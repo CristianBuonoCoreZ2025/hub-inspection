@@ -8,6 +8,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import { getNhostClient } from "@/lib/nhost/client";
 import { registerSchema, RegisterInput } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 import {
   Card,
   CardHeader,
@@ -66,9 +67,16 @@ export default function RegisterPage() {
       }
     } catch (err: any) {
       // Log completo para debug
-      console.error("[Register] Error completo:", err);
-      console.error("[Register] err.body:", err.body);
-      console.error("[Register] err.status:", err.status);
+      logger.error("Signup failed", err, {
+        component: "RegisterPage",
+        action: "signUpEmailPassword",
+        metadata: {
+          email: data.email,
+          errorBody: err.body,
+          errorStatus: err.status,
+          errorCode: err.code,
+        },
+      });
 
       let message = "Ocurrió un error inesperado";
 

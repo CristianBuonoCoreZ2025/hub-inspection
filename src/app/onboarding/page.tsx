@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import { getNhostClient } from "@/lib/nhost/client";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
   Card,
@@ -41,8 +42,9 @@ export default function OnboardingPage() {
 
   const onSubmit = async (data: OnboardingInput) => {
     setIsLoading(true);
+    let session = null;
     try {
-      const session = nhost.getUserSession();
+      session = nhost.getUserSession();
       if (!session?.user) {
         toast.error("Sesión no válida. Por favor inicia sesión.");
         router.push("/login");
@@ -68,6 +70,14 @@ export default function OnboardingPage() {
       router.push("/dashboard");
       router.refresh();
     } catch (err: any) {
+      logger.error("Onboarding failed", err, {
+        component: "OnboardingPage",
+        action: "createCompany",
+        metadata: {
+          companyName: data.companyName,
+          userId: session?.user?.id,
+        },
+      });
       toast.error(err.message || "Ocurrió un error inesperado");
     } finally {
       setIsLoading(false);

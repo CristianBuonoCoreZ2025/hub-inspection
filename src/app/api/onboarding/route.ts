@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Client } from "pg";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -49,7 +50,16 @@ export async function POST(request: NextRequest) {
     });
   } catch (err: any) {
     await client.end();
-    console.error("Onboarding error:", err);
+    logger.error("API onboarding failed", err, {
+      component: "onboarding API",
+      action: "POST /api/onboarding",
+      metadata: {
+        companyName,
+        userId,
+        pgErrorCode: err.code,
+        pgErrorDetail: err.detail,
+      },
+    });
     return NextResponse.json(
       { error: err.message || "Error al crear empresa" },
       { status: 500 }

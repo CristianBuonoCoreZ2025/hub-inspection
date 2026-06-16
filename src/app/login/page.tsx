@@ -8,6 +8,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import { getNhostClient } from "@/lib/nhost/client";
 import { loginSchema, LoginInput } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 import {
   Card,
   CardHeader,
@@ -56,7 +57,16 @@ export default function LoginPage() {
       } else {
         toast.error("Error al iniciar sesión");
       }
-    } catch (err) {
+    } catch (err: any) {
+      logger.error("Login failed", err, {
+        component: "LoginPage",
+        action: "signInEmailPassword",
+        metadata: {
+          email: data.email,
+          errorBody: err.body,
+          errorStatus: err.status,
+        },
+      });
       toast.error((err as Error).message || "Ocurrió un error inesperado");
     } finally {
       setIsLoading(false);
