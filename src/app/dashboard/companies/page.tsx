@@ -7,7 +7,7 @@ import { companySchema, type CompanyInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, Building2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Building2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,16 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-");
+}
 
 export default function CompaniesPage() {
   const queryClient = useQueryClient();
@@ -33,7 +43,7 @@ export default function CompaniesPage() {
 
   const form = useForm<CompanyInput>({
     resolver: standardSchemaResolver(companySchema),
-    defaultValues: { name: "", slug: "", rut: "", address: "", phone: "", email: "", primaryColor: "" },
+    defaultValues: { name: "", slug: "", rut: "", address: "", phone: "", email: "" },
   });
 
   const createMutation = useMutation({
@@ -70,15 +80,19 @@ export default function CompaniesPage() {
   });
 
   const onSubmit = (values: CompanyInput) => {
+    const payload = {
+      ...values,
+      slug: editingId ? values.slug : slugify(values.name),
+    };
     if (editingId) {
-      updateMutation.mutate({ id: editingId, data: values });
+      updateMutation.mutate({ id: editingId, data: payload });
     } else {
-      createMutation.mutate(values);
+      createMutation.mutate(payload);
     }
   };
 
   const filtered = companies?.filter((c) =>
-    [c.name, c.slug, c.rut, c.address].filter(Boolean).join(" ")
+    [c.name, c.rut, c.address].filter(Boolean).join(" ")
       .toLowerCase()
       .includes(search.toLowerCase())
   );
@@ -87,7 +101,7 @@ export default function CompaniesPage() {
     <div className="app-page">
       <header className="app-page-header">
         <h1 className="app-page-title">Empresas</h1>
-        <p className="app-page-lead">Gestión de empresas y marcas del sistema.</p>
+        <p className="app-page-lead">Gestión de empresas aseguradoras del sistema.</p>
       </header>
 
       <div className="app-toolbar">
@@ -108,60 +122,103 @@ export default function CompaniesPage() {
             </Button>
           </DialogTrigger>
           <DialogContent className="modal-md">
-            <div className="modal-header">
-              <DialogTitle>{editingId ? "Editar Empresa" : "Nueva Empresa"}</DialogTitle>
+            <div className="modal-header flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-[15px] font-semibold">
+                    {editingId ? "Editar Empresa" : "Nueva Empresa"}
+                  </DialogTitle>
+                  <p className="text-[12px] text-muted-foreground">
+                    {editingId ? "Modifica los datos de la empresa" : "Completa los datos para registrar una nueva empresa"}
+                  </p>
+                </div>
+              </div>
+              <DialogClose>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                  <X className="h-4 w-4" />
+                </Button>
+              </DialogClose>
             </div>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+
+            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body">
+              <div className="space-y-5">
+                {/* Nombre - full width */}
                 <div className="space-y-2">
-                  <Label>Nombre</Label>
-                  <Input {...form.register("name")} />
+                  <Label className="app-field-label">Nombre de la empresa <span className="text-red-500">*</span></Label>
+                  <Input
+                    {...form.register("name")}
+                    placeholder="Ej: Mapfre Seguros"
+                    className="app-input"
+                  />
                   {form.formState.errors.name && (
                     <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label>Slug</Label>
-                  <Input {...form.register("slug")} placeholder="mi-empresa" disabled={!!editingId} />
-                  {form.formState.errors.slug && (
-                    <p className="text-xs text-red-500">{form.formState.errors.slug.message}</p>
-                  )}
+
+                {/* RUT + Email */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="app-field-label">RUT</Label>
+                    <Input
+                      {...form.register("rut")}
+                      placeholder="12.345.678-9"
+                      className="app-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="app-field-label">Email de contacto</Label>
+                    <Input
+                      {...form.register("email")}
+                      type="email"
+                      placeholder="contacto@empresa.cl"
+                      className="app-input"
+                    />
+                    {form.formState.errors.email && (
+                      <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+
+                {/* Dirección - full width */}
                 <div className="space-y-2">
-                  <Label>RUT</Label>
-                  <Input {...form.register("rut")} placeholder="12.345.678-9" />
+                  <Label className="app-field-label">Dirección</Label>
+                  <Input
+                    {...form.register("address")}
+                    placeholder="Av. Principal 123, Oficina 456, Santiago"
+                    className="app-input"
+                  />
                 </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input {...form.register("email")} type="email" placeholder="contacto@empresa.cl" />
-                  {form.formState.errors.email && (
-                    <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Dirección</Label>
-                <Input {...form.register("address")} placeholder="Av. Principal 123, Santiago" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Teléfono</Label>
-                  <Input {...form.register("phone")} placeholder="+56 9 1234 5678" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Color Primario</Label>
-                  <Input {...form.register("primaryColor")} placeholder="#0f172a" />
+
+                {/* Teléfono */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="app-field-label">Teléfono</Label>
+                    <Input
+                      {...form.register("phone")}
+                      placeholder="+56 9 1234 5678"
+                      className="app-input"
+                    />
+                  </div>
                 </div>
               </div>
             </form>
+
             <div className="modal-footer">
               <DialogClose>
-                <Button type="button" className="btn-cancel">Cancelar</Button>
+                <Button type="button" variant="outline" className="btn-cancel">Cancelar</Button>
               </DialogClose>
-              <Button type="submit" className="btn-save" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
-                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Empresa"}
+              <Button
+                type="button"
+                className="btn-save"
+                disabled={createMutation.isPending || updateMutation.isPending}
+                onClick={form.handleSubmit(onSubmit)}
+              >
+                {createMutation.isPending || updateMutation.isPending
+                  ? "Guardando..."
+                  : editingId ? "Guardar Cambios" : "Crear Empresa"}
               </Button>
             </div>
           </DialogContent>
@@ -173,99 +230,84 @@ export default function CompaniesPage() {
           <table className="app-data-table">
             <thead>
               <tr>
-                <th>Nombre</th>
+                <th>Empresa</th>
                 <th>RUT</th>
                 <th>Contacto</th>
-                <th>Color</th>
                 <th className="w-[80px]"></th>
               </tr>
             </thead>
             <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={5} className="text-center text-muted-foreground py-4">
-                      Cargando...
+              {isLoading ? (
+                <tr>
+                  <td colSpan={4} className="text-center text-muted-foreground py-4">
+                    Cargando...
+                  </td>
+                </tr>
+              ) : filtered?.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-center text-muted-foreground py-4">
+                    No se encontraron empresas.
+                  </td>
+                </tr>
+              ) : (
+                filtered?.map((company) => (
+                  <tr key={company.id}>
+                    <td className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        {company.name}
+                      </div>
+                    </td>
+                    <td>{company.rut || "—"}</td>
+                    <td>
+                      <div className="flex flex-col gap-0.5 text-[12px]">
+                        {company.email && <span>{company.email}</span>}
+                        {company.phone && <span className="text-muted-foreground">{company.phone}</span>}
+                        {!company.email && !company.phone && <span className="text-muted-foreground">—</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="btn-neutral btn-icon"
+                          onClick={() => {
+                            setEditingId(company.id);
+                            form.reset({
+                              name: company.name,
+                              slug: company.slug,
+                              rut: company.rut || "",
+                              address: company.address || "",
+                              phone: company.phone || "",
+                              email: company.email || "",
+                            });
+                            setOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="btn-danger btn-icon"
+                          onClick={() => {
+                            if (confirm("¿Eliminar esta empresa?")) {
+                              deleteMutation.mutate(company.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
-                ) : filtered?.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center text-muted-foreground py-4">
-                      No se encontraron empresas.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered?.map((company) => (
-                    <tr key={company.id}>
-                      <td className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          {company.name}
-                        </div>
-                      </td>
-                      <td>{company.rut || "—"}</td>
-                      <td>
-                        <div className="flex flex-col gap-0.5 text-[12px]">
-                          {company.email && <span>{company.email}</span>}
-                          {company.phone && <span className="text-muted-foreground">{company.phone}</span>}
-                          {!company.email && !company.phone && <span className="text-muted-foreground">—</span>}
-                        </div>
-                      </td>
-                      <td>
-                        {company.primary_color ? (
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="inline-block h-4 w-4 rounded-full border"
-                              style={{ backgroundColor: company.primary_color }}
-                            />
-                            {company.primary_color}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="btn-neutral btn-icon"
-                            onClick={() => {
-                              setEditingId(company.id);
-                              form.reset({
-                                name: company.name,
-                                slug: company.slug,
-                                rut: company.rut || "",
-                                address: company.address || "",
-                                phone: company.phone || "",
-                                email: company.email || "",
-                                primaryColor: company.primary_color || "",
-                              });
-                              setOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="btn-danger btn-icon"
-                            onClick={() => {
-                              if (confirm("¿Eliminar esta empresa?")) {
-                                deleteMutation.mutate(company.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
+    </div>
   );
 }

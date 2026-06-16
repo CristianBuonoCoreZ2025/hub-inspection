@@ -61,10 +61,7 @@ export type ClaimInput = z.infer<typeof claimSchema>;
 
 export const companySchema = z.object({
   name: z.string().min(1, "Nombre requerido"),
-  slug: z
-    .string()
-    .min(1, "Slug requerido")
-    .regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
+  slug: z.string().optional(),
   rut: z.string().optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
