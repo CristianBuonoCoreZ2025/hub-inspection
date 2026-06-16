@@ -8,14 +8,7 @@ import { claimSchema, type ClaimInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import {
-  Plus,
-  Search,
-  Pencil,
-  Trash2,
-  FileText,
-  X,
-} from "lucide-react";
+import { Plus, Search, Pencil, Trash2, FileText } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,14 +21,20 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { ClaimStatus, Company } from "@/types";
 
 const statusLabels: Record<ClaimStatus, string> = {
   created: "Creado",
   scheduled: "Agendado",
-  in_progress: "En proceso",
-  pending_info: "Pendiente",
+  in_progress: "En progreso",
+  pending_info: "Pendiente info",
   in_review: "En revisión",
   signed: "Firmado",
   closed: "Cerrado",
@@ -48,7 +47,7 @@ const statusColors: Record<ClaimStatus, string> = {
   pending_info: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
   in_review: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
   signed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-  closed: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  closed: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
 };
 
 export default function ClaimsPage() {
@@ -57,27 +56,18 @@ export default function ClaimsPage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const { data: claims, isLoading } = useQuery({
-    queryKey: ["claims"],
-    queryFn: () => getClaims(),
-  });
-
   const form = useForm<ClaimInput>({
     resolver: standardSchemaResolver(claimSchema),
     defaultValues: {
-      claimNumber: "",
-      policyNumber: "",
-      insuranceCompany: "",
-      insuredName: "",
-      insuredEmail: "",
-      insuredPhone: "",
-      address: "",
-      city: "",
-      claimDate: "",
-      claimType: "",
-      companyId: "",
-      notes: "",
+      claimNumber: "", policyNumber: "", insuranceCompany: "", insuredName: "",
+      insuredEmail: "", insuredPhone: "", address: "", city: "", claimDate: "",
+      claimType: "", companyId: "", notes: "",
     },
+  });
+
+  const { data: claims, isLoading } = useQuery({
+    queryKey: ["claims"],
+    queryFn: () => getClaims(),
   });
 
   const { data: companies } = useQuery({
@@ -88,7 +78,7 @@ export default function ClaimsPage() {
   const createMutation = useMutation({
     mutationFn: createClaim,
     onSuccess: () => {
-      toast.success("Siniestro creado correctamente");
+      toast.success("Siniestro creado");
       queryClient.invalidateQueries({ queryKey: ["claims"] });
       setOpen(false);
       form.reset();
@@ -97,8 +87,7 @@ export default function ClaimsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<ClaimInput> }) =>
-      updateClaim(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<ClaimInput> }) => updateClaim(id, data),
     onSuccess: () => {
       toast.success("Siniestro actualizado");
       queryClient.invalidateQueries({ queryKey: ["claims"] });
@@ -126,25 +115,22 @@ export default function ClaimsPage() {
     }
   };
 
-  const filteredClaims = claims?.filter((c) =>
-    [c.claim_number, c.insured_name, c.address, c.city]
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase())
+  const filtered = claims?.filter((c) =>
+    [c.claim_number, c.insured_name, c.address].join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="app-page">
       <header className="app-page-header">
         <h1 className="app-page-title">Siniestros</h1>
-        <p className="app-page-lead">Gestión de siniestros y casos de inspección.</p>
+        <p className="app-page-lead">Gestión de siniestros y seguimiento de casos.</p>
       </header>
 
       <div className="app-toolbar">
         <div className="flex items-center gap-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por número, nombre, dirección..."
+            placeholder="Buscar siniestro..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 w-full max-w-sm"
@@ -157,35 +143,31 @@ export default function ClaimsPage() {
               Nuevo Siniestro
             </Button>
           </DialogTrigger>
+
+          {/* ── MODAL Siniestros — 900px (muchos campos) ── */}
           <DialogContent className="modal-lg">
             <div className="modal-header">
-              <div className="flex items-center justify-between">
-                <DialogTitle className="text-lg font-semibold">
-                  {editingId ? "Editar Siniestro" : "Nuevo Siniestro"}
-                </DialogTitle>
-                <DialogClose>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </DialogClose>
-              </div>
+              <DialogTitle className="text-lg font-semibold">
+                {editingId ? "Editar Siniestro" : "Nuevo Siniestro"}
+              </DialogTitle>
             </div>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body">
+
+            <div className="modal-body">
               <div className="space-y-6">
                 {/* Fila 1: Número | Póliza | Compañía */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                   <div>
-                    <Label className="app-field-label">Número Siniestro <span className="text-red-500">*</span></Label>
+                    <Label className="app-field-label">Número de siniestro <span className="text-red-500">*</span></Label>
                     <Input {...form.register("claimNumber")} placeholder="SIN-2024-001" className="app-input" />
                     {form.formState.errors.claimNumber && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.claimNumber.message}</p>)}
                   </div>
                   <div>
-                    <Label className="app-field-label">Número Póliza <span className="text-red-500">*</span></Label>
+                    <Label className="app-field-label">Número de póliza <span className="text-red-500">*</span></Label>
                     <Input {...form.register("policyNumber")} placeholder="POL-123456" className="app-input" />
                     {form.formState.errors.policyNumber && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.policyNumber.message}</p>)}
                   </div>
                   <div>
-                    <Label className="app-field-label">Compañía de Seguros</Label>
+                    <Label className="app-field-label">Compañía de seguros</Label>
                     <Input {...form.register("insuranceCompany")} placeholder="Mapfre Seguros" className="app-input" />
                   </div>
                 </div>
@@ -193,16 +175,16 @@ export default function ClaimsPage() {
                 {/* Fila 2: Asegurado | Email | Teléfono */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                   <div>
-                    <Label className="app-field-label">Nombre Asegurado <span className="text-red-500">*</span></Label>
+                    <Label className="app-field-label">Nombre del asegurado <span className="text-red-500">*</span></Label>
                     <Input {...form.register("insuredName")} placeholder="Juan Pérez" className="app-input" />
                     {form.formState.errors.insuredName && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.insuredName.message}</p>)}
                   </div>
                   <div>
-                    <Label className="app-field-label">Email</Label>
+                    <Label className="app-field-label">Email del asegurado</Label>
                     <Input {...form.register("insuredEmail")} type="email" placeholder="juan@email.com" className="app-input" />
                   </div>
                   <div>
-                    <Label className="app-field-label">Teléfono</Label>
+                    <Label className="app-field-label">Teléfono del asegurado</Label>
                     <Input {...form.register("insuredPhone")} placeholder="+56 912345678" className="app-input" />
                   </div>
                 </div>
@@ -220,7 +202,7 @@ export default function ClaimsPage() {
                     {form.formState.errors.city && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.city.message}</p>)}
                   </div>
                   <div>
-                    <Label className="app-field-label">Fecha Siniestro <span className="text-red-500">*</span></Label>
+                    <Label className="app-field-label">Fecha del siniestro <span className="text-red-500">*</span></Label>
                     <Input {...form.register("claimDate")} type="date" className="app-input" />
                     {form.formState.errors.claimDate && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.claimDate.message}</p>)}
                   </div>
@@ -229,14 +211,14 @@ export default function ClaimsPage() {
                 {/* Fila 4: Tipo | Empresa */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <div>
-                    <Label className="app-field-label">Tipo Siniestro <span className="text-red-500">*</span></Label>
+                    <Label className="app-field-label">Tipo de siniestro <span className="text-red-500">*</span></Label>
                     <Input {...form.register("claimType")} placeholder="Daños por agua" className="app-input" />
                     {form.formState.errors.claimType && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.claimType.message}</p>)}
                   </div>
                   <div>
                     <Label className="app-field-label">Empresa <span className="text-red-500">*</span></Label>
                     <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} defaultValue={form.getValues("companyId")} disabled={editingId !== null}>
-                      <SelectTrigger className="app-input h-10"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+                      <SelectTrigger className="app-input h-11"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
                       <SelectContent>
                         {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                       </SelectContent>
@@ -247,16 +229,17 @@ export default function ClaimsPage() {
 
                 {/* Fila 5: Notas */}
                 <div>
-                  <Label className="app-field-label">Notas</Label>
-                  <Input {...form.register("notes")} placeholder="Observaciones adicionales..." className="app-input" />
+                  <Label className="app-field-label">Notas adicionales</Label>
+                  <Input {...form.register("notes")} placeholder="Observaciones relevantes del caso..." className="app-input" />
                 </div>
               </div>
-            </form>
+            </div>
+
             <div className="modal-footer">
               <DialogClose>
-                <Button type="button" variant="outline" className="btn-cancel">Cancelar</Button>
+                <Button type="button" variant="outline" className="btn-cancel btn-footer">Cancelar</Button>
               </DialogClose>
-              <Button type="button" className="btn-save" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              <Button type="button" className="btn-save btn-footer" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
                 {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Siniestro"}
               </Button>
             </div>
@@ -271,92 +254,53 @@ export default function ClaimsPage() {
               <tr>
                 <th>Número</th>
                 <th>Asegurado</th>
-                <th>Empresa</th>
-                <th>Dirección</th>
-                <th>Fecha</th>
                 <th>Estado</th>
+                <th>Fecha</th>
                 <th className="w-[80px]"></th>
               </tr>
             </thead>
             <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={7} className="text-center text-muted-foreground py-4">
-                      Cargando...
+              {isLoading ? (
+                <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+              ) : filtered?.length === 0 ? (
+                <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron siniestros.</td></tr>
+              ) : (
+                filtered?.map((claim) => (
+                  <tr key={claim.id}>
+                    <td className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        {claim.claim_number}
+                      </div>
+                    </td>
+                    <td>{claim.insured_name}</td>
+                    <td><Badge className={statusColors[claim.status]}>{statusLabels[claim.status]}</Badge></td>
+                    <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
+                    <td>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+                          setEditingId(claim.id);
+                          form.reset({
+                            claimNumber: claim.claim_number, policyNumber: claim.policy_number,
+                            insuranceCompany: claim.insurance_company || "", insuredName: claim.insured_name,
+                            insuredEmail: claim.insured_email || "", insuredPhone: claim.insured_phone || "",
+                            address: claim.address, city: claim.city, claimDate: claim.claim_date,
+                            claimType: claim.claim_type, companyId: claim.company_id, notes: claim.notes || "",
+                          });
+                          setOpen(true);
+                        }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Eliminar este siniestro?")) deleteMutation.mutate(claim.id); }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
-                ) : filteredClaims?.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center text-muted-foreground py-4">
-                      No se encontraron siniestros.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredClaims?.map((claim) => (
-                    <tr key={claim.id}>
-                      <td className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          {claim.claim_number}
-                        </div>
-                      </td>
-                      <td>{claim.insured_name}</td>
-                      <td>{companies?.find((c: Company) => c.id === claim.company_id)?.name || "—"}</td>
-                      <td>{claim.address}, {claim.city}</td>
-                      <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
-                      <td>
-                        <Badge className={statusColors[claim.status]}>
-                          {statusLabels[claim.status]}
-                        </Badge>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="btn-neutral btn-icon"
-                            onClick={() => {
-                              setEditingId(claim.id);
-                              form.reset({
-                                claimNumber: claim.claim_number,
-                                policyNumber: claim.policy_number,
-                                insuranceCompany: claim.insurance_company || "",
-                                insuredName: claim.insured_name,
-                                insuredEmail: claim.insured_email || "",
-                                insuredPhone: claim.insured_phone || "",
-                                address: claim.address,
-                                city: claim.city,
-                                claimDate: claim.claim_date,
-                                claimType: claim.claim_type,
-                                companyId: claim.company_id,
-                                notes: claim.notes || "",
-                              });
-                              setOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="btn-danger btn-icon"
-                            onClick={() => {
-                              if (confirm("¿Eliminar este siniestro?")) {
-                                deleteMutation.mutate(claim.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
+    </div>
   );
 }

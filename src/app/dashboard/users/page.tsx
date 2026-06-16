@@ -9,7 +9,7 @@ import type { Company } from "@/types";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, UserX, UserCheck, Users, X } from "lucide-react";
+import { Plus, Search, Pencil, UserX, UserCheck, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,13 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { UserRole } from "@/types";
 
 const roleLabels: Record<UserRole, string> = {
@@ -134,43 +140,39 @@ export default function UsersPage() {
               Invitar Usuario
             </Button>
           </DialogTrigger>
+
+          {/* ── MODAL Usuarios — 480px (formulario simple) ── */}
           <DialogContent className="modal-sm">
             <div className="modal-header">
-              <div className="flex items-center justify-between">
-                <DialogTitle className="text-lg font-semibold">
-                  {editingId ? "Editar Usuario" : "Invitar Usuario"}
-                </DialogTitle>
-                <DialogClose>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </DialogClose>
-              </div>
+              <DialogTitle className="text-lg font-semibold">
+                {editingId ? "Editar Usuario" : "Invitar Usuario"}
+              </DialogTitle>
             </div>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body">
+
+            <div className="modal-body">
               <div className="space-y-5">
                 {!editingId && (
-                  <>
+                  <div className="space-y-5">
                     <div>
-                      <Label className="app-field-label">Nombre Completo</Label>
+                      <Label className="app-field-label">Nombre completo <span className="text-red-500">*</span></Label>
                       <Input {...form.register("fullName")} placeholder="Juan Pérez" className="app-input" />
                       {form.formState.errors.fullName && (
                         <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.fullName.message}</p>
                       )}
                     </div>
                     <div>
-                      <Label className="app-field-label">Email</Label>
+                      <Label className="app-field-label">Email <span className="text-red-500">*</span></Label>
                       <Input {...form.register("email")} type="email" placeholder="juan@empresa.cl" className="app-input" />
                       {form.formState.errors.email && (
                         <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.email.message}</p>
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
                 <div>
-                  <Label className="app-field-label">Rol</Label>
+                  <Label className="app-field-label">Rol <span className="text-red-500">*</span></Label>
                   <Select onValueChange={(v) => form.setValue("role", v as "admin" | "supervisor" | "adjuster" | "inspector" | "client")} defaultValue={form.getValues("role")}>
-                    <SelectTrigger className="app-input h-10"><SelectValue placeholder="Selecciona un rol" /></SelectTrigger>
+                    <SelectTrigger className="app-input h-11"><SelectValue placeholder="Selecciona un rol" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Administrador (Interno)</SelectItem>
                       <SelectItem value="supervisor">Supervisor (Interno)</SelectItem>
@@ -185,9 +187,9 @@ export default function UsersPage() {
                 </div>
                 {selectedRole === "client" && (
                   <div>
-                    <Label className="app-field-label">Empresa asignada</Label>
+                    <Label className="app-field-label">Empresa asignada <span className="text-red-500">*</span></Label>
                     <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} defaultValue={form.getValues("companyId")}>
-                      <SelectTrigger className="app-input h-10"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+                      <SelectTrigger className="app-input h-11"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
                       <SelectContent>
                         {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                       </SelectContent>
@@ -198,12 +200,13 @@ export default function UsersPage() {
                   </div>
                 )}
               </div>
-            </form>
+            </div>
+
             <div className="modal-footer">
               <DialogClose>
-                <Button type="button" variant="outline" className="btn-cancel">Cancelar</Button>
+                <Button type="button" variant="outline" className="btn-cancel btn-footer">Cancelar</Button>
               </DialogClose>
-              <Button type="button" className="btn-save" disabled={inviteMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              <Button type="button" className="btn-save btn-footer" disabled={inviteMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
                 {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Enviar Invitación"}
               </Button>
             </div>
@@ -224,85 +227,49 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={5} className="text-center text-muted-foreground py-4">
-                      Cargando...
+              {isLoading ? (
+                <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+              ) : filtered?.length === 0 ? (
+                <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron usuarios.</td></tr>
+              ) : (
+                filtered?.map((user) => (
+                  <tr key={user.id}>
+                    <td className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        {user.full_name || "Sin nombre"}
+                      </div>
                     </td>
-                  </tr>
-                ) : filtered?.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center text-muted-foreground py-4">
-                      No se encontraron usuarios.
+                    <td>{user.email}</td>
+                    <td><Badge className={roleColors[user.role]}>{roleLabels[user.role]}</Badge></td>
+                    <td>
+                      {user.is_active ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-emerald-600"><UserCheck className="h-3 w-3" /> Activo</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-red-500"><UserX className="h-3 w-3" /> Inactivo</span>
+                      )}
                     </td>
-                  </tr>
-                ) : (
-                  filtered?.map((user) => (
-                    <tr key={user.id}>
-                      <td className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          {user.full_name || "Sin nombre"}
-                        </div>
-                      </td>
-                      <td>{user.email}</td>
-                      <td>
-                        <Badge className={roleColors[user.role]}>
-                          {roleLabels[user.role]}
-                        </Badge>
-                      </td>
-                      <td>
-                        {user.is_active ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
-                            <UserCheck className="h-3 w-3" /> Activo
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-xs text-red-500">
-                            <UserX className="h-3 w-3" /> Inactivo
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="btn-neutral btn-icon"
-                            onClick={() => {
-                              setEditingId(user.id);
-                              form.reset({
-                                email: user.email || "",
-                                fullName: user.full_name || "",
-                                role: user.role as Exclude<UserRole, "super_admin" | "client">,
-                              });
-                              setOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
+                    <td>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+                          setEditingId(user.id);
+                          form.reset({ email: user.email || "", fullName: user.full_name || "", role: user.role as Exclude<UserRole, "super_admin" | "client">, companyId: "" });
+                          setOpen(true);
+                        }}><Pencil className="h-4 w-4" /></Button>
+                        {user.is_active && (
+                          <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este usuario?")) deactivateMutation.mutate(user.id); }}>
+                            <UserX className="h-4 w-4" />
                           </Button>
-                          {user.is_active && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="btn-danger btn-icon"
-                              onClick={() => {
-                                if (confirm("¿Desactivar este usuario?")) {
-                                  deactivateMutation.mutate(user.id);
-                                }
-                              }}
-                            >
-                              <UserX className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
+    </div>
   );
 }

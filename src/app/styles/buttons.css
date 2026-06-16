@@ -1,5 +1,5 @@
 /*
- * PALETA GLOBAL DE BOTONES — hub-stock-ai
+ * PALETA GLOBAL DE BOTONES — Hub Inspections
  * Principio: cada acción semántica tiene su color consistente en toda la app.
  * Uso: <Button className="btn-save btn-lg"> o <Button className="btn-warn btn-lg-block">
  * Tamaños: btn-lg (230px), btn-lg-block (ancho completo en modales), btn-sm (180px), btn-footer (pie de modal).
@@ -13,7 +13,7 @@
  * ─ btn-warn / btn-alert / btn-amber    → ámbar-naranja     (Advertencia, Forzar)
  * ─ btn-danger / btn-delete             → rosa-rojo         (Eliminar, Borrar)
  *
- * ACCIONES SECUNDARIAS (borde sutil, sin gradiente)
+ * ACCIONES SECUNDARIAS (borde sutil, sin color fuerte)
  * ─ btn-cancel                          → zinc con borde    (Cancelar)
  * ─ btn-close                           → borde neutro      (Cerrar)
  * ─ btn-skip                            → slate semi-opaco  (Saltar, Omitir)

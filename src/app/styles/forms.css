@@ -1,6 +1,6 @@
 /*
- * FORMULARIOS GLOBALES — hub-stock-ai
- * Clases reutilizables para inputs, labels y acciones de formulario.
+ * FORMULARIOS — Hub Inspections
+ * Estilo checkout/profesional: labels normales arriba, espaciado generoso.
  */
 
 @layer components {
@@ -8,11 +8,13 @@
     @apply mt-4 flex flex-wrap gap-2;
   }
 
+  /* Label limpio: 13px, font-medium, color de texto normal — NO uppercase miniatura */
   .app-field-label {
     @apply mb-2 block text-[13px] font-medium text-foreground;
   }
 
+  /* Input redondeado xl, buen padding, placeholder visible */
   .app-input {
-    @apply h-10 w-full rounded-xl border border-input bg-background px-3 text-[13px] text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/25;
+    @apply h-11 w-full rounded-xl border border-input bg-background px-4 text-[14px] text-foreground shadow-sm transition-colors placeholder:text-muted-foreground/60 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20;
   }
 }
