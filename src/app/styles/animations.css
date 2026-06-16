@@ -1,0 +1,76 @@
+/*
+ * ANIMACIONES GLOBALES — hub-stock-ai
+ * Todos los @keyframes de componentes: wizard, bulk progress, modales.
+ */
+
+@keyframes app-progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+.app-progress-indeterminate {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--muted);
+}
+
+.app-progress-indeterminate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 35%;
+  border-radius: 9999px;
+  background: var(--primary);
+  animation: app-progress-slide 1.15s ease-in-out infinite;
+}
+
+@keyframes homolog-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes homolog-pulse-ring {
+  0%   { transform: scale(0.85); opacity: 0.7; }
+  50%  { transform: scale(1.15); opacity: 0.2; }
+  100% { transform: scale(0.85); opacity: 0.7; }
+}
+
+@keyframes homolog-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes homolog-glow-orbit {
+  0%   { transform: rotate(0deg) translateX(45%) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(45%) rotate(-360deg); }
+}
+
+@keyframes homolog-count-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bulk-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes bulk-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bulk-count-pop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  60%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bulk-pulse-ring {
+  0%   { transform: scale(0.9); opacity: 0.6; }
+  50%  { transform: scale(1.1); opacity: 0.15; }
+  100% { transform: scale(0.9); opacity: 0.6; }
+}

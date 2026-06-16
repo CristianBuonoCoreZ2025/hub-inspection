@@ -1,0 +1,145 @@
+/*
+ * COMPONENTES DE LAYOUT — hub-stock-ai
+ * Clases reutilizables para páginas, paneles, tablas y alertas.
+ */
+
+@layer components {
+  .premium-bg-base {
+    background-color: var(--surface-canvas);
+  }
+
+  .premium-bg-mesh {
+    background-image:
+      radial-gradient(ellipse 120% 80% at 50% -30%, rgb(251 146 60 / 0.06), transparent 55%),
+      radial-gradient(ellipse 80% 50% at 100% 0%, rgb(244 114 182 / 0.05), transparent 50%);
+  }
+
+  .dark .premium-bg-mesh {
+    background-image:
+      radial-gradient(ellipse 100% 60% at 50% -20%, rgb(251 146 60 / 0.08), transparent 55%),
+      radial-gradient(ellipse 70% 40% at 80% 100%, rgb(96 165 250 / 0.06), transparent 45%);
+  }
+
+  .premium-grid-lines {
+    opacity: 0.4;
+    background-image:
+      linear-gradient(rgb(0 0 0 / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(0 0 0 / 0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .dark .premium-grid-lines {
+    opacity: 0.15;
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px);
+  }
+
+  .glass-panel {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background-color: var(--surface-elevated);
+    box-shadow: var(--shadow-card);
+  }
+
+  .glass-panel-subtle {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background-color: var(--muted);
+  }
+
+  .dark .glass-panel-subtle {
+    background-color: rgb(39 39 42 / 0.5);
+  }
+
+  .auth-shell {
+    @apply relative flex min-h-dvh w-full flex-col items-center justify-center px-4 py-12 sm:px-6;
+  }
+
+  .auth-card {
+    @apply w-full max-w-[400px] rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-card)];
+  }
+
+  .auth-brand {
+    @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground;
+  }
+
+  .auth-title {
+    @apply text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem];
+  }
+
+  .auth-subtitle {
+    @apply mt-1 text-[13px] leading-relaxed text-muted-foreground;
+  }
+
+  .text-gradient-warm {
+    background: linear-gradient(
+      105deg,
+      var(--accent-warm-start) 0%,
+      var(--accent-warm-end) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .app-page {
+    @apply mx-auto flex w-full max-w-6xl flex-col gap-8 px-0;
+  }
+
+  .app-page-stock-wide {
+    @apply max-w-[min(96rem,calc(100%-1rem))] px-2 sm:px-4;
+  }
+
+  .app-page-header {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .app-page-title {
+    @apply text-lg font-semibold tracking-tight text-foreground sm:text-xl;
+  }
+
+  .app-page-lead {
+    @apply text-[13px] font-medium leading-relaxed text-muted-foreground;
+  }
+
+  .app-panel {
+    @apply rounded-xl border border-border bg-card p-4 text-card-foreground shadow-[var(--shadow-card)] sm:p-6;
+  }
+
+  .app-toolbar {
+    @apply flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between;
+  }
+
+  .app-data-table-wrap {
+    @apply overflow-x-auto rounded-xl border border-border bg-card shadow-[var(--shadow-card)];
+  }
+
+  .app-data-table {
+    @apply w-full min-w-[520px] border-collapse text-[13px] text-foreground;
+  }
+
+  .app-data-table thead tr {
+    @apply border-b border-border text-left;
+  }
+
+  .app-data-table th {
+    @apply px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+
+  .app-data-table td {
+    @apply border-b border-border/60 px-3 py-2.5;
+  }
+
+  .app-data-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .app-inline-code {
+    @apply rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/80;
+  }
+
+  .app-alert-warn {
+    @apply rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100;
+  }
+}

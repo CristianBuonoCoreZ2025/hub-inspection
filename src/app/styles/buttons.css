@@ -1,0 +1,158 @@
+/*
+ * PALETA GLOBAL DE BOTONES — hub-stock-ai
+ * Principio: cada acción semántica tiene su color consistente en toda la app.
+ * Uso: <Button className="btn-save btn-lg"> o <Button className="btn-warn btn-lg-block">
+ * Tamaños: btn-lg (230px), btn-lg-block (ancho completo en modales), btn-sm (180px), btn-footer (pie de modal).
+ *
+ * ACCIONES PRIMARIAS (gradiente + sombra coloreada)
+ * ─ btn-save / btn-confirm / btn-accept  → verde esmeralda  (Guardar, Confirmar, Aceptar)
+ * ─ btn-create / btn-new                → esmeralda-teal    (Crear, Nuevo, Alta)
+ * ─ btn-run / btn-execute               → sky-blue          (Ejecutar, Procesar, Paso 1)
+ * ─ btn-homolog / btn-ai                → violeta-primary   (Iniciar homologación, IA)
+ * ─ btn-review / btn-violet-alt         → violeta-fuchsia   (Revisar, Clasificar)
+ * ─ btn-warn / btn-alert / btn-amber    → ámbar-naranja     (Advertencia, Forzar)
+ * ─ btn-danger / btn-delete             → rosa-rojo         (Eliminar, Borrar)
+ *
+ * ACCIONES SECUNDARIAS (borde sutil, sin gradiente)
+ * ─ btn-cancel                          → zinc con borde    (Cancelar)
+ * ─ btn-close                           → borde neutro      (Cerrar)
+ * ─ btn-skip                            → slate semi-opaco  (Saltar, Omitir)
+ * ─ btn-neutral                         → fondo neutro      (Acción sin carga emocional)
+ */
+
+@layer components {
+  /* GUARDAR / CONFIRMAR / ACEPTAR — verde esmeralda */
+  .btn-save,
+  .btn-confirm,
+  .btn-accept {
+    @apply bg-linear-to-r from-emerald-500 to-teal-600 text-white
+           shadow-md shadow-emerald-500/25
+           transition-shadow hover:shadow-lg hover:shadow-emerald-500/35
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* CREAR / NUEVO / ALTA — esmeralda-teal */
+  .btn-create,
+  .btn-new,
+  .btn-emerald {
+    @apply bg-linear-to-r from-emerald-500 to-teal-600 text-white
+           shadow-md shadow-emerald-500/20
+           transition-shadow hover:shadow-lg hover:shadow-emerald-500/30
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* EJECUTAR / PROCESAR — sky-blue */
+  .btn-run,
+  .btn-execute,
+  .btn-sky {
+    @apply bg-linear-to-r from-sky-500 to-blue-600 text-white
+           shadow-md shadow-sky-500/20
+           transition-shadow hover:shadow-lg hover:shadow-sky-500/30
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* HOMOLOGACIÓN / IA / ACCIÓN PRINCIPAL — violeta */
+  .btn-homolog,
+  .btn-ai,
+  .btn-violet {
+    @apply bg-linear-to-r from-primary to-violet-600 text-white
+           shadow-md shadow-primary/20
+           transition-shadow hover:shadow-lg hover:shadow-primary/30
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* REVISAR / CLASIFICAR — violeta-fuchsia */
+  .btn-review,
+  .btn-violet-alt {
+    @apply bg-linear-to-r from-violet-500 to-fuchsia-600 text-white
+           shadow-md shadow-violet-500/25
+           transition-shadow hover:shadow-lg hover:shadow-violet-500/35
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* ADVERTENCIA / FORZAR — ámbar */
+  .btn-warn,
+  .btn-alert,
+  .btn-amber {
+    @apply bg-linear-to-r from-amber-500 to-orange-500 text-white
+           shadow-md shadow-amber-500/20
+           transition-shadow hover:shadow-lg hover:shadow-amber-500/30
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* ELIMINAR / BORRAR / PELIGRO — rosa-rojo */
+  .btn-danger,
+  .btn-delete,
+  .btn-destructive-grad {
+    @apply bg-linear-to-r from-rose-500 to-red-600 text-white
+           shadow-md shadow-rose-500/25
+           transition-shadow hover:shadow-lg hover:shadow-rose-500/35
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* CANCELAR — borde zinc, sin color fuerte */
+  .btn-cancel {
+    @apply border border-zinc-300 bg-white text-zinc-700
+           shadow-sm hover:bg-zinc-50
+           disabled:opacity-50 disabled:pointer-events-none
+           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800;
+  }
+
+  /* CERRAR — menos prominente que cancelar */
+  .btn-close {
+    @apply border border-border bg-background text-muted-foreground
+           hover:bg-muted hover:text-foreground
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* SALTAR / OMITIR — slate semi-transparente */
+  .btn-skip {
+    @apply bg-slate-100 text-slate-700 border border-slate-200
+           hover:bg-slate-200
+           disabled:opacity-50 disabled:pointer-events-none
+           dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700;
+  }
+
+  /* NEUTRAL — acción sin carga emocional */
+  .btn-neutral {
+    @apply bg-muted text-muted-foreground border border-border
+           hover:bg-muted/80 hover:text-foreground
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* TAMAÑOS ESTÁNDAR */
+  .btn-lg {
+    @apply h-10 w-[230px] px-4 gap-2 text-xs font-medium;
+    & svg {
+      @apply h-4 w-4;
+    }
+  }
+
+  .btn-lg-block {
+    @apply h-10 w-full px-4 gap-2 text-xs font-medium;
+    & svg {
+      @apply h-4 w-4;
+    }
+  }
+
+  .btn-sm {
+    @apply h-10 w-[180px] px-3 gap-1 text-xs font-medium;
+    & svg {
+      @apply h-4 w-4;
+    }
+  }
+
+  .btn-footer {
+    @apply h-9 shrink-0 gap-2 px-3 text-xs font-medium;
+    & svg {
+      @apply h-4 w-4;
+    }
+  }
+
+  .btn-icon {
+    @apply w-8 h-8 p-0;
+    & svg {
+      @apply h-4 w-4;
+    }
+  }
+}

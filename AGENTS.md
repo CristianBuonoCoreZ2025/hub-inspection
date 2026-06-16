@@ -273,3 +273,78 @@ logger.error("Descripción del error", err, {
 Todo error capturado en el frontend DEBE pasar por logger.error() con contexto (componente, acción, metadata).
 Nunca usar console.error() directamente en producción.
 ```
+
+---
+
+## 10. Sistema de Estilos (de hub-stock-ai)
+
+### Principio
+Todo el diseño visual sigue el sistema de estilos de hub-stock-ai: tokens CSS, paleta semántica de botones, clases de layout, y modales estándar.
+
+### Tokens de Color
+- Modo claro: fondo #fafafa, texto #0a0a0a, primario #0a0a0a, acento cálido #fff7ed
+- Modo oscuro: fondo #0c0c0e, texto #fafafa, primario #fafafa
+- Radio base: 0.75rem (12px)
+- Sombra de tarjeta: `0 1px 2px rgb(0 0 0 / 0.04), 0 4px 12px rgb(0 0 0 / 0.04)`
+
+### Paleta Semántica de Botones (OBLIGATORIA)
+```
+.btn-save / .btn-confirm     → verde esmeralda  (Guardar, Confirmar)
+.btn-create / .btn-new       → esmeralda-teal    (Crear, Nuevo)
+.btn-run / .btn-execute      → sky-blue          (Ejecutar, Procesar)
+.btn-homolog / .btn-ai       → violeta-primary   (IA, Homologación)
+.btn-review / .btn-violet-alt → violeta-fuchsia  (Revisar)
+.btn-warn / .btn-alert       → ámbar-naranja     (Advertencia)
+.btn-danger / .btn-delete    → rosa-rojo         (Eliminar)
+.btn-cancel                   → zinc con borde    (Cancelar)
+.btn-close                    → borde neutro      (Cerrar)
+.btn-skip                     → slate semi-opaco  (Saltar)
+.btn-neutral                  → fondo mutado      (Acción neutral)
+```
+
+### Tamaños de Botones
+```
+.btn-lg       → h-10 w-[230px]    (principal con texto)
+.btn-lg-block → h-10 w-full       (ancho completo en modales)
+.btn-sm       → h-10 w-[180px]    (secundario)
+.btn-footer   → h-9 shrink-0       (pie de modal)
+.btn-icon     → w-8 h-8           (solo ícono)
+```
+
+### Clases de Layout
+```
+.app-page          → max-w-6xl, flex flex-col gap-8
+.app-page-header   → flex flex-col gap-1.5
+.app-page-title    → text-lg/xl font-semibold
+.app-page-lead     → text-[13px] text-muted-foreground
+.app-panel         → rounded-xl border bg-card p-4 sm:p-6
+.app-toolbar       → flex flex-col gap-3 sm:flex-row sm:justify-between
+.glass-panel      → tarjeta con borde + sombra + fondo elevado
+```
+
+### Modales
+```
+.modal-lg         → w-[min(98vw,900px)] rounded-2xl shadow-2xl
+.modal-header     → border-b px-8 pb-5 pt-6
+.modal-body       → flex-1 overflow-y-auto
+.modal-footer     → border-t px-8 py-4
+```
+
+### Formularios
+```
+.app-field-label   → text-[11px] font-semibold uppercase tracking-wide
+.app-input         → h-10 rounded-xl border border-input px-3 text-[13px]
+```
+
+### Tablas
+```
+.app-data-table-wrap → overflow-x-auto rounded-xl border bg-card
+.app-data-table      → w-full min-w-[520px] text-[13px]
+```
+
+### Regla
+```
+Nunca usar colores hardcodeados (bg-blue-500). Siempre usar clases semánticas (.btn-save, .btn-danger) o tokens CSS (var(--primary)).
+Todos los modales DEBEN usar modal-lg (900px).
+Todas las tarjetas DEBEN usar glass-panel o app-panel.
+```
