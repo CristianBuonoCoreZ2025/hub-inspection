@@ -57,18 +57,38 @@ export default function RegisterPage() {
       });
 
       if (response.body.session) {
-        // Sesión inmediata (email verification deshabilitado en Nhost Console)
         toast.success("Cuenta creada correctamente");
         router.push("/dashboard");
         router.refresh();
       } else {
-        // Requiere verificación de email (comportamiento por defecto de Nhost)
         setNeedsVerification(true);
         toast.info("Revisa tu correo para confirmar la cuenta");
       }
     } catch (err: any) {
-      // El SDK v4 lanza FetchError con body.message
-      const message = err.body?.message || err.message || "Ocurrió un error inesperado";
+      // Log completo para debug
+      console.error("[Register] Error completo:", err);
+      console.error("[Register] err.body:", err.body);
+      console.error("[Register] err.status:", err.status);
+
+      let message = "Ocurrió un error inesperado";
+
+      if (err.body?.message) {
+        message = err.body.message;
+      } else if (err.body?.error) {
+        message = err.body.error;
+      } else if (err.message) {
+        message = err.message;
+      }
+
+      // Mapear errores comunes de Nhost Auth
+      if (message.includes("already exists") || message.includes("already registered")) {
+        message = "Este correo ya está registrado. Intenta iniciar sesión.";
+      } else if (message.includes("password") && message.includes("too short")) {
+        message = "La contraseña es muy corta. Usa al menos 6 caracteres.";
+      } else if (message.includes("invalid")) {
+        message = "Datos inválidos. Verifica el correo y la contraseña.";
+      }
+
       toast.error(message);
     } finally {
       setIsLoading(false);
