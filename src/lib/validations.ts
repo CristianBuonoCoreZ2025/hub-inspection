@@ -69,6 +69,7 @@ export const companySchema = z
     address: z.string().optional().or(z.literal("")),
     phone: z.string().optional().or(z.literal("")),
     email: z.string().email("Correo inválido").optional().or(z.literal("")),
+    logoUrl: z.string().optional().or(z.literal("")),
     primaryColor: z.string().optional().or(z.literal("")),
   })
   .refine(

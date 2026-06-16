@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompanies, createCompany, updateCompany, deleteCompany } from "@/services/companies";
 import { getCountries } from "@/services/countries";
+import { uploadFileToStorage } from "@/lib/nhost/storage-upload";
 import { companySchema, type CompanyInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, Building2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Upload, X, ImageIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,10 +45,11 @@ export default function CompaniesPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   const form = useForm<CompanyInput>({
     resolver: standardSchemaResolver(companySchema),
-    defaultValues: { name: "", slug: "", countryId: "", rut: "", address: "", phone: "", email: "" },
+    defaultValues: { name: "", slug: "", countryId: "", rut: "", address: "", phone: "", email: "", logoUrl: "" },
   });
 
   const { data: companies, isLoading } = useQuery({
@@ -141,6 +143,70 @@ export default function CompaniesPage() {
 
             <div className="modal-body">
               <div className="space-y-6">
+                {/* Logo de la empresa */}
+                <div>
+                  <Label className="app-field-label">Logo de la empresa</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      {form.watch("logoUrl") ? (
+                        <img
+                          src={form.watch("logoUrl")}
+                          alt="Logo"
+                          className="h-16 w-16 rounded-xl object-cover border border-border shadow-sm"
+                        />
+                      ) : (
+                        <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-muted shadow-sm">
+                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={(el) => {
+                          if (el) (el as HTMLInputElement & { _btn?: HTMLButtonElement })._btn = undefined;
+                        }}
+                        id="logo-upload"
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setLogoUploading(true);
+                          try {
+                            const url = await uploadFileToStorage(file, `companies/logos/${Date.now()}-${file.name}`);
+                            form.setValue("logoUrl", url);
+                            toast.success("Logo subido");
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : "Error al subir logo");
+                          } finally {
+                            setLogoUploading(false);
+                            e.target.value = "";
+                          }
+                        }}
+                      />
+                      <label htmlFor="logo-upload" className="cursor-pointer">
+                        <span className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm transition-colors hover:bg-muted disabled:opacity-50">
+                          <Upload className="mr-1.5 h-3.5 w-3.5" />
+                          {logoUploading ? "Subiendo..." : "Subir logo"}
+                        </span>
+                      </label>
+                      {form.watch("logoUrl") && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 text-red-500 hover:text-red-600"
+                          onClick={() => form.setValue("logoUrl", "")}
+                        >
+                          <X className="mr-1.5 h-3.5 w-3.5" />
+                          Quitar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Nombre | País */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <div>
@@ -231,8 +297,18 @@ export default function CompaniesPage() {
                 filtered?.map((company) => (
                   <tr key={company.id}>
                     <td className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex items-center gap-3">
+                        {company.logo_url ? (
+                          <img
+                            src={company.logo_url}
+                            alt={company.name}
+                            className="h-8 w-8 rounded-lg object-cover border border-border/60"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-[11px] font-semibold text-muted-foreground">
+                            {company.name.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
                         {company.name}
                       </div>
                     </td>
@@ -252,6 +328,7 @@ export default function CompaniesPage() {
                           form.reset({
                             name: company.name, slug: company.slug, countryId: company.country_id || "",
                             rut: company.rut || "", address: company.address || "", phone: company.phone || "", email: company.email || "",
+                            logoUrl: company.logo_url || "",
                           });
                           setOpen(true);
                         }}><Pencil className="h-4 w-4" /></Button>
