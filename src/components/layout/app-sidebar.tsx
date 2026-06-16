@@ -30,7 +30,7 @@ import { UiStyleDevSelect } from "@/components/layout/UiStyleDevSelect"
 
 const mainLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/siniestros", label: "Siniestros", icon: FileText },
+  { href: "/dashboard/claims", label: "Siniestros", icon: FileText },
   { href: "/dashboard/inspecciones", label: "Inspecciones", icon: ClipboardCheck },
   { href: "/dashboard/agenda", label: "Agenda", icon: Calendar },
   { href: "/dashboard/evidencias", label: "Evidencias", icon: Image },
@@ -38,8 +38,8 @@ const mainLinks = [
 ]
 
 const adminLinks = [
-  { href: "/dashboard/usuarios", label: "Usuarios", icon: Users },
-  { href: "/dashboard/empresas", label: "Empresas", icon: Building2 },
+  { href: "/dashboard/users", label: "Usuarios", icon: Users },
+  { href: "/dashboard/companies", label: "Empresas", icon: Building2 },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
 ]
 

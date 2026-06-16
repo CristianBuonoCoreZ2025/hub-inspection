@@ -19,13 +19,13 @@ function getPageTitle(pathname: string) {
   const last = segments[segments.length - 1] ?? "Dashboard"
   const map: Record<string, string> = {
     dashboard: "Dashboard",
-    siniestros: "Siniestros",
+    claims: "Siniestros",
     inspecciones: "Inspecciones",
     agenda: "Agenda",
     evidencias: "Evidencias",
     informes: "Informes",
-    usuarios: "Usuarios",
-    empresas: "Empresas",
+    users: "Usuarios",
+    companies: "Empresas",
     configuracion: "Configuración",
   }
   return map[last] ?? last.charAt(0).toUpperCase() + last.slice(1)
