@@ -20,17 +20,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
-function slugify(str: string) {
-  return str
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
   const router = useRouter();
   const nhost = getNhostClient();
 
@@ -56,6 +48,7 @@ export default function RegisterPage() {
         email: data.email,
         password: data.password,
         options: {
+          displayName: data.fullName,
           metadata: {
             full_name: data.fullName,
             company_name: data.companyName,
@@ -64,35 +57,51 @@ export default function RegisterPage() {
       });
 
       if (response.body.session) {
-        // Crear empresa vía GraphQL
-        try {
-          const companySlug = slugify(data.companyName);
-          await nhost.graphql.request({
-            query: `
-              mutation InsertCompany($name: String!, $slug: String!) {
-                insert_companies_one(object: { name: $name, slug: $slug }) {
-                  id
-                }
-              }
-            `,
-            variables: { name: data.companyName, slug: companySlug },
-          });
-        } catch (graphqlErr) {
-          console.warn("Company creation warning:", graphqlErr);
-        }
-
+        // Sesión inmediata (email verification deshabilitado en Nhost Console)
         toast.success("Cuenta creada correctamente");
         router.push("/dashboard");
         router.refresh();
       } else {
+        // Requiere verificación de email (comportamiento por defecto de Nhost)
+        setNeedsVerification(true);
         toast.info("Revisa tu correo para confirmar la cuenta");
       }
-    } catch (err) {
-      toast.error((err as Error).message || "Ocurrió un error inesperado");
+    } catch (err: any) {
+      // El SDK v4 lanza FetchError con body.message
+      const message = err.body?.message || err.message || "Ocurrió un error inesperado";
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (needsVerification) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-muted/50 to-background px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-heading">Verifica tu correo</CardTitle>
+            <CardDescription>
+              Te enviamos un enlace de confirmación. Revisa tu bandeja de entrada (y spam).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-sm text-muted-foreground">
+              Una vez confirmes, podrás iniciar sesión.
+            </p>
+          </CardContent>
+          <CardFooter className="flex justify-center">
+            <Link
+              href="/login"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Ir al login
+            </Link>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-muted/50 to-background px-4">

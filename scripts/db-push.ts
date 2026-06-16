@@ -73,7 +73,7 @@ async function runMigrations() {
   } catch (err: any) {
     if (err.code === "ENOTFOUND") {
       console.error(
-        `\n❌ Error: No se puede resolver el host '${extractHost(DATABASE_URL)}'.\n` +
+        `\n❌ Error: No se puede resolver el host '${extractHost(DATABASE_URL!)}'.\n` +
           "   Posibles causas:\n" +
           "   1. El hostname en .env.local está mal escrito.\n" +
           "   2. El acceso público aún no se propagó por DNS (espera 2-5 min).\n" +
@@ -83,7 +83,7 @@ async function runMigrations() {
       );
     } else if (err.code === "ECONNREFUSED") {
       console.error(
-        `\n❌ Error: Conexión rechazada a '${extractHost(DATABASE_URL)}'.\n` +
+        `\n❌ Error: Conexión rechazada a '${extractHost(DATABASE_URL!)}'.\n` +
           "   Posibles causas:\n" +
           "   1. Puerto incorrecto.\n" +
           "   2. Acceso público deshabilitado.\n" +
