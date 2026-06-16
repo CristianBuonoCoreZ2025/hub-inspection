@@ -1,11 +1,28 @@
-import { AppSidebar } from "@/components/layout/app-sidebar"
-import { Header } from "@/components/layout/header"
+import { redirect } from "next/navigation";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { Header } from "@/components/layout/header";
+import { getNhostServerClient } from "@/lib/nhost/server";
+import { getUserProfile } from "@/lib/db";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
+  try {
+    const nhost = await getNhostServerClient();
+    const session = nhost.getUserSession();
+
+    if (session?.user) {
+      const profile = await getUserProfile(session.user.id);
+      if (!profile?.company_id) {
+        redirect("/onboarding");
+      }
+    }
+  } catch {
+    // Si no hay sesión, el middleware ya redirige a /login
+  }
+
   return (
     <div className="flex h-screen bg-background">
       <AppSidebar />
@@ -16,5 +33,5 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
-  )
+  );
 }
