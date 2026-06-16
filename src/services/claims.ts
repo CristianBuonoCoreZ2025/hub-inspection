@@ -22,9 +22,12 @@ const CLAIM_FIELDS = `
 `;
 
 export async function getClaims(companyId?: string) {
+  const where = companyId
+    ? `{ company_id: { _eq: "${companyId}" } }`
+    : `{}`;
   const query = `
-    query GetClaims($companyId: uuid) {
-      claims(where: { company_id: { _eq: $companyId } }, order_by: { created_at: desc }) {
+    query GetClaims {
+      claims(where: ${where}, order_by: { created_at: desc }) {
         ${CLAIM_FIELDS}
         assigned_adjuster {
           full_name
@@ -34,8 +37,7 @@ export async function getClaims(companyId?: string) {
   `;
 
   const data = await graphqlRequest<{ claims: (Claim & { assigned_adjuster?: { full_name: string | null } })[] }>(
-    query,
-    { companyId: companyId || null }
+    query
   );
   return data.claims;
 }

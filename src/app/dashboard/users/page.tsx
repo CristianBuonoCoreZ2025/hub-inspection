@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUsers, inviteUser, updateUser, deactivateUser } from "@/services/users";
+import { getCompanies } from "@/services/companies";
 import { inviteUserSchema, type InviteUserInput } from "@/lib/validations";
+import type { Company } from "@/types";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -30,7 +32,8 @@ const roleLabels: Record<UserRole, string> = {
   admin: "Administrador",
   supervisor: "Supervisor",
   adjuster: "Liquidador",
-  client: "Cliente",
+  inspector: "Inspector",
+  client: "Empresa",
 };
 
 const roleColors: Record<UserRole, string> = {
@@ -38,6 +41,7 @@ const roleColors: Record<UserRole, string> = {
   admin: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
   supervisor: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
   adjuster: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+  inspector: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
   client: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
 };
 
@@ -47,14 +51,21 @@ export default function UsersPage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const form = useForm<InviteUserInput>({
+    resolver: standardSchemaResolver(inviteUserSchema),
+    defaultValues: { email: "", fullName: "", role: "adjuster", companyId: "" },
+  });
+
+  const selectedRole = form.watch("role");
+
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: () => getUsers(),
   });
 
-  const form = useForm<InviteUserInput>({
-    resolver: standardSchemaResolver(inviteUserSchema),
-    defaultValues: { email: "", fullName: "", role: "adjuster" },
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: () => getCompanies(),
   });
 
   const inviteMutation = useMutation({
@@ -92,8 +103,8 @@ export default function UsersPage() {
     if (editingId) {
       updateMutation.mutate({ id: editingId, role: values.role });
     } else {
-      // TODO: usar company_id real
-      inviteMutation.mutate({ ...values, company_id: "" });
+      const company_id = values.role === "client" ? values.companyId || "" : "";
+      inviteMutation.mutate({ ...values, company_id });
     }
   };
 
@@ -151,22 +162,45 @@ export default function UsersPage() {
               <div className="space-y-2">
                 <Label>Rol</Label>
                 <Select
-                  onValueChange={(v) => form.setValue("role", v as "admin" | "supervisor" | "adjuster")}
+                  onValueChange={(v) => form.setValue("role", v as "admin" | "supervisor" | "adjuster" | "inspector" | "client")}
                   defaultValue={form.getValues("role")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona un rol" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="supervisor">Supervisor</SelectItem>
-                    <SelectItem value="adjuster">Liquidador</SelectItem>
+                    <SelectItem value="admin">Administrador (Interno)</SelectItem>
+                    <SelectItem value="supervisor">Supervisor (Interno)</SelectItem>
+                    <SelectItem value="adjuster">Liquidador (Interno)</SelectItem>
+                    <SelectItem value="inspector">Inspector</SelectItem>
+                    <SelectItem value="client">Empresa (Cliente)</SelectItem>
                   </SelectContent>
                 </Select>
                 {form.formState.errors.role && (
                   <p className="text-xs text-red-500">{form.formState.errors.role.message}</p>
                 )}
               </div>
+              {selectedRole === "client" && (
+                <div className="space-y-2">
+                  <Label>Empresa asignada</Label>
+                  <Select
+                    onValueChange={(v) => form.setValue("companyId", v ?? "")}
+                    defaultValue={form.getValues("companyId")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies?.map((c: Company) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.companyId && (
+                    <p className="text-xs text-red-500">Debe seleccionar una empresa para el cliente</p>
+                  )}
+                </div>
+              )}
               <DialogFooter>
                 <DialogClose>
                   <Button type="button" className="btn-cancel btn-footer">Cancelar</Button>

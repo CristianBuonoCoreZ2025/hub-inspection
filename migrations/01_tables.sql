@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   email TEXT,
   phone TEXT,
   avatar_url TEXT,
-  role TEXT NOT NULL DEFAULT 'adjuster' CHECK (role IN ('super_admin','admin','supervisor','adjuster','client')),
+  role TEXT NOT NULL DEFAULT 'adjuster' CHECK (role IN ('super_admin','admin','supervisor','adjuster','inspector','client')),
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

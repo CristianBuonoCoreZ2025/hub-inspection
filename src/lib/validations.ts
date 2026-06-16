@@ -53,6 +53,7 @@ export const claimSchema = z.object({
   claimDate: z.string().min(1, "Fecha del siniestro requerida"),
   claimType: z.string().min(1, "Tipo de siniestro requerido"),
   assignedAdjusterId: z.string().optional(),
+  companyId: z.string().min(1, "Empresa requerida"),
   notes: z.string().optional(),
 });
 
@@ -72,7 +73,8 @@ export type CompanyInput = z.infer<typeof companySchema>;
 export const inviteUserSchema = z.object({
   email: z.string().email("Correo inválido"),
   fullName: z.string().min(1, "Nombre requerido"),
-  role: z.enum(["admin", "supervisor", "adjuster"]),
+  role: z.enum(["admin", "supervisor", "adjuster", "inspector", "client"]),
+  companyId: z.string().optional(),
 });
 
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;

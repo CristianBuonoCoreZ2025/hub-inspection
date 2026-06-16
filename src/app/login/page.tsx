@@ -121,12 +121,9 @@ export default function LoginPage() {
               >
                 ¿Olvidaste tu contraseña?
               </Link>
-              <Link
-                href="/register"
-                className="hover:text-foreground underline-offset-4 hover:underline transition-colors"
-              >
-                ¿No tienes cuenta? Regístrate
-              </Link>
+              <span className="text-muted-foreground">
+                Acceso solo por invitación. Contacta a tu administrador.
+              </span>
             </div>
           </div>
         </form>

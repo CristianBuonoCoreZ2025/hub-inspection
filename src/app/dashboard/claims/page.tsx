@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaims, createClaim, updateClaim, deleteClaim } from "@/services/claims";
+import { getCompanies } from "@/services/companies";
 import { claimSchema, type ClaimInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
@@ -28,7 +29,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import type { ClaimStatus } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { ClaimStatus, Company } from "@/types";
 
 const statusLabels: Record<ClaimStatus, string> = {
   created: "Creado",
@@ -74,8 +76,14 @@ export default function ClaimsPage() {
       city: "",
       claimDate: "",
       claimType: "",
+      companyId: "",
       notes: "",
     },
+  });
+
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: () => getCompanies(),
   });
 
   const createMutation = useMutation({
@@ -115,8 +123,7 @@ export default function ClaimsPage() {
     if (editingId) {
       updateMutation.mutate({ id: editingId, data: values });
     } else {
-      // TODO: usar company_id real del perfil de usuario
-      createMutation.mutate({ ...values, company_id: "" });
+      createMutation.mutate({ ...values, company_id: values.companyId });
     }
   };
 
@@ -226,6 +233,26 @@ export default function ClaimsPage() {
                 )}
               </div>
               <div className="space-y-2">
+                <Label>Empresa</Label>
+                <Select
+                  onValueChange={(v) => form.setValue("companyId", v ?? "")}
+                  defaultValue={form.getValues("companyId")}
+                  disabled={editingId !== null}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies?.map((c: Company) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.companyId && (
+                  <p className="text-xs text-red-500">{form.formState.errors.companyId.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
                 <Label>Notas</Label>
                 <Input {...form.register("notes")} />
               </div>
@@ -249,6 +276,7 @@ export default function ClaimsPage() {
               <tr>
                 <th>Número</th>
                 <th>Asegurado</th>
+                <th>Empresa</th>
                 <th>Dirección</th>
                 <th>Fecha</th>
                 <th>Estado</th>
@@ -258,13 +286,13 @@ export default function ClaimsPage() {
             <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="text-center text-muted-foreground py-4">
+                    <td colSpan={7} className="text-center text-muted-foreground py-4">
                       Cargando...
                     </td>
                   </tr>
                 ) : filteredClaims?.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center text-muted-foreground py-4">
+                    <td colSpan={7} className="text-center text-muted-foreground py-4">
                       No se encontraron siniestros.
                     </td>
                   </tr>
@@ -278,6 +306,7 @@ export default function ClaimsPage() {
                         </div>
                       </td>
                       <td>{claim.insured_name}</td>
+                      <td>{companies?.find((c: Company) => c.id === claim.company_id)?.name || "—"}</td>
                       <td>{claim.address}, {claim.city}</td>
                       <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
                       <td>
@@ -304,6 +333,7 @@ export default function ClaimsPage() {
                                 city: claim.city,
                                 claimDate: claim.claim_date,
                                 claimType: claim.claim_type,
+                                companyId: claim.company_id,
                                 notes: claim.notes || "",
                               });
                               setOpen(true);

@@ -3,6 +3,7 @@ export type UserRole =
   | "admin"
   | "supervisor"
   | "adjuster"
+  | "inspector"
   | "client";
 
 export type { ClaimInput, CompanyInput, InviteUserInput } from "@/lib/validations";
