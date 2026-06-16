@@ -70,8 +70,9 @@ async function runMigrations() {
     console.log(
       "   Ve a Hasura Console → Data → 'Track All' para exponer las tablas en GraphQL."
     );
-  } catch (err: any) {
-    if (err.code === "ENOTFOUND") {
+  } catch (err: unknown) {
+    const error = err as { code?: string; message?: string };
+    if (error.code === "ENOTFOUND") {
       console.error(
         `\n❌ Error: No se puede resolver el host '${extractHost(DATABASE_URL!)}'.\n` +
           "   Posibles causas:\n" +
@@ -81,7 +82,7 @@ async function runMigrations() {
           "   4. El acceso público no está habilitado en Nhost Console.\n\n" +
           "   Solución: Copia exactamente la Connection String de Nhost Console → Settings → Database."
       );
-    } else if (err.code === "ECONNREFUSED") {
+    } else if (error.code === "ECONNREFUSED") {
       console.error(
         `\n❌ Error: Conexión rechazada a '${extractHost(DATABASE_URL!)}'.\n` +
           "   Posibles causas:\n" +
@@ -89,13 +90,13 @@ async function runMigrations() {
           "   2. Acceso público deshabilitado.\n" +
           "   3. Contraseña incorrecta."
       );
-    } else if (err.code === "28P01") {
+    } else if (error.code === "28P01") {
       console.error(
         `\n❌ Error: Autenticación fallida.\n` +
           "   Verifica que el usuario y la contraseña sean correctos."
       );
     } else {
-      console.error("\n❌ Error ejecutando migraciones:\n", err.message || err);
+      console.error("\n❌ Error ejecutando migraciones:\n", error.message || err);
     }
     process.exit(1);
   } finally {

@@ -58,27 +58,27 @@ export default function RegisterPage() {
         setNeedsVerification(true);
         toast.info("Revisa tu correo para confirmar la cuenta");
       }
-    } catch (err: any) {
-      // Log completo para debug
-      logger.error("Signup failed", err, {
+    } catch (err: unknown) {
+      const error = err as { body?: { message?: string; error?: string }; status?: number; code?: string; message?: string };
+      logger.error("Signup failed", err instanceof Error ? err : new Error(String(err)), {
         component: "RegisterPage",
         action: "signUpEmailPassword",
         metadata: {
           email: data.email,
-          errorBody: err.body,
-          errorStatus: err.status,
-          errorCode: err.code,
+          errorBody: error.body,
+          errorStatus: error.status,
+          errorCode: error.code,
         },
       });
 
       let message = "Ocurrió un error inesperado";
 
-      if (err.body?.message) {
-        message = err.body.message;
-      } else if (err.body?.error) {
-        message = err.body.error;
-      } else if (err.message) {
-        message = err.message;
+      if (error.body?.message) {
+        message = error.body.message;
+      } else if (error.body?.error) {
+        message = error.body.error;
+      } else if (error.message) {
+        message = error.message;
       }
 
       // Mapear errores comunes de Nhost Auth

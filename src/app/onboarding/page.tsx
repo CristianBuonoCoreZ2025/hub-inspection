@@ -69,8 +69,9 @@ export default function OnboardingPage() {
       toast.success("Empresa creada correctamente");
       router.push("/dashboard");
       router.refresh();
-    } catch (err: any) {
-      logger.error("Onboarding failed", err, {
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      logger.error("Onboarding failed", err instanceof Error ? err : new Error(String(err)), {
         component: "OnboardingPage",
         action: "createCompany",
         metadata: {
@@ -78,7 +79,7 @@ export default function OnboardingPage() {
           userId: session?.user?.id,
         },
       });
-      toast.error(err.message || "Ocurrió un error inesperado");
+      toast.error(error.message || "Ocurrió un error inesperado");
     } finally {
       setIsLoading(false);
     }

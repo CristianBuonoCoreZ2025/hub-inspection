@@ -48,20 +48,21 @@ export async function POST(request: NextRequest) {
       companyId,
       message: "Empresa creada y perfil actualizado",
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     await client.end();
-    logger.error("API onboarding failed", err, {
+    const error = err as { code?: string; detail?: string; message?: string };
+    logger.error("API onboarding failed", err instanceof Error ? err : new Error(String(err)), {
       component: "onboarding API",
       action: "POST /api/onboarding",
       metadata: {
         companyName,
         userId,
-        pgErrorCode: err.code,
-        pgErrorDetail: err.detail,
+        pgErrorCode: error.code,
+        pgErrorDetail: error.detail,
       },
     });
     return NextResponse.json(
-      { error: err.message || "Error al crear empresa" },
+      { error: error.message || "Error al crear empresa" },
       { status: 500 }
     );
   }

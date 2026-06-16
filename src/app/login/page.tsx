@@ -57,17 +57,18 @@ export default function LoginPage() {
       } else {
         toast.error("Error al iniciar sesión");
       }
-    } catch (err: any) {
-      logger.error("Login failed", err, {
+    } catch (err: unknown) {
+      const error = err as { body?: { message?: string }; status?: number; message?: string };
+      logger.error("Login failed", err instanceof Error ? err : new Error(String(err)), {
         component: "LoginPage",
         action: "signInEmailPassword",
         metadata: {
           email: data.email,
-          errorBody: err.body,
-          errorStatus: err.status,
+          errorBody: error.body,
+          errorStatus: error.status,
         },
       });
-      toast.error((err as Error).message || "Ocurrió un error inesperado");
+      toast.error(error.message || "Ocurrió un error inesperado");
     } finally {
       setIsLoading(false);
     }

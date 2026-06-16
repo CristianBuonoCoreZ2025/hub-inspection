@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
@@ -21,18 +21,15 @@ import { Button } from "@/components/ui/button";
 
 export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isReady, setIsReady] = useState(false);
   const router = useRouter();
   const nhost = getNhostClient();
-
-  useEffect(() => {
+  const [isReady] = useState(() => {
     const session = nhost.getUserSession();
-    if (session) {
-      setIsReady(true);
-    } else {
+    if (!session) {
       toast.error("El enlace es inválido o ha expirado");
     }
-  }, [nhost]);
+    return !!session;
+  });
 
   const {
     register,
