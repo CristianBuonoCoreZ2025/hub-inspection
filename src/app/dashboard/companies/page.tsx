@@ -110,7 +110,6 @@ export default function CompaniesPage() {
 
   return (
     <div className="app-page">
-      {/* Header con icono y descripción */}
       <header className="app-page-header">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -141,7 +140,6 @@ export default function CompaniesPage() {
             </Button>
           </DialogTrigger>
 
-          {/* MODAL Empresas */}
           <DialogContent className="modal-md">
             <div className="modal-header">
               <DialogTitle className="text-lg font-semibold">
@@ -150,24 +148,22 @@ export default function CompaniesPage() {
             </div>
 
             <div className="modal-body">
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {/* Logo */}
                 <div>
-                  <Label className="app-field-label">Logo de la empresa</Label>
+                  <Label className="app-field-label">Logo</Label>
                   <div className="flex items-center gap-4">
-                    <div className="relative">
-                      {form.watch("logoUrl") ? (
-                        <img
-                          src={form.watch("logoUrl")}
-                          alt="Logo"
-                          className="h-16 w-16 rounded-xl object-cover border border-border shadow-sm"
-                        />
-                      ) : (
-                        <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-muted shadow-sm">
-                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
+                    {form.watch("logoUrl") ? (
+                      <img
+                        src={form.watch("logoUrl")}
+                        alt="Logo"
+                        className="h-16 w-16 rounded-xl object-cover border border-border shadow-sm"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-muted shadow-sm">
+                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <input
                         id="logo-upload"
@@ -191,7 +187,7 @@ export default function CompaniesPage() {
                         }}
                       />
                       <label htmlFor="logo-upload" className="cursor-pointer">
-                        <span className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm transition-colors hover:bg-muted disabled:opacity-50">
+                        <span className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm transition-colors hover:bg-muted">
                           <Upload className="mr-1.5 h-3.5 w-3.5" />
                           {logoUploading ? "Subiendo..." : "Subir logo"}
                         </span>
@@ -213,10 +209,10 @@ export default function CompaniesPage() {
                 </div>
 
                 {/* Nombre | País */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-5">
                   <div>
-                    <Label className="app-field-label">Nombre de la empresa <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("name")} placeholder="Ej: Mapfre Seguros" className="app-input" />
+                    <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("name")} placeholder="Mapfre Seguros" className="app-input" />
                     {form.formState.errors.name && (
                       <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.name.message}</p>
                     )}
@@ -227,10 +223,12 @@ export default function CompaniesPage() {
                       name="countryId"
                       control={form.control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || undefined}>
                           <SelectTrigger className="app-input h-11"><SelectValue placeholder="Selecciona un país" /></SelectTrigger>
                           <SelectContent>
-                            {countries?.map((c: Country) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                            {countries?.map((c: Country) => (
+                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       )}
@@ -241,17 +239,17 @@ export default function CompaniesPage() {
                   </div>
                 </div>
 
-                {/* RUT | Email */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {/* ID Tributario | Email */}
+                <div className="grid grid-cols-2 gap-5">
                   <div>
-                    <Label className="app-field-label">{isChile ? "RUT" : "ID Tributario"}</Label>
+                    <Label className="app-field-label">{isChile ? "RUT" : "ID tributario"}</Label>
                     <Input {...form.register("rut")} placeholder={isChile ? "12.345.678-9" : "Ej: 123456789"} className="app-input" />
                     {form.formState.errors.rut && (
                       <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.rut.message}</p>
                     )}
                   </div>
                   <div>
-                    <Label className="app-field-label">Email de contacto</Label>
+                    <Label className="app-field-label">Email</Label>
                     <Input {...form.register("email")} type="email" placeholder="contacto@empresa.cl" className="app-input" />
                     {form.formState.errors.email && (
                       <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.email.message}</p>
@@ -266,7 +264,7 @@ export default function CompaniesPage() {
                 </div>
 
                 {/* Teléfono */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-5">
                   <div>
                     <Label className="app-field-label">Teléfono</Label>
                     <Input {...form.register("phone")} placeholder={selectedCountry?.phone_prefix ? `${selectedCountry.phone_prefix} 912345678` : "+56 912345678"} className="app-input" />
@@ -277,17 +275,21 @@ export default function CompaniesPage() {
 
             <div className="modal-footer">
               <DialogClose>
-                <Button type="button" variant="outline" className="btn-cancel btn-footer">Cancelar</Button>
+                <Button type="button" variant="outline" className="h-10 px-5 text-sm">Cancelar</Button>
               </DialogClose>
-              <Button type="button" className="btn-save btn-footer" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
-                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Empresa"}
+              <Button
+                type="button"
+                className="h-10 px-5 text-sm btn-save"
+                disabled={createMutation.isPending || updateMutation.isPending}
+                onClick={form.handleSubmit(onSubmit)}
+              >
+                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear Empresa"}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Tabla */}
       <div className="app-panel">
         <div className="app-data-table-wrap">
           <table className="app-data-table">

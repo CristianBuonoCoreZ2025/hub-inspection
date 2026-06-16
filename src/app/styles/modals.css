@@ -18,7 +18,7 @@
   }
 
   .modal-md {
-    @apply flex max-h-[90vh] w-[min(96vw,640px)] flex-col gap-0
+    @apply flex max-h-[90vh] w-[min(96vw,720px)] flex-col gap-0
            overflow-hidden rounded-2xl border-0 bg-popover p-0
            shadow-2xl shadow-black/20;
   }
