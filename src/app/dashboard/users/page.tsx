@@ -21,17 +21,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { UserRole } from "@/types";
 
@@ -112,17 +102,30 @@ export default function UsersPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Usuarios</h1>
+    <div className="app-page">
+      <header className="app-page-header">
+        <h1 className="app-page-title">Usuarios</h1>
+        <p className="app-page-lead">Gestión de usuarios y permisos del sistema.</p>
+      </header>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar usuario..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-full max-w-sm"
+          />
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger>
-            <Button onClick={() => { setEditingId(null); form.reset(); }}>
+            <Button onClick={() => { setEditingId(null); form.reset(); }} className="btn-create btn-sm">
               <Plus className="mr-2 h-4 w-4" />
               Invitar Usuario
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="modal-lg">
             <DialogHeader>
               <DialogTitle>{editingId ? "Editar Usuario" : "Invitar Usuario"}</DialogTitle>
             </DialogHeader>
@@ -166,9 +169,9 @@ export default function UsersPage() {
               </div>
               <DialogFooter>
                 <DialogClose>
-                  <Button type="button" variant="outline">Cancelar</Button>
+                  <Button type="button" className="btn-cancel btn-footer">Cancelar</Button>
                 </DialogClose>
-                <Button type="submit" disabled={inviteMutation.isPending || updateMutation.isPending}>
+                <Button type="submit" className="btn-save btn-footer" disabled={inviteMutation.isPending || updateMutation.isPending}>
                   {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Enviar Invitación"}
                 </Button>
               </DialogFooter>
@@ -177,62 +180,47 @@ export default function UsersPage() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Usuarios del sistema
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 pb-4">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar usuario..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 w-full max-w-sm"
-            />
-          </div>
-          <ScrollArea className="h-[calc(100vh-20rem)]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+      <div className="app-panel">
+        <div className="app-data-table-wrap">
+          <table className="app-data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th className="w-[80px]"></th>
+              </tr>
+            </thead>
+            <tbody>
                 {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <tr>
+                    <td colSpan={5} className="text-center text-muted-foreground py-4">
                       Cargando...
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ) : filtered?.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <tr>
+                    <td colSpan={5} className="text-center text-muted-foreground py-4">
                       No se encontraron usuarios.
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ) : (
                   filtered?.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">
+                    <tr key={user.id}>
+                      <td className="font-medium">
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-muted-foreground" />
                           {user.full_name || "Sin nombre"}
                         </div>
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
+                      </td>
+                      <td>{user.email}</td>
+                      <td>
                         <Badge className={roleColors[user.role]}>
                           {roleLabels[user.role]}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td>
                         {user.is_active ? (
                           <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
                             <UserCheck className="h-3 w-3" /> Activo
@@ -242,13 +230,13 @@ export default function UsersPage() {
                             <UserX className="h-3 w-3" /> Inactivo
                           </span>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="btn-neutral btn-icon"
                             onClick={() => {
                               setEditingId(user.id);
                               form.reset({
@@ -265,7 +253,7 @@ export default function UsersPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-destructive"
+                              className="btn-danger btn-icon"
                               onClick={() => {
                                 if (confirm("¿Desactivar este usuario?")) {
                                   deactivateMutation.mutate(user.id);
@@ -276,15 +264,14 @@ export default function UsersPage() {
                             </Button>
                           )}
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))
                 )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-    </div>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
   );
 }

@@ -348,3 +348,24 @@ Nunca usar colores hardcodeados (bg-blue-500). Siempre usar clases semánticas (
 Todos los modales DEBEN usar modal-lg (900px).
 Todas las tarjetas DEBEN usar glass-panel o app-panel.
 ```
+
+### Skins de Escritorio
+```
+5 pieles disponibles via html[data-ui-style]:
+- nordic-air     → DM Sans + Sora, radius 1rem, rejilla holgada
+- pastel-dream   → Quicksand + Manrope, radius 1.45rem, modal etéreo
+- bubble-play    → Nunito + Fredoka, radius 1.85rem, modal grueso
+- kinetic-pop    → Space Grotesk + Syne, radius 0.45rem, compacto
+- neo-playful    → Bricolage + Unbounded, radius 1.15rem, display
+
+Selección en sidebar: UiStyleDevSelect recarga la página al cambiar.
+```
+
+### Log de Diagnóstico
+```
+- Panel flotante global activable desde /dashboard/configuracion
+- Intercepta todos los fetch cuando está activo
+- Sesiones por ruta con métricas (eventos, errores, lentos, duplicados)
+- Exporta a JSON: diagnostic-log__ruta__fecha.json
+- No exponer secrets ni datos sensibles (sanitizeObject)
+```

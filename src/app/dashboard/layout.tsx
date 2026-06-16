@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Header } from "@/components/layout/header";
 import { getNhostServerClient } from "@/lib/nhost/server";
 import { getUserProfile } from "@/lib/db";
+import { DashboardClientWrapper } from "@/components/dashboard-client-wrapper";
 
 export default async function DashboardLayout({
   children,
@@ -29,7 +30,7 @@ export default async function DashboardLayout({
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {children}
+          <DashboardClientWrapper>{children}</DashboardClientWrapper>
         </main>
       </div>
     </div>

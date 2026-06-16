@@ -7,14 +7,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import { getNhostClient } from "@/lib/nhost/client";
 import { forgotPasswordSchema, ForgotPasswordInput } from "@/lib/validations";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -53,38 +46,37 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-muted/50 to-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-heading">Recuperar Contraseña</CardTitle>
-          <CardDescription>
+    <div className="auth-shell premium-bg-base">
+      <div className="auth-card">
+        <div className="text-center">
+          <p className="auth-brand">Hub Inspections</p>
+          <h1 className="auth-title">Recuperar Contraseña</h1>
+          <p className="auth-subtitle">
             Te enviaremos un enlace para restablecer tu acceso
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo electrónico</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                {...register("email")}
-                aria-invalid={errors.email ? "true" : "false"}
-                disabled={isSent}
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
-            </div>
-            {isSent && (
-              <p className="text-sm text-emerald-600">
-                Si el correo existe, recibirás instrucciones para restablecer tu contraseña.
-              </p>
+          </p>
+        </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="tu@email.com"
+              {...register("email")}
+              aria-invalid={errors.email ? "true" : "false"}
+              disabled={isSent}
+            />
+            {errors.email && (
+              <p className="text-sm text-destructive">{errors.email.message}</p>
             )}
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading || isSent}>
+          </div>
+          {isSent && (
+            <p className="text-sm text-emerald-600">
+              Si el correo existe, recibirás instrucciones para restablecer tu contraseña.
+            </p>
+          )}
+          <div className="flex flex-col gap-4 pt-2">
+            <Button type="submit" className="w-full btn-run btn-lg-block" disabled={isLoading || isSent}>
               {isLoading ? "Enviando..." : "Enviar enlace de recuperación"}
             </Button>
             <Link
@@ -93,9 +85,9 @@ export default function ForgotPasswordPage() {
             >
               Volver al login
             </Link>
-          </CardFooter>
+          </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }

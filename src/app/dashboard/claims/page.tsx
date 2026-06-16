@@ -27,17 +27,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ClaimStatus } from "@/types";
 
 const statusLabels: Record<ClaimStatus, string> = {
@@ -138,17 +128,30 @@ export default function ClaimsPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Siniestros</h1>
+    <div className="app-page">
+      <header className="app-page-header">
+        <h1 className="app-page-title">Siniestros</h1>
+        <p className="app-page-lead">Gestión de siniestros y casos de inspección.</p>
+      </header>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por número, nombre, dirección..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-full max-w-sm"
+          />
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger>
-            <Button onClick={() => { setEditingId(null); form.reset(); }}>
+            <Button onClick={() => { setEditingId(null); form.reset(); }} className="btn-create btn-sm">
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Siniestro
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="modal-lg">
             <DialogHeader>
               <DialogTitle>
                 {editingId ? "Editar Siniestro" : "Nuevo Siniestro"}
@@ -228,9 +231,9 @@ export default function ClaimsPage() {
               </div>
               <DialogFooter>
                 <DialogClose>
-                  <Button type="button" variant="outline">Cancelar</Button>
+                  <Button type="button" className="btn-cancel btn-footer">Cancelar</Button>
                 </DialogClose>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                <Button type="submit" className="btn-save btn-footer" disabled={createMutation.isPending || updateMutation.isPending}>
                   {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Siniestro"}
                 </Button>
               </DialogFooter>
@@ -239,70 +242,55 @@ export default function ClaimsPage() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Lista de siniestros registrados
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 pb-4">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por número, nombre, dirección..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 w-full max-w-sm"
-            />
-          </div>
-          <ScrollArea className="h-[calc(100vh-20rem)]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Número</TableHead>
-                  <TableHead>Asegurado</TableHead>
-                  <TableHead>Dirección</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+      <div className="app-panel">
+        <div className="app-data-table-wrap">
+          <table className="app-data-table">
+            <thead>
+              <tr>
+                <th>Número</th>
+                <th>Asegurado</th>
+                <th>Dirección</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th className="w-[80px]"></th>
+              </tr>
+            </thead>
+            <tbody>
                 {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <tr>
+                    <td colSpan={6} className="text-center text-muted-foreground py-4">
                       Cargando...
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ) : filteredClaims?.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <tr>
+                    <td colSpan={6} className="text-center text-muted-foreground py-4">
                       No se encontraron siniestros.
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ) : (
                   filteredClaims?.map((claim) => (
-                    <TableRow key={claim.id}>
-                      <TableCell className="font-medium">
+                    <tr key={claim.id}>
+                      <td className="font-medium">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />
                           {claim.claim_number}
                         </div>
-                      </TableCell>
-                      <TableCell>{claim.insured_name}</TableCell>
-                      <TableCell>{claim.address}, {claim.city}</TableCell>
-                      <TableCell>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</TableCell>
-                      <TableCell>
+                      </td>
+                      <td>{claim.insured_name}</td>
+                      <td>{claim.address}, {claim.city}</td>
+                      <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
+                      <td>
                         <Badge className={statusColors[claim.status]}>
                           {statusLabels[claim.status]}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="btn-neutral btn-icon"
                             onClick={() => {
                               setEditingId(claim.id);
                               form.reset({
@@ -326,7 +314,7 @@ export default function ClaimsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive"
+                            className="btn-danger btn-icon"
                             onClick={() => {
                               if (confirm("¿Eliminar este siniestro?")) {
                                 deleteMutation.mutate(claim.id);
@@ -336,15 +324,14 @@ export default function ClaimsPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))
                 )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-    </div>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
   );
 }

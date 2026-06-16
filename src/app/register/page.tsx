@@ -9,14 +9,7 @@ import { toast } from "sonner";
 import { getNhostClient } from "@/lib/nhost/client";
 import { registerSchema, RegisterInput } from "@/lib/validations";
 import { logger } from "@/lib/logger";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -98,43 +91,40 @@ export default function RegisterPage() {
 
   if (needsVerification) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-muted/50 to-background px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-heading">Verifica tu correo</CardTitle>
-            <CardDescription>
-              Te enviamos un enlace de confirmación. Revisa tu bandeja de entrada (y spam).
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-sm text-muted-foreground">
-              Una vez confirmes, podrás iniciar sesión.
-            </p>
-          </CardContent>
-          <CardFooter className="flex justify-center">
+      <div className="auth-shell premium-bg-base">
+        <div className="auth-card text-center">
+          <p className="auth-brand">Hub Inspections</p>
+          <h1 className="auth-title">Verifica tu correo</h1>
+          <p className="auth-subtitle">
+            Te enviamos un enlace de confirmación. Revisa tu bandeja de entrada (y spam).
+          </p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Una vez confirmes, podrás iniciar sesión.
+          </p>
+          <div className="mt-4">
             <Link
               href="/login"
               className="text-sm font-medium text-primary hover:underline"
             >
               Ir al login
             </Link>
-          </CardFooter>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-muted/50 to-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-heading">Crear Cuenta</CardTitle>
-          <CardDescription>
+    <div className="auth-shell premium-bg-base">
+      <div className="auth-card">
+        <div className="text-center">
+          <p className="auth-brand">Hub Inspections</p>
+          <h1 className="auth-title">Crear Cuenta</h1>
+          <p className="auth-subtitle">
             Completa los datos para comenzar a usar Hub Inspections
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+          </p>
+        </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="fullName">Nombre completo</Label>
               <Input
@@ -198,9 +188,8 @@ export default function RegisterPage() {
                 <p className="text-sm text-destructive">{errors.companyName.message}</p>
               )}
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+          <div className="flex flex-col gap-4 pt-2">
+            <Button type="submit" className="w-full btn-create btn-lg-block" disabled={isLoading}>
               {isLoading ? "Creando cuenta..." : "Crear Cuenta"}
             </Button>
             <Link
@@ -209,9 +198,9 @@ export default function RegisterPage() {
             >
               ¿Ya tienes cuenta? Inicia sesión
             </Link>
-          </CardFooter>
+          </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }

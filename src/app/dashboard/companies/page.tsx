@@ -21,16 +21,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 export default function CompaniesPage() {
   const queryClient = useQueryClient();
@@ -94,17 +85,30 @@ export default function CompaniesPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Empresas</h1>
+    <div className="app-page">
+      <header className="app-page-header">
+        <h1 className="app-page-title">Empresas</h1>
+        <p className="app-page-lead">Gestión de empresas y marcas del sistema.</p>
+      </header>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar empresa..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-full max-w-sm"
+          />
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger>
-            <Button onClick={() => { setEditingId(null); form.reset(); }}>
+            <Button onClick={() => { setEditingId(null); form.reset(); }} className="btn-create btn-sm">
               <Plus className="mr-2 h-4 w-4" />
               Nueva Empresa
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="modal-lg">
             <DialogHeader>
               <DialogTitle>{editingId ? "Editar Empresa" : "Nueva Empresa"}</DialogTitle>
             </DialogHeader>
@@ -129,9 +133,9 @@ export default function CompaniesPage() {
               </div>
               <DialogFooter>
                 <DialogClose>
-                  <Button type="button" variant="outline">Cancelar</Button>
+                  <Button type="button" className="btn-cancel btn-footer">Cancelar</Button>
                 </DialogClose>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                <Button type="submit" className="btn-save btn-footer" disabled={createMutation.isPending || updateMutation.isPending}>
                   {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Empresa"}
                 </Button>
               </DialogFooter>
@@ -140,56 +144,41 @@ export default function CompaniesPage() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Empresas registradas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 pb-4">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar empresa..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 w-full max-w-sm"
-            />
-          </div>
-          <ScrollArea className="h-[calc(100vh-20rem)]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Color</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+      <div className="app-panel">
+        <div className="app-data-table-wrap">
+          <table className="app-data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Slug</th>
+                <th>Color</th>
+                <th className="w-[80px]"></th>
+              </tr>
+            </thead>
+            <tbody>
                 {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <tr>
+                    <td colSpan={4} className="text-center text-muted-foreground py-4">
                       Cargando...
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ) : filtered?.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <tr>
+                    <td colSpan={4} className="text-center text-muted-foreground py-4">
                       No se encontraron empresas.
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ) : (
                   filtered?.map((company) => (
-                    <TableRow key={company.id}>
-                      <TableCell className="font-medium">
+                    <tr key={company.id}>
+                      <td className="font-medium">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-muted-foreground" />
                           {company.name}
                         </div>
-                      </TableCell>
-                      <TableCell>{company.slug}</TableCell>
-                      <TableCell>
+                      </td>
+                      <td>{company.slug}</td>
+                      <td>
                         {company.primary_color ? (
                           <div className="flex items-center gap-2">
                             <span
@@ -201,13 +190,13 @@ export default function CompaniesPage() {
                         ) : (
                           <span className="text-muted-foreground text-sm">—</span>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="btn-neutral btn-icon"
                             onClick={() => {
                               setEditingId(company.id);
                               form.reset({
@@ -223,7 +212,7 @@ export default function CompaniesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive"
+                            className="btn-danger btn-icon"
                             onClick={() => {
                               if (confirm("¿Eliminar esta empresa?")) {
                                 deleteMutation.mutate(company.id);
@@ -233,15 +222,14 @@ export default function CompaniesPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))
                 )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-    </div>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
   );
 }

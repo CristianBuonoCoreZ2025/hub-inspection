@@ -1,10 +1,17 @@
 export default function InspectionsPage() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Inspecciones</h1>
-      <p className="text-muted-foreground">
-        Módulo en desarrollo. Aquí se gestionarán las sesiones de inspección remota con LiveKit.
-      </p>
+    <div className="app-page">
+      <header className="app-page-header">
+        <h1 className="app-page-title">Inspecciones</h1>
+        <p className="app-page-lead">
+          Gestión de sesiones de inspección remota.
+        </p>
+      </header>
+      <section className="app-panel">
+        <p className="text-[13px] text-muted-foreground">
+          Módulo en desarrollo. Próximamente podrás realizar inspecciones remotas con video en tiempo real.
+        </p>
+      </section>
     </div>
   );
 }

@@ -25,6 +25,8 @@ import {
   Avatar,
   AvatarFallback,
 } from "@/components/ui/avatar"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { UiStyleDevSelect } from "@/components/layout/UiStyleDevSelect"
 
 const mainLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -118,6 +120,22 @@ export function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </div>
       </nav>
+
+      <Separator />
+
+      {/* Theme & UI Style */}
+      <div className="px-3 py-2">
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Apariencia
+          </span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1">
+          <ThemeToggle />
+          <span className="text-xs text-muted-foreground">Tema</span>
+        </div>
+        <UiStyleDevSelect />
+      </div>
 
       <Separator />
 

@@ -8,14 +8,7 @@ import { toast } from "sonner";
 import { getNhostClient } from "@/lib/nhost/client";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -86,40 +79,37 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-muted/50 to-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-heading">
-            Configura tu empresa
-          </CardTitle>
-          <CardDescription>
+    <div className="auth-shell premium-bg-base">
+      <div className="auth-card">
+        <div className="text-center">
+          <p className="auth-brand">Hub Inspections</p>
+          <h1 className="auth-title">Configura tu empresa</h1>
+          <p className="auth-subtitle">
             Completa los datos para comenzar a usar Hub Inspections
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Nombre de empresa</Label>
-              <Input
-                id="companyName"
-                placeholder="Aseguradora ABC"
-                {...register("companyName")}
-                aria-invalid={errors.companyName ? "true" : "false"}
-              />
-              {errors.companyName && (
-                <p className="text-sm text-destructive">
-                  {errors.companyName.message}
-                </p>
-              )}
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+          </p>
+        </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="companyName">Nombre de empresa</Label>
+            <Input
+              id="companyName"
+              placeholder="Aseguradora ABC"
+              {...register("companyName")}
+              aria-invalid={errors.companyName ? "true" : "false"}
+            />
+            {errors.companyName && (
+              <p className="text-sm text-destructive">
+                {errors.companyName.message}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col gap-4 pt-2">
+            <Button type="submit" className="w-full btn-create btn-lg-block" disabled={isLoading}>
               {isLoading ? "Creando..." : "Continuar al Dashboard"}
             </Button>
-          </CardFooter>
+          </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }

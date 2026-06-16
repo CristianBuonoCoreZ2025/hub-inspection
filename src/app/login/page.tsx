@@ -9,14 +9,7 @@ import { toast } from "sonner";
 import { getNhostClient } from "@/lib/nhost/client";
 import { loginSchema, LoginInput } from "@/lib/validations";
 import { logger } from "@/lib/logger";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -75,51 +68,50 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-muted/50 to-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-heading">Iniciar Sesión</CardTitle>
-          <CardDescription>
+    <div className="auth-shell premium-bg-base">
+      <div className="auth-card">
+        <div className="text-center">
+          <p className="auth-brand">Hub Inspections</p>
+          <h1 className="auth-title">Iniciar Sesión</h1>
+          <p className="auth-subtitle">
             Ingresa tus credenciales para acceder a tu cuenta
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo electrónico</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                {...register("email")}
-                aria-invalid={errors.email ? "true" : "false"}
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                {...register("password")}
-                aria-invalid={errors.password ? "true" : "false"}
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="remember" {...register("remember")} />
-              <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
-                Recordar sesión
-              </Label>
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+          </p>
+        </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="tu@email.com"
+              {...register("email")}
+              aria-invalid={errors.email ? "true" : "false"}
+            />
+            {errors.email && (
+              <p className="text-sm text-destructive">{errors.email.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Contraseña</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              {...register("password")}
+              aria-invalid={errors.password ? "true" : "false"}
+            />
+            {errors.password && (
+              <p className="text-sm text-destructive">{errors.password.message}</p>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox id="remember" {...register("remember")} />
+            <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+              Recordar sesión
+            </Label>
+          </div>
+          <div className="flex flex-col gap-4 pt-2">
+            <Button type="submit" className="w-full btn-save btn-lg-block" disabled={isLoading}>
               {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
             </Button>
             <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
@@ -136,9 +128,9 @@ export default function LoginPage() {
                 ¿No tienes cuenta? Regístrate
               </Link>
             </div>
-          </CardFooter>
+          </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }
