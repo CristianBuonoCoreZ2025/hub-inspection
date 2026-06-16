@@ -48,13 +48,6 @@ export default function RegisterPage() {
       const response = await nhost.auth.signUpEmailPassword({
         email: data.email,
         password: data.password,
-        options: {
-          displayName: data.fullName,
-          metadata: {
-            full_name: data.fullName,
-            company_name: data.companyName,
-          },
-        },
       });
 
       if (response.body.session) {
