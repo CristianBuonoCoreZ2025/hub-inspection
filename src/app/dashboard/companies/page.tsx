@@ -15,13 +15,10 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-
 
 export default function CompaniesPage() {
   const queryClient = useQueryClient();
@@ -36,7 +33,7 @@ export default function CompaniesPage() {
 
   const form = useForm<CompanyInput>({
     resolver: standardSchemaResolver(companySchema),
-    defaultValues: { name: "", slug: "", primaryColor: "" },
+    defaultValues: { name: "", slug: "", rut: "", address: "", phone: "", email: "", primaryColor: "" },
   });
 
   const createMutation = useMutation({
@@ -81,7 +78,9 @@ export default function CompaniesPage() {
   };
 
   const filtered = companies?.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
+    [c.name, c.slug, c.rut, c.address].filter(Boolean).join(" ")
+      .toLowerCase()
+      .includes(search.toLowerCase())
   );
 
   return (
@@ -108,38 +107,63 @@ export default function CompaniesPage() {
               Nueva Empresa
             </Button>
           </DialogTrigger>
-          <DialogContent className="modal-lg">
-            <DialogHeader>
+          <DialogContent className="modal-md">
+            <div className="modal-header">
               <DialogTitle>{editingId ? "Editar Empresa" : "Nueva Empresa"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nombre</Label>
-                <Input {...form.register("name")} />
-                {form.formState.errors.name && (
-                  <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>
-                )}
+            </div>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nombre</Label>
+                  <Input {...form.register("name")} />
+                  {form.formState.errors.name && (
+                    <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Slug</Label>
+                  <Input {...form.register("slug")} placeholder="mi-empresa" disabled={!!editingId} />
+                  {form.formState.errors.slug && (
+                    <p className="text-xs text-red-500">{form.formState.errors.slug.message}</p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>RUT</Label>
+                  <Input {...form.register("rut")} placeholder="12.345.678-9" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input {...form.register("email")} type="email" placeholder="contacto@empresa.cl" />
+                  {form.formState.errors.email && (
+                    <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>Slug</Label>
-                <Input {...form.register("slug")} placeholder="mi-empresa" />
-                {form.formState.errors.slug && (
-                  <p className="text-xs text-red-500">{form.formState.errors.slug.message}</p>
-                )}
+                <Label>Dirección</Label>
+                <Input {...form.register("address")} placeholder="Av. Principal 123, Santiago" />
               </div>
-              <div className="space-y-2">
-                <Label>Color Primario (hex opcional)</Label>
-                <Input {...form.register("primaryColor")} placeholder="#0f172a" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Teléfono</Label>
+                  <Input {...form.register("phone")} placeholder="+56 9 1234 5678" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Color Primario</Label>
+                  <Input {...form.register("primaryColor")} placeholder="#0f172a" />
+                </div>
               </div>
-              <DialogFooter>
-                <DialogClose>
-                  <Button type="button" className="btn-cancel btn-footer">Cancelar</Button>
-                </DialogClose>
-                <Button type="submit" className="btn-save btn-footer" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Empresa"}
-                </Button>
-              </DialogFooter>
             </form>
+            <div className="modal-footer">
+              <DialogClose>
+                <Button type="button" className="btn-cancel">Cancelar</Button>
+              </DialogClose>
+              <Button type="submit" className="btn-save" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Empresa"}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -150,7 +174,8 @@ export default function CompaniesPage() {
             <thead>
               <tr>
                 <th>Nombre</th>
-                <th>Slug</th>
+                <th>RUT</th>
+                <th>Contacto</th>
                 <th>Color</th>
                 <th className="w-[80px]"></th>
               </tr>
@@ -158,13 +183,13 @@ export default function CompaniesPage() {
             <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={4} className="text-center text-muted-foreground py-4">
+                    <td colSpan={5} className="text-center text-muted-foreground py-4">
                       Cargando...
                     </td>
                   </tr>
                 ) : filtered?.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-center text-muted-foreground py-4">
+                    <td colSpan={5} className="text-center text-muted-foreground py-4">
                       No se encontraron empresas.
                     </td>
                   </tr>
@@ -177,7 +202,14 @@ export default function CompaniesPage() {
                           {company.name}
                         </div>
                       </td>
-                      <td>{company.slug}</td>
+                      <td>{company.rut || "—"}</td>
+                      <td>
+                        <div className="flex flex-col gap-0.5 text-[12px]">
+                          {company.email && <span>{company.email}</span>}
+                          {company.phone && <span className="text-muted-foreground">{company.phone}</span>}
+                          {!company.email && !company.phone && <span className="text-muted-foreground">—</span>}
+                        </div>
+                      </td>
                       <td>
                         {company.primary_color ? (
                           <div className="flex items-center gap-2">
@@ -202,6 +234,10 @@ export default function CompaniesPage() {
                               form.reset({
                                 name: company.name,
                                 slug: company.slug,
+                                rut: company.rut || "",
+                                address: company.address || "",
+                                phone: company.phone || "",
+                                email: company.email || "",
                                 primaryColor: company.primary_color || "",
                               });
                               setOpen(true);

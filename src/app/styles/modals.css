@@ -1,48 +1,62 @@
 /*
- * ESTÁNDAR DE MODALES — hub-stock-ai
+ * ESTÁNDAR DE MODALES — Hub Inspections
  *
- * Un único tamaño canónico: modal-lg (900px).
- * Todos los modales de la app deben usar esta clase en DialogContent.
+ * 3 tamaños canónicos responsivos. Todos los modales DEBEN usar uno de estos.
+ * Nunca usar tamaños arbitrarios (sm:max-w-lg, etc.).
  *
  * Uso:
- *   <DialogContent className="modal-lg">
+ *   <DialogContent className="modal-sm">  → confirmaciones, formularios simples (1-3 campos)
+ *   <DialogContent className="modal-md">  → formularios estándar (4-8 campos)  ← DEFAULT
+ *   <DialogContent className="modal-lg">  → tablas, vistas complejas, dos columnas
  *
- * Para modales con header/body/footer custom (p-0, gap-0):
- *   <DialogContent className="modal-lg modal-no-pad">
+ * Responsive: en móvil ocupan casi todo el viewport; en desktop el máximo definido.
  */
 
 @layer components {
+  /* ── SMALL ── */
+  .modal-sm {
+    @apply flex max-h-[90vh] w-[min(96vw,480px)] flex-col gap-0
+           overflow-hidden rounded-2xl border-0 bg-popover p-0
+           shadow-2xl shadow-black/20;
+  }
+
+  /* ── MEDIUM (default) ── */
+  .modal-md {
+    @apply flex max-h-[90vh] w-[min(96vw,640px)] flex-col gap-0
+           overflow-hidden rounded-2xl border-0 bg-popover p-0
+           shadow-2xl shadow-black/20;
+  }
+
+  /* ── LARGE ── */
   .modal-lg {
     @apply flex max-h-[90vh] w-[min(98vw,900px)] flex-col gap-0
            overflow-hidden rounded-2xl border-0 bg-popover p-0
            shadow-2xl shadow-black/20;
   }
 
+  /* ── Header / Body / Footer (todos los tamaños) ── */
   .modal-header {
-    @apply relative overflow-hidden border-b px-8 pb-5 pt-6;
+    @apply relative shrink-0 border-b px-6 pb-4 pt-5;
   }
 
   .modal-body {
-    @apply flex min-h-0 flex-1 flex-col overflow-y-auto;
-  }
-
-  .modal-body-cols {
-    @apply flex min-h-0 flex-1 overflow-hidden;
-  }
-
-  .modal-col-main {
-    @apply flex flex-1 flex-col gap-5 overflow-y-auto px-8 py-6;
-  }
-
-  .modal-col-aside {
-    @apply w-72 shrink-0 overflow-y-auto border-l bg-muted/20 px-6 py-6;
-  }
-
-  .modal-stats-bar {
-    @apply border-t bg-muted/20 px-8 py-5;
+    @apply flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5;
   }
 
   .modal-footer {
-    @apply flex items-center justify-between border-t bg-muted/10 px-8 py-4;
+    @apply flex shrink-0 items-center justify-end gap-3 border-t bg-muted/10 px-6 py-4;
+  }
+
+  /* ── Override de padding para modales sin pad (tablas, vistas complejas) ── */
+  .modal-no-pad .modal-body {
+    @apply px-0 py-0;
+  }
+
+  .modal-no-pad .modal-header {
+    @apply px-8 pb-5 pt-6;
+  }
+
+  .modal-no-pad .modal-footer {
+    @apply px-8 py-4;
   }
 }

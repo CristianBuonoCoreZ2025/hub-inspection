@@ -22,10 +22,8 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -158,13 +156,13 @@ export default function ClaimsPage() {
               Nuevo Siniestro
             </Button>
           </DialogTrigger>
-          <DialogContent className="modal-lg">
-            <DialogHeader>
+          <DialogContent className="modal-md">
+            <div className="modal-header">
               <DialogTitle>
                 {editingId ? "Editar Siniestro" : "Nuevo Siniestro"}
               </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            </div>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Número Siniestro</Label>
@@ -256,15 +254,15 @@ export default function ClaimsPage() {
                 <Label>Notas</Label>
                 <Input {...form.register("notes")} />
               </div>
-              <DialogFooter>
-                <DialogClose>
-                  <Button type="button" className="btn-cancel btn-footer">Cancelar</Button>
-                </DialogClose>
-                <Button type="submit" className="btn-save btn-footer" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Siniestro"}
-                </Button>
-              </DialogFooter>
             </form>
+            <div className="modal-footer">
+              <DialogClose>
+                <Button type="button" className="btn-cancel">Cancelar</Button>
+              </DialogClose>
+              <Button type="submit" className="btn-save" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Siniestro"}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

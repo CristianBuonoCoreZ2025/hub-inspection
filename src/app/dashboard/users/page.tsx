@@ -17,10 +17,8 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -136,11 +134,11 @@ export default function UsersPage() {
               Invitar Usuario
             </Button>
           </DialogTrigger>
-          <DialogContent className="modal-lg">
-            <DialogHeader>
+          <DialogContent className="modal-sm">
+            <div className="modal-header">
               <DialogTitle>{editingId ? "Editar Usuario" : "Invitar Usuario"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            </div>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body space-y-4">
               {!editingId && (
                 <>
                   <div className="space-y-2">
@@ -201,15 +199,15 @@ export default function UsersPage() {
                   )}
                 </div>
               )}
-              <DialogFooter>
-                <DialogClose>
-                  <Button type="button" className="btn-cancel btn-footer">Cancelar</Button>
-                </DialogClose>
-                <Button type="submit" className="btn-save btn-footer" disabled={inviteMutation.isPending || updateMutation.isPending}>
-                  {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Enviar Invitación"}
-                </Button>
-              </DialogFooter>
             </form>
+            <div className="modal-footer">
+              <DialogClose>
+                <Button type="button" className="btn-cancel">Cancelar</Button>
+              </DialogClose>
+              <Button type="submit" className="btn-save" disabled={inviteMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+                {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Enviar Invitación"}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

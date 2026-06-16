@@ -322,12 +322,17 @@ Todo el diseño visual sigue el sistema de estilos de hub-stock-ai: tokens CSS, 
 .glass-panel      → tarjeta con borde + sombra + fondo elevado
 ```
 
-### Modales
+### Modales (3 tamaños canónicos)
 ```
-.modal-lg         → w-[min(98vw,900px)] rounded-2xl shadow-2xl
-.modal-header     → border-b px-8 pb-5 pt-6
-.modal-body       → flex-1 overflow-y-auto
-.modal-footer     → border-t px-8 py-4
+.modal-sm  → w-[min(96vw,480px)]  → confirmaciones, formularios simples (1-3 campos)
+.modal-md  → w-[min(96vw,640px)]  → formularios estándar (4-8 campos) ← DEFAULT
+.modal-lg  → w-[min(98vw,900px)]  → tablas, vistas complejas, dos columnas
+```
+Estructura interna:
+```
+.modal-header  → border-b px-6 pb-4 pt-5
+.modal-body    → flex-1 overflow-y-auto px-6 py-5
+.modal-footer  → border-t px-6 py-4 (botones a la derecha)
 ```
 
 ### Formularios
@@ -345,7 +350,7 @@ Todo el diseño visual sigue el sistema de estilos de hub-stock-ai: tokens CSS, 
 ### Regla
 ```
 Nunca usar colores hardcodeados (bg-blue-500). Siempre usar clases semánticas (.btn-save, .btn-danger) o tokens CSS (var(--primary)).
-Todos los modales DEBEN usar modal-lg (900px).
+Todos los modales DEBEN usar uno de los 3 tamaños canónicos: modal-sm (480px), modal-md (640px), o modal-lg (900px).
 Todas las tarjetas DEBEN usar glass-panel o app-panel.
 ```
 

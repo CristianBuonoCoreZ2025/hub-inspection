@@ -12,6 +12,10 @@ export interface Company {
   id: string;
   name: string;
   slug: string;
+  rut?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
   logo_url?: string | null;
   primary_color?: string | null;
   settings?: Record<string, unknown> | null;

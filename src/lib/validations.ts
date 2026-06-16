@@ -65,7 +65,11 @@ export const companySchema = z.object({
     .string()
     .min(1, "Slug requerido")
     .regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
-  primaryColor: z.string().optional(),
+  rut: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+  email: z.string().email("Correo inválido").optional().or(z.literal("")),
+  primaryColor: z.string().optional().or(z.literal("")),
 });
 
 export type CompanyInput = z.infer<typeof companySchema>;
