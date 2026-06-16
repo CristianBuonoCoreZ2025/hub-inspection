@@ -240,3 +240,36 @@ El usuario recién registrado no tiene empresa asociada. No puede crear siniestr
 Todo usuario autenticado DEBE tener una empresa asociada antes de acceder al dashboard principal.
 El onboarding es una barrera obligatoria para usuarios sin company_id.
 ```
+
+---
+
+## 9. Sistema de Logging Centralizado
+
+### Problema
+Errores del frontend se pierden en la consola del navegador. No hay trazabilidad de errores en producción.
+
+### Solución Definitiva
+- Crear `src/lib/logger.ts` — logger centralizado con niveles (info, warn, error).
+- Usar `logger.error(message, error, context)` en TODOS los catch blocks del frontend.
+- Crear `src/components/error-boundary.tsx` — captura errores de React y los loguea.
+- Crear API route `POST /api/logs` — recibe logs del frontend en producción.
+- En desarrollo, los logs se imprimen en consola. En producción, se envían al servidor.
+- El logger almacena hasta 500 logs en memoria para debugging.
+
+### Uso obligatorio:
+```ts
+import { logger } from "@/lib/logger";
+
+// En catch blocks del frontend:
+logger.error("Descripción del error", err, {
+  component: "NombreComponente",
+  action: "nombreAccion",
+  metadata: { userId, extraData },
+});
+```
+
+### Regla
+```
+Todo error capturado en el frontend DEBE pasar por logger.error() con contexto (componente, acción, metadata).
+Nunca usar console.error() directamente en producción.
+```
