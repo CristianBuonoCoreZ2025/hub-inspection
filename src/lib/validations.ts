@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validateRut } from "./rut-validator";
 
 export const loginSchema = z.object({
   email: z.string().email("Correo electrónico inválido"),
@@ -59,15 +60,28 @@ export const claimSchema = z.object({
 
 export type ClaimInput = z.infer<typeof claimSchema>;
 
-export const companySchema = z.object({
-  name: z.string().min(1, "Nombre requerido"),
-  slug: z.string().optional(),
-  rut: z.string().optional().or(z.literal("")),
-  address: z.string().optional().or(z.literal("")),
-  phone: z.string().optional().or(z.literal("")),
-  email: z.string().email("Correo inválido").optional().or(z.literal("")),
-  primaryColor: z.string().optional().or(z.literal("")),
-});
+export const companySchema = z
+  .object({
+    name: z.string().min(1, "Nombre requerido"),
+    slug: z.string().optional(),
+    countryId: z.string().min(1, "País requerido"),
+    rut: z.string().optional().or(z.literal("")),
+    address: z.string().optional().or(z.literal("")),
+    phone: z.string().optional().or(z.literal("")),
+    email: z.string().email("Correo inválido").optional().or(z.literal("")),
+    primaryColor: z.string().optional().or(z.literal("")),
+  })
+  .refine(
+    (data) => {
+      // Validar RUT solo si el país es Chile (code CL)
+      if (!data.rut || data.rut.trim() === "") return true;
+      return validateRut(data.rut);
+    },
+    {
+      message: "RUT inválido",
+      path: ["rut"],
+    }
+  );
 
 export type CompanyInput = z.infer<typeof companySchema>;
 

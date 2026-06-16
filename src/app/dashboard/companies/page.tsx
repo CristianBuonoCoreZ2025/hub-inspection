@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompanies, createCompany, updateCompany, deleteCompany } from "@/services/companies";
+import { getCountries } from "@/services/countries";
 import { companySchema, type CompanyInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
@@ -19,6 +20,14 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Country } from "@/types";
 
 function slugify(text: string): string {
   return text
@@ -43,8 +52,17 @@ export default function CompaniesPage() {
 
   const form = useForm<CompanyInput>({
     resolver: standardSchemaResolver(companySchema),
-    defaultValues: { name: "", slug: "", rut: "", address: "", phone: "", email: "" },
+    defaultValues: { name: "", slug: "", countryId: "", rut: "", address: "", phone: "", email: "" },
   });
+
+  const { data: countries } = useQuery({
+    queryKey: ["countries"],
+    queryFn: getCountries,
+  });
+
+  const selectedCountryId = form.watch("countryId");
+  const selectedCountry = countries?.find((c: Country) => c.id === selectedCountryId);
+  const isChile = selectedCountry?.code === "CL";
 
   const createMutation = useMutation({
     mutationFn: createCompany,
@@ -145,28 +163,54 @@ export default function CompaniesPage() {
 
             <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body">
               <div className="space-y-5">
-                {/* Nombre - full width */}
-                <div className="space-y-2">
-                  <Label className="app-field-label">Nombre de la empresa <span className="text-red-500">*</span></Label>
-                  <Input
-                    {...form.register("name")}
-                    placeholder="Ej: Mapfre Seguros"
-                    className="app-input"
-                  />
-                  {form.formState.errors.name && (
-                    <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>
-                  )}
-                </div>
-
-                {/* RUT + Email */}
+                {/* Nombre + País */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="app-field-label">RUT</Label>
+                    <Label className="app-field-label">Nombre de la empresa <span className="text-red-500">*</span></Label>
                     <Input
-                      {...form.register("rut")}
-                      placeholder="12.345.678-9"
+                      {...form.register("name")}
+                      placeholder="Ej: Mapfre Seguros"
                       className="app-input"
                     />
+                    {form.formState.errors.name && (
+                      <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="app-field-label">País <span className="text-red-500">*</span></Label>
+                    <Select
+                      onValueChange={(v) => form.setValue("countryId", v ?? "")}
+                      defaultValue={form.getValues("countryId")}
+                    >
+                      <SelectTrigger className="app-input h-10">
+                        <SelectValue placeholder="Selecciona un país" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries?.map((c: Country) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.countryId && (
+                      <p className="text-xs text-red-500">{form.formState.errors.countryId.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* RUT (validado solo para Chile) + Email */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="app-field-label">
+                      RUT {isChile && <span className="text-amber-500 text-[10px] font-normal">(Chile: con dígito verificador)</span>}
+                    </Label>
+                    <Input
+                      {...form.register("rut")}
+                      placeholder={isChile ? "12.345.678-9" : "Identificador tributario"}
+                      className="app-input"
+                    />
+                    {form.formState.errors.rut && (
+                      <p className="text-xs text-red-500">{form.formState.errors.rut.message}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label className="app-field-label">Email de contacto</Label>
@@ -198,7 +242,7 @@ export default function CompaniesPage() {
                     <Label className="app-field-label">Teléfono</Label>
                     <Input
                       {...form.register("phone")}
-                      placeholder="+56 9 1234 5678"
+                      placeholder={selectedCountry?.phone_prefix ? `${selectedCountry.phone_prefix} 9 1234 5678` : "+56 9 1234 5678"}
                       className="app-input"
                     />
                   </div>
@@ -231,6 +275,7 @@ export default function CompaniesPage() {
             <thead>
               <tr>
                 <th>Empresa</th>
+                <th>País</th>
                 <th>RUT</th>
                 <th>Contacto</th>
                 <th className="w-[80px]"></th>
@@ -239,13 +284,13 @@ export default function CompaniesPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={4} className="text-center text-muted-foreground py-4">
+                  <td colSpan={5} className="text-center text-muted-foreground py-4">
                     Cargando...
                   </td>
                 </tr>
               ) : filtered?.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center text-muted-foreground py-4">
+                  <td colSpan={5} className="text-center text-muted-foreground py-4">
                     No se encontraron empresas.
                   </td>
                 </tr>
@@ -258,6 +303,7 @@ export default function CompaniesPage() {
                         {company.name}
                       </div>
                     </td>
+                    <td>{countries?.find((c: Country) => c.id === company.country_id)?.name || "—"}</td>
                     <td>{company.rut || "—"}</td>
                     <td>
                       <div className="flex flex-col gap-0.5 text-[12px]">
@@ -277,6 +323,7 @@ export default function CompaniesPage() {
                             form.reset({
                               name: company.name,
                               slug: company.slug,
+                              countryId: company.country_id || "",
                               rut: company.rut || "",
                               address: company.address || "",
                               phone: company.phone || "",

@@ -9,6 +9,7 @@ const COMPANY_FIELDS = `
   address
   phone
   email
+  country_id
   logo_url
   primary_color
   settings
@@ -56,6 +57,7 @@ export async function createCompany(input: CompanyInput) {
       address: input.address || null,
       phone: input.phone || null,
       email: input.email || null,
+      country_id: input.countryId || null,
       primary_color: input.primaryColor || null,
     },
   });
@@ -77,6 +79,7 @@ export async function updateCompany(id: string, input: Partial<CompanyInput>) {
   if (input.address !== undefined) set.address = input.address || null;
   if (input.phone !== undefined) set.phone = input.phone || null;
   if (input.email !== undefined) set.email = input.email || null;
+  if (input.countryId !== undefined) set.country_id = input.countryId || null;
   if (input.primaryColor !== undefined) set.primary_color = input.primaryColor || null;
 
   const data = await graphqlRequest<{ update_companies_by_pk: Company }>(mutation, { id, set });

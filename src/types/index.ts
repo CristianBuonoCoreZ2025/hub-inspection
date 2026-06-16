@@ -8,6 +8,14 @@ export type UserRole =
 
 export type { ClaimInput, CompanyInput, InviteUserInput } from "@/lib/validations";
 
+export interface Country {
+  id: string;
+  code: string;
+  name: string;
+  phone_prefix?: string | null;
+  created_at: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -16,6 +24,7 @@ export interface Company {
   address?: string | null;
   phone?: string | null;
   email?: string | null;
+  country_id?: string | null;
   logo_url?: string | null;
   primary_color?: string | null;
   settings?: Record<string, unknown> | null;
