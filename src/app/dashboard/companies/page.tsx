@@ -7,9 +7,9 @@ import { getCountries } from "@/services/countries";
 import { uploadFileToStorage } from "@/lib/nhost/storage-upload";
 import { companySchema, type CompanyInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, Upload, X, ImageIcon } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Upload, X, ImageIcon, Building2, Globe, Mail, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,9 +110,17 @@ export default function CompaniesPage() {
 
   return (
     <div className="app-page">
+      {/* Header con icono y descripción */}
       <header className="app-page-header">
-        <h1 className="app-page-title">Empresas</h1>
-        <p className="app-page-lead">Gestión de empresas aseguradoras del sistema.</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="app-page-title">Empresas</h1>
+            <p className="app-page-lead">Administra las compañías aseguradoras y sus datos de contacto. Cada empresa puede tener siniestros y usuarios asignados.</p>
+          </div>
+        </div>
       </header>
 
       <div className="app-toolbar">
@@ -133,7 +141,7 @@ export default function CompaniesPage() {
             </Button>
           </DialogTrigger>
 
-          {/* ── MODAL Empresas — 640px (formulario medio) ── */}
+          {/* MODAL Empresas */}
           <DialogContent className="modal-md">
             <div className="modal-header">
               <DialogTitle className="text-lg font-semibold">
@@ -143,7 +151,7 @@ export default function CompaniesPage() {
 
             <div className="modal-body">
               <div className="space-y-6">
-                {/* Logo de la empresa */}
+                {/* Logo */}
                 <div>
                   <Label className="app-field-label">Logo de la empresa</Label>
                   <div className="flex items-center gap-4">
@@ -162,9 +170,6 @@ export default function CompaniesPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <input
-                        ref={(el) => {
-                          if (el) (el as HTMLInputElement & { _btn?: HTMLButtonElement })._btn = undefined;
-                        }}
                         id="logo-upload"
                         type="file"
                         accept="image/*"
@@ -218,12 +223,18 @@ export default function CompaniesPage() {
                   </div>
                   <div>
                     <Label className="app-field-label">País <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => form.setValue("countryId", v ?? "")} defaultValue={form.getValues("countryId")}>
-                      <SelectTrigger className="app-input h-11"><SelectValue placeholder="Selecciona un país" /></SelectTrigger>
-                      <SelectContent>
-                        {countries?.map((c: Country) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      name="countryId"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger className="app-input h-11"><SelectValue placeholder="Selecciona un país" /></SelectTrigger>
+                          <SelectContent>
+                            {countries?.map((c: Country) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                     {form.formState.errors.countryId && (
                       <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.countryId.message}</p>
                     )}
@@ -248,7 +259,7 @@ export default function CompaniesPage() {
                   </div>
                 </div>
 
-                {/* Dirección — full width */}
+                {/* Dirección */}
                 <div>
                   <Label className="app-field-label">Dirección</Label>
                   <Input {...form.register("address")} placeholder="Av. Principal 123, Oficina 456, Santiago" className="app-input" />
@@ -276,23 +287,25 @@ export default function CompaniesPage() {
         </Dialog>
       </div>
 
+      {/* Tabla */}
       <div className="app-panel">
         <div className="app-data-table-wrap">
           <table className="app-data-table">
             <thead>
               <tr>
-                <th>Empresa</th>
-                <th>País</th>
-                <th>RUT / ID</th>
-                <th>Contacto</th>
+                <th className="w-[220px]">Empresa</th>
+                <th className="w-[120px]">País</th>
+                <th className="w-[140px]">RUT / ID</th>
+                <th className="w-[200px]">Email</th>
+                <th className="w-[140px]">Teléfono</th>
                 <th className="w-[80px]"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+                <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
               ) : filtered?.length === 0 ? (
-                <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron empresas.</td></tr>
+                <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron empresas.</td></tr>
               ) : (
                 filtered?.map((company) => (
                   <tr key={company.id}>
@@ -309,17 +322,35 @@ export default function CompaniesPage() {
                             {company.name.slice(0, 2).toUpperCase()}
                           </div>
                         )}
-                        {company.name}
+                        <span className="truncate max-w-[140px]" title={company.name}>{company.name}</span>
                       </div>
                     </td>
-                    <td>{countries?.find((c: Country) => c.id === company.country_id)?.name || "—"}</td>
+                    <td>
+                      <div className="flex items-center gap-1.5">
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        {countries?.find((c: Country) => c.id === company.country_id)?.name || "—"}
+                      </div>
+                    </td>
                     <td>{company.rut || "—"}</td>
                     <td>
-                      <div className="flex flex-col gap-0.5 text-[12px]">
-                        {company.email && <span>{company.email}</span>}
-                        {company.phone && <span className="text-muted-foreground">{company.phone}</span>}
-                        {!company.email && !company.phone && <span className="text-muted-foreground">—</span>}
-                      </div>
+                      {company.email ? (
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate max-w-[170px]" title={company.email}>{company.email}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td>
+                      {company.phone ? (
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          {company.phone}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td>
                       <div className="flex items-center gap-1">
