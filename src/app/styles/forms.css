@@ -9,7 +9,7 @@
   }
 
   .app-field-label {
-    @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
+    @apply mb-2 block text-[13px] font-medium text-foreground;
   }
 
   .app-input {

@@ -139,113 +139,71 @@ export default function CompaniesPage() {
               Nueva Empresa
             </Button>
           </DialogTrigger>
-          <DialogContent className="modal-md">
-            <div className="modal-header flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Building2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <DialogTitle className="text-[15px] font-semibold">
-                    {editingId ? "Editar Empresa" : "Nueva Empresa"}
-                  </DialogTitle>
-                  <p className="text-[12px] text-muted-foreground">
-                    {editingId ? "Modifica los datos de la empresa" : "Completa los datos para registrar una nueva empresa"}
-                  </p>
-                </div>
+          <DialogContent className="modal-lg">
+            <div className="modal-header">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-lg font-semibold">
+                  {editingId ? "Editar Empresa" : "Nueva Empresa"}
+                </DialogTitle>
+                <DialogClose>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </DialogClose>
               </div>
-              <DialogClose>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                  <X className="h-4 w-4" />
-                </Button>
-              </DialogClose>
             </div>
 
             <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body">
-              <div className="space-y-5">
-                {/* Nombre + País */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="app-field-label">Nombre de la empresa <span className="text-red-500">*</span></Label>
-                    <Input
-                      {...form.register("name")}
-                      placeholder="Ej: Mapfre Seguros"
-                      className="app-input"
-                    />
+              <div className="space-y-6">
+                {/* Fila 1: Nombre | País | RUT */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                  <div>
+                    <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("name")} placeholder="Mapfre Seguros" className="app-input" />
                     {form.formState.errors.name && (
-                      <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>
+                      <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.name.message}</p>
                     )}
                   </div>
-                  <div className="space-y-2">
+                  <div>
                     <Label className="app-field-label">País <span className="text-red-500">*</span></Label>
-                    <Select
-                      onValueChange={(v) => form.setValue("countryId", v ?? "")}
-                      defaultValue={form.getValues("countryId")}
-                    >
-                      <SelectTrigger className="app-input h-10">
-                        <SelectValue placeholder="Selecciona un país" />
-                      </SelectTrigger>
+                    <Select onValueChange={(v) => form.setValue("countryId", v ?? "")} defaultValue={form.getValues("countryId")}>
+                      <SelectTrigger className="app-input h-10"><SelectValue placeholder="Selecciona" /></SelectTrigger>
                       <SelectContent>
-                        {countries?.map((c: Country) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
+                        {countries?.map((c: Country) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                       </SelectContent>
                     </Select>
                     {form.formState.errors.countryId && (
-                      <p className="text-xs text-red-500">{form.formState.errors.countryId.message}</p>
+                      <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.countryId.message}</p>
                     )}
                   </div>
-                </div>
-
-                {/* RUT (validado solo para Chile) + Email */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="app-field-label">
-                      RUT {isChile && <span className="text-amber-500 text-[10px] font-normal">(Chile: con dígito verificador)</span>}
-                    </Label>
-                    <Input
-                      {...form.register("rut")}
-                      placeholder={isChile ? "12.345.678-9" : "Identificador tributario"}
-                      className="app-input"
-                    />
+                  <div>
+                    <Label className="app-field-label">{isChile ? "RUT" : "ID Tributario"}</Label>
+                    <Input {...form.register("rut")} placeholder={isChile ? "12.345.678-9" : "Ej: 123456789"} className="app-input" />
                     {form.formState.errors.rut && (
-                      <p className="text-xs text-red-500">{form.formState.errors.rut.message}</p>
+                      <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.rut.message}</p>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label className="app-field-label">Email de contacto</Label>
-                    <Input
-                      {...form.register("email")}
-                      type="email"
-                      placeholder="contacto@empresa.cl"
-                      className="app-input"
-                    />
+                </div>
+
+                {/* Fila 2: Email | Teléfono */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div>
+                    <Label className="app-field-label">Email</Label>
+                    <Input {...form.register("email")} type="email" placeholder="contacto@empresa.cl" className="app-input" />
                     {form.formState.errors.email && (
-                      <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
+                      <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.email.message}</p>
                     )}
                   </div>
-                </div>
-
-                {/* Dirección - full width */}
-                <div className="space-y-2">
-                  <Label className="app-field-label">Dirección</Label>
-                  <Input
-                    {...form.register("address")}
-                    placeholder="Av. Principal 123, Oficina 456, Santiago"
-                    className="app-input"
-                  />
-                </div>
-
-                {/* Teléfono */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
+                  <div>
                     <Label className="app-field-label">Teléfono</Label>
-                    <Input
-                      {...form.register("phone")}
-                      placeholder={selectedCountry?.phone_prefix ? `${selectedCountry.phone_prefix} 9 1234 5678` : "+56 9 1234 5678"}
-                      className="app-input"
-                    />
+                    <Input {...form.register("phone")} placeholder={selectedCountry?.phone_prefix ? `${selectedCountry.phone_prefix} 912345678` : "+56 912345678"} className="app-input" />
                   </div>
+                </div>
+
+                {/* Fila 3: Dirección */}
+                <div>
+                  <Label className="app-field-label">Dirección</Label>
+                  <Input {...form.register("address")} placeholder="Av. Principal 123, Oficina 456, Santiago" className="app-input" />
                 </div>
               </div>
             </form>
@@ -254,15 +212,8 @@ export default function CompaniesPage() {
               <DialogClose>
                 <Button type="button" variant="outline" className="btn-cancel">Cancelar</Button>
               </DialogClose>
-              <Button
-                type="button"
-                className="btn-save"
-                disabled={createMutation.isPending || updateMutation.isPending}
-                onClick={form.handleSubmit(onSubmit)}
-              >
-                {createMutation.isPending || updateMutation.isPending
-                  ? "Guardando..."
-                  : editingId ? "Guardar Cambios" : "Crear Empresa"}
+              <Button type="button" className="btn-save" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Empresa"}
               </Button>
             </div>
           </DialogContent>

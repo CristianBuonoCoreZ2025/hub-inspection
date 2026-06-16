@@ -14,6 +14,7 @@ import {
   Pencil,
   Trash2,
   FileText,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -156,110 +157,106 @@ export default function ClaimsPage() {
               Nuevo Siniestro
             </Button>
           </DialogTrigger>
-          <DialogContent className="modal-md">
+          <DialogContent className="modal-lg">
             <div className="modal-header">
-              <DialogTitle>
-                {editingId ? "Editar Siniestro" : "Nuevo Siniestro"}
-              </DialogTitle>
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-lg font-semibold">
+                  {editingId ? "Editar Siniestro" : "Nuevo Siniestro"}
+                </DialogTitle>
+                <DialogClose>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </DialogClose>
+              </div>
             </div>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Número Siniestro</Label>
-                  <Input {...form.register("claimNumber")} />
-                  {form.formState.errors.claimNumber && (
-                    <p className="text-xs text-red-500">{form.formState.errors.claimNumber.message}</p>
-                  )}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body">
+              <div className="space-y-6">
+                {/* Fila 1: Número | Póliza | Compañía */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                  <div>
+                    <Label className="app-field-label">Número Siniestro <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("claimNumber")} placeholder="SIN-2024-001" className="app-input" />
+                    {form.formState.errors.claimNumber && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.claimNumber.message}</p>)}
+                  </div>
+                  <div>
+                    <Label className="app-field-label">Número Póliza <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("policyNumber")} placeholder="POL-123456" className="app-input" />
+                    {form.formState.errors.policyNumber && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.policyNumber.message}</p>)}
+                  </div>
+                  <div>
+                    <Label className="app-field-label">Compañía de Seguros</Label>
+                    <Input {...form.register("insuranceCompany")} placeholder="Mapfre Seguros" className="app-input" />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Número Póliza</Label>
-                  <Input {...form.register("policyNumber")} />
-                  {form.formState.errors.policyNumber && (
-                    <p className="text-xs text-red-500">{form.formState.errors.policyNumber.message}</p>
-                  )}
+
+                {/* Fila 2: Asegurado | Email | Teléfono */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                  <div>
+                    <Label className="app-field-label">Nombre Asegurado <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("insuredName")} placeholder="Juan Pérez" className="app-input" />
+                    {form.formState.errors.insuredName && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.insuredName.message}</p>)}
+                  </div>
+                  <div>
+                    <Label className="app-field-label">Email</Label>
+                    <Input {...form.register("insuredEmail")} type="email" placeholder="juan@email.com" className="app-input" />
+                  </div>
+                  <div>
+                    <Label className="app-field-label">Teléfono</Label>
+                    <Input {...form.register("insuredPhone")} placeholder="+56 912345678" className="app-input" />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Compañía de Seguros</Label>
-                <Input {...form.register("insuranceCompany")} />
-              </div>
-              <div className="space-y-2">
-                <Label>Nombre Asegurado</Label>
-                <Input {...form.register("insuredName")} />
-                {form.formState.errors.insuredName && (
-                  <p className="text-xs text-red-500">{form.formState.errors.insuredName.message}</p>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input {...form.register("insuredEmail")} type="email" />
+
+                {/* Fila 3: Dirección | Ciudad | Fecha */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                  <div>
+                    <Label className="app-field-label">Dirección <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("address")} placeholder="Av. Principal 123" className="app-input" />
+                    {form.formState.errors.address && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.address.message}</p>)}
+                  </div>
+                  <div>
+                    <Label className="app-field-label">Ciudad <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("city")} placeholder="Santiago" className="app-input" />
+                    {form.formState.errors.city && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.city.message}</p>)}
+                  </div>
+                  <div>
+                    <Label className="app-field-label">Fecha Siniestro <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("claimDate")} type="date" className="app-input" />
+                    {form.formState.errors.claimDate && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.claimDate.message}</p>)}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Teléfono</Label>
-                  <Input {...form.register("insuredPhone")} />
+
+                {/* Fila 4: Tipo | Empresa */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div>
+                    <Label className="app-field-label">Tipo Siniestro <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("claimType")} placeholder="Daños por agua" className="app-input" />
+                    {form.formState.errors.claimType && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.claimType.message}</p>)}
+                  </div>
+                  <div>
+                    <Label className="app-field-label">Empresa <span className="text-red-500">*</span></Label>
+                    <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} defaultValue={form.getValues("companyId")} disabled={editingId !== null}>
+                      <SelectTrigger className="app-input h-10"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+                      <SelectContent>
+                        {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.companyId && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.companyId.message}</p>)}
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Dirección</Label>
-                <Input {...form.register("address")} />
-                {form.formState.errors.address && (
-                  <p className="text-xs text-red-500">{form.formState.errors.address.message}</p>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Ciudad</Label>
-                  <Input {...form.register("city")} />
-                  {form.formState.errors.city && (
-                    <p className="text-xs text-red-500">{form.formState.errors.city.message}</p>
-                  )}
+
+                {/* Fila 5: Notas */}
+                <div>
+                  <Label className="app-field-label">Notas</Label>
+                  <Input {...form.register("notes")} placeholder="Observaciones adicionales..." className="app-input" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Fecha Siniestro</Label>
-                  <Input {...form.register("claimDate")} type="date" />
-                  {form.formState.errors.claimDate && (
-                    <p className="text-xs text-red-500">{form.formState.errors.claimDate.message}</p>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo Siniestro</Label>
-                <Input {...form.register("claimType")} placeholder="Ej: Daños por agua" />
-                {form.formState.errors.claimType && (
-                  <p className="text-xs text-red-500">{form.formState.errors.claimType.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Empresa</Label>
-                <Select
-                  onValueChange={(v) => form.setValue("companyId", v ?? "")}
-                  defaultValue={form.getValues("companyId")}
-                  disabled={editingId !== null}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona una empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies?.map((c: Company) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {form.formState.errors.companyId && (
-                  <p className="text-xs text-red-500">{form.formState.errors.companyId.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Notas</Label>
-                <Input {...form.register("notes")} />
               </div>
             </form>
             <div className="modal-footer">
               <DialogClose>
-                <Button type="button" className="btn-cancel">Cancelar</Button>
+                <Button type="button" variant="outline" className="btn-cancel">Cancelar</Button>
               </DialogClose>
-              <Button type="submit" className="btn-save" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              <Button type="button" className="btn-save" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
                 {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Siniestro"}
               </Button>
             </div>

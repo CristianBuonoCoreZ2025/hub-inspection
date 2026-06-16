@@ -9,7 +9,7 @@ import type { Company } from "@/types";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, UserX, UserCheck, Users } from "lucide-react";
+import { Plus, Search, Pencil, UserX, UserCheck, Users, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,75 +136,74 @@ export default function UsersPage() {
           </DialogTrigger>
           <DialogContent className="modal-sm">
             <div className="modal-header">
-              <DialogTitle>{editingId ? "Editar Usuario" : "Invitar Usuario"}</DialogTitle>
-            </div>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body space-y-4">
-              {!editingId && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Nombre Completo</Label>
-                    <Input {...form.register("fullName")} />
-                    {form.formState.errors.fullName && (
-                      <p className="text-xs text-red-500">{form.formState.errors.fullName.message}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input {...form.register("email")} type="email" />
-                    {form.formState.errors.email && (
-                      <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
-                    )}
-                  </div>
-                </>
-              )}
-              <div className="space-y-2">
-                <Label>Rol</Label>
-                <Select
-                  onValueChange={(v) => form.setValue("role", v as "admin" | "supervisor" | "adjuster" | "inspector" | "client")}
-                  defaultValue={form.getValues("role")}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Administrador (Interno)</SelectItem>
-                    <SelectItem value="supervisor">Supervisor (Interno)</SelectItem>
-                    <SelectItem value="adjuster">Liquidador (Interno)</SelectItem>
-                    <SelectItem value="inspector">Inspector</SelectItem>
-                    <SelectItem value="client">Empresa (Cliente)</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.formState.errors.role && (
-                  <p className="text-xs text-red-500">{form.formState.errors.role.message}</p>
-                )}
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-lg font-semibold">
+                  {editingId ? "Editar Usuario" : "Invitar Usuario"}
+                </DialogTitle>
+                <DialogClose>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </DialogClose>
               </div>
-              {selectedRole === "client" && (
-                <div className="space-y-2">
-                  <Label>Empresa asignada</Label>
-                  <Select
-                    onValueChange={(v) => form.setValue("companyId", v ?? "")}
-                    defaultValue={form.getValues("companyId")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una empresa" />
-                    </SelectTrigger>
+            </div>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="modal-body">
+              <div className="space-y-5">
+                {!editingId && (
+                  <>
+                    <div>
+                      <Label className="app-field-label">Nombre Completo</Label>
+                      <Input {...form.register("fullName")} placeholder="Juan Pérez" className="app-input" />
+                      {form.formState.errors.fullName && (
+                        <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.fullName.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="app-field-label">Email</Label>
+                      <Input {...form.register("email")} type="email" placeholder="juan@empresa.cl" className="app-input" />
+                      {form.formState.errors.email && (
+                        <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.email.message}</p>
+                      )}
+                    </div>
+                  </>
+                )}
+                <div>
+                  <Label className="app-field-label">Rol</Label>
+                  <Select onValueChange={(v) => form.setValue("role", v as "admin" | "supervisor" | "adjuster" | "inspector" | "client")} defaultValue={form.getValues("role")}>
+                    <SelectTrigger className="app-input h-10"><SelectValue placeholder="Selecciona un rol" /></SelectTrigger>
                     <SelectContent>
-                      {companies?.map((c: Company) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
+                      <SelectItem value="admin">Administrador (Interno)</SelectItem>
+                      <SelectItem value="supervisor">Supervisor (Interno)</SelectItem>
+                      <SelectItem value="adjuster">Liquidador (Interno)</SelectItem>
+                      <SelectItem value="inspector">Inspector</SelectItem>
+                      <SelectItem value="client">Empresa (Cliente)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {form.formState.errors.companyId && (
-                    <p className="text-xs text-red-500">Debe seleccionar una empresa para el cliente</p>
+                  {form.formState.errors.role && (
+                    <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.role.message}</p>
                   )}
                 </div>
-              )}
+                {selectedRole === "client" && (
+                  <div>
+                    <Label className="app-field-label">Empresa asignada</Label>
+                    <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} defaultValue={form.getValues("companyId")}>
+                      <SelectTrigger className="app-input h-10"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+                      <SelectContent>
+                        {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.companyId && (
+                      <p className="mt-1.5 text-xs text-red-500">Debe seleccionar una empresa para el cliente</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </form>
             <div className="modal-footer">
               <DialogClose>
-                <Button type="button" className="btn-cancel">Cancelar</Button>
+                <Button type="button" variant="outline" className="btn-cancel">Cancelar</Button>
               </DialogClose>
-              <Button type="submit" className="btn-save" disabled={inviteMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              <Button type="button" className="btn-save" disabled={inviteMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
                 {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Enviar Invitación"}
               </Button>
             </div>
