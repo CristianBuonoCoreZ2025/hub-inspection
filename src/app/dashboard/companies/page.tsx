@@ -24,22 +24,6 @@ import {
 
 import type { Country } from "@/types";
 
-// Países de Sudamérica — fallback hardcodeado por si la tabla countries no existe en Nhost
-const SOUTH_AMERICAN_COUNTRIES: Country[] = [
-  { id: "a1b2c3d4-1111-1111-1111-000000000001", code: "AR", name: "Argentina", phone_prefix: "+54", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-000000000002", code: "BO", name: "Bolivia", phone_prefix: "+591", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-000000000003", code: "BR", name: "Brasil", phone_prefix: "+55", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-000000000004", code: "CL", name: "Chile", phone_prefix: "+56", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-000000000005", code: "CO", name: "Colombia", phone_prefix: "+57", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-000000000006", code: "EC", name: "Ecuador", phone_prefix: "+593", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-000000000007", code: "GY", name: "Guyana", phone_prefix: "+592", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-000000000008", code: "PY", name: "Paraguay", phone_prefix: "+595", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-000000000009", code: "PE", name: "Perú", phone_prefix: "+51", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-00000000000a", code: "SR", name: "Surinam", phone_prefix: "+597", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-00000000000b", code: "UY", name: "Uruguay", phone_prefix: "+598", created_at: "" },
-  { id: "a1b2c3d4-1111-1111-1111-00000000000c", code: "VE", name: "Venezuela", phone_prefix: "+58", created_at: "" },
-];
-
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -72,9 +56,8 @@ export default function CompaniesPage() {
     queryFn: getCountries,
   });
 
-  const countryList = countries && countries.length > 0 ? countries : SOUTH_AMERICAN_COUNTRIES;
   const selectedCountryId = form.watch("countryId");
-  const selectedCountry = countryList.find((c: Country) => c.id === selectedCountryId);
+  const selectedCountry = countries?.find((c: Country) => c.id === selectedCountryId);
   const isChile = selectedCountry?.code === "CL";
 
   const createMutation = useMutation({
@@ -241,7 +224,7 @@ export default function CompaniesPage() {
                           className="app-input h-11 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2371717a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:20px] bg-[right_12px_center] bg-no-repeat pr-10"
                         >
                           <option value="">Selecciona un país</option>
-                          {countryList.map((c: Country) => (
+                          {countries?.map((c: Country) => (
                             <option key={c.id} value={c.id}>{c.name}</option>
                           ))}
                         </select>
@@ -344,7 +327,7 @@ export default function CompaniesPage() {
                     <td>
                       <div className="flex items-center gap-1.5">
                         <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                        {countryList.find((c: Country) => c.id === company.country_id)?.name || "—"}
+                        {countries?.find((c: Country) => c.id === company.country_id)?.name || "—"}
                       </div>
                     </td>
                     <td>{company.rut || "—"}</td>
