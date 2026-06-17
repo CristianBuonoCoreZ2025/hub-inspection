@@ -1,44 +1,56 @@
 /*
- * PALETA GLOBAL DE BOTONES — Hub Inspections
+ * PALETA GLOBAL DE BOTONES — Hub Inspections (estilo portal-seguros)
  * Principio: cada acción semántica tiene su color consistente en toda la app.
- * Uso: <Button className="btn-save btn-lg"> o <Button className="btn-warn btn-lg-block">
- * Tamaños: btn-lg (230px), btn-lg-block (ancho completo en modales), btn-sm (180px), btn-footer (pie de modal).
- *
- * ACCIONES PRIMARIAS (gradiente + sombra coloreada)
- * ─ btn-save / btn-confirm / btn-accept  → verde esmeralda  (Guardar, Confirmar, Aceptar)
- * ─ btn-create / btn-new                → esmeralda-teal    (Crear, Nuevo, Alta)
- * ─ btn-run / btn-execute               → sky-blue          (Ejecutar, Procesar, Paso 1)
- * ─ btn-homolog / btn-ai                → violeta-primary   (Iniciar homologación, IA)
- * ─ btn-review / btn-violet-alt         → violeta-fuchsia   (Revisar, Clasificar)
- * ─ btn-warn / btn-alert / btn-amber    → ámbar-naranja     (Advertencia, Forzar)
- * ─ btn-danger / btn-delete             → rosa-rojo         (Eliminar, Borrar)
- *
- * ACCIONES SECUNDARIAS (borde sutil, sin color fuerte)
- * ─ btn-cancel                          → zinc con borde    (Cancelar)
- * ─ btn-close                           → borde neutro      (Cerrar)
- * ─ btn-skip                            → slate semi-opaco  (Saltar, Omitir)
- * ─ btn-neutral                         → fondo neutro      (Acción sin carga emocional)
  */
 
 @layer components {
-  /* GUARDAR / CONFIRMAR / ACEPTAR — verde esmeralda */
+  /* GUARDAR / CONFIRMAR / ACEPTAR — azul portal McLarens */
   .btn-save,
   .btn-confirm,
   .btn-accept {
-    @apply bg-linear-to-r from-emerald-500 to-teal-600 text-white
-           shadow-md shadow-emerald-500/25
-           transition-shadow hover:shadow-lg hover:shadow-emerald-500/35
-           disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center text-white
+           font-semibold text-[14px] cursor-pointer transition-all;
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: linear-gradient(180deg, #0095DA 0%, #005BBB 100%);
+    box-shadow: 0 10px 20px rgba(0, 149, 218, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
-  /* CREAR / NUEVO / ALTA — esmeralda-teal */
+  .btn-save:hover:not(:disabled),
+  .btn-confirm:hover:not(:disabled),
+  .btn-accept:hover:not(:disabled) {
+    background: linear-gradient(180deg, #005BBB 0%, #003591 100%);
+    transform: translateY(-1px);
+  }
+
+  .btn-save:disabled,
+  .btn-confirm:disabled,
+  .btn-accept:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* CREAR / NUEVO / ALTA — azul portal (alias de save) */
   .btn-create,
   .btn-new,
   .btn-emerald {
-    @apply bg-linear-to-r from-emerald-500 to-teal-600 text-white
-           shadow-md shadow-emerald-500/20
-           transition-shadow hover:shadow-lg hover:shadow-emerald-500/30
-           disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center text-white
+           font-semibold text-[14px] cursor-pointer transition-all;
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: linear-gradient(180deg, #0095DA 0%, #005BBB 100%);
+    box-shadow: 0 10px 20px rgba(0, 149, 218, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .btn-create:hover:not(:disabled),
+  .btn-new:hover:not(:disabled),
+  .btn-emerald:hover:not(:disabled) {
+    background: linear-gradient(180deg, #005BBB 0%, #003591 100%);
+    transform: translateY(-1px);
   }
 
   /* EJECUTAR / PROCESAR — sky-blue */
@@ -90,12 +102,24 @@
            disabled:opacity-50 disabled:pointer-events-none;
   }
 
-  /* CANCELAR — borde zinc, sin color fuerte */
+  /* CANCELAR — secondary limpio del portal */
   .btn-cancel {
-    @apply border border-zinc-300 bg-white text-zinc-700
-           shadow-sm hover:bg-zinc-50
-           disabled:opacity-50 disabled:pointer-events-none
-           dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800;
+    @apply inline-flex items-center justify-center text-[#0b1220]
+           font-semibold text-[14px] cursor-pointer transition-all;
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+  }
+
+  .btn-cancel:hover:not(:disabled) {
+    background: #f1f5f9;
+  }
+
+  .btn-cancel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   /* CERRAR — menos prominente que cancelar */

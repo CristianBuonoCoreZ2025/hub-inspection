@@ -17,6 +17,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -140,12 +141,15 @@ export default function ClaimsPage() {
             Nuevo Siniestro
           </Button>
 
-          {/* ── MODAL Siniestros — 900px (muchos campos) ── */}
+          {/* ── MODAL Siniestros — 720px (muchos campos) ── */}
           <DialogContent className="modal-lg">
             <div className="modal-header">
-              <DialogTitle className="text-lg font-semibold">
+              <DialogTitle className="modal-title">
                 {editingId ? "Editar Siniestro" : "Nuevo Siniestro"}
               </DialogTitle>
+              <DialogDescription className="modal-subtitle">
+                Registra la información del siniestro y del asegurado para iniciar el proceso de inspección.
+              </DialogDescription>
             </div>
 
             <div className="modal-body">
@@ -232,12 +236,12 @@ export default function ClaimsPage() {
             </div>
 
             <div className="modal-footer">
-              <Button type="button" variant="outline" className="btn-cancel btn-footer" onClick={() => setOpen(false)}>
+              <button type="button" className="btn-cancel" onClick={() => setOpen(false)}>
                 Cancelar
-              </Button>
-              <Button type="button" className="btn-save btn-footer" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              </button>
+              <button type="button" className="btn-save" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
                 {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Siniestro"}
-              </Button>
+              </button>
             </div>
           </DialogContent>
         </Dialog>

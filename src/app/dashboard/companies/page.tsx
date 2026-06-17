@@ -18,6 +18,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 import type { Country } from "@/types";
@@ -132,15 +133,18 @@ export default function CompaniesPage() {
 
           <DialogContent className="modal-md">
             <div className="modal-header">
-              <DialogTitle className="text-lg font-semibold">
+              <DialogTitle className="modal-title">
                 {editingId ? "Editar Empresa" : "Nueva Empresa"}
               </DialogTitle>
+              <DialogDescription className="modal-subtitle">
+                Completa los datos de la compañía aseguradora. Los campos marcados con * son obligatorios.
+              </DialogDescription>
             </div>
 
             <div className="modal-body">
-              <div className="space-y-5">
-                {/* Logo */}
-                <div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+                {/* Logo — full width */}
+                <div className="col-span-2">
                   <Label className="app-field-label">Logo</Label>
                   <div className="flex items-center gap-4">
                     {form.watch("logoUrl") ? (
@@ -199,85 +203,79 @@ export default function CompaniesPage() {
                 </div>
 
                 {/* Nombre | País */}
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("name")} placeholder="Mapfre Seguros" className="app-input" />
-                    {form.formState.errors.name && (
-                      <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.name.message}</p>
+                <div>
+                  <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
+                  <Input {...form.register("name")} placeholder="Mapfre Seguros" className="app-input" />
+                  {form.formState.errors.name && (
+                    <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.name.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="app-field-label">País <span className="text-red-500">*</span></Label>
+                  <Controller
+                    name="countryId"
+                    control={form.control}
+                    render={({ field }) => (
+                      <select
+                        {...field}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        className="app-input h-[42px] appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2371717a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:20px] bg-[right_12px_center] bg-no-repeat pr-10"
+                      >
+                        <option value="">Selecciona un país</option>
+                        {countries?.map((c: Country) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
                     )}
-                  </div>
-                  <div>
-                    <Label className="app-field-label">País <span className="text-red-500">*</span></Label>
-                    <Controller
-                      name="countryId"
-                      control={form.control}
-                      render={({ field }) => (
-                        <select
-                          {...field}
-                          value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value)}
-                          className="app-input h-11 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2371717a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:20px] bg-[right_12px_center] bg-no-repeat pr-10"
-                        >
-                          <option value="">Selecciona un país</option>
-                          {countries?.map((c: Country) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      )}
-                    />
-                    {form.formState.errors.countryId && (
-                      <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.countryId.message}</p>
-                    )}
-                  </div>
+                  />
+                  {form.formState.errors.countryId && (
+                    <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.countryId.message}</p>
+                  )}
                 </div>
 
                 {/* ID Tributario | Email */}
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <Label className="app-field-label">{isChile ? "RUT" : "ID tributario"}</Label>
-                    <Input {...form.register("rut")} placeholder={isChile ? "12.345.678-9" : "Ej: 123456789"} className="app-input" />
-                    {form.formState.errors.rut && (
-                      <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.rut.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="app-field-label">Email</Label>
-                    <Input {...form.register("email")} type="email" placeholder="contacto@empresa.cl" className="app-input" />
-                    {form.formState.errors.email && (
-                      <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.email.message}</p>
-                    )}
-                  </div>
+                <div>
+                  <Label className="app-field-label">{isChile ? "RUT" : "ID tributario"}</Label>
+                  <Input {...form.register("rut")} placeholder={isChile ? "12.345.678-9" : "Ej: 123456789"} className="app-input" />
+                  {form.formState.errors.rut && (
+                    <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.rut.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="app-field-label">Email</Label>
+                  <Input {...form.register("email")} type="email" placeholder="contacto@empresa.cl" className="app-input" />
+                  {form.formState.errors.email && (
+                    <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.email.message}</p>
+                  )}
                 </div>
 
-                {/* Dirección */}
-                <div>
+                {/* Dirección — full width */}
+                <div className="col-span-2">
                   <Label className="app-field-label">Dirección</Label>
                   <Input {...form.register("address")} placeholder="Av. Principal 123, Oficina 456, Santiago" className="app-input" />
                 </div>
 
-                {/* Teléfono */}
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <Label className="app-field-label">Teléfono</Label>
-                    <Input {...form.register("phone")} placeholder={selectedCountry?.phone_prefix ? `${selectedCountry.phone_prefix} 912345678` : "+56 912345678"} className="app-input" />
-                  </div>
+                {/* Teléfono — full width */}
+                <div className="col-span-2">
+                  <Label className="app-field-label">Teléfono</Label>
+                  <Input {...form.register("phone")} placeholder={selectedCountry?.phone_prefix ? `${selectedCountry.phone_prefix} 912345678` : "+56 912345678"} className="app-input" />
                 </div>
               </div>
             </div>
 
             <div className="modal-footer">
-              <Button type="button" variant="outline" className="h-10 px-5 text-sm" onClick={() => setOpen(false)}>
+              <button type="button" className="btn-cancel" onClick={() => setOpen(false)}>
                 Cancelar
-              </Button>
-              <Button
+              </button>
+              <button
                 type="button"
-                className="h-10 px-5 text-sm btn-save"
+                className="btn-save"
                 disabled={createMutation.isPending || updateMutation.isPending}
                 onClick={form.handleSubmit(onSubmit)}
               >
-                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear Empresa"}
-              </Button>
+                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Empresa"}
+              </button>
             </div>
           </DialogContent>
         </Dialog>

@@ -1,6 +1,6 @@
 /*
- * FORMULARIOS — Hub Inspections
- * Estilo checkout/profesional: labels normales arriba, espaciado generoso.
+ * FORMULARIOS — Hub Inspections (estilo portal-seguros)
+ * Labels 14px semibold, inputs 42px con borde #cbd5e1 y focus #0095DA.
  */
 
 @layer components {
@@ -8,13 +8,33 @@
     @apply mt-4 flex flex-wrap gap-2;
   }
 
-  /* Label limpio: 13px, font-medium, color de texto normal — NO uppercase miniatura */
+  /* Label limpio: 14px, semibold, color #0b1220 */
   .app-field-label {
-    @apply mb-2 block text-[13px] font-medium text-foreground;
+    @apply block text-[14px] font-semibold;
+    color: #0b1220;
+    margin-bottom: 7px;
   }
 
-  /* Input redondeado xl, buen padding, placeholder visible */
+  /* Input redondeado 14px, altura 42px, borde #cbd5e1 */
   .app-input {
-    @apply h-11 w-full rounded-xl border border-input bg-background px-4 text-[14px] text-foreground shadow-sm transition-colors placeholder:text-muted-foreground/60 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20;
+    @apply w-full text-[14px];
+    height: 42px;
+    padding: 0 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    background: #fff;
+    color: #0b1220;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .app-input::placeholder {
+    color: rgba(100, 116, 139, 0.6);
+  }
+
+  .app-input:focus {
+    border-color: #0095DA;
+    box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12);
   }
 }

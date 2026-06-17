@@ -18,6 +18,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -137,12 +138,15 @@ export default function UsersPage() {
             Invitar Usuario
           </Button>
 
-          {/* ── MODAL Usuarios — 480px (formulario simple) ── */}
+          {/* ── MODAL Usuarios — 520px (formulario simple) ── */}
           <DialogContent className="modal-sm">
             <div className="modal-header">
-              <DialogTitle className="text-lg font-semibold">
+              <DialogTitle className="modal-title">
                 {editingId ? "Editar Usuario" : "Invitar Usuario"}
               </DialogTitle>
+              <DialogDescription className="modal-subtitle">
+                Gestiona los permisos y datos del usuario en el sistema.
+              </DialogDescription>
             </div>
 
             <div className="modal-body">
@@ -199,12 +203,12 @@ export default function UsersPage() {
             </div>
 
             <div className="modal-footer">
-              <Button type="button" variant="outline" className="btn-cancel btn-footer" onClick={() => setOpen(false)}>
+              <button type="button" className="btn-cancel" onClick={() => setOpen(false)}>
                 Cancelar
-              </Button>
-              <Button type="button" className="btn-save btn-footer" disabled={inviteMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              </button>
+              <button type="button" className="btn-save" disabled={inviteMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
                 {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Enviar Invitación"}
-              </Button>
+              </button>
             </div>
           </DialogContent>
         </Dialog>
