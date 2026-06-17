@@ -116,15 +116,6 @@ export default function CompaniesPage() {
         </div>
       </header>
 
-      {/* PANEL DE DEBUG — visible en pantalla */}
-      <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-xs font-mono text-amber-900">
-        <p className="font-semibold">Debug: Query Países</p>
-        <p>Loading: {countriesLoading ? "Sí" : "No"}</p>
-        <p>Error: {countriesError ? (countriesError as Error).message : "Ninguno"}</p>
-        <p>Cantidad: {countries?.length ?? 0}</p>
-        <p>IDs: {countries?.map((c) => `${c.code}=${c.name}`).join(", ") ?? "vacío"}</p>
-      </div>
-
       <div className="app-toolbar">
         <div className="flex items-center gap-2">
           <Search className="h-4 w-4 text-muted-foreground" />

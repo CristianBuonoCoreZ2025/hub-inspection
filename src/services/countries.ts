@@ -1,4 +1,5 @@
 import { graphqlRequest } from "@/lib/nhost/graphql";
+import { requestLogger } from "@/lib/request-logger";
 import type { Country } from "@/types";
 
 const COUNTRY_FIELDS = `
@@ -10,13 +11,15 @@ const COUNTRY_FIELDS = `
 `;
 
 export async function getCountries() {
-  const query = `
-    query GetCountries {
-      countries(order_by: { name: asc }) {
-        ${COUNTRY_FIELDS}
+  return requestLogger.traceAsyncMethod("getCountries", async () => {
+    const query = `
+      query GetCountries {
+        countries(order_by: { name: asc }) {
+          ${COUNTRY_FIELDS}
+        }
       }
-    }
-  `;
-  const data = await graphqlRequest<{ countries: Country[] }>(query);
-  return data.countries;
+    `;
+    const data = await graphqlRequest<{ countries: Country[] }>(query);
+    return data.countries;
+  });
 }
