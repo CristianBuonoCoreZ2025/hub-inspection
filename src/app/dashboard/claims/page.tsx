@@ -144,7 +144,10 @@ export default function ClaimsPage() {
           {/* ── MODAL Siniestros — 720px (muchos campos) ── */}
           <DialogContent className="modal-lg">
             <div className="modal-header">
-              <DialogTitle className="modal-title">
+              <DialogTitle className="modal-title flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+                  <FileText className="h-4 w-4" />
+                </div>
                 {editingId ? "Editar Siniestro" : "Nuevo Siniestro"}
               </DialogTitle>
               <DialogDescription className="modal-subtitle">

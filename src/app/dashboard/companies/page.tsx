@@ -133,7 +133,10 @@ export default function CompaniesPage() {
 
           <DialogContent className="modal-md">
             <div className="modal-header">
-              <DialogTitle className="modal-title">
+              <DialogTitle className="modal-title flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+                  <Building2 className="h-4 w-4" />
+                </div>
                 {editingId ? "Editar Empresa" : "Nueva Empresa"}
               </DialogTitle>
               <DialogDescription className="modal-subtitle">
@@ -142,20 +145,20 @@ export default function CompaniesPage() {
             </div>
 
             <div className="modal-body">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 {/* Logo — full width */}
                 <div className="col-span-2">
                   <Label className="app-field-label">Logo</Label>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     {form.watch("logoUrl") ? (
                       <img
                         src={form.watch("logoUrl")}
                         alt="Logo"
-                        className="h-16 w-16 rounded-xl object-cover border border-border shadow-sm"
+                        className="h-12 w-12 rounded-xl object-cover border border-border/60 shadow-sm"
                       />
                     ) : (
-                      <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-muted shadow-sm">
-                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border/60 bg-muted/60 shadow-sm">
+                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
                       </div>
                     )}
                     <div className="flex items-center gap-2">
@@ -181,35 +184,35 @@ export default function CompaniesPage() {
                         }}
                       />
                       <label htmlFor="logo-upload" className="cursor-pointer">
-                        <span className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium shadow-sm transition-colors hover:bg-muted">
-                          <Upload className="mr-1.5 h-3.5 w-3.5" />
+                        <span className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs font-medium shadow-sm transition-colors hover:bg-muted">
+                          <Upload className="mr-1.5 h-3 w-3" />
                           {logoUploading ? "Subiendo..." : "Subir logo"}
                         </span>
                       </label>
                       {form.watch("logoUrl") && (
-                        <Button
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-9 text-red-500 hover:text-red-600"
+                          className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-600 transition-colors"
                           onClick={() => form.setValue("logoUrl", "")}
                         >
-                          <X className="mr-1.5 h-3.5 w-3.5" />
+                          <X className="h-3 w-3" />
                           Quitar
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Nombre | País */}
-                <div>
+                {/* Nombre — full width */}
+                <div className="col-span-2">
                   <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
                   <Input {...form.register("name")} placeholder="Mapfre Seguros" className="app-input" />
                   {form.formState.errors.name && (
-                    <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.name.message}</p>
+                    <p className="mt-1 text-xs text-red-500">{form.formState.errors.name.message}</p>
                   )}
                 </div>
+
+                {/* País | RUT */}
                 <div>
                   <Label className="app-field-label">País <span className="text-red-500">*</span></Label>
                   <Controller
@@ -220,7 +223,7 @@ export default function CompaniesPage() {
                         {...field}
                         value={field.value || ""}
                         onChange={(e) => field.onChange(e.target.value)}
-                        className="app-input h-[42px] appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2371717a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:20px] bg-[right_12px_center] bg-no-repeat pr-10"
+                        className="app-input appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2371717a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:18px] bg-[right_10px_center] bg-no-repeat pr-9"
                       >
                         <option value="">Selecciona un país</option>
                         {countries?.map((c: Country) => (
@@ -230,23 +233,23 @@ export default function CompaniesPage() {
                     )}
                   />
                   {form.formState.errors.countryId && (
-                    <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.countryId.message}</p>
+                    <p className="mt-1 text-xs text-red-500">{form.formState.errors.countryId.message}</p>
                   )}
                 </div>
-
-                {/* ID Tributario | Email */}
                 <div>
                   <Label className="app-field-label">{isChile ? "RUT" : "ID tributario"}</Label>
                   <Input {...form.register("rut")} placeholder={isChile ? "12.345.678-9" : "Ej: 123456789"} className="app-input" />
                   {form.formState.errors.rut && (
-                    <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.rut.message}</p>
+                    <p className="mt-1 text-xs text-red-500">{form.formState.errors.rut.message}</p>
                   )}
                 </div>
-                <div>
+
+                {/* Email — full width */}
+                <div className="col-span-2">
                   <Label className="app-field-label">Email</Label>
                   <Input {...form.register("email")} type="email" placeholder="contacto@empresa.cl" className="app-input" />
                   {form.formState.errors.email && (
-                    <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.email.message}</p>
+                    <p className="mt-1 text-xs text-red-500">{form.formState.errors.email.message}</p>
                   )}
                 </div>
 

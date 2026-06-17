@@ -10,18 +10,22 @@
 
   /* Label limpio: 14px, semibold, color #0b1220 */
   .app-field-label {
-    @apply block text-[14px] font-semibold;
-    color: #0b1220;
-    margin-bottom: 7px;
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #0b1220 !important;
+    margin-bottom: 6px !important;
+    line-height: 1.4 !important;
   }
 
   /* Input redondeado 14px, altura 42px, borde #cbd5e1 */
   .app-input {
-    @apply w-full text-[14px];
-    height: 42px;
-    padding: 0 14px;
+    @apply w-full;
+    font-size: 13px !important;
+    height: 40px;
+    padding: 0 12px;
     border: 1px solid #cbd5e1;
-    border-radius: 14px;
+    border-radius: 12px;
     background: #fff;
     color: #0b1220;
     box-sizing: border-box;
@@ -30,7 +34,8 @@
   }
 
   .app-input::placeholder {
-    color: rgba(100, 116, 139, 0.6);
+    color: rgba(100, 116, 139, 0.55);
+    font-size: 13px;
   }
 
   .app-input:focus {

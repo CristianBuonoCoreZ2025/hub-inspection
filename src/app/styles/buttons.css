@@ -9,13 +9,15 @@
   .btn-confirm,
   .btn-accept {
     @apply inline-flex items-center justify-center text-white
-           font-semibold text-[14px] cursor-pointer transition-all;
-    height: 42px;
-    padding: 0 18px;
-    border-radius: 12px;
+           cursor-pointer transition-all;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 10px;
     border: 1px solid transparent;
     background: linear-gradient(180deg, #0095DA 0%, #005BBB 100%);
     box-shadow: 0 10px 20px rgba(0, 149, 218, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    font-weight: 600;
+    font-size: 13px;
   }
 
   .btn-save:hover:not(:disabled),
@@ -37,13 +39,15 @@
   .btn-new,
   .btn-emerald {
     @apply inline-flex items-center justify-center text-white
-           font-semibold text-[14px] cursor-pointer transition-all;
-    height: 42px;
-    padding: 0 18px;
-    border-radius: 12px;
+           cursor-pointer transition-all;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 10px;
     border: 1px solid transparent;
     background: linear-gradient(180deg, #0095DA 0%, #005BBB 100%);
     box-shadow: 0 10px 20px rgba(0, 149, 218, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    font-weight: 600;
+    font-size: 13px;
   }
 
   .btn-create:hover:not(:disabled),
@@ -105,12 +109,14 @@
   /* CANCELAR — secondary limpio del portal */
   .btn-cancel {
     @apply inline-flex items-center justify-center text-[#0b1220]
-           font-semibold text-[14px] cursor-pointer transition-all;
-    height: 42px;
-    padding: 0 18px;
-    border-radius: 12px;
+           cursor-pointer transition-all;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 10px;
     border: 1px solid #cbd5e1;
     background: #fff;
+    font-weight: 600;
+    font-size: 13px;
   }
 
   .btn-cancel:hover:not(:disabled) {

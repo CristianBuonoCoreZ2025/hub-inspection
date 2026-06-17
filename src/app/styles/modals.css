@@ -37,30 +37,36 @@
 
   /* ═══════════════ ESTRUCTURA INTERNA ═══════════════ */
   .modal-header {
-    @apply px-[22px] pt-[22px] pb-0;
+    @apply px-[22px] pt-[22px];
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   }
 
   .modal-title {
-    margin: 0 0 10px;
-    font-size: 24px;
-    letter-spacing: -0.03em;
-    color: #0b1220;
-    font-weight: 800;
+    margin: 0 0 10px !important;
+    font-size: 22px !important;
+    letter-spacing: -0.03em !important;
+    color: #0b1220 !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
   }
 
   .modal-subtitle {
-    margin: 0 0 14px;
-    color: #64748b;
-    font-size: 14px;
-    line-height: 1.5;
+    margin: 0 !important;
+    color: #64748b !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
   }
 
   .modal-body {
-    @apply flex-1 overflow-y-auto px-[22px] py-[14px];
+    @apply flex-1 overflow-y-auto px-[22px];
+    padding-top: 14px;
+    padding-bottom: 14px;
   }
 
   .modal-footer {
-    @apply flex items-center justify-end gap-[10px] px-[22px] py-[18px];
+    @apply flex items-center justify-end gap-[10px] px-[22px] py-[14px];
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
   }
 }
 
