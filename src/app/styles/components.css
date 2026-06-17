@@ -36,15 +36,15 @@
   }
 
   .glass-panel {
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
+    border-radius: 12px !important;
+    border: 1px solid var(--border) !important;
     background-color: var(--surface-elevated);
     box-shadow: var(--shadow-card);
   }
 
   .glass-panel-subtle {
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border);
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
     background-color: var(--muted);
   }
 
@@ -104,7 +104,8 @@
   }
 
   .app-panel {
-    @apply rounded-xl border border-border bg-card p-4 text-card-foreground shadow-[var(--shadow-card)] sm:p-6;
+    @apply border border-border bg-card p-4 text-card-foreground shadow-[var(--shadow-card)] sm:p-6;
+    border-radius: 12px !important;
   }
 
   .app-toolbar {
@@ -112,7 +113,8 @@
   }
 
   .app-data-table-wrap {
-    @apply overflow-x-auto rounded-xl border border-border bg-card shadow-[var(--shadow-card)];
+    @apply overflow-x-auto border border-border bg-card shadow-[var(--shadow-card)];
+    border-radius: 12px !important;
   }
 
   .app-data-table {
@@ -120,7 +122,8 @@
   }
 
   .app-data-table thead tr {
-    @apply border-b border-border text-left;
+    @apply text-left;
+    border-bottom: 1px solid var(--border) !important;
   }
 
   .app-data-table th {
@@ -128,11 +131,12 @@
   }
 
   .app-data-table td {
-    @apply border-b border-border/60 px-3 py-2.5;
+    @apply px-3 py-2.5;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent) !important;
   }
 
   .app-data-table tbody tr:last-child td {
-    @apply border-b-0;
+    border-bottom: none !important;
   }
 
   .app-inline-code {
