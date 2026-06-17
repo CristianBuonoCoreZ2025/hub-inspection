@@ -11,7 +11,10 @@
  *   NHOST_ADMIN_SECRET=tu-admin-secret
  */
 
-import "dotenv/config";
+import dotenv from "dotenv";
+import { resolve } from "path";
+
+dotenv.config({ path: resolve(process.cwd(), ".env.local") });
 
 const TABLES = [
   "companies",
