@@ -18,7 +18,6 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 
@@ -127,12 +126,10 @@ export default function CompaniesPage() {
           />
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger>
-            <Button onClick={() => { setEditingId(null); form.reset(); }} className="btn-create btn-sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Empresa
-            </Button>
-          </DialogTrigger>
+          <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Empresa
+          </Button>
 
           <DialogContent className="modal-md">
             <div className="modal-header">
