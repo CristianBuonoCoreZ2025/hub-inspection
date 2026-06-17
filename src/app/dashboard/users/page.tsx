@@ -139,7 +139,7 @@ export default function UsersPage() {
           </Button>
 
           {/* ── MODAL Usuarios — 520px (formulario simple) ── */}
-          <DialogContent className="modal-sm">
+          <DialogContent className="modal-sm" showCloseButton={false}>
             <div className="modal-header">
               <DialogTitle className="modal-title flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
