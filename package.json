@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "tsx scripts/db-push.ts",
-    "test:auth": "tsx scripts/test-auth.ts"
+    "test:auth": "tsx scripts/test-auth.ts",
+    "db:permissions": "tsx scripts/setup-hasura-permissions.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
