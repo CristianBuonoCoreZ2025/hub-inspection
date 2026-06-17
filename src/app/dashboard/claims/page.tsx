@@ -81,8 +81,9 @@ export default function ClaimsPage() {
       insuredName: "", lastName: "", rut: "",
       insuredEmail: "", insuredPhone: "", cellPhone: "",
       address: "", city: "", commune: "", region: "", country: "Chile",
-      claimDate: "", reportDate: "", assignmentDate: "",
+      claimDate: "", claimTime: "", reportDate: "", assignmentDate: "",
       claimType: "", claimCause: "", summary: "",
+      contactName: "", contactRole: "", contactEmail: "",
       assignedAdjusterId: "", inspectorId: "", adjusterId: "", auditorId: "",
       dispatcherId: "", assistantId: "",
       brokerName: "", brokerExecutive: "", brokerNumber: "", builderName: "", advisor: "",
@@ -244,6 +245,10 @@ export default function ClaimsPage() {
                   <FieldError message={form.formState.errors.claimDate?.message} />
                 </div>
                 <div className="modal-field">
+                  <Label className="app-field-label">Hora Siniestro</Label>
+                  <Input {...form.register("claimTime")} type="time" className="app-input" />
+                </div>
+                <div className="modal-field">
                   <Label className="app-field-label">Fecha Denuncio</Label>
                   <Input {...form.register("reportDate")} type="date" className="app-input" />
                 </div>
@@ -296,6 +301,21 @@ export default function ClaimsPage() {
                 <div className="modal-field">
                   <Label className="app-field-label">Celular</Label>
                   <Input {...form.register("cellPhone")} placeholder="9 9999 9999" className="app-input" />
+                </div>
+
+                {/* ═══ PERSONA DE CONTACTO ═══ */}
+                <SectionTitle>Persona de Contacto</SectionTitle>
+                <div className="modal-field">
+                  <Label className="app-field-label">Nombre Contacto</Label>
+                  <Input {...form.register("contactName")} placeholder="Gonzalo Meza" className="app-input" />
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Cargo / Relación</Label>
+                  <Input {...form.register("contactRole")} placeholder="Arrendatario depto 606" className="app-input" />
+                </div>
+                <div className="modal-field modal-field-full">
+                  <Label className="app-field-label">Email Contacto</Label>
+                  <Input {...form.register("contactEmail")} type="email" placeholder="ignacia@adpro.cl" className="app-input" />
                 </div>
 
                 {/* ═══ UBICACIÓN ═══ */}
@@ -474,11 +494,15 @@ export default function ClaimsPage() {
                             region: claim.region || "",
                             country: claim.country || "Chile",
                             claimDate: claim.claim_date,
+                            claimTime: claim.claim_time || "",
                             reportDate: claim.report_date || "",
                             assignmentDate: claim.assignment_date || "",
                             claimType: claim.claim_type,
                             claimCause: claim.claim_cause || "",
                             summary: claim.summary || "",
+                            contactName: claim.contact_name || "",
+                            contactRole: claim.contact_role || "",
+                            contactEmail: claim.contact_email || "",
                             assignedAdjusterId: claim.assigned_adjuster_id || "",
                             inspectorId: claim.inspector_id || "",
                             adjusterId: claim.adjuster_id || "",

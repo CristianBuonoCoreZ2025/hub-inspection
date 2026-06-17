@@ -72,11 +72,15 @@ export interface Claim {
   region: string | null;
   country: string | null;
   claim_date: string;
+  claim_time: string | null;
   report_date: string | null;
   assignment_date: string | null;
   claim_type: string;
   claim_cause: string | null;
   summary: string | null;
+  contact_name: string | null;
+  contact_role: string | null;
+  contact_email: string | null;
   status: ClaimStatus;
   assigned_adjuster_id: string | null;
   inspector_id: string | null;
@@ -112,6 +116,18 @@ export interface InspectionSession {
   magic_link_token: string | null;
   magic_link_expires_at: string | null;
   status: "pending" | "active" | "completed" | "cancelled";
+  inspection_date: string | null;
+  inspection_time: string | null;
+  interviewed_name: string | null;
+  interviewed_email: string | null;
+  interviewed_relationship: string | null;
+  police_report_number: string | null;
+  police_report_name: string | null;
+  police_report_rut: string | null;
+  firefighters_company: string | null;
+  other_insurances: boolean;
+  other_insurance_company: string | null;
+  inspector_observations: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -126,4 +142,119 @@ export interface AuditLog {
   performed_by: string | null;
   company_id: string | null;
   created_at: string;
+}
+
+// ── Nuevas tablas de inspección en terreno ──
+
+export interface PropertyRisk {
+  id: string;
+  session_id: string;
+  risk_type: string | null;
+  risk_class: string | null;
+  property_type: string | null;
+  apartment_number: string | null;
+  floor_count: number | null;
+  age_years: number | null;
+  built_surface: number | null;
+  room_count: number | null;
+  bathroom_count: number | null;
+  office_count: number | null;
+  warehouse_count: number | null;
+  is_habitable: boolean | null;
+  owner_name: string | null;
+  branch_count: number | null;
+  worker_resident_count: number | null;
+  business_line: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PropertyMateriality {
+  id: string;
+  session_id: string;
+  walls: string | null;
+  roof: string | null;
+  interior_flooring: string | null;
+  interior_ceilings: string | null;
+  interior_finishes: string | null;
+  exterior_finishes: string | null;
+  perimeter_closure: string | null;
+  others: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SecurityMeasures {
+  id: string;
+  session_id: string;
+  protections: boolean;
+  protections_detail: string | null;
+  security_locks: boolean;
+  security_locks_detail: string | null;
+  security_guards: boolean;
+  security_guards_detail: string | null;
+  alarms: boolean;
+  alarms_detail: string | null;
+  cameras: boolean;
+  cameras_detail: string | null;
+  other_measures: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsuredStatement {
+  id: string;
+  session_id: string;
+  statement: string | null;
+  entry_exit_point: string | null;
+  alarm_activation: string | null;
+  stolen_items_estimate: string | null;
+  vehicle_use: string | null;
+  incident_duration: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ThirdParty {
+  id: string;
+  session_id: string;
+  party_type: "affected" | "responsible";
+  full_name: string | null;
+  rut: string | null;
+  address: string | null;
+  commune: string | null;
+  phone: string | null;
+  email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DamageSketch {
+  id: string;
+  session_id: string;
+  sketch_url: string;
+  label: string | null;
+  created_at: string;
+}
+
+export interface InspectionDamage {
+  id: string;
+  session_id: string;
+  category: string;
+  subcategory: string | null;
+  description: string;
+  observations: string | null;
+  severity: "low" | "medium" | "high" | "total";
+  dependency: string | null;
+  sector: string | null;
+  materiality_type: string | null;
+  unit: string | null;
+  quantity: number | null;
+  damage_type: "building" | "content";
+  product: string | null;
+  brand_model: string | null;
+  purchase_date: string | null;
+  estimated_amount: number | null;
+  created_at: string;
+  updated_at: string;
 }

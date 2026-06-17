@@ -18,11 +18,15 @@ const CLAIM_FIELDS = `
   region
   country
   claim_date
+  claim_time
   report_date
   assignment_date
   claim_type
   claim_cause
   summary
+  contact_name
+  contact_role
+  contact_email
   status
   assigned_adjuster_id
   inspector_id
@@ -125,11 +129,15 @@ function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }):
     region: input.region || null,
     country: input.country || "Chile",
     claim_date: input.claimDate,
+    claim_time: input.claimTime || null,
     report_date: input.reportDate || null,
     assignment_date: input.assignmentDate || null,
     claim_type: input.claimType,
     claim_cause: input.claimCause || null,
     summary: input.summary || null,
+    contact_name: input.contactName || null,
+    contact_role: input.contactRole || null,
+    contact_email: input.contactEmail || null,
     assigned_adjuster_id: input.assignedAdjusterId || null,
     inspector_id: input.inspectorId || null,
     adjuster_id: input.adjusterId || null,
