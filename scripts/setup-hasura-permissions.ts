@@ -70,7 +70,7 @@ async function createPermission(
   table: string,
   type: "select" | "insert" | "update" | "delete"
 ) {
-  const permissionType = `create_${type}_permission` as const;
+  const permissionType = `pg_create_${type}_permission` as const;
 
   const baseArgs = {
     table: { name: table, schema: "public" },
