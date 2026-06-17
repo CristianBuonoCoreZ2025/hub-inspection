@@ -153,29 +153,29 @@ export default function UsersPage() {
             </div>
 
             <div className="modal-body">
-              <div className="space-y-5">
+              <div className="modal-grid">
                 {!editingId && (
-                  <div className="space-y-5">
-                    <div>
+                  <>
+                    <div className="modal-field modal-field-full">
                       <Label className="app-field-label">Nombre completo <span className="text-red-500">*</span></Label>
                       <Input {...form.register("fullName")} placeholder="Juan Pérez" className="app-input" />
                       {form.formState.errors.fullName && (
-                        <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.fullName.message}</p>
+                        <p className="text-xs text-red-500">{form.formState.errors.fullName.message}</p>
                       )}
                     </div>
-                    <div>
+                    <div className="modal-field modal-field-full">
                       <Label className="app-field-label">Email <span className="text-red-500">*</span></Label>
                       <Input {...form.register("email")} type="email" placeholder="juan@empresa.cl" className="app-input" />
                       {form.formState.errors.email && (
-                        <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.email.message}</p>
+                        <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
                       )}
                     </div>
-                  </div>
+                  </>
                 )}
-                <div>
+                <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Rol <span className="text-red-500">*</span></Label>
                   <Select onValueChange={(v) => form.setValue("role", v as "admin" | "supervisor" | "adjuster" | "inspector" | "client")} defaultValue={form.getValues("role")}>
-                    <SelectTrigger className="app-input h-11"><SelectValue placeholder="Selecciona un rol" /></SelectTrigger>
+                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Selecciona un rol" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Administrador (Interno)</SelectItem>
                       <SelectItem value="supervisor">Supervisor (Interno)</SelectItem>
@@ -185,20 +185,20 @@ export default function UsersPage() {
                     </SelectContent>
                   </Select>
                   {form.formState.errors.role && (
-                    <p className="mt-1.5 text-xs text-red-500">{form.formState.errors.role.message}</p>
+                    <p className="text-xs text-red-500">{form.formState.errors.role.message}</p>
                   )}
                 </div>
                 {selectedRole === "client" && (
-                  <div>
+                  <div className="modal-field modal-field-full">
                     <Label className="app-field-label">Empresa asignada <span className="text-red-500">*</span></Label>
                     <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} defaultValue={form.getValues("companyId")}>
-                      <SelectTrigger className="app-input h-11"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+                      <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
                       <SelectContent>
                         {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                       </SelectContent>
                     </Select>
                     {form.formState.errors.companyId && (
-                      <p className="mt-1.5 text-xs text-red-500">Debe seleccionar una empresa para el cliente</p>
+                      <p className="text-xs text-red-500">Debe seleccionar una empresa para el cliente</p>
                     )}
                   </div>
                 )}

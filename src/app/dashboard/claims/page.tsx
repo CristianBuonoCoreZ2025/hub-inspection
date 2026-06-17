@@ -156,82 +156,74 @@ export default function ClaimsPage() {
             </div>
 
             <div className="modal-body">
-              <div className="space-y-6">
-                {/* Fila 1: Número | Póliza | Compañía */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                  <div>
-                    <Label className="app-field-label">Número de siniestro <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("claimNumber")} placeholder="SIN-2024-001" className="app-input" />
-                    {form.formState.errors.claimNumber && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.claimNumber.message}</p>)}
-                  </div>
-                  <div>
-                    <Label className="app-field-label">Número de póliza <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("policyNumber")} placeholder="POL-123456" className="app-input" />
-                    {form.formState.errors.policyNumber && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.policyNumber.message}</p>)}
-                  </div>
-                  <div>
-                    <Label className="app-field-label">Compañía de seguros</Label>
-                    <Input {...form.register("insuranceCompany")} placeholder="Mapfre Seguros" className="app-input" />
-                  </div>
+              <div className="modal-grid">
+                {/* Fila 1 */}
+                <div className="modal-field">
+                  <Label className="app-field-label">Número de siniestro <span className="text-red-500">*</span></Label>
+                  <Input {...form.register("claimNumber")} placeholder="SIN-2024-001" className="app-input" />
+                  {form.formState.errors.claimNumber && (<p className="text-xs text-red-500">{form.formState.errors.claimNumber.message}</p>)}
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Número de póliza <span className="text-red-500">*</span></Label>
+                  <Input {...form.register("policyNumber")} placeholder="POL-123456" className="app-input" />
+                  {form.formState.errors.policyNumber && (<p className="text-xs text-red-500">{form.formState.errors.policyNumber.message}</p>)}
+                </div>
+                <div className="modal-field modal-field-full">
+                  <Label className="app-field-label">Compañía de seguros</Label>
+                  <Input {...form.register("insuranceCompany")} placeholder="Mapfre Seguros" className="app-input" />
                 </div>
 
-                {/* Fila 2: Asegurado | Email | Teléfono */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                  <div>
-                    <Label className="app-field-label">Nombre del asegurado <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("insuredName")} placeholder="Juan Pérez" className="app-input" />
-                    {form.formState.errors.insuredName && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.insuredName.message}</p>)}
-                  </div>
-                  <div>
-                    <Label className="app-field-label">Email del asegurado</Label>
-                    <Input {...form.register("insuredEmail")} type="email" placeholder="juan@email.com" className="app-input" />
-                  </div>
-                  <div>
-                    <Label className="app-field-label">Teléfono del asegurado</Label>
-                    <Input {...form.register("insuredPhone")} placeholder="+56 912345678" className="app-input" />
-                  </div>
+                {/* Fila 2 */}
+                <div className="modal-field">
+                  <Label className="app-field-label">Nombre del asegurado <span className="text-red-500">*</span></Label>
+                  <Input {...form.register("insuredName")} placeholder="Juan Pérez" className="app-input" />
+                  {form.formState.errors.insuredName && (<p className="text-xs text-red-500">{form.formState.errors.insuredName.message}</p>)}
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Email del asegurado</Label>
+                  <Input {...form.register("insuredEmail")} type="email" placeholder="juan@email.com" className="app-input" />
+                </div>
+                <div className="modal-field modal-field-full">
+                  <Label className="app-field-label">Teléfono del asegurado</Label>
+                  <Input {...form.register("insuredPhone")} placeholder="+56 912345678" className="app-input" />
                 </div>
 
-                {/* Fila 3: Dirección | Ciudad | Fecha */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                  <div>
-                    <Label className="app-field-label">Dirección <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("address")} placeholder="Av. Principal 123" className="app-input" />
-                    {form.formState.errors.address && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.address.message}</p>)}
-                  </div>
-                  <div>
-                    <Label className="app-field-label">Ciudad <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("city")} placeholder="Santiago" className="app-input" />
-                    {form.formState.errors.city && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.city.message}</p>)}
-                  </div>
-                  <div>
-                    <Label className="app-field-label">Fecha del siniestro <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("claimDate")} type="date" className="app-input" />
-                    {form.formState.errors.claimDate && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.claimDate.message}</p>)}
-                  </div>
+                {/* Fila 3 */}
+                <div className="modal-field">
+                  <Label className="app-field-label">Dirección <span className="text-red-500">*</span></Label>
+                  <Input {...form.register("address")} placeholder="Av. Principal 123" className="app-input" />
+                  {form.formState.errors.address && (<p className="text-xs text-red-500">{form.formState.errors.address.message}</p>)}
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Ciudad <span className="text-red-500">*</span></Label>
+                  <Input {...form.register("city")} placeholder="Santiago" className="app-input" />
+                  {form.formState.errors.city && (<p className="text-xs text-red-500">{form.formState.errors.city.message}</p>)}
+                </div>
+                <div className="modal-field modal-field-full">
+                  <Label className="app-field-label">Fecha del siniestro <span className="text-red-500">*</span></Label>
+                  <Input {...form.register("claimDate")} type="date" className="app-input" />
+                  {form.formState.errors.claimDate && (<p className="text-xs text-red-500">{form.formState.errors.claimDate.message}</p>)}
                 </div>
 
-                {/* Fila 4: Tipo | Empresa */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <div>
-                    <Label className="app-field-label">Tipo de siniestro <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("claimType")} placeholder="Daños por agua" className="app-input" />
-                    {form.formState.errors.claimType && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.claimType.message}</p>)}
-                  </div>
-                  <div>
-                    <Label className="app-field-label">Empresa <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} defaultValue={form.getValues("companyId")} disabled={editingId !== null}>
-                      <SelectTrigger className="app-input h-11"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
-                      <SelectContent>
-                        {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.companyId && (<p className="mt-1.5 text-xs text-red-500">{form.formState.errors.companyId.message}</p>)}
-                  </div>
+                {/* Fila 4 */}
+                <div className="modal-field">
+                  <Label className="app-field-label">Tipo de siniestro <span className="text-red-500">*</span></Label>
+                  <Input {...form.register("claimType")} placeholder="Daños por agua" className="app-input" />
+                  {form.formState.errors.claimType && (<p className="text-xs text-red-500">{form.formState.errors.claimType.message}</p>)}
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Empresa <span className="text-red-500">*</span></Label>
+                  <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} defaultValue={form.getValues("companyId")} disabled={editingId !== null}>
+                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+                    <SelectContent>
+                      {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.companyId && (<p className="text-xs text-red-500">{form.formState.errors.companyId.message}</p>)}
                 </div>
 
                 {/* Fila 5: Notas */}
-                <div>
+                <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Notas adicionales</Label>
                   <Input {...form.register("notes")} placeholder="Observaciones relevantes del caso..." className="app-input" />
                 </div>

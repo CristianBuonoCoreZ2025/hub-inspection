@@ -145,9 +145,9 @@ export default function CompaniesPage() {
             </div>
 
             <div className="modal-body">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="modal-grid">
                 {/* Logo — full width */}
-                <div className="col-span-2">
+                <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Logo</Label>
                   <div className="flex items-center gap-3">
                     {form.watch("logoUrl") ? (
@@ -204,16 +204,16 @@ export default function CompaniesPage() {
                 </div>
 
                 {/* Nombre — full width */}
-                <div className="col-span-2">
+                <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
                   <Input {...form.register("name")} placeholder="Mapfre Seguros" className="app-input" />
                   {form.formState.errors.name && (
-                    <p className="mt-1 text-xs text-red-500">{form.formState.errors.name.message}</p>
+                    <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>
                   )}
                 </div>
 
                 {/* País | RUT */}
-                <div>
+                <div className="modal-field">
                   <Label className="app-field-label">País <span className="text-red-500">*</span></Label>
                   <Controller
                     name="countryId"
@@ -223,7 +223,7 @@ export default function CompaniesPage() {
                         {...field}
                         value={field.value || ""}
                         onChange={(e) => field.onChange(e.target.value)}
-                        className="app-input appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2371717a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:18px] bg-[right_10px_center] bg-no-repeat pr-9"
+                        className="app-input h-[40px] appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2371717a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:18px] bg-[right_10px_center] bg-no-repeat pr-9"
                       >
                         <option value="">Selecciona un país</option>
                         {countries?.map((c: Country) => (
@@ -233,34 +233,34 @@ export default function CompaniesPage() {
                     )}
                   />
                   {form.formState.errors.countryId && (
-                    <p className="mt-1 text-xs text-red-500">{form.formState.errors.countryId.message}</p>
+                    <p className="text-xs text-red-500">{form.formState.errors.countryId.message}</p>
                   )}
                 </div>
-                <div>
+                <div className="modal-field">
                   <Label className="app-field-label">{isChile ? "RUT" : "ID tributario"}</Label>
                   <Input {...form.register("rut")} placeholder={isChile ? "12.345.678-9" : "Ej: 123456789"} className="app-input" />
                   {form.formState.errors.rut && (
-                    <p className="mt-1 text-xs text-red-500">{form.formState.errors.rut.message}</p>
+                    <p className="text-xs text-red-500">{form.formState.errors.rut.message}</p>
                   )}
                 </div>
 
                 {/* Email — full width */}
-                <div className="col-span-2">
+                <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Email</Label>
                   <Input {...form.register("email")} type="email" placeholder="contacto@empresa.cl" className="app-input" />
                   {form.formState.errors.email && (
-                    <p className="mt-1 text-xs text-red-500">{form.formState.errors.email.message}</p>
+                    <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
                   )}
                 </div>
 
                 {/* Dirección — full width */}
-                <div className="col-span-2">
+                <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Dirección</Label>
                   <Input {...form.register("address")} placeholder="Av. Principal 123, Oficina 456, Santiago" className="app-input" />
                 </div>
 
                 {/* Teléfono — full width */}
-                <div className="col-span-2">
+                <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Teléfono</Label>
                   <Input {...form.register("phone")} placeholder={selectedCountry?.phone_prefix ? `${selectedCountry.phone_prefix} 912345678` : "+56 912345678"} className="app-input" />
                 </div>

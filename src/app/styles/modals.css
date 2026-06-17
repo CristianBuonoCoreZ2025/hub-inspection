@@ -77,6 +77,25 @@
   backdrop-filter: none;
 }
 
+/* ═══════════════ GRID / FIELD (portal-seguros) ═══════════════ */
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+  margin-top: 8px;
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.modal-field-full {
+  grid-column: 1 / -1;
+}
+
 /* ═══════════════ INFO BANNER ═══════════════ */
 .info-box {
   padding: 10px 14px;
