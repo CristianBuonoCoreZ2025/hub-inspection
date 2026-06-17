@@ -7,14 +7,42 @@ const CLAIM_FIELDS = `
   policy_number
   insurance_company
   insured_name
+  last_name
+  rut
   insured_email
   insured_phone
+  cell_phone
   address
   city
+  commune
+  region
+  country
   claim_date
+  report_date
+  assignment_date
   claim_type
+  claim_cause
+  summary
   status
   assigned_adjuster_id
+  inspector_id
+  adjuster_id
+  auditor_id
+  dispatcher_id
+  assistant_id
+  broker_name
+  broker_executive
+  broker_number
+  builder_name
+  advisor
+  internal_number
+  company_report_number
+  mclarens_one_number
+  liquidation_number
+  is_special_claim
+  recovery_type_legal
+  recovery_type_material
+  recovery_comments
   company_id
   notes
   created_at
@@ -29,16 +57,26 @@ export async function getClaims(companyId?: string) {
     query GetClaims {
       claims(where: ${where}, order_by: { created_at: desc }) {
         ${CLAIM_FIELDS}
-        assigned_adjuster {
-          full_name
-        }
+        assigned_adjuster { full_name }
+        inspector { full_name }
+        adjuster { full_name }
+        auditor { full_name }
+        dispatcher { full_name }
+        assistant { full_name }
       }
     }
   `;
 
-  const data = await graphqlRequest<{ claims: (Claim & { assigned_adjuster?: { full_name: string | null } })[] }>(
-    query
-  );
+  type ClaimWithProfiles = Claim & {
+    assigned_adjuster?: { full_name: string | null } | null;
+    inspector?: { full_name: string | null } | null;
+    adjuster?: { full_name: string | null } | null;
+    auditor?: { full_name: string | null } | null;
+    dispatcher?: { full_name: string | null } | null;
+    assistant?: { full_name: string | null } | null;
+  };
+
+  const data = await graphqlRequest<{ claims: ClaimWithProfiles[] }>(query);
   return data.claims;
 }
 
@@ -47,18 +85,73 @@ export async function getClaimById(id: string) {
     query GetClaimById($id: uuid!) {
       claims_by_pk(id: $id) {
         ${CLAIM_FIELDS}
-        assigned_adjuster {
-          full_name
-        }
+        assigned_adjuster { full_name }
+        inspector { full_name }
+        adjuster { full_name }
+        auditor { full_name }
+        dispatcher { full_name }
+        assistant { full_name }
       }
     }
   `;
 
-  const data = await graphqlRequest<{ claims_by_pk: Claim & { assigned_adjuster?: { full_name: string | null } } }>(
-    query,
-    { id }
-  );
+  type ClaimWithProfiles = Claim & {
+    assigned_adjuster?: { full_name: string | null } | null;
+    inspector?: { full_name: string | null } | null;
+    adjuster?: { full_name: string | null } | null;
+    auditor?: { full_name: string | null } | null;
+    dispatcher?: { full_name: string | null } | null;
+    assistant?: { full_name: string | null } | null;
+  };
+
+  const data = await graphqlRequest<{ claims_by_pk: ClaimWithProfiles }>(query, { id });
   return data.claims_by_pk;
+}
+
+function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }): Record<string, unknown> {
+  return {
+    claim_number: input.claimNumber,
+    policy_number: input.policyNumber,
+    insurance_company: input.insuranceCompany || null,
+    insured_name: input.insuredName,
+    last_name: input.lastName || null,
+    rut: input.rut || null,
+    insured_email: input.insuredEmail || null,
+    insured_phone: input.insuredPhone || null,
+    cell_phone: input.cellPhone || null,
+    address: input.address,
+    city: input.city,
+    commune: input.commune || null,
+    region: input.region || null,
+    country: input.country || "Chile",
+    claim_date: input.claimDate,
+    report_date: input.reportDate || null,
+    assignment_date: input.assignmentDate || null,
+    claim_type: input.claimType,
+    claim_cause: input.claimCause || null,
+    summary: input.summary || null,
+    assigned_adjuster_id: input.assignedAdjusterId || null,
+    inspector_id: input.inspectorId || null,
+    adjuster_id: input.adjusterId || null,
+    auditor_id: input.auditorId || null,
+    dispatcher_id: input.dispatcherId || null,
+    assistant_id: input.assistantId || null,
+    broker_name: input.brokerName || null,
+    broker_executive: input.brokerExecutive || null,
+    broker_number: input.brokerNumber || null,
+    builder_name: input.builderName || null,
+    advisor: input.advisor || null,
+    internal_number: input.internalNumber || null,
+    company_report_number: input.companyReportNumber || null,
+    mclarens_one_number: input.mclarensOneNumber || null,
+    liquidation_number: input.liquidationNumber || null,
+    is_special_claim: input.isSpecialClaim ?? false,
+    recovery_type_legal: input.recoveryTypeLegal || null,
+    recovery_type_material: input.recoveryTypeMaterial || null,
+    recovery_comments: input.recoveryComments || null,
+    notes: input.notes || null,
+    company_id: input.company_id,
+  };
 }
 
 export async function createClaim(input: ClaimInput & { company_id: string }) {
@@ -71,22 +164,7 @@ export async function createClaim(input: ClaimInput & { company_id: string }) {
   `;
 
   const data = await graphqlRequest<{ insert_claims_one: Claim }>(mutation, {
-    object: {
-      claim_number: input.claimNumber,
-      policy_number: input.policyNumber,
-      insurance_company: input.insuranceCompany || null,
-      insured_name: input.insuredName,
-      insured_email: input.insuredEmail || null,
-      insured_phone: input.insuredPhone || null,
-      address: input.address,
-      city: input.city,
-      claim_date: input.claimDate,
-      claim_type: input.claimType,
-      assigned_adjuster_id: input.assignedAdjusterId || null,
-      notes: input.notes || null,
-      status: "created" as ClaimStatus,
-      company_id: input.company_id,
-    },
+    object: { ...buildClaimObject(input), status: "created" as ClaimStatus },
   });
   return data.insert_claims_one;
 }
@@ -101,18 +179,12 @@ export async function updateClaim(id: string, input: Partial<ClaimInput>) {
   `;
 
   const set: Record<string, unknown> = {};
-  if (input.claimNumber !== undefined) set.claim_number = input.claimNumber;
-  if (input.policyNumber !== undefined) set.policy_number = input.policyNumber;
-  if (input.insuranceCompany !== undefined) set.insurance_company = input.insuranceCompany;
-  if (input.insuredName !== undefined) set.insured_name = input.insuredName;
-  if (input.insuredEmail !== undefined) set.insured_email = input.insuredEmail;
-  if (input.insuredPhone !== undefined) set.insured_phone = input.insuredPhone;
-  if (input.address !== undefined) set.address = input.address;
-  if (input.city !== undefined) set.city = input.city;
-  if (input.claimDate !== undefined) set.claim_date = input.claimDate;
-  if (input.claimType !== undefined) set.claim_type = input.claimType;
-  if (input.assignedAdjusterId !== undefined) set.assigned_adjuster_id = input.assignedAdjusterId;
-  if (input.notes !== undefined) set.notes = input.notes;
+  const obj = buildClaimObject(input);
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined && value !== null) {
+      set[key] = value;
+    }
+  }
 
   const data = await graphqlRequest<{ update_claims_by_pk: Claim }>(mutation, { id, set });
   return data.update_claims_by_pk;
