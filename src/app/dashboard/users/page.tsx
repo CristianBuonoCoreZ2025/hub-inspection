@@ -18,8 +18,6 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-  DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -134,12 +132,10 @@ export default function UsersPage() {
           />
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger>
-            <Button onClick={() => { setEditingId(null); form.reset(); }} className="btn-create btn-sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Invitar Usuario
-            </Button>
-          </DialogTrigger>
+          <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Invitar Usuario
+          </Button>
 
           {/* ── MODAL Usuarios — 480px (formulario simple) ── */}
           <DialogContent className="modal-sm">
@@ -203,9 +199,9 @@ export default function UsersPage() {
             </div>
 
             <div className="modal-footer">
-              <DialogClose>
-                <Button type="button" variant="outline" className="btn-cancel btn-footer">Cancelar</Button>
-              </DialogClose>
+              <Button type="button" variant="outline" className="btn-cancel btn-footer" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
               <Button type="button" className="btn-save btn-footer" disabled={inviteMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
                 {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Enviar Invitación"}
               </Button>

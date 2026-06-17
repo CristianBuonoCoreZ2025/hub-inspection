@@ -18,7 +18,6 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
 
 import type { Country } from "@/types";
@@ -268,9 +267,9 @@ export default function CompaniesPage() {
             </div>
 
             <div className="modal-footer">
-              <DialogClose>
-                <Button type="button" variant="outline" className="h-10 px-5 text-sm">Cancelar</Button>
-              </DialogClose>
+              <Button type="button" variant="outline" className="h-10 px-5 text-sm" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
               <Button
                 type="button"
                 className="h-10 px-5 text-sm btn-save"
