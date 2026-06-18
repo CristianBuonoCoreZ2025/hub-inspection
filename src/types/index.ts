@@ -85,13 +85,8 @@ export interface Claim {
   assigned_adjuster_id: string | null;
   inspector_id: string | null;
   adjuster_id: string | null;
-  auditor_id: string | null;
-  dispatcher_id: string | null;
-  assistant_id: string | null;
   broker_name: string | null;
-  broker_executive: string | null;
   broker_number: string | null;
-  builder_name: string | null;
   advisor: string | null;
   client_reference: string | null;
   company_report_number: string | null;
@@ -359,6 +354,17 @@ export interface InsuranceProduct {
   business_line_id: string;
   name: string;
   description: string | null;
+  country: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Advisor {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
   country: string;
   is_active: boolean;
   created_at: string;

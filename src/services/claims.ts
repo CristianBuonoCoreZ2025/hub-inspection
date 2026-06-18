@@ -31,13 +31,8 @@ const CLAIM_FIELDS = `
   assigned_adjuster_id
   inspector_id
   adjuster_id
-  auditor_id
-  dispatcher_id
-  assistant_id
   broker_name
-  broker_executive
   broker_number
-  builder_name
   advisor
   client_reference
   company_report_number
@@ -140,13 +135,8 @@ function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }):
     assigned_adjuster_id: input.assignedAdjusterId || null,
     inspector_id: input.inspectorId || null,
     adjuster_id: input.adjusterId || null,
-    auditor_id: input.auditorId || null,
-    dispatcher_id: input.dispatcherId || null,
-    assistant_id: input.assistantId || null,
     broker_name: input.brokerName || null,
-    broker_executive: input.brokerExecutive || null,
     broker_number: input.brokerNumber || null,
-    builder_name: input.builderName || null,
     advisor: input.advisor || null,
     client_reference: input.clientReference || null,
     company_report_number: input.companyReportNumber || null,

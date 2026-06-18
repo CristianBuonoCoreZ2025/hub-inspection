@@ -5,6 +5,7 @@ import type {
   BrokerCatalog,
   BusinessLine,
   InsuranceProduct,
+  Advisor,
 } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -237,4 +238,50 @@ export async function updateInsuranceProduct(id: string, input: Partial<Insuranc
 
 export async function deleteInsuranceProduct(id: string) {
   return updateInsuranceProduct(id, { is_active: false });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADVISORS (ASESORES)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getAdvisors() {
+  const query = `
+    query GetAdvisors {
+      advisors(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
+        id name email phone country is_active created_at updated_at
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ advisors: Advisor[] }>(query);
+  return data.advisors;
+}
+
+export async function createAdvisor(input: { name: string; email?: string; phone?: string; country?: string }) {
+  const mutation = `
+    mutation CreateAdvisor($object: advisors_insert_input!) {
+      insert_advisors_one(object: $object) { id name email phone country is_active }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_advisors_one: Advisor }>(mutation, {
+    object: { ...input, is_active: true },
+  });
+  return data.insert_advisors_one;
+}
+
+export async function updateAdvisor(id: string, input: Partial<Advisor>) {
+  const mutation = `
+    mutation UpdateAdvisor($id: uuid!, $set: advisors_set_input!) {
+      update_advisors_by_pk(pk_columns: { id: $id }, _set: $set) { id name email phone is_active }
+    }
+  `;
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  const data = await graphqlRequest<{ update_advisors_by_pk: Advisor }>(mutation, { id, set });
+  return data.update_advisors_by_pk;
+}
+
+export async function deleteAdvisor(id: string) {
+  return updateAdvisor(id, { is_active: false });
 }

@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaims, createClaim, updateClaim, deleteClaim } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
-import { getClaimCauses, getInsuranceCompanies, getBrokers } from "@/services/catalogs";
+import { getClaimCauses, getInsuranceCompanies, getBrokers, getAdvisors } from "@/services/catalogs";
 import { claimSchema, type ClaimInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
@@ -142,9 +142,8 @@ export default function ClaimsPage() {
       claimDate: "", claimTime: "", reportDate: "", assignmentDate: "",
       claimType: "", claimCause: "", summary: "",
       contactName: "", contactRole: "", contactEmail: "",
-      assignedAdjusterId: "", inspectorId: "", adjusterId: "", auditorId: "",
-      dispatcherId: "", assistantId: "",
-      brokerName: "", brokerExecutive: "", brokerNumber: "", builderName: "", advisor: "",
+      assignedAdjusterId: "", inspectorId: "", adjusterId: "",
+      brokerName: "", brokerNumber: "", advisor: "",
       recoveryTypeLegal: "", recoveryTypeMaterial: "", recoveryComments: "",
       companyId: "", notes: "", isSpecialClaim: false,
     },
@@ -178,6 +177,11 @@ export default function ClaimsPage() {
   const { data: brokersCatalog } = useQuery({
     queryKey: ["brokers"],
     queryFn: () => getBrokers(),
+  });
+
+  const { data: advisorsCatalog } = useQuery({
+    queryKey: ["advisors"],
+    queryFn: () => getAdvisors(),
   });
 
   const createMutation = useMutation({
@@ -443,13 +447,10 @@ export default function ClaimsPage() {
               <div className="modal-grid-3">
                 <UserSelect label="Inspector" name="inspectorId" users={users} form={form} />
                 <UserSelect label="Ajustador" name="adjusterId" users={users} form={form} />
-                <UserSelect label="Auditor" name="auditorId" users={users} form={form} />
-                <UserSelect label="Despachador" name="dispatcherId" users={users} form={form} />
-                <UserSelect label="Asistente" name="assistantId" users={users} form={form} />
               </div>
 
-              {/* ═══ CORREDOR / CONSTRUCTORA ═══ */}
-              <SectionTitle>Corredor y Constructora</SectionTitle>
+              {/* ═══ CORREDOR ═══ */}
+              <SectionTitle>Corredor</SectionTitle>
               <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Corredor</Label>
@@ -462,20 +463,18 @@ export default function ClaimsPage() {
                   </Select>
                 </div>
                 <div className="modal-field">
-                  <Label className="app-field-label">Ejecutivo Corredor</Label>
-                  <Input {...form.register("brokerExecutive")} className="app-input" />
-                </div>
-                <div className="modal-field">
                   <Label className="app-field-label">N° Corredor</Label>
                   <Input {...form.register("brokerNumber")} className="app-input" />
                 </div>
                 <div className="modal-field">
-                  <Label className="app-field-label">Constructora No. 1</Label>
-                  <Input {...form.register("builderName")} className="app-input" />
-                </div>
-                <div className="modal-field" style={{ gridColumn: "span 2" }}>
                   <Label className="app-field-label">Asesor</Label>
-                  <Input {...form.register("advisor")} className="app-input" />
+                  <Select onValueChange={(v) => form.setValue("advisor", v ?? "")} value={form.getValues("advisor") || ""}>
+                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar asesor..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {advisorsCatalog?.map((a) => (<SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -618,13 +617,8 @@ export default function ClaimsPage() {
                             assignedAdjusterId: claim.assigned_adjuster_id || "",
                             inspectorId: claim.inspector_id || "",
                             adjusterId: claim.adjuster_id || "",
-                            auditorId: claim.auditor_id || "",
-                            dispatcherId: claim.dispatcher_id || "",
-                            assistantId: claim.assistant_id || "",
                             brokerName: claim.broker_name || "",
-                            brokerExecutive: claim.broker_executive || "",
                             brokerNumber: claim.broker_number || "",
-                            builderName: claim.builder_name || "",
                             advisor: claim.advisor || "",
                             recoveryTypeLegal: claim.recovery_type_legal || "",
                             recoveryTypeMaterial: claim.recovery_type_material || "",
