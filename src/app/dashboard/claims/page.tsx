@@ -266,7 +266,8 @@ export default function ClaimsPage() {
                 </div>
               </div>
 
-              {/* ═══ COMPAÑÍA DE SEGUROS ═══ */}
+              {/* ═══ SINIESTRO / LIQUIDACIÓN ═══ */}
+              <SectionTitle>Siniestro y Liquidación</SectionTitle>
               <div className="modal-grid">
                 <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Compañía de Seguros</Label>
@@ -279,9 +280,6 @@ export default function ClaimsPage() {
                   </Select>
                 </div>
               </div>
-
-              {/* ═══ SINIESTRO / LIQUIDACIÓN ═══ */}
-              <SectionTitle>Siniestro y Liquidación</SectionTitle>
               <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">N° Siniestro Compañía <span className="text-red-500">*</span></Label>
@@ -317,7 +315,7 @@ export default function ClaimsPage() {
                   <FieldError message={form.formState.errors.claimType?.message} />
                 </div>
               </div>
-              <div className="modal-grid-3">
+              <div className="modal-grid-4">
                 <div className="modal-field">
                   <Label className="app-field-label">Fecha Siniestro <span className="text-red-500">*</span></Label>
                   <Input {...form.register("claimDate")} type="date" className="app-input h-8" />
@@ -335,7 +333,9 @@ export default function ClaimsPage() {
                   <Label className="app-field-label">Fecha Asignación</Label>
                   <Input {...form.register("assignmentDate")} type="date" className="app-input h-8" />
                 </div>
-                <div className="modal-field modal-field-full" style={{ gridColumn: "span 2" }}>
+              </div>
+              <div className="modal-grid">
+                <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Causal del Siniestro</Label>
                   <Select onValueChange={(v) => form.setValue("claimCause", v ?? "")} value={form.getValues("claimCause") || ""}>
                     <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar causal..." /></SelectTrigger>
