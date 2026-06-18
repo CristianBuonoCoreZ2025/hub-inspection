@@ -7,7 +7,13 @@ import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
 import { claimSchema, type ClaimInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useForm } from "react-hook-form";
+import {
+  useForm,
+  useWatch,
+  type Control,
+  type UseFormSetValue,
+  type UseFormReturn,
+} from "react-hook-form";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck } from "lucide-react";
 import { createInspectionSession } from "@/services/inspections";
@@ -67,6 +73,54 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="text-xs text-red-500">{message}</p>;
+}
+
+function SpecialClaimCheckbox({
+  control,
+  setValue,
+}: {
+  control: Control<ClaimInput>;
+  setValue: UseFormSetValue<ClaimInput>;
+}) {
+  const isSpecialClaim = useWatch({ control, name: "isSpecialClaim" });
+  return (
+    <div className="modal-field flex items-center gap-2 pt-7">
+      <Checkbox
+        checked={isSpecialClaim}
+        onChange={(e) => setValue("isSpecialClaim", e.target.checked)}
+      />
+      <Label className="text-[13px] font-medium cursor-pointer">Siniestro Especial</Label>
+    </div>
+  );
+}
+
+function UserSelect({
+  label,
+  name,
+  users,
+  form,
+}: {
+  label: string;
+  name: keyof ClaimInput;
+  users?: Profile[];
+  form: UseFormReturn<ClaimInput>;
+}) {
+  return (
+    <div className="modal-field">
+      <Label className="app-field-label">{label}</Label>
+      <Select onValueChange={(v) => form.setValue(name, v as string)} value={String(form.getValues(name) ?? "")}>
+        <SelectTrigger className="app-input h-[40px]">
+          <SelectValue placeholder="Seleccionar..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">— Sin asignar —</SelectItem>
+          {users?.map((u: Profile) => (
+            <SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
 export default function ClaimsPage() {
@@ -162,23 +216,6 @@ export default function ClaimsPage() {
 
   const filtered = claims?.filter((c) =>
     [c.claim_number, c.liquidation_number, c.insured_name, c.address].join(" ").toLowerCase().includes(search.toLowerCase())
-  );
-
-  const UserSelect = ({ label, name }: { label: string; name: keyof ClaimInput }) => (
-    <div className="modal-field">
-      <Label className="app-field-label">{label}</Label>
-      <Select onValueChange={(v) => form.setValue(name, v as string)} value={String(form.getValues(name) ?? "")}>
-        <SelectTrigger className="app-input h-[40px]">
-          <SelectValue placeholder="Seleccionar..." />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">— Sin asignar —</SelectItem>
-          {users?.map((u: Profile) => (
-            <SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
   );
 
   return (
@@ -370,11 +407,11 @@ export default function ClaimsPage() {
               {/* ═══ EQUIPO ASIGNADO ═══ */}
               <SectionTitle>Equipo Asignado</SectionTitle>
               <div className="modal-grid-3">
-                <UserSelect label="Inspector" name="inspectorId" />
-                <UserSelect label="Ajustador" name="adjusterId" />
-                <UserSelect label="Auditor" name="auditorId" />
-                <UserSelect label="Despachador" name="dispatcherId" />
-                <UserSelect label="Asistente" name="assistantId" />
+                <UserSelect label="Inspector" name="inspectorId" users={users} form={form} />
+                <UserSelect label="Ajustador" name="adjusterId" users={users} form={form} />
+                <UserSelect label="Auditor" name="auditorId" users={users} form={form} />
+                <UserSelect label="Despachador" name="dispatcherId" users={users} form={form} />
+                <UserSelect label="Asistente" name="assistantId" users={users} form={form} />
               </div>
 
               {/* ═══ CORREDOR / CONSTRUCTORA ═══ */}
@@ -437,13 +474,7 @@ export default function ClaimsPage() {
                   </Select>
                   <FieldError message={form.formState.errors.companyId?.message} />
                 </div>
-                <div className="modal-field flex items-center gap-2 pt-7">
-                  <Checkbox
-                    checked={form.watch("isSpecialClaim")}
-                    onChange={(e) => form.setValue("isSpecialClaim", e.target.checked)}
-                  />
-                  <Label className="text-[13px] font-medium cursor-pointer">Siniestro Especial</Label>
-                </div>
+                <SpecialClaimCheckbox control={form.control} setValue={form.setValue} />
                 <div className="modal-field modal-field-full" style={{ gridColumn: "span 3" }}>
                   <Label className="app-field-label">Notas adicionales</Label>
                   <textarea
