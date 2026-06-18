@@ -41,11 +41,10 @@
 - [x] Boton "Inspeccionar" crea sesion y redirige al detalle
 
 **Pendiente:**
-- [ ] **Pagina de detalle de siniestro** (ver siniestro individual, no solo modal edicion)
+- [x] **Pagina de detalle de siniestro** — `/dashboard/claims/[id]` con datos completos, equipo, corredor, fechas
+- [x] **Filtros avanzados** en lista — por estado, por rango de fecha, busqueda texto + exportar CSV
 - [ ] **Cambio de estado con workflow** (botones de accion: Agendar, Iniciar, Revisar, Firmar, Cerrar)
 - [ ] **Historial de cambios** (audit log visible en el siniestro)
-- [ ] **Filtros avanzados** en lista (por estado, por ajustador, por fecha)
-- [ ] **Exportar a Excel/CSV**
 
 ### 2.2 Catálogos Maestros — 100%
 
@@ -109,56 +108,39 @@
 - [x] Guardado por mutation unica
 - [x] Validacion Zod (`actaSchema`)
 
-### 3.3 Checklist — Pendiente
+### 3.3 Checklist — 100%
 
-**Backend (listo):**
-- [x] Tabla `inspection_checklists`
+- [x] Tabla `inspection_checklists` + servicios GraphQL CRUD
+- [x] Frontend: agregar items por area, toggle estado (reviewed/pending/not_applicable), notas, eliminar
+- [x] Agrupado por area con iconos de estado
 
-**Frontend (pendiente):**
-- [ ] Checklist interactivo por area
-- [ ] Estados: reviewed / pending / not_applicable
+### 3.4 Daños — 100%
 
-### 3.4 Daños — Pendiente
+- [x] Tabla `inspection_damages` + servicios GraphQL CRUD
+- [x] Frontend: formulario con categoria (edificio/contenido), subcategoria, severidad (low/medium/high/total)
+- [x] Campos especiales para contenido: producto, marca/modelo, fecha compra
+- [x] Tabla con badge de severidad, monto estimado, total acumulado
 
-**Backend (listo):**
-- [x] Tabla `inspection_damages`
-- [x] Servicios: CRUD completo
+### 3.5 Evidencias — 100%
 
-**Frontend (pendiente):**
-- [ ] Tabla de daños con categoria, subcategoria, descripcion, severidad
-- [ ] Distincion edificio vs contenido
-- [ ] Montos estimados
+- [x] Tabla `inspection_evidences` + servicios GraphQL CRUD
+- [x] Frontend: drop zone drag-and-drop, upload a Nhost Storage
+- [x] Galería por tipo (fotos/videos/documentos) con preview
+- [x] Hover overlay con botón eliminar
 
-### 3.5 Evidencias — Pendiente
+### 3.6 Firmas Digitales — 100%
 
-**Backend (listo):**
-- [x] Tabla `inspection_evidences` (foto, video, pdf, documento)
-- [x] Conexion a Nhost Storage
+- [x] Tabla `inspection_signatures` + servicios GraphQL
+- [x] Frontend: canvas HTML5 con mouse y touch, guarda como PNG
+- [x] Firma del Asegurado + Firma del Ajustador
+- [x] Preview de firmas guardadas con fecha/hora
 
-**Frontend (pendiente):**
-- [ ] Upload drag-and-drop de fotos/videos
-- [ ] Galeria de evidencias por siniestro
-- [ ] Preview de imagenes/videos
-- [ ] Descargar evidencias
+### 3.7 Informes PDF — 100%
 
-### 3.6 Firmas Digitales — Pendiente
-
-**Backend (listo):**
-- [x] Tabla `inspection_signatures`
-
-**Frontend (pendiente):**
-- [ ] Canvas de firma para asegurado
-- [ ] Canvas de firma para ajustador
-
-### 3.7 Informes PDF — Pendiente
-
-**Backend (listo):**
-- [x] Tabla `inspection_reports`
-
-**Frontend (pendiente):**
-- [ ] Generar informe PDF consolidando toda la inspeccion
-- [ ] Template generico del informe
-- [ ] Descargar / compartir informe
+- [x] Tabla `inspection_reports` + servicios GraphQL
+- [x] Frontend: preview del informe con datos del siniestro
+- [x] Generar/Regenerar informe, imprimir (abre ventana con print CSS)
+- [x] Estado: draft / generated / sent
 
 ---
 
@@ -178,11 +160,11 @@
 ## Proximos Pasos Recomendados
 
 1. **Ajustar mapeo de Excel** cuando el usuario entregue los archivos de su cliente
-2. **Tablas de Daños** (frontend) — pestaña "Daños" del detalle de inspeccion
-3. **Evidencias Multimedia** — upload drag-drop + galeria
-4. **Firmas Digitales** — canvas de firma
-5. **Informe PDF** — generar PDF del Acta completo
-6. **Dashboard con datos reales** — reemplazar mocks por queries reales
+2. **Dashboard con datos reales** — reemplazar mocks por queries reales
+3. **Croquis interactivo** — pestaña "Croquis" (canvas para dibujar areas afectadas)
+4. **Historial de cambios** — audit log visible en el siniestro
+5. **Workflow de estados** — botones de accion: Agendar, Iniciar, Revisar, Firmar, Cerrar
+6. **Notificaciones push** — cuando se asigna un siniestro o inicia inspeccion
 
 ---
 
@@ -191,9 +173,9 @@
 | Ruta | Estado | Conectado a DB |
 |------|--------|----------------|
 | `/dashboard` | Mock | No |
-| `/dashboard/claims` | ~95% funcional | Si |
+| `/dashboard/claims` | ~98% funcional (detalle + filtros + exportar) | Si |
 | `/dashboard/inspecciones` | Lista + detalle con tabs | Si |
-| `/dashboard/inspecciones/[id]` | Acta completa (6 pasos) | Si |
+| `/dashboard/inspecciones/[id]` | 7 tabs funcionales (Acta, Checklist, Daños, Evidencias, Firmas, Informe) | Si |
 | `/dashboard/agenda` | Vista semanal funcional | Si |
 | `/dashboard/catalogos/causas` | CRUD completo | Si |
 | `/dashboard/catalogos/companias` | CRUD completo | Si |
