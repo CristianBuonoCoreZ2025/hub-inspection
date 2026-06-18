@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -20,6 +21,8 @@ import {
   Briefcase,
   Tag,
   Box,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -62,6 +65,48 @@ function getInitials(email?: string | null) {
   const parts = email.split("@")[0].split(/[._-]/)
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+function NavSection({ title, links, pathname, onNavigate }: { title: string; links: typeof catalogLinks; pathname: string; onNavigate?: () => void }) {
+  const hasActive = links.some((l) => pathname.startsWith(l.href))
+  const [open, setOpen] = useState(hasActive)
+
+  return (
+    <div className="mb-2">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <span>{title}</span>
+        {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+      </button>
+      {open && (
+        <div className="mt-1 space-y-0.5 pl-1">
+          {links.map((link) => {
+            const isActive = pathname.startsWith(link.href)
+            const Icon = link.icon
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="size-4 shrink-0" />
+                {link.label}
+              </Link>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {
@@ -108,57 +153,8 @@ export function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </div>
 
-        <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Catálogos
-        </div>
-        <div className="mb-6 space-y-1">
-          {catalogLinks.map((link) => {
-            const isActive = pathname.startsWith(link.href)
-            const Icon = link.icon
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={onNavigate}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Icon className="size-4 shrink-0" />
-                {link.label}
-              </Link>
-            )
-          })}
-        </div>
-
-        <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Administración
-        </div>
-        <div className="space-y-1">
-          {adminLinks.map((link) => {
-            const isActive = pathname.startsWith(link.href)
-            const Icon = link.icon
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={onNavigate}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Icon className="size-4 shrink-0" />
-                {link.label}
-              </Link>
-            )
-          })}
-        </div>
+        <NavSection title="Catálogos" links={catalogLinks} pathname={pathname} onNavigate={onNavigate} />
+        <NavSection title="Administración" links={adminLinks} pathname={pathname} onNavigate={onNavigate} />
       </nav>
 
       <Separator />
