@@ -61,11 +61,11 @@ const statusColors: Record<ClaimStatus, string> = {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="modal-field-full">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mt-2 mb-1">
+    <div className="modal-field-full mt-4">
+      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
         {children}
       </h3>
-      <div className="h-px bg-border/40 mb-2" />
+      <div className="h-px bg-border/40 mb-3" />
     </div>
   );
 }

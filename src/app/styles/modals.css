@@ -35,10 +35,15 @@
     background: rgba(255, 255, 255, 0.98) !important;
     box-shadow: 0 26px 55px rgba(2, 12, 27, 0.2) !important;
     border: 1px solid rgba(255, 255, 255, 0.7) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 90vh !important;
+    min-height: 0 !important;
   }
 
   /* ═══════════════ ESTRUCTURA INTERNA (inmune) ═══════════════ */
   .modal-header {
+    flex-shrink: 0 !important;
     padding: 22px 22px 14px 22px !important;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
   }
@@ -60,12 +65,17 @@
   }
 
   .modal-body {
-    @apply flex-1 overflow-y-auto;
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    min-height: 0 !important;
     padding: 14px 22px !important;
   }
 
   .modal-footer {
-    @apply flex items-center justify-end;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
     gap: 10px !important;
     padding: 14px 22px !important;
     border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
