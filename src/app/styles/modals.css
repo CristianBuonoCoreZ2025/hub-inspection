@@ -107,14 +107,14 @@
 .modal-grid-4 {
   display: grid !important;
   grid-template-columns: repeat(4, 1fr) !important;
-  gap: 10px 12px !important;
-  margin-top: 6px !important;
+  gap: 6px 8px !important;
+  margin-top: 4px !important;
 }
 
 .modal-field {
   display: flex !important;
   flex-direction: column !important;
-  gap: 7px !important;
+  gap: 4px !important;
   min-width: 0 !important;
 }
 

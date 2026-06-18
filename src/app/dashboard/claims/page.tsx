@@ -56,11 +56,11 @@ const statusColors: Record<ClaimStatus, string> = {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="modal-field-full mt-4">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+    <div className="modal-field-full mt-3">
+      <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
         {children}
       </h3>
-      <div className="h-px bg-border/40 mb-3" />
+      <div className="h-px bg-border/40 mb-2" />
     </div>
   );
 }
@@ -318,20 +318,20 @@ export default function ClaimsPage() {
               <div className="modal-grid-4">
                 <div className="modal-field">
                   <Label className="app-field-label">Fecha Siniestro <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("claimDate")} type="date" className="app-input h-8" />
+                  <Input {...form.register("claimDate")} type="date" className="app-input h-7 px-2 text-xs" />
                   <FieldError message={form.formState.errors.claimDate?.message} />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Hora Siniestro</Label>
-                  <Input {...form.register("claimTime")} type="time" className="app-input h-8" />
+                  <Input {...form.register("claimTime")} type="time" className="app-input h-7 px-2 text-xs" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Fecha Denuncio</Label>
-                  <Input {...form.register("reportDate")} type="date" className="app-input h-8" />
+                  <Input {...form.register("reportDate")} type="date" className="app-input h-7 px-2 text-xs" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Fecha Asignación</Label>
-                  <Input {...form.register("assignmentDate")} type="date" className="app-input h-8" />
+                  <Input {...form.register("assignmentDate")} type="date" className="app-input h-7 px-2 text-xs" />
                 </div>
               </div>
               <div className="modal-grid">
