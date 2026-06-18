@@ -13,6 +13,11 @@ const SESSION_FIELDS = `
   police_report_number police_report_name police_report_rut
   firefighters_company other_insurances other_insurance_company
   inspector_observations
+  property_risk
+  property_materiality
+  security_measures
+  insured_statement
+  third_parties
   created_at updated_at
 `;
 

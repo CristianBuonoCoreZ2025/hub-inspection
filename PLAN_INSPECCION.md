@@ -350,7 +350,8 @@ Cuando la sesión está `completed` y ambas firmas existen:
 - 7 pestañas: Resumen, Acta, Daños, Evidencias, Croquis, Firmas, Informe
 - Tab Resumen: datos completos del siniestro, asegurado, contacto, estado de sesion
 - Botones de accion segun estado en el header
-- Tabs Acta-Daños-Evidencias-Croquis-Firmas-Informe: placeholders listos para construir
+- **Tab Acta:** Wizard de 6 pasos funcional (Datos Generales, Riesgo, Materialidad, Seguridad, Declaracion, Terceros)
+- Tabs Daños-Evidencias-Croquis-Firmas-Informe: placeholders listos para construir
 
 ### Página de Agenda (`/dashboard/agenda`)
 - Vista semanal (Lunes a Domingo)

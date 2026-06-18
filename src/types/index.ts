@@ -106,6 +106,69 @@ export interface Claim {
   updated_at: string;
 }
 
+export interface ActaPropertyRisk {
+  risk_type?: string;
+  risk_class?: string;
+  property_type?: string;
+  apartment_number?: string;
+  floor_count?: string;
+  age_years?: string;
+  built_surface?: string;
+  room_count?: string;
+  bathroom_count?: string;
+  office_count?: string;
+  warehouse_count?: string;
+  is_habitable?: boolean;
+  owner_name?: string;
+  branch_count?: string;
+  worker_resident_count?: string;
+  business_line?: string;
+}
+
+export interface ActaPropertyMateriality {
+  walls?: string;
+  roof?: string;
+  interior_flooring?: string;
+  interior_ceilings?: string;
+  interior_finishes?: string;
+  exterior_finishes?: string;
+  perimeter_closure?: string;
+  others?: string;
+}
+
+export interface ActaSecurityMeasureItem {
+  has_it?: boolean;
+  detail?: string;
+}
+
+export interface ActaSecurityMeasures {
+  protections?: ActaSecurityMeasureItem;
+  security_locks?: ActaSecurityMeasureItem;
+  security_guards?: ActaSecurityMeasureItem;
+  alarms?: ActaSecurityMeasureItem;
+  cameras?: ActaSecurityMeasureItem;
+  other_measures?: ActaSecurityMeasureItem;
+}
+
+export interface ActaInsuredStatement {
+  statement?: string;
+  entry_exit_point?: string;
+  alarm_activation?: string;
+  stolen_items_estimate?: string;
+  vehicle_use?: string;
+  incident_duration?: string;
+}
+
+export interface ActaThirdParty {
+  party_type: "afectado" | "responsable";
+  full_name?: string;
+  rut?: string;
+  address?: string;
+  commune?: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface InspectionSession {
   id: string;
   claim_id: string;
@@ -127,6 +190,11 @@ export interface InspectionSession {
   other_insurances: boolean;
   other_insurance_company: string | null;
   inspector_observations: string | null;
+  property_risk?: ActaPropertyRisk | null;
+  property_materiality?: ActaPropertyMateriality | null;
+  security_measures?: ActaSecurityMeasures | null;
+  insured_statement?: ActaInsuredStatement | null;
+  third_parties?: ActaThirdParty[] | null;
   created_at: string;
   updated_at: string;
 }

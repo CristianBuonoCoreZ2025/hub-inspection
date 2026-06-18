@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { InspectionSession } from "@/types";
+import ActaForm from "./acta-form";
 
 const sessionStatusLabels: Record<string, string> = {
   pending: "Pendiente",
@@ -356,29 +357,20 @@ export default function InspectionDetailPage() {
 
         {/* ── TAB: ACTA DE INSPECCION ── */}
         <TabsContent value="acta" className="mt-4">
-          <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Acta de Inspeccion
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {session.status === "active" || session.status === "completed"
-                ? "Completa los datos del Acta de Inspeccion en terreno."
-                : "La sesion debe estar en progreso para completar el Acta."}
-            </p>
-            {session.status === "pending" || session.status === "scheduled" ? (
+          {session.status === "pending" || session.status === "scheduled" ? (
+            <div className="app-panel">
+              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                Acta de Inspeccion
+              </h3>
               <div className="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30">
                 <p className="text-sm text-amber-950 dark:text-amber-100">
                   Inicia la inspeccion para acceder al formulario del Acta.
                 </p>
               </div>
-            ) : (
-              <div className="mt-4 space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Formulario del Acta en construccion. Proximamente: Datos Generales, Descripcion del Riesgo, Materialidad, Medidas de Asegurabilidad, Declaracion del Asegurado, Datos de Terceros.
-                </p>
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <ActaForm session={session} />
+          )}
         </TabsContent>
 
         {/* ── TAB: DANOS ── */}
