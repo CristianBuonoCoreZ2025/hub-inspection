@@ -8,13 +8,7 @@ import { getUsers } from "@/services/users";
 import { getClaimCauses, getInsuranceCompanies, getBrokers, getAdvisors } from "@/services/catalogs";
 import { claimSchema, type ClaimInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import {
-  useForm,
-  useWatch,
-  type Control,
-  type UseFormSetValue,
-  type UseFormReturn,
-} from "react-hook-form";
+import { useForm, type UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck } from "lucide-react";
 import { createInspectionSession } from "@/services/inspections";
@@ -37,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import type { ClaimStatus, Company, Profile } from "@/types";
 
 const statusLabels: Record<ClaimStatus, string> = {
@@ -76,24 +70,7 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-xs text-red-500">{message}</p>;
 }
 
-function SpecialClaimCheckbox({
-  control,
-  setValue,
-}: {
-  control: Control<ClaimInput>;
-  setValue: UseFormSetValue<ClaimInput>;
-}) {
-  const isSpecialClaim = useWatch({ control, name: "isSpecialClaim" });
-  return (
-    <div className="modal-field flex items-center gap-2 pt-7">
-      <Checkbox
-        checked={isSpecialClaim}
-        onChange={(e) => setValue("isSpecialClaim", e.target.checked)}
-      />
-      <Label className="text-[13px] font-medium cursor-pointer">Siniestro Especial</Label>
-    </div>
-  );
-}
+
 
 function UserSelect({
   label,
@@ -110,7 +87,7 @@ function UserSelect({
     <div className="modal-field">
       <Label className="app-field-label">{label}</Label>
       <Select onValueChange={(v) => form.setValue(name, v as string)} value={String(form.getValues(name) ?? "")}>
-        <SelectTrigger className="app-input h-[40px]">
+        <SelectTrigger className="app-input h-8">
           <SelectValue placeholder="Seleccionar..." />
         </SelectTrigger>
         <SelectContent>
@@ -144,8 +121,7 @@ export default function ClaimsPage() {
       contactName: "", contactRole: "", contactEmail: "",
       assignedAdjusterId: "", inspectorId: "", adjusterId: "",
       brokerName: "", brokerNumber: "", advisor: "",
-      recoveryTypeLegal: "", recoveryTypeMaterial: "", recoveryComments: "",
-      companyId: "", notes: "", isSpecialClaim: false,
+      companyId: "", notes: "",
     },
   });
 
@@ -276,35 +252,63 @@ export default function ClaimsPage() {
             </div>
 
             <div className="modal-body">
+              {/* ═══ EMPRESA (MI CLIENTE) ═══ */}
+              <div className="modal-grid">
+                <div className="modal-field modal-field-full">
+                  <Label className="app-field-label">Empresa (Cliente) <span className="text-red-500">*</span></Label>
+                  <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} value={form.getValues("companyId")} disabled={editingId !== null}>
+                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+                    <SelectContent>
+                      {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                  <FieldError message={form.formState.errors.companyId?.message} />
+                </div>
+              </div>
+
+              {/* ═══ COMPAÑÍA DE SEGUROS ═══ */}
+              <div className="modal-grid">
+                <div className="modal-field modal-field-full">
+                  <Label className="app-field-label">Compañía de Seguros</Label>
+                  <Select onValueChange={(v) => form.setValue("insuranceCompany", v ?? "")} value={form.getValues("insuranceCompany") || ""}>
+                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar compañia..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {insuranceCompaniesCatalog?.map((c) => (<SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               {/* ═══ SINIESTRO / LIQUIDACIÓN ═══ */}
               <SectionTitle>Siniestro y Liquidación</SectionTitle>
               <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">N° Siniestro Compañía <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("claimNumber")} placeholder="1946897" className="app-input" />
+                  <Input {...form.register("claimNumber")} placeholder="1946897" className="app-input h-8" />
                   <FieldError message={form.formState.errors.claimNumber?.message} />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">N° Liquidación</Label>
-                  <Input {...form.register("liquidationNumber")} placeholder="202503906" className="app-input" />
+                  <Input {...form.register("liquidationNumber")} placeholder="202503906" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">N° Póliza <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("policyNumber")} placeholder="20618983" className="app-input" />
+                  <Input {...form.register("policyNumber")} placeholder="20618983" className="app-input h-8" />
                   <FieldError message={form.formState.errors.policyNumber?.message} />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Ref. Interna Cliente</Label>
-                  <Input {...form.register("clientReference")} placeholder="CHL-00013152" className="app-input" />
+                  <Input {...form.register("clientReference")} placeholder="CHL-00013152" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">N° Denuncio Compañía</Label>
-                  <Input {...form.register("companyReportNumber")} className="app-input" />
+                  <Input {...form.register("companyReportNumber")} className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Tipo de Siniestro <span className="text-red-500">*</span></Label>
                   <Select onValueChange={(v) => form.setValue("claimType", v ?? "")} value={form.getValues("claimType") || ""}>
-                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
+                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">— Sin seleccionar —</SelectItem>
                       {claimCauses?.map((c) => (<SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>))}
@@ -313,40 +317,28 @@ export default function ClaimsPage() {
                   <FieldError message={form.formState.errors.claimType?.message} />
                 </div>
               </div>
-              <div className="modal-grid">
-                <div className="modal-field modal-field-full">
-                  <Label className="app-field-label">Compañía de Seguros</Label>
-                  <Select onValueChange={(v) => form.setValue("insuranceCompany", v ?? "")} value={form.getValues("insuranceCompany") || ""}>
-                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar compañia..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {insuranceCompaniesCatalog?.map((c) => (<SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
               <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Fecha Siniestro <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("claimDate")} type="date" className="app-input" />
+                  <Input {...form.register("claimDate")} type="date" className="app-input h-8" />
                   <FieldError message={form.formState.errors.claimDate?.message} />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Hora Siniestro</Label>
-                  <Input {...form.register("claimTime")} type="time" className="app-input" />
+                  <Input {...form.register("claimTime")} type="time" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Fecha Denuncio</Label>
-                  <Input {...form.register("reportDate")} type="date" className="app-input" />
+                  <Input {...form.register("reportDate")} type="date" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Fecha Asignación</Label>
-                  <Input {...form.register("assignmentDate")} type="date" className="app-input" />
+                  <Input {...form.register("assignmentDate")} type="date" className="app-input h-8" />
                 </div>
                 <div className="modal-field modal-field-full" style={{ gridColumn: "span 2" }}>
                   <Label className="app-field-label">Causal del Siniestro</Label>
                   <Select onValueChange={(v) => form.setValue("claimCause", v ?? "")} value={form.getValues("claimCause") || ""}>
-                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar causal..." /></SelectTrigger>
+                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar causal..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">— Sin seleccionar —</SelectItem>
                       {claimCauses?.map((c) => (<SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>))}
@@ -371,28 +363,28 @@ export default function ClaimsPage() {
               <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("insuredName")} placeholder="EDIFICIO CONDOMINIO" className="app-input" />
+                  <Input {...form.register("insuredName")} placeholder="EDIFICIO CONDOMINIO" className="app-input h-8" />
                   <FieldError message={form.formState.errors.insuredName?.message} />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Apellido</Label>
-                  <Input {...form.register("lastName")} placeholder="LYON" className="app-input" />
+                  <Input {...form.register("lastName")} placeholder="LYON" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">RUT</Label>
-                  <Input {...form.register("rut")} placeholder="53325014-9" className="app-input" />
+                  <Input {...form.register("rut")} placeholder="53325014-9" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Email</Label>
-                  <Input {...form.register("insuredEmail")} type="email" placeholder="fareyes@gmail.com" className="app-input" />
+                  <Input {...form.register("insuredEmail")} type="email" placeholder="fareyes@gmail.com" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Teléfono</Label>
-                  <Input {...form.register("insuredPhone")} placeholder="X XXXX XXXX" className="app-input" />
+                  <Input {...form.register("insuredPhone")} placeholder="X XXXX XXXX" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Celular</Label>
-                  <Input {...form.register("cellPhone")} placeholder="9 9999 9999" className="app-input" />
+                  <Input {...form.register("cellPhone")} placeholder="9 9999 9999" className="app-input h-8" />
                 </div>
               </div>
 
@@ -401,15 +393,15 @@ export default function ClaimsPage() {
               <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Nombre Contacto</Label>
-                  <Input {...form.register("contactName")} placeholder="Gonzalo Meza" className="app-input" />
+                  <Input {...form.register("contactName")} placeholder="Gonzalo Meza" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Cargo / Relación</Label>
-                  <Input {...form.register("contactRole")} placeholder="Arrendatario depto 606" className="app-input" />
+                  <Input {...form.register("contactRole")} placeholder="Arrendatario depto 606" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Email Contacto</Label>
-                  <Input {...form.register("contactEmail")} type="email" placeholder="ignacia@adpro.cl" className="app-input" />
+                  <Input {...form.register("contactEmail")} type="email" placeholder="ignacia@adpro.cl" className="app-input h-8" />
                 </div>
               </div>
 
@@ -418,33 +410,47 @@ export default function ClaimsPage() {
               <div className="modal-grid">
                 <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Dirección <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("address")} placeholder="AVDA RICARDO LYON 1351" className="app-input" />
+                  <Input {...form.register("address")} placeholder="AVDA RICARDO LYON 1351" className="app-input h-8" />
                   <FieldError message={form.formState.errors.address?.message} />
                 </div>
               </div>
               <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Ciudad <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("city")} placeholder="Santiago" className="app-input" />
+                  <Input {...form.register("city")} placeholder="Santiago" className="app-input h-8" />
                   <FieldError message={form.formState.errors.city?.message} />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Comuna</Label>
-                  <Input {...form.register("commune")} placeholder="Providencia" className="app-input" />
+                  <Input {...form.register("commune")} placeholder="Providencia" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Región</Label>
-                  <Input {...form.register("region")} placeholder="Metropolitana" className="app-input" />
+                  <Input {...form.register("region")} placeholder="Metropolitana" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">País</Label>
-                  <Input {...form.register("country")} placeholder="Chile" className="app-input" />
+                  <Input {...form.register("country")} placeholder="Chile" className="app-input h-8" />
+                </div>
+              </div>
+
+              {/* ═══ ASESOR ═══ */}
+              <SectionTitle>Asesor</SectionTitle>
+              <div className="modal-grid">
+                <div className="modal-field modal-field-full">
+                  <Select onValueChange={(v) => form.setValue("advisor", v ?? "")} value={form.getValues("advisor") || ""}>
+                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar asesor..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {advisorsCatalog?.map((a) => (<SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               {/* ═══ EQUIPO ASIGNADO ═══ */}
               <SectionTitle>Equipo Asignado</SectionTitle>
-              <div className="modal-grid-3">
+              <div className="modal-grid">
                 <UserSelect label="Inspector" name="inspectorId" users={users} form={form} />
                 <UserSelect label="Ajustador" name="adjusterId" users={users} form={form} />
               </div>
@@ -455,7 +461,7 @@ export default function ClaimsPage() {
                 <div className="modal-field">
                   <Label className="app-field-label">Corredor</Label>
                   <Select onValueChange={(v) => form.setValue("brokerName", v ?? "")} value={form.getValues("brokerName") || ""}>
-                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar corredor..." /></SelectTrigger>
+                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar corredor..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">— Sin seleccionar —</SelectItem>
                       {brokersCatalog?.map((b) => (<SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>))}
@@ -464,58 +470,14 @@ export default function ClaimsPage() {
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">N° Corredor</Label>
-                  <Input {...form.register("brokerNumber")} className="app-input" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Asesor</Label>
-                  <Select onValueChange={(v) => form.setValue("advisor", v ?? "")} value={form.getValues("advisor") || ""}>
-                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar asesor..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {advisorsCatalog?.map((a) => (<SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                  <Input {...form.register("brokerNumber")} className="app-input h-8" />
                 </div>
               </div>
 
-              {/* ═══ RECUPERO ═══ */}
-              <SectionTitle>Recupero</SectionTitle>
-              <div className="modal-grid-3">
-                <div className="modal-field">
-                  <Label className="app-field-label">Tipo Recupero Legal</Label>
-                  <Input {...form.register("recoveryTypeLegal")} className="app-input" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Tipo Recupero Material</Label>
-                  <Input {...form.register("recoveryTypeMaterial")} className="app-input" />
-                </div>
-                <div className="modal-field modal-field-full" style={{ gridColumn: "span 3" }}>
-                  <Label className="app-field-label">Comentario Recupero</Label>
-                  <textarea
-                    {...form.register("recoveryComments")}
-                    rows={2}
-                    className="app-input resize-none"
-                    placeholder="Observaciones sobre recupero..."
-                  />
-                </div>
-              </div>
-
-              {/* ═══ EMPRESA / NOTAS ═══ */}
-              <SectionTitle>Empresa y Estado</SectionTitle>
-              <div className="modal-grid-3">
-                <div className="modal-field">
-                  <Label className="app-field-label">Empresa <span className="text-red-500">*</span></Label>
-                  <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} value={form.getValues("companyId")} disabled={editingId !== null}>
-                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
-                    <SelectContent>
-                      {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                  <FieldError message={form.formState.errors.companyId?.message} />
-                </div>
-                <SpecialClaimCheckbox control={form.control} setValue={form.setValue} />
-                <div className="modal-field modal-field-full" style={{ gridColumn: "span 3" }}>
-                  <Label className="app-field-label">Notas adicionales</Label>
+              {/* ═══ NOTAS ═══ */}
+              <SectionTitle>Notas</SectionTitle>
+              <div className="modal-grid">
+                <div className="modal-field modal-field-full">
                   <textarea
                     {...form.register("notes")}
                     rows={2}
@@ -620,12 +582,8 @@ export default function ClaimsPage() {
                             brokerName: claim.broker_name || "",
                             brokerNumber: claim.broker_number || "",
                             advisor: claim.advisor || "",
-                            recoveryTypeLegal: claim.recovery_type_legal || "",
-                            recoveryTypeMaterial: claim.recovery_type_material || "",
-                            recoveryComments: claim.recovery_comments || "",
                             companyId: claim.company_id,
                             notes: claim.notes || "",
-                            isSpecialClaim: claim.is_special_claim,
                           });
                           setOpen(true);
                         }}><Pencil className="h-4 w-4" /></Button>

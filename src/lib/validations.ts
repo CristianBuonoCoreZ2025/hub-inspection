@@ -76,10 +76,6 @@ export const claimSchema = z.object({
   clientReference: z.string().optional(),
   companyReportNumber: z.string().optional(),
   liquidationNumber: z.string().optional(),
-  isSpecialClaim: z.boolean().optional().default(false),
-  recoveryTypeLegal: z.string().optional(),
-  recoveryTypeMaterial: z.string().optional(),
-  recoveryComments: z.string().optional(),
   companyId: z.string().min(1, "Empresa requerida"),
   notes: z.string().optional(),
 });

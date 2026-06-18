@@ -37,10 +37,6 @@ const CLAIM_FIELDS = `
   client_reference
   company_report_number
   liquidation_number
-  is_special_claim
-  recovery_type_legal
-  recovery_type_material
-  recovery_comments
   company_id
   notes
   created_at
@@ -141,10 +137,6 @@ function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }):
     client_reference: input.clientReference || null,
     company_report_number: input.companyReportNumber || null,
     liquidation_number: input.liquidationNumber || null,
-    is_special_claim: input.isSpecialClaim ?? false,
-    recovery_type_legal: input.recoveryTypeLegal || null,
-    recovery_type_material: input.recoveryTypeMaterial || null,
-    recovery_comments: input.recoveryComments || null,
     notes: input.notes || null,
     company_id: input.company_id,
   };

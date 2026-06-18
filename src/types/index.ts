@@ -91,10 +91,6 @@ export interface Claim {
   client_reference: string | null;
   company_report_number: string | null;
   liquidation_number: string | null;
-  is_special_claim: boolean;
-  recovery_type_legal: string | null;
-  recovery_type_material: string | null;
-  recovery_comments: string | null;
   company_id: string;
   notes: string | null;
   created_at: string;
