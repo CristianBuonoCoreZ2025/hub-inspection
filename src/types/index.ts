@@ -295,6 +295,44 @@ export interface DamageSketch {
   created_at: string;
 }
 
+export interface InspectionChecklist {
+  id: string;
+  session_id: string;
+  area: string;
+  item: string;
+  status: "reviewed" | "pending" | "not_applicable";
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InspectionEvidence {
+  id: string;
+  session_id: string;
+  type: "photo" | "video" | "document";
+  url: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface InspectionSignature {
+  id: string;
+  session_id: string;
+  role: "insured" | "adjuster";
+  signature_url: string;
+  signed_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
+}
+
+export interface InspectionReport {
+  id: string;
+  session_id: string;
+  report_url: string | null;
+  generated_at: string | null;
+  status: "draft" | "generated" | "sent";
+}
+
 // ── Catalogos Maestros ──
 
 export interface ClaimCause {

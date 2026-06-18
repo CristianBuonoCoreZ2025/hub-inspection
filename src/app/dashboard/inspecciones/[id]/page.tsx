@@ -27,6 +27,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { InspectionSession } from "@/types";
 import ActaForm from "./acta-form";
+import ChecklistTab from "./checklist-tab";
+import DamagesTab from "./damages-tab";
+import EvidencesTab from "./evidences-tab";
+import SignaturesTab from "./signatures-tab";
+import ReportTab from "./report-tab";
 
 const sessionStatusLabels: Record<string, string> = {
   pending: "Pendiente",
@@ -200,7 +205,11 @@ export default function InspectionDetailPage() {
           </TabsTrigger>
           <TabsTrigger value="acta">
             <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" />
-            Acta de Inspeccion
+            Acta
+          </TabsTrigger>
+          <TabsTrigger value="checklist">
+            <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" />
+            Checklist
           </TabsTrigger>
           <TabsTrigger value="danos">
             <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
@@ -373,28 +382,19 @@ export default function InspectionDetailPage() {
           )}
         </TabsContent>
 
+        {/* ── TAB: CHECKLIST ── */}
+        <TabsContent value="checklist" className="mt-4">
+          <ChecklistTab sessionId={session.id} />
+        </TabsContent>
+
         {/* ── TAB: DANOS ── */}
         <TabsContent value="danos" className="mt-4">
-          <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Registro de Danos
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Tabla de danos en construccion. Proximamente: edificio, contenido, montos estimados.
-            </p>
-          </div>
+          <DamagesTab sessionId={session.id} />
         </TabsContent>
 
         {/* ── TAB: EVIDENCIAS ── */}
         <TabsContent value="evidencias" className="mt-4">
-          <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Evidencias Multimedia
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Galeria de evidencias en construccion. Proximamente: upload de fotos, videos y documentos.
-            </p>
-          </div>
+          <EvidencesTab sessionId={session.id} />
         </TabsContent>
 
         {/* ── TAB: CROQUIS ── */}
@@ -411,26 +411,12 @@ export default function InspectionDetailPage() {
 
         {/* ── TAB: FIRMAS ── */}
         <TabsContent value="firmas" className="mt-4">
-          <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Firmas Digitales
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Canvas de firmas en construccion. Proximamente: firma del inspector y del asegurado.
-            </p>
-          </div>
+          <SignaturesTab sessionId={session.id} />
         </TabsContent>
 
         {/* ── TAB: INFORME ── */}
         <TabsContent value="informe" className="mt-4">
-          <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Informe PDF
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Generacion de informe en construccion. Proximamente: consolidar Acta, danos, evidencias, croquis y firmas en PDF.
-            </p>
-          </div>
+          <ReportTab sessionId={session.id} claimNumber={session.claim?.claim_number} />
         </TabsContent>
       </Tabs>
     </div>

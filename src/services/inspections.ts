@@ -52,7 +52,7 @@ export async function getInspectionSessionById(id: string) {
       }
     }
   `;
-  const data = await graphqlRequest<{ inspection_sessions_by_pk: InspectionSession & { claim?: Record<string, unknown> } }>(query, { id });
+  const data = await graphqlRequest<{ inspection_sessions_by_pk: InspectionSession & { claim?: { claim_number: string; insured_name: string; address: string; city: string | null; claim_date: string | null; claim_time: string | null; contact_name: string | null; contact_role: string | null; contact_email: string | null; insurance_company: string | null; policy_number: string; liquidation_number: string | null; client_reference: string | null; broker_name: string | null; broker_executive: string | null; broker_number: string | null; builder_name: string | null; advisor: string | null; inspector_id: string | null; adjuster_id: string | null; auditor_id: string | null; dispatcher_id: string | null; assistant_id: string | null } } }>(query, { id });
   return data.inspection_sessions_by_pk;
 }
 
@@ -405,4 +405,182 @@ export async function deleteDamage(id: string) {
     }
   `;
   await graphqlRequest(mutation, { id });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CHECKLIST
+// ═══════════════════════════════════════════════════════════════
+
+const CHECKLIST_FIELDS = `
+  id session_id area item status notes created_at updated_at
+`;
+
+export async function getChecklists(sessionId: string) {
+  const query = `
+    query GetChecklists($sessionId: uuid!) {
+      inspection_checklists(where: { session_id: { _eq: $sessionId } }) {
+        ${CHECKLIST_FIELDS}
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ inspection_checklists: import("@/types").InspectionChecklist[] }>(query, { sessionId });
+  return data.inspection_checklists;
+}
+
+export async function createChecklistItem(input: Omit<import("@/types").InspectionChecklist, "id" | "created_at" | "updated_at">) {
+  const mutation = `
+    mutation CreateChecklistItem($object: inspection_checklists_insert_input!) {
+      insert_inspection_checklists_one(object: $object) {
+        ${CHECKLIST_FIELDS}
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_inspection_checklists_one: import("@/types").InspectionChecklist }>(mutation, { object: input });
+  return data.insert_inspection_checklists_one;
+}
+
+export async function updateChecklistItem(id: string, input: Partial<import("@/types").InspectionChecklist>) {
+  const mutation = `
+    mutation UpdateChecklistItem($id: uuid!, $set: inspection_checklists_set_input!) {
+      update_inspection_checklists_by_pk(pk_columns: { id: $id }, _set: $set) {
+        ${CHECKLIST_FIELDS}
+      }
+    }
+  `;
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  const data = await graphqlRequest<{ update_inspection_checklists_by_pk: import("@/types").InspectionChecklist }>(mutation, { id, set });
+  return data.update_inspection_checklists_by_pk;
+}
+
+export async function deleteChecklistItem(id: string) {
+  const mutation = `
+    mutation DeleteChecklistItem($id: uuid!) {
+      delete_inspection_checklists_by_pk(id: $id) { id }
+    }
+  `;
+  await graphqlRequest(mutation, { id });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EVIDENCES
+// ═══════════════════════════════════════════════════════════════
+
+const EVIDENCE_FIELDS = `
+  id session_id type url description created_at
+`;
+
+export async function getEvidences(sessionId: string) {
+  const query = `
+    query GetEvidences($sessionId: uuid!) {
+      inspection_evidences(where: { session_id: { _eq: $sessionId } }) {
+        ${EVIDENCE_FIELDS}
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ inspection_evidences: import("@/types").InspectionEvidence[] }>(query, { sessionId });
+  return data.inspection_evidences;
+}
+
+export async function createEvidence(input: Omit<import("@/types").InspectionEvidence, "id" | "created_at">) {
+  const mutation = `
+    mutation CreateEvidence($object: inspection_evidences_insert_input!) {
+      insert_inspection_evidences_one(object: $object) {
+        ${EVIDENCE_FIELDS}
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_inspection_evidences_one: import("@/types").InspectionEvidence }>(mutation, { object: input });
+  return data.insert_inspection_evidences_one;
+}
+
+export async function deleteEvidence(id: string) {
+  const mutation = `
+    mutation DeleteEvidence($id: uuid!) {
+      delete_inspection_evidences_by_pk(id: $id) { id }
+    }
+  `;
+  await graphqlRequest(mutation, { id });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SIGNATURES
+// ═══════════════════════════════════════════════════════════════
+
+const SIGNATURE_FIELDS = `
+  id session_id role signature_url signed_at ip_address user_agent
+`;
+
+export async function getSignatures(sessionId: string) {
+  const query = `
+    query GetSignatures($sessionId: uuid!) {
+      inspection_signatures(where: { session_id: { _eq: $sessionId } }) {
+        ${SIGNATURE_FIELDS}
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ inspection_signatures: import("@/types").InspectionSignature[] }>(query, { sessionId });
+  return data.inspection_signatures;
+}
+
+export async function createSignature(input: Omit<import("@/types").InspectionSignature, "id">) {
+  const mutation = `
+    mutation CreateSignature($object: inspection_signatures_insert_input!) {
+      insert_inspection_signatures_one(object: $object) {
+        ${SIGNATURE_FIELDS}
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_inspection_signatures_one: import("@/types").InspectionSignature }>(mutation, { object: input });
+  return data.insert_inspection_signatures_one;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  REPORTS
+// ═══════════════════════════════════════════════════════════════
+
+const REPORT_FIELDS = `
+  id session_id report_url generated_at status
+`;
+
+export async function getReport(sessionId: string) {
+  const query = `
+    query GetReport($sessionId: uuid!) {
+      inspection_reports(where: { session_id: { _eq: $sessionId } }) {
+        ${REPORT_FIELDS}
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ inspection_reports: import("@/types").InspectionReport[] }>(query, { sessionId });
+  return data.inspection_reports[0] || null;
+}
+
+export async function createReport(input: Omit<import("@/types").InspectionReport, "id">) {
+  const mutation = `
+    mutation CreateReport($object: inspection_reports_insert_input!) {
+      insert_inspection_reports_one(object: $object) {
+        ${REPORT_FIELDS}
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_inspection_reports_one: import("@/types").InspectionReport }>(mutation, { object: input });
+  return data.insert_inspection_reports_one;
+}
+
+export async function updateReport(id: string, input: Partial<import("@/types").InspectionReport>) {
+  const mutation = `
+    mutation UpdateReport($id: uuid!, $set: inspection_reports_set_input!) {
+      update_inspection_reports_by_pk(pk_columns: { id: $id }, _set: $set) {
+        ${REPORT_FIELDS}
+      }
+    }
+  `;
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  const data = await graphqlRequest<{ update_inspection_reports_by_pk: import("@/types").InspectionReport }>(mutation, { id, set });
+  return data.update_inspection_reports_by_pk;
 }
