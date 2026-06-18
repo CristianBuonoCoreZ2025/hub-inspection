@@ -10,7 +10,7 @@ import { claimSchema, type ClaimInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, type UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck, Download, X } from "lucide-react";
 import { createInspectionSession } from "@/services/inspections";
 import { useRouter } from "next/navigation";
 
@@ -101,10 +101,24 @@ function UserSelect({
   );
 }
 
+const statusOptions = [
+  { value: "", label: "Todos los estados" },
+  { value: "created", label: "Creado" },
+  { value: "scheduled", label: "Programado" },
+  { value: "in_progress", label: "En Progreso" },
+  { value: "pending_info", label: "Pendiente Info" },
+  { value: "in_review", label: "En Revisión" },
+  { value: "signed", label: "Firmado" },
+  { value: "closed", label: "Cerrado" },
+];
+
 export default function ClaimsPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -210,9 +224,12 @@ export default function ClaimsPage() {
     }
   };
 
-  const filtered = claims?.filter((c) =>
-    [c.claim_number, c.liquidation_number, c.insured_name, c.address].join(" ").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = claims?.filter((c) => {
+    const textMatch = [c.claim_number, c.liquidation_number, c.insured_name, c.address].join(" ").toLowerCase().includes(search.toLowerCase());
+    const statusMatch = !statusFilter || c.status === statusFilter;
+    const dateMatch = (!dateFrom || (c.claim_date && c.claim_date >= dateFrom)) && (!dateTo || (c.claim_date && c.claim_date <= dateTo));
+    return textMatch && statusMatch && dateMatch;
+  });
 
   return (
     <div className="app-page">
@@ -222,23 +239,81 @@ export default function ClaimsPage() {
       </header>
 
       <div className="app-toolbar">
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar siniestro..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 w-full max-w-[200px] text-[13px]"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-8 rounded-md border border-input bg-background px-2 text-[13px]"
+          >
+            {statusOptions.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
           <Input
-            placeholder="Buscar siniestro..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-full max-w-sm"
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="h-8 w-[130px] text-[13px]"
+            placeholder="Desde"
           />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-8 w-[130px] text-[13px]"
+            placeholder="Hasta"
+          />
+          {(statusFilter || dateFrom || dateTo) && (
+            <button
+              onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" /> Limpiar
+            </button>
+          )}
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-[13px]"
+            onClick={() => {
+              const rows = filtered || [];
+              const csv = [
+                ["N° Siniestro","N° Póliza","Asegurado","Dirección","Ciudad","Estado","Fecha","Compañía"].join(","),
+                ...rows.map((c) => [
+                  c.claim_number, c.policy_number, `${c.insured_name} ${c.last_name || ""}`,
+                  `"${c.address}"`, c.city, c.status, c.claim_date || "", c.insurance_company || ""
+                ].join(",")),
+              ].join("\n");
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+              const link = document.createElement("a");
+              link.href = URL.createObjectURL(blob);
+              link.download = `siniestros_${new Date().toISOString().slice(0,10)}.csv`;
+              link.click();
+            }}
+          >
+            <Download className="mr-2 h-3.5 w-3.5" /> Exportar CSV
+          </Button>
           <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Siniestro
           </Button>
+        </div>
+      </div>
 
-          {/* ── MODAL Siniestros — 720px (muchos campos) ── */}
-          <DialogContent className="modal-lg" showCloseButton={false}>
+      <Dialog open={open} onOpenChange={setOpen}>
+        {/* ── MODAL Siniestros — 720px (muchos campos) ── */}
+        <DialogContent className="modal-lg" showCloseButton={false}>
             <div className="modal-header">
               <DialogTitle className="modal-title flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
@@ -498,7 +573,6 @@ export default function ClaimsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
 
       <div className="app-panel">
         <div className="app-data-table-wrap">
@@ -521,7 +595,11 @@ export default function ClaimsPage() {
                 <tr><td colSpan={7} className="text-center text-muted-foreground py-4">No se encontraron siniestros.</td></tr>
               ) : (
                 filtered?.map((claim) => (
-                  <tr key={claim.id}>
+                  <tr
+                    key={claim.id}
+                    className="cursor-pointer hover:bg-muted/40"
+                    onClick={() => router.push(`/dashboard/claims/${claim.id}`)}
+                  >
                     <td className="font-medium">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground" />
@@ -533,7 +611,7 @@ export default function ClaimsPage() {
                     <td className="truncate">{claim.address}, {claim.city}</td>
                     <td><Badge className={statusColors[claim.status]}>{statusLabels[claim.status]}</Badge></td>
                     <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
