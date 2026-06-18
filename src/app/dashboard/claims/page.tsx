@@ -504,13 +504,13 @@ export default function ClaimsPage() {
           <table className="app-data-table">
             <thead>
               <tr>
-                <th>N° Siniestro</th>
-                <th>N° Liquidación</th>
-                <th>Asegurado</th>
+                <th className="w-[140px]">N° Siniestro</th>
+                <th className="w-[120px]">N° Liquidación</th>
+                <th className="w-[200px]">Asegurado</th>
                 <th>Dirección</th>
-                <th>Estado</th>
-                <th>Fecha</th>
-                <th className="w-[80px]"></th>
+                <th className="w-[110px]">Estado</th>
+                <th className="w-[100px]">Fecha</th>
+                <th className="w-[160px] text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -529,7 +529,7 @@ export default function ClaimsPage() {
                     </td>
                     <td>{claim.liquidation_number || "—"}</td>
                     <td>{claim.insured_name} {claim.last_name}</td>
-                    <td className="max-w-[200px] truncate">{claim.address}</td>
+                    <td className="truncate">{claim.address}, {claim.city}</td>
                     <td><Badge className={statusColors[claim.status]}>{statusLabels[claim.status]}</Badge></td>
                     <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
                     <td>

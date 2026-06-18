@@ -84,7 +84,7 @@
   }
 
   .app-page {
-    @apply mx-auto flex w-full max-w-6xl flex-col gap-8 px-0;
+    @apply mx-auto flex w-full max-w-[min(96rem,calc(100%-2rem))] flex-col gap-6 px-0;
   }
 
   .app-page-stock-wide {
@@ -118,7 +118,7 @@
   }
 
   .app-data-table {
-    @apply w-full min-w-[520px] border-collapse text-[13px] text-foreground;
+    @apply w-full border-collapse text-[13px] text-foreground;
   }
 
   .app-data-table thead tr {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getInspectionSessions,
@@ -66,6 +67,7 @@ function formatDateTime(dateStr: string | null) {
 
 export default function InspectionsPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [openCreate, setOpenCreate] = useState(false);
@@ -168,12 +170,12 @@ export default function InspectionsPage() {
         <table className="app-data-table">
           <thead>
             <tr>
-              <th>Siniestro</th>
-              <th>Asegurado</th>
+              <th className="w-[140px]">Siniestro</th>
+              <th className="w-[200px]">Asegurado</th>
               <th>Direccion</th>
-              <th>Estado</th>
-              <th>Programada</th>
-              <th>Acciones</th>
+              <th className="w-[110px]">Estado</th>
+              <th className="w-[160px]">Programada</th>
+              <th className="w-[200px] text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -209,7 +211,7 @@ export default function InspectionsPage() {
                   <td>
                     <div className="flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="truncate max-w-[200px]">
+                      <span className="truncate">
                         {session.claim?.address}
                         {session.claim?.city ? `, ${session.claim.city}` : ""}
                       </span>
@@ -239,9 +241,7 @@ export default function InspectionsPage() {
                         variant="ghost"
                         size="sm"
                         className="h-7 px-2 text-xs"
-                        onClick={() => {
-                          /* TODO: redirigir a detalle */
-                        }}
+                        onClick={() => router.push(`/dashboard/inspecciones/${session.id}`)}
                       >
                         <Eye className="h-3.5 w-3.5 mr-1" />
                         Ver
