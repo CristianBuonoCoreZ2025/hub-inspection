@@ -23,6 +23,7 @@ import {
   Box,
   ChevronDown,
   ChevronRight,
+  Upload,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -58,6 +59,11 @@ const adminLinks = [
   { href: "/dashboard/users", label: "Usuarios", icon: Users },
   { href: "/dashboard/companies", label: "Empresas", icon: Building2 },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
+]
+
+const operationLinks = [
+  { href: "/dashboard/operaciones/carga-siniestros", label: "Carga Siniestros", icon: Upload },
+  { href: "/dashboard/operaciones/carga-catalogos", label: "Carga Catálogos", icon: Upload },
 ]
 
 function getInitials(email?: string | null) {
@@ -112,11 +118,12 @@ export function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {
 
   const isCatalogActive = catalogLinks.some((l) => pathname.startsWith(l.href))
   const isAdminActive = adminLinks.some((l) => pathname.startsWith(l.href))
-  const [activeSection, setActiveSection] = useState<"catalogs" | "admin" | null>(
-    isCatalogActive ? "catalogs" : isAdminActive ? "admin" : null
+  const isOperationActive = operationLinks.some((l) => pathname.startsWith(l.href))
+  const [activeSection, setActiveSection] = useState<"catalogs" | "admin" | "operations" | null>(
+    isCatalogActive ? "catalogs" : isAdminActive ? "admin" : isOperationActive ? "operations" : null
   )
 
-  const toggle = (section: "catalogs" | "admin") => {
+  const toggle = (section: "catalogs" | "admin" | "operations") => {
     setActiveSection((prev) => (prev === section ? null : section))
   }
 
@@ -167,6 +174,14 @@ export function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {
           onNavigate={onNavigate}
           open={activeSection === "catalogs"}
           onToggle={() => toggle("catalogs")}
+        />
+        <NavSection
+          title="Operaciones"
+          links={operationLinks}
+          pathname={pathname}
+          onNavigate={onNavigate}
+          open={activeSection === "operations"}
+          onToggle={() => toggle("operations")}
         />
         <NavSection
           title="Administración"

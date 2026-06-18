@@ -6,6 +6,9 @@
  *   modal-sm  → 520px  → formularios simples (1-3 campos)
  *   modal-md  → 560px  → formularios estándar (4-8 campos)
  *   modal-lg  → 720px  → formularios complejos, +8 campos
+ *
+ * NOTA: @apply es una directiva de Tailwind CSS. Warnings del CSS parser
+ * del IDE son esperados y no afectan el build (PostCSS los procesa).
  */
 
 @layer components {
