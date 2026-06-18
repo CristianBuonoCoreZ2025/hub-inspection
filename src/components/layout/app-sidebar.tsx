@@ -67,15 +67,12 @@ function getInitials(email?: string | null) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-function NavSection({ title, links, pathname, onNavigate }: { title: string; links: typeof catalogLinks; pathname: string; onNavigate?: () => void }) {
-  const hasActive = links.some((l) => pathname.startsWith(l.href))
-  const [open, setOpen] = useState(hasActive)
-
+function NavSection({ title, links, pathname, onNavigate, open, onToggle }: { title: string; links: typeof catalogLinks; pathname: string; onNavigate?: () => void; open: boolean; onToggle: () => void }) {
   return (
     <div className="mb-2">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={onToggle}
         className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       >
         <span>{title}</span>
@@ -112,6 +109,16 @@ function NavSection({ title, links, pathname, onNavigate }: { title: string; lin
 export function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
   const { user, isLoading, signOut } = useAuth()
+
+  const isCatalogActive = catalogLinks.some((l) => pathname.startsWith(l.href))
+  const isAdminActive = adminLinks.some((l) => pathname.startsWith(l.href))
+  const [activeSection, setActiveSection] = useState<"catalogs" | "admin" | null>(
+    isCatalogActive ? "catalogs" : isAdminActive ? "admin" : null
+  )
+
+  const toggle = (section: "catalogs" | "admin") => {
+    setActiveSection((prev) => (prev === section ? null : section))
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -153,8 +160,22 @@ export function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </div>
 
-        <NavSection title="Catálogos" links={catalogLinks} pathname={pathname} onNavigate={onNavigate} />
-        <NavSection title="Administración" links={adminLinks} pathname={pathname} onNavigate={onNavigate} />
+        <NavSection
+          title="Catálogos"
+          links={catalogLinks}
+          pathname={pathname}
+          onNavigate={onNavigate}
+          open={activeSection === "catalogs"}
+          onToggle={() => toggle("catalogs")}
+        />
+        <NavSection
+          title="Administración"
+          links={adminLinks}
+          pathname={pathname}
+          onNavigate={onNavigate}
+          open={activeSection === "admin"}
+          onToggle={() => toggle("admin")}
+        />
       </nav>
 
       <Separator />
