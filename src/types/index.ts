@@ -304,6 +304,67 @@ export interface DamageSketch {
   created_at: string;
 }
 
+// ── Catalogos Maestros ──
+
+export interface ClaimCause {
+  id: string;
+  name: string;
+  description: string | null;
+  country: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsuranceCompanyCatalog {
+  id: string;
+  name: string;
+  rut: string | null;
+  address: string | null;
+  line_of_business: string | null;
+  code: string | null;
+  type: string | null;
+  country: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BrokerCatalog {
+  id: string;
+  name: string;
+  rut: string | null;
+  address: string | null;
+  contact: string | null;
+  country: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessLine {
+  id: string;
+  country: string;
+  name: string;
+  claim_type: string | null;
+  ramo_fecu: string | null;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsuranceProduct {
+  id: string;
+  business_line_id: string;
+  name: string;
+  description: string | null;
+  country: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface InspectionDamage {
   id: string;
   session_id: string;

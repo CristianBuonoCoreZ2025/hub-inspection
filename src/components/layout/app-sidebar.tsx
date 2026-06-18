@@ -15,6 +15,11 @@ import {
   ShieldCheck,
   LogOut,
   Loader2,
+  AlertTriangle,
+  Landmark,
+  Briefcase,
+  Tag,
+  Box,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -35,6 +40,14 @@ const mainLinks = [
   { href: "/dashboard/agenda", label: "Agenda", icon: Calendar },
   { href: "/dashboard/evidencias", label: "Evidencias", icon: Image },
   { href: "/dashboard/informes", label: "Informes", icon: BarChart3 },
+]
+
+const catalogLinks = [
+  { href: "/dashboard/catalogos/causas", label: "Causas Siniestro", icon: AlertTriangle },
+  { href: "/dashboard/catalogos/companias", label: "Compañias Seguros", icon: Landmark },
+  { href: "/dashboard/catalogos/corredores", label: "Corredores", icon: Briefcase },
+  { href: "/dashboard/catalogos/lineas-negocio", label: "Lineas de Negocio", icon: Tag },
+  { href: "/dashboard/catalogos/productos", label: "Ramos/Productos", icon: Box },
 ]
 
 const adminLinks = [
@@ -74,6 +87,32 @@ export function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {
               link.href === "/dashboard"
                 ? pathname === "/dashboard"
                 : pathname.startsWith(link.href)
+            const Icon = link.icon
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="size-4 shrink-0" />
+                {link.label}
+              </Link>
+            )
+          })}
+        </div>
+
+        <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Catálogos
+        </div>
+        <div className="mb-6 space-y-1">
+          {catalogLinks.map((link) => {
+            const isActive = pathname.startsWith(link.href)
             const Icon = link.icon
             return (
               <Link
