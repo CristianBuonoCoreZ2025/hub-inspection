@@ -57,31 +57,53 @@ export async function inviteUser(input: InviteUserInput & { company_id: string }
     },
   });
 
-  const user = response.body.session?.user;
-
-  if (!user) throw new Error("No se pudo crear el usuario");
-
-  if (user) {
-    const mutation = `
-      mutation UpsertProfile($object: profiles_insert_input!) {
-        insert_profiles_one(object: $object, on_conflict: { constraint: profiles_user_id_key, update_columns: [full_name, role, company_id, is_active] }) {
-          ${PROFILE_FIELDS}
+  // Si requiere verificacion de email, session es null pero el trigger
+  // handle_new_user ya creo el perfil con la metadata automaticamente.
+  if (!response.body.session) {
+    const query = `
+      query GetProfileByEmail($email: String!) {
+        profiles(where: { email: { _eq: $email } }) {
+          id user_id email full_name role company_id
         }
       }
     `;
-    await graphqlRequest(mutation, {
-      object: {
-        user_id: user.id,
-        email: input.email,
-        full_name: input.fullName,
-        role: input.role,
-        company_id: input.company_id,
-        is_active: true,
-      },
-    });
+    const data = await graphqlRequest<{ profiles: Profile[] }>(query, { email: input.email });
+    if (data.profiles.length === 0) {
+      throw new Error(
+        "No se pudo crear el usuario. El trigger de perfil no respondio. " +
+        "Verifica en Nhost Console que la verificacion de email este desactivada " +
+        "o que el trigger handle_new_user exista."
+      );
+    }
+    return { user: { id: data.profiles[0].user_id, email: input.email } };
   }
 
-  return { user };
+  const session = response.body.session;
+  if (!session?.user) {
+    throw new Error("No se pudo crear el usuario: session invalida");
+  }
+
+  // El trigger handle_new_user ya creo el perfil, pero nos aseguramos
+  // de que tenga company_id y role correctos (upsert).
+  const mutation = `
+    mutation UpsertProfile($object: profiles_insert_input!) {
+      insert_profiles_one(object: $object, on_conflict: { constraint: profiles_user_id_key, update_columns: [full_name, role, company_id, is_active] }) {
+        ${PROFILE_FIELDS}
+      }
+    }
+  `;
+  await graphqlRequest(mutation, {
+    object: {
+      user_id: session.user.id,
+      email: input.email,
+      full_name: input.fullName,
+      role: input.role,
+      company_id: input.company_id,
+      is_active: true,
+    },
+  });
+
+  return { user: session.user };
 }
 
 export async function updateUser(id: string, input: Partial<Profile>) {

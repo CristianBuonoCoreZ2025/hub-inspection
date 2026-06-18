@@ -29,7 +29,7 @@
   }
 
   .modal-lg {
-    @apply flex max-h-[90vh] w-[min(98vw,720px)] flex-col gap-0
+    @apply flex max-h-[90vh] w-[min(98vw,860px)] flex-col gap-0
            overflow-hidden border-0 p-0;
     border-radius: 18px !important;
     background: rgba(255, 255, 255, 0.98) !important;
@@ -82,7 +82,14 @@
 /* ═══════════════ GRID / FIELD (portal-seguros, inmune) ═══════════════ */
 .modal-grid {
   display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 14px 16px !important;
+  margin-top: 8px !important;
+}
+
+.modal-grid-3 {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
   gap: 14px 16px !important;
   margin-top: 8px !important;
 }

@@ -26,11 +26,11 @@ export async function getInspectionSessions(claimId?: string) {
     query GetInspectionSessions {
       inspection_sessions(where: ${where}, order_by: { created_at: desc }) {
         ${SESSION_FIELDS}
-        claim { claim_number insured_name address }
+        claim { claim_number insured_name address city insurance_company policy_number }
       }
     }
   `;
-  const data = await graphqlRequest<{ inspection_sessions: (InspectionSession & { claim?: { claim_number: string; insured_name: string; address: string } })[] }>(query);
+  const data = await graphqlRequest<{ inspection_sessions: (InspectionSession & { claim?: { claim_number: string; insured_name: string; address: string; city: string | null; insurance_company: string | null; policy_number: string } })[] }>(query);
   return data.inspection_sessions;
 }
 
@@ -40,7 +40,7 @@ export async function getInspectionSessionById(id: string) {
       inspection_sessions_by_pk(id: $id) {
         ${SESSION_FIELDS}
         claim { claim_number insured_name address city claim_date claim_time contact_name contact_role contact_email
-          insurance_company policy_number liquidation_number internal_number
+          insurance_company policy_number liquidation_number client_reference
           broker_name broker_executive broker_number builder_name advisor
           inspector_id adjuster_id auditor_id dispatcher_id assistant_id
         }

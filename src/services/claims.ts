@@ -39,9 +39,8 @@ const CLAIM_FIELDS = `
   broker_number
   builder_name
   advisor
-  internal_number
+  client_reference
   company_report_number
-  mclarens_one_number
   liquidation_number
   is_special_claim
   recovery_type_legal
@@ -149,9 +148,8 @@ function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }):
     broker_number: input.brokerNumber || null,
     builder_name: input.builderName || null,
     advisor: input.advisor || null,
-    internal_number: input.internalNumber || null,
+    client_reference: input.clientReference || null,
     company_report_number: input.companyReportNumber || null,
-    mclarens_one_number: input.mclarensOneNumber || null,
     liquidation_number: input.liquidationNumber || null,
     is_special_claim: input.isSpecialClaim ?? false,
     recovery_type_legal: input.recoveryTypeLegal || null,

@@ -9,7 +9,9 @@ import { claimSchema, type ClaimInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, FileText } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck } from "lucide-react";
+import { createInspectionSession } from "@/services/inspections";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +71,7 @@ function FieldError({ message }: { message?: string }) {
 
 export default function ClaimsPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,7 +80,7 @@ export default function ClaimsPage() {
     resolver: standardSchemaResolver(claimSchema),
     defaultValues: {
       claimNumber: "", policyNumber: "", liquidationNumber: "",
-      insuranceCompany: "", internalNumber: "", companyReportNumber: "", mclarensOneNumber: "",
+      insuranceCompany: "", clientReference: "", companyReportNumber: "",
       insuredName: "", lastName: "", rut: "",
       insuredEmail: "", insuredPhone: "", cellPhone: "",
       address: "", city: "", commune: "", region: "", country: "Chile",
@@ -135,6 +138,16 @@ export default function ClaimsPage() {
     onSuccess: () => {
       toast.success("Siniestro eliminado");
       queryClient.invalidateQueries({ queryKey: ["claims"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const inspectMutation = useMutation({
+    mutationFn: createInspectionSession,
+    onSuccess: (data) => {
+      toast.success("Inspeccion creada");
+      queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+      router.push(`/dashboard/inspecciones/${data.id}`);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -206,9 +219,9 @@ export default function ClaimsPage() {
             </div>
 
             <div className="modal-body">
-              <div className="modal-grid">
-                {/* ═══ SINIESTRO / LIQUIDACIÓN ═══ */}
-                <SectionTitle>Siniestro y Liquidación</SectionTitle>
+              {/* ═══ SINIESTRO / LIQUIDACIÓN ═══ */}
+              <SectionTitle>Siniestro y Liquidación</SectionTitle>
+              <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">N° Siniestro Compañía <span className="text-red-500">*</span></Label>
                   <Input {...form.register("claimNumber")} placeholder="1946897" className="app-input" />
@@ -224,21 +237,26 @@ export default function ClaimsPage() {
                   <FieldError message={form.formState.errors.policyNumber?.message} />
                 </div>
                 <div className="modal-field">
-                  <Label className="app-field-label">N° Interno McLarens</Label>
-                  <Input {...form.register("internalNumber")} placeholder="CHL-00013152" className="app-input" />
+                  <Label className="app-field-label">Ref. Interna Cliente</Label>
+                  <Input {...form.register("clientReference")} placeholder="CHL-00013152" className="app-input" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">N° Denuncio Compañía</Label>
                   <Input {...form.register("companyReportNumber")} className="app-input" />
                 </div>
                 <div className="modal-field">
-                  <Label className="app-field-label">N° McLarens One</Label>
-                  <Input {...form.register("mclarensOneNumber")} className="app-input" />
+                  <Label className="app-field-label">Tipo de Siniestro <span className="text-red-500">*</span></Label>
+                  <Input {...form.register("claimType")} placeholder="Rotura de cañería" className="app-input" />
+                  <FieldError message={form.formState.errors.claimType?.message} />
                 </div>
+              </div>
+              <div className="modal-grid">
                 <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Compañía de Seguros</Label>
                   <Input {...form.register("insuranceCompany")} placeholder="Hdi Seguros S.A." className="app-input" />
                 </div>
+              </div>
+              <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Fecha Siniestro <span className="text-red-500">*</span></Label>
                   <Input {...form.register("claimDate")} type="date" className="app-input" />
@@ -256,15 +274,12 @@ export default function ClaimsPage() {
                   <Label className="app-field-label">Fecha Asignación</Label>
                   <Input {...form.register("assignmentDate")} type="date" className="app-input" />
                 </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Tipo de Siniestro <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("claimType")} placeholder="Rotura de cañería" className="app-input" />
-                  <FieldError message={form.formState.errors.claimType?.message} />
-                </div>
-                <div className="modal-field modal-field-full">
+                <div className="modal-field modal-field-full" style={{ gridColumn: "span 2" }}>
                   <Label className="app-field-label">Causal del Siniestro</Label>
                   <Input {...form.register("claimCause")} placeholder="Viento y Lluvia" className="app-input" />
                 </div>
+              </div>
+              <div className="modal-grid">
                 <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Resumen</Label>
                   <textarea
@@ -274,9 +289,11 @@ export default function ClaimsPage() {
                     placeholder="Descripción resumida del siniestro..."
                   />
                 </div>
+              </div>
 
-                {/* ═══ ASEGURADO ═══ */}
-                <SectionTitle>Asegurado</SectionTitle>
+              {/* ═══ ASEGURADO ═══ */}
+              <SectionTitle>Asegurado</SectionTitle>
+              <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
                   <Input {...form.register("insuredName")} placeholder="EDIFICIO CONDOMINIO" className="app-input" />
@@ -302,9 +319,11 @@ export default function ClaimsPage() {
                   <Label className="app-field-label">Celular</Label>
                   <Input {...form.register("cellPhone")} placeholder="9 9999 9999" className="app-input" />
                 </div>
+              </div>
 
-                {/* ═══ PERSONA DE CONTACTO ═══ */}
-                <SectionTitle>Persona de Contacto</SectionTitle>
+              {/* ═══ PERSONA DE CONTACTO ═══ */}
+              <SectionTitle>Persona de Contacto</SectionTitle>
+              <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Nombre Contacto</Label>
                   <Input {...form.register("contactName")} placeholder="Gonzalo Meza" className="app-input" />
@@ -313,18 +332,22 @@ export default function ClaimsPage() {
                   <Label className="app-field-label">Cargo / Relación</Label>
                   <Input {...form.register("contactRole")} placeholder="Arrendatario depto 606" className="app-input" />
                 </div>
-                <div className="modal-field modal-field-full">
+                <div className="modal-field">
                   <Label className="app-field-label">Email Contacto</Label>
                   <Input {...form.register("contactEmail")} type="email" placeholder="ignacia@adpro.cl" className="app-input" />
                 </div>
+              </div>
 
-                {/* ═══ UBICACIÓN ═══ */}
-                <SectionTitle>Ubicación del Siniestro</SectionTitle>
+              {/* ═══ UBICACIÓN ═══ */}
+              <SectionTitle>Ubicación del Siniestro</SectionTitle>
+              <div className="modal-grid">
                 <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Dirección <span className="text-red-500">*</span></Label>
                   <Input {...form.register("address")} placeholder="AVDA RICARDO LYON 1351" className="app-input" />
                   <FieldError message={form.formState.errors.address?.message} />
                 </div>
+              </div>
+              <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Ciudad <span className="text-red-500">*</span></Label>
                   <Input {...form.register("city")} placeholder="Santiago" className="app-input" />
@@ -336,23 +359,27 @@ export default function ClaimsPage() {
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Región</Label>
-                  <Input {...form.register("region")} placeholder="Metropolitana de Santiago" className="app-input" />
+                  <Input {...form.register("region")} placeholder="Metropolitana" className="app-input" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">País</Label>
                   <Input {...form.register("country")} placeholder="Chile" className="app-input" />
                 </div>
+              </div>
 
-                {/* ═══ EQUIPO ASIGNADO ═══ */}
-                <SectionTitle>Equipo Asignado</SectionTitle>
+              {/* ═══ EQUIPO ASIGNADO ═══ */}
+              <SectionTitle>Equipo Asignado</SectionTitle>
+              <div className="modal-grid-3">
                 <UserSelect label="Inspector" name="inspectorId" />
                 <UserSelect label="Ajustador" name="adjusterId" />
                 <UserSelect label="Auditor" name="auditorId" />
                 <UserSelect label="Despachador" name="dispatcherId" />
                 <UserSelect label="Asistente" name="assistantId" />
+              </div>
 
-                {/* ═══ CORREDOR / CONSTRUCTORA ═══ */}
-                <SectionTitle>Corredor y Constructora</SectionTitle>
+              {/* ═══ CORREDOR / CONSTRUCTORA ═══ */}
+              <SectionTitle>Corredor y Constructora</SectionTitle>
+              <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Corredor</Label>
                   <Input {...form.register("brokerName")} placeholder="ARTHUR J. GALLAGHER" className="app-input" />
@@ -369,13 +396,15 @@ export default function ClaimsPage() {
                   <Label className="app-field-label">Constructora No. 1</Label>
                   <Input {...form.register("builderName")} className="app-input" />
                 </div>
-                <div className="modal-field modal-field-full">
+                <div className="modal-field" style={{ gridColumn: "span 2" }}>
                   <Label className="app-field-label">Asesor</Label>
                   <Input {...form.register("advisor")} className="app-input" />
                 </div>
+              </div>
 
-                {/* ═══ RECUPERO ═══ */}
-                <SectionTitle>Recupero</SectionTitle>
+              {/* ═══ RECUPERO ═══ */}
+              <SectionTitle>Recupero</SectionTitle>
+              <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Tipo Recupero Legal</Label>
                   <Input {...form.register("recoveryTypeLegal")} className="app-input" />
@@ -384,7 +413,7 @@ export default function ClaimsPage() {
                   <Label className="app-field-label">Tipo Recupero Material</Label>
                   <Input {...form.register("recoveryTypeMaterial")} className="app-input" />
                 </div>
-                <div className="modal-field modal-field-full">
+                <div className="modal-field modal-field-full" style={{ gridColumn: "span 3" }}>
                   <Label className="app-field-label">Comentario Recupero</Label>
                   <textarea
                     {...form.register("recoveryComments")}
@@ -393,9 +422,11 @@ export default function ClaimsPage() {
                     placeholder="Observaciones sobre recupero..."
                   />
                 </div>
+              </div>
 
-                {/* ═══ EMPRESA / NOTAS ═══ */}
-                <SectionTitle>Empresa y Estado</SectionTitle>
+              {/* ═══ EMPRESA / NOTAS ═══ */}
+              <SectionTitle>Empresa y Estado</SectionTitle>
+              <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Empresa <span className="text-red-500">*</span></Label>
                   <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} value={form.getValues("companyId")} disabled={editingId !== null}>
@@ -413,7 +444,7 @@ export default function ClaimsPage() {
                   />
                   <Label className="text-[13px] font-medium cursor-pointer">Siniestro Especial</Label>
                 </div>
-                <div className="modal-field modal-field-full">
+                <div className="modal-field modal-field-full" style={{ gridColumn: "span 3" }}>
                   <Label className="app-field-label">Notas adicionales</Label>
                   <textarea
                     {...form.register("notes")}
@@ -472,6 +503,17 @@ export default function ClaimsPage() {
                     <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
                     <td>
                       <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-[#0095DA] hover:text-[#005BBB] hover:bg-[#0095DA]/10"
+                          title="Crear inspeccion"
+                          disabled={inspectMutation.isPending}
+                          onClick={() => inspectMutation.mutate(claim.id)}
+                        >
+                          <ClipboardCheck className="h-3.5 w-3.5 mr-1" />
+                          Inspeccionar
+                        </Button>
                         <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
                           setEditingId(claim.id);
                           form.reset({
@@ -479,9 +521,8 @@ export default function ClaimsPage() {
                             policyNumber: claim.policy_number,
                             liquidationNumber: claim.liquidation_number || "",
                             insuranceCompany: claim.insurance_company || "",
-                            internalNumber: claim.internal_number || "",
+                            clientReference: claim.client_reference || "",
                             companyReportNumber: claim.company_report_number || "",
-                            mclarensOneNumber: claim.mclarens_one_number || "",
                             insuredName: claim.insured_name,
                             lastName: claim.last_name || "",
                             rut: claim.rut || "",

@@ -93,9 +93,8 @@ export interface Claim {
   broker_number: string | null;
   builder_name: string | null;
   advisor: string | null;
-  internal_number: string | null;
+  client_reference: string | null;
   company_report_number: string | null;
-  mclarens_one_number: string | null;
   liquidation_number: string | null;
   is_special_claim: boolean;
   recovery_type_legal: string | null;
@@ -115,7 +114,7 @@ export interface InspectionSession {
   ended_at: string | null;
   magic_link_token: string | null;
   magic_link_expires_at: string | null;
-  status: "pending" | "active" | "completed" | "cancelled";
+  status: "pending" | "scheduled" | "active" | "completed" | "cancelled";
   inspection_date: string | null;
   inspection_time: string | null;
   interviewed_name: string | null;
