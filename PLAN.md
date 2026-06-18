@@ -206,8 +206,11 @@
 | `/dashboard/catalogos/causas` | CRUD completo | Si |
 | `/dashboard/catalogos/companias` | CRUD completo | Si |
 | `/dashboard/catalogos/corredores` | CRUD completo | Si |
+| `/dashboard/catalogos/asesores` | CRUD completo | Si |
 | `/dashboard/catalogos/lineas-negocio` | CRUD completo | Si |
 | `/dashboard/catalogos/productos` | CRUD completo | Si |
+| `/dashboard/operaciones/carga-siniestros` | Carga masiva via Excel | Si |
+| `/dashboard/operaciones/carga-catalogos` | Carga masiva via Excel (6 catálogos) | Si |
 | `/dashboard/evidencias` | Placeholder | No |
 | `/dashboard/informes` | Placeholder | No |
 | `/dashboard/users` | Funcional | Si |
