@@ -203,6 +203,11 @@
 | `/dashboard/inspecciones` | Lista + detalle con 7 tabs | Si |
 | `/dashboard/inspecciones/[id]` | Detalle funcional (Resumen listo, resto placeholders) | Si |
 | `/dashboard/agenda` | Vista semanal funcional | Si |
+| `/dashboard/catalogos/causas` | CRUD completo | Si |
+| `/dashboard/catalogos/companias` | CRUD completo | Si |
+| `/dashboard/catalogos/corredores` | CRUD completo | Si |
+| `/dashboard/catalogos/lineas-negocio` | CRUD completo | Si |
+| `/dashboard/catalogos/productos` | CRUD completo | Si |
 | `/dashboard/evidencias` | Placeholder | No |
 | `/dashboard/informes` | Placeholder | No |
 | `/dashboard/users` | Funcional | Si |

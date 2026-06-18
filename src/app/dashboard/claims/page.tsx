@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaims, createClaim, updateClaim, deleteClaim } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
+import { getClaimCauses, getInsuranceCompanies, getBrokers } from "@/services/catalogs";
 import { claimSchema, type ClaimInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
@@ -164,6 +165,21 @@ export default function ClaimsPage() {
     queryFn: () => getUsers(),
   });
 
+  const { data: claimCauses } = useQuery({
+    queryKey: ["claim-causes"],
+    queryFn: () => getClaimCauses(),
+  });
+
+  const { data: insuranceCompaniesCatalog } = useQuery({
+    queryKey: ["insurance-companies"],
+    queryFn: () => getInsuranceCompanies(),
+  });
+
+  const { data: brokersCatalog } = useQuery({
+    queryKey: ["brokers"],
+    queryFn: () => getBrokers(),
+  });
+
   const createMutation = useMutation({
     mutationFn: createClaim,
     onSuccess: () => {
@@ -283,14 +299,26 @@ export default function ClaimsPage() {
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Tipo de Siniestro <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("claimType")} placeholder="Rotura de cañería" className="app-input" />
+                  <Select onValueChange={(v) => form.setValue("claimType", v ?? "")} value={form.getValues("claimType") || ""}>
+                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {claimCauses?.map((c) => (<SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
                   <FieldError message={form.formState.errors.claimType?.message} />
                 </div>
               </div>
               <div className="modal-grid">
                 <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Compañía de Seguros</Label>
-                  <Input {...form.register("insuranceCompany")} placeholder="Hdi Seguros S.A." className="app-input" />
+                  <Select onValueChange={(v) => form.setValue("insuranceCompany", v ?? "")} value={form.getValues("insuranceCompany") || ""}>
+                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar compañia..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {insuranceCompaniesCatalog?.map((c) => (<SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="modal-grid-3">
@@ -313,7 +341,13 @@ export default function ClaimsPage() {
                 </div>
                 <div className="modal-field modal-field-full" style={{ gridColumn: "span 2" }}>
                   <Label className="app-field-label">Causal del Siniestro</Label>
-                  <Input {...form.register("claimCause")} placeholder="Viento y Lluvia" className="app-input" />
+                  <Select onValueChange={(v) => form.setValue("claimCause", v ?? "")} value={form.getValues("claimCause") || ""}>
+                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar causal..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {claimCauses?.map((c) => (<SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="modal-grid">
@@ -419,7 +453,13 @@ export default function ClaimsPage() {
               <div className="modal-grid-3">
                 <div className="modal-field">
                   <Label className="app-field-label">Corredor</Label>
-                  <Input {...form.register("brokerName")} placeholder="ARTHUR J. GALLAGHER" className="app-input" />
+                  <Select onValueChange={(v) => form.setValue("brokerName", v ?? "")} value={form.getValues("brokerName") || ""}>
+                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar corredor..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {brokersCatalog?.map((b) => (<SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Ejecutivo Corredor</Label>
