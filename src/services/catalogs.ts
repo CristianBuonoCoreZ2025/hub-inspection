@@ -14,7 +14,6 @@ import type {
   LossType,
   PolicyType,
   ClaimType,
-  HousingType,
   HousingDestination,
   BuildingAge,
   Relationship,
@@ -657,50 +656,6 @@ export async function updateClaimType(id: string, input: Partial<ClaimType>) {
 
 export async function deleteClaimType(id: string) {
   return updateClaimType(id, { is_active: false });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// HOUSING TYPES
-// ═══════════════════════════════════════════════════════════════
-
-export async function getHousingTypes() {
-  const query = `
-    query GetHousingTypes {
-      housing_types(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name name_es name_en name_pt description is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ housing_types: HousingType[] }>(query);
-  return data.housing_types;
-}
-
-export async function createHousingType(input: { name: string; description?: string }) {
-  const mutation = `
-    mutation CreateHousingType($object: housing_types_insert_input!) {
-      insert_housing_types_one(object: $object) { id name name_es name_en name_pt description is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_housing_types_one: HousingType }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_housing_types_one;
-}
-
-export async function updateHousingType(id: string, input: Partial<HousingType>) {
-  const mutation = `
-    mutation UpdateHousingType($id: uuid!, $set: housing_types_set_input!) {
-      update_housing_types_by_pk(pk_columns: { id: $id }, _set: $set) { id name description is_active }
-    }
-  `;
-  const set: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
-  }
-  const data = await graphqlRequest<{ update_housing_types_by_pk: HousingType }>(mutation, { id, set });
-  return data.update_housing_types_by_pk;
-}
-
-export async function deleteHousingType(id: string) {
-  return updateHousingType(id, { is_active: false });
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -66,7 +66,6 @@ const catalogLinks = [
   { href: "/dashboard/catalogos/clasificacion-danos", label: "Clasificacion Danos", icon: FileWarning },
   { href: "/dashboard/catalogos/tipos-perdida", label: "Tipos Perdida", icon: Shield },
   { href: "/dashboard/catalogos/tipos-polizas", label: "Tipos Polizas", icon: Shield },
-  { href: "/dashboard/catalogos/tipos-vivienda", label: "Tipos Vivienda", icon: Home },
   { href: "/dashboard/catalogos/destinos-vivienda", label: "Destinos Vivienda", icon: Warehouse },
   { href: "/dashboard/catalogos/antiguedades", label: "Antiguedad Inmueble", icon: CalendarDays },
   { href: "/dashboard/catalogos/parentescos", label: "Parentescos", icon: Heart },
