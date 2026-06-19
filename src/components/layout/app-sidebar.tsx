@@ -25,8 +25,6 @@ import {
   ChevronRight,
   Upload,
   MapPin,
-  Layers,
-  Grid3X3,
   FileWarning,
   Scale,
   Shield,
@@ -59,8 +57,6 @@ const mainLinks = [
 
 const catalogLinks = [
   { href: "/dashboard/catalogos/ubicaciones", label: "Ubicaciones", icon: MapPin },
-  { href: "/dashboard/catalogos/areas", label: "Areas", icon: Layers },
-  { href: "/dashboard/catalogos/subareas", label: "Subareas", icon: Grid3X3 },
   { href: "/dashboard/catalogos/causas", label: "Causas Siniestro", icon: AlertTriangle },
   { href: "/dashboard/catalogos/tipos-siniestros", label: "Tipos Siniestro", icon: FileWarning },
   { href: "/dashboard/catalogos/tipos-siniestros-causas", label: "Tipo-Causa", icon: Scale },

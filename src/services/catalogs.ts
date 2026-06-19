@@ -9,8 +9,6 @@ import type {
   Region,
   City,
   Commune,
-  Area,
-  Subarea,
   PropertyClassification,
   DamageClassification,
   LossType,
@@ -441,94 +439,6 @@ export async function updateCommune(id: string, input: Partial<Commune>) {
 
 export async function deleteCommune(id: string) {
   return updateCommune(id, { is_active: false });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// AREAS
-// ═══════════════════════════════════════════════════════════════
-
-export async function getAreas() {
-  const query = `
-    query GetAreas {
-      areas(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name name_es name_en name_pt description is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ areas: Area[] }>(query);
-  return data.areas;
-}
-
-export async function createArea(input: { name: string; description?: string }) {
-  const mutation = `
-    mutation CreateArea($object: areas_insert_input!) {
-      insert_areas_one(object: $object) { id name name_es name_en name_pt description is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_areas_one: Area }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_areas_one;
-}
-
-export async function updateArea(id: string, input: Partial<Area>) {
-  const mutation = `
-    mutation UpdateArea($id: uuid!, $set: areas_set_input!) {
-      update_areas_by_pk(pk_columns: { id: $id }, _set: $set) { id name description is_active }
-    }
-  `;
-  const set: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
-  }
-  const data = await graphqlRequest<{ update_areas_by_pk: Area }>(mutation, { id, set });
-  return data.update_areas_by_pk;
-}
-
-export async function deleteArea(id: string) {
-  return updateArea(id, { is_active: false });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SUBAREAS
-// ═══════════════════════════════════════════════════════════════
-
-export async function getSubareas() {
-  const query = `
-    query GetSubareas {
-      subareas(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id letter name name_es name_en name_pt description sw_asignacion is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ subareas: Subarea[] }>(query);
-  return data.subareas;
-}
-
-export async function createSubarea(input: { letter: string; name: string; description?: string }) {
-  const mutation = `
-    mutation CreateSubarea($object: subareas_insert_input!) {
-      insert_subareas_one(object: $object) { id letter name name_es name_en name_pt description sw_asignacion is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_subareas_one: Subarea }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_subareas_one;
-}
-
-export async function updateSubarea(id: string, input: Partial<Subarea>) {
-  const mutation = `
-    mutation UpdateSubarea($id: uuid!, $set: subareas_set_input!) {
-      update_subareas_by_pk(pk_columns: { id: $id }, _set: $set) { id letter name description is_active }
-    }
-  `;
-  const set: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
-  }
-  const data = await graphqlRequest<{ update_subareas_by_pk: Subarea }>(mutation, { id, set });
-  return data.update_subareas_by_pk;
-}
-
-export async function deleteSubarea(id: string) {
-  return updateSubarea(id, { is_active: false });
 }
 
 // ═══════════════════════════════════════════════════════════════

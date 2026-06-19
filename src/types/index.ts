@@ -473,32 +473,6 @@ export interface Commune {
   updated_at: string;
 }
 
-export interface Area {
-  id: string;
-  name: string;
-  name_es: string | null;
-  name_en: string | null;
-  name_pt: string | null;
-  description: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Subarea {
-  id: string;
-  letter: string;
-  name: string;
-  name_es: string | null;
-  name_en: string | null;
-  name_pt: string | null;
-  description: string | null;
-  sw_asignacion: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface PropertyClassification {
   id: string;
   name: string;
