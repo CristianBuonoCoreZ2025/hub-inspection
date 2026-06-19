@@ -101,6 +101,11 @@ export interface Claim {
   claim_type_id: string | null;
   business_line_id: string | null;
   insurance_product_id: string | null;
+  // FKs geograficas
+  country_id: string | null;
+  region_id: string | null;
+  city_id: string | null;
+  commune_id: string | null;
   created_at: string;
   updated_at: string;
 }
