@@ -8,9 +8,19 @@ ALTER TABLE claims
   DROP COLUMN IF EXISTS mclarens_one_number;
 
 -- 2. Renombrar internal_number → client_reference (referencia interna del cliente/empresa)
--- Cualquier empresa de ajuste que use el sistema puede tener su propio numero de referencia interno
-ALTER TABLE claims
-  RENAME COLUMN internal_number TO client_reference;
+-- Solo si internal_number existe y client_reference NO existe
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'claims' AND column_name = 'internal_number'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'claims' AND column_name = 'client_reference'
+  ) THEN
+    ALTER TABLE claims RENAME COLUMN internal_number TO client_reference;
+  END IF;
+END $$;
 
 -- 3. Actualizar comentario para que sea generico
 COMMENT ON COLUMN claims.client_reference IS 'Numero de referencia interno de la empresa de ajuste (cliente del sistema)';

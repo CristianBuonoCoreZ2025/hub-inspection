@@ -5,7 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaims, createClaim, updateClaim, deleteClaim } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
-import { getClaimCauses, getInsuranceCompanies, getBrokers, getAdvisors } from "@/services/catalogs";
+import { getClaimCauses, getInsuranceCompanies, getBrokers, getAdvisors, getRegions, getCities, getCommunes } from "@/services/catalogs";
+import { getCountries } from "@/services/countries";
 import { claimSchema, type ClaimInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, type UseFormReturn } from "react-hook-form";
@@ -172,6 +173,42 @@ export default function ClaimsPage() {
   const { data: advisorsCatalog } = useQuery({
     queryKey: ["advisors"],
     queryFn: () => getAdvisors(),
+  });
+
+  const { data: countriesCatalog } = useQuery({
+    queryKey: ["countries"],
+    queryFn: getCountries,
+  });
+
+  const selectedCountry = form.watch("country");
+  const selectedRegion = form.watch("region");
+  const selectedCity = form.watch("city");
+
+  const { data: regionsCatalog } = useQuery({
+    queryKey: ["regions", selectedCountry],
+    queryFn: () => {
+      const country = countriesCatalog?.find(c => c.name === selectedCountry);
+      return getRegions(country?.id);
+    },
+    enabled: !!selectedCountry && !!countriesCatalog,
+  });
+
+  const { data: citiesCatalog } = useQuery({
+    queryKey: ["cities", selectedRegion],
+    queryFn: () => {
+      const region = regionsCatalog?.find(r => r.name === selectedRegion);
+      return getCities(region?.id);
+    },
+    enabled: !!selectedRegion && !!regionsCatalog,
+  });
+
+  const { data: communesCatalog } = useQuery({
+    queryKey: ["communes", selectedCity],
+    queryFn: () => {
+      const city = citiesCatalog?.find(c => c.name === selectedCity);
+      return getCommunes(city?.id);
+    },
+    enabled: !!selectedCity && !!citiesCatalog,
   });
 
   const createMutation = useMutation({
@@ -491,21 +528,57 @@ export default function ClaimsPage() {
               </div>
               <div className="modal-grid-3">
                 <div className="modal-field">
+                  <Label className="app-field-label">País</Label>
+                  <Select onValueChange={(v) => {
+                    form.setValue("country", v ?? "");
+                    form.setValue("region", "");
+                    form.setValue("city", "");
+                    form.setValue("commune", "");
+                  }} value={form.getValues("country") || ""}>
+                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar pais..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {countriesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Región</Label>
+                  <Select onValueChange={(v) => {
+                    form.setValue("region", v ?? "");
+                    form.setValue("city", "");
+                    form.setValue("commune", "");
+                  }} value={form.getValues("region") || ""} disabled={!selectedCountry}>
+                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar region..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {regionsCatalog?.map((r) => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="modal-field">
                   <Label className="app-field-label">Ciudad <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("city")} placeholder="Santiago" className="app-input h-8" />
+                  <Select onValueChange={(v) => {
+                    form.setValue("city", v ?? "");
+                    form.setValue("commune", "");
+                  }} value={form.getValues("city") || ""} disabled={!selectedRegion}>
+                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar ciudad..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {citiesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   <FieldError message={form.formState.errors.city?.message} />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Comuna</Label>
-                  <Input {...form.register("commune")} placeholder="Providencia" className="app-input h-8" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Región</Label>
-                  <Input {...form.register("region")} placeholder="Metropolitana" className="app-input h-8" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">País</Label>
-                  <Input {...form.register("country")} placeholder="Chile" className="app-input h-8" />
+                  <Select onValueChange={(v) => form.setValue("commune", v ?? "")} value={form.getValues("commune") || ""} disabled={!selectedCity}>
+                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar comuna..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Sin seleccionar —</SelectItem>
+                      {communesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

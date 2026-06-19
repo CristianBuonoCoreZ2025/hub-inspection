@@ -436,3 +436,31 @@ export interface InspectionChatMessage {
   content: string;
   created_at: string;
 }
+
+export interface Region {
+  id: string;
+  country_id: string;
+  code: string | null;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface City {
+  id: string;
+  region_id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Commune {
+  id: string;
+  city_id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}

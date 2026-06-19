@@ -6,6 +6,9 @@ import type {
   BusinessLine,
   InsuranceProduct,
   Advisor,
+  Region,
+  City,
+  Commune,
 } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -284,4 +287,145 @@ export async function updateAdvisor(id: string, input: Partial<Advisor>) {
 
 export async function deleteAdvisor(id: string) {
   return updateAdvisor(id, { is_active: false });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REGIONS (REGIONES)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getRegions(countryId?: string) {
+  const where = countryId ? `{ country_id: { _eq: "${countryId}" }, is_active: { _eq: true } }` : `{ is_active: { _eq: true } }`;
+  const query = `
+    query GetRegions {
+      regions(where: ${where}, order_by: { name: asc }) {
+        id country_id code name is_active created_at updated_at
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ regions: Region[] }>(query);
+  return data.regions;
+}
+
+export async function createRegion(input: { country_id: string; code?: string; name: string }) {
+  const mutation = `
+    mutation CreateRegion($object: regions_insert_input!) {
+      insert_regions_one(object: $object) { id country_id code name is_active }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_regions_one: Region }>(mutation, {
+    object: { ...input, is_active: true },
+  });
+  return data.insert_regions_one;
+}
+
+export async function updateRegion(id: string, input: Partial<Region>) {
+  const mutation = `
+    mutation UpdateRegion($id: uuid!, $set: regions_set_input!) {
+      update_regions_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id code name is_active }
+    }
+  `;
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  const data = await graphqlRequest<{ update_regions_by_pk: Region }>(mutation, { id, set });
+  return data.update_regions_by_pk;
+}
+
+export async function deleteRegion(id: string) {
+  return updateRegion(id, { is_active: false });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CITIES (CIUDADES)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getCities(regionId?: string) {
+  const where = regionId ? `{ region_id: { _eq: "${regionId}" }, is_active: { _eq: true } }` : `{ is_active: { _eq: true } }`;
+  const query = `
+    query GetCities {
+      cities(where: ${where}, order_by: { name: asc }) {
+        id region_id name is_active created_at updated_at
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ cities: City[] }>(query);
+  return data.cities;
+}
+
+export async function createCity(input: { region_id: string; name: string }) {
+  const mutation = `
+    mutation CreateCity($object: cities_insert_input!) {
+      insert_cities_one(object: $object) { id region_id name is_active }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_cities_one: City }>(mutation, {
+    object: { ...input, is_active: true },
+  });
+  return data.insert_cities_one;
+}
+
+export async function updateCity(id: string, input: Partial<City>) {
+  const mutation = `
+    mutation UpdateCity($id: uuid!, $set: cities_set_input!) {
+      update_cities_by_pk(pk_columns: { id: $id }, _set: $set) { id region_id name is_active }
+    }
+  `;
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  const data = await graphqlRequest<{ update_cities_by_pk: City }>(mutation, { id, set });
+  return data.update_cities_by_pk;
+}
+
+export async function deleteCity(id: string) {
+  return updateCity(id, { is_active: false });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMMUNES (COMUNAS)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getCommunes(cityId?: string) {
+  const where = cityId ? `{ city_id: { _eq: "${cityId}" }, is_active: { _eq: true } }` : `{ is_active: { _eq: true } }`;
+  const query = `
+    query GetCommunes {
+      communes(where: ${where}, order_by: { name: asc }) {
+        id city_id name is_active created_at updated_at
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ communes: Commune[] }>(query);
+  return data.communes;
+}
+
+export async function createCommune(input: { city_id: string; name: string }) {
+  const mutation = `
+    mutation CreateCommune($object: communes_insert_input!) {
+      insert_communes_one(object: $object) { id city_id name is_active }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_communes_one: Commune }>(mutation, {
+    object: { ...input, is_active: true },
+  });
+  return data.insert_communes_one;
+}
+
+export async function updateCommune(id: string, input: Partial<Commune>) {
+  const mutation = `
+    mutation UpdateCommune($id: uuid!, $set: communes_set_input!) {
+      update_communes_by_pk(pk_columns: { id: $id }, _set: $set) { id city_id name is_active }
+    }
+  `;
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  const data = await graphqlRequest<{ update_communes_by_pk: Commune }>(mutation, { id, set });
+  return data.update_communes_by_pk;
+}
+
+export async function deleteCommune(id: string) {
+  return updateCommune(id, { is_active: false });
 }
