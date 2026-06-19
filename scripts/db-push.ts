@@ -44,6 +44,18 @@ async function runMigrations() {
     await client.connect();
     console.log("🔗 Conectado a PostgreSQL (Nhost)\n");
 
+    // Crear tabla de tracking si no existe
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS _migrations (
+        filename TEXT PRIMARY KEY,
+        executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // Obtener migraciones ya ejecutadas
+    const executedRes = await client.query('SELECT filename FROM _migrations');
+    const executed = new Set(executedRes.rows.map(r => r.filename));
+
     const migrationsDir = join(process.cwd(), "migrations");
     const files = readdirSync(migrationsDir)
       .filter((f) => f.endsWith(".sql"))
@@ -54,14 +66,29 @@ async function runMigrations() {
       return;
     }
 
-    console.log(`📂 Migraciones encontradas: ${files.length}\n`);
+    const pending = files.filter(f => !executed.has(f));
 
-    for (const file of files) {
+    if (pending.length === 0) {
+      console.log(`📂 Migraciones encontradas: ${files.length}`);
+      console.log("✅ Todas las migraciones ya están ejecutadas.");
+      console.log("\n📋 Próximo paso:");
+      console.log(
+        "   Ve a Hasura Console → Data → 'Track All' para exponer las tablas en GraphQL."
+      );
+      return;
+    }
+
+    console.log(`📂 Migraciones encontradas: ${files.length}`);
+    console.log(`   Ejecutadas: ${executed.size}`);
+    console.log(`   Pendientes: ${pending.length}\n`);
+
+    for (const file of pending) {
       const filePath = join(migrationsDir, file);
       const sql = readFileSync(filePath, "utf-8");
 
       console.log(`⏳ Ejecutando: ${file} ...`);
       await client.query(sql);
+      await client.query('INSERT INTO _migrations (filename) VALUES ($1) ON CONFLICT (filename) DO NOTHING', [file]);
       console.log(`✅ ${file} ejecutado correctamente\n`);
     }
 
