@@ -93,6 +93,14 @@ export interface Claim {
   liquidation_number: string | null;
   company_id: string;
   notes: string | null;
+  // FKs a catalogos
+  insurance_company_id: string | null;
+  broker_id: string | null;
+  advisor_id: string | null;
+  claim_cause_id: string | null;
+  claim_type_id: string | null;
+  business_line_id: string | null;
+  insurance_product_id: string | null;
   created_at: string;
   updated_at: string;
 }
