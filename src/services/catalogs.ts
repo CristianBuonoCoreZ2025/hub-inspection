@@ -17,7 +17,6 @@ import type {
   HousingType,
   HousingDestination,
   BuildingAge,
-  ManufactureYear,
   Relationship,
 } from "@/types";
 
@@ -790,50 +789,6 @@ export async function updateBuildingAge(id: string, input: Partial<BuildingAge>)
 
 export async function deleteBuildingAge(id: string) {
   return updateBuildingAge(id, { is_active: false });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// MANUFACTURE YEARS
-// ═══════════════════════════════════════════════════════════════
-
-export async function getManufactureYears() {
-  const query = `
-    query GetManufactureYears {
-      manufacture_years(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ manufacture_years: ManufactureYear[] }>(query);
-  return data.manufacture_years;
-}
-
-export async function createManufactureYear(input: { name: string }) {
-  const mutation = `
-    mutation CreateManufactureYear($object: manufacture_years_insert_input!) {
-      insert_manufacture_years_one(object: $object) { id name is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_manufacture_years_one: ManufactureYear }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_manufacture_years_one;
-}
-
-export async function updateManufactureYear(id: string, input: Partial<ManufactureYear>) {
-  const mutation = `
-    mutation UpdateManufactureYear($id: uuid!, $set: manufacture_years_set_input!) {
-      update_manufacture_years_by_pk(pk_columns: { id: $id }, _set: $set) { id name is_active }
-    }
-  `;
-  const set: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
-  }
-  const data = await graphqlRequest<{ update_manufacture_years_by_pk: ManufactureYear }>(mutation, { id, set });
-  return data.update_manufacture_years_by_pk;
-}
-
-export async function deleteManufactureYear(id: string) {
-  return updateManufactureYear(id, { is_active: false });
 }
 
 // ═══════════════════════════════════════════════════════════════

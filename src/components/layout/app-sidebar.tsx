@@ -30,7 +30,6 @@ import {
   Home,
   Warehouse,
   CalendarDays,
-  Factory,
   Heart,
 } from "lucide-react"
 
@@ -70,7 +69,6 @@ const catalogLinks = [
   { href: "/dashboard/catalogos/tipos-vivienda", label: "Tipos Vivienda", icon: Home },
   { href: "/dashboard/catalogos/destinos-vivienda", label: "Destinos Vivienda", icon: Warehouse },
   { href: "/dashboard/catalogos/antiguedades", label: "Antiguedad Inmueble", icon: CalendarDays },
-  { href: "/dashboard/catalogos/anos-fabricacion", label: "Año Fabricacion", icon: Factory },
   { href: "/dashboard/catalogos/parentescos", label: "Parentescos", icon: Heart },
 ]
 

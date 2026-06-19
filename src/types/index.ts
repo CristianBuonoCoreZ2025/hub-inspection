@@ -568,14 +568,6 @@ export interface BuildingAge {
   updated_at: string;
 }
 
-export interface ManufactureYear {
-  id: string;
-  name: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Relationship {
   id: string;
   name: string;
