@@ -536,16 +536,6 @@ export interface ClaimType {
   updated_at: string;
 }
 
-export interface ClaimTypeCause {
-  id: string;
-  country_id: string;
-  claim_type_id: string;
-  claim_cause_id: string;
-  cause_name: string | null;
-  is_active: boolean;
-  created_at: string;
-}
-
 export interface HousingType {
   id: string;
   name: string;

@@ -14,7 +14,6 @@ import type {
   LossType,
   PolicyType,
   ClaimType,
-  ClaimTypeCause,
   HousingType,
   HousingDestination,
   BuildingAge,
@@ -659,50 +658,6 @@ export async function updateClaimType(id: string, input: Partial<ClaimType>) {
 
 export async function deleteClaimType(id: string) {
   return updateClaimType(id, { is_active: false });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CLAIM TYPE CAUSES
-// ═══════════════════════════════════════════════════════════════
-
-export async function getClaimTypeCauses() {
-  const query = `
-    query GetClaimTypeCauses {
-      claim_type_causes(where: { is_active: { _eq: true } }, order_by: { cause_name: asc }) {
-        id country_id claim_type_id claim_cause_id cause_name is_active created_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ claim_type_causes: ClaimTypeCause[] }>(query);
-  return data.claim_type_causes;
-}
-
-export async function createClaimTypeCause(input: { country_id: string; claim_type_id: string; claim_cause_id: string; cause_name?: string }) {
-  const mutation = `
-    mutation CreateClaimTypeCause($object: claim_type_causes_insert_input!) {
-      insert_claim_type_causes_one(object: $object) { id country_id claim_type_id claim_cause_id cause_name is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_claim_type_causes_one: ClaimTypeCause }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_claim_type_causes_one;
-}
-
-export async function updateClaimTypeCause(id: string, input: Partial<ClaimTypeCause>) {
-  const mutation = `
-    mutation UpdateClaimTypeCause($id: uuid!, $set: claim_type_causes_set_input!) {
-      update_claim_type_causes_by_pk(pk_columns: { id: $id }, _set: $set) { id cause_name is_active }
-    }
-  `;
-  const set: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
-  }
-  const data = await graphqlRequest<{ update_claim_type_causes_by_pk: ClaimTypeCause }>(mutation, { id, set });
-  return data.update_claim_type_causes_by_pk;
-}
-
-export async function deleteClaimTypeCause(id: string) {
-  return updateClaimTypeCause(id, { is_active: false });
 }
 
 // ═══════════════════════════════════════════════════════════════
