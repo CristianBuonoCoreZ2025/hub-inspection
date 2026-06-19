@@ -25,6 +25,16 @@ import {
   ChevronRight,
   Upload,
   MapPin,
+  Layers,
+  Grid3X3,
+  FileWarning,
+  Scale,
+  Shield,
+  Home,
+  Warehouse,
+  CalendarDays,
+  Factory,
+  Heart,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -49,12 +59,25 @@ const mainLinks = [
 
 const catalogLinks = [
   { href: "/dashboard/catalogos/ubicaciones", label: "Ubicaciones", icon: MapPin },
+  { href: "/dashboard/catalogos/areas", label: "Areas", icon: Layers },
+  { href: "/dashboard/catalogos/subareas", label: "Subareas", icon: Grid3X3 },
   { href: "/dashboard/catalogos/causas", label: "Causas Siniestro", icon: AlertTriangle },
+  { href: "/dashboard/catalogos/tipos-siniestros", label: "Tipos Siniestro", icon: FileWarning },
+  { href: "/dashboard/catalogos/tipos-siniestros-causas", label: "Tipo-Causa", icon: Scale },
   { href: "/dashboard/catalogos/companias", label: "Compañias Seguros", icon: Landmark },
   { href: "/dashboard/catalogos/corredores", label: "Corredores", icon: Briefcase },
   { href: "/dashboard/catalogos/asesores", label: "Asesores", icon: Users },
   { href: "/dashboard/catalogos/lineas-negocio", label: "Lineas de Negocio", icon: Tag },
   { href: "/dashboard/catalogos/productos", label: "Ramos/Productos", icon: Box },
+  { href: "/dashboard/catalogos/clasificacion-bien", label: "Clasificacion Bien", icon: Home },
+  { href: "/dashboard/catalogos/clasificacion-danos", label: "Clasificacion Danos", icon: FileWarning },
+  { href: "/dashboard/catalogos/tipos-perdida", label: "Tipos Perdida", icon: Shield },
+  { href: "/dashboard/catalogos/tipos-polizas", label: "Tipos Polizas", icon: Shield },
+  { href: "/dashboard/catalogos/tipos-vivienda", label: "Tipos Vivienda", icon: Home },
+  { href: "/dashboard/catalogos/destinos-vivienda", label: "Destinos Vivienda", icon: Warehouse },
+  { href: "/dashboard/catalogos/antiguedades", label: "Antiguedad Inmueble", icon: CalendarDays },
+  { href: "/dashboard/catalogos/anos-fabricacion", label: "Año Fabricacion", icon: Factory },
+  { href: "/dashboard/catalogos/parentescos", label: "Parentescos", icon: Heart },
 ]
 
 const adminLinks = [

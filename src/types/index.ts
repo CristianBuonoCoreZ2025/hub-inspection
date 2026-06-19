@@ -464,3 +464,148 @@ export interface Commune {
   created_at: string;
   updated_at: string;
 }
+
+export interface Area {
+  id: string;
+  name: string;
+  name_es: string | null;
+  name_en: string | null;
+  name_pt: string | null;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Subarea {
+  id: string;
+  letter: string;
+  name: string;
+  name_es: string | null;
+  name_en: string | null;
+  name_pt: string | null;
+  description: string | null;
+  sw_asignacion: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PropertyClassification {
+  id: string;
+  name: string;
+  name_es: string | null;
+  name_en: string | null;
+  name_pt: string | null;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DamageClassification {
+  id: string;
+  name: string;
+  name_es: string | null;
+  name_en: string | null;
+  name_pt: string | null;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LossType {
+  id: string;
+  name: string;
+  name_es: string | null;
+  name_en: string | null;
+  name_pt: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PolicyType {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClaimType {
+  id: string;
+  name: string;
+  name_es: string | null;
+  name_en: string | null;
+  name_pt: string | null;
+  description: string | null;
+  sw_type: number | null;
+  icon: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClaimTypeCause {
+  id: string;
+  country_id: string;
+  claim_type_id: string;
+  claim_cause_id: string;
+  cause_name: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface HousingType {
+  id: string;
+  name: string;
+  name_es: string | null;
+  name_en: string | null;
+  name_pt: string | null;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HousingDestination {
+  id: string;
+  name: string;
+  name_es: string | null;
+  name_en: string | null;
+  name_pt: string | null;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BuildingAge {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ManufactureYear {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Relationship {
+  id: string;
+  name: string;
+  name_es: string | null;
+  name_en: string | null;
+  name_pt: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}

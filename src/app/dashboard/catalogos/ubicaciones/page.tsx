@@ -154,7 +154,7 @@ export default function UbicacionesPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
           {getLevelIcon()}
         </div>
         <h2 className="text-base font-semibold">{getLevelTitle()}</h2>
