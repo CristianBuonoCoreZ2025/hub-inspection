@@ -1,8 +1,8 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { getClaimById, deleteClaim } from "@/services/claims";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getClaimById, deleteClaim, updateClaimStatus } from "@/services/claims";
 import { getUsers } from "@/services/users";
 import { createInspectionSession } from "@/services/inspections";
 import { toast } from "sonner";
@@ -18,10 +18,12 @@ import {
   Shield,
   FileText,
   Clock,
+  Lock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import AuditLogSection from "./audit-log-section";
 
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -43,7 +45,7 @@ export default function ClaimDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-
+  const queryClient = useQueryClient();
 
   const { data: claim, isLoading } = useQuery({
     queryKey: ["claim", id],
@@ -69,6 +71,16 @@ export default function ClaimDetailPage() {
     onSuccess: () => {
       toast.success("Siniestro eliminado");
       router.push("/dashboard/claims");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const closeMutation = useMutation({
+    mutationFn: () => updateClaimStatus(id, "closed"),
+    onSuccess: () => {
+      toast.success("Caso cerrado");
+      queryClient.invalidateQueries({ queryKey: ["claim", id] });
+      queryClient.invalidateQueries({ queryKey: ["claims"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -129,6 +141,20 @@ export default function ClaimDetailPage() {
             <Pencil className="mr-2 h-4 w-4" />
             Editar
           </Button>
+          {claim.status === "signed" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="btn-save btn-sm"
+              onClick={() => {
+                if (confirm("¿Cerrar este caso? No se podrá revertir.")) closeMutation.mutate();
+              }}
+              disabled={closeMutation.isPending}
+            >
+              <Lock className="mr-2 h-4 w-4" />
+              Cerrar caso
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -291,6 +317,8 @@ export default function ClaimDetailPage() {
               <p className="text-[13px] text-muted-foreground whitespace-pre-wrap">{claim.notes}</p>
             </div>
           )}
+
+          <AuditLogSection claimId={claim.id} users={users} />
         </div>
 
         {/* Sidebar derecha */}

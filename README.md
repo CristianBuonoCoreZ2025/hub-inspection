@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hub Inspections
 
-## Getting Started
+Plataforma SaaS multi-tenant para la gestión integral de siniestros e inspecciones remotas.
 
-First, run the development server:
+## Stack Tecnológico
+
+- **Framework:** Next.js 16 (App Router)
+- **Lenguaje:** TypeScript (estricto)
+- **Estilos:** Tailwind CSS v4
+- **Componentes UI:** shadcn/ui
+- **Formularios:** React Hook Form + Zod
+- **Gestión de Estado:** Zustand
+- **Datos/Cache:** TanStack Query (React Query)
+- **Backend:** Nhost (PostgreSQL + Hasura GraphQL, Auth, Storage, Functions)
+- **Gestor de paquetes:** pnpm
+
+## Módulos Principales
+
+- **Base SaaS:** Auth, Multi-tenant, Usuarios, Empresas, Onboarding
+- **Siniestros (Claims):** CRUD completo, workflow de estados, historial de cambios (audit log)
+- **Catálogos Maestros:** Causas, compañías, corredores, asesores, líneas de negocio, productos
+- **Carga Masiva:** Importación de siniestros y catálogos vía Excel
+- **Inspecciones Remotas:** Sesiones de inspección, acta de inspección (wizard 6 pasos), checklist, daños, evidencias, croquis, firmas digitales, informes PDF
+- **Agenda:** Vista semanal de inspecciones programadas
+- **Chat:** Mensajería persistente por sesión de inspección
+
+## Comandos del Proyecto
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm dev          # Iniciar desarrollo
+pnpm build        # Build de producción
+pnpm lint         # Linting
+pnpm db:push      # Ejecutar migraciones SQL en PostgreSQL
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Configuración de Variables de Entorno
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Crea `.env.local` con:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+NEXT_PUBLIC_NHOST_SUBDOMAIN=tu-subdomain
+NEXT_PUBLIC_NHOST_REGION=eu-central-1
+NEXT_PUBLIC_NHOST_AUTH_URL=https://auth.tu-proyecto.nhost.run
+NEXT_PUBLIC_NHOST_GRAPHQL_URL=https://graphql.tu-proyecto.nhost.run/v1
+NEXT_PUBLIC_NHOST_STORAGE_URL=https://storage.tu-proyecto.nhost.run
+DATABASE_URL="postgres://postgres:password@host:port/database"
+```
 
-## Learn More
+## Arquitectura
 
-To learn more about Next.js, take a look at the following resources:
+Estructura **feature-based** bajo `src/features/` y `src/app/`. Ver `AGENTS.md` para convenciones completas de código, seguridad, estilos y decisiones técnicas.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Decisiones Técnicas Clave
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Migraciones SQL manuales versionadas (`migrations/`)
+- Triggers PostgreSQL para auditoría automática (`audit_logs`)
+- Workflow de estados del siniestro automático vía inspección
+- Upload de archivos a Nhost Storage
+- Sistema de estilos semántico con paleta de botones y modales canónicos
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Documentación técnica detallada en [`AGENTS.md`](./AGENTS.md).

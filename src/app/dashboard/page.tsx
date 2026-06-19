@@ -1,3 +1,9 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { getClaims } from "@/services/claims";
+import { getInspectionSessions } from "@/services/inspections";
+import { getRecentAuditLogs } from "@/services/audit-logs";
 import {
   FileText,
   CheckCircle,
@@ -5,98 +11,143 @@ import {
   AlertCircle,
   Calendar,
   Timer,
-  ArrowUpRight,
-  ArrowDownRight,
   Activity,
-} from "lucide-react"
+  ClipboardCheck,
+} from "lucide-react";
 
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import type { Claim, InspectionSession, AuditLog } from "@/types";
 
-const metrics = [
-  {
-    label: "Casos abiertos",
-    value: 124,
-    change: "+12%",
-    trend: "up" as const,
-    icon: FileText,
-  },
-  {
-    label: "Casos cerrados",
-    value: 89,
-    change: "+5%",
-    trend: "up" as const,
-    icon: CheckCircle,
-  },
-  {
-    label: "Casos pendientes",
-    value: 34,
-    change: "-8%",
-    trend: "down" as const,
-    icon: Clock,
-  },
-  {
-    label: "Casos en revisión",
-    value: 18,
-    change: "+2%",
-    trend: "up" as const,
-    icon: AlertCircle,
-  },
-  {
-    label: "Inspecciones programadas",
-    value: 42,
-    change: "+15%",
-    trend: "up" as const,
-    icon: Calendar,
-  },
-  {
-    label: "Tiempo promedio de resolución",
-    value: "3.2 días",
-    change: "-10%",
-    trend: "down" as const,
-    icon: Timer,
-  },
-]
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
 
-const recentActivity = [
-  {
-    id: "1",
-    text: "Nuevo siniestro creado #2025-001",
-    time: "Hace 2 horas",
-    icon: FileText,
-  },
-  {
-    id: "2",
-    text: "Inspección completada para #2024-089",
-    time: "Hace 4 horas",
-    icon: CheckCircle,
-  },
-  {
-    id: "3",
-    text: "Evidencia subida por Juan Pérez",
-    time: "Hace 5 horas",
-    icon: Activity,
-  },
-  {
-    id: "4",
-    text: "Usuario María García asignada a #2025-002",
-    time: "Hace 8 horas",
-    icon: Clock,
-  },
-  {
-    id: "5",
-    text: "Informe firmado para #2024-075",
-    time: "Hace 1 día",
-    icon: CheckCircle,
-  },
-]
+  if (diffMin < 1) return "Hace un momento";
+  if (diffMin < 60) return `Hace ${diffMin} min`;
+  if (diffHr < 24) return `Hace ${diffHr} h`;
+  if (diffDay < 7) return `Hace ${diffDay} día${diffDay > 1 ? "s" : ""}`;
+  return date.toLocaleDateString("es-CL");
+}
+
+function getActivityText(log: AuditLog): string {
+  const actionLabels: Record<string, string> = {
+    INSERT: "creado",
+    UPDATE: "actualizado",
+    DELETE: "eliminado",
+  };
+  const tableLabels: Record<string, string> = {
+    claims: "siniestro",
+    inspection_sessions: "inspección",
+  };
+  const action = actionLabels[log.action] || log.action.toLowerCase();
+  const table = tableLabels[log.table_name] || log.table_name;
+  return `${table.charAt(0).toUpperCase() + table.slice(1)} ${action}`;
+}
+
+function getActivityIcon(log: AuditLog) {
+  if (log.table_name === "claims") return FileText;
+  if (log.table_name === "inspection_sessions") return ClipboardCheck;
+  return Activity;
+}
 
 export default function DashboardPage() {
+  const { data: claims } = useQuery({
+    queryKey: ["claims"],
+    queryFn: () => getClaims(),
+  });
+
+  const { data: sessions } = useQuery({
+    queryKey: ["inspection-sessions"],
+    queryFn: () => getInspectionSessions(),
+  });
+
+  const { data: auditLogs } = useQuery({
+    queryKey: ["recent-activity"],
+    queryFn: () => getRecentAuditLogs(undefined, 10),
+  });
+
+  const closedClaims =
+    claims?.filter((c: Claim) => c.status === "closed") ?? [];
+  const pendingClaims =
+    claims?.filter((c: Claim) => c.status === "pending_info") ?? [];
+  const reviewClaims =
+    claims?.filter((c: Claim) => c.status === "in_review") ?? [];
+  const openClaims =
+    claims?.filter((c: Claim) => c.status !== "closed") ?? [];
+
+  const scheduledSessions =
+    sessions?.filter(
+      (s: InspectionSession) =>
+        s.status === "scheduled" &&
+        s.scheduled_at &&
+        new Date(s.scheduled_at) >= new Date()
+    ) ?? [];
+
+  // Tiempo promedio de resolución (claims cerrados)
+  let avgResolutionDays = 0;
+  if (closedClaims.length > 0) {
+    const totalDays = closedClaims.reduce((sum: number, c: Claim) => {
+      const created = new Date(c.created_at).getTime();
+      const updated = new Date(c.updated_at).getTime();
+      return sum + (updated - created) / 86400000;
+    }, 0);
+    avgResolutionDays = totalDays / closedClaims.length;
+  }
+
+  const metrics = [
+    {
+      label: "Casos abiertos",
+      value: openClaims.length,
+      icon: FileText,
+    },
+    {
+      label: "Casos cerrados",
+      value: closedClaims.length,
+      icon: CheckCircle,
+    },
+    {
+      label: "Casos pendientes",
+      value: pendingClaims.length,
+      icon: Clock,
+    },
+    {
+      label: "Casos en revisión",
+      value: reviewClaims.length,
+      icon: AlertCircle,
+    },
+    {
+      label: "Inspecciones programadas",
+      value: scheduledSessions.length,
+      icon: Calendar,
+    },
+    {
+      label: "Tiempo promedio de resolución",
+      value:
+        closedClaims.length > 0
+          ? `${avgResolutionDays.toFixed(1)} días`
+          : "—",
+      icon: Timer,
+    },
+  ];
+
+  const recentActivity =
+    auditLogs?.map((log: AuditLog) => ({
+      id: log.id,
+      text: getActivityText(log),
+      time: formatRelativeTime(log.created_at),
+      icon: getActivityIcon(log),
+    })) ?? [];
+
   return (
     <div className="space-y-6">
       <div>
@@ -109,14 +160,7 @@ export default function DashboardPage() {
       {/* Metrics */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {metrics.map((metric) => {
-          const Icon = metric.icon
-          const TrendIcon =
-            metric.trend === "up" ? ArrowUpRight : ArrowDownRight
-          const trendColor =
-            metric.trend === "up"
-              ? "text-emerald-600 dark:text-emerald-400"
-              : "text-rose-600 dark:text-rose-400"
-
+          const Icon = metric.icon;
           return (
             <Card key={metric.label}>
               <CardContent className="pt-6">
@@ -129,14 +173,9 @@ export default function DashboardPage() {
                     {metric.value}
                   </span>
                 </div>
-                <div className="mt-1 flex items-center gap-1 text-xs">
-                  <TrendIcon className={trendColor} />
-                  <span className={trendColor}>{metric.change}</span>
-                  <span className="text-muted-foreground">vs. mes pasado</span>
-                </div>
               </CardContent>
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -146,31 +185,35 @@ export default function DashboardPage() {
           <CardTitle>Actividad reciente</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-1">
-            {recentActivity.map((item, index) => {
-              const Icon = item.icon
-              return (
-                <div key={item.id}>
-                  <div className="flex items-start gap-3 py-3">
-                    <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                      <Icon className="size-4 text-muted-foreground" />
+          {recentActivity.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              No hay actividad reciente.
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {recentActivity.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.id}>
+                    <div className="flex items-start gap-3 py-3">
+                      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                        <Icon className="size-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex flex-1 flex-col gap-0.5">
+                        <p className="text-sm font-medium">{item.text}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.time}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex flex-1 flex-col gap-0.5">
-                      <p className="text-sm font-medium">{item.text}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.time}
-                      </p>
-                    </div>
+                    {index < recentActivity.length - 1 && <Separator />}
                   </div>
-                  {index < recentActivity.length - 1 && (
-                    <Separator />
-                  )}
-                </div>
-              )
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -338,6 +338,21 @@ export async function createDamageSketch(input: Omit<DamageSketch, "id" | "creat
   return data.insert_damage_sketches_one;
 }
 
+export async function updateDamageSketch(id: string, input: Partial<Pick<DamageSketch, "label" | "sketch_url">>) {
+  const mutation = `
+    mutation UpdateDamageSketch($id: uuid!, $set: damage_sketches_set_input!) {
+      update_damage_sketches_by_pk(pk_columns: { id: $id }, _set: $set) {
+        ${SKETCH_FIELDS}
+      }
+    }
+  `;
+  const set: Record<string, unknown> = {};
+  if (input.label !== undefined) set.label = input.label;
+  if (input.sketch_url !== undefined) set.sketch_url = input.sketch_url;
+  const data = await graphqlRequest<{ update_damage_sketches_by_pk: DamageSketch }>(mutation, { id, set });
+  return data.update_damage_sketches_by_pk;
+}
+
 export async function deleteDamageSketch(id: string) {
   const mutation = `
     mutation DeleteDamageSketch($id: uuid!) {

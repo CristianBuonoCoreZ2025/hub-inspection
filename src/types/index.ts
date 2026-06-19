@@ -426,3 +426,13 @@ export interface InspectionDamage {
   created_at: string;
   updated_at: string;
 }
+
+export interface InspectionChatMessage {
+  id: string;
+  session_id: string;
+  sender_id: string | null;
+  sender_name: string | null;
+  sender_role: string | null;
+  content: string;
+  created_at: string;
+}

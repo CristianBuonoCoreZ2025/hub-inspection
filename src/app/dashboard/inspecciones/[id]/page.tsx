@@ -7,6 +7,7 @@ import {
   getInspectionSessionById,
   updateInspectionSession,
 } from "@/services/inspections";
+import { updateClaimStatus } from "@/services/claims";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -20,18 +21,28 @@ import {
   User,
   Clock,
   ShieldCheck,
+  MessageSquare,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import type { InspectionSession } from "@/types";
+import type { ClaimStatus, InspectionSession } from "@/types";
 import ActaForm from "./acta-form";
 import ChecklistTab from "./checklist-tab";
 import DamagesTab from "./damages-tab";
 import EvidencesTab from "./evidences-tab";
 import SignaturesTab from "./signatures-tab";
 import ReportTab from "./report-tab";
+import SketchesTab from "./sketches-tab";
+import ChatTab from "./chat-tab";
+
+const sessionToClaimStatus: Record<string, ClaimStatus> = {
+  scheduled: "scheduled",
+  active: "in_progress",
+  completed: "in_review",
+  cancelled: "pending_info",
+};
 
 const sessionStatusLabels: Record<string, string> = {
   pending: "Pendiente",
@@ -73,10 +84,24 @@ export default function InspectionDetailPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, input }: { id: string; input: Partial<InspectionSession> }) =>
       updateInspectionSession(id, input),
-    onSuccess: () => {
+    onSuccess: async (_data, variables) => {
       toast.success("Estado actualizado");
       queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+
+      const newStatus = variables.input.status;
+      if (newStatus && session?.claim_id) {
+        const claimStatus = sessionToClaimStatus[newStatus];
+        if (claimStatus) {
+          try {
+            await updateClaimStatus(session.claim_id, claimStatus);
+            queryClient.invalidateQueries({ queryKey: ["claim", session.claim_id] });
+            queryClient.invalidateQueries({ queryKey: ["claims"] });
+          } catch {
+            // No bloquear la UI si el claim no se puede actualizar
+          }
+        }
+      }
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -230,6 +255,10 @@ export default function InspectionDetailPage() {
           <TabsTrigger value="informe">
             <FileText className="mr-1.5 h-3.5 w-3.5" />
             Informe
+          </TabsTrigger>
+          <TabsTrigger value="chat">
+            <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
+            Chat
           </TabsTrigger>
         </TabsList>
 
@@ -399,14 +428,7 @@ export default function InspectionDetailPage() {
 
         {/* ── TAB: CROQUIS ── */}
         <TabsContent value="croquis" className="mt-4">
-          <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Croquis de Areas Afectadas
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Upload de croquis en construccion. Proximamente: planos y croquis de areas afectadas.
-            </p>
-          </div>
+          <SketchesTab sessionId={session.id} />
         </TabsContent>
 
         {/* ── TAB: FIRMAS ── */}
@@ -417,6 +439,11 @@ export default function InspectionDetailPage() {
         {/* ── TAB: INFORME ── */}
         <TabsContent value="informe" className="mt-4">
           <ReportTab sessionId={session.id} claimNumber={session.claim?.claim_number} />
+        </TabsContent>
+
+        {/* ── TAB: CHAT ── */}
+        <TabsContent value="chat" className="mt-4">
+          <ChatTab sessionId={session.id} />
         </TabsContent>
       </Tabs>
     </div>

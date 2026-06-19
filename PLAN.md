@@ -14,7 +14,7 @@
 | Usuarios | Listo | CRUD completo, invitacion por rol, activar/desactivar |
 | Empresas | Listo | CRUD completo, upload de logo a Nhost Storage, validacion RUT Chile |
 | Sidebar + Header | Listo | Navegacion responsive, breadcrumbs, tema dark/light, 5 skins, menu acordeon |
-| Dashboard | Mock | Metricas hardcodeadas, actividad reciente estatica |
+| Dashboard | Listo | Metricas reales desde DB (claims por estado, inspecciones, actividad reciente via audit_logs) |
 | Configuracion | Listo | Cambio de tema, selector de skin, panel de diagnostico (logs) |
 | Base de datos | Listo | 15 tablas base, triggers, RLS, migraciones versionadas |
 
@@ -43,8 +43,8 @@
 **Pendiente:**
 - [x] **Pagina de detalle de siniestro** — `/dashboard/claims/[id]` con datos completos, equipo, corredor, fechas
 - [x] **Filtros avanzados** en lista — por estado, por rango de fecha, busqueda texto + exportar CSV
-- [ ] **Cambio de estado con workflow** (botones de accion: Agendar, Iniciar, Revisar, Firmar, Cerrar)
-- [ ] **Historial de cambios** (audit log visible en el siniestro)
+- [x] **Cambio de estado con workflow** — automatico via inspeccion (session → claim) + boton manual "Cerrar caso" (signed → closed)
+- [x] **Historial de cambios** — audit log visible en el detalle del siniestro (triggers PostgreSQL + servicio GraphQL + UI)
 
 ### 2.2 Catálogos Maestros — 100%
 
@@ -160,11 +160,10 @@
 ## Proximos Pasos Recomendados
 
 1. **Ajustar mapeo de Excel** cuando el usuario entregue los archivos de su cliente
-2. **Dashboard con datos reales** — reemplazar mocks por queries reales
-3. **Croquis interactivo** — pestaña "Croquis" (canvas para dibujar areas afectadas)
-4. **Historial de cambios** — audit log visible en el siniestro
-5. **Workflow de estados** — botones de accion: Agendar, Iniciar, Revisar, Firmar, Cerrar
-6. **Notificaciones push** — cuando se asigna un siniestro o inicia inspeccion
+2. **Notificaciones push** — cuando se asigna un siniestro o inicia inspeccion
+3. **Dashboard mejorado** — graficos, comparativas mensuales, KPIs adicionales
+4. **Croquis interactivo** — canvas para dibujar areas afectadas (actualmente es upload de imagen)
+5. **Realtime chat** — suscripciones GraphQL para actualizaciones en vivo del chat
 
 ---
 
@@ -172,10 +171,10 @@
 
 | Ruta | Estado | Conectado a DB |
 |------|--------|----------------|
-| `/dashboard` | Mock | No |
-| `/dashboard/claims` | ~98% funcional (detalle + filtros + exportar) | Si |
+| `/dashboard` | Funcional (datos reales) | Si |
+| `/dashboard/claims` | ~100% funcional (detalle + filtros + exportar + workflow + audit log) | Si |
 | `/dashboard/inspecciones` | Lista + detalle con tabs | Si |
-| `/dashboard/inspecciones/[id]` | 7 tabs funcionales (Acta, Checklist, Daños, Evidencias, Firmas, Informe) | Si |
+| `/dashboard/inspecciones/[id]` | 8 tabs funcionales (Acta, Checklist, Daños, Evidencias, Croquis, Firmas, Informe, Chat) | Si |
 | `/dashboard/agenda` | Vista semanal funcional | Si |
 | `/dashboard/catalogos/causas` | CRUD completo | Si |
 | `/dashboard/catalogos/companias` | CRUD completo | Si |
@@ -185,8 +184,8 @@
 | `/dashboard/catalogos/productos` | CRUD completo | Si |
 | `/dashboard/operaciones/carga-siniestros` | Carga masiva Excel | Si |
 | `/dashboard/operaciones/carga-catalogos` | Carga masiva Excel (6 catálogos) | Si |
-| `/dashboard/evidencias` | Placeholder | No |
-| `/dashboard/informes` | Placeholder | No |
+| `/dashboard/evidencias` | Redirige a /inspecciones | Si |
+| `/dashboard/informes` | Redirige a /inspecciones | Si |
 | `/dashboard/users` | Funcional | Si |
 | `/dashboard/companies` | Funcional | Si |
 | `/dashboard/configuracion` | Funcional | No (local) |
@@ -210,3 +209,4 @@
 | `11_add_acta_fields.sql` | Campos JSONB del Acta en inspection_sessions |
 | `12_catalogs.sql` | 5 tablas de catalogos (causas, companias, corredores, lineas, productos) |
 | `13_add_advisors_catalog.sql` | Tabla advisors |
+| `14_audit_triggers.sql` | Triggers audit_log para claims e inspection_sessions |
