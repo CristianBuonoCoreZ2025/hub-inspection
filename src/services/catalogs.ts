@@ -11,7 +11,6 @@ import type {
   Commune,
   PropertyClassification,
   DamageClassification,
-  LossType,
   PolicyType,
   ClaimType,
   HousingDestination,
@@ -524,50 +523,6 @@ export async function updateDamageClassification(id: string, input: Partial<Dama
 
 export async function deleteDamageClassification(id: string) {
   return updateDamageClassification(id, { is_active: false });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// LOSS TYPES
-// ═══════════════════════════════════════════════════════════════
-
-export async function getLossTypes() {
-  const query = `
-    query GetLossTypes {
-      loss_types(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name name_es name_en name_pt is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ loss_types: LossType[] }>(query);
-  return data.loss_types;
-}
-
-export async function createLossType(input: { name: string }) {
-  const mutation = `
-    mutation CreateLossType($object: loss_types_insert_input!) {
-      insert_loss_types_one(object: $object) { id name name_es name_en name_pt is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_loss_types_one: LossType }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_loss_types_one;
-}
-
-export async function updateLossType(id: string, input: Partial<LossType>) {
-  const mutation = `
-    mutation UpdateLossType($id: uuid!, $set: loss_types_set_input!) {
-      update_loss_types_by_pk(pk_columns: { id: $id }, _set: $set) { id name is_active }
-    }
-  `;
-  const set: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
-  }
-  const data = await graphqlRequest<{ update_loss_types_by_pk: LossType }>(mutation, { id, set });
-  return data.update_loss_types_by_pk;
-}
-
-export async function deleteLossType(id: string) {
-  return updateLossType(id, { is_active: false });
 }
 
 // ═══════════════════════════════════════════════════════════════

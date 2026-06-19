@@ -502,17 +502,6 @@ export interface DamageClassification {
   updated_at: string;
 }
 
-export interface LossType {
-  id: string;
-  name: string;
-  name_es: string | null;
-  name_en: string | null;
-  name_pt: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface PolicyType {
   id: string;
   name: string;
