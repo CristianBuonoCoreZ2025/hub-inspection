@@ -210,3 +210,5 @@
 | `12_catalogs.sql` | 5 tablas de catalogos (causas, companias, corredores, lineas, productos) |
 | `13_add_advisors_catalog.sql` | Tabla advisors |
 | `14_audit_triggers.sql` | Triggers audit_log para claims e inspection_sessions |
+| `15_regions_cities_communes.sql` | Tablas regions, cities, communes (estructura) |
+| `16_seed_regions_cities_communes.sql` | Seed real: 16 regiones, 53 ciudades, 347 comunas de Chile |
