@@ -106,6 +106,53 @@ export interface Claim {
   region_id: string | null;
   city_id: string | null;
   commune_id: string | null;
+  // Datos del contratante
+  contractor_rut: string | null;
+  contractor_name: string | null;
+  contractor_last_name: string | null;
+  contractor_email: string | null;
+  contractor_phone: string | null;
+  contractor_cell_phone: string | null;
+  contractor_address: string | null;
+  contractor_country: string | null;
+  contractor_region: string | null;
+  contractor_city: string | null;
+  contractor_commune: string | null;
+  // Datos del beneficiario
+  beneficiary_rut: string | null;
+  beneficiary_name: string | null;
+  beneficiary_last_name: string | null;
+  beneficiary_email: string | null;
+  beneficiary_phone: string | null;
+  beneficiary_cell_phone: string | null;
+  beneficiary_address: string | null;
+  beneficiary_country: string | null;
+  beneficiary_region: string | null;
+  beneficiary_city: string | null;
+  beneficiary_commune: string | null;
+  // Dirección del siniestro
+  claim_address: string | null;
+  claim_country: string | null;
+  claim_region: string | null;
+  claim_city: string | null;
+  claim_commune: string | null;
+  // Detalle póliza y siniestro
+  executive_name: string | null;
+  created_date: string | null;
+  closed_date: string | null;
+  event: string | null;
+  policy_item: string | null;
+  policy_start_date: string | null;
+  policy_end_date: string | null;
+  policy_currency: string | null;
+  policy_amount: number | null;
+  policy_premium: number | null;
+  contact_phone: string | null;
+  construction_type: string | null;
+  destination: string | null;
+  damage_classification: string | null;
+  is_habitable: boolean | null;
+  owner_same_as_insured: boolean | null;
   created_at: string;
   updated_at: string;
 }
