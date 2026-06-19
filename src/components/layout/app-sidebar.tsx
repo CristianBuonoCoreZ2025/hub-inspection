@@ -48,9 +48,7 @@ const mainLinks = [
 ]
 
 const catalogLinks = [
-  { href: "/dashboard/catalogos/regiones", label: "Regiones", icon: MapPin },
-  { href: "/dashboard/catalogos/ciudades", label: "Ciudades", icon: Building2 },
-  { href: "/dashboard/catalogos/comunas", label: "Comunas", icon: Landmark },
+  { href: "/dashboard/catalogos/ubicaciones", label: "Ubicaciones", icon: MapPin },
   { href: "/dashboard/catalogos/causas", label: "Causas Siniestro", icon: AlertTriangle },
   { href: "/dashboard/catalogos/companias", label: "Compañias Seguros", icon: Landmark },
   { href: "/dashboard/catalogos/corredores", label: "Corredores", icon: Briefcase },
