@@ -558,9 +558,6 @@ export interface Commune {
 export interface PropertyClassification {
   id: string;
   name: string;
-  name_es: string | null;
-  name_en: string | null;
-  name_pt: string | null;
   description: string | null;
   is_active: boolean;
   created_at: string;
@@ -570,9 +567,6 @@ export interface PropertyClassification {
 export interface DamageClassification {
   id: string;
   name: string;
-  name_es: string | null;
-  name_en: string | null;
-  name_pt: string | null;
   description: string | null;
   is_active: boolean;
   created_at: string;
@@ -591,9 +585,6 @@ export interface PolicyType {
 export interface ClaimType {
   id: string;
   name: string;
-  name_es: string | null;
-  name_en: string | null;
-  name_pt: string | null;
   description: string | null;
   sw_type: number | null;
   icon: string | null;
@@ -605,9 +596,6 @@ export interface ClaimType {
 export interface HousingDestination {
   id: string;
   name: string;
-  name_es: string | null;
-  name_en: string | null;
-  name_pt: string | null;
   description: string | null;
   is_active: boolean;
   created_at: string;
@@ -625,9 +613,6 @@ export interface BuildingAge {
 export interface Relationship {
   id: string;
   name: string;
-  name_es: string | null;
-  name_en: string | null;
-  name_pt: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

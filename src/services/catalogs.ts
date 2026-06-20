@@ -446,7 +446,7 @@ export async function getPropertyClassifications() {
   const query = `
     query GetPropertyClassifications {
       property_classifications(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name name_es name_en name_pt description is_active created_at updated_at
+        id name  description is_active created_at updated_at
       }
     }
   `;
@@ -457,7 +457,7 @@ export async function getPropertyClassifications() {
 export async function createPropertyClassification(input: { name: string; description?: string }) {
   const mutation = `
     mutation CreatePropertyClassification($object: property_classifications_insert_input!) {
-      insert_property_classifications_one(object: $object) { id name name_es name_en name_pt description is_active }
+      insert_property_classifications_one(object: $object) { id name  description is_active }
     }
   `;
   const data = await graphqlRequest<{ insert_property_classifications_one: PropertyClassification }>(mutation, { object: { ...input, is_active: true } });
@@ -490,7 +490,7 @@ export async function getDamageClassifications() {
   const query = `
     query GetDamageClassifications {
       damage_classifications(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name name_es name_en name_pt description is_active created_at updated_at
+        id name  description is_active created_at updated_at
       }
     }
   `;
@@ -501,7 +501,7 @@ export async function getDamageClassifications() {
 export async function createDamageClassification(input: { name: string; description?: string }) {
   const mutation = `
     mutation CreateDamageClassification($object: damage_classifications_insert_input!) {
-      insert_damage_classifications_one(object: $object) { id name name_es name_en name_pt description is_active }
+      insert_damage_classifications_one(object: $object) { id name  description is_active }
     }
   `;
   const data = await graphqlRequest<{ insert_damage_classifications_one: DamageClassification }>(mutation, { object: { ...input, is_active: true } });
@@ -578,7 +578,7 @@ export async function getClaimTypes() {
   const query = `
     query GetClaimTypes {
       claim_types(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name name_es name_en name_pt description sw_type icon is_active created_at updated_at
+        id name  description sw_type icon is_active created_at updated_at
       }
     }
   `;
@@ -589,7 +589,7 @@ export async function getClaimTypes() {
 export async function createClaimType(input: { name: string; description?: string; sw_type?: number; icon?: string }) {
   const mutation = `
     mutation CreateClaimType($object: claim_types_insert_input!) {
-      insert_claim_types_one(object: $object) { id name name_es name_en name_pt description sw_type icon is_active }
+      insert_claim_types_one(object: $object) { id name  description sw_type icon is_active }
     }
   `;
   const data = await graphqlRequest<{ insert_claim_types_one: ClaimType }>(mutation, { object: { ...input, is_active: true } });
@@ -622,7 +622,7 @@ export async function getHousingDestinations() {
   const query = `
     query GetHousingDestinations {
       housing_destinations(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name name_es name_en name_pt description is_active created_at updated_at
+        id name  description is_active created_at updated_at
       }
     }
   `;
@@ -633,7 +633,7 @@ export async function getHousingDestinations() {
 export async function createHousingDestination(input: { name: string; description?: string }) {
   const mutation = `
     mutation CreateHousingDestination($object: housing_destinations_insert_input!) {
-      insert_housing_destinations_one(object: $object) { id name name_es name_en name_pt description is_active }
+      insert_housing_destinations_one(object: $object) { id name  description is_active }
     }
   `;
   const data = await graphqlRequest<{ insert_housing_destinations_one: HousingDestination }>(mutation, { object: { ...input, is_active: true } });
@@ -710,7 +710,7 @@ export async function getRelationships() {
   const query = `
     query GetRelationships {
       relationships(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name name_es name_en name_pt is_active created_at updated_at
+        id name  is_active created_at updated_at
       }
     }
   `;
@@ -721,7 +721,7 @@ export async function getRelationships() {
 export async function createRelationship(input: { name: string }) {
   const mutation = `
     mutation CreateRelationship($object: relationships_insert_input!) {
-      insert_relationships_one(object: $object) { id name name_es name_en name_pt is_active }
+      insert_relationships_one(object: $object) { id name  is_active }
     }
   `;
   const data = await graphqlRequest<{ insert_relationships_one: Relationship }>(mutation, { object: { ...input, is_active: true } });
