@@ -22,7 +22,7 @@ export async function getUsers(companyId?: string) {
     : `{ is_active: { _eq: true } }`;
   const query = `
     query GetUsers {
-      profiles(where: ${where}, order_by: { created_at: desc }) {
+      profiles(where: ${where}, order_by: { full_name: asc }) {
         ${PROFILE_FIELDS}
       }
     }

@@ -155,6 +155,9 @@ export default function ClaimsPage() {
     queryFn: () => getUsers(),
   });
 
+  const inspectors = users?.filter((u) => u.role === "inspector").sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+  const adjusters = users?.filter((u) => u.role === "adjuster").sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+
   const { data: claimCauses } = useQuery({
     queryKey: ["claim-causes"],
     queryFn: () => getClaimCauses(),
@@ -599,8 +602,8 @@ export default function ClaimsPage() {
               {/* ═══ EQUIPO ASIGNADO ═══ */}
               <SectionTitle>Equipo Asignado</SectionTitle>
               <div className="modal-grid">
-                <UserSelect label="Inspector" name="inspectorId" users={users} form={form} />
-                <UserSelect label="Ajustador" name="adjusterId" users={users} form={form} />
+                <UserSelect label="Inspector" name="inspectorId" users={inspectors} form={form} />
+                <UserSelect label="Ajustador" name="adjusterId" users={adjusters} form={form} />
               </div>
 
               {/* ═══ CORREDOR ═══ */}
