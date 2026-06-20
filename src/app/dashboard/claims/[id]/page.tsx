@@ -41,8 +41,8 @@ function formatDate(date: string | null) {
   return new Date(date).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-function getParticipant(claim: { claim_participants?: { type: string; full_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[] }, type: string) {
-  return claim.claim_participants?.find((p) => p.type === type);
+function getParticipant(claim: { claims_participants?: { type: string; full_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[] }, type: string) {
+  return claim.claims_participants?.find((p) => p.type === type);
 }
 
 export default function ClaimDetailPage() {

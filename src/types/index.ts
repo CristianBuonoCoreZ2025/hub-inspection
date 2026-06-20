@@ -125,7 +125,7 @@ export interface Claim {
   updated_at: string;
 }
 
-export interface ClaimParticipant {
+export interface ClaimsParticipant {
   id: string;
   claim_id: string;
   type: "insured" | "contractor" | "beneficiary" | "executive" | "contact";
@@ -162,7 +162,7 @@ export interface LookupCatalog {
   updated_at: string;
 }
 
-export interface ClaimCarga {
+export interface ClaimsStaging {
   id: string;
   company_id: string | null;
   raw_data: Record<string, unknown>;

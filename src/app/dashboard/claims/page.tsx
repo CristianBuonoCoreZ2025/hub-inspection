@@ -71,8 +71,8 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-xs text-red-500">{message}</p>;
 }
 
-function getParticipant(claim: { claim_participants?: { type: string; full_name: string | null; address: string | null; city: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; commune: string | null; region: string | null; country: string | null }[] }, type: string) {
-  return claim.claim_participants?.find((p) => p.type === type);
+function getParticipant(claim: { claims_participants?: { type: string; full_name: string | null; address: string | null; city: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; commune: string | null; region: string | null; country: string | null }[] }, type: string) {
+  return claim.claims_participants?.find((p) => p.type === type);
 }
 
 
