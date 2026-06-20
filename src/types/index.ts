@@ -400,6 +400,7 @@ export interface ClaimCause {
   name: string;
   description: string | null;
   country: string;
+  country_id: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -414,6 +415,7 @@ export interface InsuranceCompanyCatalog {
   code: string | null;
   type: string | null;
   country: string;
+  country_id: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -426,6 +428,7 @@ export interface BrokerCatalog {
   address: string | null;
   contact: string | null;
   country: string;
+  country_id: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -434,6 +437,7 @@ export interface BrokerCatalog {
 export interface BusinessLine {
   id: string;
   country: string;
+  country_id: string;
   name: string;
   claim_type: string | null;
   ramo_fecu: string | null;
@@ -449,6 +453,7 @@ export interface InsuranceProduct {
   name: string;
   description: string | null;
   country: string;
+  country_id: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -460,6 +465,7 @@ export interface Advisor {
   email: string | null;
   phone: string | null;
   country: string;
+  country_id: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
