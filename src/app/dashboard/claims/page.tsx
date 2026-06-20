@@ -71,6 +71,10 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-xs text-red-500">{message}</p>;
 }
 
+function getParticipant(claim: { claim_participants?: { type: string; full_name: string | null; address: string | null; city: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; commune: string | null; region: string | null; country: string | null }[] }, type: string) {
+  return claim.claim_participants?.find((p) => p.type === type);
+}
+
 
 
 function UserSelect({
@@ -265,7 +269,7 @@ export default function ClaimsPage() {
   };
 
   const filtered = claims?.filter((c) => {
-    const textMatch = [c.claim_number, c.liquidation_number, c.insured?.full_name, c.insured?.address].join(" ").toLowerCase().includes(search.toLowerCase());
+    const textMatch = [c.claim_number, c.liquidation_number, getParticipant(c, 'insured')?.full_name, getParticipant(c, 'insured')?.address].join(" ").toLowerCase().includes(search.toLowerCase());
     const statusMatch = !statusFilter || c.status === statusFilter;
     const dateMatch = (!dateFrom || (c.claim_date && c.claim_date >= dateFrom)) && (!dateTo || (c.claim_date && c.claim_date <= dateTo));
     return textMatch && statusMatch && dateMatch;
@@ -331,8 +335,8 @@ export default function ClaimsPage() {
               const csv = [
                 ["N° Siniestro","N° Póliza","Asegurado","Dirección","Ciudad","Estado","Fecha","Compañía"].join(","),
                 ...rows.map((c) => [
-                  c.claim_number, c.policy_number, c.insured?.full_name || "",
-                  `"${c.insured?.address || ""}"`, c.insured?.city || "", c.status, c.claim_date || "", c.insurance_company?.name || ""
+                  c.claim_number, c.policy_number, getParticipant(c, 'insured')?.full_name || "",
+                  `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", c.status, c.claim_date || "", c.insurance_company?.name || ""
                 ].join(",")),
               ].join("\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -683,8 +687,8 @@ export default function ClaimsPage() {
                       </div>
                     </td>
                     <td>{claim.liquidation_number || "—"}</td>
-                    <td>{claim.insured?.full_name || "—"}</td>
-                    <td className="truncate">{claim.insured?.address || "—"}, {claim.insured?.city || "—"}</td>
+                    <td>{getParticipant(claim, 'insured')?.full_name || "—"}</td>
+                    <td className="truncate">{getParticipant(claim, 'insured')?.address || "—"}, {getParticipant(claim, 'insured')?.city || "—"}</td>
                     <td><Badge className={statusColors[claim.status]}>{statusLabels[claim.status]}</Badge></td>
                     <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
                     <td onClick={(e) => e.stopPropagation()}>
@@ -709,17 +713,17 @@ export default function ClaimsPage() {
                             insuranceCompany: claim.insurance_company?.name || "",
                             clientReference: claim.client_reference || "",
                             companyReportNumber: claim.company_report_number || "",
-                            insuredName: claim.insured?.full_name || "",
+                            insuredName: getParticipant(claim, 'insured')?.full_name || "",
                             lastName: "",
-                            rut: claim.insured?.rut || "",
-                            insuredEmail: claim.insured?.email || "",
-                            insuredPhone: claim.insured?.phone || "",
-                            cellPhone: claim.insured?.cell_phone || "",
-                            address: claim.insured?.address || "",
-                            city: claim.insured?.city || "",
-                            commune: claim.insured?.commune || "",
-                            region: claim.insured?.region || "",
-                            country: claim.insured?.country || "Chile",
+                            rut: getParticipant(claim, 'insured')?.rut || "",
+                            insuredEmail: getParticipant(claim, 'insured')?.email || "",
+                            insuredPhone: getParticipant(claim, 'insured')?.phone || "",
+                            cellPhone: getParticipant(claim, 'insured')?.cell_phone || "",
+                            address: getParticipant(claim, 'insured')?.address || "",
+                            city: getParticipant(claim, 'insured')?.city || "",
+                            commune: getParticipant(claim, 'insured')?.commune || "",
+                            region: getParticipant(claim, 'insured')?.region || "",
+                            country: getParticipant(claim, 'insured')?.country || "Chile",
                             claimDate: claim.claim_date,
                             claimTime: "",
                             reportDate: claim.report_date || "",
@@ -727,9 +731,9 @@ export default function ClaimsPage() {
                             claimType: claim.claim_type?.name || "",
                             claimCause: claim.claim_cause?.name || "",
                             summary: claim.summary || "",
-                            contactName: claim.general_contact?.full_name || "",
+                            contactName: getParticipant(claim, 'contact')?.full_name || "",
                             contactRole: "",
-                            contactEmail: claim.general_contact?.email || "",
+                            contactEmail: getParticipant(claim, 'contact')?.email || "",
                             assignedAdjusterId: claim.assigned_adjuster_id || "",
                             inspectorId: claim.inspector_id || "",
                             adjusterId: claim.adjuster_id || "",

@@ -36,11 +36,6 @@ const CLAIM_FIELDS = `
   region_id
   city_id
   commune_id
-  insured_id
-  contractor_id
-  beneficiary_id
-  executive_id
-  general_contact_id
   construction_type_id
   destination_housing_id
   damage_classification_id
@@ -83,11 +78,7 @@ export async function getClaims(companyId?: string) {
         auditor { full_name }
         dispatcher { full_name }
         assistant { full_name }
-        insured { id full_name rut email phone cell_phone address country region city commune }
-        contractor { id full_name rut email phone cell_phone address country region city commune }
-        beneficiary { id full_name rut email phone cell_phone address country region city commune }
-        executive { id full_name email phone }
-        general_contact { id full_name email phone }
+        claim_participants { id type full_name first_name last_name rut email phone cell_phone address country region city commune }
         construction_type { id name }
         destination_housing { id name }
         damage_classification { id name }
@@ -109,11 +100,7 @@ export async function getClaims(companyId?: string) {
     auditor?: { full_name: string | null } | null;
     dispatcher?: { full_name: string | null } | null;
     assistant?: { full_name: string | null } | null;
-    insured?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
-    contractor?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
-    beneficiary?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
-    executive?: { id: string; full_name: string; email: string | null; phone: string | null } | null;
-    general_contact?: { id: string; full_name: string; email: string | null; phone: string | null } | null;
+    claim_participants?: { id: string; type: string; full_name: string; first_name: string | null; last_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[];
     construction_type?: { id: string; name: string } | null;
     destination_housing?: { id: string; name: string } | null;
     damage_classification?: { id: string; name: string } | null;
@@ -141,11 +128,7 @@ export async function getClaimById(id: string) {
         auditor { full_name }
         dispatcher { full_name }
         assistant { full_name }
-        insured { id full_name rut email phone cell_phone address country region city commune }
-        contractor { id full_name rut email phone cell_phone address country region city commune }
-        beneficiary { id full_name rut email phone cell_phone address country region city commune }
-        executive { id full_name email phone }
-        general_contact { id full_name email phone }
+        claim_participants { id type full_name first_name last_name rut email phone cell_phone address country region city commune }
         construction_type { id name }
         destination_housing { id name }
         damage_classification { id name }
@@ -167,11 +150,7 @@ export async function getClaimById(id: string) {
     auditor?: { full_name: string | null } | null;
     dispatcher?: { full_name: string | null } | null;
     assistant?: { full_name: string | null } | null;
-    insured?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
-    contractor?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
-    beneficiary?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
-    executive?: { id: string; full_name: string; email: string | null; phone: string | null } | null;
-    general_contact?: { id: string; full_name: string; email: string | null; phone: string | null } | null;
+    claim_participants?: { id: string; type: string; full_name: string; first_name: string | null; last_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[];
     construction_type?: { id: string; name: string } | null;
     destination_housing?: { id: string; name: string } | null;
     damage_classification?: { id: string; name: string } | null;

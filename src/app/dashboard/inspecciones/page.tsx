@@ -386,10 +386,10 @@ export default function InspectionsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        #{claim.claim_number} — {claim.insured?.full_name || "—"}
+                        #{claim.claim_number} — {claim.claim_participants?.find((p: {type: string; full_name: string | null}) => p.type === 'insured')?.full_name || "—"}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {claim.insured?.address || "—"}, {claim.insured?.city || "—"} — {claim.insurance_company?.name || "—"}
+                        {claim.claim_participants?.find((p: {type: string; address: string | null}) => p.type === 'insured')?.address || "—"}, {claim.claim_participants?.find((p: {type: string; city: string | null}) => p.type === 'insured')?.city || "—"} — {claim.insurance_company?.name || "—"}
                       </p>
                     </div>
                     {selectedClaimId === claim.id && (

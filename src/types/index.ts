@@ -88,12 +88,6 @@ export interface Claim {
   claim_type_id: string | null;
   business_line_id: string | null;
   insurance_product_id: string | null;
-  // FKs a contacts
-  insured_id: string | null;
-  contractor_id: string | null;
-  beneficiary_id: string | null;
-  executive_id: string | null;
-  general_contact_id: string | null;
   // FKs a lookup_catalog
   construction_type_id: string | null;
   destination_housing_id: string | null;
@@ -131,11 +125,10 @@ export interface Claim {
   updated_at: string;
 }
 
-export interface Contact {
+export interface ClaimParticipant {
   id: string;
-  company_id: string | null;
-  country_id: string | null;
-  type: "insured" | "contractor" | "beneficiary" | "executive" | "contact" | "third_party";
+  claim_id: string;
+  type: "insured" | "contractor" | "beneficiary" | "executive" | "contact";
   full_name: string;
   first_name: string | null;
   last_name: string | null;

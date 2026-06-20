@@ -41,6 +41,10 @@ function formatDate(date: string | null) {
   return new Date(date).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+function getParticipant(claim: { claim_participants?: { type: string; full_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[] }, type: string) {
+  return claim.claim_participants?.find((p) => p.type === type);
+}
+
 export default function ClaimDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -229,23 +233,23 @@ export default function ClaimDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre</span>
-                <p className="font-medium">{claim.insured?.full_name || "—"}</p>
+                <p className="font-medium">{getParticipant(claim, 'insured')?.full_name || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">RUT</span>
-                <p className="font-medium">{claim.insured?.rut || "—"}</p>
+                <p className="font-medium">{getParticipant(claim, 'insured')?.rut || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Email</span>
-                <p className="font-medium">{claim.insured?.email || "—"}</p>
+                <p className="font-medium">{getParticipant(claim, 'insured')?.email || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Teléfono</span>
-                <p className="font-medium">{claim.insured?.phone || "—"}</p>
+                <p className="font-medium">{getParticipant(claim, 'insured')?.phone || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Celular</span>
-                <p className="font-medium">{claim.insured?.cell_phone || "—"}</p>
+                <p className="font-medium">{getParticipant(claim, 'insured')?.cell_phone || "—"}</p>
               </div>
             </div>
           </div>
@@ -259,29 +263,29 @@ export default function ClaimDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
               <div className="col-span-2 md:col-span-3">
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Dirección</span>
-                <p className="font-medium">{claim.insured?.address || "—"}</p>
+                <p className="font-medium">{getParticipant(claim, 'insured')?.address || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Ciudad</span>
-                <p className="font-medium">{claim.insured?.city || "—"}</p>
+                <p className="font-medium">{getParticipant(claim, 'insured')?.city || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Comuna</span>
-                <p className="font-medium">{claim.insured?.commune || "—"}</p>
+                <p className="font-medium">{getParticipant(claim, 'insured')?.commune || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Región</span>
-                <p className="font-medium">{claim.insured?.region || "—"}</p>
+                <p className="font-medium">{getParticipant(claim, 'insured')?.region || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">País</span>
-                <p className="font-medium">{claim.insured?.country || "Chile"}</p>
+                <p className="font-medium">{getParticipant(claim, 'insured')?.country || "Chile"}</p>
               </div>
             </div>
           </div>
 
           {/* Contacto */}
-          {(claim.general_contact?.full_name || claim.general_contact?.email) && (
+          {(getParticipant(claim, 'contact')?.full_name || getParticipant(claim, 'contact')?.email) && (
             <div className="app-panel">
               <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
                 <Phone className="h-4 w-4" />
@@ -290,7 +294,7 @@ export default function ClaimDetailPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
                 <div>
                   <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre</span>
-                  <p className="font-medium">{claim.general_contact?.full_name || "—"}</p>
+                  <p className="font-medium">{getParticipant(claim, 'contact')?.full_name || "—"}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Cargo</span>
@@ -298,7 +302,7 @@ export default function ClaimDetailPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Email</span>
-                  <p className="font-medium">{claim.general_contact?.email || "—"}</p>
+                  <p className="font-medium">{getParticipant(claim, 'contact')?.email || "—"}</p>
                 </div>
               </div>
             </div>
