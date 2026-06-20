@@ -17,14 +17,17 @@ const PROFILE_FIELDS = `
 `;
 
 export async function getUsers(companyId?: string) {
+  const where = companyId
+    ? `{ company_id: { _eq: "${companyId}" } }`
+    : `{ is_active: { _eq: true } }`;
   const query = `
-    query GetUsers($companyId: uuid) {
-      profiles(where: { company_id: { _eq: $companyId } }, order_by: { created_at: desc }) {
+    query GetUsers {
+      profiles(where: ${where}, order_by: { created_at: desc }) {
         ${PROFILE_FIELDS}
       }
     }
   `;
-  const data = await graphqlRequest<{ profiles: Profile[] }>(query, { companyId: companyId || null });
+  const data = await graphqlRequest<{ profiles: Profile[] }>(query);
   return data.profiles;
 }
 
