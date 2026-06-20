@@ -5,40 +5,66 @@ const CLAIM_FIELDS = `
   id
   claim_number
   policy_number
-  insurance_company
-  insured_name
-  last_name
-  rut
-  insured_email
-  insured_phone
-  cell_phone
-  address
-  city
-  commune
-  region
-  country
   claim_date
-  claim_time
+  status
+  status_id
   report_date
   assignment_date
-  claim_type
-  claim_cause
-  summary
-  contact_name
-  contact_role
-  contact_email
-  status
-  assigned_adjuster_id
-  inspector_id
-  adjuster_id
-  broker_name
-  broker_number
-  advisor
   client_reference
   company_report_number
   liquidation_number
-  company_id
+  is_special_claim
+  summary
+  event
+  internal_number
   notes
+  company_id
+  assigned_adjuster_id
+  inspector_id
+  adjuster_id
+  auditor_id
+  dispatcher_id
+  assistant_id
+  insurance_company_id
+  broker_id
+  advisor_id
+  claim_cause_id
+  claim_type_id
+  business_line_id
+  insurance_product_id
+  country_id
+  region_id
+  city_id
+  commune_id
+  insured_id
+  contractor_id
+  beneficiary_id
+  executive_id
+  general_contact_id
+  construction_type_id
+  destination_housing_id
+  damage_classification_id
+  habitability_id
+  type_id
+  currency_id
+  service_type_id
+  billing_type_id
+  claim_address
+  claim_country
+  claim_region
+  claim_city
+  claim_commune
+  owner_same_as_insured
+  policy_item
+  policy_start_date
+  policy_end_date
+  policy_currency
+  policy_amount
+  policy_premium
+  recovery_type_legal
+  recovery_type_material
+  recovery_comments
+  broker_executive
   created_at
   updated_at
 `;
@@ -57,20 +83,50 @@ export async function getClaims(companyId?: string) {
         auditor { full_name }
         dispatcher { full_name }
         assistant { full_name }
+        insured { id full_name rut email phone cell_phone address country region city commune }
+        contractor { id full_name rut email phone cell_phone address country region city commune }
+        beneficiary { id full_name rut email phone cell_phone address country region city commune }
+        executive { id full_name email phone }
+        general_contact { id full_name email phone }
+        construction_type { id name }
+        destination_housing { id name }
+        damage_classification { id name }
+        habitability { id name }
+        insurance_company { id name }
+        broker { id name }
+        business_line { id name }
+        insurance_product { id name }
+        claim_cause { id name }
+        claim_type { id name }
       }
     }
   `;
 
-  type ClaimWithProfiles = Claim & {
+  type ClaimWithRelations = Claim & {
     assigned_adjuster?: { full_name: string | null } | null;
     inspector?: { full_name: string | null } | null;
     adjuster?: { full_name: string | null } | null;
     auditor?: { full_name: string | null } | null;
     dispatcher?: { full_name: string | null } | null;
     assistant?: { full_name: string | null } | null;
+    insured?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
+    contractor?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
+    beneficiary?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
+    executive?: { id: string; full_name: string; email: string | null; phone: string | null } | null;
+    general_contact?: { id: string; full_name: string; email: string | null; phone: string | null } | null;
+    construction_type?: { id: string; name: string } | null;
+    destination_housing?: { id: string; name: string } | null;
+    damage_classification?: { id: string; name: string } | null;
+    habitability?: { id: string; name: string } | null;
+    insurance_company?: { id: string; name: string } | null;
+    broker?: { id: string; name: string } | null;
+    business_line?: { id: string; name: string } | null;
+    insurance_product?: { id: string; name: string } | null;
+    claim_cause?: { id: string; name: string } | null;
+    claim_type?: { id: string; name: string } | null;
   };
 
-  const data = await graphqlRequest<{ claims: ClaimWithProfiles[] }>(query);
+  const data = await graphqlRequest<{ claims: ClaimWithRelations[] }>(query);
   return data.claims;
 }
 
@@ -85,20 +141,50 @@ export async function getClaimById(id: string) {
         auditor { full_name }
         dispatcher { full_name }
         assistant { full_name }
+        insured { id full_name rut email phone cell_phone address country region city commune }
+        contractor { id full_name rut email phone cell_phone address country region city commune }
+        beneficiary { id full_name rut email phone cell_phone address country region city commune }
+        executive { id full_name email phone }
+        general_contact { id full_name email phone }
+        construction_type { id name }
+        destination_housing { id name }
+        damage_classification { id name }
+        habitability { id name }
+        insurance_company { id name }
+        broker { id name }
+        business_line { id name }
+        insurance_product { id name }
+        claim_cause { id name }
+        claim_type { id name }
       }
     }
   `;
 
-  type ClaimWithProfiles = Claim & {
+  type ClaimWithRelations = Claim & {
     assigned_adjuster?: { full_name: string | null } | null;
     inspector?: { full_name: string | null } | null;
     adjuster?: { full_name: string | null } | null;
     auditor?: { full_name: string | null } | null;
     dispatcher?: { full_name: string | null } | null;
     assistant?: { full_name: string | null } | null;
+    insured?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
+    contractor?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
+    beneficiary?: { id: string; full_name: string; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null } | null;
+    executive?: { id: string; full_name: string; email: string | null; phone: string | null } | null;
+    general_contact?: { id: string; full_name: string; email: string | null; phone: string | null } | null;
+    construction_type?: { id: string; name: string } | null;
+    destination_housing?: { id: string; name: string } | null;
+    damage_classification?: { id: string; name: string } | null;
+    habitability?: { id: string; name: string } | null;
+    insurance_company?: { id: string; name: string } | null;
+    broker?: { id: string; name: string } | null;
+    business_line?: { id: string; name: string } | null;
+    insurance_product?: { id: string; name: string } | null;
+    claim_cause?: { id: string; name: string } | null;
+    claim_type?: { id: string; name: string } | null;
   };
 
-  const data = await graphqlRequest<{ claims_by_pk: ClaimWithProfiles }>(query, { id });
+  const data = await graphqlRequest<{ claims_by_pk: ClaimWithRelations }>(query, { id });
   return data.claims_by_pk;
 }
 
@@ -106,38 +192,14 @@ function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }):
   return {
     claim_number: input.claimNumber,
     policy_number: input.policyNumber,
-    insurance_company: input.insuranceCompany || null,
-    insured_name: input.insuredName,
-    last_name: input.lastName || null,
-    rut: input.rut || null,
-    insured_email: input.insuredEmail || null,
-    insured_phone: input.insuredPhone || null,
-    cell_phone: input.cellPhone || null,
-    address: input.address,
-    city: input.city,
-    commune: input.commune || null,
-    region: input.region || null,
-    country: input.country || "Chile",
     claim_date: input.claimDate,
-    claim_time: input.claimTime || null,
+    status: "created" as ClaimStatus,
     report_date: input.reportDate || null,
     assignment_date: input.assignmentDate || null,
-    claim_type: input.claimType,
-    claim_cause: input.claimCause || null,
-    summary: input.summary || null,
-    contact_name: input.contactName || null,
-    contact_role: input.contactRole || null,
-    contact_email: input.contactEmail || null,
-    assigned_adjuster_id: input.assignedAdjusterId || null,
-    inspector_id: input.inspectorId || null,
-    adjuster_id: input.adjusterId || null,
-    broker_name: input.brokerName || null,
-    broker_number: input.brokerNumber || null,
-    advisor: input.advisor || null,
     client_reference: input.clientReference || null,
     company_report_number: input.companyReportNumber || null,
     liquidation_number: input.liquidationNumber || null,
-    notes: input.notes || null,
+    summary: input.summary || null,
     company_id: input.company_id,
   };
 }

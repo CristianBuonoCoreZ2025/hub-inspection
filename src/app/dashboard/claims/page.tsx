@@ -262,7 +262,7 @@ export default function ClaimsPage() {
   };
 
   const filtered = claims?.filter((c) => {
-    const textMatch = [c.claim_number, c.liquidation_number, c.insured_name, c.address].join(" ").toLowerCase().includes(search.toLowerCase());
+    const textMatch = [c.claim_number, c.liquidation_number, c.insured?.full_name, c.insured?.address].join(" ").toLowerCase().includes(search.toLowerCase());
     const statusMatch = !statusFilter || c.status === statusFilter;
     const dateMatch = (!dateFrom || (c.claim_date && c.claim_date >= dateFrom)) && (!dateTo || (c.claim_date && c.claim_date <= dateTo));
     return textMatch && statusMatch && dateMatch;
@@ -328,8 +328,8 @@ export default function ClaimsPage() {
               const csv = [
                 ["N° Siniestro","N° Póliza","Asegurado","Dirección","Ciudad","Estado","Fecha","Compañía"].join(","),
                 ...rows.map((c) => [
-                  c.claim_number, c.policy_number, `${c.insured_name} ${c.last_name || ""}`,
-                  `"${c.address}"`, c.city, c.status, c.claim_date || "", c.insurance_company || ""
+                  c.claim_number, c.policy_number, c.insured?.full_name || "",
+                  `"${c.insured?.address || ""}"`, c.insured?.city || "", c.status, c.claim_date || "", c.insurance_company?.name || ""
                 ].join(",")),
               ].join("\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -680,8 +680,8 @@ export default function ClaimsPage() {
                       </div>
                     </td>
                     <td>{claim.liquidation_number || "—"}</td>
-                    <td>{claim.insured_name} {claim.last_name}</td>
-                    <td className="truncate">{claim.address}, {claim.city}</td>
+                    <td>{claim.insured?.full_name || "—"}</td>
+                    <td className="truncate">{claim.insured?.address || "—"}, {claim.insured?.city || "—"}</td>
                     <td><Badge className={statusColors[claim.status]}>{statusLabels[claim.status]}</Badge></td>
                     <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
                     <td onClick={(e) => e.stopPropagation()}>
@@ -703,36 +703,36 @@ export default function ClaimsPage() {
                             claimNumber: claim.claim_number,
                             policyNumber: claim.policy_number,
                             liquidationNumber: claim.liquidation_number || "",
-                            insuranceCompany: claim.insurance_company || "",
+                            insuranceCompany: claim.insurance_company?.name || "",
                             clientReference: claim.client_reference || "",
                             companyReportNumber: claim.company_report_number || "",
-                            insuredName: claim.insured_name,
-                            lastName: claim.last_name || "",
-                            rut: claim.rut || "",
-                            insuredEmail: claim.insured_email || "",
-                            insuredPhone: claim.insured_phone || "",
-                            cellPhone: claim.cell_phone || "",
-                            address: claim.address,
-                            city: claim.city,
-                            commune: claim.commune || "",
-                            region: claim.region || "",
-                            country: claim.country || "Chile",
+                            insuredName: claim.insured?.full_name || "",
+                            lastName: "",
+                            rut: claim.insured?.rut || "",
+                            insuredEmail: claim.insured?.email || "",
+                            insuredPhone: claim.insured?.phone || "",
+                            cellPhone: claim.insured?.cell_phone || "",
+                            address: claim.insured?.address || "",
+                            city: claim.insured?.city || "",
+                            commune: claim.insured?.commune || "",
+                            region: claim.insured?.region || "",
+                            country: claim.insured?.country || "Chile",
                             claimDate: claim.claim_date,
-                            claimTime: claim.claim_time || "",
+                            claimTime: "",
                             reportDate: claim.report_date || "",
                             assignmentDate: claim.assignment_date || "",
-                            claimType: claim.claim_type,
-                            claimCause: claim.claim_cause || "",
+                            claimType: claim.claim_type?.name || "",
+                            claimCause: claim.claim_cause?.name || "",
                             summary: claim.summary || "",
-                            contactName: claim.contact_name || "",
-                            contactRole: claim.contact_role || "",
-                            contactEmail: claim.contact_email || "",
+                            contactName: claim.general_contact?.full_name || "",
+                            contactRole: "",
+                            contactEmail: claim.general_contact?.email || "",
                             assignedAdjusterId: claim.assigned_adjuster_id || "",
                             inspectorId: claim.inspector_id || "",
                             adjusterId: claim.adjuster_id || "",
-                            brokerName: claim.broker_name || "",
-                            brokerNumber: claim.broker_number || "",
-                            advisor: claim.advisor || "",
+                            brokerName: claim.broker?.name || "",
+                            brokerNumber: "",
+                            advisor: "",
                             companyId: claim.company_id,
                             notes: claim.notes || "",
                           });

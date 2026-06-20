@@ -59,41 +59,28 @@ export interface Claim {
   id: string;
   claim_number: string;
   policy_number: string;
-  insurance_company: string | null;
-  insured_name: string;
-  last_name: string | null;
-  rut: string | null;
-  insured_email: string | null;
-  insured_phone: string | null;
-  cell_phone: string | null;
-  address: string;
-  city: string;
-  commune: string | null;
-  region: string | null;
-  country: string | null;
   claim_date: string;
-  claim_time: string | null;
+  status: ClaimStatus;
+  status_id: string | null;
   report_date: string | null;
   assignment_date: string | null;
-  claim_type: string;
-  claim_cause: string | null;
-  summary: string | null;
-  contact_name: string | null;
-  contact_role: string | null;
-  contact_email: string | null;
-  status: ClaimStatus;
-  assigned_adjuster_id: string | null;
-  inspector_id: string | null;
-  adjuster_id: string | null;
-  broker_name: string | null;
-  broker_number: string | null;
-  advisor: string | null;
   client_reference: string | null;
   company_report_number: string | null;
   liquidation_number: string | null;
-  company_id: string;
+  is_special_claim: boolean | null;
+  summary: string | null;
+  event: string | null;
+  internal_number: string | null;
   notes: string | null;
-  // FKs a catalogos
+  // Relaciones a empresa y usuarios
+  company_id: string;
+  assigned_adjuster_id: string | null;
+  inspector_id: string | null;
+  adjuster_id: string | null;
+  auditor_id: string | null;
+  dispatcher_id: string | null;
+  assistant_id: string | null;
+  // FKs a catálogos principales
   insurance_company_id: string | null;
   broker_id: string | null;
   advisor_id: string | null;
@@ -101,58 +88,95 @@ export interface Claim {
   claim_type_id: string | null;
   business_line_id: string | null;
   insurance_product_id: string | null;
-  // FKs geograficas
+  // FKs a contacts
+  insured_id: string | null;
+  contractor_id: string | null;
+  beneficiary_id: string | null;
+  executive_id: string | null;
+  general_contact_id: string | null;
+  // FKs a lookup_catalog
+  construction_type_id: string | null;
+  destination_housing_id: string | null;
+  damage_classification_id: string | null;
+  habitability_id: string | null;
+  type_id: string | null;
+  currency_id: string | null;
+  service_type_id: string | null;
+  billing_type_id: string | null;
+  // FKs geográficas
   country_id: string | null;
   region_id: string | null;
   city_id: string | null;
   commune_id: string | null;
-  // Datos del contratante
-  contractor_rut: string | null;
-  contractor_name: string | null;
-  contractor_last_name: string | null;
-  contractor_email: string | null;
-  contractor_phone: string | null;
-  contractor_cell_phone: string | null;
-  contractor_address: string | null;
-  contractor_country: string | null;
-  contractor_region: string | null;
-  contractor_city: string | null;
-  contractor_commune: string | null;
-  // Datos del beneficiario
-  beneficiary_rut: string | null;
-  beneficiary_name: string | null;
-  beneficiary_last_name: string | null;
-  beneficiary_email: string | null;
-  beneficiary_phone: string | null;
-  beneficiary_cell_phone: string | null;
-  beneficiary_address: string | null;
-  beneficiary_country: string | null;
-  beneficiary_region: string | null;
-  beneficiary_city: string | null;
-  beneficiary_commune: string | null;
-  // Dirección del siniestro
+  // Datos del siniestro
   claim_address: string | null;
   claim_country: string | null;
   claim_region: string | null;
   claim_city: string | null;
   claim_commune: string | null;
-  // Detalle póliza y siniestro
-  executive_name: string | null;
-  created_date: string | null;
-  closed_date: string | null;
-  event: string | null;
+  owner_same_as_insured: boolean | null;
+  // Datos de la póliza
   policy_item: string | null;
   policy_start_date: string | null;
   policy_end_date: string | null;
   policy_currency: string | null;
   policy_amount: number | null;
   policy_premium: number | null;
-  contact_phone: string | null;
-  construction_type: string | null;
-  destination: string | null;
-  damage_classification: string | null;
-  is_habitable: boolean | null;
-  owner_same_as_insured: boolean | null;
+  // Recovery
+  recovery_type_legal: boolean | null;
+  recovery_type_material: boolean | null;
+  recovery_comments: string | null;
+  broker_executive: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Contact {
+  id: string;
+  company_id: string | null;
+  country_id: string | null;
+  type: "insured" | "contractor" | "beneficiary" | "executive" | "contact" | "third_party";
+  full_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  rut: string | null;
+  email: string | null;
+  phone: string | null;
+  cell_phone: string | null;
+  address: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  commune: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LookupCatalog {
+  id: string;
+  country_id: string | null;
+  category: string;
+  code: string | null;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClaimCarga {
+  id: string;
+  company_id: string | null;
+  raw_data: Record<string, unknown>;
+  status: "pending" | "processing" | "completed" | "error";
+  error_message: string | null;
+  claim_id: string | null;
+  processed_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -188,24 +188,21 @@ export default function ClaimDetailPage() {
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Compañía</span>
-                <p className="font-medium">{claim.insurance_company || "—"}</p>
+                <p className="font-medium">{claim.insurance_company?.name || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Tipo</span>
-                <p className="font-medium">{claim.claim_type}</p>
+                <p className="font-medium">{claim.claim_type?.name || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Causal</span>
-                <p className="font-medium">{claim.claim_cause || "—"}</p>
+                <p className="font-medium">{claim.claim_cause?.name || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Fecha</span>
                 <p className="font-medium">{formatDate(claim.claim_date)}</p>
               </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Hora</span>
-                <p className="font-medium">{claim.claim_time || "—"}</p>
-              </div>
+
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Liquidación</span>
                 <p className="font-medium">{claim.liquidation_number || "—"}</p>
@@ -232,23 +229,23 @@ export default function ClaimDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre</span>
-                <p className="font-medium">{claim.insured_name} {claim.last_name || ""}</p>
+                <p className="font-medium">{claim.insured?.full_name || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">RUT</span>
-                <p className="font-medium">{claim.rut || "—"}</p>
+                <p className="font-medium">{claim.insured?.rut || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Email</span>
-                <p className="font-medium">{claim.insured_email || "—"}</p>
+                <p className="font-medium">{claim.insured?.email || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Teléfono</span>
-                <p className="font-medium">{claim.insured_phone || "—"}</p>
+                <p className="font-medium">{claim.insured?.phone || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Celular</span>
-                <p className="font-medium">{claim.cell_phone || "—"}</p>
+                <p className="font-medium">{claim.insured?.cell_phone || "—"}</p>
               </div>
             </div>
           </div>
@@ -262,29 +259,29 @@ export default function ClaimDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
               <div className="col-span-2 md:col-span-3">
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Dirección</span>
-                <p className="font-medium">{claim.address}</p>
+                <p className="font-medium">{claim.insured?.address || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Ciudad</span>
-                <p className="font-medium">{claim.city}</p>
+                <p className="font-medium">{claim.insured?.city || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Comuna</span>
-                <p className="font-medium">{claim.commune || "—"}</p>
+                <p className="font-medium">{claim.insured?.commune || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Región</span>
-                <p className="font-medium">{claim.region || "—"}</p>
+                <p className="font-medium">{claim.insured?.region || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">País</span>
-                <p className="font-medium">{claim.country || "Chile"}</p>
+                <p className="font-medium">{claim.insured?.country || "Chile"}</p>
               </div>
             </div>
           </div>
 
           {/* Contacto */}
-          {(claim.contact_name || claim.contact_email) && (
+          {(claim.general_contact?.full_name || claim.general_contact?.email) && (
             <div className="app-panel">
               <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
                 <Phone className="h-4 w-4" />
@@ -293,15 +290,15 @@ export default function ClaimDetailPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
                 <div>
                   <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre</span>
-                  <p className="font-medium">{claim.contact_name || "—"}</p>
+                  <p className="font-medium">{claim.general_contact?.full_name || "—"}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Cargo</span>
-                  <p className="font-medium">{claim.contact_role || "—"}</p>
+                  <p className="font-medium">{"—"}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Email</span>
-                  <p className="font-medium">{claim.contact_email || "—"}</p>
+                  <p className="font-medium">{claim.general_contact?.email || "—"}</p>
                 </div>
               </div>
             </div>
@@ -350,15 +347,15 @@ export default function ClaimDetailPage() {
             <div className="space-y-3 text-[13px]">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Corredor</span>
-                <span className="font-medium">{claim.broker_name || "—"}</span>
+                <span className="font-medium">{claim.broker?.name || "—"}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">N° Corredor</span>
-                <span className="font-medium">{claim.broker_number || "—"}</span>
+                <span className="font-medium">{"—"}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Asesor</span>
-                <span className="font-medium">{claim.advisor || "—"}</span>
+                <span className="font-medium">{"—"}</span>
               </div>
             </div>
           </div>
