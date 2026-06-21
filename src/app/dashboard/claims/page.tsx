@@ -340,7 +340,7 @@ export default function ClaimsPage() {
                 ["N° Siniestro","N° Póliza","Asegurado","Dirección","Ciudad","Estado","Fecha","Compañía"].join(","),
                 ...rows.map((c) => [
                   c.claim_number, c.policy_number, getParticipant(c, 'insured')?.full_name || "",
-                  `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", c.status, c.claim_date || "", c.insurance_company?.name || ""
+                  `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", c.status, c.claim_date || "", ""
                 ].join(",")),
               ].join("\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -714,7 +714,7 @@ export default function ClaimsPage() {
                             claimNumber: claim.claim_number,
                             policyNumber: claim.policy_number,
                             liquidationNumber: claim.liquidation_number || "",
-                            insuranceCompany: claim.insurance_company?.name || "",
+                            insuranceCompany: "",
                             clientReference: claim.client_reference || "",
                             companyReportNumber: claim.company_report_number || "",
                             insuredName: getParticipant(claim, 'insured')?.full_name || "",
@@ -732,8 +732,8 @@ export default function ClaimsPage() {
                             claimTime: "",
                             reportDate: claim.report_date || "",
                             assignmentDate: claim.assignment_date || "",
-                            claimType: claim.claim_type?.name || "",
-                            claimCause: claim.claim_cause?.name || "",
+                            claimType: "",
+                            claimCause: "",
                             summary: claim.summary || "",
                             contactName: getParticipant(claim, 'contact')?.full_name || "",
                             contactRole: "",
@@ -741,7 +741,7 @@ export default function ClaimsPage() {
                             assignedAdjusterId: claim.assigned_adjuster_id || "",
                             inspectorId: claim.inspector_id || "",
                             adjusterId: claim.adjuster_id || "",
-                            brokerName: claim.broker?.name || "",
+                            brokerName: "",
                             brokerNumber: "",
                             advisor: "",
                             companyId: claim.company_id,

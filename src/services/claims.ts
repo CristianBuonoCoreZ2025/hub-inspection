@@ -72,45 +72,13 @@ export async function getClaims(companyId?: string) {
     query GetClaims {
       claims(where: ${where}, order_by: { created_at: desc }) {
         ${CLAIM_FIELDS}
-        assigned_adjuster { full_name }
-        inspector { full_name }
-        adjuster { full_name }
-        auditor { full_name }
-        dispatcher { full_name }
-        assistant { full_name }
         claims_participants { id type full_name first_name last_name rut email phone cell_phone address country region city commune }
-        construction_type { id name }
-        destination_housing { id name }
-        damage_classification { id name }
-        habitability { id name }
-        insurance_company { id name }
-        broker { id name }
-        business_line { id name }
-        insurance_product { id name }
-        claim_cause { id name }
-        claim_type { id name }
       }
     }
   `;
 
   type ClaimWithRelations = Claim & {
-    assigned_adjuster?: { full_name: string | null } | null;
-    inspector?: { full_name: string | null } | null;
-    adjuster?: { full_name: string | null } | null;
-    auditor?: { full_name: string | null } | null;
-    dispatcher?: { full_name: string | null } | null;
-    assistant?: { full_name: string | null } | null;
     claims_participants?: { id: string; type: string; full_name: string; first_name: string | null; last_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[];
-    construction_type?: { id: string; name: string } | null;
-    destination_housing?: { id: string; name: string } | null;
-    damage_classification?: { id: string; name: string } | null;
-    habitability?: { id: string; name: string } | null;
-    insurance_company?: { id: string; name: string } | null;
-    broker?: { id: string; name: string } | null;
-    business_line?: { id: string; name: string } | null;
-    insurance_product?: { id: string; name: string } | null;
-    claim_cause?: { id: string; name: string } | null;
-    claim_type?: { id: string; name: string } | null;
   };
 
   const data = await graphqlRequest<{ claims: ClaimWithRelations[] }>(query);
@@ -122,45 +90,13 @@ export async function getClaimById(id: string) {
     query GetClaimById($id: uuid!) {
       claims_by_pk(id: $id) {
         ${CLAIM_FIELDS}
-        assigned_adjuster { full_name }
-        inspector { full_name }
-        adjuster { full_name }
-        auditor { full_name }
-        dispatcher { full_name }
-        assistant { full_name }
         claims_participants { id type full_name first_name last_name rut email phone cell_phone address country region city commune }
-        construction_type { id name }
-        destination_housing { id name }
-        damage_classification { id name }
-        habitability { id name }
-        insurance_company { id name }
-        broker { id name }
-        business_line { id name }
-        insurance_product { id name }
-        claim_cause { id name }
-        claim_type { id name }
       }
     }
   `;
 
   type ClaimWithRelations = Claim & {
-    assigned_adjuster?: { full_name: string | null } | null;
-    inspector?: { full_name: string | null } | null;
-    adjuster?: { full_name: string | null } | null;
-    auditor?: { full_name: string | null } | null;
-    dispatcher?: { full_name: string | null } | null;
-    assistant?: { full_name: string | null } | null;
     claims_participants?: { id: string; type: string; full_name: string; first_name: string | null; last_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[];
-    construction_type?: { id: string; name: string } | null;
-    destination_housing?: { id: string; name: string } | null;
-    damage_classification?: { id: string; name: string } | null;
-    habitability?: { id: string; name: string } | null;
-    insurance_company?: { id: string; name: string } | null;
-    broker?: { id: string; name: string } | null;
-    business_line?: { id: string; name: string } | null;
-    insurance_product?: { id: string; name: string } | null;
-    claim_cause?: { id: string; name: string } | null;
-    claim_type?: { id: string; name: string } | null;
   };
 
   const data = await graphqlRequest<{ claims_by_pk: ClaimWithRelations }>(query, { id });

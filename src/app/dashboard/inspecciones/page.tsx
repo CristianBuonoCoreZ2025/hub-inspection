@@ -198,7 +198,7 @@ export default function InspectionsPage() {
                     <div className="flex flex-col gap-0.5">
                       <span className="font-medium">{session.claim?.claim_number}</span>
                       <span className="text-[11px] text-muted-foreground">
-                        {session.claim?.insurance_company || "Sin compañia"}
+                        {"Sin compañia"}
                       </span>
                     </div>
                   </td>
@@ -389,7 +389,7 @@ export default function InspectionsPage() {
                         #{claim.claim_number} — {claim.claims_participants?.find((p: {type: string; full_name: string | null}) => p.type === 'insured')?.full_name || "—"}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {claim.claims_participants?.find((p: {type: string; address: string | null}) => p.type === 'insured')?.address || "—"}, {claim.claims_participants?.find((p: {type: string; city: string | null}) => p.type === 'insured')?.city || "—"} — {claim.insurance_company?.name || "—"}
+                        {claim.claims_participants?.find((p: {type: string; address: string | null}) => p.type === 'insured')?.address || "—"}, {claim.claims_participants?.find((p: {type: string; city: string | null}) => p.type === 'insured')?.city || "—"} — {"—"}
                       </p>
                     </div>
                     {selectedClaimId === claim.id && (

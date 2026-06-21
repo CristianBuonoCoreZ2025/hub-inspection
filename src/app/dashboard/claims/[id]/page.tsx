@@ -192,15 +192,15 @@ export default function ClaimDetailPage() {
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Compañía</span>
-                <p className="font-medium">{claim.insurance_company?.name || "—"}</p>
+                <p className="font-medium">{"—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Tipo</span>
-                <p className="font-medium">{claim.claim_type?.name || "—"}</p>
+                <p className="font-medium">{"—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Causal</span>
-                <p className="font-medium">{claim.claim_cause?.name || "—"}</p>
+                <p className="font-medium">{"—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Fecha</span>
@@ -351,7 +351,7 @@ export default function ClaimDetailPage() {
             <div className="space-y-3 text-[13px]">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Corredor</span>
-                <span className="font-medium">{claim.broker?.name || "—"}</span>
+                <span className="font-medium">{"—"}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">N° Corredor</span>
