@@ -354,10 +354,10 @@ export default function ClaimsPage() {
             onClick={() => {
               const rows = filtered || [];
               const csv = [
-                ["N° Siniestro","N° Póliza","Asegurado","Dirección","Ciudad","Estado","Fecha","Compañía"].join(","),
+                ["N° Ref McLarens","N° Liquidación","N° Siniestro Cía","Asegurado","Dirección","Ciudad","Estado","Fecha"].join(","),
                 ...rows.map((c) => [
-                  c.claim_number, c.policy_number, getParticipant(c, 'insured')?.full_name || "",
-                  `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", c.status, c.claim_date || "", ""
+                  c.claim_number, c.liquidation_number || "", c.company_report_number || "", getParticipant(c, 'insured')?.full_name || "",
+                  `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", c.status, c.claim_date || ""
                 ].join(",")),
               ].join("\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -686,20 +686,21 @@ export default function ClaimsPage() {
           <table className="app-data-table">
             <thead>
               <tr>
-                <th className="w-[140px]">N° Siniestro</th>
-                <th className="w-[120px]">N° Liquidación</th>
-                <th className="w-[200px]">Asegurado</th>
+                <th className="w-[120px]">N° Ref</th>
+                <th className="w-[110px]">N° Liq</th>
+                <th className="w-[110px]">N° Siniestro Cía</th>
+                <th className="w-[180px]">Asegurado</th>
                 <th>Dirección</th>
-                <th className="w-[110px]">Estado</th>
-                <th className="w-[100px]">Fecha</th>
+                <th className="w-[100px]">Estado</th>
+                <th className="w-[90px]">Fecha</th>
                 <th className="w-[160px] text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={7} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+                <tr><td colSpan={8} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
               ) : filtered?.length === 0 ? (
-                <tr><td colSpan={7} className="text-center text-muted-foreground py-4">No se encontraron siniestros.</td></tr>
+                <tr><td colSpan={8} className="text-center text-muted-foreground py-4">No se encontraron siniestros.</td></tr>
               ) : (
                 filtered?.map((claim) => (
                   <tr
@@ -714,6 +715,7 @@ export default function ClaimsPage() {
                       </div>
                     </td>
                     <td>{claim.liquidation_number || "—"}</td>
+                    <td>{claim.company_report_number || "—"}</td>
                     <td>{getParticipant(claim, 'insured')?.full_name || "—"}</td>
                     <td className="truncate">{getParticipant(claim, 'insured')?.address || "—"}, {getParticipant(claim, 'insured')?.city || "—"}</td>
                     <td><Badge className={statusColors[claim.status]}>{statusLabels[claim.status]}</Badge></td>
