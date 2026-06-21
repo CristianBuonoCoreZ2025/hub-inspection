@@ -72,17 +72,43 @@ export async function getClaims(companyId?: string) {
     query GetClaims {
       claims(where: ${where}, order_by: { created_at: desc }) {
         ${CLAIM_FIELDS}
-        claims_participants { id type full_name first_name last_name rut email phone cell_phone address country region city commune }
       }
     }
   `;
 
-  type ClaimWithRelations = Claim & {
-    claims_participants?: { id: string; type: string; full_name: string; first_name: string | null; last_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[];
-  };
-
-  const data = await graphqlRequest<{ claims: ClaimWithRelations[] }>(query);
+  const data = await graphqlRequest<{ claims: Claim[] }>(query);
   return data.claims;
+}
+
+export async function getClaimsParticipants(claimIds: string[]) {
+  if (claimIds.length === 0) return [];
+  const ids = claimIds.map((id) => `"${id}"`).join(",");
+  const query = `
+    query GetClaimsParticipants {
+      claims_participants(where: { claim_id: { _in: [${ids}] } }) {
+        id claim_id type full_name first_name last_name rut email phone cell_phone address country region city commune
+      }
+    }
+  `;
+  type Participant = {
+    id: string;
+    claim_id: string;
+    type: string;
+    full_name: string;
+    first_name: string | null;
+    last_name: string | null;
+    rut: string | null;
+    email: string | null;
+    phone: string | null;
+    cell_phone: string | null;
+    address: string | null;
+    country: string | null;
+    region: string | null;
+    city: string | null;
+    commune: string | null;
+  };
+  const data = await graphqlRequest<{ claims_participants: Participant[] }>(query);
+  return data.claims_participants;
 }
 
 export async function getClaimById(id: string) {
@@ -90,17 +116,41 @@ export async function getClaimById(id: string) {
     query GetClaimById($id: uuid!) {
       claims_by_pk(id: $id) {
         ${CLAIM_FIELDS}
-        claims_participants { id type full_name first_name last_name rut email phone cell_phone address country region city commune }
       }
     }
   `;
 
-  type ClaimWithRelations = Claim & {
-    claims_participants?: { id: string; type: string; full_name: string; first_name: string | null; last_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[];
-  };
-
-  const data = await graphqlRequest<{ claims_by_pk: ClaimWithRelations }>(query, { id });
+  const data = await graphqlRequest<{ claims_by_pk: Claim }>(query, { id });
   return data.claims_by_pk;
+}
+
+export async function getClaimParticipants(id: string) {
+  const query = `
+    query GetClaimParticipants {
+      claims_participants(where: { claim_id: { _eq: "${id}" } }) {
+        id claim_id type full_name first_name last_name rut email phone cell_phone address country region city commune
+      }
+    }
+  `;
+  type Participant = {
+    id: string;
+    claim_id: string;
+    type: string;
+    full_name: string;
+    first_name: string | null;
+    last_name: string | null;
+    rut: string | null;
+    email: string | null;
+    phone: string | null;
+    cell_phone: string | null;
+    address: string | null;
+    country: string | null;
+    region: string | null;
+    city: string | null;
+    commune: string | null;
+  };
+  const data = await graphqlRequest<{ claims_participants: Participant[] }>(query);
+  return data.claims_participants;
 }
 
 function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }): Record<string, unknown> {

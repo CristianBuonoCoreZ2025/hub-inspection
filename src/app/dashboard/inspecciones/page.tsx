@@ -8,7 +8,7 @@ import {
   createInspectionSession,
   updateInspectionSession,
 } from "@/services/inspections";
-import { getClaims } from "@/services/claims";
+import { getClaims, getClaimsParticipants } from "@/services/claims";
 import { toast } from "sonner";
 import {
   ClipboardCheck,
@@ -78,11 +78,23 @@ export default function InspectionsPage() {
     queryFn: () => getInspectionSessions(),
   });
 
-  const { data: claims } = useQuery({
+  const { data: rawClaims } = useQuery({
     queryKey: ["claims"],
     queryFn: () => getClaims(),
     enabled: openCreate,
   });
+
+  const claimIds = rawClaims?.map((c) => c.id) ?? [];
+  const { data: participants } = useQuery({
+    queryKey: ["claims-participants", claimIds],
+    queryFn: () => getClaimsParticipants(claimIds),
+    enabled: openCreate && claimIds.length > 0,
+  });
+
+  const claims = rawClaims?.map((claim) => ({
+    ...claim,
+    claims_participants: participants?.filter((p) => p.claim_id === claim.id) ?? [],
+  }));
 
   const createMutation = useMutation({
     mutationFn: createInspectionSession,

@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getClaimById, deleteClaim, updateClaimStatus } from "@/services/claims";
+import { getClaimById, getClaimParticipants, deleteClaim, updateClaimStatus } from "@/services/claims";
 import { getUsers } from "@/services/users";
 import { createInspectionSession } from "@/services/inspections";
 import { toast } from "sonner";
@@ -51,10 +51,20 @@ export default function ClaimDetailPage() {
   const id = params.id as string;
   const queryClient = useQueryClient();
 
-  const { data: claim, isLoading } = useQuery({
+  const { data: rawClaim, isLoading } = useQuery({
     queryKey: ["claim", id],
     queryFn: () => getClaimById(id),
   });
+
+  const { data: participants } = useQuery({
+    queryKey: ["claim-participants", id],
+    queryFn: () => getClaimParticipants(id),
+    enabled: !!id,
+  });
+
+  const claim = rawClaim
+    ? { ...rawClaim, claims_participants: participants ?? [] }
+    : undefined;
 
   const { data: users } = useQuery({
     queryKey: ["users"],

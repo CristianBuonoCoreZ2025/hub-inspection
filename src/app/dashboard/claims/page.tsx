@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getClaims, createClaim, updateClaim, deleteClaim } from "@/services/claims";
+import { getClaims, getClaimsParticipants, createClaim, updateClaim, deleteClaim } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
 import { getClaimCauses, getInsuranceCompanies, getBrokers, getAdvisors, getRegions, getCities, getCommunes } from "@/services/catalogs";
@@ -144,7 +144,7 @@ export default function ClaimsPage() {
     },
   });
 
-  const { data: claims, isLoading, error } = useQuery({
+  const { data: rawClaims, isLoading, error } = useQuery({
     queryKey: ["claims"],
     queryFn: () => getClaims(),
   });
@@ -152,6 +152,18 @@ export default function ClaimsPage() {
   if (error) {
     toast.error(`Error cargando siniestros: ${(error as Error).message}`);
   }
+
+  const claimIds = rawClaims?.map((c) => c.id) ?? [];
+  const { data: participants } = useQuery({
+    queryKey: ["claims-participants", claimIds],
+    queryFn: () => getClaimsParticipants(claimIds),
+    enabled: claimIds.length > 0,
+  });
+
+  const claims = rawClaims?.map((claim) => ({
+    ...claim,
+    claims_participants: participants?.filter((p) => p.claim_id === claim.id) ?? [],
+  }));
 
   const { data: companies } = useQuery({
     queryKey: ["companies"],
