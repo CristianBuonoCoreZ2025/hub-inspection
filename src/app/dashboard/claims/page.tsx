@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaims, getClaimsParticipants, createClaim, updateClaim, deleteClaim } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
-import { getClaimCauses, getInsuranceCompanies, getBrokers, getAdvisors, getRegions, getCities, getCommunes } from "@/services/catalogs";
+import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBrokers, getAdvisors, getRegions, getCities, getCommunes } from "@/services/catalogs";
 import { getCountries } from "@/services/countries";
 import { claimSchema, type ClaimInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
@@ -71,7 +71,7 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-xs text-red-500">{message}</p>;
 }
 
-function getParticipant(claim: { claims_participants?: { type: string; full_name: string | null; address: string | null; city: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; commune: string | null; region: string | null; country: string | null }[] }, type: string) {
+function getParticipant(claim: { claims_participants?: { type: string; full_name: string | null; first_name: string | null; last_name: string | null; address: string | null; city: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; commune: string | null; region: string | null; country: string | null }[] }, type: string) {
   return claim.claims_participants?.find((p) => p.type === type);
 }
 
@@ -130,7 +130,7 @@ export default function ClaimsPage() {
   const form = useForm<ClaimInput>({
     resolver: standardSchemaResolver(claimSchema),
     defaultValues: {
-      claimNumber: "", policyNumber: "", liquidationNumber: "",
+      claimNumber: "", policyNumber: "", policyItem: "", liquidationNumber: "",
       insuranceCompany: "", clientReference: "", companyReportNumber: "",
       insuredName: "", lastName: "", rut: "",
       insuredEmail: "", insuredPhone: "", cellPhone: "",
@@ -181,6 +181,11 @@ export default function ClaimsPage() {
   const { data: claimCauses } = useQuery({
     queryKey: ["claim-causes"],
     queryFn: () => getClaimCauses(),
+  });
+
+  const { data: claimTypes } = useQuery({
+    queryKey: ["claim-types"],
+    queryFn: () => getClaimTypes(),
   });
 
   const { data: insuranceCompaniesCatalog } = useQuery({
@@ -415,10 +420,10 @@ export default function ClaimsPage() {
                   </Select>
                 </div>
               </div>
-              <div className="modal-grid-3">
+              <div className="modal-grid-4">
                 <div className="modal-field">
-                  <Label className="app-field-label">N° Siniestro Compañía <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("claimNumber")} placeholder="1946897" className="app-input h-8" />
+                  <Label className="app-field-label">N° Siniestro <span className="text-red-500">*</span></Label>
+                  <Input {...form.register("claimNumber")} placeholder="CHL-00000573" className="app-input h-8" />
                   <FieldError message={form.formState.errors.claimNumber?.message} />
                 </div>
                 <div className="modal-field">
@@ -431,12 +436,18 @@ export default function ClaimsPage() {
                   <FieldError message={form.formState.errors.policyNumber?.message} />
                 </div>
                 <div className="modal-field">
+                  <Label className="app-field-label">Item Póliza</Label>
+                  <Input {...form.register("policyItem")} placeholder="1" className="app-input h-8" />
+                </div>
+              </div>
+              <div className="modal-grid-3">
+                <div className="modal-field">
                   <Label className="app-field-label">Ref. Interna Cliente</Label>
                   <Input {...form.register("clientReference")} placeholder="CHL-00013152" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
-                  <Label className="app-field-label">N° Denuncio Compañía</Label>
-                  <Input {...form.register("companyReportNumber")} className="app-input h-8" />
+                  <Label className="app-field-label">N° Siniestro Compañía</Label>
+                  <Input {...form.register("companyReportNumber")} placeholder="1022370" className="app-input h-8" />
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Tipo de Siniestro <span className="text-red-500">*</span></Label>
@@ -444,7 +455,7 @@ export default function ClaimsPage() {
                     <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {claimCauses?.map((c) => (<SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>))}
+                      {claimTypes?.map((t) => (<SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
                   <FieldError message={form.formState.errors.claimType?.message} />
@@ -722,38 +733,45 @@ export default function ClaimsPage() {
                         </Button>
                         <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
                           setEditingId(claim.id);
+                          const pInsured = getParticipant(claim, 'insured');
+                          const pContact = getParticipant(claim, 'contact');
+                          const companyName = insuranceCompaniesCatalog?.find((c) => c.id === claim.insurance_company_id)?.name ?? "";
+                          const typeName = claimTypes?.find((t) => t.id === claim.claim_type_id)?.name ?? "";
+                          const causeName = claimCauses?.find((c) => c.id === claim.claim_cause_id)?.name ?? "";
+                          const brokerName = brokersCatalog?.find((b) => b.id === claim.broker_id)?.name ?? "";
                           form.reset({
                             claimNumber: claim.claim_number,
                             policyNumber: claim.policy_number,
+                            policyItem: claim.policy_item || "",
                             liquidationNumber: claim.liquidation_number || "",
-                            insuranceCompany: "",
+                            insuranceCompany: companyName,
                             clientReference: claim.client_reference || "",
                             companyReportNumber: claim.company_report_number || "",
-                            insuredName: getParticipant(claim, 'insured')?.full_name || "",
-                            lastName: "",
-                            rut: getParticipant(claim, 'insured')?.rut || "",
-                            insuredEmail: getParticipant(claim, 'insured')?.email || "",
-                            insuredPhone: getParticipant(claim, 'insured')?.phone || "",
-                            cellPhone: getParticipant(claim, 'insured')?.cell_phone || "",
-                            address: getParticipant(claim, 'insured')?.address || "",
-                            city: getParticipant(claim, 'insured')?.city || "",
-                            commune: getParticipant(claim, 'insured')?.commune || "",
-                            region: getParticipant(claim, 'insured')?.region || "",
-                            country: getParticipant(claim, 'insured')?.country || "Chile",
+                            insuredName: pInsured?.first_name || pInsured?.full_name || "",
+                            lastName: pInsured?.last_name || "",
+                            rut: pInsured?.rut || "",
+                            insuredEmail: pInsured?.email || "",
+                            insuredPhone: pInsured?.phone || "",
+                            cellPhone: pInsured?.cell_phone || "",
+                            address: pInsured?.address || "",
+                            city: pInsured?.city || "",
+                            commune: pInsured?.commune || "",
+                            region: pInsured?.region || "",
+                            country: pInsured?.country || "Chile",
                             claimDate: claim.claim_date,
                             claimTime: "",
                             reportDate: claim.report_date || "",
                             assignmentDate: claim.assignment_date || "",
-                            claimType: "",
-                            claimCause: "",
+                            claimType: typeName,
+                            claimCause: causeName,
                             summary: claim.summary || "",
-                            contactName: getParticipant(claim, 'contact')?.full_name || "",
+                            contactName: pContact?.full_name || "",
                             contactRole: "",
-                            contactEmail: getParticipant(claim, 'contact')?.email || "",
+                            contactEmail: pContact?.email || "",
                             assignedAdjusterId: claim.assigned_adjuster_id || "",
                             inspectorId: claim.inspector_id || "",
                             adjusterId: claim.adjuster_id || "",
-                            brokerName: "",
+                            brokerName: brokerName,
                             brokerNumber: "",
                             advisor: "",
                             companyId: claim.company_id,

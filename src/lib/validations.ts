@@ -45,6 +45,7 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export const claimSchema = z.object({
   claimNumber: z.string().min(1, "Número de siniestro requerido"),
   policyNumber: z.string().min(1, "Número de póliza requerido"),
+  policyItem: z.string().optional(),
   insuranceCompany: z.string().optional(),
   insuredName: z.string().min(1, "Nombre del asegurado requerido"),
   lastName: z.string().optional(),
