@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaims, getClaimsParticipants, createClaim, updateClaim, deleteClaim } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
@@ -127,6 +127,14 @@ export default function ClaimsPage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("siniestro");
+  const prevOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      setActiveTab("siniestro");
+    }
+    prevOpenRef.current = open;
+  }, [open]);
 
   const form = useForm<ClaimInput>({
     resolver: standardSchemaResolver(claimSchema),
@@ -417,7 +425,7 @@ export default function ClaimsPage() {
                 ))}
               </div>
 
-              {activeTab === "siniestro" && (<div className="space-y-4">
+              {activeTab === "siniestro" && (<div key="tab-siniestro" className="space-y-4">
               {/* ═══ EMPRESA (MI CLIENTE) ═══ */}
               <div className="modal-grid">
                 <div className="modal-field modal-field-full">
@@ -532,7 +540,7 @@ export default function ClaimsPage() {
 
               </div>)} {/* end siniestro tab */}
 
-              {activeTab === "asegurado" && (<div className="space-y-4">
+              {activeTab === "asegurado" && (<div key="tab-asegurado" className="space-y-4">
               {/* ═══ ASEGURADO ═══ */}
               <SectionTitle>Asegurado</SectionTitle>
               <div className="modal-grid-3">
@@ -565,7 +573,7 @@ export default function ClaimsPage() {
 
               </div>)} {/* end asegurado tab */}
 
-              {activeTab === "contacto" && (<div className="space-y-4">
+              {activeTab === "contacto" && (<div key="tab-contacto" className="space-y-4">
               {/* ═══ PERSONA DE CONTACTO ═══ */}
               <SectionTitle>Persona de Contacto</SectionTitle>
               <div className="modal-grid-3">
@@ -585,7 +593,7 @@ export default function ClaimsPage() {
 
               </div>)} {/* end contacto tab */}
 
-              {activeTab === "ubicacion" && (<div className="space-y-4">
+              {activeTab === "ubicacion" && (<div key="tab-ubicacion" className="space-y-4">
               {/* ═══ UBICACIÓN ═══ */}
               <SectionTitle>Ubicación del Siniestro</SectionTitle>
               <div className="modal-grid">
@@ -653,7 +661,7 @@ export default function ClaimsPage() {
 
               </div>)} {/* end ubicacion tab */}
 
-              {activeTab === "equipo" && (<div className="space-y-4">
+              {activeTab === "equipo" && (<div key="tab-equipo" className="space-y-4">
               {/* ═══ ASESOR ═══ */}
               <SectionTitle>Asesor</SectionTitle>
               <div className="modal-grid">
