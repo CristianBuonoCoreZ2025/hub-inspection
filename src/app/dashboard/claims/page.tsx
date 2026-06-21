@@ -144,10 +144,14 @@ export default function ClaimsPage() {
     },
   });
 
-  const { data: claims, isLoading } = useQuery({
+  const { data: claims, isLoading, error } = useQuery({
     queryKey: ["claims"],
     queryFn: () => getClaims(),
   });
+
+  if (error) {
+    toast.error(`Error cargando siniestros: ${(error as Error).message}`);
+  }
 
   const { data: companies } = useQuery({
     queryKey: ["companies"],
