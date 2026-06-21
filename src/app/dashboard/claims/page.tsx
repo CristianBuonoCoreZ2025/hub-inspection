@@ -126,6 +126,7 @@ export default function ClaimsPage() {
   const [dateTo, setDateTo] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("siniestro");
 
   const form = useForm<ClaimInput>({
     resolver: standardSchemaResolver(claimSchema),
@@ -369,7 +370,7 @@ export default function ClaimsPage() {
           >
             <Download className="mr-2 h-3.5 w-3.5" /> Exportar CSV
           </Button>
-          <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
+          <Button onClick={() => { setEditingId(null); form.reset(); setActiveTab("siniestro"); setOpen(true); }} className="btn-create btn-sm">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Siniestro
           </Button>
@@ -392,6 +393,31 @@ export default function ClaimsPage() {
             </div>
 
             <div className="modal-body">
+              {/* TABS */}
+              <div className="flex gap-1 border-b mb-4 pb-1 sticky top-0 bg-background z-10">
+                {[
+                  { id: "siniestro", label: "Siniestro" },
+                  { id: "asegurado", label: "Asegurado" },
+                  { id: "ubicacion", label: "Ubicación" },
+                  { id: "contacto", label: "Contacto" },
+                  { id: "equipo", label: "Equipo" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setActiveTab(t.id)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors ${
+                      activeTab === t.id
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {activeTab === "siniestro" && (<div className="space-y-4">
               {/* ═══ EMPRESA (MI CLIENTE) ═══ */}
               <div className="modal-grid">
                 <div className="modal-field modal-field-full">
@@ -504,6 +530,9 @@ export default function ClaimsPage() {
                 </div>
               </div>
 
+              </div>)} {/* end siniestro tab */}
+
+              {activeTab === "asegurado" && (<div className="space-y-4">
               {/* ═══ ASEGURADO ═══ */}
               <SectionTitle>Asegurado</SectionTitle>
               <div className="modal-grid-3">
@@ -534,6 +563,9 @@ export default function ClaimsPage() {
                 </div>
               </div>
 
+              </div>)} {/* end asegurado tab */}
+
+              {activeTab === "contacto" && (<div className="space-y-4">
               {/* ═══ PERSONA DE CONTACTO ═══ */}
               <SectionTitle>Persona de Contacto</SectionTitle>
               <div className="modal-grid-3">
@@ -551,6 +583,9 @@ export default function ClaimsPage() {
                 </div>
               </div>
 
+              </div>)} {/* end contacto tab */}
+
+              {activeTab === "ubicacion" && (<div className="space-y-4">
               {/* ═══ UBICACIÓN ═══ */}
               <SectionTitle>Ubicación del Siniestro</SectionTitle>
               <div className="modal-grid">
@@ -616,6 +651,9 @@ export default function ClaimsPage() {
                 </div>
               </div>
 
+              </div>)} {/* end ubicacion tab */}
+
+              {activeTab === "equipo" && (<div className="space-y-4">
               {/* ═══ ASESOR ═══ */}
               <SectionTitle>Asesor</SectionTitle>
               <div className="modal-grid">
@@ -668,6 +706,7 @@ export default function ClaimsPage() {
                   />
                 </div>
               </div>
+              </div>)} {/* end equipo tab */}
             </div>
 
             <div className="modal-footer">
@@ -779,6 +818,7 @@ export default function ClaimsPage() {
                             companyId: claim.company_id,
                             notes: claim.notes || "",
                           });
+                          setActiveTab("siniestro");
                           setOpen(true);
                         }}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Eliminar este siniestro?")) deleteMutation.mutate(claim.id); }}>
