@@ -195,9 +195,12 @@ export async function createClaimMinimal(
     claimDate: string;
     summary?: string | null;
     inspectorId?: string | null;
+    adjusterId?: string | null;
     insuranceCompanyId?: string | null;
     claimTypeId?: string | null;
     claimCauseId?: string | null;
+    liquidationNumber?: string | null;
+    companyReportNumber?: string | null;
     company_id: string;
   },
   insured: {
@@ -255,9 +258,12 @@ export async function createClaimMinimal(
       status: "created" as ClaimStatus,
       summary: input.summary || null,
       inspector_id: input.inspectorId || null,
+      adjuster_id: input.adjusterId || null,
       insurance_company_id: input.insuranceCompanyId || null,
       claim_type_id: input.claimTypeId || null,
       claim_cause_id: input.claimCauseId || null,
+      liquidation_number: input.liquidationNumber || null,
+      company_report_number: input.companyReportNumber || null,
       company_id: input.company_id,
     },
   });

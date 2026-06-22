@@ -115,7 +115,10 @@ export const claimCreateMinimalSchema = z.object({
   claimTypeId: z.string().min(1, "Tipo de siniestro requerido"),
   claimCauseId: z.string().optional().or(z.literal("")),
   summary: z.string().optional().or(z.literal("")),
+  liquidationNumber: z.string().optional().or(z.literal("")),
+  companyReportNumber: z.string().optional().or(z.literal("")),
   inspectorId: z.string().optional().or(z.literal("")),
+  adjusterId: z.string().optional().or(z.literal("")),
   companyId: z.string().min(1, "Empresa requerida"),
   // ── Paso 2: Detalles Incidente ──
   insuredName: z.string().min(1, "Nombre del asegurado requerido"),

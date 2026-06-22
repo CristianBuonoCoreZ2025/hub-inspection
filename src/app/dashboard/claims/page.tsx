@@ -114,7 +114,10 @@ export default function ClaimsPage() {
       claimTypeId: "",
       claimCauseId: "",
       summary: "",
+      liquidationNumber: "",
+      companyReportNumber: "",
       inspectorId: "",
+      adjusterId: "",
       companyId: "",
       insuredName: "",
       lastName: "",
@@ -181,7 +184,8 @@ export default function ClaimsPage() {
     queryFn: () => getUsers(),
   });
 
-  const inspectors = users?.filter((u) => u.role === "inspector").sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+  const inspectors = users?.filter((u) => u.role === "inspector" && (!selectedCompanyId || u.company_id === selectedCompanyId)).sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+  const adjusters = users?.filter((u) => u.role === "adjuster" && (!selectedCompanyId || u.company_id === selectedCompanyId)).sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
 
   const { data: claimCauses } = useQuery({
     queryKey: ["claim-causes"],
@@ -213,6 +217,7 @@ export default function ClaimsPage() {
     queryFn: getCountries,
   });
 
+  const selectedCompanyId = form.watch("companyId");
   const selectedCountry = form.watch("country");
   const selectedRegion = form.watch("region");
   const selectedCity = form.watch("city");
@@ -253,6 +258,12 @@ export default function ClaimsPage() {
           claimDate: values.claimDate,
           summary: values.summary,
           inspectorId: values.inspectorId,
+          adjusterId: values.adjusterId,
+          insuranceCompanyId: values.insuranceCompanyId,
+          claimTypeId: values.claimTypeId,
+          claimCauseId: values.claimCauseId,
+          liquidationNumber: values.liquidationNumber,
+          companyReportNumber: values.companyReportNumber,
           company_id: values.companyId,
         },
         {
@@ -430,7 +441,7 @@ export default function ClaimsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1 col-span-full">
                     <Label className="app-field-label">Empresa (Cliente) <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} value={form.getValues("companyId")}>
+                    <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} value={form.watch("companyId")}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
                       <SelectContent>
                         {companies?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
@@ -443,18 +454,26 @@ export default function ClaimsPage() {
                 <SectionTitle>Datos del Siniestro</SectionTitle>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">N° Siniestro <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("claimNumber")} placeholder="CHL-00000573" className="app-input h-8" />
+                    <Label className="app-field-label">N° Siniestro (Compañía) <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("claimNumber")} placeholder="Ej: 12345678" className="app-input h-8" />
                     <FieldError message={form.formState.errors.claimNumber?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">N° Póliza <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("policyNumber")} placeholder="20618983" className="app-input h-8" />
+                    <Input {...form.register("policyNumber")} placeholder="Ej: POL-2026-001" className="app-input h-8" />
                     <FieldError message={form.formState.errors.policyNumber?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">N° Liquidación / Interno</Label>
+                    <Input {...form.register("liquidationNumber")} placeholder="Ej: L-0000123" className="app-input h-8" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">N° Informe Compañía</Label>
+                    <Input {...form.register("companyReportNumber")} placeholder="Ej: INF-2026-001" className="app-input h-8" />
+                  </div>
+                  <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Compañía de Seguros</Label>
-                    <Select onValueChange={(v) => form.setValue("insuranceCompanyId", v ?? "")} value={form.getValues("insuranceCompanyId") || ""}>
+                    <Select onValueChange={(v) => form.setValue("insuranceCompanyId", v ?? "")} value={form.watch("insuranceCompanyId") || ""}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar compañía..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">— Sin seleccionar —</SelectItem>
@@ -469,7 +488,7 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Tipo de Siniestro <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => form.setValue("claimTypeId", v ?? "")} value={form.getValues("claimTypeId") || ""}>
+                    <Select onValueChange={(v) => form.setValue("claimTypeId", v ?? "")} value={form.watch("claimTypeId") || ""}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">— Sin seleccionar —</SelectItem>
@@ -480,7 +499,7 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Causal del Siniestro</Label>
-                    <Select onValueChange={(v) => form.setValue("claimCauseId", v ?? "")} value={form.getValues("claimCauseId") || ""}>
+                    <Select onValueChange={(v) => form.setValue("claimCauseId", v ?? "")} value={form.watch("claimCauseId") || ""}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar causal..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">— Sin seleccionar —</SelectItem>
@@ -500,11 +519,21 @@ export default function ClaimsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1 col-span-full">
                     <Label className="app-field-label">Inspector</Label>
-                    <Select onValueChange={(v) => form.setValue("inspectorId", v ?? "")} value={form.getValues("inspectorId") || ""}>
+                    <Select onValueChange={(v) => form.setValue("inspectorId", v ?? "")} value={form.watch("inspectorId") || ""}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar inspector..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">— Sin asignar —</SelectItem>
                         {inspectors?.map((u) => (<SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1 col-span-full">
+                    <Label className="app-field-label">Liquidador</Label>
+                    <Select onValueChange={(v) => form.setValue("adjusterId", v ?? "")} value={form.watch("adjusterId") || ""}>
+                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar liquidador..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— Sin asignar —</SelectItem>
+                        {adjusters?.map((u) => (<SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>))}
                       </SelectContent>
                     </Select>
                   </div>
