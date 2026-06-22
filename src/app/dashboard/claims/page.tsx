@@ -627,7 +627,7 @@ export default function ClaimsPage() {
                       Empresa (Cliente) <span className="text-red-500">*</span>
                     </Label>
                     <Select
-                      value={form.watch("companyId") || undefined}
+                      value={form.watch("companyId") || ""}
                       onValueChange={(v) => form.setValue("companyId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -649,7 +649,7 @@ export default function ClaimsPage() {
                       Compañía de Seguros <span className="text-red-500">*</span>
                     </Label>
                     <Select
-                      value={form.watch("insuranceCompanyId") || undefined}
+                      value={form.watch("insuranceCompanyId") || ""}
                       onValueChange={(v) => form.setValue("insuranceCompanyId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -733,7 +733,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Línea de Negocios</Label>
                     <Select
-                      value={form.watch("businessLineId") || undefined}
+                      value={form.watch("businessLineId") || ""}
                       onValueChange={(v) => {
                         form.setValue("businessLineId", v || "");
                         form.setValue("insuranceProductId", "");
@@ -755,7 +755,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Ramo/Producto</Label>
                     <Select
-                      value={form.watch("insuranceProductId") || undefined}
+                      value={form.watch("insuranceProductId") || ""}
                       onValueChange={(v) => form.setValue("insuranceProductId", v || "")}
                       disabled={!selectedBusinessLineId}
                     >
@@ -786,7 +786,7 @@ export default function ClaimsPage() {
                       Tipo de Siniestro <span className="text-red-500">*</span>
                     </Label>
                     <Select
-                      value={form.watch("claimTypeId") || undefined}
+                      value={form.watch("claimTypeId") || ""}
                       onValueChange={(v) => form.setValue("claimTypeId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -806,7 +806,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Asesor</Label>
                     <Select
-                      value={form.watch("advisorId") || undefined}
+                      value={form.watch("advisorId") || ""}
                       onValueChange={(v) => form.setValue("advisorId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -825,7 +825,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Corredor</Label>
                     <Select
-                      value={form.watch("brokerId") || undefined}
+                      value={form.watch("brokerId") || ""}
                       onValueChange={(v) => form.setValue("brokerId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -846,7 +846,7 @@ export default function ClaimsPage() {
                       Inspector <span className="text-red-500">*</span>
                     </Label>
                     <Select
-                      value={form.watch("inspectorId") || undefined}
+                      value={form.watch("inspectorId") || ""}
                       onValueChange={(v) => form.setValue("inspectorId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -866,7 +866,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Ajustador / Liquidador</Label>
                     <Select
-                      value={form.watch("adjusterId") || undefined}
+                      value={form.watch("adjusterId") || ""}
                       onValueChange={(v) => form.setValue("adjusterId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -894,7 +894,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Causal del Siniestro</Label>
                     <Select
-                      value={form.watch("claimCauseId") || undefined}
+                      value={form.watch("claimCauseId") || ""}
                       onValueChange={(v) => form.setValue("claimCauseId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -913,7 +913,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Tipo de Construcción</Label>
                     <Select
-                      value={form.watch("constructionTypeId") || undefined}
+                      value={form.watch("constructionTypeId") || ""}
                       onValueChange={(v) => form.setValue("constructionTypeId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -932,7 +932,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Habitabilidad</Label>
                     <Select
-                      value={form.watch("habitabilityId") || undefined}
+                      value={form.watch("habitabilityId") || ""}
                       onValueChange={(v) => form.setValue("habitabilityId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -951,7 +951,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Destino</Label>
                     <Select
-                      value={form.watch("destinationHousingId") || undefined}
+                      value={form.watch("destinationHousingId") || ""}
                       onValueChange={(v) => form.setValue("destinationHousingId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -970,7 +970,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Asegurado/Propietario</Label>
                     <Select
-                      value={form.watch("propertyClassificationId") || undefined}
+                      value={form.watch("propertyClassificationId") || ""}
                       onValueChange={(v) => form.setValue("propertyClassificationId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -989,7 +989,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Clasificación del Daño</Label>
                     <Select
-                      value={form.watch("damageClassificationId") || undefined}
+                      value={form.watch("damageClassificationId") || ""}
                       onValueChange={(v) => form.setValue("damageClassificationId", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -1105,7 +1105,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">País</Label>
                     <Select
-                      value={form.watch("claimCountry") || undefined}
+                      value={form.watch("claimCountry") || ""}
                       onValueChange={(v) => {
                         form.setValue("claimCountry", v || "");
                         form.setValue("claimRegion", "");
@@ -1128,7 +1128,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Región</Label>
                     <Select
-                      value={form.watch("claimRegion") || undefined}
+                      value={form.watch("claimRegion") || ""}
                       onValueChange={(v) => {
                         form.setValue("claimRegion", v || "");
                         form.setValue("claimCity", "");
@@ -1153,7 +1153,7 @@ export default function ClaimsPage() {
                       Ciudad <span className="text-red-500">*</span>
                     </Label>
                     <Select
-                      value={form.watch("claimCity") || undefined}
+                      value={form.watch("claimCity") || ""}
                       onValueChange={(v) => {
                         form.setValue("claimCity", v || "");
                         form.setValue("claimCommune", "");
@@ -1176,7 +1176,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Comuna</Label>
                     <Select
-                      value={form.watch("claimCommune") || undefined}
+                      value={form.watch("claimCommune") || ""}
                       onValueChange={(v) => form.setValue("claimCommune", v || "")}
                       disabled={!selectedClaimCity}
                     >
@@ -1260,7 +1260,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">País</Label>
                     <Select
-                      value={form.watch("contractorCountry") || undefined}
+                      value={form.watch("contractorCountry") || ""}
                       onValueChange={(v) => form.setValue("contractorCountry", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -1278,7 +1278,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Región</Label>
                     <Select
-                      value={form.watch("contractorRegion") || undefined}
+                      value={form.watch("contractorRegion") || ""}
                       onValueChange={(v) => form.setValue("contractorRegion", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -1296,7 +1296,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Ciudad</Label>
                     <Select
-                      value={form.watch("contractorCity") || undefined}
+                      value={form.watch("contractorCity") || ""}
                       onValueChange={(v) => form.setValue("contractorCity", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -1314,7 +1314,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Comuna</Label>
                     <Select
-                      value={form.watch("contractorCommune") || undefined}
+                      value={form.watch("contractorCommune") || ""}
                       onValueChange={(v) => form.setValue("contractorCommune", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -1397,7 +1397,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">País</Label>
                     <Select
-                      value={form.watch("beneficiaryCountry") || undefined}
+                      value={form.watch("beneficiaryCountry") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryCountry", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -1415,7 +1415,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Región</Label>
                     <Select
-                      value={form.watch("beneficiaryRegion") || undefined}
+                      value={form.watch("beneficiaryRegion") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryRegion", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -1433,7 +1433,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Ciudad</Label>
                     <Select
-                      value={form.watch("beneficiaryCity") || undefined}
+                      value={form.watch("beneficiaryCity") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryCity", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -1451,7 +1451,7 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Comuna</Label>
                     <Select
-                      value={form.watch("beneficiaryCommune") || undefined}
+                      value={form.watch("beneficiaryCommune") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryCommune", v || "")}
                     >
                       <SelectTrigger className="app-input h-8">
@@ -1532,7 +1532,7 @@ export default function ClaimsPage() {
                             </td>
                             <td>
                               <Select
-                                value={doc.type || undefined}
+                                value={doc.type || ""}
                                 onValueChange={(v) =>
                                   updateDocument(doc.id, { type: v || "" })
                                 }
