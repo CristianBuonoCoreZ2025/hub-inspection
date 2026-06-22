@@ -41,13 +41,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SelectItem } from "@/components/ui/select";
+import { FormSelect } from "@/components/ui/form-select";
 
 import type { ClaimStatus } from "@/types";
 
@@ -632,21 +627,18 @@ export default function ClaimsPage() {
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Empresa (Cliente) <span className="text-red-500">*</span>
                     </Label>
-                    <Select
-                      value={form.watch("companyId") || ""}
-                      onValueChange={(v) => form.setValue("companyId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="companyId"
+                      placeholder="Selecciona una empresa"
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Selecciona una empresa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {companies?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {companies?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                     <FieldError message={form.formState.errors.companyId?.message} />
                   </div>
 
@@ -654,21 +646,18 @@ export default function ClaimsPage() {
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Compañía de Seguros <span className="text-red-500">*</span>
                     </Label>
-                    <Select
-                      value={form.watch("insuranceCompanyId") || ""}
-                      onValueChange={(v) => form.setValue("insuranceCompanyId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="insuranceCompanyId"
+                      placeholder="Seleccionar compañía..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar compañía..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {insuranceCompaniesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {insuranceCompaniesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                     <FieldError message={form.formState.errors.insuranceCompanyId?.message} />
                   </div>
 
@@ -738,164 +727,138 @@ export default function ClaimsPage() {
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Línea de Negocios</Label>
-                    <Select
-                      value={form.watch("businessLineId") || ""}
-                      onValueChange={(v) => {
-                        form.setValue("businessLineId", v || "");
-                        form.setValue("insuranceProductId", "");
-                      }}
+                    <FormSelect
+                      control={form.control}
+                      name="businessLineId"
+                      placeholder="Seleccionar línea..."
+                      className="app-input h-7"
+                      onValueChange={() => form.setValue("insuranceProductId", "")}
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar línea..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {businessLinesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {businessLinesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Ramo/Producto</Label>
-                    <Select
-                      value={form.watch("insuranceProductId") || ""}
-                      onValueChange={(v) => form.setValue("insuranceProductId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="insuranceProductId"
+                      placeholder="Seleccionar producto..."
+                      className="app-input h-7"
                       disabled={!selectedBusinessLineId}
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar producto..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredInsuranceProducts?.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {filteredInsuranceProducts?.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Evento</Label>
-                    <Select
-                      value={form.watch("eventId") || ""}
-                      onValueChange={(v) => form.setValue("eventId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="eventId"
+                      placeholder="Seleccionar evento..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar evento..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {eventsCatalog?.map((e) => (
-                          <SelectItem key={e.id} value={e.id}>
-                            {e.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {eventsCatalog?.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Tipo de Siniestro <span className="text-red-500">*</span>
                     </Label>
-                    <Select
-                      value={form.watch("claimTypeId") || ""}
-                      onValueChange={(v) => form.setValue("claimTypeId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="claimTypeId"
+                      placeholder="Seleccionar tipo..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar tipo..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {claimTypes?.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {claimTypes?.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                     <FieldError message={form.formState.errors.claimTypeId?.message} />
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Asesor</Label>
-                    <Select
-                      value={form.watch("advisorId") || ""}
-                      onValueChange={(v) => form.setValue("advisorId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="advisorId"
+                      placeholder="Seleccionar asesor..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar asesor..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {advisorsCatalog?.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {advisorsCatalog?.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Corredor</Label>
-                    <Select
-                      value={form.watch("brokerId") || ""}
-                      onValueChange={(v) => form.setValue("brokerId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="brokerId"
+                      placeholder="Seleccionar corredor..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar corredor..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {brokersCatalog?.map((b) => (
-                          <SelectItem key={b.id} value={b.id}>
-                            {b.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {brokersCatalog?.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Inspector <span className="text-red-500">*</span>
                     </Label>
-                    <Select
-                      value={form.watch("inspectorId") || ""}
-                      onValueChange={(v) => form.setValue("inspectorId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="inspectorId"
+                      placeholder="Seleccionar inspector..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar inspector..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {inspectors?.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.full_name || u.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {inspectors?.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.full_name || u.email}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                     <FieldError message={form.formState.errors.inspectorId?.message} />
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Ajustador / Liquidador</Label>
-                    <Select
-                      value={form.watch("adjusterId") || ""}
-                      onValueChange={(v) => form.setValue("adjusterId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="adjusterId"
+                      placeholder="Seleccionar ajustador..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar ajustador..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {adjusters?.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.full_name || u.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {adjusters?.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.full_name || u.email}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                 </div>
               </div>
@@ -909,116 +872,98 @@ export default function ClaimsPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Causal del Siniestro</Label>
-                    <Select
-                      value={form.watch("claimCauseId") || ""}
-                      onValueChange={(v) => form.setValue("claimCauseId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="claimCauseId"
+                      placeholder="Seleccionar causal..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar causal..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {claimCauses?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {claimCauses?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Tipo de Construcción</Label>
-                    <Select
-                      value={form.watch("constructionTypeId") || ""}
-                      onValueChange={(v) => form.setValue("constructionTypeId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="constructionTypeId"
+                      placeholder="Seleccionar tipo..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar tipo..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {constructionTypesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {constructionTypesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Habitabilidad</Label>
-                    <Select
-                      value={form.watch("habitabilityId") || ""}
-                      onValueChange={(v) => form.setValue("habitabilityId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="habitabilityId"
+                      placeholder="Seleccionar habitabilidad..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar habitabilidad..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {habitabilityCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {habitabilityCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Destino</Label>
-                    <Select
-                      value={form.watch("destinationHousingId") || ""}
-                      onValueChange={(v) => form.setValue("destinationHousingId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="destinationHousingId"
+                      placeholder="Seleccionar destino..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar destino..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {housingDestinationsCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {housingDestinationsCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Asegurado/Propietario</Label>
-                    <Select
-                      value={form.watch("propertyClassificationId") || ""}
-                      onValueChange={(v) => form.setValue("propertyClassificationId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="propertyClassificationId"
+                      placeholder="Seleccionar clasificación..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar clasificación..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {propertyClassificationsCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {propertyClassificationsCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Clasificación del Daño</Label>
-                    <Select
-                      value={form.watch("damageClassificationId") || ""}
-                      onValueChange={(v) => form.setValue("damageClassificationId", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="damageClassificationId"
+                      placeholder="Seleccionar clasificación..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar clasificación..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {damageClassificationsCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {damageClassificationsCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
 
                   <div className="flex flex-col gap-1 col-span-full">
@@ -1120,93 +1065,79 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">País</Label>
-                    <Select
-                      value={form.watch("claimCountry") || ""}
-                      onValueChange={(v) => {
-                        form.setValue("claimCountry", v || "");
+                    <FormSelect
+                      control={form.control}
+                      name="claimCountry"
+                      placeholder="Seleccionar país..."
+                      className="app-input h-7"
+                      onValueChange={() => {
                         form.setValue("claimRegion", "");
                         form.setValue("claimCity", "");
                         form.setValue("claimCommune", "");
                       }}
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar país..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countriesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {countriesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Región</Label>
-                    <Select
-                      value={form.watch("claimRegion") || ""}
-                      onValueChange={(v) => {
-                        form.setValue("claimRegion", v || "");
+                    <FormSelect
+                      control={form.control}
+                      name="claimRegion"
+                      placeholder="Seleccionar región..."
+                      className="app-input h-7"
+                      disabled={!selectedClaimCountry}
+                      onValueChange={() => {
                         form.setValue("claimCity", "");
                         form.setValue("claimCommune", "");
                       }}
-                      disabled={!selectedClaimCountry}
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar región..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {regionsCatalog?.map((r) => (
-                          <SelectItem key={r.id} value={r.name}>
-                            {r.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {regionsCatalog?.map((r) => (
+                        <SelectItem key={r.id} value={r.name}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Ciudad <span className="text-red-500">*</span>
                     </Label>
-                    <Select
-                      value={form.watch("claimCity") || ""}
-                      onValueChange={(v) => {
-                        form.setValue("claimCity", v || "");
-                        form.setValue("claimCommune", "");
-                      }}
+                    <FormSelect
+                      control={form.control}
+                      name="claimCity"
+                      placeholder="Seleccionar ciudad..."
+                      className="app-input h-7"
                       disabled={!selectedClaimRegion}
+                      onValueChange={() => form.setValue("claimCommune", "")}
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar ciudad..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {citiesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {citiesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                     <FieldError message={form.formState.errors.claimCity?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Comuna</Label>
-                    <Select
-                      value={form.watch("claimCommune") || ""}
-                      onValueChange={(v) => form.setValue("claimCommune", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="claimCommune"
+                      placeholder="Seleccionar comuna..."
+                      className="app-input h-7"
                       disabled={!selectedClaimCity}
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar comuna..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {communesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {communesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                 </div>
 
@@ -1275,75 +1206,63 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">País</Label>
-                    <Select
-                      value={form.watch("contractorCountry") || ""}
-                      onValueChange={(v) => form.setValue("contractorCountry", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="contractorCountry"
+                      placeholder="Seleccionar país..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar país..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countriesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {countriesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Región</Label>
-                    <Select
-                      value={form.watch("contractorRegion") || ""}
-                      onValueChange={(v) => form.setValue("contractorRegion", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="contractorRegion"
+                      placeholder="Seleccionar región..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar región..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {regionsCatalog?.map((r) => (
-                          <SelectItem key={r.id} value={r.name}>
-                            {r.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {regionsCatalog?.map((r) => (
+                        <SelectItem key={r.id} value={r.name}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Ciudad</Label>
-                    <Select
-                      value={form.watch("contractorCity") || ""}
-                      onValueChange={(v) => form.setValue("contractorCity", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="contractorCity"
+                      placeholder="Seleccionar ciudad..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar ciudad..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {citiesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {citiesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Comuna</Label>
-                    <Select
-                      value={form.watch("contractorCommune") || ""}
-                      onValueChange={(v) => form.setValue("contractorCommune", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="contractorCommune"
+                      placeholder="Seleccionar comuna..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar comuna..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {communesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {communesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                 </div>
 
@@ -1412,75 +1331,63 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">País</Label>
-                    <Select
-                      value={form.watch("beneficiaryCountry") || ""}
-                      onValueChange={(v) => form.setValue("beneficiaryCountry", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="beneficiaryCountry"
+                      placeholder="Seleccionar país..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar país..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countriesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {countriesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Región</Label>
-                    <Select
-                      value={form.watch("beneficiaryRegion") || ""}
-                      onValueChange={(v) => form.setValue("beneficiaryRegion", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="beneficiaryRegion"
+                      placeholder="Seleccionar región..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar región..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {regionsCatalog?.map((r) => (
-                          <SelectItem key={r.id} value={r.name}>
-                            {r.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {regionsCatalog?.map((r) => (
+                        <SelectItem key={r.id} value={r.name}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Ciudad</Label>
-                    <Select
-                      value={form.watch("beneficiaryCity") || ""}
-                      onValueChange={(v) => form.setValue("beneficiaryCity", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="beneficiaryCity"
+                      placeholder="Seleccionar ciudad..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar ciudad..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {citiesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {citiesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label text-[10px]! leading-tight! py-0!">Comuna</Label>
-                    <Select
-                      value={form.watch("beneficiaryCommune") || ""}
-                      onValueChange={(v) => form.setValue("beneficiaryCommune", v || "")}
+                    <FormSelect
+                      control={form.control}
+                      name="beneficiaryCommune"
+                      placeholder="Seleccionar comuna..."
+                      className="app-input h-7"
                     >
-                      <SelectTrigger className="app-input h-7">
-                        <SelectValue placeholder="Seleccionar comuna..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {communesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {communesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                 </div>
               </div>
@@ -1547,23 +1454,19 @@ export default function ClaimsPage() {
                               />
                             </td>
                             <td>
-                              <Select
-                                value={doc.type || ""}
-                                onValueChange={(v) =>
-                                  updateDocument(doc.id, { type: v || "" })
-                                }
+                              <FormSelect
+                                control={form.control}
+                                name={`documentType-${doc.id}`}
+                                placeholder="Tipo..."
+                                className="h-8 text-[13px]"
+                                onValueChange={(v) => updateDocument(doc.id, { type: v })}
                               >
-                                <SelectTrigger className="h-8 text-[13px]">
-                                  <SelectValue placeholder="Tipo..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {documentTypesCatalog?.map((t) => (
-                                    <SelectItem key={t.id} value={t.id}>
-                                      {t.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                {documentTypesCatalog?.map((t) => (
+                                  <SelectItem key={t.id} value={t.id}>
+                                    {t.name}
+                                  </SelectItem>
+                                ))}
+                              </FormSelect>
                             </td>
                             <td className="text-[13px] text-muted-foreground truncate max-w-[180px]">
                               {doc.file.name}
