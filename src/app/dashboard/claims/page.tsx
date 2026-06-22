@@ -5,8 +5,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaims, getClaimsParticipants, createClaimMinimal, deleteClaim } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
-import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBrokers, getAdvisors, getRegions, getCities, getCommunes } from "@/services/catalogs";
-import { getCountries } from "@/services/countries";
+import {
+  getClaimCauses,
+  getClaimTypes,
+  getInsuranceCompanies,
+  getBrokers,
+  getAdvisors,
+  getBusinessLines,
+  getInsuranceProducts,
+  getRegions,
+  getCities,
+  getCommunes,
+  getCountries,
+  getHousingDestinations,
+  getPropertyClassifications,
+  getDamageClassifications,
+  getLookupCatalog,
+} from "@/services/catalogs";
 import { claimCreateMinimalSchema, type ClaimCreateMinimalInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
@@ -33,7 +48,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { ClaimStatus, Profile } from "@/types";
+import type { ClaimStatus } from "@/types";
 
 const statusLabels: Record<ClaimStatus, string> = {
   created: "Creado",
@@ -103,40 +118,56 @@ export default function ClaimsPage() {
   const [dateTo, setDateTo] = useState("");
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
+  const [documents, setDocuments] = useState<{ id: string; name: string; type: string; file: File }[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+
+  type DocumentRow = { id: string; name: string; type: string; file: File };
 
   const form = useForm<ClaimCreateMinimalInput>({
     resolver: standardSchemaResolver(claimCreateMinimalSchema),
     defaultValues: {
+      companyId: "",
+      insuranceCompanyId: "",
       claimNumber: "",
       policyNumber: "",
+      clientReference: "",
       claimDate: "",
-      insuranceCompanyId: "",
+      assignmentDate: "",
+      reportDate: "",
+      businessLineId: "",
+      insuranceProductId: "",
+      event: "",
       claimTypeId: "",
-      claimCauseId: "",
-      summary: "",
-      liquidationNumber: "",
-      companyReportNumber: "",
+      advisorId: "",
+      brokerId: "",
       inspectorId: "",
       adjusterId: "",
-      companyId: "",
+      claimCauseId: "",
+      summary: "",
+      constructionTypeId: "",
+      habitabilityId: "",
+      destinationHousingId: "",
+      propertyClassificationId: "",
+      ownerSameAsInsured: false,
+      damageClassificationId: "",
       insuredName: "",
       lastName: "",
       rut: "",
       insuredEmail: "",
       cellPhone: "",
       insuredPhone: "",
-      address: "",
-      country: "Chile",
-      region: "",
-      city: "",
-      commune: "",
+      claimAddress: "",
+      claimCountry: "Chile",
+      claimRegion: "",
+      claimCity: "",
+      claimCommune: "",
       contractorName: "",
       contractorLastName: "",
       contractorRut: "",
       contractorEmail: "",
       contractorCellPhone: "",
       contractorAddress: "",
-      contractorCountry: "Chile",
+      contractorCountry: "",
       contractorRegion: "",
       contractorCity: "",
       contractorCommune: "",
@@ -146,7 +177,7 @@ export default function ClaimsPage() {
       beneficiaryEmail: "",
       beneficiaryCellPhone: "",
       beneficiaryAddress: "",
-      beneficiaryCountry: "Chile",
+      beneficiaryCountry: "",
       beneficiaryRegion: "",
       beneficiaryCity: "",
       beneficiaryCommune: "",
@@ -185,12 +216,16 @@ export default function ClaimsPage() {
   });
 
   const selectedCompanyId = form.watch("companyId");
-  const selectedCountry = form.watch("country");
-  const selectedRegion = form.watch("region");
-  const selectedCity = form.watch("city");
+  const selectedClaimCountry = form.watch("claimCountry");
+  const selectedClaimRegion = form.watch("claimRegion");
+  const selectedClaimCity = form.watch("claimCity");
 
-  const inspectors = users?.filter((u) => u.role === "inspector" && (!selectedCompanyId || u.company_id === selectedCompanyId)).sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
-  const adjusters = users?.filter((u) => u.role === "adjuster" && (!selectedCompanyId || u.company_id === selectedCompanyId)).sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+  const inspectors = users
+    ?.filter((u) => u.role === "inspector" && (!selectedCompanyId || u.company_id === selectedCompanyId))
+    .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+  const adjusters = users
+    ?.filter((u) => u.role === "adjuster" && (!selectedCompanyId || u.company_id === selectedCompanyId))
+    .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
 
   const { data: claimCauses } = useQuery({
     queryKey: ["claim-causes"],
@@ -207,6 +242,16 @@ export default function ClaimsPage() {
     queryFn: () => getInsuranceCompanies(),
   });
 
+  const { data: businessLinesCatalog } = useQuery({
+    queryKey: ["business-lines"],
+    queryFn: () => getBusinessLines(),
+  });
+
+  const { data: insuranceProductsCatalog } = useQuery({
+    queryKey: ["insurance-products"],
+    queryFn: () => getInsuranceProducts(),
+  });
+
   const { data: brokersCatalog } = useQuery({
     queryKey: ["brokers"],
     queryFn: () => getBrokers(),
@@ -217,37 +262,72 @@ export default function ClaimsPage() {
     queryFn: () => getAdvisors(),
   });
 
+  const { data: housingDestinationsCatalog } = useQuery({
+    queryKey: ["housing-destinations"],
+    queryFn: () => getHousingDestinations(),
+  });
+
+  const { data: propertyClassificationsCatalog } = useQuery({
+    queryKey: ["property-classifications"],
+    queryFn: () => getPropertyClassifications(),
+  });
+
+  const { data: damageClassificationsCatalog } = useQuery({
+    queryKey: ["damage-classifications"],
+    queryFn: () => getDamageClassifications(),
+  });
+
+  const { data: constructionTypesCatalog } = useQuery({
+    queryKey: ["lookup-catalog", "construction_type"],
+    queryFn: () => getLookupCatalog("construction_type"),
+  });
+
+  const { data: habitabilityCatalog } = useQuery({
+    queryKey: ["lookup-catalog", "habitability"],
+    queryFn: () => getLookupCatalog("habitability"),
+  });
+
+  const { data: documentTypesCatalog } = useQuery({
+    queryKey: ["lookup-catalog", "document_type"],
+    queryFn: () => getLookupCatalog("document_type"),
+  });
+
   const { data: countriesCatalog } = useQuery({
     queryKey: ["countries"],
-    queryFn: getCountries,
+    queryFn: () => getCountries(),
   });
 
   const { data: regionsCatalog } = useQuery({
-    queryKey: ["regions", selectedCountry],
+    queryKey: ["regions", selectedClaimCountry],
     queryFn: () => {
-      const country = countriesCatalog?.find(c => c.name === selectedCountry);
+      const country = countriesCatalog?.find((c) => c.name === selectedClaimCountry);
       return getRegions(country?.id);
     },
-    enabled: !!selectedCountry && !!countriesCatalog,
+    enabled: !!selectedClaimCountry && !!countriesCatalog,
   });
 
   const { data: citiesCatalog } = useQuery({
-    queryKey: ["cities", selectedRegion],
+    queryKey: ["cities", selectedClaimRegion],
     queryFn: () => {
-      const region = regionsCatalog?.find(r => r.name === selectedRegion);
+      const region = regionsCatalog?.find((r) => r.name === selectedClaimRegion);
       return getCities(region?.id);
     },
-    enabled: !!selectedRegion && !!regionsCatalog,
+    enabled: !!selectedClaimRegion && !!regionsCatalog,
   });
 
   const { data: communesCatalog } = useQuery({
-    queryKey: ["communes", selectedCity],
+    queryKey: ["communes", selectedClaimCity],
     queryFn: () => {
-      const city = citiesCatalog?.find(c => c.name === selectedCity);
+      const city = citiesCatalog?.find((c) => c.name === selectedClaimCity);
       return getCommunes(city?.id);
     },
-    enabled: !!selectedCity && !!citiesCatalog,
+    enabled: !!selectedClaimCity && !!citiesCatalog,
   });
+
+  const selectedBusinessLineId = form.watch("businessLineId");
+  const filteredInsuranceProducts = insuranceProductsCatalog?.filter(
+    (p) => !selectedBusinessLineId || p.business_line_id === selectedBusinessLineId
+  );
 
   const createMutation = useMutation({
     mutationFn: (values: ClaimCreateMinimalInput) =>
@@ -256,35 +336,79 @@ export default function ClaimsPage() {
           claimNumber: values.claimNumber,
           policyNumber: values.policyNumber,
           claimDate: values.claimDate,
+          clientReference: values.clientReference || null,
+          assignmentDate: values.assignmentDate || null,
+          reportDate: values.reportDate || null,
           summary: values.summary,
           inspectorId: values.inspectorId,
-          adjusterId: values.adjusterId,
+          adjusterId: values.adjusterId || null,
           insuranceCompanyId: values.insuranceCompanyId,
           claimTypeId: values.claimTypeId,
-          claimCauseId: values.claimCauseId,
-          liquidationNumber: values.liquidationNumber,
-          companyReportNumber: values.companyReportNumber,
+          claimCauseId: values.claimCauseId || null,
+          businessLineId: values.businessLineId || null,
+          insuranceProductId: values.insuranceProductId || null,
+          advisorId: values.advisorId || null,
+          brokerId: values.brokerId || null,
+          event: values.event || null,
+          constructionTypeId: values.constructionTypeId || null,
+          habitabilityId: values.habitabilityId || null,
+          destinationHousingId: values.destinationHousingId || null,
+          damageClassificationId: values.damageClassificationId || null,
+          propertyClassificationId: values.propertyClassificationId || null,
+          ownerSameAsInsured: values.ownerSameAsInsured,
           company_id: values.companyId,
         },
         {
           insuredName: values.insuredName,
-          lastName: values.lastName,
-          rut: values.rut,
-          insuredEmail: values.insuredEmail,
-          insuredPhone: values.insuredPhone,
+          lastName: values.lastName || null,
+          rut: values.rut || null,
+          insuredEmail: values.insuredEmail || null,
+          insuredPhone: values.insuredPhone || null,
           cellPhone: values.cellPhone,
-          address: values.address,
-          country: values.country,
-          region: values.region,
-          city: values.city,
-          commune: values.commune,
-        }
+        },
+        {
+          claimAddress: values.claimAddress,
+          claimCountry: values.claimCountry,
+          claimRegion: values.claimRegion || null,
+          claimCity: values.claimCity,
+          claimCommune: values.claimCommune || null,
+        },
+        values.contractorName
+          ? {
+              contractorName: values.contractorName,
+              contractorLastName: values.contractorLastName || null,
+              contractorRut: values.contractorRut || null,
+              contractorEmail: values.contractorEmail || null,
+              contractorCellPhone: values.contractorCellPhone || null,
+              contractorAddress: values.contractorAddress || null,
+              contractorCountry: values.contractorCountry || null,
+              contractorRegion: values.contractorRegion || null,
+              contractorCity: values.contractorCity || null,
+              contractorCommune: values.contractorCommune || null,
+            }
+          : null,
+        values.beneficiaryName
+          ? {
+              beneficiaryName: values.beneficiaryName,
+              beneficiaryLastName: values.beneficiaryLastName || null,
+              beneficiaryRut: values.beneficiaryRut || null,
+              beneficiaryEmail: values.beneficiaryEmail || null,
+              beneficiaryCellPhone: values.beneficiaryCellPhone || null,
+              beneficiaryAddress: values.beneficiaryAddress || null,
+              beneficiaryCountry: values.beneficiaryCountry || null,
+              beneficiaryRegion: values.beneficiaryRegion || null,
+              beneficiaryCity: values.beneficiaryCity || null,
+              beneficiaryCommune: values.beneficiaryCommune || null,
+            }
+          : null
       ),
     onSuccess: () => {
       toast.success("Siniestro creado");
       queryClient.invalidateQueries({ queryKey: ["claims"] });
       setOpen(false);
       form.reset();
+      setDocuments([]);
+      setStep(1);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -310,6 +434,51 @@ export default function ClaimsPage() {
 
   const onSubmit = (values: ClaimCreateMinimalInput) => {
     createMutation.mutate(values);
+  };
+
+  const copyInsuredToContractor = () => {
+    form.setValue("contractorName", form.getValues("insuredName") || "");
+    form.setValue("contractorLastName", form.getValues("lastName") || "");
+    form.setValue("contractorRut", form.getValues("rut") || "");
+    form.setValue("contractorEmail", form.getValues("insuredEmail") || "");
+    form.setValue("contractorCellPhone", form.getValues("cellPhone") || "");
+    form.setValue("contractorAddress", form.getValues("claimAddress") || "");
+    form.setValue("contractorCountry", form.getValues("claimCountry") || "");
+    form.setValue("contractorRegion", form.getValues("claimRegion") || "");
+    form.setValue("contractorCity", form.getValues("claimCity") || "");
+    form.setValue("contractorCommune", form.getValues("claimCommune") || "");
+  };
+
+  const copyInsuredToBeneficiary = () => {
+    form.setValue("beneficiaryName", form.getValues("insuredName") || "");
+    form.setValue("beneficiaryLastName", form.getValues("lastName") || "");
+    form.setValue("beneficiaryRut", form.getValues("rut") || "");
+    form.setValue("beneficiaryEmail", form.getValues("insuredEmail") || "");
+    form.setValue("beneficiaryCellPhone", form.getValues("cellPhone") || "");
+    form.setValue("beneficiaryAddress", form.getValues("claimAddress") || "");
+    form.setValue("beneficiaryCountry", form.getValues("claimCountry") || "");
+    form.setValue("beneficiaryRegion", form.getValues("claimRegion") || "");
+    form.setValue("beneficiaryCity", form.getValues("claimCity") || "");
+    form.setValue("beneficiaryCommune", form.getValues("claimCommune") || "");
+  };
+
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).map((file) => ({
+      id: Math.random().toString(36).slice(2),
+      name: file.name.replace(/\.[^/.]+$/, ""),
+      type: "",
+      file,
+    }));
+    setDocuments((prev) => [...prev, ...newFiles]);
+  };
+
+  const removeDocument = (id: string) => {
+    setDocuments((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const updateDocument = (id: string, updates: Partial<DocumentRow>) => {
+    setDocuments((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
   };
 
   const filtered = claims?.filter((c) => {
@@ -382,7 +551,7 @@ export default function ClaimsPage() {
                   c.claim_number, c.liquidation_number || "", c.company_report_number || "", getParticipant(c, 'insured')?.full_name || "",
                   `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", c.status, c.claim_date || ""
                 ].join(",")),
-              ].join("\n");
+              ].join("\\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
               const link = document.createElement("a");
               link.href = URL.createObjectURL(blob);
@@ -392,7 +561,7 @@ export default function ClaimsPage() {
           >
             <Download className="mr-2 h-3.5 w-3.5" /> Exportar CSV
           </Button>
-          <Button onClick={() => { form.reset(); setStep(1); setOpen(true); }} className="btn-create btn-sm">
+          <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setOpen(true); }} className="btn-create btn-sm">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Siniestro
           </Button>
@@ -419,17 +588,31 @@ export default function ClaimsPage() {
               {wizardSteps.map((s, idx) => (
                 <div key={s.id} className="flex items-center flex-1">
                   <div className="flex flex-col items-center gap-1 flex-1">
-                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                      step > s.id ? "bg-emerald-500 text-white" :
-                      step === s.id ? "bg-primary text-primary-foreground" :
-                      "bg-muted text-muted-foreground"
-                    }`}>
+                    <div
+                      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                        step > s.id
+                          ? "bg-emerald-500 text-white"
+                          : step === s.id
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                      }`}
+                    >
                       {step > s.id ? <Check className="h-4 w-4" /> : s.id}
                     </div>
-                    <span className={`text-[11px] font-medium ${step >= s.id ? "text-foreground" : "text-muted-foreground"}`}>{s.label}</span>
+                    <span
+                      className={`text-[11px] font-medium ${
+                        step >= s.id ? "text-foreground" : "text-muted-foreground"
+                      }`}
+                    >
+                      {s.label}
+                    </span>
                   </div>
                   {idx < wizardSteps.length - 1 && (
-                    <div className={`h-px flex-1 mx-2 transition-colors ${step > s.id ? "bg-emerald-400" : "bg-border"}`} />
+                    <div
+                      className={`h-px flex-1 mx-2 transition-colors ${
+                        step > s.id ? "bg-emerald-400" : "bg-border"
+                      }`}
+                    />
                   )}
                 </div>
               ))}
@@ -440,95 +623,261 @@ export default function ClaimsPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label">Empresa (Cliente) <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => form.setValue("companyId", v || "")} value={form.watch("companyId") || undefined}>
-                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+                    <Label className="app-field-label">
+                      Empresa (Cliente) <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={form.watch("companyId") || undefined}
+                      onValueChange={(v) => form.setValue("companyId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Selecciona una empresa" />
+                      </SelectTrigger>
                       <SelectContent>
-                        {companies?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                        {companies?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FieldError message={form.formState.errors.companyId?.message} />
                   </div>
-                </div>
 
-                <SectionTitle>Datos del Siniestro</SectionTitle>
-                <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">N° Siniestro (Compañía) <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("claimNumber")} placeholder="Ej: 12345678" className="app-input h-8" />
+                    <Label className="app-field-label">
+                      Compañía de Seguros <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={form.watch("insuranceCompanyId") || undefined}
+                      onValueChange={(v) => form.setValue("insuranceCompanyId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar compañía..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {insuranceCompaniesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FieldError message={form.formState.errors.insuranceCompanyId?.message} />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">
+                      N° Siniestro (Compañía) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      {...form.register("claimNumber")}
+                      placeholder="Ej: 12345678"
+                      className="app-input h-8"
+                    />
                     <FieldError message={form.formState.errors.claimNumber?.message} />
                   </div>
+
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">N° Póliza <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("policyNumber")} placeholder="Ej: POL-2026-001" className="app-input h-8" />
+                    <Label className="app-field-label">
+                      N° Póliza <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      {...form.register("policyNumber")}
+                      placeholder="Ej: POL-2026-001"
+                      className="app-input h-8"
+                    />
                     <FieldError message={form.formState.errors.policyNumber?.message} />
                   </div>
+
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">N° Liquidación / Interno</Label>
-                    <Input {...form.register("liquidationNumber")} placeholder="Ej: L-0000123" className="app-input h-8" />
+                    <Label className="app-field-label">N° Interno Cliente</Label>
+                    <Input
+                      readOnly
+                      placeholder="MCL-XXXX"
+                      className="app-input h-8 bg-muted/50"
+                      value=""
+                    />
                   </div>
+
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">N° Informe Compañía</Label>
-                    <Input {...form.register("companyReportNumber")} placeholder="Ej: INF-2026-001" className="app-input h-8" />
+                    <Label className="app-field-label">
+                      Fecha Siniestro <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      {...form.register("claimDate")}
+                      type="date"
+                      className="app-input h-7 px-2 text-xs"
+                    />
+                    <FieldError message={form.formState.errors.claimDate?.message} />
                   </div>
+
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Compañía de Seguros</Label>
-                    <Select onValueChange={(v) => form.setValue("insuranceCompanyId", v || "")} value={form.watch("insuranceCompanyId") || undefined}>
-                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar compañía..." /></SelectTrigger>
+                    <Label className="app-field-label">Fecha Asignación</Label>
+                    <Input
+                      {...form.register("assignmentDate")}
+                      type="date"
+                      className="app-input h-7 px-2 text-xs"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Fecha Denuncio</Label>
+                    <Input
+                      {...form.register("reportDate")}
+                      type="date"
+                      className="app-input h-7 px-2 text-xs"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Línea de Negocios</Label>
+                    <Select
+                      value={form.watch("businessLineId") || undefined}
+                      onValueChange={(v) => {
+                        form.setValue("businessLineId", v || "");
+                        form.setValue("insuranceProductId", "");
+                      }}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar línea..." />
+                      </SelectTrigger>
                       <SelectContent>
-                        {insuranceCompaniesCatalog?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                        {businessLinesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Fecha Siniestro <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("claimDate")} type="date" className="app-input h-7 px-2 text-xs" />
-                    <FieldError message={form.formState.errors.claimDate?.message} />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Tipo de Siniestro <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => form.setValue("claimTypeId", v || "")} value={form.watch("claimTypeId") || undefined}>
-                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
+                    <Label className="app-field-label">Ramo/Producto</Label>
+                    <Select
+                      value={form.watch("insuranceProductId") || undefined}
+                      onValueChange={(v) => form.setValue("insuranceProductId", v || "")}
+                      disabled={!selectedBusinessLineId}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar producto..." />
+                      </SelectTrigger>
                       <SelectContent>
-                        {claimTypes?.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>))}
+                        {filteredInsuranceProducts?.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Evento</Label>
+                    <Input
+                      {...form.register("event")}
+                      placeholder="Ej: Incendio estructural"
+                      className="app-input h-8"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">
+                      Tipo de Siniestro <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={form.watch("claimTypeId") || undefined}
+                      onValueChange={(v) => form.setValue("claimTypeId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar tipo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {claimTypes?.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FieldError message={form.formState.errors.claimTypeId?.message} />
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Causal del Siniestro</Label>
-                    <Select onValueChange={(v) => form.setValue("claimCauseId", v || "")} value={form.watch("claimCauseId") || undefined}>
-                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar causal..." /></SelectTrigger>
-                      <SelectContent>
-                        {claimCauses?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label">Resumen</Label>
-                    <textarea {...form.register("summary")} rows={2} className="app-input resize-none" placeholder="Descripción breve del siniestro..." />
-                  </div>
-                </div>
 
-                <SectionTitle>Asignación</SectionTitle>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label">Inspector</Label>
-                    <Select onValueChange={(v) => form.setValue("inspectorId", v || "")} value={form.watch("inspectorId") || undefined}>
-                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar inspector..." /></SelectTrigger>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Asesor</Label>
+                    <Select
+                      value={form.watch("advisorId") || undefined}
+                      onValueChange={(v) => form.setValue("advisorId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar asesor..." />
+                      </SelectTrigger>
                       <SelectContent>
-                        {inspectors?.map((u) => (<SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>))}
+                        {advisorsCatalog?.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label">Liquidador</Label>
-                    <Select onValueChange={(v) => form.setValue("adjusterId", v || "")} value={form.watch("adjusterId") || undefined}>
-                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar liquidador..." /></SelectTrigger>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Corredor</Label>
+                    <Select
+                      value={form.watch("brokerId") || undefined}
+                      onValueChange={(v) => form.setValue("brokerId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar corredor..." />
+                      </SelectTrigger>
                       <SelectContent>
-                        {adjusters?.map((u) => (<SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>))}
+                        {brokersCatalog?.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {b.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">
+                      Inspector <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={form.watch("inspectorId") || undefined}
+                      onValueChange={(v) => form.setValue("inspectorId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar inspector..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {inspectors?.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.full_name || u.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FieldError message={form.formState.errors.inspectorId?.message} />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Ajustador / Liquidador</Label>
+                    <Select
+                      value={form.watch("adjusterId") || undefined}
+                      onValueChange={(v) => form.setValue("adjusterId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar ajustador..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {adjusters?.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.full_name || u.email}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -539,77 +888,581 @@ export default function ClaimsPage() {
             {/* PASO 2: DETALLES INCIDENTE */}
             {step === 2 && (
               <div className="space-y-4">
+                {/* Incidente */}
+                <SectionTitle>Incidente</SectionTitle>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Causal del Siniestro</Label>
+                    <Select
+                      value={form.watch("claimCauseId") || undefined}
+                      onValueChange={(v) => form.setValue("claimCauseId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar causal..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {claimCauses?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Tipo de Construcción</Label>
+                    <Select
+                      value={form.watch("constructionTypeId") || undefined}
+                      onValueChange={(v) => form.setValue("constructionTypeId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar tipo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {constructionTypesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Habitabilidad</Label>
+                    <Select
+                      value={form.watch("habitabilityId") || undefined}
+                      onValueChange={(v) => form.setValue("habitabilityId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar habitabilidad..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {habitabilityCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Destino</Label>
+                    <Select
+                      value={form.watch("destinationHousingId") || undefined}
+                      onValueChange={(v) => form.setValue("destinationHousingId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar destino..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {housingDestinationsCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Asegurado/Propietario</Label>
+                    <Select
+                      value={form.watch("propertyClassificationId") || undefined}
+                      onValueChange={(v) => form.setValue("propertyClassificationId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar clasificación..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {propertyClassificationsCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Clasificación del Daño</Label>
+                    <Select
+                      value={form.watch("damageClassificationId") || undefined}
+                      onValueChange={(v) => form.setValue("damageClassificationId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar clasificación..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {damageClassificationsCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1 col-span-full">
+                    <Label className="app-field-label">Resumen</Label>
+                    <textarea
+                      {...form.register("summary")}
+                      rows={2}
+                      className="app-input resize-none"
+                      placeholder="Descripción breve del siniestro..."
+                    />
+                  </div>
+
+                  <div className="col-span-full flex items-center gap-2">
+                    <input
+                      id="ownerSameAsInsured"
+                      type="checkbox"
+                      {...form.register("ownerSameAsInsured")}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                    <Label htmlFor="ownerSameAsInsured" className="text-[13px]">
+                      Mismo asegurado es propietario
+                    </Label>
+                  </div>
+                </div>
+
+                {/* Asegurado */}
                 <SectionTitle>Asegurado</SectionTitle>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("insuredName")} placeholder="Cristian" className="app-input h-8" />
+                    <Label className="app-field-label">RUT</Label>
+                    <Input
+                      {...form.register("rut")}
+                      placeholder="14185994k"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">
+                      Nombre <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      {...form.register("insuredName")}
+                      placeholder="Cristian"
+                      className="app-input h-8"
+                    />
                     <FieldError message={form.formState.errors.insuredName?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Apellido</Label>
-                    <Input {...form.register("lastName")} placeholder="Zárate" className="app-input h-8" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">RUT</Label>
-                    <Input {...form.register("rut")} placeholder="14185994k" className="app-input h-8" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Celular <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("cellPhone")} placeholder="9 9999 9999" className="app-input h-8" />
-                    <FieldError message={form.formState.errors.cellPhone?.message} />
+                    <Input
+                      {...form.register("lastName")}
+                      placeholder="Zárate"
+                      className="app-input h-8"
+                    />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Email</Label>
-                    <Input {...form.register("insuredEmail")} type="email" placeholder="asegurado@email.com" className="app-input h-8" />
+                    <Input
+                      {...form.register("insuredEmail")}
+                      type="email"
+                      placeholder="asegurado@email.com"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">
+                      Celular <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      {...form.register("cellPhone")}
+                      placeholder="9 9999 9999"
+                      className="app-input h-8"
+                    />
+                    <FieldError message={form.formState.errors.cellPhone?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Teléfono</Label>
-                    <Input {...form.register("insuredPhone")} placeholder="X XXXX XXXX" className="app-input h-8" />
+                    <Input
+                      {...form.register("insuredPhone")}
+                      placeholder="X XXXX XXXX"
+                      className="app-input h-8"
+                    />
                   </div>
                 </div>
 
-                <SectionTitle>Ubicación del Siniestro</SectionTitle>
+                {/* Dirección del Siniestro */}
+                <SectionTitle>Dirección del Siniestro</SectionTitle>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label">Dirección <span className="text-red-500">*</span></Label>
-                    <Input {...form.register("address")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-8" />
-                    <FieldError message={form.formState.errors.address?.message} />
+                    <Label className="app-field-label">
+                      Dirección <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      {...form.register("claimAddress")}
+                      placeholder="Av. Ricardo Lyon 1351"
+                      className="app-input h-8"
+                    />
+                    <FieldError message={form.formState.errors.claimAddress?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">País</Label>
-                    <Select onValueChange={(v) => { form.setValue("country", v || ""); form.setValue("region", ""); form.setValue("city", ""); form.setValue("commune", ""); }} value={form.watch("country") || undefined}>
-                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar país..." /></SelectTrigger>
+                    <Select
+                      value={form.watch("claimCountry") || undefined}
+                      onValueChange={(v) => {
+                        form.setValue("claimCountry", v || "");
+                        form.setValue("claimRegion", "");
+                        form.setValue("claimCity", "");
+                        form.setValue("claimCommune", "");
+                      }}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar país..." />
+                      </SelectTrigger>
                       <SelectContent>
-                        {countriesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                        {countriesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Región</Label>
-                    <Select onValueChange={(v) => { form.setValue("region", v || ""); form.setValue("city", ""); form.setValue("commune", ""); }} value={form.watch("region") || undefined} disabled={!selectedCountry}>
-                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar región..." /></SelectTrigger>
+                    <Select
+                      value={form.watch("claimRegion") || undefined}
+                      onValueChange={(v) => {
+                        form.setValue("claimRegion", v || "");
+                        form.setValue("claimCity", "");
+                        form.setValue("claimCommune", "");
+                      }}
+                      disabled={!selectedClaimCountry}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar región..." />
+                      </SelectTrigger>
                       <SelectContent>
-                        {regionsCatalog?.map((r) => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
+                        {regionsCatalog?.map((r) => (
+                          <SelectItem key={r.id} value={r.name}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Ciudad <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => { form.setValue("city", v || ""); form.setValue("commune", ""); }} value={form.watch("city") || undefined} disabled={!selectedRegion}>
-                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar ciudad..." /></SelectTrigger>
+                    <Label className="app-field-label">
+                      Ciudad <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={form.watch("claimCity") || undefined}
+                      onValueChange={(v) => {
+                        form.setValue("claimCity", v || "");
+                        form.setValue("claimCommune", "");
+                      }}
+                      disabled={!selectedClaimRegion}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar ciudad..." />
+                      </SelectTrigger>
                       <SelectContent>
-                        {citiesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                        {citiesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    <FieldError message={form.formState.errors.city?.message} />
+                    <FieldError message={form.formState.errors.claimCity?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Comuna</Label>
-                    <Select onValueChange={(v) => form.setValue("commune", v || "")} value={form.watch("commune") || undefined} disabled={!selectedCity}>
-                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar comuna..." /></SelectTrigger>
+                    <Select
+                      value={form.watch("claimCommune") || undefined}
+                      onValueChange={(v) => form.setValue("claimCommune", v || "")}
+                      disabled={!selectedClaimCity}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar comuna..." />
+                      </SelectTrigger>
                       <SelectContent>
-                        {communesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                        {communesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Contratante */}
+                <SectionTitle>Contratante</SectionTitle>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={copyInsuredToContractor}
+                  >
+                    Copiar de Asegurado
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">RUT</Label>
+                    <Input
+                      {...form.register("contractorRut")}
+                      placeholder="14185994k"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Nombre</Label>
+                    <Input
+                      {...form.register("contractorName")}
+                      placeholder="Cristian"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Apellido</Label>
+                    <Input
+                      {...form.register("contractorLastName")}
+                      placeholder="Zárate"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Email</Label>
+                    <Input
+                      {...form.register("contractorEmail")}
+                      type="email"
+                      placeholder="contratante@email.com"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Celular</Label>
+                    <Input
+                      {...form.register("contractorCellPhone")}
+                      placeholder="9 9999 9999"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 col-span-full">
+                    <Label className="app-field-label">Dirección</Label>
+                    <Input
+                      {...form.register("contractorAddress")}
+                      placeholder="Av. Ricardo Lyon 1351"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">País</Label>
+                    <Select
+                      value={form.watch("contractorCountry") || undefined}
+                      onValueChange={(v) => form.setValue("contractorCountry", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar país..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countriesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Región</Label>
+                    <Select
+                      value={form.watch("contractorRegion") || undefined}
+                      onValueChange={(v) => form.setValue("contractorRegion", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar región..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {regionsCatalog?.map((r) => (
+                          <SelectItem key={r.id} value={r.name}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Ciudad</Label>
+                    <Select
+                      value={form.watch("contractorCity") || undefined}
+                      onValueChange={(v) => form.setValue("contractorCity", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar ciudad..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {citiesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Comuna</Label>
+                    <Select
+                      value={form.watch("contractorCommune") || undefined}
+                      onValueChange={(v) => form.setValue("contractorCommune", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar comuna..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {communesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Beneficiario */}
+                <SectionTitle>Beneficiario</SectionTitle>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={copyInsuredToBeneficiary}
+                  >
+                    Copiar de Asegurado
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">RUT</Label>
+                    <Input
+                      {...form.register("beneficiaryRut")}
+                      placeholder="14185994k"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Nombre</Label>
+                    <Input
+                      {...form.register("beneficiaryName")}
+                      placeholder="Cristian"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Apellido</Label>
+                    <Input
+                      {...form.register("beneficiaryLastName")}
+                      placeholder="Zárate"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Email</Label>
+                    <Input
+                      {...form.register("beneficiaryEmail")}
+                      type="email"
+                      placeholder="beneficiario@email.com"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Celular</Label>
+                    <Input
+                      {...form.register("beneficiaryCellPhone")}
+                      placeholder="9 9999 9999"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 col-span-full">
+                    <Label className="app-field-label">Dirección</Label>
+                    <Input
+                      {...form.register("beneficiaryAddress")}
+                      placeholder="Av. Ricardo Lyon 1351"
+                      className="app-input h-8"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">País</Label>
+                    <Select
+                      value={form.watch("beneficiaryCountry") || undefined}
+                      onValueChange={(v) => form.setValue("beneficiaryCountry", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar país..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countriesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Región</Label>
+                    <Select
+                      value={form.watch("beneficiaryRegion") || undefined}
+                      onValueChange={(v) => form.setValue("beneficiaryRegion", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar región..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {regionsCatalog?.map((r) => (
+                          <SelectItem key={r.id} value={r.name}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Ciudad</Label>
+                    <Select
+                      value={form.watch("beneficiaryCity") || undefined}
+                      onValueChange={(v) => form.setValue("beneficiaryCity", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar ciudad..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {citiesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Comuna</Label>
+                    <Select
+                      value={form.watch("beneficiaryCommune") || undefined}
+                      onValueChange={(v) => form.setValue("beneficiaryCommune", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar comuna..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {communesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -621,23 +1474,100 @@ export default function ClaimsPage() {
             {step === 3 && (
               <div className="space-y-4">
                 <SectionTitle>Documentos Soporte</SectionTitle>
-                <div className="border rounded-xl border-dashed p-10 text-center">
+                <div
+                  className={`border rounded-xl border-dashed p-10 text-center transition-colors ${
+                    dragOver ? "border-primary bg-primary/5" : "border-border"
+                  }`}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files); }}
+                >
                   <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground text-[13px]">Arrastra archivo(s) o haz clic para seleccionarlos</p>
-                  <p className="text-muted-foreground text-xs mt-1">Acepta archivos PDF, Word y Excel de hasta 10 MB</p>
+                  <p className="text-muted-foreground text-[13px]">
+                    Arrastra archivo(s) aquí o{" "}
+                    <label className="cursor-pointer text-primary hover:underline">
+                      haz clic para seleccionar
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => handleFileSelect(e.target.files)}
+                      />
+                    </label>
+                  </p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Acepta archivos PDF, Word y Excel de hasta 10 MB
+                  </p>
                 </div>
-                <table className="w-full text-[13px]">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 px-3">Nombre de documento</th>
-                      <th className="text-left py-2 px-3">Tipo de documento</th>
-                      <th className="text-left py-2 px-3">Nombre de archivo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr><td colSpan={3} className="text-center text-muted-foreground py-6">No hay documentos cargados.</td></tr>
-                  </tbody>
-                </table>
+
+                <div className="app-data-table-wrap">
+                  <table className="app-data-table">
+                    <thead>
+                      <tr>
+                        <th className="text-left">Nombre de documento</th>
+                        <th className="text-left">Tipo de documento</th>
+                        <th className="text-left">Nombre de archivo</th>
+                        <th className="w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {documents.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="text-center text-muted-foreground py-6">
+                            No hay documentos cargados.
+                          </td>
+                        </tr>
+                      ) : (
+                        documents.map((doc) => (
+                          <tr key={doc.id}>
+                            <td>
+                              <Input
+                                value={doc.name}
+                                onChange={(e) =>
+                                  updateDocument(doc.id, { name: e.target.value })
+                                }
+                                className="h-8 text-[13px]"
+                                placeholder="Nombre de documento"
+                              />
+                            </td>
+                            <td>
+                              <Select
+                                value={doc.type || undefined}
+                                onValueChange={(v) =>
+                                  updateDocument(doc.id, { type: v || "" })
+                                }
+                              >
+                                <SelectTrigger className="h-8 text-[13px]">
+                                  <SelectValue placeholder="Tipo..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {documentTypesCatalog?.map((t) => (
+                                    <SelectItem key={t.id} value={t.id}>
+                                      {t.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="text-[13px] text-muted-foreground truncate max-w-[180px]">
+                              {doc.file.name}
+                            </td>
+                            <td>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="btn-danger btn-icon"
+                                onClick={() => removeDocument(doc.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

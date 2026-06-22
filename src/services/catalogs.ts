@@ -16,6 +16,8 @@ import type {
   HousingDestination,
   BuildingAge,
   Relationship,
+  LookupCatalog,
+  Country,
 } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -744,4 +746,36 @@ export async function updateRelationship(id: string, input: Partial<Relationship
 
 export async function deleteRelationship(id: string) {
   return updateRelationship(id, { is_active: false });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOOKUP CATALOG (generic by category)
+// ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// COUNTRIES
+// ═══════════════════════════════════════════════════════════════
+
+export async function getCountries() {
+  const query = `
+    query GetCountries {
+      countries(order_by: { name: asc }) {
+        id code name phone_prefix created_at
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ countries: Country[] }>(query);
+  return data.countries;
+}
+
+export async function getLookupCatalog(category: string) {
+  const query = `
+    query GetLookupCatalog($category: String!) {
+      lookup_catalog(where: { category: { _eq: $category }, is_active: { _eq: true } }, order_by: { sort_order: asc, name: asc }) {
+        id country_id category code name description sort_order is_active
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ lookup_catalog: LookupCatalog[] }>(query, { category });
+  return data.lookup_catalog;
 }

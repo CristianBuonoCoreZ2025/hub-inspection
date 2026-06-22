@@ -193,14 +193,29 @@ export async function createClaimMinimal(
     claimNumber: string;
     policyNumber: string;
     claimDate: string;
+    clientReference?: string | null;
+    assignmentDate?: string | null;
+    reportDate?: string | null;
     summary?: string | null;
     inspectorId?: string | null;
     adjusterId?: string | null;
+    auditorId?: string | null;
+    dispatcherId?: string | null;
+    assistantId?: string | null;
     insuranceCompanyId?: string | null;
     claimTypeId?: string | null;
     claimCauseId?: string | null;
-    liquidationNumber?: string | null;
-    companyReportNumber?: string | null;
+    businessLineId?: string | null;
+    insuranceProductId?: string | null;
+    advisorId?: string | null;
+    brokerId?: string | null;
+    event?: string | null;
+    constructionTypeId?: string | null;
+    habitabilityId?: string | null;
+    destinationHousingId?: string | null;
+    damageClassificationId?: string | null;
+    propertyClassificationId?: string | null;
+    ownerSameAsInsured?: boolean | null;
     company_id: string;
   },
   insured: {
@@ -210,11 +225,13 @@ export async function createClaimMinimal(
     insuredEmail?: string | null;
     insuredPhone?: string | null;
     cellPhone: string;
-    address: string;
-    country?: string | null;
-    region?: string | null;
-    city: string;
-    commune?: string | null;
+  },
+  claimAddress: {
+    claimAddress: string;
+    claimCountry?: string | null;
+    claimRegion?: string | null;
+    claimCity: string;
+    claimCommune?: string | null;
   },
   contractor?: {
     contractorName: string;
@@ -255,15 +272,35 @@ export async function createClaimMinimal(
       claim_number: input.claimNumber,
       policy_number: input.policyNumber,
       claim_date: input.claimDate,
+      client_reference: input.clientReference || null,
+      assignment_date: input.assignmentDate || null,
+      report_date: input.reportDate || null,
       status: "created" as ClaimStatus,
       summary: input.summary || null,
       inspector_id: input.inspectorId || null,
       adjuster_id: input.adjusterId || null,
+      auditor_id: input.auditorId || null,
+      dispatcher_id: input.dispatcherId || null,
+      assistant_id: input.assistantId || null,
       insurance_company_id: input.insuranceCompanyId || null,
       claim_type_id: input.claimTypeId || null,
       claim_cause_id: input.claimCauseId || null,
-      liquidation_number: input.liquidationNumber || null,
-      company_report_number: input.companyReportNumber || null,
+      business_line_id: input.businessLineId || null,
+      insurance_product_id: input.insuranceProductId || null,
+      advisor_id: input.advisorId || null,
+      broker_id: input.brokerId || null,
+      event: input.event || null,
+      construction_type_id: input.constructionTypeId || null,
+      habitability_id: input.habitabilityId || null,
+      destination_housing_id: input.destinationHousingId || null,
+      damage_classification_id: input.damageClassificationId || null,
+      property_classification_id: input.propertyClassificationId || null,
+      owner_same_as_insured: input.ownerSameAsInsured ?? null,
+      claim_address: claimAddress.claimAddress,
+      claim_country: claimAddress.claimCountry || null,
+      claim_region: claimAddress.claimRegion || null,
+      claim_city: claimAddress.claimCity,
+      claim_commune: claimAddress.claimCommune || null,
       company_id: input.company_id,
     },
   });
@@ -280,11 +317,11 @@ export async function createClaimMinimal(
     email: insured.insuredEmail || null,
     phone: insured.insuredPhone || null,
     cell_phone: insured.cellPhone,
-    address: insured.address,
-    country: insured.country || null,
-    region: insured.region || null,
-    city: insured.city,
-    commune: insured.commune || null,
+    address: claimAddress.claimAddress,
+    country: claimAddress.claimCountry || null,
+    region: claimAddress.claimRegion || null,
+    city: claimAddress.claimCity,
+    commune: claimAddress.claimCommune || null,
   });
 
   // 3. Crear participant contractor (si existe)
