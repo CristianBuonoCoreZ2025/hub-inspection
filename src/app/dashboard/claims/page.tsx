@@ -441,7 +441,7 @@ export default function ClaimsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1 col-span-full">
                     <Label className="app-field-label">Empresa (Cliente) <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} value={form.watch("companyId")}>
+                    <Select onValueChange={(v) => form.setValue("companyId", v || "")} value={form.watch("companyId") || undefined}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
                       <SelectContent>
                         {companies?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
@@ -473,10 +473,9 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Compañía de Seguros</Label>
-                    <Select onValueChange={(v) => form.setValue("insuranceCompanyId", v ?? "")} value={form.watch("insuranceCompanyId") || ""}>
+                    <Select onValueChange={(v) => form.setValue("insuranceCompanyId", v || "")} value={form.watch("insuranceCompanyId") || undefined}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar compañía..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">— Sin seleccionar —</SelectItem>
                         {insuranceCompaniesCatalog?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                       </SelectContent>
                     </Select>
@@ -488,10 +487,9 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Tipo de Siniestro <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => form.setValue("claimTypeId", v ?? "")} value={form.watch("claimTypeId") || ""}>
+                    <Select onValueChange={(v) => form.setValue("claimTypeId", v || "")} value={form.watch("claimTypeId") || undefined}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">— Sin seleccionar —</SelectItem>
                         {claimTypes?.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>))}
                       </SelectContent>
                     </Select>
@@ -499,10 +497,9 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Causal del Siniestro</Label>
-                    <Select onValueChange={(v) => form.setValue("claimCauseId", v ?? "")} value={form.watch("claimCauseId") || ""}>
+                    <Select onValueChange={(v) => form.setValue("claimCauseId", v || "")} value={form.watch("claimCauseId") || undefined}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar causal..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">— Sin seleccionar —</SelectItem>
                         {claimCauses?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                       </SelectContent>
                     </Select>
@@ -519,20 +516,18 @@ export default function ClaimsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1 col-span-full">
                     <Label className="app-field-label">Inspector</Label>
-                    <Select onValueChange={(v) => form.setValue("inspectorId", v ?? "")} value={form.watch("inspectorId") || ""}>
+                    <Select onValueChange={(v) => form.setValue("inspectorId", v || "")} value={form.watch("inspectorId") || undefined}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar inspector..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">— Sin asignar —</SelectItem>
                         {inspectors?.map((u) => (<SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1 col-span-full">
                     <Label className="app-field-label">Liquidador</Label>
-                    <Select onValueChange={(v) => form.setValue("adjusterId", v ?? "")} value={form.watch("adjusterId") || ""}>
+                    <Select onValueChange={(v) => form.setValue("adjusterId", v || "")} value={form.watch("adjusterId") || undefined}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar liquidador..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">— Sin asignar —</SelectItem>
                         {adjusters?.map((u) => (<SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>))}
                       </SelectContent>
                     </Select>
@@ -583,30 +578,27 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">País</Label>
-                    <Select onValueChange={(v) => { form.setValue("country", v ?? ""); form.setValue("region", ""); form.setValue("city", ""); form.setValue("commune", ""); }} value={form.getValues("country") || ""}>
+                    <Select onValueChange={(v) => { form.setValue("country", v || ""); form.setValue("region", ""); form.setValue("city", ""); form.setValue("commune", ""); }} value={form.watch("country") || undefined}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar país..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">— Sin seleccionar —</SelectItem>
                         {countriesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Región</Label>
-                    <Select onValueChange={(v) => { form.setValue("region", v ?? ""); form.setValue("city", ""); form.setValue("commune", ""); }} value={form.getValues("region") || ""} disabled={!selectedCountry}>
+                    <Select onValueChange={(v) => { form.setValue("region", v || ""); form.setValue("city", ""); form.setValue("commune", ""); }} value={form.watch("region") || undefined} disabled={!selectedCountry}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar región..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">— Sin seleccionar —</SelectItem>
                         {regionsCatalog?.map((r) => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Ciudad <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => { form.setValue("city", v ?? ""); form.setValue("commune", ""); }} value={form.getValues("city") || ""} disabled={!selectedRegion}>
+                    <Select onValueChange={(v) => { form.setValue("city", v || ""); form.setValue("commune", ""); }} value={form.watch("city") || undefined} disabled={!selectedRegion}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar ciudad..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">— Sin seleccionar —</SelectItem>
                         {citiesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -614,10 +606,9 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Comuna</Label>
-                    <Select onValueChange={(v) => form.setValue("commune", v ?? "")} value={form.getValues("commune") || ""} disabled={!selectedCity}>
+                    <Select onValueChange={(v) => form.setValue("commune", v || "")} value={form.watch("commune") || undefined} disabled={!selectedCity}>
                       <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar comuna..." /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">— Sin seleccionar —</SelectItem>
                         {communesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
