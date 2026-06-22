@@ -80,7 +80,7 @@ export default function LandingPage() {
             <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <ShieldCheck className="size-5" />
             </div>
-            <span className="font-heading text-lg font-semibold tracking-tight">Hub Inspections</span>
+            <span className="font-heading text-lg font-semibold tracking-tight">Claims Hub</span>
           </Link>
 
           <nav className="hidden items-center gap-8 md:flex">
@@ -117,8 +117,8 @@ export default function LandingPage() {
                 Claims Lifecycle Management Platform
               </div>
               <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                Inspecciones Remotas para{" "}
-                <span className="text-primary">Siniestros Domiciliarios</span>
+                Gestión Integral de{" "}
+                <span className="text-primary">Siniestros</span>
               </h1>
               <p className="max-w-xl text-lg text-muted-foreground">
                 La plataforma digital para la gestión integral del ciclo de vida de un siniestro. Desde la apertura hasta la liquidación.
@@ -142,7 +142,7 @@ export default function LandingPage() {
                         <span className="size-3 rounded-full bg-amber-400" />
                         <span className="size-3 rounded-full bg-emerald-400" />
                       </div>
-                      <span className="ml-2 text-xs text-muted-foreground">Sala de Inspección · Hub Inspections</span>
+                      <span className="ml-2 text-xs text-muted-foreground">Sala de Inspección · Claims Hub</span>
                     </div>
                     <div className="flex flex-1">
                       <div className="w-2/3 border-r p-4">
@@ -252,7 +252,7 @@ export default function LandingPage() {
             Transforma tu proceso de liquidación hoy
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Únete a las aseguradoras que ya confían en Hub Inspections para agilizar sus operaciones.
+            Únete a las aseguradoras que ya confían en Claims Hub Platform para transformar la gestión de siniestros.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Button size="lg" onClick={() => window.location.href='/register'}>
@@ -274,10 +274,10 @@ export default function LandingPage() {
                 <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <ShieldCheck className="size-5" />
                 </div>
-                <span className="font-heading text-base font-semibold">Hub Inspections</span>
+                <span className="font-heading text-base font-semibold">Claims Hub</span>
               </Link>
               <p className="mt-4 text-sm text-muted-foreground">
-                Inspecciones remotas para siniestros domiciliarios. Seguro, rápido y escalable.
+                Plataforma empresarial para la gestión integral del ciclo de vida de siniestros.
               </p>
             </div>
             <div>
@@ -305,7 +305,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="mt-12 border-t pt-8 text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Hub Inspections. Todos los derechos reservados.
+            © {new Date().getFullYear()} Claims Hub Platform. Todos los derechos reservados.
           </div>
         </div>
       </footer>
