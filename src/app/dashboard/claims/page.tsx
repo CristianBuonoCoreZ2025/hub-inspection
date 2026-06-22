@@ -25,7 +25,7 @@ import {
 } from "@/services/catalogs";
 import { claimCreateMinimalSchema, type ClaimCreateMinimalInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload } from "lucide-react";
 import { createInspectionSession } from "@/services/inspections";
@@ -216,10 +216,10 @@ export default function ClaimsPage() {
     queryFn: () => getUsers(),
   });
 
-  const selectedCompanyId = form.watch("companyId");
-  const selectedClaimCountry = form.watch("claimCountry");
-  const selectedClaimRegion = form.watch("claimRegion");
-  const selectedClaimCity = form.watch("claimCity");
+  const selectedCompanyId = useWatch({ control: form.control, name: "companyId" });
+  const selectedClaimCountry = useWatch({ control: form.control, name: "claimCountry" });
+  const selectedClaimRegion = useWatch({ control: form.control, name: "claimRegion" });
+  const selectedClaimCity = useWatch({ control: form.control, name: "claimCity" });
 
   const inspectors = users
     ?.filter((u) => u.role === "inspector" && (!selectedCompanyId || u.company_id === selectedCompanyId))
@@ -330,7 +330,7 @@ export default function ClaimsPage() {
     enabled: !!selectedClaimCity && !!citiesCatalog,
   });
 
-  const selectedBusinessLineId = form.watch("businessLineId");
+  const selectedBusinessLineId = useWatch({ control: form.control, name: "businessLineId" });
   const filteredInsuranceProducts = insuranceProductsCatalog?.filter(
     (p) => !selectedBusinessLineId || p.business_line_id === selectedBusinessLineId
   );
@@ -629,7 +629,7 @@ export default function ClaimsPage() {
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Empresa (Cliente) <span className="text-red-500">*</span>
                     </Label>
                     <Select
@@ -651,7 +651,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Compañía de Seguros <span className="text-red-500">*</span>
                     </Label>
                     <Select
@@ -673,7 +673,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       N° Siniestro (Compañía) <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -685,7 +685,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       N° Póliza <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -697,7 +697,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">N° Interno Cliente</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">N° Interno Cliente</Label>
                     <Input
                       readOnly
                       placeholder="MCL-XXXX"
@@ -707,7 +707,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Fecha Siniestro <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -719,7 +719,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Fecha Asignación</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Fecha Asignación</Label>
                     <Input
                       {...form.register("assignmentDate")}
                       type="date"
@@ -728,7 +728,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Fecha Denuncio</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Fecha Denuncio</Label>
                     <Input
                       {...form.register("reportDate")}
                       type="date"
@@ -737,7 +737,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Línea de Negocios</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Línea de Negocios</Label>
                     <Select
                       value={form.watch("businessLineId") || ""}
                       onValueChange={(v) => {
@@ -759,7 +759,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Ramo/Producto</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Ramo/Producto</Label>
                     <Select
                       value={form.watch("insuranceProductId") || ""}
                       onValueChange={(v) => form.setValue("insuranceProductId", v || "")}
@@ -779,7 +779,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Evento</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Evento</Label>
                     <Select
                       value={form.watch("eventId") || ""}
                       onValueChange={(v) => form.setValue("eventId", v || "")}
@@ -798,7 +798,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Tipo de Siniestro <span className="text-red-500">*</span>
                     </Label>
                     <Select
@@ -820,7 +820,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Asesor</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Asesor</Label>
                     <Select
                       value={form.watch("advisorId") || ""}
                       onValueChange={(v) => form.setValue("advisorId", v || "")}
@@ -839,7 +839,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Corredor</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Corredor</Label>
                     <Select
                       value={form.watch("brokerId") || ""}
                       onValueChange={(v) => form.setValue("brokerId", v || "")}
@@ -858,7 +858,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Inspector <span className="text-red-500">*</span>
                     </Label>
                     <Select
@@ -880,7 +880,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Ajustador / Liquidador</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Ajustador / Liquidador</Label>
                     <Select
                       value={form.watch("adjusterId") || ""}
                       onValueChange={(v) => form.setValue("adjusterId", v || "")}
@@ -908,7 +908,7 @@ export default function ClaimsPage() {
                 <SectionTitle>Incidente</SectionTitle>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Causal del Siniestro</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Causal del Siniestro</Label>
                     <Select
                       value={form.watch("claimCauseId") || ""}
                       onValueChange={(v) => form.setValue("claimCauseId", v || "")}
@@ -927,7 +927,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Tipo de Construcción</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Tipo de Construcción</Label>
                     <Select
                       value={form.watch("constructionTypeId") || ""}
                       onValueChange={(v) => form.setValue("constructionTypeId", v || "")}
@@ -946,7 +946,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Habitabilidad</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Habitabilidad</Label>
                     <Select
                       value={form.watch("habitabilityId") || ""}
                       onValueChange={(v) => form.setValue("habitabilityId", v || "")}
@@ -965,7 +965,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Destino</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Destino</Label>
                     <Select
                       value={form.watch("destinationHousingId") || ""}
                       onValueChange={(v) => form.setValue("destinationHousingId", v || "")}
@@ -984,7 +984,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Asegurado/Propietario</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Asegurado/Propietario</Label>
                     <Select
                       value={form.watch("propertyClassificationId") || ""}
                       onValueChange={(v) => form.setValue("propertyClassificationId", v || "")}
@@ -1003,7 +1003,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Clasificación del Daño</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Clasificación del Daño</Label>
                     <Select
                       value={form.watch("damageClassificationId") || ""}
                       onValueChange={(v) => form.setValue("damageClassificationId", v || "")}
@@ -1022,7 +1022,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Resumen</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Resumen</Label>
                     <textarea
                       {...form.register("summary")}
                       rows={2}
@@ -1048,7 +1048,7 @@ export default function ClaimsPage() {
                 <SectionTitle>Asegurado</SectionTitle>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">RUT</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">RUT</Label>
                     <Input
                       {...form.register("rut")}
                       placeholder="14185994k"
@@ -1056,7 +1056,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Nombre <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -1067,7 +1067,7 @@ export default function ClaimsPage() {
                     <FieldError message={form.formState.errors.insuredName?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Apellido</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Apellido</Label>
                     <Input
                       {...form.register("lastName")}
                       placeholder="Zárate"
@@ -1075,7 +1075,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Email</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Email</Label>
                     <Input
                       {...form.register("insuredEmail")}
                       type="email"
@@ -1084,7 +1084,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Celular <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -1095,7 +1095,7 @@ export default function ClaimsPage() {
                     <FieldError message={form.formState.errors.cellPhone?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Teléfono</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Teléfono</Label>
                     <Input
                       {...form.register("insuredPhone")}
                       placeholder="X XXXX XXXX"
@@ -1108,7 +1108,7 @@ export default function ClaimsPage() {
                 <SectionTitle>Dirección del Siniestro</SectionTitle>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Dirección <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -1119,7 +1119,7 @@ export default function ClaimsPage() {
                     <FieldError message={form.formState.errors.claimAddress?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">País</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">País</Label>
                     <Select
                       value={form.watch("claimCountry") || ""}
                       onValueChange={(v) => {
@@ -1142,7 +1142,7 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Región</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Región</Label>
                     <Select
                       value={form.watch("claimRegion") || ""}
                       onValueChange={(v) => {
@@ -1165,7 +1165,7 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">
                       Ciudad <span className="text-red-500">*</span>
                     </Label>
                     <Select
@@ -1190,7 +1190,7 @@ export default function ClaimsPage() {
                     <FieldError message={form.formState.errors.claimCity?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Comuna</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Comuna</Label>
                     <Select
                       value={form.watch("claimCommune") || ""}
                       onValueChange={(v) => form.setValue("claimCommune", v || "")}
@@ -1225,7 +1225,7 @@ export default function ClaimsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">RUT</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">RUT</Label>
                     <Input
                       {...form.register("contractorRut")}
                       placeholder="14185994k"
@@ -1233,7 +1233,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Nombre</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Nombre</Label>
                     <Input
                       {...form.register("contractorName")}
                       placeholder="Cristian"
@@ -1241,7 +1241,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Apellido</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Apellido</Label>
                     <Input
                       {...form.register("contractorLastName")}
                       placeholder="Zárate"
@@ -1249,7 +1249,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Email</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Email</Label>
                     <Input
                       {...form.register("contractorEmail")}
                       type="email"
@@ -1258,7 +1258,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Celular</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Celular</Label>
                     <Input
                       {...form.register("contractorCellPhone")}
                       placeholder="9 9999 9999"
@@ -1266,7 +1266,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Dirección</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Dirección</Label>
                     <Input
                       {...form.register("contractorAddress")}
                       placeholder="Av. Ricardo Lyon 1351"
@@ -1274,7 +1274,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">País</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">País</Label>
                     <Select
                       value={form.watch("contractorCountry") || ""}
                       onValueChange={(v) => form.setValue("contractorCountry", v || "")}
@@ -1292,7 +1292,7 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Región</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Región</Label>
                     <Select
                       value={form.watch("contractorRegion") || ""}
                       onValueChange={(v) => form.setValue("contractorRegion", v || "")}
@@ -1310,7 +1310,7 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Ciudad</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Ciudad</Label>
                     <Select
                       value={form.watch("contractorCity") || ""}
                       onValueChange={(v) => form.setValue("contractorCity", v || "")}
@@ -1328,7 +1328,7 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Comuna</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Comuna</Label>
                     <Select
                       value={form.watch("contractorCommune") || ""}
                       onValueChange={(v) => form.setValue("contractorCommune", v || "")}
@@ -1362,7 +1362,7 @@ export default function ClaimsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">RUT</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">RUT</Label>
                     <Input
                       {...form.register("beneficiaryRut")}
                       placeholder="14185994k"
@@ -1370,7 +1370,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Nombre</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Nombre</Label>
                     <Input
                       {...form.register("beneficiaryName")}
                       placeholder="Cristian"
@@ -1378,7 +1378,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Apellido</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Apellido</Label>
                     <Input
                       {...form.register("beneficiaryLastName")}
                       placeholder="Zárate"
@@ -1386,7 +1386,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Email</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Email</Label>
                     <Input
                       {...form.register("beneficiaryEmail")}
                       type="email"
@@ -1395,7 +1395,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Celular</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Celular</Label>
                     <Input
                       {...form.register("beneficiaryCellPhone")}
                       placeholder="9 9999 9999"
@@ -1403,7 +1403,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Dirección</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Dirección</Label>
                     <Input
                       {...form.register("beneficiaryAddress")}
                       placeholder="Av. Ricardo Lyon 1351"
@@ -1411,7 +1411,7 @@ export default function ClaimsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">País</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">País</Label>
                     <Select
                       value={form.watch("beneficiaryCountry") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryCountry", v || "")}
@@ -1429,7 +1429,7 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Región</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Región</Label>
                     <Select
                       value={form.watch("beneficiaryRegion") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryRegion", v || "")}
@@ -1447,7 +1447,7 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Ciudad</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Ciudad</Label>
                     <Select
                       value={form.watch("beneficiaryCity") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryCity", v || "")}
@@ -1465,7 +1465,7 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Comuna</Label>
+                    <Label className="app-field-label text-[10px]! leading-tight! py-0!">Comuna</Label>
                     <Select
                       value={form.watch("beneficiaryCommune") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryCommune", v || "")}
