@@ -184,6 +184,11 @@ export default function ClaimsPage() {
     queryFn: () => getUsers(),
   });
 
+  const selectedCompanyId = form.watch("companyId");
+  const selectedCountry = form.watch("country");
+  const selectedRegion = form.watch("region");
+  const selectedCity = form.watch("city");
+
   const inspectors = users?.filter((u) => u.role === "inspector" && (!selectedCompanyId || u.company_id === selectedCompanyId)).sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
   const adjusters = users?.filter((u) => u.role === "adjuster" && (!selectedCompanyId || u.company_id === selectedCompanyId)).sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
 
@@ -216,11 +221,6 @@ export default function ClaimsPage() {
     queryKey: ["countries"],
     queryFn: getCountries,
   });
-
-  const selectedCompanyId = form.watch("companyId");
-  const selectedCountry = form.watch("country");
-  const selectedRegion = form.watch("region");
-  const selectedCity = form.watch("city");
 
   const { data: regionsCatalog } = useQuery({
     queryKey: ["regions", selectedCountry],
