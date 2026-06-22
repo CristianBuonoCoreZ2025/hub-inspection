@@ -21,6 +21,7 @@ import {
   getPropertyClassifications,
   getDamageClassifications,
   getLookupCatalog,
+  getEvents,
 } from "@/services/catalogs";
 import { claimCreateMinimalSchema, type ClaimCreateMinimalInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
@@ -136,7 +137,7 @@ export default function ClaimsPage() {
       reportDate: "",
       businessLineId: "",
       insuranceProductId: "",
-      event: "",
+      eventId: "",
       claimTypeId: "",
       advisorId: "",
       brokerId: "",
@@ -282,6 +283,11 @@ export default function ClaimsPage() {
     queryFn: () => getLookupCatalog("construction_type"),
   });
 
+  const { data: eventsCatalog } = useQuery({
+    queryKey: ["events"],
+    queryFn: () => getEvents(),
+  });
+
   const { data: habitabilityCatalog } = useQuery({
     queryKey: ["lookup-catalog", "habitability"],
     queryFn: () => getLookupCatalog("habitability"),
@@ -349,7 +355,7 @@ export default function ClaimsPage() {
           insuranceProductId: values.insuranceProductId || null,
           advisorId: values.advisorId || null,
           brokerId: values.brokerId || null,
-          event: values.event || null,
+          eventId: values.eventId || null,
           constructionTypeId: values.constructionTypeId || null,
           habitabilityId: values.habitabilityId || null,
           destinationHousingId: values.destinationHousingId || null,
@@ -774,11 +780,21 @@ export default function ClaimsPage() {
 
                   <div className="flex flex-col gap-1">
                     <Label className="app-field-label">Evento</Label>
-                    <Input
-                      {...form.register("event")}
-                      placeholder="Ej: Incendio estructural"
-                      className="app-input h-8"
-                    />
+                    <Select
+                      value={form.watch("eventId") || ""}
+                      onValueChange={(v) => form.setValue("eventId", v || "")}
+                    >
+                      <SelectTrigger className="app-input h-8">
+                        <SelectValue placeholder="Seleccionar evento..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {eventsCatalog?.map((e) => (
+                          <SelectItem key={e.id} value={e.id}>
+                            {e.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="flex flex-col gap-1">

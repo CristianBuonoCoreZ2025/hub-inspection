@@ -209,7 +209,7 @@ export async function createClaimMinimal(
     insuranceProductId?: string | null;
     advisorId?: string | null;
     brokerId?: string | null;
-    event?: string | null;
+    eventId?: string | null;
     constructionTypeId?: string | null;
     habitabilityId?: string | null;
     destinationHousingId?: string | null;
@@ -289,7 +289,7 @@ export async function createClaimMinimal(
       insurance_product_id: input.insuranceProductId || null,
       advisor_id: input.advisorId || null,
       broker_id: input.brokerId || null,
-      event: input.event || null,
+      event_id: input.eventId || null,
       construction_type_id: input.constructionTypeId || null,
       habitability_id: input.habitabilityId || null,
       destination_housing_id: input.destinationHousingId || null,

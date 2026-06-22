@@ -6,6 +6,7 @@ import type {
   BusinessLine,
   InsuranceProduct,
   Advisor,
+  Event,
   Region,
   City,
   Commune,
@@ -778,4 +779,20 @@ export async function getLookupCatalog(category: string) {
   `;
   const data = await graphqlRequest<{ lookup_catalog: LookupCatalog[] }>(query, { category });
   return data.lookup_catalog;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EVENTS
+// ═══════════════════════════════════════════════════════════════
+
+export async function getEvents() {
+  const query = `
+    query GetEvents {
+      events(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
+        id country_id code name description is_active created_at updated_at
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ events: Event[] }>(query);
+  return data.events;
 }

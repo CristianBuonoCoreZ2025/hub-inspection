@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaimById, getClaimParticipants, deleteClaim, updateClaimStatus } from "@/services/claims";
 import { getUsers } from "@/services/users";
-import { getClaimCauses, getClaimTypes, getInsuranceCompanies } from "@/services/catalogs";
+import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getEvents } from "@/services/catalogs";
 import { createInspectionSession } from "@/services/inspections";
 import { toast } from "sonner";
 import {
@@ -106,6 +106,56 @@ export default function ClaimDetailPage() {
   const { data: insuranceCompaniesCatalog } = useQuery({
     queryKey: ["insurance-companies"],
     queryFn: () => getInsuranceCompanies(),
+  });
+
+  const { data: businessLinesCatalog } = useQuery({
+    queryKey: ["business-lines"],
+    queryFn: () => getBusinessLines(),
+  });
+
+  const { data: insuranceProductsCatalog } = useQuery({
+    queryKey: ["insurance-products"],
+    queryFn: () => getInsuranceProducts(),
+  });
+
+  const { data: brokersCatalog } = useQuery({
+    queryKey: ["brokers"],
+    queryFn: () => getBrokers(),
+  });
+
+  const { data: advisorsCatalog } = useQuery({
+    queryKey: ["advisors"],
+    queryFn: () => getAdvisors(),
+  });
+
+  const { data: housingDestinationsCatalog } = useQuery({
+    queryKey: ["housing-destinations"],
+    queryFn: () => getHousingDestinations(),
+  });
+
+  const { data: propertyClassificationsCatalog } = useQuery({
+    queryKey: ["property-classifications"],
+    queryFn: () => getPropertyClassifications(),
+  });
+
+  const { data: damageClassificationsCatalog } = useQuery({
+    queryKey: ["damage-classifications"],
+    queryFn: () => getDamageClassifications(),
+  });
+
+  const { data: constructionTypesCatalog } = useQuery({
+    queryKey: ["lookup-catalog", "construction_type"],
+    queryFn: () => getLookupCatalog("construction_type"),
+  });
+
+  const { data: habitabilityCatalog } = useQuery({
+    queryKey: ["lookup-catalog", "habitability"],
+    queryFn: () => getLookupCatalog("habitability"),
+  });
+
+  const { data: eventsCatalog } = useQuery({
+    queryKey: ["events"],
+    queryFn: () => getEvents(),
   });
 
   const createInspectionMutation = useMutation({
@@ -278,7 +328,7 @@ export default function ClaimDetailPage() {
                   <DataField label="Fecha Asignación" value={formatDate(claim.assignment_date)} />
                   <DataField label="Tipo" value={resolveName(claim.claim_type_id, claimTypesCatalog)} />
                   <DataField label="Causal" value={resolveName(claim.claim_cause_id, claimCausesCatalog)} />
-                  <DataField label="Evento" value={claim.event || "—"} />
+                  <DataField label="Evento" value={resolveName(claim.event, eventsCatalog)} />
                 </div>
               </div>
 
@@ -425,10 +475,10 @@ export default function ClaimDetailPage() {
               <div className="app-panel">
                 <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Tipo de Siniestro</h3>
                 <div className="space-y-3 text-[13px]">
-                  <DataField label="Tipo Construcción" value={claim.construction_type_id || "—"} />
-                  <DataField label="Destino" value={claim.destination_housing_id || "—"} />
-                  <DataField label="Clasif. Daño" value={claim.damage_classification_id || "—"} />
-                  <DataField label="Habitabilidad" value={claim.habitability_id || "—"} />
+                  <DataField label="Tipo Construcción" value={resolveName(claim.construction_type_id, constructionTypesCatalog)} />
+                  <DataField label="Destino" value={resolveName(claim.destination_housing_id, housingDestinationsCatalog)} />
+                  <DataField label="Clasif. Daño" value={resolveName(claim.damage_classification_id, damageClassificationsCatalog)} />
+                  <DataField label="Habitabilidad" value={resolveName(claim.habitability_id, habitabilityCatalog)} />
                   <DataField label="Dueño = Asegurado" value={claim.owner_same_as_insured ? "Sí" : "No"} />
                 </div>
               </div>
@@ -454,9 +504,8 @@ export default function ClaimDetailPage() {
                 Intermediarios
               </h3>
               <div className="space-y-3 text-[13px]">
-                <DataField label="Corredor" value={claim.broker_id || "—"} />
-                <DataField label="Ejecutivo Corredor" value={claim.broker_executive || "—"} />
-                <DataField label="Asesor" value={claim.advisor_id || "—"} />
+                <DataField label="Corredor" value={resolveName(claim.broker_id, brokersCatalog)} />
+                <DataField label="Asesor" value={resolveName(claim.advisor_id, advisorsCatalog)} />
               </div>
             </div>
           </div>
