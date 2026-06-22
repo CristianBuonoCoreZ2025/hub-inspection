@@ -626,17 +626,17 @@ export default function ClaimsPage() {
 
             {/* PASO 1: DETALLES SINIESTRO */}
             {step === 1 && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       Empresa (Cliente) <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={form.watch("companyId") || ""}
                       onValueChange={(v) => form.setValue("companyId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Selecciona una empresa" />
                       </SelectTrigger>
                       <SelectContent>
@@ -651,14 +651,14 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       Compañía de Seguros <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={form.watch("insuranceCompanyId") || ""}
                       onValueChange={(v) => form.setValue("insuranceCompanyId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar compañía..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -673,41 +673,41 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       N° Siniestro (Compañía) <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       {...form.register("claimNumber")}
                       placeholder="Ej: 12345678"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                     <FieldError message={form.formState.errors.claimNumber?.message} />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       N° Póliza <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       {...form.register("policyNumber")}
                       placeholder="Ej: POL-2026-001"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                     <FieldError message={form.formState.errors.policyNumber?.message} />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">N° Interno Cliente</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">N° Interno Cliente</Label>
                     <Input
                       readOnly
                       placeholder="MCL-XXXX"
-                      className="app-input h-8 bg-muted/50"
+                      className="app-input h-7 bg-muted/50"
                       value=""
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       Fecha Siniestro <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -719,7 +719,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Fecha Asignación</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Fecha Asignación</Label>
                     <Input
                       {...form.register("assignmentDate")}
                       type="date"
@@ -728,7 +728,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Fecha Denuncio</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Fecha Denuncio</Label>
                     <Input
                       {...form.register("reportDate")}
                       type="date"
@@ -737,7 +737,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Línea de Negocios</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Línea de Negocios</Label>
                     <Select
                       value={form.watch("businessLineId") || ""}
                       onValueChange={(v) => {
@@ -745,7 +745,7 @@ export default function ClaimsPage() {
                         form.setValue("insuranceProductId", "");
                       }}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar línea..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -759,13 +759,13 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Ramo/Producto</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Ramo/Producto</Label>
                     <Select
                       value={form.watch("insuranceProductId") || ""}
                       onValueChange={(v) => form.setValue("insuranceProductId", v || "")}
                       disabled={!selectedBusinessLineId}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar producto..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -779,12 +779,12 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Evento</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Evento</Label>
                     <Select
                       value={form.watch("eventId") || ""}
                       onValueChange={(v) => form.setValue("eventId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar evento..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -798,14 +798,14 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       Tipo de Siniestro <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={form.watch("claimTypeId") || ""}
                       onValueChange={(v) => form.setValue("claimTypeId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar tipo..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -820,12 +820,12 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Asesor</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Asesor</Label>
                     <Select
                       value={form.watch("advisorId") || ""}
                       onValueChange={(v) => form.setValue("advisorId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar asesor..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -839,12 +839,12 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Corredor</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Corredor</Label>
                     <Select
                       value={form.watch("brokerId") || ""}
                       onValueChange={(v) => form.setValue("brokerId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar corredor..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -858,14 +858,14 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       Inspector <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={form.watch("inspectorId") || ""}
                       onValueChange={(v) => form.setValue("inspectorId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar inspector..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -880,12 +880,12 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Ajustador / Liquidador</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Ajustador / Liquidador</Label>
                     <Select
                       value={form.watch("adjusterId") || ""}
                       onValueChange={(v) => form.setValue("adjusterId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar ajustador..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -903,17 +903,17 @@ export default function ClaimsPage() {
 
             {/* PASO 2: DETALLES INCIDENTE */}
             {step === 2 && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {/* Incidente */}
                 <SectionTitle>Incidente</SectionTitle>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Causal del Siniestro</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Causal del Siniestro</Label>
                     <Select
                       value={form.watch("claimCauseId") || ""}
                       onValueChange={(v) => form.setValue("claimCauseId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar causal..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -927,12 +927,12 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Tipo de Construcción</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Tipo de Construcción</Label>
                     <Select
                       value={form.watch("constructionTypeId") || ""}
                       onValueChange={(v) => form.setValue("constructionTypeId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar tipo..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -946,12 +946,12 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Habitabilidad</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Habitabilidad</Label>
                     <Select
                       value={form.watch("habitabilityId") || ""}
                       onValueChange={(v) => form.setValue("habitabilityId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar habitabilidad..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -965,12 +965,12 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Destino</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Destino</Label>
                     <Select
                       value={form.watch("destinationHousingId") || ""}
                       onValueChange={(v) => form.setValue("destinationHousingId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar destino..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -984,12 +984,12 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Asegurado/Propietario</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Asegurado/Propietario</Label>
                     <Select
                       value={form.watch("propertyClassificationId") || ""}
                       onValueChange={(v) => form.setValue("propertyClassificationId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar clasificación..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1003,12 +1003,12 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Clasificación del Daño</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Clasificación del Daño</Label>
                     <Select
                       value={form.watch("damageClassificationId") || ""}
                       onValueChange={(v) => form.setValue("damageClassificationId", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar clasificación..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1022,7 +1022,7 @@ export default function ClaimsPage() {
                   </div>
 
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label">Resumen</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Resumen</Label>
                     <textarea
                       {...form.register("summary")}
                       rows={2}
@@ -1046,80 +1046,80 @@ export default function ClaimsPage() {
 
                 {/* Asegurado */}
                 <SectionTitle>Asegurado</SectionTitle>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">RUT</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">RUT</Label>
                     <Input
                       {...form.register("rut")}
                       placeholder="14185994k"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       Nombre <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       {...form.register("insuredName")}
                       placeholder="Cristian"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                     <FieldError message={form.formState.errors.insuredName?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Apellido</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Apellido</Label>
                     <Input
                       {...form.register("lastName")}
                       placeholder="Zárate"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Email</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Email</Label>
                     <Input
                       {...form.register("insuredEmail")}
                       type="email"
                       placeholder="asegurado@email.com"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       Celular <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       {...form.register("cellPhone")}
                       placeholder="9 9999 9999"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                     <FieldError message={form.formState.errors.cellPhone?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Teléfono</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Teléfono</Label>
                     <Input
                       {...form.register("insuredPhone")}
                       placeholder="X XXXX XXXX"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                 </div>
 
                 {/* Dirección del Siniestro */}
                 <SectionTitle>Dirección del Siniestro</SectionTitle>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       Dirección <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       {...form.register("claimAddress")}
                       placeholder="Av. Ricardo Lyon 1351"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                     <FieldError message={form.formState.errors.claimAddress?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">País</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">País</Label>
                     <Select
                       value={form.watch("claimCountry") || ""}
                       onValueChange={(v) => {
@@ -1129,7 +1129,7 @@ export default function ClaimsPage() {
                         form.setValue("claimCommune", "");
                       }}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar país..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1142,7 +1142,7 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Región</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Región</Label>
                     <Select
                       value={form.watch("claimRegion") || ""}
                       onValueChange={(v) => {
@@ -1152,7 +1152,7 @@ export default function ClaimsPage() {
                       }}
                       disabled={!selectedClaimCountry}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar región..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1165,7 +1165,7 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">
                       Ciudad <span className="text-red-500">*</span>
                     </Label>
                     <Select
@@ -1176,7 +1176,7 @@ export default function ClaimsPage() {
                       }}
                       disabled={!selectedClaimRegion}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar ciudad..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1190,13 +1190,13 @@ export default function ClaimsPage() {
                     <FieldError message={form.formState.errors.claimCity?.message} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Comuna</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Comuna</Label>
                     <Select
                       value={form.watch("claimCommune") || ""}
                       onValueChange={(v) => form.setValue("claimCommune", v || "")}
                       disabled={!selectedClaimCity}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar comuna..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1223,63 +1223,63 @@ export default function ClaimsPage() {
                     Copiar de Asegurado
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">RUT</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">RUT</Label>
                     <Input
                       {...form.register("contractorRut")}
                       placeholder="14185994k"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Nombre</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Nombre</Label>
                     <Input
                       {...form.register("contractorName")}
                       placeholder="Cristian"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Apellido</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Apellido</Label>
                     <Input
                       {...form.register("contractorLastName")}
                       placeholder="Zárate"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Email</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Email</Label>
                     <Input
                       {...form.register("contractorEmail")}
                       type="email"
                       placeholder="contratante@email.com"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Celular</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Celular</Label>
                     <Input
                       {...form.register("contractorCellPhone")}
                       placeholder="9 9999 9999"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label">Dirección</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Dirección</Label>
                     <Input
                       {...form.register("contractorAddress")}
                       placeholder="Av. Ricardo Lyon 1351"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">País</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">País</Label>
                     <Select
                       value={form.watch("contractorCountry") || ""}
                       onValueChange={(v) => form.setValue("contractorCountry", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar país..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1292,12 +1292,12 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Región</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Región</Label>
                     <Select
                       value={form.watch("contractorRegion") || ""}
                       onValueChange={(v) => form.setValue("contractorRegion", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar región..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1310,12 +1310,12 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Ciudad</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Ciudad</Label>
                     <Select
                       value={form.watch("contractorCity") || ""}
                       onValueChange={(v) => form.setValue("contractorCity", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar ciudad..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1328,12 +1328,12 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Comuna</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Comuna</Label>
                     <Select
                       value={form.watch("contractorCommune") || ""}
                       onValueChange={(v) => form.setValue("contractorCommune", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar comuna..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1360,63 +1360,63 @@ export default function ClaimsPage() {
                     Copiar de Asegurado
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">RUT</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">RUT</Label>
                     <Input
                       {...form.register("beneficiaryRut")}
                       placeholder="14185994k"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Nombre</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Nombre</Label>
                     <Input
                       {...form.register("beneficiaryName")}
                       placeholder="Cristian"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Apellido</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Apellido</Label>
                     <Input
                       {...form.register("beneficiaryLastName")}
                       placeholder="Zárate"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Email</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Email</Label>
                     <Input
                       {...form.register("beneficiaryEmail")}
                       type="email"
                       placeholder="beneficiario@email.com"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Celular</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Celular</Label>
                     <Input
                       {...form.register("beneficiaryCellPhone")}
                       placeholder="9 9999 9999"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1 col-span-full">
-                    <Label className="app-field-label">Dirección</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Dirección</Label>
                     <Input
                       {...form.register("beneficiaryAddress")}
                       placeholder="Av. Ricardo Lyon 1351"
-                      className="app-input h-8"
+                      className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">País</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">País</Label>
                     <Select
                       value={form.watch("beneficiaryCountry") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryCountry", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar país..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1429,12 +1429,12 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Región</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Región</Label>
                     <Select
                       value={form.watch("beneficiaryRegion") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryRegion", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar región..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1447,12 +1447,12 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Ciudad</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Ciudad</Label>
                     <Select
                       value={form.watch("beneficiaryCity") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryCity", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar ciudad..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1465,12 +1465,12 @@ export default function ClaimsPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="app-field-label">Comuna</Label>
+                    <Label className="app-field-label !text-[10px] !leading-tight !py-0">Comuna</Label>
                     <Select
                       value={form.watch("beneficiaryCommune") || ""}
                       onValueChange={(v) => form.setValue("beneficiaryCommune", v || "")}
                     >
-                      <SelectTrigger className="app-input h-8">
+                      <SelectTrigger className="app-input h-7">
                         <SelectValue placeholder="Seleccionar comuna..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1488,7 +1488,7 @@ export default function ClaimsPage() {
 
             {/* PASO 3: DOCUMENTOS SOPORTE */}
             {step === 3 && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <SectionTitle>Documentos Soporte</SectionTitle>
                 <div
                   className={`border rounded-xl border-dashed p-10 text-center transition-colors ${
