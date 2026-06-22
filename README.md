@@ -1,6 +1,6 @@
-# Hub Inspections
+# Claims Hub Platform
 
-Plataforma SaaS multi-tenant para la gestión integral de siniestros e inspecciones remotas.
+Plataforma SaaS empresarial para la gestión integral del ciclo de vida de siniestros (Claims Lifecycle Management).
 
 ## Stack Tecnológico
 

@@ -1,4 +1,4 @@
-# Plan de Desarrollo — Hub Inspections
+# Plan de Desarrollo — Claims Hub Platform
 
 > Plan actualizado el 18-06-2026. Estado completo del codebase.
 

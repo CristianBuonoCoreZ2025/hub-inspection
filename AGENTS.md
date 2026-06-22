@@ -1,4 +1,4 @@
-# Hub Inspections — Reglas del Proyecto
+# Claims Hub Platform — Reglas del Proyecto
 
 ## Stack Tecnológico
 - **Framework:** Next.js 16 (App Router)

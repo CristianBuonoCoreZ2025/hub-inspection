@@ -54,11 +54,11 @@ const benefits = [
 ]
 
 const steps = [
-  { number: "1", title: "Crear inspección", desc: "Registra el siniestro y asigna un liquidador." },
+  { number: "1", title: "Crear caso", desc: "Registra el siniestro y asigna un especialista." },
   { number: "2", title: "Enviar Magic Link", desc: "El asegurado recibe un enlace seguro de acceso." },
-  { number: "3", title: "Realizar inspección remota", desc: "Videollamada en vivo con captura de evidencias." },
-  { number: "4", title: "Firmar informe", desc: "Firma digital del asegurado y del liquidador." },
-  { number: "5", title: "Generar PDF", desc: "Informe final descargable y almacenado en el expediente." },
+  { number: "3", title: "Realizar inspección", desc: "Videollamada en vivo con captura de evidencias y firma digital." },
+  { number: "4", title: "Firmar informe", desc: "Firma digital del asegurado y del especialista." },
+  { number: "5", title: "Generar PDF", desc: "Informe final descargable y almacenado en el expediente del caso." },
 ]
 
 const useCases = [
@@ -114,14 +114,14 @@ export default function LandingPage() {
             <div className="space-y-8">
               <div className="inline-flex items-center rounded-full border bg-muted px-3 py-1 text-xs font-medium">
                 <span className="mr-2 flex size-2 rounded-full bg-emerald-500" />
-                Plataforma enterprise lista para producción
+                Claims Lifecycle Management Platform
               </div>
               <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
                 Inspecciones Remotas para{" "}
                 <span className="text-primary">Siniestros Domiciliarios</span>
               </h1>
               <p className="max-w-xl text-lg text-muted-foreground">
-                Reduce tiempos de liquidación, centraliza evidencias y realiza inspecciones remotas desde cualquier lugar.
+                La plataforma digital para la gestión integral del ciclo de vida de un siniestro. Desde la apertura hasta la liquidación.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Button size="lg" onClick={() => window.location.href='/register'}>
@@ -172,7 +172,7 @@ export default function LandingPage() {
           <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Todo lo que necesitas en una plataforma</h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Diseñado para liquidadores, supervisores y aseguradoras de primer nivel.
+              Diseñado para equipos de siniestros, ajustadores, liquidadores y aseguradoras de primer nivel.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -200,7 +200,7 @@ export default function LandingPage() {
           <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Cómo funciona</h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Un flujo simple y seguro desde la creación hasta el cierre del informe.
+              Un flujo end-to-end desde la apertura del caso hasta la liquidación final.
             </p>
           </div>
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
@@ -223,7 +223,7 @@ export default function LandingPage() {
           <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Casos de uso</h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Adaptable a cualquier tipo de siniestro domiciliario.
+              Adaptable a cualquier tipo de siniestro: hogar, autos, industria y más.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
