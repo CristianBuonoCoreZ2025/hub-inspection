@@ -184,6 +184,146 @@ export async function createClaim(input: ClaimInput & { company_id: string }) {
   return data.insert_claims_one;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CREACIÓN MÍNIMA (modal rápido desde grilla)
+// ═══════════════════════════════════════════════════════════════
+
+export async function createClaimMinimal(
+  input: {
+    claimNumber: string;
+    policyNumber: string;
+    claimDate: string;
+    summary?: string | null;
+    inspectorId?: string | null;
+    insuranceCompanyId?: string | null;
+    claimTypeId?: string | null;
+    claimCauseId?: string | null;
+    company_id: string;
+  },
+  insured: {
+    insuredName: string;
+    lastName?: string | null;
+    rut?: string | null;
+    insuredEmail?: string | null;
+    insuredPhone?: string | null;
+    cellPhone: string;
+    address: string;
+    country?: string | null;
+    region?: string | null;
+    city: string;
+    commune?: string | null;
+  },
+  contractor?: {
+    contractorName: string;
+    contractorLastName?: string | null;
+    contractorRut?: string | null;
+    contractorEmail?: string | null;
+    contractorCellPhone?: string | null;
+    contractorAddress?: string | null;
+    contractorCountry?: string | null;
+    contractorRegion?: string | null;
+    contractorCity?: string | null;
+    contractorCommune?: string | null;
+  } | null,
+  beneficiary?: {
+    beneficiaryName: string;
+    beneficiaryLastName?: string | null;
+    beneficiaryRut?: string | null;
+    beneficiaryEmail?: string | null;
+    beneficiaryCellPhone?: string | null;
+    beneficiaryAddress?: string | null;
+    beneficiaryCountry?: string | null;
+    beneficiaryRegion?: string | null;
+    beneficiaryCity?: string | null;
+    beneficiaryCommune?: string | null;
+  } | null
+) {
+  // 1. Crear claim
+  const mutation = `
+    mutation CreateClaimMinimal($object: claims_insert_input!) {
+      insert_claims_one(object: $object) {
+        ${CLAIM_FIELDS}
+      }
+    }
+  `;
+
+  const data = await graphqlRequest<{ insert_claims_one: Claim }>(mutation, {
+    object: {
+      claim_number: input.claimNumber,
+      policy_number: input.policyNumber,
+      claim_date: input.claimDate,
+      status: "created" as ClaimStatus,
+      summary: input.summary || null,
+      inspector_id: input.inspectorId || null,
+      insurance_company_id: input.insuranceCompanyId || null,
+      claim_type_id: input.claimTypeId || null,
+      claim_cause_id: input.claimCauseId || null,
+      company_id: input.company_id,
+    },
+  });
+  const claim = data.insert_claims_one;
+
+  // 2. Crear participant insured
+  await createClaimParticipant({
+    claim_id: claim.id,
+    type: "insured",
+    full_name: `${insured.insuredName} ${insured.lastName || ""}`.trim(),
+    first_name: insured.insuredName,
+    last_name: insured.lastName || null,
+    rut: insured.rut || null,
+    email: insured.insuredEmail || null,
+    phone: insured.insuredPhone || null,
+    cell_phone: insured.cellPhone,
+    address: insured.address,
+    country: insured.country || null,
+    region: insured.region || null,
+    city: insured.city,
+    commune: insured.commune || null,
+  });
+
+  // 3. Crear participant contractor (si existe)
+  if (contractor && contractor.contractorName) {
+    await createClaimParticipant({
+      claim_id: claim.id,
+      type: "contractor",
+      full_name: `${contractor.contractorName} ${contractor.contractorLastName || ""}`.trim(),
+      first_name: contractor.contractorName,
+      last_name: contractor.contractorLastName || null,
+      rut: contractor.contractorRut || null,
+      email: contractor.contractorEmail || null,
+      phone: null,
+      cell_phone: contractor.contractorCellPhone || null,
+      address: contractor.contractorAddress || null,
+      country: contractor.contractorCountry || null,
+      region: contractor.contractorRegion || null,
+      city: contractor.contractorCity || null,
+      commune: contractor.contractorCommune || null,
+    });
+  }
+
+  // 4. Crear participant beneficiary (si existe)
+  if (beneficiary && beneficiary.beneficiaryName) {
+    await createClaimParticipant({
+      claim_id: claim.id,
+      type: "beneficiary",
+      full_name: `${beneficiary.beneficiaryName} ${beneficiary.beneficiaryLastName || ""}`.trim(),
+      first_name: beneficiary.beneficiaryName,
+      last_name: beneficiary.beneficiaryLastName || null,
+      rut: beneficiary.beneficiaryRut || null,
+      email: beneficiary.beneficiaryEmail || null,
+      phone: null,
+      cell_phone: beneficiary.beneficiaryCellPhone || null,
+      address: beneficiary.beneficiaryAddress || null,
+      country: beneficiary.beneficiaryCountry || null,
+      region: beneficiary.beneficiaryRegion || null,
+      city: beneficiary.beneficiaryCity || null,
+      commune: beneficiary.beneficiaryCommune || null,
+    });
+  }
+
+  return claim;
+}
+
 export async function updateClaim(id: string, input: Partial<ClaimInput>) {
   const mutation = `
     mutation UpdateClaim($id: uuid!, $set: claims_set_input!) {
@@ -227,4 +367,64 @@ export async function deleteClaim(id: string) {
     }
   `;
   await graphqlRequest(mutation, { id });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CLAIMS PARTICIPANTS
+// ═══════════════════════════════════════════════════════════════
+
+export async function createClaimParticipant(input: {
+  claim_id: string;
+  type: string;
+  full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  rut?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  cell_phone?: string | null;
+  address?: string | null;
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+  commune?: string | null;
+}) {
+  const mutation = `
+    mutation CreateClaimParticipant($object: claims_participants_insert_input!) {
+      insert_claims_participants_one(object: $object) {
+        id claim_id type full_name first_name last_name rut email phone cell_phone address country region city commune
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_claims_participants_one: { id: string } }>(mutation, { object: input });
+  return data.insert_claims_participants_one;
+}
+
+export async function updateClaimParticipant(id: string, input: Partial<{
+  full_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  rut: string | null;
+  email: string | null;
+  phone: string | null;
+  cell_phone: string | null;
+  address: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  commune: string | null;
+}>) {
+  const mutation = `
+    mutation UpdateClaimParticipant($id: uuid!, $set: claims_participants_set_input!) {
+      update_claims_participants_by_pk(pk_columns: { id: $id }, _set: $set) {
+        id claim_id type full_name first_name last_name rut email phone cell_phone address country region city commune
+      }
+    }
+  `;
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  const data = await graphqlRequest<{ update_claims_participants_by_pk: { id: string } }>(mutation, { id, set });
+  return data.update_claims_participants_by_pk;
 }

@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getClaims, getClaimsParticipants, createClaim, updateClaim, deleteClaim } from "@/services/claims";
+import { getClaims, getClaimsParticipants, createClaimMinimal, deleteClaim } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
 import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBrokers, getAdvisors, getRegions, getCities, getCommunes } from "@/services/catalogs";
 import { getCountries } from "@/services/countries";
-import { claimSchema, type ClaimInput } from "@/lib/validations";
+import { claimCreateMinimalSchema, type ClaimCreateMinimalInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useForm, type UseFormReturn } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck, Download, X } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload } from "lucide-react";
 import { createInspectionSession } from "@/services/inspections";
 import { useRouter } from "next/navigation";
 
@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { ClaimStatus, Company, Profile } from "@/types";
+import type { ClaimStatus, Profile } from "@/types";
 
 const statusLabels: Record<ClaimStatus, string> = {
   created: "Creado",
@@ -57,7 +57,7 @@ const statusColors: Record<ClaimStatus, string> = {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="modal-field-full mt-3">
+    <div className="col-span-full mt-3">
       <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
         {children}
       </h3>
@@ -77,35 +77,6 @@ function getParticipant(claim: { claims_participants?: { type: string; full_name
 
 
 
-function UserSelect({
-  label,
-  name,
-  users,
-  form,
-}: {
-  label: string;
-  name: keyof ClaimInput;
-  users?: Profile[];
-  form: UseFormReturn<ClaimInput>;
-}) {
-  return (
-    <div className="modal-field">
-      <Label className="app-field-label">{label}</Label>
-      <Select onValueChange={(v) => form.setValue(name, v as string)} value={String(form.getValues(name) ?? "")}>
-        <SelectTrigger className="app-input h-8">
-          <SelectValue placeholder="Seleccionar..." />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">— Sin asignar —</SelectItem>
-          {users?.map((u: Profile) => (
-            <SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
 const statusOptions = [
   { value: "", label: "Todos los estados" },
   { value: "created", label: "Creado" },
@@ -117,6 +88,12 @@ const statusOptions = [
   { value: "closed", label: "Cerrado" },
 ];
 
+const wizardSteps = [
+  { id: 1, label: "Detalles Siniestro", description: "Ingresa los detalles sobre el reclamo." },
+  { id: 2, label: "Detalles Incidente", description: "Ingresa detalles sobre lo que sucedió." },
+  { id: 3, label: "Documentos Soporte", description: "Cargue los documentos necesarios." },
+];
+
 export default function ClaimsPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -125,31 +102,51 @@ export default function ClaimsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("siniestro");
-  const prevOpenRef = useRef(false);
+  const [step, setStep] = useState(1);
 
-  useEffect(() => {
-    if (open && !prevOpenRef.current) {
-      setActiveTab("siniestro");
-    }
-    prevOpenRef.current = open;
-  }, [open]);
-
-  const form = useForm<ClaimInput>({
-    resolver: standardSchemaResolver(claimSchema),
+  const form = useForm<ClaimCreateMinimalInput>({
+    resolver: standardSchemaResolver(claimCreateMinimalSchema),
     defaultValues: {
-      claimNumber: "", policyNumber: "", policyItem: "", liquidationNumber: "",
-      insuranceCompany: "", clientReference: "", companyReportNumber: "",
-      insuredName: "", lastName: "", rut: "",
-      insuredEmail: "", insuredPhone: "", cellPhone: "",
-      address: "", city: "", commune: "", region: "", country: "Chile",
-      claimDate: "", claimTime: "", reportDate: "", assignmentDate: "",
-      claimType: "", claimCause: "", summary: "",
-      contactName: "", contactRole: "", contactEmail: "",
-      assignedAdjusterId: "", inspectorId: "", adjusterId: "",
-      brokerName: "", brokerNumber: "", advisor: "",
-      companyId: "", notes: "",
+      claimNumber: "",
+      policyNumber: "",
+      claimDate: "",
+      insuranceCompanyId: "",
+      claimTypeId: "",
+      claimCauseId: "",
+      summary: "",
+      inspectorId: "",
+      companyId: "",
+      insuredName: "",
+      lastName: "",
+      rut: "",
+      insuredEmail: "",
+      cellPhone: "",
+      insuredPhone: "",
+      address: "",
+      country: "Chile",
+      region: "",
+      city: "",
+      commune: "",
+      contractorName: "",
+      contractorLastName: "",
+      contractorRut: "",
+      contractorEmail: "",
+      contractorCellPhone: "",
+      contractorAddress: "",
+      contractorCountry: "Chile",
+      contractorRegion: "",
+      contractorCity: "",
+      contractorCommune: "",
+      beneficiaryName: "",
+      beneficiaryLastName: "",
+      beneficiaryRut: "",
+      beneficiaryEmail: "",
+      beneficiaryCellPhone: "",
+      beneficiaryAddress: "",
+      beneficiaryCountry: "Chile",
+      beneficiaryRegion: "",
+      beneficiaryCity: "",
+      beneficiaryCommune: "",
     },
   });
 
@@ -185,7 +182,6 @@ export default function ClaimsPage() {
   });
 
   const inspectors = users?.filter((u) => u.role === "inspector").sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
-  const adjusters = users?.filter((u) => u.role === "adjuster").sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
 
   const { data: claimCauses } = useQuery({
     queryKey: ["claim-causes"],
@@ -249,23 +245,34 @@ export default function ClaimsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: createClaim,
+    mutationFn: (values: ClaimCreateMinimalInput) =>
+      createClaimMinimal(
+        {
+          claimNumber: values.claimNumber,
+          policyNumber: values.policyNumber,
+          claimDate: values.claimDate,
+          summary: values.summary,
+          inspectorId: values.inspectorId,
+          company_id: values.companyId,
+        },
+        {
+          insuredName: values.insuredName,
+          lastName: values.lastName,
+          rut: values.rut,
+          insuredEmail: values.insuredEmail,
+          insuredPhone: values.insuredPhone,
+          cellPhone: values.cellPhone,
+          address: values.address,
+          country: values.country,
+          region: values.region,
+          city: values.city,
+          commune: values.commune,
+        }
+      ),
     onSuccess: () => {
       toast.success("Siniestro creado");
       queryClient.invalidateQueries({ queryKey: ["claims"] });
       setOpen(false);
-      form.reset();
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<ClaimInput> }) => updateClaim(id, data),
-    onSuccess: () => {
-      toast.success("Siniestro actualizado");
-      queryClient.invalidateQueries({ queryKey: ["claims"] });
-      setOpen(false);
-      setEditingId(null);
       form.reset();
     },
     onError: (err: Error) => toast.error(err.message),
@@ -290,12 +297,8 @@ export default function ClaimsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const onSubmit = (values: ClaimInput) => {
-    if (editingId) {
-      updateMutation.mutate({ id: editingId, data: values });
-    } else {
-      createMutation.mutate({ ...values, company_id: values.companyId });
-    }
+  const onSubmit = (values: ClaimCreateMinimalInput) => {
+    createMutation.mutate(values);
   };
 
   const filtered = claims?.filter((c) => {
@@ -378,7 +381,7 @@ export default function ClaimsPage() {
           >
             <Download className="mr-2 h-3.5 w-3.5" /> Exportar CSV
           </Button>
-          <Button onClick={() => { setEditingId(null); form.reset(); setActiveTab("siniestro"); setOpen(true); }} className="btn-create btn-sm">
+          <Button onClick={() => { form.reset(); setStep(1); setOpen(true); }} className="btn-create btn-sm">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Siniestro
           </Button>
@@ -386,347 +389,263 @@ export default function ClaimsPage() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        {/* ── MODAL Siniestros — 720px (muchos campos) ── */}
         <DialogContent className="modal-lg" showCloseButton={false}>
-            <div className="modal-header">
-              <DialogTitle className="modal-title flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
-                  <FileText className="h-4 w-4" />
+          <div className="modal-header">
+            <DialogTitle className="modal-title flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+                <FileText className="h-4 w-4" />
+              </div>
+              Crear Siniestro
+            </DialogTitle>
+            <DialogDescription className="modal-subtitle">
+              Completa los datos para crear el siniestro e iniciar una inspección remota.
+            </DialogDescription>
+          </div>
+
+          <div className="modal-body">
+            {/* Wizard steps */}
+            <div className="flex items-center gap-0 mb-5 border-b pb-3">
+              {wizardSteps.map((s, idx) => (
+                <div key={s.id} className="flex items-center flex-1">
+                  <div className="flex flex-col items-center gap-1 flex-1">
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                      step > s.id ? "bg-emerald-500 text-white" :
+                      step === s.id ? "bg-primary text-primary-foreground" :
+                      "bg-muted text-muted-foreground"
+                    }`}>
+                      {step > s.id ? <Check className="h-4 w-4" /> : s.id}
+                    </div>
+                    <span className={`text-[11px] font-medium ${step >= s.id ? "text-foreground" : "text-muted-foreground"}`}>{s.label}</span>
+                  </div>
+                  {idx < wizardSteps.length - 1 && (
+                    <div className={`h-px flex-1 mx-2 transition-colors ${step > s.id ? "bg-emerald-400" : "bg-border"}`} />
+                  )}
                 </div>
-                {editingId ? "Editar Siniestro" : "Nuevo Siniestro"}
-              </DialogTitle>
-              <DialogDescription className="modal-subtitle">
-                Registra la información del siniestro proveniente del sistema de liquidación.
-              </DialogDescription>
+              ))}
             </div>
 
-            <div className="modal-body">
-              {/* TABS */}
-              <div className="flex gap-1 border-b mb-4 pb-1 sticky top-0 bg-background z-10">
-                {[
-                  { id: "siniestro", label: "Siniestro" },
-                  { id: "asegurado", label: "Asegurado" },
-                  { id: "ubicacion", label: "Ubicación" },
-                  { id: "contacto", label: "Contacto" },
-                  { id: "equipo", label: "Equipo" },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setActiveTab(t.id)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors ${
-                      activeTab === t.id
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+            {/* PASO 1: DETALLES SINIESTRO */}
+            {step === 1 && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1 col-span-full">
+                    <Label className="app-field-label">Empresa (Cliente) <span className="text-red-500">*</span></Label>
+                    <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} value={form.getValues("companyId")}>
+                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+                      <SelectContent>
+                        {companies?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                    <FieldError message={form.formState.errors.companyId?.message} />
+                  </div>
+                </div>
 
-              {activeTab === "siniestro" && (<div key="tab-siniestro" className="space-y-4">
-              {/* ═══ EMPRESA (MI CLIENTE) ═══ */}
-              <div className="modal-grid">
-                <div className="modal-field modal-field-full">
-                  <Label className="app-field-label">Empresa (Cliente) <span className="text-red-500">*</span></Label>
-                  <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} value={form.getValues("companyId")} disabled={editingId !== null}>
-                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
-                    <SelectContent>
-                      {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                  <FieldError message={form.formState.errors.companyId?.message} />
+                <SectionTitle>Datos del Siniestro</SectionTitle>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">N° Siniestro <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("claimNumber")} placeholder="CHL-00000573" className="app-input h-8" />
+                    <FieldError message={form.formState.errors.claimNumber?.message} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">N° Póliza <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("policyNumber")} placeholder="20618983" className="app-input h-8" />
+                    <FieldError message={form.formState.errors.policyNumber?.message} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Compañía de Seguros</Label>
+                    <Select onValueChange={(v) => form.setValue("insuranceCompanyId", v ?? "")} value={form.getValues("insuranceCompanyId") || ""}>
+                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar compañía..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— Sin seleccionar —</SelectItem>
+                        {insuranceCompaniesCatalog?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Fecha Siniestro <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("claimDate")} type="date" className="app-input h-7 px-2 text-xs" />
+                    <FieldError message={form.formState.errors.claimDate?.message} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Tipo de Siniestro <span className="text-red-500">*</span></Label>
+                    <Select onValueChange={(v) => form.setValue("claimTypeId", v ?? "")} value={form.getValues("claimTypeId") || ""}>
+                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— Sin seleccionar —</SelectItem>
+                        {claimTypes?.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                    <FieldError message={form.formState.errors.claimTypeId?.message} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Causal del Siniestro</Label>
+                    <Select onValueChange={(v) => form.setValue("claimCauseId", v ?? "")} value={form.getValues("claimCauseId") || ""}>
+                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar causal..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— Sin seleccionar —</SelectItem>
+                        {claimCauses?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1 col-span-full">
+                    <Label className="app-field-label">Resumen</Label>
+                    <textarea {...form.register("summary")} rows={2} className="app-input resize-none" placeholder="Descripción breve del siniestro..." />
+                  </div>
+                </div>
 
-              {/* ═══ SINIESTRO / LIQUIDACIÓN ═══ */}
-              <SectionTitle>Siniestro y Liquidación</SectionTitle>
-              <div className="modal-grid">
-                <div className="modal-field modal-field-full">
-                  <Label className="app-field-label">Compañía de Seguros</Label>
-                  <Select onValueChange={(v) => form.setValue("insuranceCompany", v ?? "")} value={form.getValues("insuranceCompany") || ""}>
-                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar compañia..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {insuranceCompaniesCatalog?.map((c) => (<SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                <SectionTitle>Asignación</SectionTitle>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1 col-span-full">
+                    <Label className="app-field-label">Inspector</Label>
+                    <Select onValueChange={(v) => form.setValue("inspectorId", v ?? "")} value={form.getValues("inspectorId") || ""}>
+                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar inspector..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— Sin asignar —</SelectItem>
+                        {inspectors?.map((u) => (<SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
-              <div className="modal-grid-4">
-                <div className="modal-field">
-                  <Label className="app-field-label">N° Siniestro <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("claimNumber")} placeholder="CHL-00000573" className="app-input h-8" />
-                  <FieldError message={form.formState.errors.claimNumber?.message} />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">N° Liquidación</Label>
-                  <Input {...form.register("liquidationNumber")} placeholder="202503906" className="app-input h-8" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">N° Póliza <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("policyNumber")} placeholder="20618983" className="app-input h-8" />
-                  <FieldError message={form.formState.errors.policyNumber?.message} />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Item Póliza</Label>
-                  <Input {...form.register("policyItem")} placeholder="1" className="app-input h-8" />
-                </div>
-              </div>
-              <div className="modal-grid-3">
-                <div className="modal-field">
-                  <Label className="app-field-label">Ref. Interna Cliente</Label>
-                  <Input {...form.register("clientReference")} placeholder="CHL-00013152" className="app-input h-8" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">N° Siniestro Compañía</Label>
-                  <Input {...form.register("companyReportNumber")} placeholder="1022370" className="app-input h-8" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Tipo de Siniestro <span className="text-red-500">*</span></Label>
-                  <Select onValueChange={(v) => form.setValue("claimType", v ?? "")} value={form.getValues("claimType") || ""}>
-                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {claimTypes?.map((t) => (<SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                  <FieldError message={form.formState.errors.claimType?.message} />
-                </div>
-              </div>
-              <div className="modal-grid-4">
-                <div className="modal-field">
-                  <Label className="app-field-label">Fecha Siniestro <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("claimDate")} type="date" className="app-input h-7 px-2 text-xs" />
-                  <FieldError message={form.formState.errors.claimDate?.message} />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Hora Siniestro</Label>
-                  <Input {...form.register("claimTime")} type="time" className="app-input h-7 px-2 text-xs" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Fecha Denuncio</Label>
-                  <Input {...form.register("reportDate")} type="date" className="app-input h-7 px-2 text-xs" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Fecha Asignación</Label>
-                  <Input {...form.register("assignmentDate")} type="date" className="app-input h-7 px-2 text-xs" />
-                </div>
-              </div>
-              <div className="modal-grid">
-                <div className="modal-field modal-field-full">
-                  <Label className="app-field-label">Causal del Siniestro</Label>
-                  <Select onValueChange={(v) => form.setValue("claimCause", v ?? "")} value={form.getValues("claimCause") || ""}>
-                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar causal..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {claimCauses?.map((c) => (<SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="modal-grid">
-                <div className="modal-field modal-field-full">
-                  <Label className="app-field-label">Resumen</Label>
-                  <textarea
-                    {...form.register("summary")}
-                    rows={3}
-                    className="app-input resize-none"
-                    placeholder="Descripción resumida del siniestro..."
-                  />
-                </div>
-              </div>
+            )}
 
-              </div>)} {/* end siniestro tab */}
+            {/* PASO 2: DETALLES INCIDENTE */}
+            {step === 2 && (
+              <div className="space-y-4">
+                <SectionTitle>Asegurado</SectionTitle>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("insuredName")} placeholder="Cristian" className="app-input h-8" />
+                    <FieldError message={form.formState.errors.insuredName?.message} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Apellido</Label>
+                    <Input {...form.register("lastName")} placeholder="Zárate" className="app-input h-8" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">RUT</Label>
+                    <Input {...form.register("rut")} placeholder="14185994k" className="app-input h-8" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Celular <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("cellPhone")} placeholder="9 9999 9999" className="app-input h-8" />
+                    <FieldError message={form.formState.errors.cellPhone?.message} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Email</Label>
+                    <Input {...form.register("insuredEmail")} type="email" placeholder="asegurado@email.com" className="app-input h-8" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Teléfono</Label>
+                    <Input {...form.register("insuredPhone")} placeholder="X XXXX XXXX" className="app-input h-8" />
+                  </div>
+                </div>
 
-              {activeTab === "asegurado" && (<div key="tab-asegurado" className="space-y-4">
-              {/* ═══ ASEGURADO ═══ */}
-              <SectionTitle>Asegurado</SectionTitle>
-              <div className="modal-grid-3">
-                <div className="modal-field">
-                  <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("insuredName")} placeholder="EDIFICIO CONDOMINIO" className="app-input h-8" />
-                  <FieldError message={form.formState.errors.insuredName?.message} />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Apellido</Label>
-                  <Input {...form.register("lastName")} placeholder="LYON" className="app-input h-8" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">RUT</Label>
-                  <Input {...form.register("rut")} placeholder="53325014-9" className="app-input h-8" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Email</Label>
-                  <Input {...form.register("insuredEmail")} type="email" placeholder="fareyes@gmail.com" className="app-input h-8" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Teléfono</Label>
-                  <Input {...form.register("insuredPhone")} placeholder="X XXXX XXXX" className="app-input h-8" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Celular</Label>
-                  <Input {...form.register("cellPhone")} placeholder="9 9999 9999" className="app-input h-8" />
+                <SectionTitle>Ubicación del Siniestro</SectionTitle>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1 col-span-full">
+                    <Label className="app-field-label">Dirección <span className="text-red-500">*</span></Label>
+                    <Input {...form.register("address")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-8" />
+                    <FieldError message={form.formState.errors.address?.message} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">País</Label>
+                    <Select onValueChange={(v) => { form.setValue("country", v ?? ""); form.setValue("region", ""); form.setValue("city", ""); form.setValue("commune", ""); }} value={form.getValues("country") || ""}>
+                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar país..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— Sin seleccionar —</SelectItem>
+                        {countriesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Región</Label>
+                    <Select onValueChange={(v) => { form.setValue("region", v ?? ""); form.setValue("city", ""); form.setValue("commune", ""); }} value={form.getValues("region") || ""} disabled={!selectedCountry}>
+                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar región..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— Sin seleccionar —</SelectItem>
+                        {regionsCatalog?.map((r) => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Ciudad <span className="text-red-500">*</span></Label>
+                    <Select onValueChange={(v) => { form.setValue("city", v ?? ""); form.setValue("commune", ""); }} value={form.getValues("city") || ""} disabled={!selectedRegion}>
+                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar ciudad..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— Sin seleccionar —</SelectItem>
+                        {citiesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FieldError message={form.formState.errors.city?.message} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="app-field-label">Comuna</Label>
+                    <Select onValueChange={(v) => form.setValue("commune", v ?? "")} value={form.getValues("commune") || ""} disabled={!selectedCity}>
+                      <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar comuna..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— Sin seleccionar —</SelectItem>
+                        {communesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
+            )}
 
-              </div>)} {/* end asegurado tab */}
-
-              {activeTab === "contacto" && (<div key="tab-contacto" className="space-y-4">
-              {/* ═══ PERSONA DE CONTACTO ═══ */}
-              <SectionTitle>Persona de Contacto</SectionTitle>
-              <div className="modal-grid-3">
-                <div className="modal-field">
-                  <Label className="app-field-label">Nombre Contacto</Label>
-                  <Input {...form.register("contactName")} placeholder="Gonzalo Meza" className="app-input h-8" />
+            {/* PASO 3: DOCUMENTOS SOPORTE */}
+            {step === 3 && (
+              <div className="space-y-4">
+                <SectionTitle>Documentos Soporte</SectionTitle>
+                <div className="border rounded-xl border-dashed p-10 text-center">
+                  <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground text-[13px]">Arrastra archivo(s) o haz clic para seleccionarlos</p>
+                  <p className="text-muted-foreground text-xs mt-1">Acepta archivos PDF, Word y Excel de hasta 10 MB</p>
                 </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Cargo / Relación</Label>
-                  <Input {...form.register("contactRole")} placeholder="Arrendatario depto 606" className="app-input h-8" />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Email Contacto</Label>
-                  <Input {...form.register("contactEmail")} type="email" placeholder="ignacia@adpro.cl" className="app-input h-8" />
-                </div>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-3">Nombre de documento</th>
+                      <th className="text-left py-2 px-3">Tipo de documento</th>
+                      <th className="text-left py-2 px-3">Nombre de archivo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colSpan={3} className="text-center text-muted-foreground py-6">No hay documentos cargados.</td></tr>
+                  </tbody>
+                </table>
               </div>
+            )}
+          </div>
 
-              </div>)} {/* end contacto tab */}
-
-              {activeTab === "ubicacion" && (<div key="tab-ubicacion" className="space-y-4">
-              {/* ═══ UBICACIÓN ═══ */}
-              <SectionTitle>Ubicación del Siniestro</SectionTitle>
-              <div className="modal-grid">
-                <div className="modal-field modal-field-full">
-                  <Label className="app-field-label">Dirección <span className="text-red-500">*</span></Label>
-                  <Input {...form.register("address")} placeholder="AVDA RICARDO LYON 1351" className="app-input h-8" />
-                  <FieldError message={form.formState.errors.address?.message} />
-                </div>
-              </div>
-              <div className="modal-grid-3">
-                <div className="modal-field">
-                  <Label className="app-field-label">País</Label>
-                  <Select onValueChange={(v) => {
-                    form.setValue("country", v ?? "");
-                    form.setValue("region", "");
-                    form.setValue("city", "");
-                    form.setValue("commune", "");
-                  }} value={form.getValues("country") || ""}>
-                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar pais..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {countriesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Región</Label>
-                  <Select onValueChange={(v) => {
-                    form.setValue("region", v ?? "");
-                    form.setValue("city", "");
-                    form.setValue("commune", "");
-                  }} value={form.getValues("region") || ""} disabled={!selectedCountry}>
-                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar region..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {regionsCatalog?.map((r) => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Ciudad <span className="text-red-500">*</span></Label>
-                  <Select onValueChange={(v) => {
-                    form.setValue("city", v ?? "");
-                    form.setValue("commune", "");
-                  }} value={form.getValues("city") || ""} disabled={!selectedRegion}>
-                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar ciudad..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {citiesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FieldError message={form.formState.errors.city?.message} />
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Comuna</Label>
-                  <Select onValueChange={(v) => form.setValue("commune", v ?? "")} value={form.getValues("commune") || ""} disabled={!selectedCity}>
-                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar comuna..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {communesCatalog?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              </div>)} {/* end ubicacion tab */}
-
-              {activeTab === "equipo" && (<div key="tab-equipo" className="space-y-4">
-              {/* ═══ ASESOR ═══ */}
-              <SectionTitle>Asesor</SectionTitle>
-              <div className="modal-grid">
-                <div className="modal-field modal-field-full">
-                  <Select onValueChange={(v) => form.setValue("advisor", v ?? "")} value={form.getValues("advisor") || ""}>
-                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar asesor..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {advisorsCatalog?.map((a) => (<SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* ═══ EQUIPO ASIGNADO ═══ */}
-              <SectionTitle>Equipo Asignado</SectionTitle>
-              <div className="modal-grid">
-                <UserSelect label="Inspector" name="inspectorId" users={inspectors} form={form} />
-                <UserSelect label="Ajustador" name="adjusterId" users={adjusters} form={form} />
-              </div>
-
-              {/* ═══ CORREDOR ═══ */}
-              <SectionTitle>Corredor</SectionTitle>
-              <div className="modal-grid-3">
-                <div className="modal-field">
-                  <Label className="app-field-label">Corredor</Label>
-                  <Select onValueChange={(v) => form.setValue("brokerName", v ?? "")} value={form.getValues("brokerName") || ""}>
-                    <SelectTrigger className="app-input h-8"><SelectValue placeholder="Seleccionar corredor..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Sin seleccionar —</SelectItem>
-                      {brokersCatalog?.map((b) => (<SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">N° Corredor</Label>
-                  <Input {...form.register("brokerNumber")} className="app-input h-8" />
-                </div>
-              </div>
-
-              {/* ═══ NOTAS ═══ */}
-              <SectionTitle>Notas</SectionTitle>
-              <div className="modal-grid">
-                <div className="modal-field modal-field-full">
-                  <textarea
-                    {...form.register("notes")}
-                    rows={2}
-                    className="app-input resize-none"
-                    placeholder="Observaciones relevantes del caso..."
-                  />
-                </div>
-              </div>
-              </div>)} {/* end equipo tab */}
-            </div>
-
-            <div className="modal-footer">
-              <button type="button" className="btn-cancel" onClick={() => setOpen(false)}>
-                Cancelar
+          <div className="modal-footer">
+            {step > 1 && (
+              <button type="button" className="btn-cancel" onClick={() => setStep(step - 1)}>
+                Atrás
               </button>
-              <button type="button" className="btn-save" disabled={createMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
-                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Siniestro"}
+            )}
+            <div className="flex-1" />
+            {step < 3 ? (
+              <button type="button" className="btn-save" onClick={() => setStep(step + 1)}>
+                Siguiente paso
               </button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            ) : (
+              <button
+                type="button"
+                className="btn-save"
+                disabled={createMutation.isPending}
+                onClick={form.handleSubmit(onSubmit)}
+              >
+                {createMutation.isPending ? "Creando..." : "Crear Siniestro"}
+              </button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="app-panel">
         <div className="app-data-table-wrap">
@@ -780,55 +699,14 @@ export default function ClaimsPage() {
                           <ClipboardCheck className="h-3.5 w-3.5 mr-1" />
                           Inspeccionar
                         </Button>
-                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
-                          setEditingId(claim.id);
-                          const pInsured = getParticipant(claim, 'insured');
-                          const pContact = getParticipant(claim, 'contact');
-                          const companyName = insuranceCompaniesCatalog?.find((c) => c.id === claim.insurance_company_id)?.name ?? "";
-                          const typeName = claimTypes?.find((t) => t.id === claim.claim_type_id)?.name ?? "";
-                          const causeName = claimCauses?.find((c) => c.id === claim.claim_cause_id)?.name ?? "";
-                          const brokerName = brokersCatalog?.find((b) => b.id === claim.broker_id)?.name ?? "";
-                          form.reset({
-                            claimNumber: claim.claim_number,
-                            policyNumber: claim.policy_number,
-                            policyItem: claim.policy_item || "",
-                            liquidationNumber: claim.liquidation_number || "",
-                            insuranceCompany: companyName,
-                            clientReference: claim.client_reference || "",
-                            companyReportNumber: claim.company_report_number || "",
-                            insuredName: pInsured?.first_name || pInsured?.full_name || "",
-                            lastName: pInsured?.last_name || "",
-                            rut: pInsured?.rut || "",
-                            insuredEmail: pInsured?.email || "",
-                            insuredPhone: pInsured?.phone || "",
-                            cellPhone: pInsured?.cell_phone || "",
-                            address: pInsured?.address || "",
-                            city: pInsured?.city || "",
-                            commune: pInsured?.commune || "",
-                            region: pInsured?.region || "",
-                            country: pInsured?.country || "Chile",
-                            claimDate: claim.claim_date,
-                            claimTime: "",
-                            reportDate: claim.report_date || "",
-                            assignmentDate: claim.assignment_date || "",
-                            claimType: typeName,
-                            claimCause: causeName,
-                            summary: claim.summary || "",
-                            contactName: pContact?.full_name || "",
-                            contactRole: "",
-                            contactEmail: pContact?.email || "",
-                            assignedAdjusterId: claim.assigned_adjuster_id || "",
-                            inspectorId: claim.inspector_id || "",
-                            adjusterId: claim.adjuster_id || "",
-                            brokerName: brokerName,
-                            brokerNumber: "",
-                            advisor: "",
-                            companyId: claim.company_id,
-                            notes: claim.notes || "",
-                          });
-                          setActiveTab("siniestro");
-                          setOpen(true);
-                        }}><Pencil className="h-4 w-4" /></Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="btn-neutral btn-icon"
+                          onClick={() => router.push(`/dashboard/claims/${claim.id}?edit=1`)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Eliminar este siniestro?")) deleteMutation.mutate(claim.id); }}>
                           <Trash2 className="h-4 w-4" />
                         </Button>

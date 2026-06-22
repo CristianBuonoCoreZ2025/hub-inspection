@@ -42,6 +42,10 @@ export const resetPasswordSchema = z
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
+// ═══════════════════════════════════════════════════════════════
+// SCHEMA COMPLETO (para edición en detalle)
+// ═══════════════════════════════════════════════════════════════
+
 export const claimSchema = z.object({
   claimNumber: z.string().min(1, "Número de siniestro requerido"),
   policyNumber: z.string().min(1, "Número de póliza requerido"),
@@ -68,6 +72,21 @@ export const claimSchema = z.object({
   contactRole: z.string().optional(),
   contactEmail: z.string().email("Correo inválido").optional().or(z.literal("")),
   summary: z.string().optional(),
+
+  contractorName: z.string().optional(),
+  contractorLastName: z.string().optional(),
+  contractorRut: z.string().optional().or(z.literal("")),
+  contractorEmail: z.string().email("Correo inválido").optional().or(z.literal("")),
+  contractorPhone: z.string().optional(),
+  contractorCellPhone: z.string().optional(),
+
+  beneficiaryName: z.string().optional(),
+  beneficiaryLastName: z.string().optional(),
+  beneficiaryRut: z.string().optional().or(z.literal("")),
+  beneficiaryEmail: z.string().email("Correo inválido").optional().or(z.literal("")),
+  beneficiaryPhone: z.string().optional(),
+  beneficiaryCellPhone: z.string().optional(),
+
   assignedAdjusterId: z.string().optional(),
   inspectorId: z.string().optional(),
   adjusterId: z.string().optional(),
@@ -82,6 +101,57 @@ export const claimSchema = z.object({
 });
 
 export type ClaimInput = z.infer<typeof claimSchema>;
+
+// ═══════════════════════════════════════════════════════════════
+// SCHEMA MÍNIMO (para creación rápida desde la grilla)
+// ═══════════════════════════════════════════════════════════════
+
+export const claimCreateMinimalSchema = z.object({
+  // ── Paso 1: Detalles Siniestro ──
+  claimNumber: z.string().min(1, "Número de siniestro requerido"),
+  policyNumber: z.string().min(1, "Número de póliza requerido"),
+  claimDate: z.string().min(1, "Fecha del siniestro requerida"),
+  insuranceCompanyId: z.string().optional().or(z.literal("")),
+  claimTypeId: z.string().min(1, "Tipo de siniestro requerido"),
+  claimCauseId: z.string().optional().or(z.literal("")),
+  summary: z.string().optional().or(z.literal("")),
+  inspectorId: z.string().optional().or(z.literal("")),
+  companyId: z.string().min(1, "Empresa requerida"),
+  // ── Paso 2: Detalles Incidente ──
+  insuredName: z.string().min(1, "Nombre del asegurado requerido"),
+  lastName: z.string().optional().or(z.literal("")),
+  rut: z.string().optional().or(z.literal("")),
+  insuredEmail: z.string().email("Correo inválido").optional().or(z.literal("")),
+  cellPhone: z.string().min(1, "Celular requerido"),
+  insuredPhone: z.string().optional().or(z.literal("")),
+  address: z.string().min(1, "Dirección requerida"),
+  country: z.string().optional().default("Chile"),
+  region: z.string().optional().or(z.literal("")),
+  city: z.string().min(1, "Ciudad requerida"),
+  commune: z.string().optional().or(z.literal("")),
+  contractorName: z.string().optional().or(z.literal("")),
+  contractorLastName: z.string().optional().or(z.literal("")),
+  contractorRut: z.string().optional().or(z.literal("")),
+  contractorEmail: z.string().optional().or(z.literal("")),
+  contractorCellPhone: z.string().optional().or(z.literal("")),
+  contractorAddress: z.string().optional().or(z.literal("")),
+  contractorCountry: z.string().optional().or(z.literal("")),
+  contractorRegion: z.string().optional().or(z.literal("")),
+  contractorCity: z.string().optional().or(z.literal("")),
+  contractorCommune: z.string().optional().or(z.literal("")),
+  beneficiaryName: z.string().optional().or(z.literal("")),
+  beneficiaryLastName: z.string().optional().or(z.literal("")),
+  beneficiaryRut: z.string().optional().or(z.literal("")),
+  beneficiaryEmail: z.string().optional().or(z.literal("")),
+  beneficiaryCellPhone: z.string().optional().or(z.literal("")),
+  beneficiaryAddress: z.string().optional().or(z.literal("")),
+  beneficiaryCountry: z.string().optional().or(z.literal("")),
+  beneficiaryRegion: z.string().optional().or(z.literal("")),
+  beneficiaryCity: z.string().optional().or(z.literal("")),
+  beneficiaryCommune: z.string().optional().or(z.literal("")),
+});
+
+export type ClaimCreateMinimalInput = z.infer<typeof claimCreateMinimalSchema>;
 
 export const companySchema = z
   .object({
