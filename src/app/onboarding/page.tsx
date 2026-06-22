@@ -82,10 +82,10 @@ export default function OnboardingPage() {
     <div className="auth-shell premium-bg-base">
       <div className="auth-card">
         <div className="text-center">
-          <p className="auth-brand">Hub Inspections</p>
+          <p className="auth-brand">Claims Hub</p>
           <h1 className="auth-title">Configura tu empresa</h1>
           <p className="auth-subtitle">
-            Completa los datos para comenzar a usar Hub Inspections
+            Completa los datos para comenzar a usar Claims Hub
           </p>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">

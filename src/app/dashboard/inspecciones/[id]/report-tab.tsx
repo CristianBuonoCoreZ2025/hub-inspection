@@ -146,7 +146,7 @@ export default function ReportTab({ sessionId, claimNumber }: { sessionId: strin
             </div>
 
             <div className="pt-4 border-t text-center text-[11px] text-muted-foreground">
-              Documento generado por Hub Inspections · {new Date().toLocaleDateString("es-CL")}
+              Documento generado por Claims Hub · {new Date().toLocaleDateString("es-CL")}
             </div>
           </div>
         </div>

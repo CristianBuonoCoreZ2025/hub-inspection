@@ -56,7 +56,7 @@ export default function ResetPasswordPage() {
     <div className="auth-shell premium-bg-base">
       <div className="auth-card">
         <div className="text-center">
-          <p className="auth-brand">Hub Inspections</p>
+          <p className="auth-brand">Claims Hub</p>
           <h1 className="auth-title">Nueva Contraseña</h1>
           <p className="auth-subtitle">
             Ingresa tu nueva contraseña para restablecer el acceso

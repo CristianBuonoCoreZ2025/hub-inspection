@@ -150,7 +150,7 @@ export function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {
           <ShieldCheck className="size-5" />
         </div>
         <span className="font-heading text-base font-semibold tracking-tight">
-          Hub Inspections
+          Claims Hub
         </span>
       </div>
 

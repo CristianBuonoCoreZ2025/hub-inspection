@@ -1,7 +1,7 @@
-// Sistema de logging de peticiones global para HubInspection
+// Sistema de logging de peticiones global para ClaimsHub
 // Registra cada consulta, clic, y respuesta con timestamps
 
-const STORAGE_KEY = 'hubinspection-diag-log-enabled'
+const STORAGE_KEY = 'claimshub-diag-log-enabled'
 const MAX_LOGS = 300
 const MAX_BODY_CHARS = 5000
 

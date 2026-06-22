@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
     <div className="auth-shell premium-bg-base">
       <div className="auth-card">
         <div className="text-center">
-          <p className="auth-brand">Hub Inspections</p>
+          <p className="auth-brand">Claims Hub</p>
           <h1 className="auth-title">Recuperar Contraseña</h1>
           <p className="auth-subtitle">
             Te enviaremos un enlace para restablecer tu acceso

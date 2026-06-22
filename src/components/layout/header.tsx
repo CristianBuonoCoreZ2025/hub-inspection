@@ -59,7 +59,7 @@ export function Header() {
 
           {/* Desktop breadcrumbs / title */}
           <div className="hidden items-center gap-2 text-sm text-muted-foreground lg:flex">
-            <span>Hub Inspections</span>
+            <span>Claims Hub</span>
             <ChevronRight className="size-4" />
             <span className="font-medium text-foreground">{pageTitle}</span>
           </div>

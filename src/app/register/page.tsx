@@ -12,7 +12,7 @@ export default function RegisterPage() {
             <ShieldCheck className="h-6 w-6" />
           </div>
         </div>
-        <p className="auth-brand">Hub Inspections</p>
+        <p className="auth-brand">Claims Hub</p>
         <h1 className="auth-title">Registro deshabilitado</h1>
         <p className="auth-subtitle">
           El acceso a la plataforma es solo por invitación.

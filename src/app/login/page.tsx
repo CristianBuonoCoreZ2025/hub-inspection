@@ -71,7 +71,7 @@ export default function LoginPage() {
     <div className="auth-shell premium-bg-base">
       <div className="auth-card">
         <div className="text-center">
-          <p className="auth-brand">Hub Inspections</p>
+          <p className="auth-brand">Claims Hub</p>
           <h1 className="auth-title">Iniciar Sesión</h1>
           <p className="auth-subtitle">
             Ingresa tus credenciales para acceder a tu cuenta

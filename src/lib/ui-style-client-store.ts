@@ -1,6 +1,6 @@
 "use client";
 
-const UI_STYLE_KEY = "hubinspection-ui-style";
+const UI_STYLE_KEY = "claimshub-ui-style";
 
 export type UiStyleSkin =
   | "nordic-air"

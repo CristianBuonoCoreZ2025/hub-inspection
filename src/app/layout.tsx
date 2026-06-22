@@ -90,9 +90,9 @@ const fontVars = [
 ].join(" ");
 
 export const metadata: Metadata = {
-  title: "Hub Inspections — Inspecciones Remotas para Siniestros Domiciliarios",
+  title: "Claims Hub — Gestión Integral de Siniestros",
   description:
-    "Reduce tiempos de liquidación, centraliza evidencias y realiza inspecciones remotas desde cualquier lugar.",
+    "Plataforma empresarial para la gestión del ciclo de vida de siniestros. Inspecciones remotas, gestión documental, asignaciones y liquidación en un solo lugar.",
 };
 
 export default function RootLayout({

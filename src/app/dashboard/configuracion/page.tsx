@@ -55,7 +55,7 @@ export default function SettingsPage() {
       <section className="app-panel">
         <h2 className="text-sm font-semibold">Perfiles de usuario</h2>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          Tres tipos de usuario definen el acceso y las capacidades dentro de Hub Inspections.
+          Tres tipos de usuario definen el acceso y las capacidades dentro de Claims Hub.
         </p>
         <div className="mt-4 space-y-4">
           {profiles.map((p) => (

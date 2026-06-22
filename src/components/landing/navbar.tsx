@@ -25,7 +25,7 @@ export function Navbar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
             <span className="text-sm font-bold">H</span>
           </div>
-          <span className="hidden sm:inline">Hub Inspections</span>
+          <span className="hidden sm:inline">Claims Hub</span>
           <span className="sm:hidden">Hub</span>
         </Link>
 

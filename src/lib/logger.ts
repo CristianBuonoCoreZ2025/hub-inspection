@@ -1,5 +1,5 @@
 /**
- * Logger centralizado para Hub Inspections.
+ * Logger centralizado para Claims Hub.
  * Captura errores del frontend y backend con contexto.
  */
 
@@ -65,13 +65,13 @@ class Logger {
   info(message: string, context?: LogContext) {
     const entry = this.createEntry("info", message, undefined, context);
     this.push(entry);
-    console.info(`[Hub Inspections] ${message}`, context || "");
+    console.info(`[Claims Hub] ${message}`, context || "");
   }
 
   warn(message: string, context?: LogContext) {
     const entry = this.createEntry("warn", message, undefined, context);
     this.push(entry);
-    console.warn(`[Hub Inspections] ${message}`, context || "");
+    console.warn(`[Claims Hub] ${message}`, context || "");
   }
 
   error(message: string, error?: Error, context?: LogContext) {
