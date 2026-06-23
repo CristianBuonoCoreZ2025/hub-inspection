@@ -31,6 +31,7 @@ import {
   Warehouse,
   CalendarDays,
   Heart,
+  Zap,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -57,6 +58,7 @@ const catalogLinks = [
   { href: "/dashboard/catalogos/ubicaciones", label: "Ubicaciones", icon: MapPin },
   { href: "/dashboard/catalogos/causas", label: "Causas Siniestro", icon: AlertTriangle },
   { href: "/dashboard/catalogos/tipos-siniestros", label: "Tipos Siniestro", icon: FileWarning },
+  { href: "/dashboard/catalogos/eventos", label: "Eventos", icon: Zap },
   { href: "/dashboard/catalogos/companias", label: "Compañias Seguros", icon: Landmark },
   { href: "/dashboard/catalogos/corredores", label: "Corredores", icon: Briefcase },
   { href: "/dashboard/catalogos/asesores", label: "Asesores", icon: Users },

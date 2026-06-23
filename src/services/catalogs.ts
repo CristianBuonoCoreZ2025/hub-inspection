@@ -796,3 +796,30 @@ export async function getEvents() {
   const data = await graphqlRequest<{ events: Event[] }>(query);
   return data.events;
 }
+
+export async function createEvent(input: { country_id?: string; code?: string; name: string; description?: string }) {
+  const mutation = `
+    mutation CreateEvent($object: events_insert_input!) {
+      insert_events_one(object: $object) { id country_id code name description is_active }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_events_one: Event }>(mutation, {
+    object: { ...input, is_active: true },
+  });
+  return data.insert_events_one;
+}
+
+export async function updateEvent(id: string, input: Partial<Event>) {
+  const mutation = `
+    mutation UpdateEvent($id: uuid!, $set: events_set_input!) {
+      update_events_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id code name description is_active }
+    }
+  `;
+  const { id: _, created_at, updated_at, ...set } = input;
+  const data = await graphqlRequest<{ update_events_by_pk: Event }>(mutation, { id, set });
+  return data.update_events_by_pk;
+}
+
+export async function deleteEvent(id: string) {
+  return updateEvent(id, { is_active: false });
+}
