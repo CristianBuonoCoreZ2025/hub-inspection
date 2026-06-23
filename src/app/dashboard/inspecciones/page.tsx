@@ -156,6 +156,7 @@ export default function InspectionsPage() {
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="">Sin selección</SelectItem>
               <SelectItem value="all">Todos los estados</SelectItem>
               <SelectItem value="pending">Pendiente</SelectItem>
               <SelectItem value="scheduled">Agendada</SelectItem>

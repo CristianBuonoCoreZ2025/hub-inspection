@@ -139,6 +139,7 @@ export default function CompaniasPage() {
                       <SelectValue placeholder="Seleccionar país..." />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="">Sin selección</SelectItem>
                       {countries?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
