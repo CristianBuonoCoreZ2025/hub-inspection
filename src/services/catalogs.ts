@@ -58,7 +58,7 @@ export async function updateClaimCause(id: string, input: Partial<ClaimCause>) {
   const set: Record<string, unknown> = {};
   if (input.name !== undefined) set.name = input.name;
   if (input.description !== undefined) set.description = input.description;
-  if (input.country_id !== undefined) set.country_id = input.country_id;
+  if (input.country_id !== undefined && input.country_id !== "") set.country_id = input.country_id;
   if (input.is_active !== undefined) set.is_active = input.is_active;
   const data = await graphqlRequest<{ update_claim_causes_by_pk: ClaimCause }>(mutation, { id, set });
   return data.update_claim_causes_by_pk;
@@ -104,7 +104,10 @@ export async function updateInsuranceCompany(id: string, input: Partial<Insuranc
   `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
+    if (value !== undefined) {
+      if (key === "country_id" && value === "") continue;
+      set[key] = value;
+    }
   }
   const data = await graphqlRequest<{ update_insurance_companies_by_pk: InsuranceCompanyCatalog }>(mutation, { id, set });
   return data.update_insurance_companies_by_pk;
@@ -150,7 +153,10 @@ export async function updateBroker(id: string, input: Partial<BrokerCatalog>) {
   `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
+    if (value !== undefined) {
+      if (key === "country_id" && value === "") continue;
+      set[key] = value;
+    }
   }
   const data = await graphqlRequest<{ update_brokers_by_pk: BrokerCatalog }>(mutation, { id, set });
   return data.update_brokers_by_pk;
@@ -196,7 +202,10 @@ export async function updateBusinessLine(id: string, input: Partial<BusinessLine
   `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
+    if (value !== undefined) {
+      if (key === "country_id" && value === "") continue;
+      set[key] = value;
+    }
   }
   const data = await graphqlRequest<{ update_business_lines_by_pk: BusinessLine }>(mutation, { id, set });
   return data.update_business_lines_by_pk;
@@ -243,7 +252,10 @@ export async function updateInsuranceProduct(id: string, input: Partial<Insuranc
   `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
+    if (value !== undefined) {
+      if (key === "country_id" && value === "") continue;
+      set[key] = value;
+    }
   }
   const data = await graphqlRequest<{ update_insurance_products_by_pk: InsuranceProduct }>(mutation, { id, set });
   return data.update_insurance_products_by_pk;
@@ -289,7 +301,10 @@ export async function updateAdvisor(id: string, input: Partial<Advisor>) {
   `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) set[key] = value;
+    if (value !== undefined) {
+      if (key === "country_id" && value === "") continue;
+      set[key] = value;
+    }
   }
   const data = await graphqlRequest<{ update_advisors_by_pk: Advisor }>(mutation, { id, set });
   return data.update_advisors_by_pk;
