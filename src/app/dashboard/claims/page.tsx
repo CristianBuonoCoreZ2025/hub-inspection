@@ -1052,27 +1052,27 @@ export default function ClaimsPage() {
 
                 {/* Contratante (colapsable) */}
                 <div className="rounded-lg border border-border/50 overflow-hidden">
-                  <button
-                    type="button"
-                    className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
-                    onClick={() => setExpandedPanel(expandedPanel === "contractor" ? null : "contractor")}
-                  >
-                    <span className="text-[11px] font-semibold text-foreground/70">Contratante</span>
-                    <div className="flex items-center gap-2">
-                      {expandedPanel === "contractor" && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 text-[11px] px-2"
-                          onClick={(e) => { e.stopPropagation(); copyInsuredToContractor(); }}
-                        >
-                          Copiar de Asegurado
-                        </Button>
-                      )}
+                  <div className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 flex-1"
+                      onClick={() => setExpandedPanel(expandedPanel === "contractor" ? null : "contractor")}
+                    >
+                      <span className="text-[11px] font-semibold text-foreground/70">Contratante</span>
                       <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedPanel === "contractor" ? "rotate-180" : ""}`} />
-                    </div>
-                  </button>
+                    </button>
+                    {expandedPanel === "contractor" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2"
+                        onClick={() => copyInsuredToContractor()}
+                      >
+                        Copiar de Asegurado
+                      </Button>
+                    )}
+                  </div>
                   {expandedPanel === "contractor" && (
                     <div className="px-3 pb-3 space-y-2">
                       <div className="grid grid-cols-3 gap-2">
@@ -1177,27 +1177,27 @@ export default function ClaimsPage() {
 
                 {/* Beneficiario (colapsable) */}
                 <div className="rounded-lg border border-border/50 overflow-hidden">
-                  <button
-                    type="button"
-                    className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
-                    onClick={() => setExpandedPanel(expandedPanel === "beneficiary" ? null : "beneficiary")}
-                  >
-                    <span className="text-[11px] font-semibold text-foreground/70">Beneficiario</span>
-                    <div className="flex items-center gap-2">
-                      {expandedPanel === "beneficiary" && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 text-[11px] px-2"
-                          onClick={(e) => { e.stopPropagation(); copyInsuredToBeneficiary(); }}
-                        >
-                          Copiar de Asegurado
-                        </Button>
-                      )}
+                  <div className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 flex-1"
+                      onClick={() => setExpandedPanel(expandedPanel === "beneficiary" ? null : "beneficiary")}
+                    >
+                      <span className="text-[11px] font-semibold text-foreground/70">Beneficiario</span>
                       <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedPanel === "beneficiary" ? "rotate-180" : ""}`} />
-                    </div>
-                  </button>
+                    </button>
+                    {expandedPanel === "beneficiary" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2"
+                        onClick={() => copyInsuredToBeneficiary()}
+                      >
+                        Copiar de Asegurado
+                      </Button>
+                    )}
+                  </div>
                   {expandedPanel === "beneficiary" && (
                     <div className="px-3 pb-3 space-y-2">
                       <div className="grid grid-cols-3 gap-2">
