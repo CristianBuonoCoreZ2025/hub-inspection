@@ -530,8 +530,7 @@ export default function ClaimsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar siniestro..."
+            <input              placeholder="Buscar siniestro..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-8 w-full max-w-[200px] text-[13px]"
@@ -546,15 +545,13 @@ export default function ClaimsPage() {
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
-          <Input
-            type="date"
+          <input            type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             className="h-8 w-[130px] text-[13px]"
             placeholder="Desde"
           />
-          <Input
-            type="date"
+          <input            type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             className="h-8 w-[130px] text-[13px]"
@@ -725,7 +722,7 @@ export default function ClaimsPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">N° Interno Cliente</Label>
-                    <Input
+                    <input
                       readOnly
                       placeholder="MCL-XXXX"
                       className="app-input h-7 bg-muted/50"
@@ -737,7 +734,7 @@ export default function ClaimsPage() {
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
                       N° Siniestro (Compañía) <span className="text-red-500">*</span>
                     </Label>
-                    <Input
+                    <input
                       {...form.register("claimNumber")}
                       placeholder="Ej: 12345678"
                       className="app-input h-7"
@@ -749,7 +746,7 @@ export default function ClaimsPage() {
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
                       N° Póliza <span className="text-red-500">*</span>
                     </Label>
-                    <Input
+                    <input
                       {...form.register("policyNumber")}
                       placeholder="Ej: POL-2026-001"
                       className="app-input h-7"
@@ -764,7 +761,7 @@ export default function ClaimsPage() {
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
                       Fecha Siniestro <span className="text-red-500">*</span>
                     </Label>
-                    <Input
+                    <input
                       {...form.register("claimDate")}
                       type="date"
                       className="app-input h-7 px-2 text-xs"
@@ -774,7 +771,7 @@ export default function ClaimsPage() {
 
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Fecha Denuncio</Label>
-                    <Input
+                    <input
                       {...form.register("reportDate")}
                       type="date"
                       className="app-input h-7 px-2 text-xs"
@@ -783,7 +780,7 @@ export default function ClaimsPage() {
 
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Fecha Asignación</Label>
-                    <Input
+                    <input
                       {...form.register("assignmentDate")}
                       type="date"
                       className="app-input h-7 px-2 text-xs"
@@ -1092,8 +1089,7 @@ export default function ClaimsPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
-                    <Input
-                      {...form.register("rut")}
+                    <input                      {...form.register("rut")}
                       placeholder="14185994k"
                       className="app-input h-7"
                     />
@@ -1102,8 +1098,7 @@ export default function ClaimsPage() {
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
                       Nombre <span className="text-red-500">*</span>
                     </Label>
-                    <Input
-                      {...form.register("insuredName")}
+                    <input                      {...form.register("insuredName")}
                       placeholder="Cristian"
                       className="app-input h-7"
                     />
@@ -1111,16 +1106,14 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Apellido</Label>
-                    <Input
-                      {...form.register("lastName")}
+                    <input                      {...form.register("lastName")}
                       placeholder="Zárate"
                       className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</Label>
-                    <Input
-                      {...form.register("insuredEmail")}
+                    <input                      {...form.register("insuredEmail")}
                       type="email"
                       placeholder="asegurado@email.com"
                       className="app-input h-7"
@@ -1130,8 +1123,7 @@ export default function ClaimsPage() {
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
                       Celular <span className="text-red-500">*</span>
                     </Label>
-                    <Input
-                      {...form.register("cellPhone")}
+                    <input                      {...form.register("cellPhone")}
                       placeholder="9 9999 9999"
                       className="app-input h-7"
                     />
@@ -1139,8 +1131,7 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Teléfono</Label>
-                    <Input
-                      {...form.register("insuredPhone")}
+                    <input                      {...form.register("insuredPhone")}
                       placeholder="X XXXX XXXX"
                       className="app-input h-7"
                     />
@@ -1154,8 +1145,7 @@ export default function ClaimsPage() {
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
                       Dirección <span className="text-red-500">*</span>
                     </Label>
-                    <Input
-                      {...form.register("claimAddress")}
+                    <input                      {...form.register("claimAddress")}
                       placeholder="Av. Ricardo Lyon 1351"
                       className="app-input h-7"
                     />
@@ -1259,32 +1249,28 @@ export default function ClaimsPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
-                    <Input
-                      {...form.register("contractorRut")}
+                    <input                      {...form.register("contractorRut")}
                       placeholder="14185994k"
                       className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Nombre</Label>
-                    <Input
-                      {...form.register("contractorName")}
+                    <input                      {...form.register("contractorName")}
                       placeholder="Cristian"
                       className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Apellido</Label>
-                    <Input
-                      {...form.register("contractorLastName")}
+                    <input                      {...form.register("contractorLastName")}
                       placeholder="Zárate"
                       className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</Label>
-                    <Input
-                      {...form.register("contractorEmail")}
+                    <input                      {...form.register("contractorEmail")}
                       type="email"
                       placeholder="contratante@email.com"
                       className="app-input h-7"
@@ -1292,16 +1278,14 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Celular</Label>
-                    <Input
-                      {...form.register("contractorCellPhone")}
+                    <input                      {...form.register("contractorCellPhone")}
                       placeholder="9 9999 9999"
                       className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1 col-span-full">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
-                    <Input
-                      {...form.register("contractorAddress")}
+                    <input                      {...form.register("contractorAddress")}
                       placeholder="Av. Ricardo Lyon 1351"
                       className="app-input h-7"
                     />
@@ -1384,32 +1368,28 @@ export default function ClaimsPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
-                    <Input
-                      {...form.register("beneficiaryRut")}
+                    <input                      {...form.register("beneficiaryRut")}
                       placeholder="14185994k"
                       className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Nombre</Label>
-                    <Input
-                      {...form.register("beneficiaryName")}
+                    <input                      {...form.register("beneficiaryName")}
                       placeholder="Cristian"
                       className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Apellido</Label>
-                    <Input
-                      {...form.register("beneficiaryLastName")}
+                    <input                      {...form.register("beneficiaryLastName")}
                       placeholder="Zárate"
                       className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</Label>
-                    <Input
-                      {...form.register("beneficiaryEmail")}
+                    <input                      {...form.register("beneficiaryEmail")}
                       type="email"
                       placeholder="beneficiario@email.com"
                       className="app-input h-7"
@@ -1417,16 +1397,14 @@ export default function ClaimsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Celular</Label>
-                    <Input
-                      {...form.register("beneficiaryCellPhone")}
+                    <input                      {...form.register("beneficiaryCellPhone")}
                       placeholder="9 9999 9999"
                       className="app-input h-7"
                     />
                   </div>
                   <div className="flex flex-col gap-1 col-span-full">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
-                    <Input
-                      {...form.register("beneficiaryAddress")}
+                    <input                      {...form.register("beneficiaryAddress")}
                       placeholder="Av. Ricardo Lyon 1351"
                       className="app-input h-7"
                     />
@@ -1546,8 +1524,7 @@ export default function ClaimsPage() {
                         documents.map((doc) => (
                           <tr key={doc.id}>
                             <td>
-                              <Input
-                                value={doc.name}
+                              <input                                value={doc.name}
                                 onChange={(e) =>
                                   updateDocument(doc.id, { name: e.target.value })
                                 }
