@@ -1781,7 +1781,7 @@ export default function ClaimsPage() {
             <button
               type="button"
               className="btn-cancel"
-              style={{ width: "130px", background: "#fff1f2 !important", borderColor: "#fecdd3 !important", color: "#9f1239 !important" }}
+              style={{ width: "130px" }}
               onClick={() => {
                 setOpen(false);
                 form.reset();
