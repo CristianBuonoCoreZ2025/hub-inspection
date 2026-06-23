@@ -453,6 +453,7 @@ export interface BusinessLine {
   country_id: string;
   name: string;
   claim_type: string | null;
+  claim_type_id: string | null;
   ramo_fecu: string | null;
   description: string | null;
   is_active: boolean;

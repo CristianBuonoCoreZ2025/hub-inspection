@@ -176,7 +176,7 @@ export async function getBusinessLines() {
     const query = `
       query GetBusinessLines {
         business_lines(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-          id country_id name claim_type ramo_fecu description is_active created_at updated_at
+          id country_id name claim_type claim_type_id ramo_fecu description is_active created_at updated_at
         }
       }
     `;
@@ -188,10 +188,10 @@ export async function getBusinessLines() {
   }
 }
 
-export async function createBusinessLine(input: { country_id?: string; name: string; claim_type?: string; ramo_fecu?: string; description?: string }) {
+export async function createBusinessLine(input: { country_id?: string; name: string; claim_type?: string; claim_type_id?: string; ramo_fecu?: string; description?: string }) {
   const mutation = `
     mutation CreateBusinessLine($object: business_lines_insert_input!) {
-      insert_business_lines_one(object: $object) { id country_id name claim_type ramo_fecu description is_active }
+      insert_business_lines_one(object: $object) { id country_id name claim_type claim_type_id ramo_fecu description is_active }
     }
   `;
   const data = await graphqlRequest<{ insert_business_lines_one: BusinessLine }>(mutation, {
@@ -203,7 +203,7 @@ export async function createBusinessLine(input: { country_id?: string; name: str
 export async function updateBusinessLine(id: string, input: Partial<BusinessLine>) {
   const mutation = `
     mutation UpdateBusinessLine($id: uuid!, $set: business_lines_set_input!) {
-      update_business_lines_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id name claim_type ramo_fecu description is_active }
+      update_business_lines_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id name claim_type claim_type_id ramo_fecu description is_active }
     }
   `;
   const set: Record<string, unknown> = {};

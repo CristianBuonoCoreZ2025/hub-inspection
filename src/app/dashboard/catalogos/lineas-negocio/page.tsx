@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getBusinessLines, createBusinessLine, updateBusinessLine, deleteBusinessLine, getCountries } from "@/services/catalogs";
+import { getBusinessLines, createBusinessLine, updateBusinessLine, deleteBusinessLine, getCountries, getClaimTypes } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, Tag } from "lucide-react";
 
@@ -27,7 +27,7 @@ export default function LineasNegocioPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ country_id: "", name: "", claim_type: "", ramo_fecu: "", description: "" });
+  const [formData, setFormData] = useState({ country_id: "", name: "", claim_type: "", claim_type_id: "", ramo_fecu: "", description: "" });
 
   const { data: lines, isLoading } = useQuery({
     queryKey: ["business-lines"],
@@ -37,6 +37,11 @@ export default function LineasNegocioPage() {
   const { data: countries } = useQuery({
     queryKey: ["countries"],
     queryFn: getCountries,
+  });
+
+  const { data: claimTypes } = useQuery({
+    queryKey: ["claim-types"],
+    queryFn: getClaimTypes,
   });
 
   const defaultCountryId = countries?.find((c) => c.code === "CL")?.id || "";
@@ -63,7 +68,7 @@ export default function LineasNegocioPage() {
     [l.name, l.claim_type, l.ramo_fecu, l.description].join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
-  const resetForm = () => setFormData({ country_id: defaultCountryId, name: "", claim_type: "", ramo_fecu: "", description: "" });
+  const resetForm = () => setFormData({ country_id: defaultCountryId, name: "", claim_type: "", claim_type_id: "", ramo_fecu: "", description: "" });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,12 +105,12 @@ export default function LineasNegocioPage() {
                 <td><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /></td>
                 <td>{countries?.find((c) => c.id === l.country_id)?.name || "—"}</td>
                 <td className="font-medium">{l.name}</td>
-                <td>{l.claim_type || "—"}</td>
+                <td>{claimTypes?.find((ct) => ct.id === l.claim_type_id)?.name || l.claim_type || "—"}</td>
                 <td>{l.ramo_fecu || "—"}</td>
                 <td className="max-w-[300px] truncate text-muted-foreground">{l.description || "—"}</td>
                 <td>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(l.id); setFormData({ country_id: l.country_id || "", name: l.name, claim_type: l.claim_type || "", ramo_fecu: l.ramo_fecu || "", description: l.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(l.id); setFormData({ country_id: l.country_id || "", name: l.name, claim_type: l.claim_type || "", claim_type_id: l.claim_type_id || "", ramo_fecu: l.ramo_fecu || "", description: l.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar esta linea?")) deleteMutation.mutate(l.id); }}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </td>
@@ -145,7 +150,19 @@ export default function LineasNegocioPage() {
                   <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
                   <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ej: Accidentes Personales" className="app-input" />
                 </div>
-                <div className="modal-field"><Label className="app-field-label">Tipo Siniestro</Label><Input value={formData.claim_type} onChange={(e) => setFormData({ ...formData, claim_type: e.target.value })} className="app-input" /></div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Tipo Siniestro</Label>
+                  <Select
+                    value={formData.claim_type_id}
+                    onValueChange={(v) => setFormData({ ...formData, claim_type_id: v ?? "" })}
+                    items={claimTypes?.map((ct) => ({ value: ct.id, label: ct.name })) || []}
+                  >
+                    <SelectTrigger className="app-input h-9"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
+                    <SelectContent>
+                      {claimTypes?.map((ct) => (<SelectItem key={ct.id} value={ct.id}>{ct.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="modal-field"><Label className="app-field-label">Ramo FECU</Label><Input value={formData.ramo_fecu} onChange={(e) => setFormData({ ...formData, ramo_fecu: e.target.value })} className="app-input" /></div>
                 <div className="modal-field modal-field-full"><Label className="app-field-label">Descripcion</Label><Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="app-input" /></div>
               </div>
