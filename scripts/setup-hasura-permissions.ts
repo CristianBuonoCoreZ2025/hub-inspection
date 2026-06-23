@@ -49,6 +49,7 @@ const TABLES = [
   "policy_types",
   "lookup_catalog",
   "events",
+  "document_types",
 ];
 
 const ROLE = "user";

@@ -19,6 +19,7 @@ import type {
   Relationship,
   LookupCatalog,
   Country,
+  DocumentType,
 } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -847,4 +848,48 @@ export async function updateEvent(id: string, input: { country_id?: string; code
 
 export async function deleteEvent(id: string) {
   return updateEvent(id, { is_active: false });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DOCUMENT TYPES
+// ═══════════════════════════════════════════════════════════════
+
+export async function getDocumentTypes() {
+  const query = `
+    query GetDocumentTypes {
+      document_types(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
+        id country_id code name description is_active created_at updated_at
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ document_types: DocumentType[] }>(query);
+  return data.document_types;
+}
+
+export async function createDocumentType(input: { country_id?: string; code?: string; name: string; description?: string }) {
+  const mutation = `
+    mutation CreateDocumentType($object: document_types_insert_input!) {
+      insert_document_types_one(object: $object) { id country_id code name description is_active }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_document_types_one: DocumentType }>(mutation, {
+    object: { ...input, is_active: true },
+  });
+  return data.insert_document_types_one;
+}
+
+export async function updateDocumentType(id: string, input: { country_id?: string; code?: string; name?: string; description?: string; is_active?: boolean }) {
+  const mutation = `
+    mutation UpdateDocumentType($id: uuid!, $set: document_types_set_input!) {
+      update_document_types_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id code name description is_active }
+    }
+  `;
+  const { country_id, code, name, description, is_active, ...rest } = input;
+  const set = { country_id, code, name, description, is_active };
+  const data = await graphqlRequest<{ update_document_types_by_pk: DocumentType }>(mutation, { id, set });
+  return data.update_document_types_by_pk;
+}
+
+export async function deleteDocumentType(id: string) {
+  return updateDocumentType(id, { is_active: false });
 }

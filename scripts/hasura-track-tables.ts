@@ -97,6 +97,7 @@ async function main() {
     "brokers",
     "housing_destinations",
     "damage_classifications",
+    "document_types",
   ];
 
   console.log(`\nTracking tables in Hasura...`);

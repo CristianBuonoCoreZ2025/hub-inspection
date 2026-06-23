@@ -70,6 +70,7 @@ const catalogLinks = [
   { href: "/dashboard/catalogos/destinos-vivienda", label: "Destinos Vivienda", icon: Warehouse },
   { href: "/dashboard/catalogos/antiguedades", label: "Antiguedad Inmueble", icon: CalendarDays },
   { href: "/dashboard/catalogos/parentescos", label: "Parentescos", icon: Heart },
+  { href: "/dashboard/catalogos/tipos-documentos", label: "Tipos Documentos", icon: FileText },
 ]
 
 const adminLinks = [
