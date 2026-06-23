@@ -365,6 +365,11 @@ export default function ClaimsPage() {
     enabled: !!selectedClaimCity && !!citiesCatalog,
   });
 
+  // Visibilidad de campos de ubicación (ocultar si no hay datos)
+  const hasRegions = !!regionsCatalog && regionsCatalog.length > 0;
+  const hasCities = !!citiesCatalog && citiesCatalog.length > 0;
+  const hasCommunes = !!communesCatalog && communesCatalog.length > 0;
+
   const selectedBusinessLineId = useWatch({ control: form.control, name: "businessLineId" });
   const filteredInsuranceProducts = insuranceProductsCatalog?.filter(
     (p) => !selectedBusinessLineId || p.business_line_id === selectedBusinessLineId
@@ -407,10 +412,10 @@ export default function ClaimsPage() {
           insuredPhone: values.insuredPhone || null,
           cellPhone: values.cellPhone,
           insuredAddress: values.insuredAddress || null,
-          insuredCountry: values.insuredCountry || null,
-          insuredRegion: values.insuredRegion || null,
-          insuredCity: values.insuredCity || null,
-          insuredCommune: values.insuredCommune || null,
+          insuredCountry: values.claimCountry || null,
+          insuredRegion: values.claimRegion || null,
+          insuredCity: values.claimCity || null,
+          insuredCommune: values.claimCommune || null,
         },
         {
           claimAddress: values.claimAddress,
@@ -428,10 +433,10 @@ export default function ClaimsPage() {
               contractorCellPhone: values.contractorCellPhone || null,
               contractorPhone: values.contractorPhone || null,
               contractorAddress: values.contractorAddress || null,
-              contractorCountry: values.contractorCountry || null,
-              contractorRegion: values.contractorRegion || null,
-              contractorCity: values.contractorCity || null,
-              contractorCommune: values.contractorCommune || null,
+              contractorCountry: values.claimCountry || null,
+              contractorRegion: values.claimRegion || null,
+              contractorCity: values.claimCity || null,
+              contractorCommune: values.claimCommune || null,
             }
           : null,
         values.beneficiaryName
@@ -443,10 +448,10 @@ export default function ClaimsPage() {
               beneficiaryCellPhone: values.beneficiaryCellPhone || null,
               beneficiaryPhone: values.beneficiaryPhone || null,
               beneficiaryAddress: values.beneficiaryAddress || null,
-              beneficiaryCountry: values.beneficiaryCountry || null,
-              beneficiaryRegion: values.beneficiaryRegion || null,
-              beneficiaryCity: values.beneficiaryCity || null,
-              beneficiaryCommune: values.beneficiaryCommune || null,
+              beneficiaryCountry: values.claimCountry || null,
+              beneficiaryRegion: values.claimRegion || null,
+              beneficiaryCity: values.claimCity || null,
+              beneficiaryCommune: values.claimCommune || null,
             }
           : null
       ),
@@ -492,10 +497,6 @@ export default function ClaimsPage() {
     form.setValue("contractorCellPhone", form.getValues("cellPhone") || "");
     form.setValue("contractorPhone", form.getValues("insuredPhone") || "");
     form.setValue("contractorAddress", form.getValues("insuredAddress") || "");
-    form.setValue("contractorCountry", form.getValues("insuredCountry") || "");
-    form.setValue("contractorRegion", form.getValues("insuredRegion") || "");
-    form.setValue("contractorCity", form.getValues("insuredCity") || "");
-    form.setValue("contractorCommune", form.getValues("insuredCommune") || "");
   };
 
   const copyInsuredToBeneficiary = () => {
@@ -506,10 +507,6 @@ export default function ClaimsPage() {
     form.setValue("beneficiaryCellPhone", form.getValues("cellPhone") || "");
     form.setValue("beneficiaryPhone", form.getValues("insuredPhone") || "");
     form.setValue("beneficiaryAddress", form.getValues("insuredAddress") || "");
-    form.setValue("beneficiaryCountry", form.getValues("insuredCountry") || "");
-    form.setValue("beneficiaryRegion", form.getValues("insuredRegion") || "");
-    form.setValue("beneficiaryCity", form.getValues("insuredCity") || "");
-    form.setValue("beneficiaryCommune", form.getValues("insuredCommune") || "");
   };
 
   const handleFileSelect = (files: FileList | null) => {
@@ -687,6 +684,11 @@ export default function ClaimsPage() {
                         name="claimCountry"
                         placeholder="Seleccionar país..."
                         className="app-input h-7"
+                        onValueChange={() => {
+                          form.setValue("claimRegion", "");
+                          form.setValue("claimCity", "");
+                          form.setValue("claimCommune", "");
+                        }}
                         items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                       >
                         {countriesCatalog?.map((c) => (
@@ -986,13 +988,13 @@ export default function ClaimsPage() {
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
                       <FormSelect
                         control={form.control}
-                        name="insuredCountry"
+                        name="claimCountry"
                         placeholder="Seleccionar país..."
                         className="app-input h-7"
                         onValueChange={() => {
-                          form.setValue("insuredRegion", "");
-                          form.setValue("insuredCity", "");
-                          form.setValue("insuredCommune", "");
+                          form.setValue("claimRegion", "");
+                          form.setValue("claimCity", "");
+                          form.setValue("claimCommune", "");
                         }}
                         items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                       >
@@ -1001,53 +1003,62 @@ export default function ClaimsPage() {
                         ))}
                       </FormSelect>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="insuredRegion"
-                        placeholder="Seleccionar región..."
-                        className="app-input h-7"
-                        onValueChange={() => {
-                          form.setValue("insuredCity", "");
-                          form.setValue("insuredCommune", "");
-                        }}
-                        items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
-                      >
-                        {regionsCatalog?.map((r) => (
-                          <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="insuredCity"
-                        placeholder="Seleccionar ciudad..."
-                        className="app-input h-7"
-                        onValueChange={() => form.setValue("insuredCommune", "")}
-                        items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
-                      >
-                        {citiesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="insuredCommune"
-                        placeholder="Seleccionar comuna..."
-                        className="app-input h-7"
-                        items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
-                      >
-                        {communesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
+                    {hasRegions && (
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
+                        <FormSelect
+                          control={form.control}
+                          name="claimRegion"
+                          placeholder="Seleccionar región..."
+                          className="app-input h-7"
+                          disabled={!selectedClaimCountry}
+                          onValueChange={() => {
+                            form.setValue("claimCity", "");
+                            form.setValue("claimCommune", "");
+                          }}
+                          items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
+                        >
+                          {regionsCatalog?.map((r) => (
+                            <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                          ))}
+                        </FormSelect>
+                      </div>
+                    )}
+                    {hasCities && (
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
+                        <FormSelect
+                          control={form.control}
+                          name="claimCity"
+                          placeholder="Seleccionar ciudad..."
+                          className="app-input h-7"
+                          disabled={!selectedClaimRegion}
+                          onValueChange={() => form.setValue("claimCommune", "")}
+                          items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                        >
+                          {citiesCatalog?.map((c) => (
+                            <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                          ))}
+                        </FormSelect>
+                      </div>
+                    )}
+                    {hasCommunes && (
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
+                        <FormSelect
+                          control={form.control}
+                          name="claimCommune"
+                          placeholder="Seleccionar comuna..."
+                          className="app-input h-7"
+                          disabled={!selectedClaimCity}
+                          items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                        >
+                          {communesCatalog?.map((c) => (
+                            <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                          ))}
+                        </FormSelect>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1109,13 +1120,13 @@ export default function ClaimsPage() {
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
                           <FormSelect
                             control={form.control}
-                            name="contractorCountry"
+                            name="claimCountry"
                             placeholder="Seleccionar país..."
                             className="app-input h-7"
                             onValueChange={() => {
-                              form.setValue("contractorRegion", "");
-                              form.setValue("contractorCity", "");
-                              form.setValue("contractorCommune", "");
+                              form.setValue("claimRegion", "");
+                              form.setValue("claimCity", "");
+                              form.setValue("claimCommune", "");
                             }}
                             items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                           >
@@ -1124,53 +1135,62 @@ export default function ClaimsPage() {
                             ))}
                           </FormSelect>
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
-                          <FormSelect
-                            control={form.control}
-                            name="contractorRegion"
-                            placeholder="Seleccionar región..."
-                            className="app-input h-7"
-                            onValueChange={() => {
-                              form.setValue("contractorCity", "");
-                              form.setValue("contractorCommune", "");
-                            }}
-                            items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
-                          >
-                            {regionsCatalog?.map((r) => (
-                              <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
-                            ))}
-                          </FormSelect>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
-                          <FormSelect
-                            control={form.control}
-                            name="contractorCity"
-                            placeholder="Seleccionar ciudad..."
-                            className="app-input h-7"
-                            onValueChange={() => form.setValue("contractorCommune", "")}
-                            items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
-                          >
-                            {citiesCatalog?.map((c) => (
-                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                            ))}
-                          </FormSelect>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
-                          <FormSelect
-                            control={form.control}
-                            name="contractorCommune"
-                            placeholder="Seleccionar comuna..."
-                            className="app-input h-7"
-                            items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
-                          >
-                            {communesCatalog?.map((c) => (
-                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                            ))}
-                          </FormSelect>
-                        </div>
+                        {hasRegions && (
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
+                            <FormSelect
+                              control={form.control}
+                              name="claimRegion"
+                              placeholder="Seleccionar región..."
+                              className="app-input h-7"
+                              disabled={!selectedClaimCountry}
+                              onValueChange={() => {
+                                form.setValue("claimCity", "");
+                                form.setValue("claimCommune", "");
+                              }}
+                              items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
+                            >
+                              {regionsCatalog?.map((r) => (
+                                <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                              ))}
+                            </FormSelect>
+                          </div>
+                        )}
+                        {hasCities && (
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
+                            <FormSelect
+                              control={form.control}
+                              name="claimCity"
+                              placeholder="Seleccionar ciudad..."
+                              className="app-input h-7"
+                              disabled={!selectedClaimRegion}
+                              onValueChange={() => form.setValue("claimCommune", "")}
+                              items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                            >
+                              {citiesCatalog?.map((c) => (
+                                <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                              ))}
+                            </FormSelect>
+                          </div>
+                        )}
+                        {hasCommunes && (
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
+                            <FormSelect
+                              control={form.control}
+                              name="claimCommune"
+                              placeholder="Seleccionar comuna..."
+                              className="app-input h-7"
+                              disabled={!selectedClaimCity}
+                              items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                            >
+                              {communesCatalog?.map((c) => (
+                                <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                              ))}
+                            </FormSelect>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1234,13 +1254,13 @@ export default function ClaimsPage() {
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
                           <FormSelect
                             control={form.control}
-                            name="beneficiaryCountry"
+                            name="claimCountry"
                             placeholder="Seleccionar país..."
                             className="app-input h-7"
                             onValueChange={() => {
-                              form.setValue("beneficiaryRegion", "");
-                              form.setValue("beneficiaryCity", "");
-                              form.setValue("beneficiaryCommune", "");
+                              form.setValue("claimRegion", "");
+                              form.setValue("claimCity", "");
+                              form.setValue("claimCommune", "");
                             }}
                             items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                           >
@@ -1249,53 +1269,62 @@ export default function ClaimsPage() {
                             ))}
                           </FormSelect>
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
-                          <FormSelect
-                            control={form.control}
-                            name="beneficiaryRegion"
-                            placeholder="Seleccionar región..."
-                            className="app-input h-7"
-                            onValueChange={() => {
-                              form.setValue("beneficiaryCity", "");
-                              form.setValue("beneficiaryCommune", "");
-                            }}
-                            items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
-                          >
-                            {regionsCatalog?.map((r) => (
-                              <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
-                            ))}
-                          </FormSelect>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
-                          <FormSelect
-                            control={form.control}
-                            name="beneficiaryCity"
-                            placeholder="Seleccionar ciudad..."
-                            className="app-input h-7"
-                            onValueChange={() => form.setValue("beneficiaryCommune", "")}
-                            items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
-                          >
-                            {citiesCatalog?.map((c) => (
-                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                            ))}
-                          </FormSelect>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
-                          <FormSelect
-                            control={form.control}
-                            name="beneficiaryCommune"
-                            placeholder="Seleccionar comuna..."
-                            className="app-input h-7"
-                            items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
-                          >
-                            {communesCatalog?.map((c) => (
-                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                            ))}
-                          </FormSelect>
-                        </div>
+                        {hasRegions && (
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
+                            <FormSelect
+                              control={form.control}
+                              name="claimRegion"
+                              placeholder="Seleccionar región..."
+                              className="app-input h-7"
+                              disabled={!selectedClaimCountry}
+                              onValueChange={() => {
+                                form.setValue("claimCity", "");
+                                form.setValue("claimCommune", "");
+                              }}
+                              items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
+                            >
+                              {regionsCatalog?.map((r) => (
+                                <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                              ))}
+                            </FormSelect>
+                          </div>
+                        )}
+                        {hasCities && (
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
+                            <FormSelect
+                              control={form.control}
+                              name="claimCity"
+                              placeholder="Seleccionar ciudad..."
+                              className="app-input h-7"
+                              disabled={!selectedClaimRegion}
+                              onValueChange={() => form.setValue("claimCommune", "")}
+                              items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                            >
+                              {citiesCatalog?.map((c) => (
+                                <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                              ))}
+                            </FormSelect>
+                          </div>
+                        )}
+                        {hasCommunes && (
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
+                            <FormSelect
+                              control={form.control}
+                              name="claimCommune"
+                              placeholder="Seleccionar comuna..."
+                              className="app-input h-7"
+                              disabled={!selectedClaimCity}
+                              items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                            >
+                              {communesCatalog?.map((c) => (
+                                <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                              ))}
+                            </FormSelect>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1435,59 +1464,65 @@ export default function ClaimsPage() {
                         ))}
                       </FormSelect>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="claimRegion"
-                        placeholder="Seleccionar región..."
-                        className="app-input h-7"
-                        disabled={!selectedClaimCountry}
-                        onValueChange={() => {
-                          form.setValue("claimCity", "");
-                          form.setValue("claimCommune", "");
-                        }}
-                        items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
-                      >
-                        {regionsCatalog?.map((r) => (
-                          <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        Ciudad <span className="text-red-500">*</span>
-                      </Label>
-                      <FormSelect
-                        control={form.control}
-                        name="claimCity"
-                        placeholder="Seleccionar ciudad..."
-                        className="app-input h-7"
-                        disabled={!selectedClaimRegion}
-                        onValueChange={() => form.setValue("claimCommune", "")}
-                        items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
-                      >
-                        {citiesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                        ))}
-                      </FormSelect>
-                      <FieldError message={form.formState.errors.claimCity?.message} />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="claimCommune"
-                        placeholder="Seleccionar comuna..."
-                        className="app-input h-7"
-                        disabled={!selectedClaimCity}
-                        items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
-                      >
-                        {communesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
+                    {hasRegions && (
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
+                        <FormSelect
+                          control={form.control}
+                          name="claimRegion"
+                          placeholder="Seleccionar región..."
+                          className="app-input h-7"
+                          disabled={!selectedClaimCountry}
+                          onValueChange={() => {
+                            form.setValue("claimCity", "");
+                            form.setValue("claimCommune", "");
+                          }}
+                          items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
+                        >
+                          {regionsCatalog?.map((r) => (
+                            <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                          ))}
+                        </FormSelect>
+                      </div>
+                    )}
+                    {hasCities && (
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          Ciudad <span className="text-red-500">*</span>
+                        </Label>
+                        <FormSelect
+                          control={form.control}
+                          name="claimCity"
+                          placeholder="Seleccionar ciudad..."
+                          className="app-input h-7"
+                          disabled={!selectedClaimRegion}
+                          onValueChange={() => form.setValue("claimCommune", "")}
+                          items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                        >
+                          {citiesCatalog?.map((c) => (
+                            <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                          ))}
+                        </FormSelect>
+                        <FieldError message={form.formState.errors.claimCity?.message} />
+                      </div>
+                    )}
+                    {hasCommunes && (
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
+                        <FormSelect
+                          control={form.control}
+                          name="claimCommune"
+                          placeholder="Seleccionar comuna..."
+                          className="app-input h-7"
+                          disabled={!selectedClaimCity}
+                          items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                        >
+                          {communesCatalog?.map((c) => (
+                            <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                          ))}
+                        </FormSelect>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
