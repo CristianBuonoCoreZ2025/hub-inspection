@@ -780,9 +780,9 @@ export default function ClaimsPage() {
           <div className="modal-header">
             <DialogTitle className="modal-title flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
-                <FileText className="h-4 w-4" />
+                <ClipboardCheck className="h-4 w-4" />
               </div>
-              Crear
+              Crear Siniestro
             </DialogTitle>
             <DialogDescription className="modal-subtitle">
               Completa los datos para crear el siniestro e iniciar una inspección remota.
