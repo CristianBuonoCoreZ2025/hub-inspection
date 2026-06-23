@@ -63,6 +63,62 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 
 const ICON_OPTIONS = Object.keys(ICON_MAP);
 
+// Categorize icons for intelligent filtering
+const ICON_CATEGORIES: Record<string, string[]> = {
+  property: ["Building", "Warehouse", "Store", "Hotel", "Factory", "Home", "House"],
+  transport: ["Car", "Truck", "Bus", "Bike", "Ship", "Plane", "Train", "Motorbike", "Package"],
+  life: ["Heart", "Baby", "Hospital", "Activity", "HeartPulse"],
+  legal: ["Scale", "Gavel", "FileText", "Badge", "Users", "Hand"],
+  weather: ["Flame", "Droplets", "Zap", "Wind", "Wrench"],
+  general: ["FileWarning", "AlertTriangle", "Shield", "ClipboardCheck"],
+};
+
+function getIconCategory(name: string): string | null {
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes("propiedad") || lowerName.includes("property") || lowerName.includes("inmueble") ||
+      lowerName.includes("bodega") || lowerName.includes("almacén") || lowerName.includes("almacen") ||
+      lowerName.includes("tienda") || lowerName.includes("comercio") || lowerName.includes("local") ||
+      lowerName.includes("hotel") || lowerName.includes("hostal") ||
+      lowerName.includes("fábrica") || lowerName.includes("fabrica") || lowerName.includes("industrial") ||
+      lowerName.includes("oficina") || lowerName.includes("empresa") ||
+      lowerName.includes("hogar") || lowerName.includes("vivienda") || lowerName.includes("casa") ||
+      lowerName.includes("house")) return "property";
+  if (lowerName.includes("transporte") || lowerName.includes("transport") ||
+      lowerName.includes("auto") || lowerName.includes("vehículo") || lowerName.includes("vehiculo") ||
+      lowerName.includes("camión") || lowerName.includes("camion") || lowerName.includes("carga") ||
+      lowerName.includes("bus") || lowerName.includes("autobús") || lowerName.includes("autobus") ||
+      lowerName.includes("bicicleta") || lowerName.includes("moto") ||
+      lowerName.includes("barco") || lowerName.includes("nave") || lowerName.includes("marítimo") || lowerName.includes("maritimo") ||
+      lowerName.includes("avión") || lowerName.includes("aereo") || lowerName.includes("aéreo") ||
+      lowerName.includes("tren") || lowerName.includes("ferrocarril") ||
+      lowerName.includes("paquete") || lowerName.includes("mercancía")) return "transport";
+  if (lowerName.includes("vida") || lowerName.includes("life") ||
+      lowerName.includes("bebé") || lowerName.includes("bebe") || lowerName.includes("infantil") ||
+      lowerName.includes("salud") || lowerName.includes("hospital") || lowerName.includes("médico") || lowerName.includes("medico") ||
+      lowerName.includes("accidente") || lowerName.includes("lesión") || lowerName.includes("lesion") ||
+      lowerName.includes("corazón") || lowerName.includes("cardíaco") || lowerName.includes("cardiaco")) return "life";
+  if (lowerName.includes("responsabilidad") || lowerName.includes("civil") || lowerName.includes("rc") ||
+      lowerName.includes("legal") || lowerName.includes("juicio") || lowerName.includes("litigio") ||
+      lowerName.includes("contrato") || lowerName.includes("póliza") || lowerName.includes("poliza") ||
+      lowerName.includes("certificado") || lowerName.includes("garantía") || lowerName.includes("garantia") ||
+      lowerName.includes("personas") || lowerName.includes("grupo") || lowerName.includes("colectivo") ||
+      lowerName.includes("manual") || lowerName.includes("operativo") || lowerName.includes("trabajo")) return "legal";
+  if (lowerName.includes("fuego") || lowerName.includes("incendio") ||
+      lowerName.includes("agua") || lowerName.includes("inundación") || lowerName.includes("inundacion") ||
+      lowerName.includes("electrico") || lowerName.includes("rayo") ||
+      lowerName.includes("viento") || lowerName.includes("tormenta") ||
+      lowerName.includes("mecánico") || lowerName.includes("maquinaria")) return "weather";
+  return null;
+}
+
+function getFilteredIcons(name: string): string[] {
+  const category = getIconCategory(name);
+  if (category && ICON_CATEGORIES[category]) {
+    return [...ICON_CATEGORIES[category], ...ICON_CATEGORIES.general];
+  }
+  return ICON_OPTIONS;
+}
+
 function getIconForClaimType(name: string): React.ComponentType<{ className?: string }> {
   const lowerName = name.toLowerCase();
   // Property / Buildings
@@ -114,7 +170,7 @@ export default function ClaimTypePage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<{ name: string; description: string; icon: string }>({ name: "", description: "", icon: "FileWarning" });
+  const [formData, setFormData] = useState<{ name: string; description: string; icon: string; manuallySelectedIcon: boolean }>({ name: "", description: "", icon: "FileWarning", manuallySelectedIcon: false });
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["tipos_siniestros"],
@@ -127,7 +183,7 @@ export default function ClaimTypePage() {
       toast.success("Tipo de siniestro creado");
       queryClient.invalidateQueries({ queryKey: ["tipos_siniestros"] });
       setOpen(false);
-      setFormData({ name: "", description: "", icon: "FileWarning" });
+      setFormData({ name: "", description: "", icon: "FileWarning", manuallySelectedIcon: false });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -139,7 +195,7 @@ export default function ClaimTypePage() {
       queryClient.invalidateQueries({ queryKey: ["tipos_siniestros"] });
       setOpen(false);
       setEditingId(null);
-      setFormData({ name: "", description: "", icon: "FileWarning" });
+      setFormData({ name: "", description: "", icon: "FileWarning", manuallySelectedIcon: false });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -188,7 +244,7 @@ export default function ClaimTypePage() {
           />
         </div>
         <Button
-          onClick={() => { setEditingId(null); setFormData({ name: "", description: "", icon: "FileWarning" }); setOpen(true); }}
+          onClick={() => { setEditingId(null); setFormData({ name: "", description: "", icon: "FileWarning", manuallySelectedIcon: false }); setOpen(true); }}
           className="btn-create btn-sm"
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -229,7 +285,7 @@ export default function ClaimTypePage() {
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
                           setEditingId(item.id);
-                          setFormData({ name: item.name || "", description: item.description || "", icon: item.icon || "FileWarning" });
+                          setFormData({ name: item.name || "", description: item.description || "", icon: item.icon || "FileWarning", manuallySelectedIcon: false });
                           setOpen(true);
                         }}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
@@ -259,7 +315,22 @@ export default function ClaimTypePage() {
             <div className="modal-body space-y-4">
               <div className="modal-field">
                 <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
-                <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ej: Incendio" className="app-input" />
+                <Input 
+                  value={formData.name} 
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    const newFormData = { ...formData, name: newName };
+                    // Auto-select icon based on name if not manually selected
+                    if (!formData.manuallySelectedIcon) {
+                      const IconComponent = getIconForClaimType(newName);
+                      const iconName = Object.keys(ICON_MAP).find(key => ICON_MAP[key] === IconComponent);
+                      if (iconName) newFormData.icon = iconName;
+                    }
+                    setFormData(newFormData);
+                  }} 
+                  placeholder="Ej: Incendio" 
+                  className="app-input" 
+                />
               </div>
               <div className="modal-field">
                 <Label className="app-field-label">Descripción</Label>
@@ -268,13 +339,13 @@ export default function ClaimTypePage() {
               <div className="modal-field">
                 <Label className="app-field-label">Ícono</Label>
                 <div className="grid grid-cols-8 gap-2">
-                  {ICON_OPTIONS.map((iconName) => {
+                  {getFilteredIcons(formData.name).map((iconName) => {
                     const IconComponent = ICON_MAP[iconName];
                     return (
                       <button
                         key={iconName}
                         type="button"
-                        onClick={() => setFormData({ ...formData, icon: iconName })}
+                        onClick={() => setFormData({ ...formData, icon: iconName, manuallySelectedIcon: true })}
                         className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
                           formData.icon === iconName
                             ? "border-primary bg-primary/10 text-primary"
