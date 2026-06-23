@@ -20,6 +20,7 @@ const TABLES = [
   "companies",
   "profiles",
   "claims",
+  "claims_participants",
   "inspection_sessions",
   "inspection_checklists",
   "inspection_damages",

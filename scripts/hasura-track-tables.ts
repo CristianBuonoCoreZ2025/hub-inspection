@@ -86,8 +86,34 @@ async function trackRelationships(table: string) {
   }
 }
 
+async function untrackTable(table: string) {
+  try {
+    await sendMetadata({
+      type: "pg_untrack_table",
+      args: {
+        source: "default",
+        table: { schema: "public", name: table },
+      },
+    });
+    console.log(`  ✓ Untracked table: ${table}`);
+  } catch (err) {
+    const msg = (err as Error).message;
+    if (msg.includes("not tracked") || msg.includes("not found")) {
+      console.log(`  ℹ Table ${table} was not tracked`);
+    } else {
+      console.error(`  ✗ Error untracking ${table}:`, msg);
+    }
+  }
+}
+
 async function main() {
+  // Primero untrack tablas que fueron renombradas y ya no existen
+  const staleTables = [
+    "claim_participants",
+  ];
+
   const tables = [
+    "claims_participants",
     "events",
     "lookup_catalog",
     "property_classifications",
@@ -99,6 +125,11 @@ async function main() {
     "damage_classifications",
     "document_types",
   ];
+
+  console.log(`\nUntracking stale tables in Hasura...`);
+  for (const table of staleTables) {
+    await untrackTable(table);
+  }
 
   console.log(`\nTracking tables in Hasura...`);
   console.log(`URL: ${metadataUrl}\n`);
