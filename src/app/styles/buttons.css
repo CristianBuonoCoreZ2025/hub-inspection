@@ -107,23 +107,23 @@
            disabled:opacity-50 disabled:pointer-events-none;
   }
 
-  /* CANCELAR — rosado claro con gradiente (inmune) */
+  /* CANCELAR — rosado con gradiente (inmune) */
   .btn-cancel {
     @apply inline-flex items-center justify-center text-white
            cursor-pointer transition-all;
     height: 32px !important;
     padding: 0 14px !important;
     border-radius: 10px !important;
-    border: 1px solid #f43f5e !important;
-    background: linear-gradient(180deg, #fda4af 0%, #fb7185 100%) !important;
+    border: 1px solid #e11d48 !important;
+    background: linear-gradient(180deg, #fb7185 0%, #f43f5e 100%) !important;
     box-shadow: 0 2px 4px rgba(244, 63, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
     font-weight: 600 !important;
     font-size: 13px !important;
   }
 
   .btn-cancel:hover:not(:disabled) {
-    background: linear-gradient(180deg, #fb7185 0%, #f43f5e 100%) !important;
-    border-color: #e11d48 !important;
+    background: linear-gradient(180deg, #f43f5e 0%, #e11d48 100%) !important;
+    border-color: #be123c !important;
     transform: translateY(-1px) !important;
   }
 
