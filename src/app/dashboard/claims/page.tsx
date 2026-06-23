@@ -841,7 +841,7 @@ export default function ClaimsPage() {
   };
 
   const filtered = claims?.filter((c) => {
-    const textMatch = [c.claim_number, c.liquidation_number, getParticipant(c, 'insured')?.full_name, getParticipant(c, 'insured')?.address].join(" ").toLowerCase().includes(search.toLowerCase());
+    const textMatch = [c.claim_number, c.client_reference, c.liquidation_number, getParticipant(c, 'insured')?.full_name, getParticipant(c, 'insured')?.address].join(" ").toLowerCase().includes(search.toLowerCase());
     const statusMatch = !statusFilter || c.status === statusFilter;
     const dateMatch = (!dateFrom || (c.claim_date && c.claim_date >= dateFrom)) && (!dateTo || (c.claim_date && c.claim_date <= dateTo));
     return textMatch && statusMatch && dateMatch;
@@ -902,9 +902,9 @@ export default function ClaimsPage() {
             onClick={() => {
               const rows = filtered || [];
               const csv = [
-                ["N° Ref McLarens","N° Liquidación","N° Siniestro Cía","Asegurado","Dirección","Ciudad","Estado","Fecha"].join(","),
+                ["N° Ref Cliente","N° Liquidación","N° Siniestro Cía","Asegurado","Dirección","Ciudad","Estado","Fecha"].join(","),
                 ...rows.map((c) => [
-                  c.claim_number, c.liquidation_number || "", c.company_report_number || "", getParticipant(c, 'insured')?.full_name || "",
+                  c.client_reference || "", c.liquidation_number || "", c.claim_number || "", getParticipant(c, 'insured')?.full_name || "",
                   `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", c.status, c.claim_date || ""
                 ].join(",")),
               ].join("\\n");
@@ -2110,7 +2110,7 @@ export default function ClaimsPage() {
           <table className="app-data-table">
             <thead>
               <tr>
-                <th className="w-[120px]">N° Ref</th>
+                <th className="w-[120px]">N° Ref Cliente</th>
                 <th className="w-[110px]">N° Liq</th>
                 <th className="w-[110px]">N° Siniestro Cía</th>
                 <th className="w-[180px]">Asegurado</th>
@@ -2135,11 +2135,11 @@ export default function ClaimsPage() {
                     <td className="font-medium">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground" />
-                        {claim.claim_number}
+                        {claim.client_reference || "—"}
                       </div>
                     </td>
                     <td>{claim.liquidation_number || "—"}</td>
-                    <td>{claim.company_report_number || "—"}</td>
+                    <td>{claim.claim_number || "—"}</td>
                     <td>{getParticipant(claim, 'insured')?.full_name || "—"}</td>
                     <td className="truncate">{getParticipant(claim, 'insured')?.address || "—"}, {getParticipant(claim, 'insured')?.city || "—"}</td>
                     <td><Badge className={statusColors[claim.status]}>{statusLabels[claim.status]}</Badge></td>
