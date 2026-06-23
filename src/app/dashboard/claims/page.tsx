@@ -626,28 +626,28 @@ export default function ClaimsPage() {
 
           <div className="modal-body">
             <form autoComplete="off" onSubmit={form.handleSubmit(onSubmit)} id="claim-wizard-form">
-            {/* Wizard steps */}
-            <div className="flex items-center gap-1 mb-4 border-b pb-3">
+            {/* Wizard steps - compact */}
+            <div className="flex items-center gap-1 mb-5 px-1">
               {wizardSteps.map((s, idx) => (
                 <div key={s.id} className="flex items-center flex-1">
-                  <div className="flex flex-col items-center gap-0.5 flex-1">
+                  <div className="flex items-center gap-1.5">
                     <div
                       className={cn(
-                        "flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold transition-colors",
+                        "flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold transition-colors",
                         step > s.id ? "bg-emerald-500 text-white" : step === s.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                       )}
                     >
-                      {step > s.id ? <Check className="h-3.5 w-3.5" /> : s.id}
+                      {step > s.id ? <Check className="h-3 w-3" /> : s.id}
                     </div>
-                    <span className={cn("text-[10px] font-medium", step >= s.id ? "text-foreground" : "text-muted-foreground")}>
+                    <span className={cn("text-[11px] font-medium", step >= s.id ? "text-foreground" : "text-muted-foreground")}>
                       {s.label}
                     </span>
                   </div>
                   {idx < wizardSteps.length - 1 && (
                     <div
                       className={cn(
-                        "h-px flex-1 mx-1 transition-colors",
-                        step > s.id ? "bg-emerald-400" : "bg-border"
+                        "h-px flex-1 mx-2 transition-colors",
+                        step > s.id ? "bg-emerald-300" : "bg-border"
                       )}
                     />
                   )}
@@ -657,330 +657,300 @@ export default function ClaimsPage() {
 
             {/* PASO 1: DETALLES SINIESTRO */}
             {step === 1 && (
-              <div className="space-y-4">
-                {/* Sección 1: Datos del País y Empresas */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 pb-2 border-b">
-                    <div className="h-1 w-8 bg-primary rounded-full" />
-                    <span className="text-xs font-semibold text-foreground">Datos del País y Empresas</span>
+              <div className="space-y-5">
+                {/* País y Empresas */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      País del Siniestro <span className="text-red-500">*</span>
+                    </Label>
+                    <FormSelect
+                      control={form.control}
+                      name="claimCountry"
+                      placeholder="Seleccionar país..."
+                      className="app-input h-7"
+                      items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                    >
+                      {countriesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
+                    <FieldError message={form.formState.errors.claimCountry?.message} />
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        País del Siniestro <span className="text-red-500">*</span>
-                      </Label>
-                      <FormSelect
-                        control={form.control}
-                        name="claimCountry"
-                        placeholder="Seleccionar país..."
-                        className="app-input h-7"
-                        items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
-                      >
-                        {countriesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                      <FieldError message={form.formState.errors.claimCountry?.message} />
-                    </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        Empresa (Cliente) <span className="text-red-500">*</span>
-                      </Label>
-                      <FormSelect
-                        control={form.control}
-                        name="companyId"
-                        placeholder="Selecciona una empresa"
-                        className="app-input h-7"
-                        items={companies?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
-                      >
-                        {companies?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                      <FieldError message={form.formState.errors.companyId?.message} />
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Empresa (Cliente) <span className="text-red-500">*</span>
+                    </Label>
+                    <FormSelect
+                      control={form.control}
+                      name="companyId"
+                      placeholder="Selecciona una empresa"
+                      className="app-input h-7"
+                      items={companies?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
+                    >
+                      {companies?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
+                    <FieldError message={form.formState.errors.companyId?.message} />
+                  </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        Compañía de Seguros <span className="text-red-500">*</span>
-                      </Label>
-                      <FormSelect
-                        control={form.control}
-                        name="insuranceCompanyId"
-                        placeholder="Seleccionar compañía..."
-                        className="app-input h-7"
-                        items={filteredInsuranceCompanies?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
-                      >
-                        {filteredInsuranceCompanies?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                      <FieldError message={form.formState.errors.insuranceCompanyId?.message} />
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Compañía de Seguros <span className="text-red-500">*</span>
+                    </Label>
+                    <FormSelect
+                      control={form.control}
+                      name="insuranceCompanyId"
+                      placeholder="Seleccionar compañía..."
+                      className="app-input h-7"
+                      items={filteredInsuranceCompanies?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
+                    >
+                      {filteredInsuranceCompanies?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
+                    <FieldError message={form.formState.errors.insuranceCompanyId?.message} />
                   </div>
                 </div>
 
-                {/* Sección 2: Números de Referencia */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 pb-2 border-b">
-                    <div className="h-1 w-8 bg-primary rounded-full" />
-                    <span className="text-xs font-semibold text-foreground">Números de Referencia</span>
+                {/* Números de Referencia */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">N° Interno Cliente</Label>
+                    <Input
+                      readOnly
+                      placeholder="MCL-XXXX"
+                      className="app-input h-7 bg-muted/50"
+                      value=""
+                    />
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">N° Interno Cliente</Label>
-                      <Input
-                        readOnly
-                        placeholder="MCL-XXXX"
-                        className="app-input h-7 bg-muted/50"
-                        value=""
-                      />
-                    </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        N° Siniestro (Compañía) <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        {...form.register("claimNumber")}
-                        placeholder="Ej: 12345678"
-                        className="app-input h-7"
-                      />
-                      <FieldError message={form.formState.errors.claimNumber?.message} />
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      N° Siniestro (Compañía) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      {...form.register("claimNumber")}
+                      placeholder="Ej: 12345678"
+                      className="app-input h-7"
+                    />
+                    <FieldError message={form.formState.errors.claimNumber?.message} />
+                  </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        N° Póliza <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        {...form.register("policyNumber")}
-                        placeholder="Ej: POL-2026-001"
-                        className="app-input h-7"
-                      />
-                      <FieldError message={form.formState.errors.policyNumber?.message} />
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      N° Póliza <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      {...form.register("policyNumber")}
+                      placeholder="Ej: POL-2026-001"
+                      className="app-input h-7"
+                    />
+                    <FieldError message={form.formState.errors.policyNumber?.message} />
                   </div>
                 </div>
 
-                {/* Sección 3: Fechas */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 pb-2 border-b">
-                    <div className="h-1 w-8 bg-primary rounded-full" />
-                    <span className="text-xs font-semibold text-foreground">Fechas</span>
+                {/* Fechas */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Fecha Siniestro <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      {...form.register("claimDate")}
+                      type="date"
+                      className="app-input h-7 px-2 text-xs"
+                    />
+                    <FieldError message={form.formState.errors.claimDate?.message} />
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        Fecha Siniestro <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        {...form.register("claimDate")}
-                        type="date"
-                        className="app-input h-7 px-2 text-xs"
-                      />
-                      <FieldError message={form.formState.errors.claimDate?.message} />
-                    </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Fecha Denuncio</Label>
-                      <Input
-                        {...form.register("reportDate")}
-                        type="date"
-                        className="app-input h-7 px-2 text-xs"
-                      />
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Fecha Denuncio</Label>
+                    <Input
+                      {...form.register("reportDate")}
+                      type="date"
+                      className="app-input h-7 px-2 text-xs"
+                    />
+                  </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Fecha Asignación</Label>
-                      <Input
-                        {...form.register("assignmentDate")}
-                        type="date"
-                        className="app-input h-7 px-2 text-xs"
-                      />
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Fecha Asignación</Label>
+                    <Input
+                      {...form.register("assignmentDate")}
+                      type="date"
+                      className="app-input h-7 px-2 text-xs"
+                    />
                   </div>
                 </div>
 
-                {/* Sección 4: Tipo, Línea y Ramo (anidados) */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 pb-2 border-b">
-                    <div className="h-1 w-8 bg-primary rounded-full" />
-                    <span className="text-xs font-semibold text-foreground">Tipo, Línea y Ramo</span>
+                {/* Separador sutil */}
+                <div className="border-t border-dashed border-border/60" />
+
+                {/* Tipo, Línea y Ramo (anidados) */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Tipo de Siniestro <span className="text-red-500">*</span>
+                    </Label>
+                    <FormSelect
+                      control={form.control}
+                      name="claimTypeId"
+                      placeholder="Seleccionar tipo..."
+                      className="app-input h-7"
+                      onValueChange={() => {
+                        form.setValue("businessLineId", "");
+                        form.setValue("insuranceProductId", "");
+                      }}
+                      items={claimTypes?.map((t) => ({ value: t.id, label: t.name ?? "" })) || []}
+                    >
+                      {claimTypes?.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
+                    <FieldError message={form.formState.errors.claimTypeId?.message} />
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        Tipo de Siniestro <span className="text-red-500">*</span>
-                      </Label>
-                      <FormSelect
-                        control={form.control}
-                        name="claimTypeId"
-                        placeholder="Seleccionar tipo..."
-                        className="app-input h-7"
-                        onValueChange={() => {
-                          form.setValue("businessLineId", "");
-                          form.setValue("insuranceProductId", "");
-                        }}
-                        items={claimTypes?.map((t) => ({ value: t.id, label: t.name ?? "" })) || []}
-                      >
-                        {claimTypes?.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                      <FieldError message={form.formState.errors.claimTypeId?.message} />
-                    </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Línea de Negocios</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="businessLineId"
-                        placeholder="Seleccionar línea..."
-                        className="app-input h-7"
-                        onValueChange={() => form.setValue("insuranceProductId", "")}
-                        items={filteredBusinessLines?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
-                      >
-                        {filteredBusinessLines?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Línea de Negocios</Label>
+                    <FormSelect
+                      control={form.control}
+                      name="businessLineId"
+                      placeholder="Seleccionar línea..."
+                      className="app-input h-7"
+                      onValueChange={() => form.setValue("insuranceProductId", "")}
+                      items={filteredBusinessLines?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
+                    >
+                      {filteredBusinessLines?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
+                  </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ramo/Producto</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="insuranceProductId"
-                        placeholder="Seleccionar producto..."
-                        className="app-input h-7"
-                        disabled={!selectedBusinessLineId}
-                        items={filteredInsuranceProducts?.map((p) => ({ value: p.id, label: p.name ?? "" })) || []}
-                      >
-                        {filteredInsuranceProducts?.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ramo/Producto</Label>
+                    <FormSelect
+                      control={form.control}
+                      name="insuranceProductId"
+                      placeholder="Seleccionar producto..."
+                      className="app-input h-7"
+                      disabled={!selectedBusinessLineId}
+                      items={filteredInsuranceProducts?.map((p) => ({ value: p.id, label: p.name ?? "" })) || []}
+                    >
+                      {filteredInsuranceProducts?.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                 </div>
 
-                {/* Sección 5: Evento, Asesor, Corredor (dependen del país) */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 pb-2 border-b">
-                    <div className="h-1 w-8 bg-primary rounded-full" />
-                    <span className="text-xs font-semibold text-foreground">Evento, Asesor y Corredor</span>
+                {/* Evento, Asesor, Corredor */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Evento</Label>
+                    <FormSelect
+                      control={form.control}
+                      name="eventId"
+                      placeholder="Seleccionar evento..."
+                      className="app-input h-7"
+                      items={eventsCatalog?.map((e) => ({ value: e.id, label: e.name ?? "" })) || []}
+                    >
+                      {eventsCatalog?.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Evento</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="eventId"
-                        placeholder="Seleccionar evento..."
-                        className="app-input h-7"
-                        items={eventsCatalog?.map((e) => ({ value: e.id, label: e.name ?? "" })) || []}
-                      >
-                        {eventsCatalog?.map((e) => (
-                          <SelectItem key={e.id} value={e.id}>
-                            {e.name}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Asesor</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="advisorId"
-                        placeholder="Seleccionar asesor..."
-                        className="app-input h-7"
-                        items={filteredAdvisors?.map((a) => ({ value: a.id, label: a.name ?? "" })) || []}
-                      >
-                        {filteredAdvisors?.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.name}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Asesor</Label>
+                    <FormSelect
+                      control={form.control}
+                      name="advisorId"
+                      placeholder="Seleccionar asesor..."
+                      className="app-input h-7"
+                      items={filteredAdvisors?.map((a) => ({ value: a.id, label: a.name ?? "" })) || []}
+                    >
+                      {filteredAdvisors?.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
+                  </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Corredor</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="brokerId"
-                        placeholder="Seleccionar corredor..."
-                        className="app-input h-7"
-                        items={filteredBrokers?.map((b) => ({ value: b.id, label: b.name ?? "" })) || []}
-                      >
-                        {filteredBrokers?.map((b) => (
-                          <SelectItem key={b.id} value={b.id}>
-                            {b.name}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Corredor</Label>
+                    <FormSelect
+                      control={form.control}
+                      name="brokerId"
+                      placeholder="Seleccionar corredor..."
+                      className="app-input h-7"
+                      items={filteredBrokers?.map((b) => ({ value: b.id, label: b.name ?? "" })) || []}
+                    >
+                      {filteredBrokers?.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                 </div>
 
-                {/* Sección 6: Inspector y Liquidador (dependen del cliente, 50/50) */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 pb-2 border-b">
-                    <div className="h-1 w-8 bg-primary rounded-full" />
-                    <span className="text-xs font-semibold text-foreground">Inspector y Liquidador</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        Inspector <span className="text-red-500">*</span>
-                      </Label>
-                      <FormSelect
-                        control={form.control}
-                        name="inspectorId"
-                        placeholder="Seleccionar inspector..."
-                        className="app-input h-7"
-                        items={inspectors?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
-                      >
-                        {inspectors?.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.full_name || u.email}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                      <FieldError message={form.formState.errors.inspectorId?.message} />
-                    </div>
+                {/* Separador sutil */}
+                <div className="border-t border-dashed border-border/60" />
 
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ajustador / Liquidador</Label>
-                      <FormSelect
-                        control={form.control}
-                        name="adjusterId"
-                        placeholder="Seleccionar ajustador..."
-                        className="app-input h-7"
-                        items={adjusters?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
-                      >
-                        {adjusters?.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.full_name || u.email}
-                          </SelectItem>
-                        ))}
-                      </FormSelect>
-                    </div>
+                {/* Inspector y Liquidador (50/50) */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Inspector <span className="text-red-500">*</span>
+                    </Label>
+                    <FormSelect
+                      control={form.control}
+                      name="inspectorId"
+                      placeholder="Seleccionar inspector..."
+                      className="app-input h-7"
+                      items={inspectors?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
+                    >
+                      {inspectors?.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.full_name || u.email}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
+                    <FieldError message={form.formState.errors.inspectorId?.message} />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ajustador / Liquidador</Label>
+                    <FormSelect
+                      control={form.control}
+                      name="adjusterId"
+                      placeholder="Seleccionar ajustador..."
+                      className="app-input h-7"
+                      items={adjusters?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
+                    >
+                      {adjusters?.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.full_name || u.email}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
                   </div>
                 </div>
               </div>
