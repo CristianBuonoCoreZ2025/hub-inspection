@@ -825,6 +825,10 @@ export default function ClaimsPage() {
                         name="claimTypeId"
                         placeholder="Seleccionar tipo..."
                         className="app-input h-7"
+                        onValueChange={() => {
+                          form.setValue("businessLineId", "");
+                          form.setValue("insuranceProductId", "");
+                        }}
                         items={claimTypes?.map((t) => ({ value: t.id, label: t.name ?? "" })) || []}
                       >
                         {claimTypes?.map((t) => (
