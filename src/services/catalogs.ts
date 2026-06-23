@@ -43,9 +43,10 @@ export async function createClaimCause(input: { name: string; description?: stri
       insert_claim_causes_one(object: $object) { id name description country_id is_active }
     }
   `;
-  const data = await graphqlRequest<{ insert_claim_causes_one: ClaimCause }>(mutation, {
-    object: { ...input, is_active: true },
-  });
+  const { country_id, ...rest } = input;
+  const object: Record<string, unknown> = { ...rest, is_active: true };
+  if (country_id && country_id !== "") object.country_id = country_id;
+  const data = await graphqlRequest<{ insert_claim_causes_one: ClaimCause }>(mutation, { object });
   return data.insert_claim_causes_one;
 }
 
@@ -58,7 +59,7 @@ export async function updateClaimCause(id: string, input: Partial<ClaimCause>) {
   const set: Record<string, unknown> = {};
   if (input.name !== undefined) set.name = input.name;
   if (input.description !== undefined) set.description = input.description;
-  if (input.country_id !== undefined && input.country_id !== "") set.country_id = input.country_id;
+  if (input.country_id && input.country_id !== "") set.country_id = input.country_id;
   if (input.is_active !== undefined) set.is_active = input.is_active;
   const data = await graphqlRequest<{ update_claim_causes_by_pk: ClaimCause }>(mutation, { id, set });
   return data.update_claim_causes_by_pk;

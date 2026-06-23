@@ -84,6 +84,21 @@ async function sendMetadata(payload: unknown) {
   return data;
 }
 
+async function dropPermission(table: string, type: "select" | "insert" | "update" | "delete") {
+  try {
+    await sendMetadata({
+      type: `pg_drop_${type}_permission`,
+      args: {
+        table: { name: table, schema: "public" },
+        role: ROLE,
+        source: "default",
+      },
+    });
+  } catch {
+    // Permission may not exist, ignore
+  }
+}
+
 async function createPermission(
   table: string,
   type: "select" | "insert" | "update" | "delete"
@@ -113,6 +128,7 @@ async function createPermission(
       break;
   }
 
+  await dropPermission(table, type);
   await sendMetadata({
     type: permissionType,
     args: { ...baseArgs, permission },
