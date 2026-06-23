@@ -65,7 +65,7 @@ export default function ProductosPage() {
   });
 
   const filtered = products?.filter((p) =>
-    [p.name, p.description, p.business_line?.name].join(" ").toLowerCase().includes(search.toLowerCase())
+    [p.name, p.description].join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
   const resetForm = () => setFormData({ country_id: defaultCountryId, business_line_id: "", name: "", description: "" });
@@ -106,7 +106,7 @@ export default function ProductosPage() {
                 <td><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /></td>
                 <td>{countries?.find((c) => c.id === p.country_id)?.name || "—"}</td>
                 <td className="font-medium">{p.name}</td>
-                <td>{p.business_line?.name || "—"}</td>
+                <td>{businessLines?.find((l) => l.id === p.business_line_id)?.name || "—"}</td>
                 <td className="max-w-[300px] truncate text-muted-foreground">{p.description || "—"}</td>
                 <td>
                   <div className="flex items-center gap-1">

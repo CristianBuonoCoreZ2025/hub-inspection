@@ -172,15 +172,20 @@ export async function deleteBroker(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getBusinessLines() {
-  const query = `
-    query GetBusinessLines {
-      business_lines(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id country_id name claim_type ramo_fecu description is_active created_at updated_at
+  try {
+    const query = `
+      query GetBusinessLines {
+        business_lines(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
+          id country_id name claim_type ramo_fecu description is_active created_at updated_at
+        }
       }
-    }
-  `;
-  const data = await graphqlRequest<{ business_lines: BusinessLine[] }>(query);
-  return data.business_lines;
+    `;
+    const data = await graphqlRequest<{ business_lines: BusinessLine[] }>(query);
+    return data.business_lines;
+  } catch (err) {
+    console.error("[getBusinessLines] Error:", err);
+    throw err;
+  }
 }
 
 export async function createBusinessLine(input: { country_id?: string; name: string; claim_type?: string; ramo_fecu?: string; description?: string }) {
@@ -221,16 +226,20 @@ export async function deleteBusinessLine(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getInsuranceProducts() {
-  const query = `
-    query GetInsuranceProducts {
-      insurance_products(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id business_line_id name description country_id is_active created_at updated_at
-        business_line { id name }
+  try {
+    const query = `
+      query GetInsuranceProducts {
+        insurance_products(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
+          id business_line_id name description country_id is_active created_at updated_at
+        }
       }
-    }
-  `;
-  const data = await graphqlRequest<{ insurance_products: (InsuranceProduct & { business_line?: { id: string; name: string } })[] }>(query);
-  return data.insurance_products;
+    `;
+    const data = await graphqlRequest<{ insurance_products: InsuranceProduct[] }>(query);
+    return data.insurance_products;
+  } catch (err) {
+    console.error("[getInsuranceProducts] Error:", err);
+    throw err;
+  }
 }
 
 export async function createInsuranceProduct(input: { business_line_id: string; name: string; description?: string; country_id?: string }) {
