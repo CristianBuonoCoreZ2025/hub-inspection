@@ -134,7 +134,7 @@ export default function UsersPage() {
         </div>
         <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
           <Plus className="mr-2 h-4 w-4" />
-          Invitar Usuario
+          Invitar
         </Button>
 
         {/* ── MODAL Usuarios — 520px (formulario simple) ── */}
@@ -210,7 +210,7 @@ export default function UsersPage() {
                 Cancelar
               </button>
               <button type="button" className="btn-save" disabled={inviteMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
-                {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Enviar Invitación"}
+                {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Invitar"}
               </button>
             </div>
           </DialogContent>

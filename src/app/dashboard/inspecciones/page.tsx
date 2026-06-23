@@ -173,7 +173,7 @@ export default function InspectionsPage() {
           className="btn-create btn-sm"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Nueva Inspeccion
+          Nueva
         </Button>
       </div>
 
@@ -433,7 +433,7 @@ export default function InspectionsPage() {
               ) : (
                 <Plus className="mr-2 h-3.5 w-3.5" />
               )}
-              Crear Inspeccion
+              Crear
             </Button>
           </div>
         </DialogContent>

@@ -387,7 +387,7 @@ export default function UbicacionesPage() {
             <div className="modal-footer">
               <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
               <Button type="submit" size="sm" disabled={createRegionMutation.isPending || updateRegionMutation.isPending || createCityMutation.isPending || updateCityMutation.isPending || createCommuneMutation.isPending || updateCommuneMutation.isPending} className="btn-save btn-footer">
-                {createRegionMutation.isPending || updateRegionMutation.isPending || createCityMutation.isPending || updateCityMutation.isPending || createCommuneMutation.isPending || updateCommuneMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear"}
+                {createRegionMutation.isPending || updateRegionMutation.isPending || createCityMutation.isPending || updateCityMutation.isPending || createCommuneMutation.isPending || updateCommuneMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}
               </Button>
             </div>
           </form>

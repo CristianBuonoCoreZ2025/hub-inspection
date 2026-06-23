@@ -740,11 +740,11 @@ export default function ClaimsPage() {
               link.click();
             }}
           >
-            <Download className="mr-2 h-3.5 w-3.5" /> Exportar CSV
+            <Download className="mr-2 h-3.5 w-3.5" /> Exportar
           </Button>
           <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setOpen(true); }} className="btn-create btn-sm">
             <Plus className="mr-2 h-4 w-4" />
-            Nuevo Siniestro
+            Nuevo
           </Button>
         </div>
       </div>
@@ -770,7 +770,7 @@ export default function ClaimsPage() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
                 <FileText className="h-4 w-4" />
               </div>
-              Crear Siniestro
+              Crear
             </DialogTitle>
             <DialogDescription className="modal-subtitle">
               Completa los datos para crear el siniestro e iniciar una inspección remota.
@@ -1822,7 +1822,7 @@ export default function ClaimsPage() {
                 style={{ width: "122px" }}
                 disabled={createMutation.isPending}
               >
-                {createMutation.isPending ? "Creando..." : "Crear Siniestro"}
+                {createMutation.isPending ? "Creando..." : "Crear"}
               </button>
             )}
           </div>

@@ -546,7 +546,7 @@ export default function ActaForm({ session }: ActaFormProps) {
           ) : (
             <>
               <Save className="mr-2 h-3.5 w-3.5" />
-              Guardar Acta
+              Guardar
             </>
           )}
         </Button>

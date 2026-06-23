@@ -127,7 +127,7 @@ export default function CompaniesPage() {
         </div>
         <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
           <Plus className="mr-2 h-4 w-4" />
-          Nueva Empresa
+          Nueva
         </Button>
 
         <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
@@ -278,7 +278,7 @@ export default function CompaniesPage() {
                 disabled={createMutation.isPending || updateMutation.isPending}
                 onClick={form.handleSubmit(onSubmit)}
               >
-                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear Empresa"}
+                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}
               </button>
             </div>
           </DialogContent>

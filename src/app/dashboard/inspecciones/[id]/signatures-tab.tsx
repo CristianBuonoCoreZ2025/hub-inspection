@@ -77,7 +77,7 @@ function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => void;
       </div>
       <div className="flex gap-2">
         <button onClick={clear} className="btn-cancel btn-sm">Limpiar</button>
-        <button onClick={save} className="btn-save btn-sm"><CheckCircle className="mr-1 h-3.5 w-3.5" /> Guardar Firma</button>
+        <button onClick={save} className="btn-save btn-sm"><CheckCircle className="mr-1 h-3.5 w-3.5" /> Guardar</button>
       </div>
     </div>
   );

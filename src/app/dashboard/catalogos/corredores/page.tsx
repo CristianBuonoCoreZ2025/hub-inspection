@@ -120,7 +120,7 @@ export default function CorredoresPage() {
           <div className="modal-header">
             <DialogTitle className="modal-title flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm"><Briefcase className="h-4 w-4" /></div>
-              {editingId ? "Editar Corredor" : "Nuevo Corredor"}
+              {editingId ? "Editar" : "Nuevo"}
             </DialogTitle>
           </div>
           <form onSubmit={handleSubmit}>
@@ -152,7 +152,7 @@ export default function CorredoresPage() {
             </div>
             <div className="modal-footer">
               <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
-              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="btn-save btn-footer">{createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear"}</Button>
+              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="btn-save btn-footer">{createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}</Button>
             </div>
           </form>
         </DialogContent>

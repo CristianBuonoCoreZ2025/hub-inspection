@@ -139,7 +139,7 @@ export default function CausasPage() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
                 <AlertTriangle className="h-4 w-4" />
               </div>
-              {editingId ? "Editar Causa" : "Nueva Causa"}
+              {editingId ? "Editar" : "Nuevo"}
             </DialogTitle>
           </div>
           <form onSubmit={handleSubmit}>
@@ -173,7 +173,7 @@ export default function CausasPage() {
             <div className="modal-footer">
               <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
               <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="btn-save btn-footer">
-                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear"}
+                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}
               </Button>
             </div>
           </form>

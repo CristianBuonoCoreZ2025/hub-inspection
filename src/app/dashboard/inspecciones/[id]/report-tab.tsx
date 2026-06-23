@@ -84,7 +84,7 @@ export default function ReportTab({ sessionId, claimNumber }: { sessionId: strin
         </Button>
         {report?.status === "generated" && (
           <Button variant="outline" onClick={handlePrint} className="btn-neutral btn-sm">
-            <Printer className="mr-2 h-4 w-4" /> Imprimir / Guardar PDF
+            <Printer className="mr-2 h-4 w-4" /> Imprimir
           </Button>
         )}
       </div>
