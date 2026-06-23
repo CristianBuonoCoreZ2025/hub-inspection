@@ -790,7 +790,7 @@ export default function ClaimsPage() {
           </div>
 
           <div className="modal-body">
-            <form autoComplete="off" onSubmit={form.handleSubmit(onSubmit)} id="claim-wizard-form">
+            <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); if (step === 4) form.handleSubmit(onSubmit)(e); }} id="claim-wizard-form">
             {/* Wizard steps - compact */}
             <div className="flex items-center gap-1 mb-5 px-1">
               {wizardSteps.map((s, idx) => (
