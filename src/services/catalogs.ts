@@ -596,7 +596,7 @@ export async function getClaimTypes() {
   const query = `
     query GetClaimTypes {
       claim_types(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name  description sw_type icon is_active created_at updated_at
+        id name description icon is_active created_at updated_at
       }
     }
   `;
@@ -604,10 +604,10 @@ export async function getClaimTypes() {
   return data.claim_types;
 }
 
-export async function createClaimType(input: { name: string; description?: string; sw_type?: number; icon?: string }) {
+export async function createClaimType(input: { name: string; description?: string; icon?: string }) {
   const mutation = `
     mutation CreateClaimType($object: claim_types_insert_input!) {
-      insert_claim_types_one(object: $object) { id name  description sw_type icon is_active }
+      insert_claim_types_one(object: $object) { id name description icon is_active }
     }
   `;
   const data = await graphqlRequest<{ insert_claim_types_one: ClaimType }>(mutation, { object: { ...input, is_active: true } });
@@ -617,7 +617,7 @@ export async function createClaimType(input: { name: string; description?: strin
 export async function updateClaimType(id: string, input: Partial<ClaimType>) {
   const mutation = `
     mutation UpdateClaimType($id: uuid!, $set: claim_types_set_input!) {
-      update_claim_types_by_pk(pk_columns: { id: $id }, _set: $set) { id name description sw_type icon is_active }
+      update_claim_types_by_pk(pk_columns: { id: $id }, _set: $set) { id name description icon is_active }
     }
   `;
   const set: Record<string, unknown> = {};

@@ -584,7 +584,6 @@ export interface ClaimType {
   id: string;
   name: string;
   description: string | null;
-  sw_type: number | null;
   icon: string | null;
   is_active: boolean;
   created_at: string;
