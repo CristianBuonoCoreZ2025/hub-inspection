@@ -25,7 +25,7 @@ import {
 } from "@/services/catalogs";
 import { claimCreateMinimalSchema, type ClaimCreateMinimalInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useForm, useWatch, useFormContext, FormProvider, type Path } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload } from "lucide-react";
 import { createInspectionSession } from "@/services/inspections";
@@ -67,8 +67,10 @@ const statusColors: Record<ClaimStatus, string> = {
   closed: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
 };
 
-function getParticipant(claim: any, type: string) {
-  return claim.claims_participants?.find((p: any) => p.type === type);
+type Participant = { type: string; full_name?: string | null; first_name?: string | null; last_name?: string | null; rut?: string | null; email?: string | null; phone?: string | null; cell_phone?: string | null; address?: string | null; country?: string | null; region?: string | null; city?: string | null; commune?: string | null };
+
+function getParticipant(claim: { claims_participants?: Participant[] }, type: string) {
+  return claim.claims_participants?.find((p) => p.type === type);
 }
 
 function FieldError({ message }: { message?: string }) {
