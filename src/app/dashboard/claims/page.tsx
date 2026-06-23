@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getClaims, getClaimsParticipants, createClaimMinimal, deleteClaim, checkClaimNumberExists } from "@/services/claims";
+import { getClaims, getClaimsParticipants, createClaimMinimal, deleteClaim, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
 import {
@@ -121,6 +121,22 @@ export default function ClaimsPage() {
   const [beneficiaryLinked, setBeneficiaryLinked] = useState(false);
   const [claimAddressLinked, setClaimAddressLinked] = useState(false);
   const [claimNumberWarning, setClaimNumberWarning] = useState<string | null>(null);
+  const [participantSuggestion, setParticipantSuggestion] = useState<{
+    section: "insured" | "contractor" | "beneficiary";
+    data: {
+      first_name: string | null;
+      last_name: string | null;
+      rut: string | null;
+      email: string | null;
+      phone: string | null;
+      cell_phone: string | null;
+      address: string | null;
+      country: string | null;
+      region: string | null;
+      city: string | null;
+      commune: string | null;
+    };
+  } | null>(null);
 
   type DocumentRow = { id: string; name: string; type: string; file: File };
 
@@ -247,6 +263,127 @@ export default function ClaimsPage() {
     }, 500);
     return () => { cancelled = true; clearTimeout(timer); };
   }, [watchedClaimNumber, watchedInsuranceCompanyId]);
+
+  // Watchers de RUT para sugerir datos existentes
+  const watchedRut = useWatch({ control: form.control, name: "rut" });
+  const watchedInsuredCountry = useWatch({ control: form.control, name: "insuredCountry" });
+  const watchedContractorRut = useWatch({ control: form.control, name: "contractorRut" });
+  const watchedContractorCountry = useWatch({ control: form.control, name: "contractorCountry" });
+  const watchedBeneficiaryRut = useWatch({ control: form.control, name: "beneficiaryRut" });
+  const watchedBeneficiaryCountry = useWatch({ control: form.control, name: "beneficiaryCountry" });
+
+  // Buscar participante existente por RUT + país (asegurado)
+  useEffect(() => {
+    if (!watchedRut || watchedRut.trim().length < 3 || !watchedInsuredCountry) {
+      setParticipantSuggestion(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const found = await findParticipantByRut(watchedRut.trim(), watchedInsuredCountry);
+        if (!cancelled) {
+          if (found && (found.first_name || found.full_name)) {
+            setParticipantSuggestion({ section: "insured", data: found });
+          } else {
+            setParticipantSuggestion(null);
+          }
+        }
+      } catch {
+        if (!cancelled) setParticipantSuggestion(null);
+      }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [watchedRut, watchedInsuredCountry]);
+
+  // Buscar participante existente por RUT + país (contratante)
+  useEffect(() => {
+    if (!watchedContractorRut || watchedContractorRut.trim().length < 3 || !watchedContractorCountry) {
+      if (participantSuggestion?.section === "contractor") setParticipantSuggestion(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const found = await findParticipantByRut(watchedContractorRut.trim(), watchedContractorCountry);
+        if (!cancelled) {
+          if (found && (found.first_name || found.full_name)) {
+            setParticipantSuggestion({ section: "contractor", data: found });
+          } else {
+            if (participantSuggestion?.section === "contractor") setParticipantSuggestion(null);
+          }
+        }
+      } catch {
+        if (!cancelled && participantSuggestion?.section === "contractor") setParticipantSuggestion(null);
+      }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [watchedContractorRut, watchedContractorCountry]);
+
+  // Buscar participante existente por RUT + país (beneficiario)
+  useEffect(() => {
+    if (!watchedBeneficiaryRut || watchedBeneficiaryRut.trim().length < 3 || !watchedBeneficiaryCountry) {
+      if (participantSuggestion?.section === "beneficiary") setParticipantSuggestion(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const found = await findParticipantByRut(watchedBeneficiaryRut.trim(), watchedBeneficiaryCountry);
+        if (!cancelled) {
+          if (found && (found.first_name || found.full_name)) {
+            setParticipantSuggestion({ section: "beneficiary", data: found });
+          } else {
+            if (participantSuggestion?.section === "beneficiary") setParticipantSuggestion(null);
+          }
+        }
+      } catch {
+        if (!cancelled && participantSuggestion?.section === "beneficiary") setParticipantSuggestion(null);
+      }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [watchedBeneficiaryRut, watchedBeneficiaryCountry]);
+
+  // Función para aplicar la sugerencia a la sección correspondiente
+  const applySuggestion = (section: "insured" | "contractor" | "beneficiary") => {
+    if (!participantSuggestion) return;
+    const d = participantSuggestion.data;
+    if (section === "insured") {
+      form.setValue("insuredName", d.first_name || "");
+      form.setValue("lastName", d.last_name || "");
+      form.setValue("insuredEmail", d.email || "");
+      form.setValue("cellPhone", d.cell_phone || "");
+      form.setValue("insuredPhone", d.phone || "");
+      form.setValue("insuredAddress", d.address || "");
+      form.setValue("insuredCountry", d.country || "");
+      form.setValue("insuredRegion", d.region || "");
+      form.setValue("insuredCity", d.city || "");
+      form.setValue("insuredCommune", d.commune || "");
+    } else if (section === "contractor") {
+      form.setValue("contractorName", d.first_name || "");
+      form.setValue("contractorLastName", d.last_name || "");
+      form.setValue("contractorEmail", d.email || "");
+      form.setValue("contractorCellPhone", d.cell_phone || "");
+      form.setValue("contractorPhone", d.phone || "");
+      form.setValue("contractorAddress", d.address || "");
+      form.setValue("contractorCountry", d.country || "");
+      form.setValue("contractorRegion", d.region || "");
+      form.setValue("contractorCity", d.city || "");
+      form.setValue("contractorCommune", d.commune || "");
+    } else if (section === "beneficiary") {
+      form.setValue("beneficiaryName", d.first_name || "");
+      form.setValue("beneficiaryLastName", d.last_name || "");
+      form.setValue("beneficiaryEmail", d.email || "");
+      form.setValue("beneficiaryCellPhone", d.cell_phone || "");
+      form.setValue("beneficiaryPhone", d.phone || "");
+      form.setValue("beneficiaryAddress", d.address || "");
+      form.setValue("beneficiaryCountry", d.country || "");
+      form.setValue("beneficiaryRegion", d.region || "");
+      form.setValue("beneficiaryCity", d.city || "");
+      form.setValue("beneficiaryCommune", d.commune || "");
+    }
+    setParticipantSuggestion(null);
+  };
 
   // Watchers de ubicación por sección (independientes)
   const selectedClaimCountry = useWatch({ control: form.control, name: "claimCountry" });
@@ -598,6 +735,7 @@ export default function ClaimsPage() {
       setBeneficiaryLinked(false);
       setClaimAddressLinked(false);
       setClaimNumberWarning(null);
+      setParticipantSuggestion(null);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -778,7 +916,7 @@ export default function ClaimsPage() {
           >
             <Download className="mr-2 h-3.5 w-3.5" /> Exportar
           </Button>
-          <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setOpen(true); }} className="btn-create btn-sm">
+          <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="btn-create btn-sm">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo
           </Button>
@@ -799,6 +937,7 @@ export default function ClaimsPage() {
             setBeneficiaryLinked(false);
             setClaimAddressLinked(false);
             setClaimNumberWarning(null);
+            setParticipantSuggestion(null);
           }
         }}
       >
@@ -1139,6 +1278,24 @@ export default function ClaimsPage() {
                 {/* Asegurado (siempre expandido) */}
                 <div className="rounded-lg border border-border/50 p-3 space-y-2">
                   <span className="text-[11px] font-semibold text-foreground/70">Asegurado</span>
+                  {participantSuggestion?.section === "insured" && (
+                    <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
+                      <div className="text-[11px] text-sky-800">
+                        <span className="font-semibold">Persona encontrada:</span>{" "}
+                        {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
+                        {participantSuggestion.data.address && (
+                          <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                        onClick={() => applySuggestion("insured")}
+                      >
+                        Usar datos
+                      </button>
+                    </div>
+                  )}
                   <div className="grid grid-cols-3 gap-2">
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
@@ -1284,6 +1441,24 @@ export default function ClaimsPage() {
                   </div>
                   {expandedPanel === "contractor" && (
                     <div className="px-3 pb-3 space-y-2">
+                      {participantSuggestion?.section === "contractor" && !contractorLinked && (
+                        <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
+                          <div className="text-[11px] text-sky-800">
+                            <span className="font-semibold">Persona encontrada:</span>{" "}
+                            {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
+                            {participantSuggestion.data.address && (
+                              <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                            onClick={() => applySuggestion("contractor")}
+                          >
+                            Usar datos
+                          </button>
+                        </div>
+                      )}
                       <div className="grid grid-cols-3 gap-2">
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
@@ -1426,6 +1601,24 @@ export default function ClaimsPage() {
                   </div>
                   {expandedPanel === "beneficiary" && (
                     <div className="px-3 pb-3 space-y-2">
+                      {participantSuggestion?.section === "beneficiary" && !beneficiaryLinked && (
+                        <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
+                          <div className="text-[11px] text-sky-800">
+                            <span className="font-semibold">Persona encontrada:</span>{" "}
+                            {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
+                            {participantSuggestion.data.address && (
+                              <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                            onClick={() => applySuggestion("beneficiary")}
+                          >
+                            Usar datos
+                          </button>
+                        </div>
+                      )}
                       <div className="grid grid-cols-3 gap-2">
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
@@ -1871,6 +2064,7 @@ export default function ClaimsPage() {
                 setBeneficiaryLinked(false);
                 setClaimAddressLinked(false);
                 setClaimNumberWarning(null);
+                setParticipantSuggestion(null);
               }}
             >
               Cancelar

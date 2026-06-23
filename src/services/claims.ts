@@ -97,6 +97,57 @@ export async function checkClaimNumberExists(claimNumber: string, insuranceCompa
   return data.claims.length > 0;
 }
 
+export async function findParticipantByRut(rut: string, country: string) {
+  if (!rut || !country) return null;
+  const query = `
+    query FindParticipantByRut {
+      claims_participants(
+        where: {
+          rut: { _ilike: "${rut}" },
+          country: { _ilike: "${country}" }
+        },
+        limit: 1,
+        order_by: { created_at: desc }
+      ) {
+        id
+        type
+        full_name
+        first_name
+        last_name
+        rut
+        email
+        phone
+        cell_phone
+        address
+        country
+        region
+        city
+        commune
+      }
+    }
+  `;
+
+  type ParticipantMatch = {
+    id: string;
+    type: string;
+    full_name: string;
+    first_name: string | null;
+    last_name: string | null;
+    rut: string | null;
+    email: string | null;
+    phone: string | null;
+    cell_phone: string | null;
+    address: string | null;
+    country: string | null;
+    region: string | null;
+    city: string | null;
+    commune: string | null;
+  };
+
+  const data = await graphqlRequest<{ claims_participants: ParticipantMatch[] }>(query);
+  return data.claims_participants[0] || null;
+}
+
 export async function getClaimsParticipants(claimIds: string[]) {
   if (claimIds.length === 0) return [];
   const ids = claimIds.map((id) => `"${id}"`).join(",");
