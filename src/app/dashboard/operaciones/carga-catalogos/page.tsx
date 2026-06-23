@@ -61,7 +61,6 @@ function mapRowForCatalog(raw: ExcelRow, headers: string[], catalogType: Catalog
       data = {
         name: get(["nombre", "name", "causa", "tipo"]),
         description: get(["descripción", "descripcion", "description", "desc"]),
-        country: get(["país", "pais", "country"]) || "Chile",
       };
       required = ["name"];
       break;
@@ -73,7 +72,6 @@ function mapRowForCatalog(raw: ExcelRow, headers: string[], catalogType: Catalog
         line_of_business: get(["ramo", "linea", "linea de negocio", "line_of_business", "linea_negocio", "giro"]),
         code: get(["código", "codigo", "code", "codigo cia", "codigo compania"]),
         type: get(["tipo", "type", "tipo compañia", "tipo cia"]) || "Generales",
-        country: get(["país", "pais", "country"]) || "Chile",
       };
       required = ["name"];
       break;
@@ -83,7 +81,6 @@ function mapRowForCatalog(raw: ExcelRow, headers: string[], catalogType: Catalog
         rut: get(["rut", "rut corredor"]),
         address: get(["dirección", "direccion", "address"]),
         contact: get(["contacto", "contact", "telefono", "teléfono", "email", "correo"]),
-        country: get(["país", "pais", "country"]) || "Chile",
       };
       required = ["name"];
       break;
@@ -92,13 +89,11 @@ function mapRowForCatalog(raw: ExcelRow, headers: string[], catalogType: Catalog
         name: get(["nombre", "name", "asesor", "nombre completo"]),
         email: get(["email", "correo", "e-mail", "mail"]),
         phone: get(["teléfono", "telefono", "phone", "celular", "móvil", "movil"]),
-        country: get(["país", "pais", "country"]) || "Chile",
       };
       required = ["name"];
       break;
     case "lineas":
       data = {
-        country: get(["país", "pais", "country"]) || "Chile",
         name: get(["nombre", "name", "linea", "linea de negocio"]),
         claim_type: get(["tipo siniestro", "tipo de siniestro", "claim_type", "tiposiniestro"]),
         ramo_fecu: get(["ramo fecu", "ramo_fecu", "fecu", "ramo"]),
