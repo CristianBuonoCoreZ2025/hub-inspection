@@ -357,6 +357,27 @@ Excepción: Botones especiales como "Desligar Asegurado" pueden usar
 colores personalizados (esmeralda) con ancho fijo w-[150px].
 ```
 
+### Regla OBLIGATORIA de Combos (FormSelect) No Obligatorios
+```
+Todos los FormSelect que NO sean obligatorios (sin asterisco rojo *)
+DEBEN incluir la prop `clearable` para permitir al usuario deseleccionar
+y volver al estado vacío.
+
+Ejemplo:
+<FormSelect
+  control={form.control}
+  name="brokerId"
+  placeholder="Seleccionar corredor..."
+  className="app-input h-7"
+  clearable
+  items={...}
+>
+  ...
+</FormSelect>
+
+Los FormSelect obligatorios (con *) NO deben tener `clearable`.
+```
+
 ### Clases de Layout
 ```
 .app-page          → max-w-6xl, flex flex-col gap-8

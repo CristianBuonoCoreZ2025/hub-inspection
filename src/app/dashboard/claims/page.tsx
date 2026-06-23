@@ -956,6 +956,7 @@ export default function ClaimsPage() {
                         name="businessLineId"
                         placeholder="Seleccionar línea..."
                         className="app-input h-7"
+                        clearable
                         onValueChange={() => form.setValue("insuranceProductId", "")}
                         items={filteredBusinessLines?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
@@ -975,6 +976,7 @@ export default function ClaimsPage() {
                         placeholder="Seleccionar producto..."
                         className="app-input h-7"
                         disabled={!selectedBusinessLineId}
+                        clearable
                         items={filteredInsuranceProducts?.map((p) => ({ value: p.id, label: p.name ?? "" })) || []}
                       >
                         {filteredInsuranceProducts?.map((p) => (
@@ -992,6 +994,7 @@ export default function ClaimsPage() {
                         name="eventId"
                         placeholder="Seleccionar evento..."
                         className="app-input h-7"
+                        clearable
                         items={eventsCatalog?.map((e) => ({ value: e.id, label: e.name ?? "" })) || []}
                       >
                         {eventsCatalog?.map((e) => (
@@ -1009,6 +1012,7 @@ export default function ClaimsPage() {
                         name="advisorId"
                         placeholder="Seleccionar asesor..."
                         className="app-input h-7"
+                        clearable
                         items={filteredAdvisors?.map((a) => ({ value: a.id, label: a.name ?? "" })) || []}
                       >
                         {filteredAdvisors?.map((a) => (
@@ -1026,6 +1030,7 @@ export default function ClaimsPage() {
                         name="brokerId"
                         placeholder="Seleccionar corredor..."
                         className="app-input h-7"
+                        clearable
                         items={filteredBrokers?.map((b) => ({ value: b.id, label: b.name ?? "" })) || []}
                       >
                         {filteredBrokers?.map((b) => (
@@ -1069,6 +1074,7 @@ export default function ClaimsPage() {
                         name="adjusterId"
                         placeholder="Seleccionar ajustador..."
                         className="app-input h-7"
+                        clearable
                         items={adjusters?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
                       >
                         {adjusters?.map((u) => (
@@ -1133,6 +1139,7 @@ export default function ClaimsPage() {
                         name="insuredCountry"
                         placeholder="Seleccionar país..."
                         className="app-input h-7"
+                        clearable
                         onValueChange={() => {
                           form.setValue("insuredRegion", "");
                           form.setValue("insuredCity", "");
@@ -1154,6 +1161,7 @@ export default function ClaimsPage() {
                           placeholder="Seleccionar región..."
                           className="app-input h-7"
                           disabled={!selectedInsuredCountry}
+                          clearable
                           onValueChange={() => {
                             form.setValue("insuredCity", "");
                             form.setValue("insuredCommune", "");
@@ -1175,6 +1183,7 @@ export default function ClaimsPage() {
                           placeholder="Seleccionar ciudad..."
                           className="app-input h-7"
                           disabled={!selectedInsuredRegion}
+                          clearable
                           onValueChange={() => form.setValue("insuredCommune", "")}
                           items={insuredCities?.map((c) => ({ value: c.name, label: c.name })) || []}
                         >
@@ -1193,6 +1202,7 @@ export default function ClaimsPage() {
                           placeholder="Seleccionar comuna..."
                           className="app-input h-7"
                           disabled={!selectedInsuredCity}
+                          clearable
                           items={insuredCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
                         >
                           {insuredCommunes?.map((c) => (
@@ -1268,6 +1278,7 @@ export default function ClaimsPage() {
                             placeholder="Seleccionar país..."
                             className="app-input h-7"
                             disabled={contractorLinked}
+                            clearable
                             onValueChange={() => {
                               form.setValue("contractorRegion", "");
                               form.setValue("contractorCity", "");
@@ -1289,6 +1300,7 @@ export default function ClaimsPage() {
                               placeholder="Seleccionar región..."
                               className="app-input h-7"
                               disabled={contractorLinked || !selectedContractorCountry}
+                              clearable
                               onValueChange={() => {
                                 form.setValue("contractorCity", "");
                                 form.setValue("contractorCommune", "");
@@ -1310,6 +1322,7 @@ export default function ClaimsPage() {
                               placeholder="Seleccionar ciudad..."
                               className="app-input h-7"
                               disabled={contractorLinked || !selectedContractorRegion}
+                              clearable
                               onValueChange={() => form.setValue("contractorCommune", "")}
                               items={contractorCities?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
@@ -1328,6 +1341,7 @@ export default function ClaimsPage() {
                               placeholder="Seleccionar comuna..."
                               className="app-input h-7"
                               disabled={contractorLinked || !selectedContractorCity}
+                              clearable
                               items={contractorCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
                               {contractorCommunes?.map((c) => (
@@ -1405,6 +1419,7 @@ export default function ClaimsPage() {
                             placeholder="Seleccionar país..."
                             className="app-input h-7"
                             disabled={beneficiaryLinked}
+                            clearable
                             onValueChange={() => {
                               form.setValue("beneficiaryRegion", "");
                               form.setValue("beneficiaryCity", "");
@@ -1426,6 +1441,7 @@ export default function ClaimsPage() {
                               placeholder="Seleccionar región..."
                               className="app-input h-7"
                               disabled={beneficiaryLinked || !selectedBeneficiaryCountry}
+                              clearable
                               onValueChange={() => {
                                 form.setValue("beneficiaryCity", "");
                                 form.setValue("beneficiaryCommune", "");
@@ -1447,6 +1463,7 @@ export default function ClaimsPage() {
                               placeholder="Seleccionar ciudad..."
                               className="app-input h-7"
                               disabled={beneficiaryLinked || !selectedBeneficiaryRegion}
+                              clearable
                               onValueChange={() => form.setValue("beneficiaryCommune", "")}
                               items={beneficiaryCities?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
@@ -1465,6 +1482,7 @@ export default function ClaimsPage() {
                               placeholder="Seleccionar comuna..."
                               className="app-input h-7"
                               disabled={beneficiaryLinked || !selectedBeneficiaryCity}
+                              clearable
                               items={beneficiaryCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
                               {beneficiaryCommunes?.map((c) => (
@@ -1494,6 +1512,7 @@ export default function ClaimsPage() {
                         name="claimCauseId"
                         placeholder="Seleccionar causal..."
                         className="app-input h-7"
+                        clearable
                         items={filteredClaimCauses?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {filteredClaimCauses?.map((c) => (
@@ -1508,6 +1527,7 @@ export default function ClaimsPage() {
                         name="constructionTypeId"
                         placeholder="Seleccionar tipo..."
                         className="app-input h-7"
+                        clearable
                         items={constructionTypesCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {constructionTypesCatalog?.map((c) => (
@@ -1522,6 +1542,7 @@ export default function ClaimsPage() {
                         name="habitabilityId"
                         placeholder="Seleccionar habitabilidad..."
                         className="app-input h-7"
+                        clearable
                         items={habitabilityCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {habitabilityCatalog?.map((c) => (
@@ -1536,6 +1557,7 @@ export default function ClaimsPage() {
                         name="destinationHousingId"
                         placeholder="Seleccionar destino..."
                         className="app-input h-7"
+                        clearable
                         items={housingDestinationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {housingDestinationsCatalog?.map((c) => (
@@ -1550,6 +1572,7 @@ export default function ClaimsPage() {
                         name="propertyClassificationId"
                         placeholder="Seleccionar clasificación..."
                         className="app-input h-7"
+                        clearable
                         items={propertyClassificationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {propertyClassificationsCatalog?.map((c) => (
@@ -1564,6 +1587,7 @@ export default function ClaimsPage() {
                         name="damageClassificationId"
                         placeholder="Seleccionar clasificación..."
                         className="app-input h-7"
+                        clearable
                         items={damageClassificationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {damageClassificationsCatalog?.map((c) => (
@@ -1623,6 +1647,7 @@ export default function ClaimsPage() {
                           placeholder="Seleccionar región..."
                           className="app-input h-7"
                           disabled={!selectedClaimCountry}
+                          clearable
                           onValueChange={() => {
                             form.setValue("claimCity", "");
                             form.setValue("claimCommune", "");
@@ -1665,6 +1690,7 @@ export default function ClaimsPage() {
                           placeholder="Seleccionar comuna..."
                           className="app-input h-7"
                           disabled={!selectedClaimCity}
+                          clearable
                           items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                         >
                           {communesCatalog?.map((c) => (
