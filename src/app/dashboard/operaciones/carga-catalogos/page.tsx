@@ -8,7 +8,6 @@ import {
   createBroker,
   createAdvisor,
   createBusinessLine,
-  createInsuranceProduct,
 } from "@/services/catalogs";
 
 import { toast } from "sonner";
@@ -21,8 +20,7 @@ type CatalogType =
   | "companias"
   | "corredores"
   | "asesores"
-  | "lineas"
-  | "productos";
+  | "lineas";
 
 interface ExcelRow {
   [key: string]: string | number | null;
@@ -41,7 +39,6 @@ const catalogOptions: { id: CatalogType; label: string }[] = [
   { id: "corredores", label: "Corredores" },
   { id: "asesores", label: "Asesores" },
   { id: "lineas", label: "Líneas de Negocio" },
-  { id: "productos", label: "Ramos/Productos" },
 ];
 
 function mapRowForCatalog(raw: ExcelRow, headers: string[], catalogType: CatalogType, rowNum: number): ParsedRow {
@@ -109,15 +106,6 @@ function mapRowForCatalog(raw: ExcelRow, headers: string[], catalogType: Catalog
       };
       required = ["name"];
       break;
-    case "productos":
-      data = {
-        name: get(["nombre", "name", "producto", "ramo", "producto/ramo"]),
-        description: get(["descripción", "descripcion", "description", "desc"]),
-        country: get(["país", "pais", "country"]) || "Chile",
-        business_line_id: get(["linea de negocio", "linea_negocio", "business_line_id", "businessline", "linea", "id linea"]),
-      };
-      required = ["name"];
-      break;
   }
 
   const errors = required.filter((k) => !data[k] || String(data[k]).trim() === "").map((k) => `${k} requerido`);
@@ -136,8 +124,6 @@ async function createCatalogItem(catalogType: CatalogType, data: Record<string, 
       return createAdvisor(data as { name: string; email?: string; phone?: string; country?: string });
     case "lineas":
       return createBusinessLine(data as { country?: string; name: string; claim_type?: string; ramo_fecu?: string; description?: string });
-    case "productos":
-      return createInsuranceProduct(data as { business_line_id: string; name: string; description?: string; country?: string });
     default:
       throw new Error("Tipo de catálogo no soportado");
   }
@@ -350,7 +336,6 @@ export default function CargaCatalogosPage() {
                   {catalogType === "corredores" && <><th>Nombre</th><th>RUT</th><th>Contacto</th></>}
                   {catalogType === "asesores" && <><th>Nombre</th><th>Email</th><th>Teléfono</th></>}
                   {catalogType === "lineas" && <><th>Nombre</th><th>Tipo Siniestro</th><th>Ramo FECU</th></>}
-                  {catalogType === "productos" && <><th>Nombre</th><th>Línea</th><th>Descripción</th></>}
                   <th className="w-40">Errores</th>
                 </tr>
               </thead>
@@ -379,9 +364,6 @@ export default function CargaCatalogosPage() {
                     )}
                     {catalogType === "lineas" && (
                       <><td className="font-medium">{String(row.data.name || "—")}</td><td>{String(row.data.claim_type || "—")}</td><td>{String(row.data.ramo_fecu || "—")}</td></>
-                    )}
-                    {catalogType === "productos" && (
-                      <><td className="font-medium">{String(row.data.name || "—")}</td><td>{String(row.data.business_line_id || "—")}</td><td className="max-w-[200px] truncate">{String(row.data.description || "—")}</td></>
                     )}
                     <td className="text-xs text-red-600 max-w-[160px] truncate">
                       {row.errors.join(", ")}

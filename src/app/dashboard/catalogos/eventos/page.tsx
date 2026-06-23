@@ -27,7 +27,7 @@ export default function EventosPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ countryId: "", code: "", name: "", description: "" });
+  const [formData, setFormData] = useState({ country_id: "", code: "", name: "", description: "" });
 
   const { data: events, isLoading } = useQuery({
     queryKey: ["events"],
@@ -75,7 +75,7 @@ export default function EventosPage() {
   );
 
   const resetForm = () => {
-    setFormData({ countryId: countries?.find((c) => c.code === "CL")?.id || "", code: "", name: "", description: "" });
+    setFormData({ country_id: countries?.find((c) => c.code === "CL")?.id || "", code: "", name: "", description: "" });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -117,7 +117,7 @@ export default function EventosPage() {
                 <td className="max-w-[300px] truncate text-muted-foreground">{e.description || "—"}</td>
                 <td>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(e.id); setFormData({ countryId: e.country_id || "", code: e.code || "", name: e.name, description: e.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(e.id); setFormData({ country_id: e.country_id || "", code: e.code || "", name: e.name, description: e.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este evento?")) deleteMutation.mutate(e.id); }}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </td>
@@ -140,7 +140,7 @@ export default function EventosPage() {
               <div className="modal-grid">
                 <div className="modal-field">
                   <Label className="app-field-label">País</Label>
-                  <Select value={formData.countryId} onValueChange={(v) => setFormData({ ...formData, countryId: v || "" })}>
+                  <Select value={formData.country_id} onValueChange={(v) => setFormData({ ...formData, country_id: v || "" })}>
                     <SelectTrigger className="app-input h-9">
                       <SelectValue placeholder="Seleccionar país..." />
                     </SelectTrigger>

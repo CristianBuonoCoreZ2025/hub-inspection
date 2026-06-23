@@ -809,13 +809,14 @@ export async function createEvent(input: { country_id?: string; code?: string; n
   return data.insert_events_one;
 }
 
-export async function updateEvent(id: string, input: Partial<Event>) {
+export async function updateEvent(id: string, input: { country_id?: string; code?: string; name?: string; description?: string; is_active?: boolean }) {
   const mutation = `
     mutation UpdateEvent($id: uuid!, $set: events_set_input!) {
       update_events_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id code name description is_active }
     }
   `;
-  const { id: inputId, created_at, updated_at, ...set } = input;
+  const { country_id, code, name, description, is_active, ...rest } = input;
+  const set = { country_id, code, name, description, is_active };
   const data = await graphqlRequest<{ update_events_by_pk: Event }>(mutation, { id, set });
   return data.update_events_by_pk;
 }
