@@ -125,12 +125,12 @@ export default function CompaniesPage() {
             className="h-9 w-full max-w-sm"
           />
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva Empresa
-          </Button>
+        <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
+          <Plus className="mr-2 h-4 w-4" />
+          Nueva Empresa
+        </Button>
 
+        <Dialog open={open} onOpenChange={setOpen} modal={true}>
           <DialogContent className="modal-md" showCloseButton={false}>
             <div className="modal-header">
               <DialogTitle className="modal-title flex items-center gap-2.5">
