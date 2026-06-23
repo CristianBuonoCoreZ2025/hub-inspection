@@ -11,9 +11,10 @@ interface FormSelectProps<TFieldValues extends FieldValues = any> {
   className?: string;
   children: React.ReactNode;
   onValueChange?: (value: string) => void;
+  items?: { value: string; label: string }[];
 }
 
-export function FormSelect<TFieldValues extends FieldValues = any>({ control, name, placeholder, disabled, className, children, onValueChange }: FormSelectProps<TFieldValues>) {
+export function FormSelect<TFieldValues extends FieldValues = any>({ control, name, placeholder, disabled, className, children, onValueChange, items }: FormSelectProps<TFieldValues>) {
   return (
     <Controller
       control={control}
@@ -27,6 +28,7 @@ export function FormSelect<TFieldValues extends FieldValues = any>({ control, na
             onValueChange?.(value);
           }}
           disabled={disabled}
+          items={items || []}
         >
           <SelectTrigger className={className}>
             <SelectValue placeholder={placeholder}>{placeholder}</SelectValue>

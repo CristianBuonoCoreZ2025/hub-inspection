@@ -638,6 +638,7 @@ export default function ClaimsPage() {
                       name="companyId"
                       placeholder="Selecciona una empresa"
                       className="app-input h-7"
+                      items={companies?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
                       {companies?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
@@ -657,6 +658,7 @@ export default function ClaimsPage() {
                       name="insuranceCompanyId"
                       placeholder="Seleccionar compañía..."
                       className="app-input h-7"
+                      items={insuranceCompaniesCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
                       {insuranceCompaniesCatalog?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
@@ -739,6 +741,7 @@ export default function ClaimsPage() {
                       placeholder="Seleccionar línea..."
                       className="app-input h-7"
                       onValueChange={() => form.setValue("insuranceProductId", "")}
+                      items={businessLinesCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
                       {businessLinesCatalog?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
@@ -756,6 +759,7 @@ export default function ClaimsPage() {
                       placeholder="Seleccionar producto..."
                       className="app-input h-7"
                       disabled={!selectedBusinessLineId}
+                      items={filteredInsuranceProducts?.map((p) => ({ value: p.id, label: p.name ?? "" })) || []}
                     >
                       {filteredInsuranceProducts?.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
@@ -772,6 +776,7 @@ export default function ClaimsPage() {
                       name="eventId"
                       placeholder="Seleccionar evento..."
                       className="app-input h-7"
+                      items={eventsCatalog?.map((e) => ({ value: e.id, label: e.name ?? "" })) || []}
                     >
                       {eventsCatalog?.map((e) => (
                         <SelectItem key={e.id} value={e.id}>
@@ -790,6 +795,7 @@ export default function ClaimsPage() {
                       name="claimTypeId"
                       placeholder="Seleccionar tipo..."
                       className="app-input h-7"
+                      items={claimTypes?.map((t) => ({ value: t.id, label: t.name ?? "" })) || []}
                     >
                       {claimTypes?.map((t) => (
                         <SelectItem key={t.id} value={t.id}>
@@ -807,6 +813,7 @@ export default function ClaimsPage() {
                       name="advisorId"
                       placeholder="Seleccionar asesor..."
                       className="app-input h-7"
+                      items={advisorsCatalog?.map((a) => ({ value: a.id, label: a.name ?? "" })) || []}
                     >
                       {advisorsCatalog?.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
@@ -823,6 +830,7 @@ export default function ClaimsPage() {
                       name="brokerId"
                       placeholder="Seleccionar corredor..."
                       className="app-input h-7"
+                      items={brokersCatalog?.map((b) => ({ value: b.id, label: b.name ?? "" })) || []}
                     >
                       {brokersCatalog?.map((b) => (
                         <SelectItem key={b.id} value={b.id}>
@@ -841,6 +849,7 @@ export default function ClaimsPage() {
                       name="inspectorId"
                       placeholder="Seleccionar inspector..."
                       className="app-input h-7"
+                      items={inspectors?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
                     >
                       {inspectors?.map((u) => (
                         <SelectItem key={u.id} value={u.id}>
@@ -858,6 +867,7 @@ export default function ClaimsPage() {
                       name="adjusterId"
                       placeholder="Seleccionar ajustador..."
                       className="app-input h-7"
+                      items={adjusters?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
                     >
                       {adjusters?.map((u) => (
                         <SelectItem key={u.id} value={u.id}>
@@ -883,6 +893,7 @@ export default function ClaimsPage() {
                       name="claimCauseId"
                       placeholder="Seleccionar causal..."
                       className="app-input h-7"
+                      items={claimCauses?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
                       {claimCauses?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
@@ -899,6 +910,7 @@ export default function ClaimsPage() {
                       name="constructionTypeId"
                       placeholder="Seleccionar tipo..."
                       className="app-input h-7"
+                      items={constructionTypesCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
                       {constructionTypesCatalog?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
@@ -915,6 +927,7 @@ export default function ClaimsPage() {
                       name="habitabilityId"
                       placeholder="Seleccionar habitabilidad..."
                       className="app-input h-7"
+                      items={habitabilityCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
                       {habitabilityCatalog?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
@@ -931,6 +944,7 @@ export default function ClaimsPage() {
                       name="destinationHousingId"
                       placeholder="Seleccionar destino..."
                       className="app-input h-7"
+                      items={housingDestinationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
                       {housingDestinationsCatalog?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
@@ -947,6 +961,7 @@ export default function ClaimsPage() {
                       name="propertyClassificationId"
                       placeholder="Seleccionar clasificación..."
                       className="app-input h-7"
+                      items={propertyClassificationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
                       {propertyClassificationsCatalog?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
@@ -963,6 +978,7 @@ export default function ClaimsPage() {
                       name="damageClassificationId"
                       placeholder="Seleccionar clasificación..."
                       className="app-input h-7"
+                      items={damageClassificationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
                       {damageClassificationsCatalog?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
@@ -1081,6 +1097,7 @@ export default function ClaimsPage() {
                         form.setValue("claimCity", "");
                         form.setValue("claimCommune", "");
                       }}
+                      items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                     >
                       {countriesCatalog?.map((c) => (
                         <SelectItem key={c.id} value={c.name}>
@@ -1101,6 +1118,7 @@ export default function ClaimsPage() {
                         form.setValue("claimCity", "");
                         form.setValue("claimCommune", "");
                       }}
+                      items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
                     >
                       {regionsCatalog?.map((r) => (
                         <SelectItem key={r.id} value={r.name}>
@@ -1120,6 +1138,7 @@ export default function ClaimsPage() {
                       className="app-input h-7"
                       disabled={!selectedClaimRegion}
                       onValueChange={() => form.setValue("claimCommune", "")}
+                      items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                     >
                       {citiesCatalog?.map((c) => (
                         <SelectItem key={c.id} value={c.name}>
@@ -1137,6 +1156,7 @@ export default function ClaimsPage() {
                       placeholder="Seleccionar comuna..."
                       className="app-input h-7"
                       disabled={!selectedClaimCity}
+                      items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                     >
                       {communesCatalog?.map((c) => (
                         <SelectItem key={c.id} value={c.name}>
