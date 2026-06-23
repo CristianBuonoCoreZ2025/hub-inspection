@@ -212,8 +212,29 @@ export default function UbicacionesPage() {
   };
 
   const handleDelete = (id: string) => {
+    // Validate hierarchy before delete
+    if (level === 1) {
+      // Check if region has cities - need to query since cities not loaded at this level
+      getCities(id).then((cityList) => {
+        if (cityList && cityList.length > 0) {
+          toast.error("No se puede eliminar esta región porque tiene ciudades asociadas. Elimine las ciudades primero.");
+        } else {
+          if (confirm("¿Desactivar esta región?")) {
+            deleteRegionMutation.mutate(id);
+          }
+        }
+      });
+      return;
+    }
+    if (level === 2) {
+      // Check if city has communes
+      const hasChildren = communes && communes.some((c) => c.city_id === id);
+      if (hasChildren) {
+        toast.error("No se puede eliminar esta ciudad porque tiene comunas asociadas. Elimine las comunas primero.");
+        return;
+      }
+    }
     if (confirm("¿Desactivar este registro?")) {
-      if (level === 1) deleteRegionMutation.mutate(id);
       if (level === 2) deleteCityMutation.mutate(id);
       if (level === 3) deleteCommuneMutation.mutate(id);
     }
