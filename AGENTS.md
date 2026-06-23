@@ -311,50 +311,50 @@ Todo el diseño visual sigue el sistema de estilos de hub-stock-ai: tokens CSS, 
 .btn-icon     → w-8 h-8           (solo ícono)
 ```
 
-### Regla OBLIGATORIA de Texto en Botones
+### Regla OBLIGATORIA y ÚNICA de Botones
 ```
-NUNCA usar dos palabras en el texto de un botón. Siempre UNA sola palabra.
-Si se necesita contexto, usar un ícono de referencia, nunca texto adicional.
+ESTA ES LA ÚNICA REGLA DE BOTONES. NO crear botones con dimensiones,
+colores o textos diferentes a los definidos aquí.
 
-Ejemplos válidos:
-  ✅ "Nuevo"    (con ícono Plus)
-  ✅ "Editar"   (con ícono Pencil)
-  ✅ "Guardar"  (con ícono Save)
-  ✅ "Crear"    (con ícono Plus)
-  ✅ "Cancelar" (sin ícono)
-  ✅ "Exportar" (con ícono Download)
-  ✅ "Imprimir" (con ícono Printer)
-  ✅ "Eliminar" (con ícono Trash2)
-  ✅ "Invitar"  (con ícono UserPlus)
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. TEXTO: Siempre UNA sola palabra. NUNCA dos. NUNCA sin texto. │
+│    Si se necesita contexto, usar un ícono, nunca texto extra.    │
+│    Los botones SIEMPRE deben tener texto (no solo ícono).        │
+└─────────────────────────────────────────────────────────────────┘
 
-Ejemplos PROHIBIDOS:
-  ❌ "Nuevo Siniestro"
-  ❌ "Guardar Cambios"
-  ❌ "Exportar CSV"
-  ❌ "Crear Empresa"
-  ❌ "Enviar Invitación"
-  ❌ "Imprimir / Guardar PDF"
+Textos permitidos (una palabra + ícono opcional):
+  ✅ "Nuevo"    (Plus)       ✅ "Editar"   (Pencil)
+  ✅ "Guardar"  (Save)       ✅ "Crear"    (Plus)
+  ✅ "Cancelar" (sin ícono)  ✅ "Exportar" (Download)
+  ✅ "Imprimir" (Printer)    ✅ "Eliminar" (Trash2)
+  ✅ "Invitar"  (UserPlus)   ✅ "Atrás"    (ArrowLeft)
+  ✅ "Siguiente"(ArrowRight) ✅ "Cerrar"   (X)
 
-Excepción: Los títulos de modales (DialogHeader/DialogTitle) SÍ pueden
-tener texto descriptivo (ej: "Editar Empresa", "Nueva Inspección").
-```
+Textos PROHIBIDOS (dos o más palabras):
+  ❌ "Nuevo Siniestro"    ❌ "Guardar Cambios"
+  ❌ "Exportar CSV"       ❌ "Crear Empresa"
+  ❌ "Enviar Invitación"  ❌ "Imprimir / Guardar PDF"
 
-### Regla OBLIGATORIA de Colores y Dimensiones en Botones
-```
-Todos los botones de acción (Aceptar, Siguiente, Grabar, Crear, Guardar)
-DEBEN usar la clase .btn-save (azul: gradiente #0095DA → #005BBB).
+Excepción: Títulos de modales (DialogTitle) pueden tener texto descriptivo.
 
-Todos los botones de cancelación DEBEN usar la clase .btn-cancel
-(rosa: gradiente #fb7185 → #f43f5e).
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. COLORES: Solo dos clases de color para botones de acción.     │
+│    .btn-save  → azul  (Aceptar, Siguiente, Grabar, Crear, Guardar)│
+│    .btn-cancel→ rosa  (Cancelar, Cerrar)                         │
+│    NUNCA usar otros colores. NUNCA mezclar.                      │
+└─────────────────────────────────────────────────────────────────┘
 
-Dimensiones estándar (definidas en buttons.css con !important):
-- Alto: 29px para btn-save y btn-cancel
-- btn-sm: w-[175px]
-- btn-lg: w-[225px]
-- Wizard footer: w-[122px]
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. DIMENSIONES: Alto fijo 29px para todos. Ancho según contexto. │
+│    .btn-save / .btn-cancel → height: 29px (en buttons.css)       │
+│    .btn-sm  → w-[175px]  (pantallas de listado/catálogos)        │
+│    .btn-lg  → w-[225px]  (pantallas principales)                 │
+│    Wizard footer → w-[122px] (Cancelar, Atrás, Siguiente, Crear) │
+│    NUNCA crear botones con alto o ancho diferente.               │
+└─────────────────────────────────────────────────────────────────┘
 
-Excepción: Botones especiales como "Desligar Asegurado" pueden usar
-colores personalizados (esmeralda) con ancho fijo w-[150px].
+Excepción ÚNICA: Botón "Desligar Asegurado" (esmeralda, w-[150px], h-6)
+es el único botón especial permitido. No crear más botones especiales.
 ```
 
 ### Regla OBLIGATORIA de Combos (FormSelect) No Obligatorios
