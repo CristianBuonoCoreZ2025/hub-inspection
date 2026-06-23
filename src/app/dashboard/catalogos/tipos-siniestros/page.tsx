@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaimTypes, createClaimType, updateClaimType, deleteClaimType } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, FileWarning, Flame, Droplets, Zap, Wind, Home, Car, Wrench, AlertTriangle, Shield, ClipboardCheck } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, FileWarning, Flame, Droplets, Zap, Wind, Home, Car, Wrench, AlertTriangle, Shield, ClipboardCheck, Building, Warehouse, Store, Hotel, Factory, House, Scale, Gavel, FileText, Badge, Users, Hand, Truck, Bus, Bike, Ship, Plane, Train, Motorbike, Package, Heart, Baby, Hospital, Activity, HeartPulse } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,31 +17,93 @@ import {
 
 // Map icon names from lucide-react to actual icon components
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  // General / Warning
   FileWarning,
+  AlertTriangle,
+  Shield,
+  ClipboardCheck,
+  // Fire / Water / Weather
   Flame,
   Droplets,
   Zap,
   Wind,
-  Home,
-  Car,
   Wrench,
-  AlertTriangle,
-  Shield,
-  ClipboardCheck,
+  // Property / Buildings
+  Home,
+  House,
+  Building,
+  Warehouse,
+  Store,
+  Hotel,
+  Factory,
+  // Transport
+  Car,
+  Truck,
+  Bus,
+  Bike,
+  Ship,
+  Plane,
+  Train,
+  Motorbike,
+  Package,
+  // Life / Health
+  Heart,
+  Baby,
+  Hospital,
+  Activity,
+  HeartPulse,
+  // Legal / Liability
+  Scale,
+  Gavel,
+  FileText,
+  Badge,
+  Users,
+  Hand,
 };
 
 const ICON_OPTIONS = Object.keys(ICON_MAP);
 
 function getIconForClaimType(name: string): React.ComponentType<{ className?: string }> {
   const lowerName = name.toLowerCase();
+  // Property / Buildings
+  if (lowerName.includes("propiedad") || lowerName.includes("property") || lowerName.includes("inmueble")) return Building;
+  if (lowerName.includes("bodega") || lowerName.includes("almacén") || lowerName.includes("almacen")) return Warehouse;
+  if (lowerName.includes("tienda") || lowerName.includes("comercio") || lowerName.includes("local")) return Store;
+  if (lowerName.includes("hotel") || lowerName.includes("hostal")) return Hotel;
+  if (lowerName.includes("fábrica") || lowerName.includes("fabrica") || lowerName.includes("industrial")) return Factory;
+  if (lowerName.includes("oficina") || lowerName.includes("empresa")) return Building;
+  if (lowerName.includes("hogar") || lowerName.includes("vivienda") || lowerName.includes("casa")) return Home;
+  if (lowerName.includes("house")) return House;
+  // Transport
+  if (lowerName.includes("transporte") || lowerName.includes("transport")) return Truck;
+  if (lowerName.includes("auto") || lowerName.includes("vehículo") || lowerName.includes("vehiculo") || lowerName.includes("robo")) return Car;
+  if (lowerName.includes("camión") || lowerName.includes("camion") || lowerName.includes("carga")) return Truck;
+  if (lowerName.includes("bus") || lowerName.includes("autobús") || lowerName.includes("autobus")) return Bus;
+  if (lowerName.includes("bicicleta") || lowerName.includes("moto") || lowerName.includes("motorcycle")) return Bike;
+  if (lowerName.includes("barco") || lowerName.includes("nave") || lowerName.includes("marítimo") || lowerName.includes("maritimo")) return Ship;
+  if (lowerName.includes("avión") || lowerName.includes("aereo") || lowerName.includes("aéreo")) return Plane;
+  if (lowerName.includes("tren") || lowerName.includes("ferrocarril")) return Train;
+  if (lowerName.includes("paquete") || lowerName.includes("carga") || lowerName.includes("mercancía")) return Package;
+  // Life / Health
+  if (lowerName.includes("vida") || lowerName.includes("life")) return Heart;
+  if (lowerName.includes("bebé") || lowerName.includes("bebe") || lowerName.includes("infantil")) return Baby;
+  if (lowerName.includes("salud") || lowerName.includes("hospital") || lowerName.includes("médico") || lowerName.includes("medico")) return Hospital;
+  if (lowerName.includes("accidente") || lowerName.includes("lesión") || lowerName.includes("lesion")) return Activity;
+  if (lowerName.includes("corazón") || lowerName.includes("cardíaco") || lowerName.includes("cardiaco")) return HeartPulse;
+  // Legal / Liability
+  if (lowerName.includes("responsabilidad") || lowerName.includes("civil") || lowerName.includes("rc")) return Scale;
+  if (lowerName.includes("legal") || lowerName.includes("juicio") || lowerName.includes("litigio")) return Gavel;
+  if (lowerName.includes("contrato") || lowerName.includes("póliza") || lowerName.includes("poliza")) return FileText;
+  if (lowerName.includes("certificado") || lowerName.includes("garantía") || lowerName.includes("garantia")) return Badge;
+  if (lowerName.includes("personas") || lowerName.includes("grupo") || lowerName.includes("colectivo")) return Users;
+  if (lowerName.includes("manual") || lowerName.includes("operativo") || lowerName.includes("trabajo")) return Hand;
+  // Fire / Water / Weather
   if (lowerName.includes("fuego") || lowerName.includes("incendio")) return Flame;
   if (lowerName.includes("agua") || lowerName.includes("inundación") || lowerName.includes("inundacion")) return Droplets;
   if (lowerName.includes("electrico") || lowerName.includes("rayo")) return Zap;
   if (lowerName.includes("viento") || lowerName.includes("tormenta")) return Wind;
-  if (lowerName.includes("hogar") || lowerName.includes("vivienda") || lowerName.includes("casa")) return Home;
-  if (lowerName.includes("auto") || lowerName.includes("vehículo") || lowerName.includes("vehiculo") || lowerName.includes("robo")) return Car;
   if (lowerName.includes("mecánico") || lowerName.includes("maquinaria")) return Wrench;
-  if (lowerName.includes("accidente")) return AlertTriangle;
+  // General
   if (lowerName.includes("seguro") || lowerName.includes("protección")) return Shield;
   if (lowerName.includes("check") || lowerName.includes("aprobado")) return ClipboardCheck;
   return FileWarning;
@@ -205,7 +267,7 @@ export default function ClaimTypePage() {
               </div>
               <div className="modal-field">
                 <Label className="app-field-label">Ícono</Label>
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-8 gap-2">
                   {ICON_OPTIONS.map((iconName) => {
                     const IconComponent = ICON_MAP[iconName];
                     return (
@@ -218,6 +280,7 @@ export default function ClaimTypePage() {
                             ? "border-primary bg-primary/10 text-primary"
                             : "border-input bg-background hover:bg-muted"
                         }`}
+                        title={iconName}
                       >
                         <IconComponent className="h-5 w-5" />
                       </button>
