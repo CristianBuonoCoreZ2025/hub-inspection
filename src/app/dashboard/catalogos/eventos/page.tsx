@@ -140,7 +140,11 @@ export default function EventosPage() {
               <div className="modal-grid">
                 <div className="modal-field">
                   <Label className="app-field-label">País</Label>
-                  <Select value={formData.country_id} onValueChange={(v) => setFormData({ ...formData, country_id: v || "" })}>
+                  <Select
+                    value={formData.country_id}
+                    onValueChange={(v) => setFormData({ ...formData, country_id: v || "" })}
+                    items={countries?.map((c) => ({ value: c.id, label: c.name })) || []}
+                  >
                     <SelectTrigger className="app-input h-9">
                       <SelectValue placeholder="Seleccionar país..." />
                     </SelectTrigger>
