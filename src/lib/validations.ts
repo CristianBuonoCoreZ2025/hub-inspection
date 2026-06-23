@@ -176,7 +176,34 @@ export const claimCreateMinimalSchema = z.object({
   beneficiaryRegion: z.string().optional().or(z.literal("")),
   beneficiaryCity: z.string().optional().or(z.literal("")),
   beneficiaryCommune: z.string().optional().or(z.literal("")),
-});
+})
+  // Validar RUT del Asegurado solo si el país es Chile
+  .refine(
+    (data) => {
+      if (data.insuredCountry !== "Chile") return true;
+      if (!data.rut || data.rut.trim() === "") return true;
+      return validateRut(data.rut);
+    },
+    { message: "RUT inválido", path: ["rut"] }
+  )
+  // Validar RUT del Contratante solo si el país es Chile
+  .refine(
+    (data) => {
+      if (data.contractorCountry !== "Chile") return true;
+      if (!data.contractorRut || data.contractorRut.trim() === "") return true;
+      return validateRut(data.contractorRut);
+    },
+    { message: "RUT inválido", path: ["contractorRut"] }
+  )
+  // Validar RUT del Beneficiario solo si el país es Chile
+  .refine(
+    (data) => {
+      if (data.beneficiaryCountry !== "Chile") return true;
+      if (!data.beneficiaryRut || data.beneficiaryRut.trim() === "") return true;
+      return validateRut(data.beneficiaryRut);
+    },
+    { message: "RUT inválido", path: ["beneficiaryRut"] }
+  );
 
 export type ClaimCreateMinimalInput = z.infer<typeof claimCreateMinimalSchema>;
 

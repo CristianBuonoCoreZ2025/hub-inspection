@@ -1111,6 +1111,7 @@ export default function ClaimsPage() {
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
                       <input {...form.register("rut")} placeholder="14185994k" className="app-input h-7" />
+                      <FieldError message={form.formState.errors.rut?.message} />
                     </div>
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -1255,6 +1256,7 @@ export default function ClaimsPage() {
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
                           <input {...form.register("contractorRut")} readOnly={contractorLinked} placeholder="14185994k" className="app-input h-7" />
+                          <FieldError message={form.formState.errors.contractorRut?.message} />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Nombre</Label>
@@ -1396,6 +1398,7 @@ export default function ClaimsPage() {
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
                           <input {...form.register("beneficiaryRut")} readOnly={beneficiaryLinked} placeholder="14185994k" className="app-input h-7" />
+                          <FieldError message={form.formState.errors.beneficiaryRut?.message} />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Nombre</Label>
