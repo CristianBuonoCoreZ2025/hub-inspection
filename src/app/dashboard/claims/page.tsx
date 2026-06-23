@@ -1220,10 +1220,10 @@ export default function ClaimsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className={`h-6 text-[11px] px-2 ${contractorLinked ? "btn-save" : ""}`}
+                        className={`h-6 text-[11px] px-2 ${contractorLinked ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-emerald-50/60 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
                         onClick={() => toggleContractorLink()}
                       >
-                        {contractorLinked ? "Desligar" : "Copiar de Asegurado"}
+                        {contractorLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
                       </Button>
                     )}
                   </div>
@@ -1357,10 +1357,10 @@ export default function ClaimsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className={`h-6 text-[11px] px-2 ${beneficiaryLinked ? "btn-save" : ""}`}
+                        className={`h-6 text-[11px] px-2 ${beneficiaryLinked ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-emerald-50/60 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
                         onClick={() => toggleBeneficiaryLink()}
                       >
-                        {beneficiaryLinked ? "Desligar" : "Copiar de Asegurado"}
+                        {beneficiaryLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
                       </Button>
                     )}
                   </div>
