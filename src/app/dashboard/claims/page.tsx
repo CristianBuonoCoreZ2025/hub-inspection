@@ -28,7 +28,7 @@ import { claimCreateMinimalSchema, type ClaimCreateMinimalInput } from "@/lib/va
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload, ChevronDown } from "lucide-react";
 import { createInspectionSession } from "@/services/inspections";
 import { useRouter } from "next/navigation";
 
@@ -117,6 +117,7 @@ export default function ClaimsPage() {
   const [step, setStep] = useState(1);
   const [documents, setDocuments] = useState<{ id: string; name: string; type: string; file: File }[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [expandedPanel, setExpandedPanel] = useState<"contractor" | "beneficiary" | null>(null);
 
   type DocumentRow = { id: string; name: string; type: string; file: File };
 
@@ -153,6 +154,11 @@ export default function ClaimsPage() {
       insuredEmail: "",
       cellPhone: "",
       insuredPhone: "",
+      insuredAddress: "",
+      insuredCountry: "",
+      insuredRegion: "",
+      insuredCity: "",
+      insuredCommune: "",
       claimAddress: "",
       claimCountry: "Chile",
       claimRegion: "",
@@ -163,6 +169,7 @@ export default function ClaimsPage() {
       contractorRut: "",
       contractorEmail: "",
       contractorCellPhone: "",
+      contractorPhone: "",
       contractorAddress: "",
       contractorCountry: "",
       contractorRegion: "",
@@ -173,6 +180,7 @@ export default function ClaimsPage() {
       beneficiaryRut: "",
       beneficiaryEmail: "",
       beneficiaryCellPhone: "",
+      beneficiaryPhone: "",
       beneficiaryAddress: "",
       beneficiaryCountry: "",
       beneficiaryRegion: "",
@@ -397,6 +405,11 @@ export default function ClaimsPage() {
           insuredEmail: values.insuredEmail || null,
           insuredPhone: values.insuredPhone || null,
           cellPhone: values.cellPhone,
+          insuredAddress: values.insuredAddress || null,
+          insuredCountry: values.insuredCountry || null,
+          insuredRegion: values.insuredRegion || null,
+          insuredCity: values.insuredCity || null,
+          insuredCommune: values.insuredCommune || null,
         },
         {
           claimAddress: values.claimAddress,
@@ -412,6 +425,7 @@ export default function ClaimsPage() {
               contractorRut: values.contractorRut || null,
               contractorEmail: values.contractorEmail || null,
               contractorCellPhone: values.contractorCellPhone || null,
+              contractorPhone: values.contractorPhone || null,
               contractorAddress: values.contractorAddress || null,
               contractorCountry: values.contractorCountry || null,
               contractorRegion: values.contractorRegion || null,
@@ -426,6 +440,7 @@ export default function ClaimsPage() {
               beneficiaryRut: values.beneficiaryRut || null,
               beneficiaryEmail: values.beneficiaryEmail || null,
               beneficiaryCellPhone: values.beneficiaryCellPhone || null,
+              beneficiaryPhone: values.beneficiaryPhone || null,
               beneficiaryAddress: values.beneficiaryAddress || null,
               beneficiaryCountry: values.beneficiaryCountry || null,
               beneficiaryRegion: values.beneficiaryRegion || null,
@@ -474,11 +489,12 @@ export default function ClaimsPage() {
     form.setValue("contractorRut", form.getValues("rut") || "");
     form.setValue("contractorEmail", form.getValues("insuredEmail") || "");
     form.setValue("contractorCellPhone", form.getValues("cellPhone") || "");
-    form.setValue("contractorAddress", form.getValues("claimAddress") || "");
-    form.setValue("contractorCountry", form.getValues("claimCountry") || "");
-    form.setValue("contractorRegion", form.getValues("claimRegion") || "");
-    form.setValue("contractorCity", form.getValues("claimCity") || "");
-    form.setValue("contractorCommune", form.getValues("claimCommune") || "");
+    form.setValue("contractorPhone", form.getValues("insuredPhone") || "");
+    form.setValue("contractorAddress", form.getValues("insuredAddress") || "");
+    form.setValue("contractorCountry", form.getValues("insuredCountry") || "");
+    form.setValue("contractorRegion", form.getValues("insuredRegion") || "");
+    form.setValue("contractorCity", form.getValues("insuredCity") || "");
+    form.setValue("contractorCommune", form.getValues("insuredCommune") || "");
   };
 
   const copyInsuredToBeneficiary = () => {
@@ -487,11 +503,12 @@ export default function ClaimsPage() {
     form.setValue("beneficiaryRut", form.getValues("rut") || "");
     form.setValue("beneficiaryEmail", form.getValues("insuredEmail") || "");
     form.setValue("beneficiaryCellPhone", form.getValues("cellPhone") || "");
-    form.setValue("beneficiaryAddress", form.getValues("claimAddress") || "");
-    form.setValue("beneficiaryCountry", form.getValues("claimCountry") || "");
-    form.setValue("beneficiaryRegion", form.getValues("claimRegion") || "");
-    form.setValue("beneficiaryCity", form.getValues("claimCity") || "");
-    form.setValue("beneficiaryCommune", form.getValues("claimCommune") || "");
+    form.setValue("beneficiaryPhone", form.getValues("insuredPhone") || "");
+    form.setValue("beneficiaryAddress", form.getValues("insuredAddress") || "");
+    form.setValue("beneficiaryCountry", form.getValues("insuredCountry") || "");
+    form.setValue("beneficiaryRegion", form.getValues("insuredRegion") || "");
+    form.setValue("beneficiaryCity", form.getValues("insuredCity") || "");
+    form.setValue("beneficiaryCommune", form.getValues("insuredCommune") || "");
   };
 
   const handleFileSelect = (files: FileList | null) => {
@@ -926,7 +943,7 @@ export default function ClaimsPage() {
             {/* PASO 2: ASEGURADO, CONTRATANTE, BENEFICIARIO, INCIDENTE */}
             {step === 2 && (
               <div className="space-y-3">
-                {/* Asegurado */}
+                {/* Asegurado (siempre expandido) */}
                 <div className="rounded-lg border border-border/50 p-3 space-y-2">
                   <span className="text-[11px] font-semibold text-foreground/70">Asegurado</span>
                   <div className="grid grid-cols-3 gap-2">
@@ -960,82 +977,330 @@ export default function ClaimsPage() {
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Teléfono</Label>
                       <input {...form.register("insuredPhone")} placeholder="X XXXX XXXX" className="app-input h-7" />
                     </div>
+                    <div className="flex flex-col gap-1 col-span-full">
+                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
+                      <input {...form.register("insuredAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
+                      <FormSelect
+                        control={form.control}
+                        name="insuredCountry"
+                        placeholder="Seleccionar país..."
+                        className="app-input h-7"
+                        onValueChange={() => {
+                          form.setValue("insuredRegion", "");
+                          form.setValue("insuredCity", "");
+                          form.setValue("insuredCommune", "");
+                        }}
+                        items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                      >
+                        {countriesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                        ))}
+                      </FormSelect>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
+                      <FormSelect
+                        control={form.control}
+                        name="insuredRegion"
+                        placeholder="Seleccionar región..."
+                        className="app-input h-7"
+                        onValueChange={() => {
+                          form.setValue("insuredCity", "");
+                          form.setValue("insuredCommune", "");
+                        }}
+                        items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
+                      >
+                        {regionsCatalog?.map((r) => (
+                          <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                        ))}
+                      </FormSelect>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
+                      <FormSelect
+                        control={form.control}
+                        name="insuredCity"
+                        placeholder="Seleccionar ciudad..."
+                        className="app-input h-7"
+                        onValueChange={() => form.setValue("insuredCommune", "")}
+                        items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                      >
+                        {citiesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                        ))}
+                      </FormSelect>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
+                      <FormSelect
+                        control={form.control}
+                        name="insuredCommune"
+                        placeholder="Seleccionar comuna..."
+                        className="app-input h-7"
+                        items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                      >
+                        {communesCatalog?.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                        ))}
+                      </FormSelect>
+                    </div>
                   </div>
                 </div>
 
-                {/* Contratante */}
-                <div className="rounded-lg border border-border/50 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
+                {/* Contratante (colapsable) */}
+                <div className="rounded-lg border border-border/50 overflow-hidden">
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
+                    onClick={() => setExpandedPanel(expandedPanel === "contractor" ? null : "contractor")}
+                  >
                     <span className="text-[11px] font-semibold text-foreground/70">Contratante</span>
-                    <Button type="button" variant="outline" size="sm" className="h-6 text-[11px] px-2" onClick={copyInsuredToContractor}>
-                      Copiar de Asegurado
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
-                      <input {...form.register("contractorRut")} placeholder="14185994k" className="app-input h-7" />
+                    <div className="flex items-center gap-2">
+                      {expandedPanel === "contractor" && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 text-[11px] px-2"
+                          onClick={(e) => { e.stopPropagation(); copyInsuredToContractor(); }}
+                        >
+                          Copiar de Asegurado
+                        </Button>
+                      )}
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedPanel === "contractor" ? "rotate-180" : ""}`} />
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Nombre</Label>
-                      <input {...form.register("contractorName")} placeholder="Cristian" className="app-input h-7" />
+                  </button>
+                  {expandedPanel === "contractor" && (
+                    <div className="px-3 pb-3 space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
+                          <input {...form.register("contractorRut")} placeholder="14185994k" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Nombre</Label>
+                          <input {...form.register("contractorName")} placeholder="Cristian" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Apellido</Label>
+                          <input {...form.register("contractorLastName")} placeholder="Zárate" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</Label>
+                          <input {...form.register("contractorEmail")} type="email" placeholder="contratante@email.com" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Celular</Label>
+                          <input {...form.register("contractorCellPhone")} placeholder="9 9999 9999" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Teléfono</Label>
+                          <input {...form.register("contractorPhone")} placeholder="X XXXX XXXX" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1 col-span-full">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
+                          <input {...form.register("contractorAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
+                          <FormSelect
+                            control={form.control}
+                            name="contractorCountry"
+                            placeholder="Seleccionar país..."
+                            className="app-input h-7"
+                            onValueChange={() => {
+                              form.setValue("contractorRegion", "");
+                              form.setValue("contractorCity", "");
+                              form.setValue("contractorCommune", "");
+                            }}
+                            items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                          >
+                            {countriesCatalog?.map((c) => (
+                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                            ))}
+                          </FormSelect>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
+                          <FormSelect
+                            control={form.control}
+                            name="contractorRegion"
+                            placeholder="Seleccionar región..."
+                            className="app-input h-7"
+                            onValueChange={() => {
+                              form.setValue("contractorCity", "");
+                              form.setValue("contractorCommune", "");
+                            }}
+                            items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
+                          >
+                            {regionsCatalog?.map((r) => (
+                              <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                            ))}
+                          </FormSelect>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
+                          <FormSelect
+                            control={form.control}
+                            name="contractorCity"
+                            placeholder="Seleccionar ciudad..."
+                            className="app-input h-7"
+                            onValueChange={() => form.setValue("contractorCommune", "")}
+                            items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                          >
+                            {citiesCatalog?.map((c) => (
+                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                            ))}
+                          </FormSelect>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
+                          <FormSelect
+                            control={form.control}
+                            name="contractorCommune"
+                            placeholder="Seleccionar comuna..."
+                            className="app-input h-7"
+                            items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                          >
+                            {communesCatalog?.map((c) => (
+                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                            ))}
+                          </FormSelect>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Apellido</Label>
-                      <input {...form.register("contractorLastName")} placeholder="Zárate" className="app-input h-7" />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</Label>
-                      <input {...form.register("contractorEmail")} type="email" placeholder="contratante@email.com" className="app-input h-7" />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Celular</Label>
-                      <input {...form.register("contractorCellPhone")} placeholder="9 9999 9999" className="app-input h-7" />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
-                      <input {...form.register("contractorAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
-                    </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Beneficiario */}
-                <div className="rounded-lg border border-border/50 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
+                {/* Beneficiario (colapsable) */}
+                <div className="rounded-lg border border-border/50 overflow-hidden">
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
+                    onClick={() => setExpandedPanel(expandedPanel === "beneficiary" ? null : "beneficiary")}
+                  >
                     <span className="text-[11px] font-semibold text-foreground/70">Beneficiario</span>
-                    <Button type="button" variant="outline" size="sm" className="h-6 text-[11px] px-2" onClick={copyInsuredToBeneficiary}>
-                      Copiar de Asegurado
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
-                      <input {...form.register("beneficiaryRut")} placeholder="14185994k" className="app-input h-7" />
+                    <div className="flex items-center gap-2">
+                      {expandedPanel === "beneficiary" && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 text-[11px] px-2"
+                          onClick={(e) => { e.stopPropagation(); copyInsuredToBeneficiary(); }}
+                        >
+                          Copiar de Asegurado
+                        </Button>
+                      )}
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedPanel === "beneficiary" ? "rotate-180" : ""}`} />
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Nombre</Label>
-                      <input {...form.register("beneficiaryName")} placeholder="Cristian" className="app-input h-7" />
+                  </button>
+                  {expandedPanel === "beneficiary" && (
+                    <div className="px-3 pb-3 space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
+                          <input {...form.register("beneficiaryRut")} placeholder="14185994k" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Nombre</Label>
+                          <input {...form.register("beneficiaryName")} placeholder="Cristian" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Apellido</Label>
+                          <input {...form.register("beneficiaryLastName")} placeholder="Zárate" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</Label>
+                          <input {...form.register("beneficiaryEmail")} type="email" placeholder="beneficiario@email.com" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Celular</Label>
+                          <input {...form.register("beneficiaryCellPhone")} placeholder="9 9999 9999" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Teléfono</Label>
+                          <input {...form.register("beneficiaryPhone")} placeholder="X XXXX XXXX" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1 col-span-full">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
+                          <input {...form.register("beneficiaryAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
+                          <FormSelect
+                            control={form.control}
+                            name="beneficiaryCountry"
+                            placeholder="Seleccionar país..."
+                            className="app-input h-7"
+                            onValueChange={() => {
+                              form.setValue("beneficiaryRegion", "");
+                              form.setValue("beneficiaryCity", "");
+                              form.setValue("beneficiaryCommune", "");
+                            }}
+                            items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                          >
+                            {countriesCatalog?.map((c) => (
+                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                            ))}
+                          </FormSelect>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
+                          <FormSelect
+                            control={form.control}
+                            name="beneficiaryRegion"
+                            placeholder="Seleccionar región..."
+                            className="app-input h-7"
+                            onValueChange={() => {
+                              form.setValue("beneficiaryCity", "");
+                              form.setValue("beneficiaryCommune", "");
+                            }}
+                            items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
+                          >
+                            {regionsCatalog?.map((r) => (
+                              <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                            ))}
+                          </FormSelect>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
+                          <FormSelect
+                            control={form.control}
+                            name="beneficiaryCity"
+                            placeholder="Seleccionar ciudad..."
+                            className="app-input h-7"
+                            onValueChange={() => form.setValue("beneficiaryCommune", "")}
+                            items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                          >
+                            {citiesCatalog?.map((c) => (
+                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                            ))}
+                          </FormSelect>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
+                          <FormSelect
+                            control={form.control}
+                            name="beneficiaryCommune"
+                            placeholder="Seleccionar comuna..."
+                            className="app-input h-7"
+                            items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                          >
+                            {communesCatalog?.map((c) => (
+                              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                            ))}
+                          </FormSelect>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Apellido</Label>
-                      <input {...form.register("beneficiaryLastName")} placeholder="Zárate" className="app-input h-7" />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</Label>
-                      <input {...form.register("beneficiaryEmail")} type="email" placeholder="beneficiario@email.com" className="app-input h-7" />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Celular</Label>
-                      <input {...form.register("beneficiaryCellPhone")} placeholder="9 9999 9999" className="app-input h-7" />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
-                      <input {...form.register("beneficiaryAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
-                    </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Incidente */}
+                {/* Incidente (siempre visible) */}
                 <div className="rounded-lg border border-border/50 p-3 space-y-2">
                   <span className="text-[11px] font-semibold text-foreground/70">Incidente</span>
                   <div className="grid grid-cols-3 gap-2">
@@ -1049,13 +1314,10 @@ export default function ClaimsPage() {
                         items={filteredClaimCauses?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {filteredClaimCauses?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
                       </FormSelect>
                     </div>
-
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Tipo de Construcción</Label>
                       <FormSelect
@@ -1066,13 +1328,10 @@ export default function ClaimsPage() {
                         items={constructionTypesCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {constructionTypesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
                       </FormSelect>
                     </div>
-
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Habitabilidad</Label>
                       <FormSelect
@@ -1083,13 +1342,10 @@ export default function ClaimsPage() {
                         items={habitabilityCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {habitabilityCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
                       </FormSelect>
                     </div>
-
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Destino</Label>
                       <FormSelect
@@ -1100,13 +1356,10 @@ export default function ClaimsPage() {
                         items={housingDestinationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {housingDestinationsCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
                       </FormSelect>
                     </div>
-
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Asegurado/Propietario</Label>
                       <FormSelect
@@ -1117,13 +1370,10 @@ export default function ClaimsPage() {
                         items={propertyClassificationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {propertyClassificationsCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
                       </FormSelect>
                     </div>
-
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Clasificación del Daño</Label>
                       <FormSelect
@@ -1134,38 +1384,22 @@ export default function ClaimsPage() {
                         items={damageClassificationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
                         {damageClassificationsCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
                       </FormSelect>
                     </div>
-
                     <div className="flex flex-col gap-1 col-span-full">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Resumen</Label>
-                      <textarea
-                        {...form.register("summary")}
-                        rows={2}
-                        className="app-input resize-none"
-                        placeholder="Descripción breve del siniestro..."
-                      />
+                      <textarea {...form.register("summary")} rows={2} className="app-input resize-none" placeholder="Descripción breve del siniestro..." />
                     </div>
-
                     <div className="col-span-full flex items-center gap-2">
-                      <input
-                        id="ownerSameAsInsured"
-                        type="checkbox"
-                        {...form.register("ownerSameAsInsured")}
-                        className="h-4 w-4 rounded border-input"
-                      />
-                      <Label htmlFor="ownerSameAsInsured" className="text-[13px]">
-                        Mismo asegurado es propietario
-                      </Label>
+                      <input id="ownerSameAsInsured" type="checkbox" {...form.register("ownerSameAsInsured")} className="h-4 w-4 rounded border-input" />
+                      <Label htmlFor="ownerSameAsInsured" className="text-[13px]">Mismo asegurado es propietario</Label>
                     </div>
                   </div>
                 </div>
 
-                {/* Dirección del Siniestro */}
+                {/* Dirección del Siniestro (siempre visible) */}
                 <div className="rounded-lg border border-border/50 p-3 space-y-2">
                   <span className="text-[11px] font-semibold text-foreground/70">Dirección del Siniestro</span>
                   <div className="grid grid-cols-3 gap-2">
@@ -1191,9 +1425,7 @@ export default function ClaimsPage() {
                         items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                       >
                         {countriesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
+                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                         ))}
                       </FormSelect>
                     </div>
@@ -1212,9 +1444,7 @@ export default function ClaimsPage() {
                         items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
                       >
                         {regionsCatalog?.map((r) => (
-                          <SelectItem key={r.id} value={r.name}>
-                            {r.name}
-                          </SelectItem>
+                          <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
                         ))}
                       </FormSelect>
                     </div>
@@ -1232,9 +1462,7 @@ export default function ClaimsPage() {
                         items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                       >
                         {citiesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
+                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                         ))}
                       </FormSelect>
                       <FieldError message={form.formState.errors.claimCity?.message} />
@@ -1250,9 +1478,7 @@ export default function ClaimsPage() {
                         items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                       >
                         {communesCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.name}>
-                            {c.name}
-                          </SelectItem>
+                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                         ))}
                       </FormSelect>
                     </div>

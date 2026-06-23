@@ -225,6 +225,11 @@ export async function createClaimMinimal(
     insuredEmail?: string | null;
     insuredPhone?: string | null;
     cellPhone: string;
+    insuredAddress?: string | null;
+    insuredCountry?: string | null;
+    insuredRegion?: string | null;
+    insuredCity?: string | null;
+    insuredCommune?: string | null;
   },
   claimAddress: {
     claimAddress: string;
@@ -239,6 +244,7 @@ export async function createClaimMinimal(
     contractorRut?: string | null;
     contractorEmail?: string | null;
     contractorCellPhone?: string | null;
+    contractorPhone?: string | null;
     contractorAddress?: string | null;
     contractorCountry?: string | null;
     contractorRegion?: string | null;
@@ -251,6 +257,7 @@ export async function createClaimMinimal(
     beneficiaryRut?: string | null;
     beneficiaryEmail?: string | null;
     beneficiaryCellPhone?: string | null;
+    beneficiaryPhone?: string | null;
     beneficiaryAddress?: string | null;
     beneficiaryCountry?: string | null;
     beneficiaryRegion?: string | null;
@@ -317,11 +324,11 @@ export async function createClaimMinimal(
     email: insured.insuredEmail || null,
     phone: insured.insuredPhone || null,
     cell_phone: insured.cellPhone,
-    address: claimAddress.claimAddress,
-    country: claimAddress.claimCountry || null,
-    region: claimAddress.claimRegion || null,
-    city: claimAddress.claimCity,
-    commune: claimAddress.claimCommune || null,
+    address: insured.insuredAddress || claimAddress.claimAddress,
+    country: insured.insuredCountry || claimAddress.claimCountry || null,
+    region: insured.insuredRegion || claimAddress.claimRegion || null,
+    city: insured.insuredCity || claimAddress.claimCity,
+    commune: insured.insuredCommune || claimAddress.claimCommune || null,
   });
 
   // 3. Crear participant contractor (si existe)
@@ -334,7 +341,7 @@ export async function createClaimMinimal(
       last_name: contractor.contractorLastName || null,
       rut: contractor.contractorRut || null,
       email: contractor.contractorEmail || null,
-      phone: null,
+      phone: contractor.contractorPhone || null,
       cell_phone: contractor.contractorCellPhone || null,
       address: contractor.contractorAddress || null,
       country: contractor.contractorCountry || null,
@@ -354,7 +361,7 @@ export async function createClaimMinimal(
       last_name: beneficiary.beneficiaryLastName || null,
       rut: beneficiary.beneficiaryRut || null,
       email: beneficiary.beneficiaryEmail || null,
-      phone: null,
+      phone: beneficiary.beneficiaryPhone || null,
       cell_phone: beneficiary.beneficiaryCellPhone || null,
       address: beneficiary.beneficiaryAddress || null,
       country: beneficiary.beneficiaryCountry || null,
