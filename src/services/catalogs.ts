@@ -815,7 +815,7 @@ export async function updateEvent(id: string, input: Partial<Event>) {
       update_events_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id code name description is_active }
     }
   `;
-  const { id: _, created_at, updated_at, ...set } = input;
+  const { id: inputId, created_at, updated_at, ...set } = input;
   const data = await graphqlRequest<{ update_events_by_pk: Event }>(mutation, { id, set });
   return data.update_events_by_pk;
 }
