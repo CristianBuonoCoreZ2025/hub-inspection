@@ -29,7 +29,7 @@ export function FormSelect<TFieldValues extends FieldValues = any>({ control, na
           disabled={disabled}
         >
           <SelectTrigger className={className}>
-            <SelectValue placeholder={placeholder} />
+            <SelectValue placeholder={placeholder}>{placeholder}</SelectValue>
           </SelectTrigger>
           <SelectContent>{children}</SelectContent>
         </Select>
