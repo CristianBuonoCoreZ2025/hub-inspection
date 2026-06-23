@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaims, getClaimsParticipants, createClaimMinimal, deleteClaim } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
@@ -297,6 +297,36 @@ export default function ClaimsPage() {
     queryKey: ["countries"],
     queryFn: () => getCountries(),
   });
+
+  const selectedCountryId = countriesCatalog?.find((c) => c.name === selectedClaimCountry)?.id;
+
+  const filteredInsuranceCompanies = insuranceCompaniesCatalog?.filter(
+    (c) => !selectedCountryId || c.country_id === selectedCountryId
+  );
+  const filteredBrokers = brokersCatalog?.filter(
+    (b) => !selectedCountryId || b.country_id === selectedCountryId
+  );
+  const filteredAdvisors = advisorsCatalog?.filter(
+    (a) => !selectedCountryId || a.country_id === selectedCountryId
+  );
+  const filteredBusinessLines = businessLinesCatalog?.filter(
+    (b) => !selectedCountryId || b.country_id === selectedCountryId
+  );
+  const filteredClaimCauses = claimCauses?.filter(
+    (c) => !selectedCountryId || c.country_id === selectedCountryId
+  );
+
+  // Reset dependent fields when country changes
+  useEffect(() => {
+    if (selectedClaimCountry) {
+      form.setValue("insuranceCompanyId", "");
+      form.setValue("advisorId", "");
+      form.setValue("brokerId", "");
+      form.setValue("businessLineId", "");
+      form.setValue("insuranceProductId", "");
+      form.setValue("claimCauseId", "");
+    }
+  }, [selectedClaimCountry, form]);
 
   const { data: regionsCatalog } = useQuery({
     queryKey: ["regions", selectedClaimCountry],
@@ -631,6 +661,26 @@ export default function ClaimsPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      País del Siniestro <span className="text-red-500">*</span>
+                    </Label>
+                    <FormSelect
+                      control={form.control}
+                      name="claimCountry"
+                      placeholder="Seleccionar país..."
+                      className="app-input h-7"
+                      items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name ?? "" })) || []}
+                    >
+                      {countriesCatalog?.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </FormSelect>
+                    <FieldError message={form.formState.errors.claimCountry?.message} />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
                       Empresa (Cliente) <span className="text-red-500">*</span>
                     </Label>
                     <FormSelect
@@ -658,9 +708,9 @@ export default function ClaimsPage() {
                       name="insuranceCompanyId"
                       placeholder="Seleccionar compañía..."
                       className="app-input h-7"
-                      items={insuranceCompaniesCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
+                      items={filteredInsuranceCompanies?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
-                      {insuranceCompaniesCatalog?.map((c) => (
+                      {filteredInsuranceCompanies?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
                         </SelectItem>
@@ -741,9 +791,9 @@ export default function ClaimsPage() {
                       placeholder="Seleccionar línea..."
                       className="app-input h-7"
                       onValueChange={() => form.setValue("insuranceProductId", "")}
-                      items={businessLinesCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
+                      items={filteredBusinessLines?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
-                      {businessLinesCatalog?.map((c) => (
+                      {filteredBusinessLines?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
                         </SelectItem>
@@ -813,9 +863,9 @@ export default function ClaimsPage() {
                       name="advisorId"
                       placeholder="Seleccionar asesor..."
                       className="app-input h-7"
-                      items={advisorsCatalog?.map((a) => ({ value: a.id, label: a.name ?? "" })) || []}
+                      items={filteredAdvisors?.map((a) => ({ value: a.id, label: a.name ?? "" })) || []}
                     >
-                      {advisorsCatalog?.map((a) => (
+                      {filteredAdvisors?.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
                           {a.name}
                         </SelectItem>
@@ -830,9 +880,9 @@ export default function ClaimsPage() {
                       name="brokerId"
                       placeholder="Seleccionar corredor..."
                       className="app-input h-7"
-                      items={brokersCatalog?.map((b) => ({ value: b.id, label: b.name ?? "" })) || []}
+                      items={filteredBrokers?.map((b) => ({ value: b.id, label: b.name ?? "" })) || []}
                     >
-                      {brokersCatalog?.map((b) => (
+                      {filteredBrokers?.map((b) => (
                         <SelectItem key={b.id} value={b.id}>
                           {b.name}
                         </SelectItem>
@@ -893,9 +943,9 @@ export default function ClaimsPage() {
                       name="claimCauseId"
                       placeholder="Seleccionar causal..."
                       className="app-input h-7"
-                      items={claimCauses?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
+                      items={filteredClaimCauses?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                     >
-                      {claimCauses?.map((c) => (
+                      {filteredClaimCauses?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
                         </SelectItem>
