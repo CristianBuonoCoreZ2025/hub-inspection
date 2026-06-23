@@ -1125,6 +1125,8 @@ export default function ClaimsPage() {
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
                       <input {...form.register("insuredAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
                     </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 mt-2">
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
                       <FormSelect
@@ -1257,6 +1259,8 @@ export default function ClaimsPage() {
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
                           <input {...form.register("contractorAddress")} readOnly={contractorLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
                         </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 mt-2">
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
                           <FormSelect
@@ -1392,6 +1396,8 @@ export default function ClaimsPage() {
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
                           <input {...form.register("beneficiaryAddress")} readOnly={beneficiaryLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
                         </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 mt-2">
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
                           <FormSelect
@@ -1588,6 +1594,8 @@ export default function ClaimsPage() {
                       <input {...form.register("claimAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
                       <FieldError message={form.formState.errors.claimAddress?.message} />
                     </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
                       <FormSelect
