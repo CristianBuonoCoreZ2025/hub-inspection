@@ -80,6 +80,23 @@ export async function getClaims(companyId?: string) {
   return data.claims;
 }
 
+export async function checkClaimNumberExists(claimNumber: string, insuranceCompanyId: string, excludeClaimId?: string) {
+  const where = excludeClaimId
+    ? `{ claim_number: { _eq: "${claimNumber}" }, insurance_company_id: { _eq: "${insuranceCompanyId}" }, id: { _neq: "${excludeClaimId}" } }`
+    : `{ claim_number: { _eq: "${claimNumber}" }, insurance_company_id: { _eq: "${insuranceCompanyId}" } }`;
+  const query = `
+    query CheckClaimNumber {
+      claims(where: ${where}, limit: 1) {
+        id
+        claim_number
+      }
+    }
+  `;
+
+  const data = await graphqlRequest<{ claims: { id: string; claim_number: string }[] }>(query);
+  return data.claims.length > 0;
+}
+
 export async function getClaimsParticipants(claimIds: string[]) {
   if (claimIds.length === 0) return [];
   const ids = claimIds.map((id) => `"${id}"`).join(",");

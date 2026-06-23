@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getClaims, getClaimsParticipants, createClaimMinimal, deleteClaim } from "@/services/claims";
+import { getClaims, getClaimsParticipants, createClaimMinimal, deleteClaim, checkClaimNumberExists } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
 import {
@@ -120,6 +120,7 @@ export default function ClaimsPage() {
   const [contractorLinked, setContractorLinked] = useState(false);
   const [beneficiaryLinked, setBeneficiaryLinked] = useState(false);
   const [claimAddressLinked, setClaimAddressLinked] = useState(false);
+  const [claimNumberWarning, setClaimNumberWarning] = useState<string | null>(null);
 
   type DocumentRow = { id: string; name: string; type: string; file: File };
 
@@ -224,6 +225,28 @@ export default function ClaimsPage() {
   });
 
   const selectedCompanyId = useWatch({ control: form.control, name: "companyId" });
+  const watchedClaimNumber = useWatch({ control: form.control, name: "claimNumber" });
+  const watchedInsuranceCompanyId = useWatch({ control: form.control, name: "insuranceCompanyId" });
+
+  // Verificar duplicado de N° siniestro por compañía de seguros
+  useEffect(() => {
+    if (!watchedClaimNumber || !watchedInsuranceCompanyId) {
+      setClaimNumberWarning(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const exists = await checkClaimNumberExists(watchedClaimNumber, watchedInsuranceCompanyId);
+        if (!cancelled) {
+          setClaimNumberWarning(exists ? "Este N° de siniestro ya existe para esta compañía" : null);
+        }
+      } catch {
+        if (!cancelled) setClaimNumberWarning(null);
+      }
+    }, 500);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [watchedClaimNumber, watchedInsuranceCompanyId]);
 
   // Watchers de ubicación por sección (independientes)
   const selectedClaimCountry = useWatch({ control: form.control, name: "claimCountry" });
@@ -573,6 +596,8 @@ export default function ClaimsPage() {
       setExpandedPanel(null);
       setContractorLinked(false);
       setBeneficiaryLinked(false);
+      setClaimAddressLinked(false);
+      setClaimNumberWarning(null);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -753,7 +778,7 @@ export default function ClaimsPage() {
           >
             <Download className="mr-2 h-3.5 w-3.5" /> Exportar
           </Button>
-          <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setOpen(true); }} className="btn-create btn-sm">
+          <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setOpen(true); }} className="btn-create btn-sm">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo
           </Button>
@@ -773,6 +798,7 @@ export default function ClaimsPage() {
             setContractorLinked(false);
             setBeneficiaryLinked(false);
             setClaimAddressLinked(false);
+            setClaimNumberWarning(null);
           }
         }}
       >
@@ -901,8 +927,14 @@ export default function ClaimsPage() {
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         N° Siniestro (Compañía) <span className="text-red-500">*</span>
                       </Label>
-                      <input {...form.register("claimNumber")} placeholder="Ej: 12345678" className="app-input h-7" />
+                      <input {...form.register("claimNumber")} placeholder="Ej: 12345678" className={`app-input h-7 ${claimNumberWarning ? "border-amber-500 ring-1 ring-amber-500/30" : ""}`} />
                       <FieldError message={form.formState.errors.claimNumber?.message} />
+                      {claimNumberWarning && (
+                        <p className="text-[10px] text-amber-600 leading-tight flex items-center gap-1">
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          {claimNumberWarning}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-1">
@@ -1838,6 +1870,7 @@ export default function ClaimsPage() {
                 setContractorLinked(false);
                 setBeneficiaryLinked(false);
                 setClaimAddressLinked(false);
+                setClaimNumberWarning(null);
               }}
             >
               Cancelar
