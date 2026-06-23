@@ -1,12 +1,27 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getRegions, getCities, getCommunes } from "@/services/catalogs";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getRegions, getCities, getCommunes, createRegion, updateRegion, deleteRegion, createCity, updateCity, deleteCity, createCommune, updateCommune, deleteCommune } from "@/services/catalogs";
 import { getCountries } from "@/services/countries";
-import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag } from "lucide-react";
+import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag, Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface BreadcrumbItem {
   label: string;
@@ -14,10 +29,14 @@ interface BreadcrumbItem {
 }
 
 export default function UbicacionesPage() {
+  const queryClient = useQueryClient();
   const [level, setLevel] = useState(0); // 0=paises, 1=regiones, 2=ciudades, 3=comunas
   const [selectedCountry, setSelectedCountry] = useState<{ id: string; name: string } | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<{ id: string; name: string } | null>(null);
   const [selectedCity, setSelectedCity] = useState<{ id: string; name: string } | null>(null);
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({ name: "", code: "", parent_id: "" });
 
   const { data: countries, isLoading: loadingCountries } = useQuery({
     queryKey: ["countries"],
@@ -40,6 +59,57 @@ export default function UbicacionesPage() {
     queryKey: ["communes", selectedCity?.id],
     queryFn: () => getCommunes(selectedCity!.id),
     enabled: !!selectedCity,
+  });
+
+  // Mutations for Regions
+  const createRegionMutation = useMutation({
+    mutationFn: createRegion,
+    onSuccess: () => { toast.success("Región creada"); queryClient.invalidateQueries({ queryKey: ["regions"] }); setOpen(false); resetForm(); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  const updateRegionMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateRegion>[1] }) => updateRegion(id, input),
+    onSuccess: () => { toast.success("Región actualizada"); queryClient.invalidateQueries({ queryKey: ["regions"] }); setOpen(false); setEditingId(null); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  const deleteRegionMutation = useMutation({
+    mutationFn: deleteRegion,
+    onSuccess: () => { toast.success("Región desactivada"); queryClient.invalidateQueries({ queryKey: ["regions"] }); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Mutations for Cities
+  const createCityMutation = useMutation({
+    mutationFn: createCity,
+    onSuccess: () => { toast.success("Ciudad creada"); queryClient.invalidateQueries({ queryKey: ["cities"] }); setOpen(false); resetForm(); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  const updateCityMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateCity>[1] }) => updateCity(id, input),
+    onSuccess: () => { toast.success("Ciudad actualizada"); queryClient.invalidateQueries({ queryKey: ["cities"] }); setOpen(false); setEditingId(null); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  const deleteCityMutation = useMutation({
+    mutationFn: deleteCity,
+    onSuccess: () => { toast.success("Ciudad desactivada"); queryClient.invalidateQueries({ queryKey: ["cities"] }); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Mutations for Communes
+  const createCommuneMutation = useMutation({
+    mutationFn: createCommune,
+    onSuccess: () => { toast.success("Comuna creada"); queryClient.invalidateQueries({ queryKey: ["communes"] }); setOpen(false); resetForm(); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  const updateCommuneMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateCommune>[1] }) => updateCommune(id, input),
+    onSuccess: () => { toast.success("Comuna actualizada"); queryClient.invalidateQueries({ queryKey: ["communes"] }); setOpen(false); setEditingId(null); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  const deleteCommuneMutation = useMutation({
+    mutationFn: deleteCommune,
+    onSuccess: () => { toast.success("Comuna desactivada"); queryClient.invalidateQueries({ queryKey: ["communes"] }); },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const breadcrumbs = useMemo<BreadcrumbItem[]>(() => {
@@ -124,6 +194,52 @@ export default function UbicacionesPage() {
     else if (level === 2) handleCityClick(item);
   };
 
+  const resetForm = () => setFormData({ name: "", code: "", parent_id: "" });
+
+  const handleCreate = () => {
+    setEditingId(null);
+    resetForm();
+    if (level === 1) setFormData({ ...formData, parent_id: selectedCountry?.id || "" });
+    if (level === 2) setFormData({ ...formData, parent_id: selectedRegion?.id || "" });
+    if (level === 3) setFormData({ ...formData, parent_id: selectedCity?.id || "" });
+    setOpen(true);
+  };
+
+  const handleEdit = (item: { id: string; name: string; code?: string | null }) => {
+    setEditingId(item.id);
+    setFormData({ name: item.name, code: item.code || "", parent_id: "" });
+    setOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("¿Desactivar este registro?")) {
+      if (level === 1) deleteRegionMutation.mutate(id);
+      if (level === 2) deleteCityMutation.mutate(id);
+      if (level === 3) deleteCommuneMutation.mutate(id);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) { toast.error("El nombre es requerido"); return; }
+    if (level === 0) return; // Paises no se editan aquí
+    if (level === 1) {
+      const input = { country_id: selectedCountry!.id, name: formData.name, code: formData.code || undefined };
+      if (editingId) updateRegionMutation.mutate({ id: editingId, input });
+      else createRegionMutation.mutate(input);
+    }
+    if (level === 2) {
+      const input = { region_id: selectedRegion!.id, name: formData.name };
+      if (editingId) updateCityMutation.mutate({ id: editingId, input });
+      else createCityMutation.mutate(input);
+    }
+    if (level === 3) {
+      const input = { city_id: selectedCity!.id, name: formData.name };
+      if (editingId) updateCommuneMutation.mutate({ id: editingId, input });
+      else createCommuneMutation.mutate(input);
+    }
+  };
+
   return (
     <div className="app-page">
       <header className="app-page-header">
@@ -161,6 +277,11 @@ export default function UbicacionesPage() {
         <span className="ml-auto text-sm text-muted-foreground">
           {isLoading ? "Cargando..." : `${currentData.length} registros`}
         </span>
+        {level > 0 && (
+          <Button onClick={handleCreate} className="btn-create btn-sm ml-2">
+            <Plus className="mr-2 h-4 w-4" /> Agregar
+          </Button>
+        )}
       </div>
 
       {/* Data table */}
@@ -181,7 +302,7 @@ export default function UbicacionesPage() {
               <tr><td colSpan={4} className="text-center text-muted-foreground py-8">No se encontraron registros.</td></tr>
             ) : (
               currentData.map((item) => (
-                <tr key={item.id} className="group cursor-pointer hover:bg-muted/50" onClick={() => level < 3 && handleRowClick(item)}>
+                <tr key={item.id} className="group">
                   <td>
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
                       {level === 0 ? <Globe className="h-4 w-4 text-muted-foreground" /> :
@@ -193,11 +314,23 @@ export default function UbicacionesPage() {
                   <td className="font-medium">{item.name}</td>
                   {level <= 1 && <td className="text-muted-foreground">{item.code || "—"}</td>}
                   <td>
-                    {level < 3 && (
-                      <Button variant="ghost" size="sm" className="btn-neutral opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); handleRowClick(item); }}>
-                        {getNextLevelLabel()} <ChevronRight className="ml-1 h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {level < 3 && (
+                        <Button variant="ghost" size="sm" className="btn-neutral" onClick={(e) => { e.stopPropagation(); handleRowClick(item); }}>
+                          {getNextLevelLabel()} <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {level > 0 && (
+                        <>
+                          <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => handleEdit(item)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -205,6 +338,40 @@ export default function UbicacionesPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal for create/edit */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="modal-md" showCloseButton={false}>
+          <div className="modal-header">
+            <DialogTitle className="modal-title flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+                {getLevelIcon()}
+              </div>
+              {editingId ? "Editar" : "Nuevo"} {level === 1 ? "Región" : level === 2 ? "Ciudad" : "Comuna"}
+            </DialogTitle>
+          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="modal-body space-y-4">
+              <div className="modal-field">
+                <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
+                <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre" className="app-input" />
+              </div>
+              {level === 1 && (
+                <div className="modal-field">
+                  <Label className="app-field-label">Código</Label>
+                  <Input value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="Ej: RM" className="app-input" />
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createRegionMutation.isPending || updateRegionMutation.isPending || createCityMutation.isPending || updateCityMutation.isPending || createCommuneMutation.isPending || updateCommuneMutation.isPending} className="btn-save btn-footer">
+                {createRegionMutation.isPending || updateRegionMutation.isPending || createCityMutation.isPending || updateCityMutation.isPending || createCommuneMutation.isPending || updateCommuneMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Crear"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
