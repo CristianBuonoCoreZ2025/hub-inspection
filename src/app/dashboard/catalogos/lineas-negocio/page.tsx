@@ -96,7 +96,7 @@ export default function LineasNegocioPage() {
 
       <div className="app-data-table-wrap">
         <table className="app-data-table">
-          <thead><tr><th className="w-10"></th><th>País</th><th>Nombre</th><th>Tipo Siniestro</th><th>Ramo FECU</th><th>Descripcion</th><th className="w-[80px]"></th></tr></thead>
+          <thead><tr><th className="w-10"></th><th>País</th><th>Tipo Siniestro</th><th>Línea de Negocio</th><th>Ramo FECU</th><th>Descripcion</th><th className="w-[80px]"></th></tr></thead>
           <tbody>
             {isLoading ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
             : filtered?.length === 0 ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
@@ -104,8 +104,8 @@ export default function LineasNegocioPage() {
               <tr key={l.id}>
                 <td><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /></td>
                 <td>{countries?.find((c) => c.id === l.country_id)?.name || "—"}</td>
-                <td className="font-medium">{l.name}</td>
                 <td>{claimTypes?.find((ct) => ct.id === l.claim_type_id)?.name || l.claim_type || "—"}</td>
+                <td className="font-medium">{l.name}</td>
                 <td>{l.ramo_fecu || "—"}</td>
                 <td className="max-w-[300px] truncate text-muted-foreground">{l.description || "—"}</td>
                 <td>
@@ -147,10 +147,6 @@ export default function LineasNegocioPage() {
                   </Select>
                 </div>
                 <div className="modal-field">
-                  <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
-                  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ej: Accidentes Personales" className="app-input" />
-                </div>
-                <div className="modal-field">
                   <Label className="app-field-label">Tipo Siniestro</Label>
                   <Select
                     value={formData.claim_type_id}
@@ -162,6 +158,10 @@ export default function LineasNegocioPage() {
                       {claimTypes?.map((ct) => (<SelectItem key={ct.id} value={ct.id}>{ct.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="modal-field modal-field-full">
+                  <Label className="app-field-label">Línea de Negocio <span className="text-red-500">*</span></Label>
+                  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ej: Accidentes Personales" className="app-input" />
                 </div>
                 <div className="modal-field"><Label className="app-field-label">Ramo FECU</Label><Input value={formData.ramo_fecu} onChange={(e) => setFormData({ ...formData, ramo_fecu: e.target.value })} className="app-input" /></div>
                 <div className="modal-field modal-field-full"><Label className="app-field-label">Descripcion</Label><Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="app-input" /></div>
