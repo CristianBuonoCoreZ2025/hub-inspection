@@ -1809,7 +1809,7 @@ export default function ClaimsPage() {
               <button
                 type="button"
                 className="btn-save"
-                style={{ width: "130px", background: "linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%) !important", boxShadow: "0 8px 16px rgba(14,165,233,0.15), inset 0 1px 0 rgba(255,255,255,0.15) !important" }}
+                style={{ width: "130px" }}
                 onClick={() => setStep(step + 1)}
               >
                 Siguiente

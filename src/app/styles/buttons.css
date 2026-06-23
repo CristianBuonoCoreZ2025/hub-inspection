@@ -4,7 +4,7 @@
  */
 
 @layer components {
-  /* GUARDAR / CONFIRMAR / ACEPTAR — azul portal */
+  /* GUARDAR / CONFIRMAR / ACEPTAR — azul portal claro */
   .btn-save,
   .btn-confirm,
   .btn-accept {
@@ -14,8 +14,8 @@
     padding: 0 14px !important;
     border-radius: 10px !important;
     border: 1px solid transparent !important;
-    background: linear-gradient(180deg, #0095DA 0%, #005BBB 100%) !important;
-    box-shadow: 0 10px 20px rgba(0, 149, 218, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%) !important;
+    box-shadow: 0 8px 16px rgba(14, 165, 233, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
     font-weight: 600 !important;
     font-size: 13px !important;
   }
@@ -23,7 +23,7 @@
   .btn-save:hover:not(:disabled),
   .btn-confirm:hover:not(:disabled),
   .btn-accept:hover:not(:disabled) {
-    background: linear-gradient(180deg, #005BBB 0%, #003591 100%) !important;
+    background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%) !important;
     transform: translateY(-1px) !important;
   }
 
@@ -114,14 +114,14 @@
     padding: 0 14px !important;
     border-radius: 10px !important;
     border: 1px solid transparent !important;
-    background: linear-gradient(180deg, #fb7185 0%, #e11d48 100%) !important;
-    box-shadow: 0 10px 20px rgba(225, 29, 72, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(180deg, #fda4af 0%, #fb7185 100%) !important;
+    box-shadow: 0 8px 16px rgba(244, 63, 94, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
     font-weight: 600 !important;
     font-size: 13px !important;
   }
 
   .btn-cancel:hover:not(:disabled) {
-    background: linear-gradient(180deg, #e11d48 0%, #be123c 100%) !important;
+    background: linear-gradient(180deg, #fb7185 0%, #f43f5e 100%) !important;
     transform: translateY(-1px) !important;
   }
 
