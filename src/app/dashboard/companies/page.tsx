@@ -50,7 +50,7 @@ export default function CompaniesPage() {
     queryFn: getCompanies,
   });
 
-  const { data: countries, isLoading: countriesLoading, error: countriesError } = useQuery({
+  const { data: countries } = useQuery({
     queryKey: ["countries"],
     queryFn: getCountries,
   });
@@ -151,6 +151,7 @@ export default function CompaniesPage() {
                   <Label className="app-field-label">Logo</Label>
                   <div className="flex items-center gap-3">
                     {form.watch("logoUrl") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={form.watch("logoUrl")}
                         alt="Logo"
@@ -308,6 +309,7 @@ export default function CompaniesPage() {
                     <td className="font-medium">
                       <div className="flex items-center gap-3">
                         {company.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={company.logo_url}
                             alt={company.name}
