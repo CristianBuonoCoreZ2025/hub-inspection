@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getInsuranceProducts, createInsuranceProduct, updateInsuranceProduct, deleteInsuranceProduct, getBusinessLines } from "@/services/catalogs";
+import { getInsuranceProducts, createInsuranceProduct, updateInsuranceProduct, deleteInsuranceProduct, getBusinessLines, getCountries } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, Box } from "lucide-react";
 
@@ -27,7 +27,7 @@ export default function ProductosPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ business_line_id: "", name: "", description: "", country: "Chile" });
+  const [formData, setFormData] = useState({ country_id: "", business_line_id: "", name: "", description: "" });
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["insurance-products"],
@@ -39,9 +39,16 @@ export default function ProductosPage() {
     queryFn: getBusinessLines,
   });
 
+  const { data: countries } = useQuery({
+    queryKey: ["countries"],
+    queryFn: getCountries,
+  });
+
+  const defaultCountryId = countries?.find((c) => c.code === "CL")?.id || "";
+
   const createMutation = useMutation({
     mutationFn: createInsuranceProduct,
-    onSuccess: () => { toast.success("Producto creado"); queryClient.invalidateQueries({ queryKey: ["insurance-products"] }); setOpen(false); setFormData({ business_line_id: "", name: "", description: "", country: "Chile" }); },
+    onSuccess: () => { toast.success("Producto creado"); queryClient.invalidateQueries({ queryKey: ["insurance-products"] }); setOpen(false); resetForm(); },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -60,6 +67,8 @@ export default function ProductosPage() {
   const filtered = products?.filter((p) =>
     [p.name, p.description, p.business_line?.name].join(" ").toLowerCase().includes(search.toLowerCase())
   );
+
+  const resetForm = () => setFormData({ country_id: defaultCountryId, business_line_id: "", name: "", description: "" });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,27 +90,27 @@ export default function ProductosPage() {
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar producto..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-full max-w-sm" />
         </div>
-        <Button onClick={() => { setEditingId(null); setFormData({ business_line_id: "", name: "", description: "", country: "Chile" }); setOpen(true); }} className="btn-create btn-sm">
+        <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="btn-create btn-sm">
           <Plus className="mr-2 h-4 w-4" /> Agregar Item
         </Button>
       </div>
 
       <div className="app-data-table-wrap">
         <table className="app-data-table">
-          <thead><tr><th className="w-10"></th><th>Nombre</th><th>Linea de Negocio</th><th>Descripcion</th><th>Pais</th><th className="w-[80px]"></th></tr></thead>
+          <thead><tr><th className="w-10"></th><th>País</th><th>Nombre</th><th>Linea de Negocio</th><th>Descripcion</th><th className="w-[80px]"></th></tr></thead>
           <tbody>
             {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
             : filtered?.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
             : filtered?.map((p) => (
               <tr key={p.id}>
                 <td><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /></td>
+                <td>{countries?.find((c) => c.id === p.country_id)?.name || "—"}</td>
                 <td className="font-medium">{p.name}</td>
                 <td>{p.business_line?.name || "—"}</td>
                 <td className="max-w-[300px] truncate text-muted-foreground">{p.description || "—"}</td>
-                <td>{p.country}</td>
                 <td>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(p.id); setFormData({ business_line_id: p.business_line_id, name: p.name, description: p.description || "", country: p.country }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(p.id); setFormData({ country_id: p.country_id || "", business_line_id: p.business_line_id, name: p.name, description: p.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este producto?")) deleteMutation.mutate(p.id); }}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </td>
@@ -122,10 +131,29 @@ export default function ProductosPage() {
           <form onSubmit={handleSubmit}>
             <div className="modal-body space-y-4">
               <div className="modal-grid">
-                <div className="modal-field modal-field-full">
+                <div className="modal-field">
+                  <Label className="app-field-label">País</Label>
+                  <Select
+                    value={formData.country_id}
+                    onValueChange={(v) => setFormData({ ...formData, country_id: v || "" })}
+                    items={countries?.map((c) => ({ value: c.id, label: c.name })) || []}
+                  >
+                    <SelectTrigger className="app-input h-9">
+                      <SelectValue placeholder="Seleccionar país..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="modal-field">
                   <Label className="app-field-label">Linea de Negocio <span className="text-red-500">*</span></Label>
-                  <Select value={formData.business_line_id} onValueChange={(v) => setFormData({ ...formData, business_line_id: v ?? "" })}>
-                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Seleccionar linea..." /></SelectTrigger>
+                  <Select
+                    value={formData.business_line_id}
+                    onValueChange={(v) => setFormData({ ...formData, business_line_id: v ?? "" })}
+                    items={businessLines?.map((l) => ({ value: l.id, label: l.name })) || []}
+                  >
+                    <SelectTrigger className="app-input h-9"><SelectValue placeholder="Seleccionar linea..." /></SelectTrigger>
                     <SelectContent>
                       {businessLines?.map((l) => (<SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>))}
                     </SelectContent>
@@ -135,7 +163,6 @@ export default function ProductosPage() {
                   <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
                   <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ej: Hogar Full Protegido" className="app-input" />
                 </div>
-                <div className="modal-field"><Label className="app-field-label">Pais</Label><Input value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} className="app-input" /></div>
                 <div className="modal-field modal-field-full"><Label className="app-field-label">Descripcion</Label><Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="app-input" /></div>
               </div>
             </div>

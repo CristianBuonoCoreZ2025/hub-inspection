@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getBusinessLines, createBusinessLine, updateBusinessLine, deleteBusinessLine } from "@/services/catalogs";
+import { getBusinessLines, createBusinessLine, updateBusinessLine, deleteBusinessLine, getCountries } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, Tag } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -20,16 +27,23 @@ export default function LineasNegocioPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ country: "Chile", name: "", claim_type: "", ramo_fecu: "", description: "" });
+  const [formData, setFormData] = useState({ country_id: "", name: "", claim_type: "", ramo_fecu: "", description: "" });
 
   const { data: lines, isLoading } = useQuery({
     queryKey: ["business-lines"],
     queryFn: getBusinessLines,
   });
 
+  const { data: countries } = useQuery({
+    queryKey: ["countries"],
+    queryFn: getCountries,
+  });
+
+  const defaultCountryId = countries?.find((c) => c.code === "CL")?.id || "";
+
   const createMutation = useMutation({
     mutationFn: createBusinessLine,
-    onSuccess: () => { toast.success("Linea creada"); queryClient.invalidateQueries({ queryKey: ["business-lines"] }); setOpen(false); setFormData({ country: "Chile", name: "", claim_type: "", ramo_fecu: "", description: "" }); },
+    onSuccess: () => { toast.success("Linea creada"); queryClient.invalidateQueries({ queryKey: ["business-lines"] }); setOpen(false); resetForm(); },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -48,6 +62,8 @@ export default function LineasNegocioPage() {
   const filtered = lines?.filter((l) =>
     [l.name, l.claim_type, l.ramo_fecu, l.description].join(" ").toLowerCase().includes(search.toLowerCase())
   );
+
+  const resetForm = () => setFormData({ country_id: defaultCountryId, name: "", claim_type: "", ramo_fecu: "", description: "" });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,28 +84,28 @@ export default function LineasNegocioPage() {
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar linea..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-full max-w-sm" />
         </div>
-        <Button onClick={() => { setEditingId(null); setFormData({ country: "Chile", name: "", claim_type: "", ramo_fecu: "", description: "" }); setOpen(true); }} className="btn-create btn-sm">
+        <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="btn-create btn-sm">
           <Plus className="mr-2 h-4 w-4" /> Agregar Item
         </Button>
       </div>
 
       <div className="app-data-table-wrap">
         <table className="app-data-table">
-          <thead><tr><th className="w-10"></th><th>Pais</th><th>Nombre</th><th>Tipo Siniestro</th><th>Ramo FECU</th><th>Descripcion</th><th className="w-[80px]"></th></tr></thead>
+          <thead><tr><th className="w-10"></th><th>País</th><th>Nombre</th><th>Tipo Siniestro</th><th>Ramo FECU</th><th>Descripcion</th><th className="w-[80px]"></th></tr></thead>
           <tbody>
             {isLoading ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
             : filtered?.length === 0 ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
             : filtered?.map((l) => (
               <tr key={l.id}>
                 <td><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /></td>
-                <td>{l.country}</td>
+                <td>{countries?.find((c) => c.id === l.country_id)?.name || "—"}</td>
                 <td className="font-medium">{l.name}</td>
                 <td>{l.claim_type || "—"}</td>
                 <td>{l.ramo_fecu || "—"}</td>
                 <td className="max-w-[300px] truncate text-muted-foreground">{l.description || "—"}</td>
                 <td>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(l.id); setFormData({ country: l.country, name: l.name, claim_type: l.claim_type || "", ramo_fecu: l.ramo_fecu || "", description: l.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(l.id); setFormData({ country_id: l.country_id || "", name: l.name, claim_type: l.claim_type || "", ramo_fecu: l.ramo_fecu || "", description: l.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar esta linea?")) deleteMutation.mutate(l.id); }}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </td>
@@ -110,8 +126,22 @@ export default function LineasNegocioPage() {
           <form onSubmit={handleSubmit}>
             <div className="modal-body space-y-4">
               <div className="modal-grid">
-                <div className="modal-field"><Label className="app-field-label">Pais</Label><Input value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} className="app-input" /></div>
-                <div className="modal-field modal-field-full">
+                <div className="modal-field">
+                  <Label className="app-field-label">País</Label>
+                  <Select
+                    value={formData.country_id}
+                    onValueChange={(v) => setFormData({ ...formData, country_id: v || "" })}
+                    items={countries?.map((c) => ({ value: c.id, label: c.name })) || []}
+                  >
+                    <SelectTrigger className="app-input h-9">
+                      <SelectValue placeholder="Seleccionar país..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="modal-field">
                   <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
                   <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ej: Accidentes Personales" className="app-input" />
                 </div>
