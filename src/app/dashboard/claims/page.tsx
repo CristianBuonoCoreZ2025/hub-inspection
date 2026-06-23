@@ -567,8 +567,19 @@ export default function ClaimsPage() {
         </div>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="modal-lg" showCloseButton={false}>
+      <Dialog
+        open={open}
+        modal="trap-focus"
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) {
+            form.reset();
+            setStep(1);
+            setDocuments([]);
+          }
+        }}
+      >
+        <DialogContent className="modal-lg" showCloseButton={true}>
           <div className="modal-header">
             <DialogTitle className="modal-title flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
@@ -1486,6 +1497,18 @@ export default function ClaimsPage() {
         </div>
 
           <div className="modal-footer">
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={() => {
+                setOpen(false);
+                form.reset();
+                setStep(1);
+                setDocuments([]);
+              }}
+            >
+              Cancelar
+            </button>
             {step > 1 && (
               <button type="button" className="btn-cancel" onClick={() => setStep(step - 1)}>
                 Atrás
