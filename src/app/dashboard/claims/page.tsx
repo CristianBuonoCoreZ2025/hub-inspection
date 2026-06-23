@@ -222,9 +222,23 @@ export default function ClaimsPage() {
   });
 
   const selectedCompanyId = useWatch({ control: form.control, name: "companyId" });
+
+  // Watchers de ubicación por sección (independientes)
   const selectedClaimCountry = useWatch({ control: form.control, name: "claimCountry" });
   const selectedClaimRegion = useWatch({ control: form.control, name: "claimRegion" });
   const selectedClaimCity = useWatch({ control: form.control, name: "claimCity" });
+
+  const selectedInsuredCountry = useWatch({ control: form.control, name: "insuredCountry" });
+  const selectedInsuredRegion = useWatch({ control: form.control, name: "insuredRegion" });
+  const selectedInsuredCity = useWatch({ control: form.control, name: "insuredCity" });
+
+  const selectedContractorCountry = useWatch({ control: form.control, name: "contractorCountry" });
+  const selectedContractorRegion = useWatch({ control: form.control, name: "contractorRegion" });
+  const selectedContractorCity = useWatch({ control: form.control, name: "contractorCity" });
+
+  const selectedBeneficiaryCountry = useWatch({ control: form.control, name: "beneficiaryCountry" });
+  const selectedBeneficiaryRegion = useWatch({ control: form.control, name: "beneficiaryRegion" });
+  const selectedBeneficiaryCity = useWatch({ control: form.control, name: "beneficiaryCity" });
 
   const inspectors = users
     ?.filter((u) => u.role === "inspector" && (!selectedCompanyId || u.company_id === selectedCompanyId))
@@ -338,6 +352,7 @@ export default function ClaimsPage() {
     }
   }, [selectedClaimCountry, form]);
 
+  // Queries de ubicación para Dirección del Siniestro
   const { data: regionsCatalog } = useQuery({
     queryKey: ["regions", selectedClaimCountry],
     queryFn: () => {
@@ -365,10 +380,106 @@ export default function ClaimsPage() {
     enabled: !!selectedClaimCity && !!citiesCatalog,
   });
 
+  // Queries de ubicación para Asegurado
+  const { data: insuredRegions } = useQuery({
+    queryKey: ["regions", "insured", selectedInsuredCountry],
+    queryFn: () => {
+      const country = countriesCatalog?.find((c) => c.name === selectedInsuredCountry);
+      return getRegions(country?.id);
+    },
+    enabled: !!selectedInsuredCountry && !!countriesCatalog,
+  });
+
+  const { data: insuredCities } = useQuery({
+    queryKey: ["cities", "insured", selectedInsuredRegion],
+    queryFn: () => {
+      const region = insuredRegions?.find((r) => r.name === selectedInsuredRegion);
+      return getCities(region?.id);
+    },
+    enabled: !!selectedInsuredRegion && !!insuredRegions,
+  });
+
+  const { data: insuredCommunes } = useQuery({
+    queryKey: ["communes", "insured", selectedInsuredCity],
+    queryFn: () => {
+      const city = insuredCities?.find((c) => c.name === selectedInsuredCity);
+      return getCommunes(city?.id);
+    },
+    enabled: !!selectedInsuredCity && !!insuredCities,
+  });
+
+  // Queries de ubicación para Contratante
+  const { data: contractorRegions } = useQuery({
+    queryKey: ["regions", "contractor", selectedContractorCountry],
+    queryFn: () => {
+      const country = countriesCatalog?.find((c) => c.name === selectedContractorCountry);
+      return getRegions(country?.id);
+    },
+    enabled: !!selectedContractorCountry && !!countriesCatalog,
+  });
+
+  const { data: contractorCities } = useQuery({
+    queryKey: ["cities", "contractor", selectedContractorRegion],
+    queryFn: () => {
+      const region = contractorRegions?.find((r) => r.name === selectedContractorRegion);
+      return getCities(region?.id);
+    },
+    enabled: !!selectedContractorRegion && !!contractorRegions,
+  });
+
+  const { data: contractorCommunes } = useQuery({
+    queryKey: ["communes", "contractor", selectedContractorCity],
+    queryFn: () => {
+      const city = contractorCities?.find((c) => c.name === selectedContractorCity);
+      return getCommunes(city?.id);
+    },
+    enabled: !!selectedContractorCity && !!contractorCities,
+  });
+
+  // Queries de ubicación para Beneficiario
+  const { data: beneficiaryRegions } = useQuery({
+    queryKey: ["regions", "beneficiary", selectedBeneficiaryCountry],
+    queryFn: () => {
+      const country = countriesCatalog?.find((c) => c.name === selectedBeneficiaryCountry);
+      return getRegions(country?.id);
+    },
+    enabled: !!selectedBeneficiaryCountry && !!countriesCatalog,
+  });
+
+  const { data: beneficiaryCities } = useQuery({
+    queryKey: ["cities", "beneficiary", selectedBeneficiaryRegion],
+    queryFn: () => {
+      const region = beneficiaryRegions?.find((r) => r.name === selectedBeneficiaryRegion);
+      return getCities(region?.id);
+    },
+    enabled: !!selectedBeneficiaryRegion && !!beneficiaryRegions,
+  });
+
+  const { data: beneficiaryCommunes } = useQuery({
+    queryKey: ["communes", "beneficiary", selectedBeneficiaryCity],
+    queryFn: () => {
+      const city = beneficiaryCities?.find((c) => c.name === selectedBeneficiaryCity);
+      return getCommunes(city?.id);
+    },
+    enabled: !!selectedBeneficiaryCity && !!beneficiaryCities,
+  });
+
   // Visibilidad de campos de ubicación (ocultar si no hay datos)
-  const hasRegions = !!regionsCatalog && regionsCatalog.length > 0;
-  const hasCities = !!citiesCatalog && citiesCatalog.length > 0;
-  const hasCommunes = !!communesCatalog && communesCatalog.length > 0;
+  const hasClaimRegions = !!regionsCatalog && regionsCatalog.length > 0;
+  const hasClaimCities = !!citiesCatalog && citiesCatalog.length > 0;
+  const hasClaimCommunes = !!communesCatalog && communesCatalog.length > 0;
+
+  const hasInsuredRegions = !!insuredRegions && insuredRegions.length > 0;
+  const hasInsuredCities = !!insuredCities && insuredCities.length > 0;
+  const hasInsuredCommunes = !!insuredCommunes && insuredCommunes.length > 0;
+
+  const hasContractorRegions = !!contractorRegions && contractorRegions.length > 0;
+  const hasContractorCities = !!contractorCities && contractorCities.length > 0;
+  const hasContractorCommunes = !!contractorCommunes && contractorCommunes.length > 0;
+
+  const hasBeneficiaryRegions = !!beneficiaryRegions && beneficiaryRegions.length > 0;
+  const hasBeneficiaryCities = !!beneficiaryCities && beneficiaryCities.length > 0;
+  const hasBeneficiaryCommunes = !!beneficiaryCommunes && beneficiaryCommunes.length > 0;
 
   const selectedBusinessLineId = useWatch({ control: form.control, name: "businessLineId" });
   const filteredInsuranceProducts = insuranceProductsCatalog?.filter(
@@ -412,10 +523,10 @@ export default function ClaimsPage() {
           insuredPhone: values.insuredPhone || null,
           cellPhone: values.cellPhone,
           insuredAddress: values.insuredAddress || null,
-          insuredCountry: values.claimCountry || null,
-          insuredRegion: values.claimRegion || null,
-          insuredCity: values.claimCity || null,
-          insuredCommune: values.claimCommune || null,
+          insuredCountry: values.insuredCountry || null,
+          insuredRegion: values.insuredRegion || null,
+          insuredCity: values.insuredCity || null,
+          insuredCommune: values.insuredCommune || null,
         },
         {
           claimAddress: values.claimAddress,
@@ -433,10 +544,10 @@ export default function ClaimsPage() {
               contractorCellPhone: values.contractorCellPhone || null,
               contractorPhone: values.contractorPhone || null,
               contractorAddress: values.contractorAddress || null,
-              contractorCountry: values.claimCountry || null,
-              contractorRegion: values.claimRegion || null,
-              contractorCity: values.claimCity || null,
-              contractorCommune: values.claimCommune || null,
+              contractorCountry: values.contractorCountry || null,
+              contractorRegion: values.contractorRegion || null,
+              contractorCity: values.contractorCity || null,
+              contractorCommune: values.contractorCommune || null,
             }
           : null,
         values.beneficiaryName
@@ -448,10 +559,10 @@ export default function ClaimsPage() {
               beneficiaryCellPhone: values.beneficiaryCellPhone || null,
               beneficiaryPhone: values.beneficiaryPhone || null,
               beneficiaryAddress: values.beneficiaryAddress || null,
-              beneficiaryCountry: values.claimCountry || null,
-              beneficiaryRegion: values.claimRegion || null,
-              beneficiaryCity: values.claimCity || null,
-              beneficiaryCommune: values.claimCommune || null,
+              beneficiaryCountry: values.beneficiaryCountry || null,
+              beneficiaryRegion: values.beneficiaryRegion || null,
+              beneficiaryCity: values.beneficiaryCity || null,
+              beneficiaryCommune: values.beneficiaryCommune || null,
             }
           : null
       ),
@@ -497,6 +608,10 @@ export default function ClaimsPage() {
     form.setValue("contractorCellPhone", form.getValues("cellPhone") || "");
     form.setValue("contractorPhone", form.getValues("insuredPhone") || "");
     form.setValue("contractorAddress", form.getValues("insuredAddress") || "");
+    form.setValue("contractorCountry", form.getValues("insuredCountry") || "");
+    form.setValue("contractorRegion", form.getValues("insuredRegion") || "");
+    form.setValue("contractorCity", form.getValues("insuredCity") || "");
+    form.setValue("contractorCommune", form.getValues("insuredCommune") || "");
   };
 
   const copyInsuredToBeneficiary = () => {
@@ -507,6 +622,10 @@ export default function ClaimsPage() {
     form.setValue("beneficiaryCellPhone", form.getValues("cellPhone") || "");
     form.setValue("beneficiaryPhone", form.getValues("insuredPhone") || "");
     form.setValue("beneficiaryAddress", form.getValues("insuredAddress") || "");
+    form.setValue("beneficiaryCountry", form.getValues("insuredCountry") || "");
+    form.setValue("beneficiaryRegion", form.getValues("insuredRegion") || "");
+    form.setValue("beneficiaryCity", form.getValues("insuredCity") || "");
+    form.setValue("beneficiaryCommune", form.getValues("insuredCommune") || "");
   };
 
   const handleFileSelect = (files: FileList | null) => {
@@ -988,13 +1107,13 @@ export default function ClaimsPage() {
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
                       <FormSelect
                         control={form.control}
-                        name="claimCountry"
+                        name="insuredCountry"
                         placeholder="Seleccionar país..."
                         className="app-input h-7"
                         onValueChange={() => {
-                          form.setValue("claimRegion", "");
-                          form.setValue("claimCity", "");
-                          form.setValue("claimCommune", "");
+                          form.setValue("insuredRegion", "");
+                          form.setValue("insuredCity", "");
+                          form.setValue("insuredCommune", "");
                         }}
                         items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                       >
@@ -1003,57 +1122,57 @@ export default function ClaimsPage() {
                         ))}
                       </FormSelect>
                     </div>
-                    {hasRegions && (
+                    {hasInsuredRegions && (
                       <div className="flex flex-col gap-1">
                         <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
                         <FormSelect
                           control={form.control}
-                          name="claimRegion"
+                          name="insuredRegion"
                           placeholder="Seleccionar región..."
                           className="app-input h-7"
-                          disabled={!selectedClaimCountry}
+                          disabled={!selectedInsuredCountry}
                           onValueChange={() => {
-                            form.setValue("claimCity", "");
-                            form.setValue("claimCommune", "");
+                            form.setValue("insuredCity", "");
+                            form.setValue("insuredCommune", "");
                           }}
-                          items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
+                          items={insuredRegions?.map((r) => ({ value: r.name, label: r.name })) || []}
                         >
-                          {regionsCatalog?.map((r) => (
+                          {insuredRegions?.map((r) => (
                             <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
                           ))}
                         </FormSelect>
                       </div>
                     )}
-                    {hasCities && (
+                    {hasInsuredCities && (
                       <div className="flex flex-col gap-1">
                         <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
                         <FormSelect
                           control={form.control}
-                          name="claimCity"
+                          name="insuredCity"
                           placeholder="Seleccionar ciudad..."
                           className="app-input h-7"
-                          disabled={!selectedClaimRegion}
-                          onValueChange={() => form.setValue("claimCommune", "")}
-                          items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                          disabled={!selectedInsuredRegion}
+                          onValueChange={() => form.setValue("insuredCommune", "")}
+                          items={insuredCities?.map((c) => ({ value: c.name, label: c.name })) || []}
                         >
-                          {citiesCatalog?.map((c) => (
+                          {insuredCities?.map((c) => (
                             <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                           ))}
                         </FormSelect>
                       </div>
                     )}
-                    {hasCommunes && (
+                    {hasInsuredCommunes && (
                       <div className="flex flex-col gap-1">
                         <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
                         <FormSelect
                           control={form.control}
-                          name="claimCommune"
+                          name="insuredCommune"
                           placeholder="Seleccionar comuna..."
                           className="app-input h-7"
-                          disabled={!selectedClaimCity}
-                          items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                          disabled={!selectedInsuredCity}
+                          items={insuredCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
                         >
-                          {communesCatalog?.map((c) => (
+                          {insuredCommunes?.map((c) => (
                             <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                           ))}
                         </FormSelect>
@@ -1120,13 +1239,13 @@ export default function ClaimsPage() {
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
                           <FormSelect
                             control={form.control}
-                            name="claimCountry"
+                            name="contractorCountry"
                             placeholder="Seleccionar país..."
                             className="app-input h-7"
                             onValueChange={() => {
-                              form.setValue("claimRegion", "");
-                              form.setValue("claimCity", "");
-                              form.setValue("claimCommune", "");
+                              form.setValue("contractorRegion", "");
+                              form.setValue("contractorCity", "");
+                              form.setValue("contractorCommune", "");
                             }}
                             items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                           >
@@ -1135,57 +1254,57 @@ export default function ClaimsPage() {
                             ))}
                           </FormSelect>
                         </div>
-                        {hasRegions && (
+                        {hasContractorRegions && (
                           <div className="flex flex-col gap-1">
                             <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
                             <FormSelect
                               control={form.control}
-                              name="claimRegion"
+                              name="contractorRegion"
                               placeholder="Seleccionar región..."
                               className="app-input h-7"
-                              disabled={!selectedClaimCountry}
+                              disabled={!selectedContractorCountry}
                               onValueChange={() => {
-                                form.setValue("claimCity", "");
-                                form.setValue("claimCommune", "");
+                                form.setValue("contractorCity", "");
+                                form.setValue("contractorCommune", "");
                               }}
-                              items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
+                              items={contractorRegions?.map((r) => ({ value: r.name, label: r.name })) || []}
                             >
-                              {regionsCatalog?.map((r) => (
+                              {contractorRegions?.map((r) => (
                                 <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
                               ))}
                             </FormSelect>
                           </div>
                         )}
-                        {hasCities && (
+                        {hasContractorCities && (
                           <div className="flex flex-col gap-1">
                             <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
                             <FormSelect
                               control={form.control}
-                              name="claimCity"
+                              name="contractorCity"
                               placeholder="Seleccionar ciudad..."
                               className="app-input h-7"
-                              disabled={!selectedClaimRegion}
-                              onValueChange={() => form.setValue("claimCommune", "")}
-                              items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                              disabled={!selectedContractorRegion}
+                              onValueChange={() => form.setValue("contractorCommune", "")}
+                              items={contractorCities?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
-                              {citiesCatalog?.map((c) => (
+                              {contractorCities?.map((c) => (
                                 <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                               ))}
                             </FormSelect>
                           </div>
                         )}
-                        {hasCommunes && (
+                        {hasContractorCommunes && (
                           <div className="flex flex-col gap-1">
                             <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
                             <FormSelect
                               control={form.control}
-                              name="claimCommune"
+                              name="contractorCommune"
                               placeholder="Seleccionar comuna..."
                               className="app-input h-7"
-                              disabled={!selectedClaimCity}
-                              items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                              disabled={!selectedContractorCity}
+                              items={contractorCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
-                              {communesCatalog?.map((c) => (
+                              {contractorCommunes?.map((c) => (
                                 <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                               ))}
                             </FormSelect>
@@ -1254,13 +1373,13 @@ export default function ClaimsPage() {
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
                           <FormSelect
                             control={form.control}
-                            name="claimCountry"
+                            name="beneficiaryCountry"
                             placeholder="Seleccionar país..."
                             className="app-input h-7"
                             onValueChange={() => {
-                              form.setValue("claimRegion", "");
-                              form.setValue("claimCity", "");
-                              form.setValue("claimCommune", "");
+                              form.setValue("beneficiaryRegion", "");
+                              form.setValue("beneficiaryCity", "");
+                              form.setValue("beneficiaryCommune", "");
                             }}
                             items={countriesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                           >
@@ -1269,57 +1388,57 @@ export default function ClaimsPage() {
                             ))}
                           </FormSelect>
                         </div>
-                        {hasRegions && (
+                        {hasBeneficiaryRegions && (
                           <div className="flex flex-col gap-1">
                             <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
                             <FormSelect
                               control={form.control}
-                              name="claimRegion"
+                              name="beneficiaryRegion"
                               placeholder="Seleccionar región..."
                               className="app-input h-7"
-                              disabled={!selectedClaimCountry}
+                              disabled={!selectedBeneficiaryCountry}
                               onValueChange={() => {
-                                form.setValue("claimCity", "");
-                                form.setValue("claimCommune", "");
+                                form.setValue("beneficiaryCity", "");
+                                form.setValue("beneficiaryCommune", "");
                               }}
-                              items={regionsCatalog?.map((r) => ({ value: r.name, label: r.name })) || []}
+                              items={beneficiaryRegions?.map((r) => ({ value: r.name, label: r.name })) || []}
                             >
-                              {regionsCatalog?.map((r) => (
+                              {beneficiaryRegions?.map((r) => (
                                 <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
                               ))}
                             </FormSelect>
                           </div>
                         )}
-                        {hasCities && (
+                        {hasBeneficiaryCities && (
                           <div className="flex flex-col gap-1">
                             <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Ciudad</Label>
                             <FormSelect
                               control={form.control}
-                              name="claimCity"
+                              name="beneficiaryCity"
                               placeholder="Seleccionar ciudad..."
                               className="app-input h-7"
-                              disabled={!selectedClaimRegion}
-                              onValueChange={() => form.setValue("claimCommune", "")}
-                              items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                              disabled={!selectedBeneficiaryRegion}
+                              onValueChange={() => form.setValue("beneficiaryCommune", "")}
+                              items={beneficiaryCities?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
-                              {citiesCatalog?.map((c) => (
+                              {beneficiaryCities?.map((c) => (
                                 <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                               ))}
                             </FormSelect>
                           </div>
                         )}
-                        {hasCommunes && (
+                        {hasBeneficiaryCommunes && (
                           <div className="flex flex-col gap-1">
                             <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
                             <FormSelect
                               control={form.control}
-                              name="claimCommune"
+                              name="beneficiaryCommune"
                               placeholder="Seleccionar comuna..."
                               className="app-input h-7"
-                              disabled={!selectedClaimCity}
-                              items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
+                              disabled={!selectedBeneficiaryCity}
+                              items={beneficiaryCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
-                              {communesCatalog?.map((c) => (
+                              {beneficiaryCommunes?.map((c) => (
                                 <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                               ))}
                             </FormSelect>
@@ -1464,7 +1583,7 @@ export default function ClaimsPage() {
                         ))}
                       </FormSelect>
                     </div>
-                    {hasRegions && (
+                    {hasClaimRegions && (
                       <div className="flex flex-col gap-1">
                         <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Región</Label>
                         <FormSelect
@@ -1485,7 +1604,7 @@ export default function ClaimsPage() {
                         </FormSelect>
                       </div>
                     )}
-                    {hasCities && (
+                    {hasClaimCities && (
                       <div className="flex flex-col gap-1">
                         <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
                           Ciudad <span className="text-red-500">*</span>
@@ -1506,7 +1625,7 @@ export default function ClaimsPage() {
                         <FieldError message={form.formState.errors.claimCity?.message} />
                       </div>
                     )}
-                    {hasCommunes && (
+                    {hasClaimCommunes && (
                       <div className="flex flex-col gap-1">
                         <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Comuna</Label>
                         <FormSelect
