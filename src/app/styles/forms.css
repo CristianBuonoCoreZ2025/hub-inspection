@@ -22,10 +22,10 @@
   .app-input {
     width: 100% !important;
     font-size: 13px !important;
-    height: 40px !important;
-    padding: 0 12px !important;
+    height: 30px !important;
+    padding: 0 10px !important;
     border: 1px solid #cbd5e1 !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
     background: #fff !important;
     color: #0b1220 !important;
     box-sizing: border-box !important;
@@ -43,9 +43,9 @@
     box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
   }
 
-  /* Select trigger (combobox) — 5px más bajo que app-input estándar */
+  /* Select trigger (combobox) — misma altura que app-input */
   [data-slot="select-trigger"].app-input {
-    height: 35px !important;
+    height: 30px !important;
   }
 
   /* Cuando está dentro de .modal-field, el gap maneja el espaciado */
