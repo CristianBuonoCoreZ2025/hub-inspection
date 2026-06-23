@@ -119,6 +119,8 @@ export default function ClaimsPage() {
   const [documents, setDocuments] = useState<{ id: string; name: string; type: string; file: File }[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [expandedPanel, setExpandedPanel] = useState<"contractor" | "beneficiary" | null>(null);
+  const [contractorLinked, setContractorLinked] = useState(false);
+  const [beneficiaryLinked, setBeneficiaryLinked] = useState(false);
 
   type DocumentRow = { id: string; name: string; type: string; file: File };
 
@@ -573,6 +575,9 @@ export default function ClaimsPage() {
       form.reset();
       setDocuments([]);
       setStep(1);
+      setExpandedPanel(null);
+      setContractorLinked(false);
+      setBeneficiaryLinked(false);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -600,32 +605,46 @@ export default function ClaimsPage() {
     createMutation.mutate(values);
   };
 
-  const copyInsuredToContractor = () => {
-    form.setValue("contractorName", form.getValues("insuredName") || "");
-    form.setValue("contractorLastName", form.getValues("lastName") || "");
-    form.setValue("contractorRut", form.getValues("rut") || "");
-    form.setValue("contractorEmail", form.getValues("insuredEmail") || "");
-    form.setValue("contractorCellPhone", form.getValues("cellPhone") || "");
-    form.setValue("contractorPhone", form.getValues("insuredPhone") || "");
-    form.setValue("contractorAddress", form.getValues("insuredAddress") || "");
-    form.setValue("contractorCountry", form.getValues("insuredCountry") || "");
-    form.setValue("contractorRegion", form.getValues("insuredRegion") || "");
-    form.setValue("contractorCity", form.getValues("insuredCity") || "");
-    form.setValue("contractorCommune", form.getValues("insuredCommune") || "");
+  const toggleContractorLink = () => {
+    if (!contractorLinked) {
+      // Ligar: copiar del asegurado y bloquear
+      form.setValue("contractorName", form.getValues("insuredName") || "");
+      form.setValue("contractorLastName", form.getValues("lastName") || "");
+      form.setValue("contractorRut", form.getValues("rut") || "");
+      form.setValue("contractorEmail", form.getValues("insuredEmail") || "");
+      form.setValue("contractorCellPhone", form.getValues("cellPhone") || "");
+      form.setValue("contractorPhone", form.getValues("insuredPhone") || "");
+      form.setValue("contractorAddress", form.getValues("insuredAddress") || "");
+      form.setValue("contractorCountry", form.getValues("insuredCountry") || "");
+      form.setValue("contractorRegion", form.getValues("insuredRegion") || "");
+      form.setValue("contractorCity", form.getValues("insuredCity") || "");
+      form.setValue("contractorCommune", form.getValues("insuredCommune") || "");
+      setContractorLinked(true);
+    } else {
+      // Desligar: permitir editar independientemente
+      setContractorLinked(false);
+    }
   };
 
-  const copyInsuredToBeneficiary = () => {
-    form.setValue("beneficiaryName", form.getValues("insuredName") || "");
-    form.setValue("beneficiaryLastName", form.getValues("lastName") || "");
-    form.setValue("beneficiaryRut", form.getValues("rut") || "");
-    form.setValue("beneficiaryEmail", form.getValues("insuredEmail") || "");
-    form.setValue("beneficiaryCellPhone", form.getValues("cellPhone") || "");
-    form.setValue("beneficiaryPhone", form.getValues("insuredPhone") || "");
-    form.setValue("beneficiaryAddress", form.getValues("insuredAddress") || "");
-    form.setValue("beneficiaryCountry", form.getValues("insuredCountry") || "");
-    form.setValue("beneficiaryRegion", form.getValues("insuredRegion") || "");
-    form.setValue("beneficiaryCity", form.getValues("insuredCity") || "");
-    form.setValue("beneficiaryCommune", form.getValues("insuredCommune") || "");
+  const toggleBeneficiaryLink = () => {
+    if (!beneficiaryLinked) {
+      // Ligar: copiar del asegurado y bloquear
+      form.setValue("beneficiaryName", form.getValues("insuredName") || "");
+      form.setValue("beneficiaryLastName", form.getValues("lastName") || "");
+      form.setValue("beneficiaryRut", form.getValues("rut") || "");
+      form.setValue("beneficiaryEmail", form.getValues("insuredEmail") || "");
+      form.setValue("beneficiaryCellPhone", form.getValues("cellPhone") || "");
+      form.setValue("beneficiaryPhone", form.getValues("insuredPhone") || "");
+      form.setValue("beneficiaryAddress", form.getValues("insuredAddress") || "");
+      form.setValue("beneficiaryCountry", form.getValues("insuredCountry") || "");
+      form.setValue("beneficiaryRegion", form.getValues("insuredRegion") || "");
+      form.setValue("beneficiaryCity", form.getValues("insuredCity") || "");
+      form.setValue("beneficiaryCommune", form.getValues("insuredCommune") || "");
+      setBeneficiaryLinked(true);
+    } else {
+      // Desligar: permitir editar independientemente
+      setBeneficiaryLinked(false);
+    }
   };
 
   const handleFileSelect = (files: FileList | null) => {
@@ -724,7 +743,7 @@ export default function ClaimsPage() {
           >
             <Download className="mr-2 h-3.5 w-3.5" /> Exportar CSV
           </Button>
-          <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setOpen(true); }} className="btn-create btn-sm">
+          <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setOpen(true); }} className="btn-create btn-sm">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Siniestro
           </Button>
@@ -740,6 +759,9 @@ export default function ClaimsPage() {
             form.reset();
             setStep(1);
             setDocuments([]);
+            setExpandedPanel(null);
+            setContractorLinked(false);
+            setBeneficiaryLinked(false);
           }
         }}
       >
@@ -1197,10 +1219,10 @@ export default function ClaimsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-6 text-[11px] px-2"
-                        onClick={() => copyInsuredToContractor()}
+                        className={`h-6 text-[11px] px-2 ${contractorLinked ? "btn-save" : ""}`}
+                        onClick={() => toggleContractorLink()}
                       >
-                        Copiar de Asegurado
+                        {contractorLinked ? "Desligar" : "Copiar de Asegurado"}
                       </Button>
                     )}
                   </div>
@@ -1209,31 +1231,31 @@ export default function ClaimsPage() {
                       <div className="grid grid-cols-3 gap-2">
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
-                          <input {...form.register("contractorRut")} placeholder="14185994k" className="app-input h-7" />
+                          <input {...form.register("contractorRut")} readOnly={contractorLinked} placeholder="14185994k" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Nombre</Label>
-                          <input {...form.register("contractorName")} placeholder="Cristian" className="app-input h-7" />
+                          <input {...form.register("contractorName")} readOnly={contractorLinked} placeholder="Cristian" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Apellido</Label>
-                          <input {...form.register("contractorLastName")} placeholder="Zárate" className="app-input h-7" />
+                          <input {...form.register("contractorLastName")} readOnly={contractorLinked} placeholder="Zárate" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</Label>
-                          <input {...form.register("contractorEmail")} type="email" placeholder="contratante@email.com" className="app-input h-7" />
+                          <input {...form.register("contractorEmail")} readOnly={contractorLinked} type="email" placeholder="contratante@email.com" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Celular</Label>
-                          <input {...form.register("contractorCellPhone")} placeholder="9 9999 9999" className="app-input h-7" />
+                          <input {...form.register("contractorCellPhone")} readOnly={contractorLinked} placeholder="9 9999 9999" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Teléfono</Label>
-                          <input {...form.register("contractorPhone")} placeholder="X XXXX XXXX" className="app-input h-7" />
+                          <input {...form.register("contractorPhone")} readOnly={contractorLinked} placeholder="X XXXX XXXX" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1 col-span-full">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
-                          <input {...form.register("contractorAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
+                          <input {...form.register("contractorAddress")} readOnly={contractorLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
@@ -1242,6 +1264,7 @@ export default function ClaimsPage() {
                             name="contractorCountry"
                             placeholder="Seleccionar país..."
                             className="app-input h-7"
+                            disabled={contractorLinked}
                             onValueChange={() => {
                               form.setValue("contractorRegion", "");
                               form.setValue("contractorCity", "");
@@ -1262,7 +1285,7 @@ export default function ClaimsPage() {
                               name="contractorRegion"
                               placeholder="Seleccionar región..."
                               className="app-input h-7"
-                              disabled={!selectedContractorCountry}
+                              disabled={contractorLinked || !selectedContractorCountry}
                               onValueChange={() => {
                                 form.setValue("contractorCity", "");
                                 form.setValue("contractorCommune", "");
@@ -1283,7 +1306,7 @@ export default function ClaimsPage() {
                               name="contractorCity"
                               placeholder="Seleccionar ciudad..."
                               className="app-input h-7"
-                              disabled={!selectedContractorRegion}
+                              disabled={contractorLinked || !selectedContractorRegion}
                               onValueChange={() => form.setValue("contractorCommune", "")}
                               items={contractorCities?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
@@ -1301,7 +1324,7 @@ export default function ClaimsPage() {
                               name="contractorCommune"
                               placeholder="Seleccionar comuna..."
                               className="app-input h-7"
-                              disabled={!selectedContractorCity}
+                              disabled={contractorLinked || !selectedContractorCity}
                               items={contractorCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
                               {contractorCommunes?.map((c) => (
@@ -1331,10 +1354,10 @@ export default function ClaimsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-6 text-[11px] px-2"
-                        onClick={() => copyInsuredToBeneficiary()}
+                        className={`h-6 text-[11px] px-2 ${beneficiaryLinked ? "btn-save" : ""}`}
+                        onClick={() => toggleBeneficiaryLink()}
                       >
-                        Copiar de Asegurado
+                        {beneficiaryLinked ? "Desligar" : "Copiar de Asegurado"}
                       </Button>
                     )}
                   </div>
@@ -1343,31 +1366,31 @@ export default function ClaimsPage() {
                       <div className="grid grid-cols-3 gap-2">
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">RUT</Label>
-                          <input {...form.register("beneficiaryRut")} placeholder="14185994k" className="app-input h-7" />
+                          <input {...form.register("beneficiaryRut")} readOnly={beneficiaryLinked} placeholder="14185994k" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Nombre</Label>
-                          <input {...form.register("beneficiaryName")} placeholder="Cristian" className="app-input h-7" />
+                          <input {...form.register("beneficiaryName")} readOnly={beneficiaryLinked} placeholder="Cristian" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Apellido</Label>
-                          <input {...form.register("beneficiaryLastName")} placeholder="Zárate" className="app-input h-7" />
+                          <input {...form.register("beneficiaryLastName")} readOnly={beneficiaryLinked} placeholder="Zárate" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Email</Label>
-                          <input {...form.register("beneficiaryEmail")} type="email" placeholder="beneficiario@email.com" className="app-input h-7" />
+                          <input {...form.register("beneficiaryEmail")} readOnly={beneficiaryLinked} type="email" placeholder="beneficiario@email.com" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Celular</Label>
-                          <input {...form.register("beneficiaryCellPhone")} placeholder="9 9999 9999" className="app-input h-7" />
+                          <input {...form.register("beneficiaryCellPhone")} readOnly={beneficiaryLinked} placeholder="9 9999 9999" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Teléfono</Label>
-                          <input {...form.register("beneficiaryPhone")} placeholder="X XXXX XXXX" className="app-input h-7" />
+                          <input {...form.register("beneficiaryPhone")} readOnly={beneficiaryLinked} placeholder="X XXXX XXXX" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1 col-span-full">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Dirección</Label>
-                          <input {...form.register("beneficiaryAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
+                          <input {...form.register("beneficiaryAddress")} readOnly={beneficiaryLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
                         </div>
                         <div className="flex flex-col gap-1">
                           <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">País</Label>
@@ -1376,6 +1399,7 @@ export default function ClaimsPage() {
                             name="beneficiaryCountry"
                             placeholder="Seleccionar país..."
                             className="app-input h-7"
+                            disabled={beneficiaryLinked}
                             onValueChange={() => {
                               form.setValue("beneficiaryRegion", "");
                               form.setValue("beneficiaryCity", "");
@@ -1396,7 +1420,7 @@ export default function ClaimsPage() {
                               name="beneficiaryRegion"
                               placeholder="Seleccionar región..."
                               className="app-input h-7"
-                              disabled={!selectedBeneficiaryCountry}
+                              disabled={beneficiaryLinked || !selectedBeneficiaryCountry}
                               onValueChange={() => {
                                 form.setValue("beneficiaryCity", "");
                                 form.setValue("beneficiaryCommune", "");
@@ -1417,7 +1441,7 @@ export default function ClaimsPage() {
                               name="beneficiaryCity"
                               placeholder="Seleccionar ciudad..."
                               className="app-input h-7"
-                              disabled={!selectedBeneficiaryRegion}
+                              disabled={beneficiaryLinked || !selectedBeneficiaryRegion}
                               onValueChange={() => form.setValue("beneficiaryCommune", "")}
                               items={beneficiaryCities?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
@@ -1435,7 +1459,7 @@ export default function ClaimsPage() {
                               name="beneficiaryCommune"
                               placeholder="Seleccionar comuna..."
                               className="app-input h-7"
-                              disabled={!selectedBeneficiaryCity}
+                              disabled={beneficiaryLinked || !selectedBeneficiaryCity}
                               items={beneficiaryCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
                             >
                               {beneficiaryCommunes?.map((c) => (
@@ -1755,6 +1779,9 @@ export default function ClaimsPage() {
                 form.reset();
                 setStep(1);
                 setDocuments([]);
+                setExpandedPanel(null);
+                setContractorLinked(false);
+                setBeneficiaryLinked(false);
               }}
             >
               Cancelar
