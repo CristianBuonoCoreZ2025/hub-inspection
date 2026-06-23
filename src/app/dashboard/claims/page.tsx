@@ -1781,7 +1781,7 @@ export default function ClaimsPage() {
             <button
               type="button"
               className="btn-cancel"
-              style={{ width: "130px" }}
+              style={{ width: "127px" }}
               onClick={() => {
                 setOpen(false);
                 form.reset();
@@ -1799,7 +1799,7 @@ export default function ClaimsPage() {
               <button
                 type="button"
                 className="btn-save"
-                style={{ width: "130px" }}
+                style={{ width: "127px" }}
                 onClick={() => setStep(step - 1)}
               >
                 Atrás
@@ -1809,7 +1809,7 @@ export default function ClaimsPage() {
               <button
                 type="button"
                 className="btn-save"
-                style={{ width: "130px" }}
+                style={{ width: "127px" }}
                 onClick={() => setStep(step + 1)}
               >
                 Siguiente
@@ -1819,7 +1819,7 @@ export default function ClaimsPage() {
                 type="submit"
                 form="claim-wizard-form"
                 className="btn-save"
-                style={{ width: "130px" }}
+                style={{ width: "127px" }}
                 disabled={createMutation.isPending}
               >
                 {createMutation.isPending ? "Creando..." : "Crear Siniestro"}
