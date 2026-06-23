@@ -43,6 +43,11 @@
     box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
   }
 
+  /* Select trigger (combobox) — 5px más bajo que app-input estándar */
+  [data-slot="select-trigger"].app-input {
+    height: 35px !important;
+  }
+
   /* Cuando está dentro de .modal-field, el gap maneja el espaciado */
   .modal-field .app-field-label {
     margin-bottom: 0 !important;
