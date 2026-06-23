@@ -723,10 +723,9 @@ export default function ClaimsPage() {
                   <div className="flex flex-col gap-1">
                     <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">N° Interno Cliente</Label>
                     <input
-                      readOnly
+                      {...form.register("clientReference")}
                       placeholder="MCL-XXXX"
-                      className="app-input h-7 bg-muted/50"
-                      value=""
+                      className="app-input h-7"
                     />
                   </div>
 
