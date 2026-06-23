@@ -1220,7 +1220,7 @@ export default function ClaimsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className={`h-6 text-[11px] px-2 ${contractorLinked ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-emerald-50/60 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+                        className={`h-6 text-[11px] w-[150px] justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
                         onClick={() => toggleContractorLink()}
                       >
                         {contractorLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
@@ -1357,7 +1357,7 @@ export default function ClaimsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className={`h-6 text-[11px] px-2 ${beneficiaryLinked ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-emerald-50/60 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+                        className={`h-6 text-[11px] w-[150px] justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
                         onClick={() => toggleBeneficiaryLink()}
                       >
                         {beneficiaryLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
