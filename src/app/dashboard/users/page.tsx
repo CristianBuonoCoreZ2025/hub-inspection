@@ -138,7 +138,7 @@ export default function UsersPage() {
         </Button>
 
         {/* ── MODAL Usuarios — 520px (formulario simple) ── */}
-        <Dialog open={open} onOpenChange={setOpen} modal={true}>
+        <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
           <DialogContent className="modal-sm" showCloseButton={false}>
             <div className="modal-header">
               <DialogTitle className="modal-title flex items-center gap-2.5">

@@ -7,8 +7,33 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
-function Dialog({ modal = true, ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" modal={modal} {...props} />
+function Dialog({
+  modal = true,
+  dismissible = true,
+  onOpenChange,
+  ...props
+}: DialogPrimitive.Root.Props & { dismissible?: boolean }) {
+  const handleOpenChange = React.useCallback(
+    (open: boolean, eventDetails: DialogPrimitive.Root.ChangeEventDetails) => {
+      if (!dismissible && !open) {
+        const reason = eventDetails.reason;
+        if (reason === "outside-press" || reason === "escape-key" || reason === "focus-out") {
+          return;
+        }
+      }
+      onOpenChange?.(open, eventDetails);
+    },
+    [dismissible, onOpenChange]
+  );
+
+  return (
+    <DialogPrimitive.Root
+      data-slot="dialog"
+      modal={modal}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  );
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
@@ -25,7 +50,6 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
 
 function DialogOverlay({
   className,
-  onPointerDown,
   ...props
 }: DialogPrimitive.Backdrop.Props) {
   return (
@@ -35,10 +59,6 @@ function DialogOverlay({
         "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
-      onPointerDown={(e) => {
-        e.preventDefault();
-        onPointerDown?.(e);
-      }}
       {...props}
     />
   )

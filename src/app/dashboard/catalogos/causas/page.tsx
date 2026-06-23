@@ -132,7 +132,7 @@ export default function CausasPage() {
         </table>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen} modal={true}>
+      <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>
           <div className="modal-header">
             <DialogTitle className="modal-title flex items-center gap-2.5">
