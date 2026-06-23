@@ -120,6 +120,7 @@ export default function ClaimsPage() {
   const [expandedPanel, setExpandedPanel] = useState<"contractor" | "beneficiary" | null>(null);
   const [contractorLinked, setContractorLinked] = useState(false);
   const [beneficiaryLinked, setBeneficiaryLinked] = useState(false);
+  const [claimAddressLinked, setClaimAddressLinked] = useState(false);
 
   type DocumentRow = { id: string; name: string; type: string; file: File };
 
@@ -149,6 +150,7 @@ export default function ClaimsPage() {
       destinationHousingId: "",
       propertyClassificationId: "",
       ownerSameAsInsured: false,
+      ownerType: "",
       damageClassificationId: "",
       insuredName: "",
       lastName: "",
@@ -513,7 +515,7 @@ export default function ClaimsPage() {
           destinationHousingId: values.destinationHousingId || null,
           damageClassificationId: values.damageClassificationId || null,
           propertyClassificationId: values.propertyClassificationId || null,
-          ownerSameAsInsured: values.ownerSameAsInsured,
+          ownerSameAsInsured: values.ownerType === "propietario",
           company_id: values.companyId,
         },
         {
@@ -646,6 +648,21 @@ export default function ClaimsPage() {
     }
   };
 
+  const toggleClaimAddressLink = () => {
+    if (!claimAddressLinked) {
+      // Ligar: copiar dirección del asegurado y bloquear
+      form.setValue("claimAddress", form.getValues("insuredAddress") || "");
+      form.setValue("claimCountry", form.getValues("insuredCountry") || "");
+      form.setValue("claimRegion", form.getValues("insuredRegion") || "");
+      form.setValue("claimCity", form.getValues("insuredCity") || "");
+      form.setValue("claimCommune", form.getValues("insuredCommune") || "");
+      setClaimAddressLinked(true);
+    } else {
+      // Desligar: permitir editar independientemente
+      setClaimAddressLinked(false);
+    }
+  };
+
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
     const newFiles = Array.from(files).map((file) => ({
@@ -742,7 +759,7 @@ export default function ClaimsPage() {
           >
             <Download className="mr-2 h-3.5 w-3.5" /> Exportar
           </Button>
-          <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setOpen(true); }} className="btn-create btn-sm">
+          <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setOpen(true); }} className="btn-create btn-sm">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo
           </Button>
@@ -761,6 +778,7 @@ export default function ClaimsPage() {
             setExpandedPanel(null);
             setContractorLinked(false);
             setBeneficiaryLinked(false);
+            setClaimAddressLinked(false);
           }
         }}
       >
@@ -1569,15 +1587,13 @@ export default function ClaimsPage() {
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Asegurado/Propietario</Label>
                       <FormSelect
                         control={form.control}
-                        name="propertyClassificationId"
-                        placeholder="Seleccionar clasificación..."
+                        name="ownerType"
+                        placeholder="Seleccionar..."
                         className="app-input h-7"
                         clearable
-                        items={propertyClassificationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
                       >
-                        {propertyClassificationsCatalog?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
+                        <SelectItem value="propietario">Propietario</SelectItem>
+                        <SelectItem value="arrendatario">Arrendatario</SelectItem>
                       </FormSelect>
                     </div>
                     <div className="flex flex-col gap-1">
@@ -1599,22 +1615,29 @@ export default function ClaimsPage() {
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Resumen</Label>
                       <textarea {...form.register("summary")} rows={2} className="app-input resize-none" placeholder="Descripción breve del siniestro..." />
                     </div>
-                    <div className="col-span-full flex items-center gap-2">
-                      <input id="ownerSameAsInsured" type="checkbox" {...form.register("ownerSameAsInsured")} className="h-4 w-4 rounded border-input" />
-                      <Label htmlFor="ownerSameAsInsured" className="text-[13px]">Mismo asegurado es propietario</Label>
-                    </div>
                   </div>
                 </div>
 
                 {/* Dirección del Siniestro */}
                 <div className="rounded-lg border border-border/50 p-3 space-y-2">
-                  <span className="text-[11px] font-semibold text-foreground/70">Dirección del Siniestro</span>
+                  <div className="w-full flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-foreground/70">Dirección del Siniestro</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={`h-6 text-[11px] w-[150px] justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+                      onClick={() => toggleClaimAddressLink()}
+                    >
+                      {claimAddressLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="flex flex-col gap-1 col-span-full">
                       <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         Dirección <span className="text-red-500">*</span>
                       </Label>
-                      <input {...form.register("claimAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
+                      <input {...form.register("claimAddress")} readOnly={claimAddressLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
                       <FieldError message={form.formState.errors.claimAddress?.message} />
                     </div>
                   </div>
@@ -1626,6 +1649,7 @@ export default function ClaimsPage() {
                         name="claimCountry"
                         placeholder="Seleccionar país..."
                         className="app-input h-7"
+                        disabled={claimAddressLinked}
                         onValueChange={() => {
                           form.setValue("claimRegion", "");
                           form.setValue("claimCity", "");
@@ -1646,7 +1670,7 @@ export default function ClaimsPage() {
                           name="claimRegion"
                           placeholder="Seleccionar región..."
                           className="app-input h-7"
-                          disabled={!selectedClaimCountry}
+                          disabled={!selectedClaimCountry || claimAddressLinked}
                           clearable
                           onValueChange={() => {
                             form.setValue("claimCity", "");
@@ -1670,7 +1694,7 @@ export default function ClaimsPage() {
                           name="claimCity"
                           placeholder="Seleccionar ciudad..."
                           className="app-input h-7"
-                          disabled={!selectedClaimRegion}
+                          disabled={!selectedClaimRegion || claimAddressLinked}
                           onValueChange={() => form.setValue("claimCommune", "")}
                           items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                         >
@@ -1689,7 +1713,7 @@ export default function ClaimsPage() {
                           name="claimCommune"
                           placeholder="Seleccionar comuna..."
                           className="app-input h-7"
-                          disabled={!selectedClaimCity}
+                          disabled={!selectedClaimCity || claimAddressLinked}
                           clearable
                           items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
                         >
@@ -1816,6 +1840,7 @@ export default function ClaimsPage() {
                 setExpandedPanel(null);
                 setContractorLinked(false);
                 setBeneficiaryLinked(false);
+                setClaimAddressLinked(false);
               }}
             >
               Cancelar

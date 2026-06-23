@@ -132,6 +132,7 @@ export const claimCreateMinimalSchema = z.object({
   destinationHousingId: z.string().optional().or(z.literal("")),
   propertyClassificationId: z.string().optional().or(z.literal("")),
   ownerSameAsInsured: z.boolean().optional().default(false),
+  ownerType: z.string().optional().or(z.literal("")),
   damageClassificationId: z.string().optional().or(z.literal("")),
   // Asegurado
   insuredName: z.string().min(1, "Nombre del asegurado requerido"),
