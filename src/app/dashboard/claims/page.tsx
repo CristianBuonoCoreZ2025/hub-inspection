@@ -1781,6 +1781,7 @@ export default function ClaimsPage() {
             <button
               type="button"
               className="btn-cancel"
+              style={{ width: "130px", background: "#fff1f2 !important", borderColor: "#fecdd3 !important", color: "#9f1239 !important" }}
               onClick={() => {
                 setOpen(false);
                 form.reset();
@@ -1794,20 +1795,31 @@ export default function ClaimsPage() {
               Cancelar
             </button>
             {step > 1 && (
-              <button type="button" className="btn-cancel" onClick={() => setStep(step - 1)}>
+              <button
+                type="button"
+                className="btn-cancel"
+                style={{ width: "130px", background: "#f0f9ff !important", borderColor: "#bae6fd !important", color: "#0369a1 !important" }}
+                onClick={() => setStep(step - 1)}
+              >
                 Atrás
               </button>
             )}
             <div className="flex-1" />
             {step < 4 ? (
-              <button type="button" className="btn-save" onClick={() => setStep(step + 1)}>
-                Siguiente paso
+              <button
+                type="button"
+                className="btn-save"
+                style={{ width: "130px", background: "linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%) !important", boxShadow: "0 8px 16px rgba(14,165,233,0.15), inset 0 1px 0 rgba(255,255,255,0.15) !important" }}
+                onClick={() => setStep(step + 1)}
+              >
+                Siguiente
               </button>
             ) : (
               <button
                 type="submit"
                 form="claim-wizard-form"
                 className="btn-save"
+                style={{ width: "130px" }}
                 disabled={createMutation.isPending}
               >
                 {createMutation.isPending ? "Creando..." : "Crear Siniestro"}
