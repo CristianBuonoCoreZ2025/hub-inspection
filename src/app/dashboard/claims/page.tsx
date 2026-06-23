@@ -1798,7 +1798,8 @@ export default function ClaimsPage() {
             {step > 1 && (
               <button
                 type="button"
-                style={{ width: "130px", height: "32px", borderRadius: "10px", border: "1px solid #94a3b8", background: "#e2e8f0", color: "#475569", fontWeight: 600, fontSize: "13px", cursor: "pointer", transition: "all 0.2s" }}
+                className="btn-save"
+                style={{ width: "130px" }}
                 onClick={() => setStep(step - 1)}
               >
                 Atrás
