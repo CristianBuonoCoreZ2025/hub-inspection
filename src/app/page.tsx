@@ -133,7 +133,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="relative">
-              <div className="relative rounded-2xl border bg-gradient-to-br from-muted to-background p-2 shadow-2xl">
+              <div className="relative rounded-2xl border bg-linear-to-br from-muted to-background p-2 shadow-2xl">
                 <div className="aspect-[16/10] overflow-hidden rounded-xl border bg-background">
                   <div className="flex h-full flex-col">
                     <div className="flex items-center gap-2 border-b px-4 py-3">

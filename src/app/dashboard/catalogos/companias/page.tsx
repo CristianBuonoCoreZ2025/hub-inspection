@@ -121,7 +121,7 @@ export default function CompaniasPage() {
         <DialogContent className="modal-md" showCloseButton={false}>
           <div className="modal-header">
             <DialogTitle className="modal-title flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm"><Landmark className="h-4 w-4" /></div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm"><Landmark className="h-4 w-4" /></div>
               {editingId ? "Editar Compañia" : "Nueva Compañia"}
             </DialogTitle>
           </div>
