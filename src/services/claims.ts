@@ -230,8 +230,8 @@ function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }):
     report_date: input.reportDate || null,
     assignment_date: input.assignmentDate || null,
     client_reference: input.clientReference || null,
-    company_report_number: input.companyReportNumber || null,
-    liquidation_number: input.liquidationNumber || null,
+    // liquidation_number y company_report_number se auto-generan/ignoran
+    // (liquidation_number via trigger, company_report_number null por ahora)
     summary: input.summary || null,
     company_id: input.company_id,
   };

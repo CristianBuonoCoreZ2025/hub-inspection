@@ -723,8 +723,9 @@ export default function ClaimsPage() {
             }
           : null
       ),
-    onSuccess: () => {
-      toast.success("Siniestro creado");
+    onSuccess: (data) => {
+      const liqNum = (data as { liquidation_number?: string })?.liquidation_number;
+      toast.success(liqNum ? `Siniestro creado — ${liqNum}` : "Siniestro creado");
       queryClient.invalidateQueries({ queryKey: ["claims"] });
       setOpen(false);
       form.reset();
