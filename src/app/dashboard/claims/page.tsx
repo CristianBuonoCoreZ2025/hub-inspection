@@ -1794,17 +1794,16 @@ export default function ClaimsPage() {
             >
               Cancelar
             </button>
+            <div className="flex-1" />
             {step > 1 && (
               <button
                 type="button"
-                className="btn-cancel"
-                style={{ width: "130px", background: "#f0f9ff !important", borderColor: "#bae6fd !important", color: "#0369a1 !important" }}
+                style={{ width: "130px", height: "32px", borderRadius: "10px", border: "1px solid #94a3b8", background: "#e2e8f0", color: "#475569", fontWeight: 600, fontSize: "13px", cursor: "pointer", transition: "all 0.2s" }}
                 onClick={() => setStep(step - 1)}
               >
                 Atrás
               </button>
             )}
-            <div className="flex-1" />
             {step < 4 ? (
               <button
                 type="button"
