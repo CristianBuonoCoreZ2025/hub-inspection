@@ -102,8 +102,9 @@ const statusOptions = [
 
 const wizardSteps = [
   { id: 1, label: "Detalles Siniestro", description: "Ingresa los detalles sobre el reclamo." },
-  { id: 2, label: "Detalles Incidente", description: "Ingresa detalles sobre lo que sucedió." },
-  { id: 3, label: "Documentos Soporte", description: "Cargue los documentos necesarios." },
+  { id: 2, label: "Personas", description: "Asegurado, contratante y beneficiario." },
+  { id: 3, label: "Incidente", description: "Detalles del siniestro y dirección." },
+  { id: 4, label: "Documentos", description: "Cargue los documentos necesarios." },
 ];
 
 export default function ClaimsPage() {
@@ -940,7 +941,7 @@ export default function ClaimsPage() {
               </div>
             )}
 
-            {/* PASO 2: ASEGURADO, CONTRATANTE, BENEFICIARIO, INCIDENTE */}
+            {/* PASO 2: ASEGURADO, CONTRATANTE, BENEFICIARIO */}
             {step === 2 && (
               <div className="space-y-3">
                 {/* Asegurado (siempre expandido) */}
@@ -1299,8 +1300,13 @@ export default function ClaimsPage() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
 
-                {/* Incidente (siempre visible) */}
+            {/* PASO 3: INCIDENTE Y DIRECCIÓN */}
+            {step === 3 && (
+              <div className="space-y-3">
+                {/* Incidente */}
                 <div className="rounded-lg border border-border/50 p-3 space-y-2">
                   <span className="text-[11px] font-semibold text-foreground/70">Incidente</span>
                   <div className="grid grid-cols-3 gap-2">
@@ -1399,7 +1405,7 @@ export default function ClaimsPage() {
                   </div>
                 </div>
 
-                {/* Dirección del Siniestro (siempre visible) */}
+                {/* Dirección del Siniestro */}
                 <div className="rounded-lg border border-border/50 p-3 space-y-2">
                   <span className="text-[11px] font-semibold text-foreground/70">Dirección del Siniestro</span>
                   <div className="grid grid-cols-3 gap-2">
@@ -1487,8 +1493,8 @@ export default function ClaimsPage() {
               </div>
             )}
 
-            {/* PASO 3: DOCUMENTOS SOPORTE */}
-            {step === 3 && (
+            {/* PASO 4: DOCUMENTOS SOPORTE */}
+            {step === 4 && (
               <div className="space-y-3">
                 <SectionTitle>Documentos Soporte</SectionTitle>
                 <div
@@ -1605,7 +1611,7 @@ export default function ClaimsPage() {
               </button>
             )}
             <div className="flex-1" />
-            {step < 3 ? (
+            {step < 4 ? (
               <button type="button" className="btn-save" onClick={() => setStep(step + 1)}>
                 Siguiente paso
               </button>
