@@ -18,7 +18,6 @@ import {
   getCommunes,
   getCountries,
   getHousingDestinations,
-  getPropertyClassifications,
   getDamageClassifications,
   getLookupCatalog,
   getEvents,
@@ -288,11 +287,6 @@ export default function ClaimsPage() {
   const { data: housingDestinationsCatalog } = useQuery({
     queryKey: ["housing-destinations"],
     queryFn: () => getHousingDestinations(),
-  });
-
-  const { data: propertyClassificationsCatalog } = useQuery({
-    queryKey: ["property-classifications"],
-    queryFn: () => getPropertyClassifications(),
   });
 
   const { data: damageClassificationsCatalog } = useQuery({
