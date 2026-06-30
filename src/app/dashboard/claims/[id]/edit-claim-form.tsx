@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -14,6 +14,7 @@ import {
   X,
   Shield,
   Building,
+  ChevronDown,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-select";
 import { SelectItem } from "@/components/ui/select";
-import { updateClaimFields, updateClaimParticipant, createClaimParticipant } from "@/services/claims";
+import { updateClaimFields, updateClaimParticipant, createClaimParticipant, findParticipantByRut } from "@/services/claims";
 import { getCountries, getRegions, getCities, getCommunes } from "@/services/catalogs";
 import type { Claim, ClaimsParticipant } from "@/types";
 
@@ -33,6 +34,7 @@ import type { Claim, ClaimsParticipant } from "@/types";
 interface Catalog {
   id: string;
   name: string;
+  country_id?: string | null;
 }
 
 interface UserOption {
@@ -211,6 +213,8 @@ function EditSelect({
   placeholder,
   clearable,
   items,
+  disabled,
+  onValueChange,
 }: {
   label: string;
   required?: boolean;
@@ -219,6 +223,8 @@ function EditSelect({
   placeholder: string;
   clearable?: boolean;
   items: { value: string; label: string }[];
+  disabled?: boolean;
+  onValueChange?: () => void;
 }) {
   return (
     <div className="space-y-1">
@@ -228,6 +234,8 @@ function EditSelect({
         name={name}
         placeholder={placeholder}
         clearable={clearable}
+        disabled={disabled}
+        onValueChange={onValueChange}
         className="app-input h-7 text-[13px]"
         items={items}
       >
@@ -277,6 +285,23 @@ const tabs = [
 export default function EditClaimForm({ claim, participants, catalogs, onCancel, onSaved }: EditClaimFormProps) {
   const [activeTab, setActiveTab] = useState("siniestro");
   const queryClient = useQueryClient();
+
+  // Linking state
+  const [contractorLinked, setContractorLinked] = useState(false);
+  const [beneficiaryLinked, setBeneficiaryLinked] = useState(false);
+  const [claimAddressLinked, setClaimAddressLinked] = useState(false);
+
+  // Collapsible panels
+  const [expandedPanels, setExpandedPanels] = useState<{ contractor: boolean; beneficiary: boolean }>({
+    contractor: !!getParticipant(participants, "contractor")?.full_name,
+    beneficiary: !!getParticipant(participants, "beneficiary")?.full_name,
+  });
+
+  // RUT autocomplete suggestion
+  const [participantSuggestion, setParticipantSuggestion] = useState<{
+    section: "insured" | "contractor" | "beneficiary";
+    data: any;
+  } | null>(null);
 
   const insured = getParticipant(participants, "insured");
   const contractor = getParticipant(participants, "contractor");
@@ -491,33 +516,60 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const { control, register, handleSubmit, watch } = form;
+  const { control, register, handleSubmit, watch, setValue } = form;
 
+  // ──────────────────────────────────────────────────────────────
   // Catálogos para selects
+  // ──────────────────────────────────────────────────────────────
   const claimTypeItems = catalogs.claimTypes.map((c) => ({ value: c.id, label: c.name }));
-  const claimCauseItems = catalogs.claimCauses.map((c) => ({ value: c.id, label: c.name }));
   const eventItems = catalogs.events.map((c) => ({ value: c.id, label: c.name }));
   const currencyItems = catalogs.currencies.map((c) => ({ value: c.id, label: c.name }));
-  const insuranceCompanyItems = catalogs.insuranceCompanies.map((c) => ({ value: c.id, label: c.name }));
-  const businessLineItems = catalogs.businessLines.map((c) => ({ value: c.id, label: c.name }));
-  const insuranceProductItems = catalogs.insuranceProducts.map((c) => ({ value: c.id, label: c.name }));
-  const brokerItems = catalogs.brokers.map((c) => ({ value: c.id, label: c.name }));
-  const advisorItems = catalogs.advisors.map((c) => ({ value: c.id, label: c.name }));
   const housingDestItems = catalogs.housingDestinations.map((c) => ({ value: c.id, label: c.name }));
   const damageClassItems = catalogs.damageClassifications.map((c) => ({ value: c.id, label: c.name }));
   const constructionTypeItems = catalogs.constructionTypes.map((c) => ({ value: c.id, label: c.name }));
   const habitabilityItems = catalogs.habitability.map((c) => ({ value: c.id, label: c.name }));
   const userItems = catalogs.users.map((u) => ({ value: u.id, label: u.full_name || u.email || "—" }));
 
-  // Geo catalogs (cascading: country → region → city → commune)
+  // ──────────────────────────────────────────────────────────────
+  // Watched values
+  // ──────────────────────────────────────────────────────────────
+  // Incidente geo (FK-based, usa IDs)
   const watchedCountryId = watch("countryId");
   const watchedRegionId = watch("regionId");
   const watchedCityId = watch("cityId");
 
+  // Participantes geo (text-based, usa nombres)
+  const watchedInsuredCountry = useWatch({ control, name: "insuredCountry" });
+  const watchedInsuredRegion = useWatch({ control, name: "insuredRegion" });
+  const watchedInsuredCity = useWatch({ control, name: "insuredCity" });
+  const watchedInsuredRut = useWatch({ control, name: "insuredRut" });
+
+  const watchedContractorCountry = useWatch({ control, name: "contractorCountry" });
+  const watchedContractorRegion = useWatch({ control, name: "contractorRegion" });
+  const watchedContractorCity = useWatch({ control, name: "contractorCity" });
+  const watchedContractorRut = useWatch({ control, name: "contractorRut" });
+
+  const watchedBeneficiaryCountry = useWatch({ control, name: "beneficiaryCountry" });
+  const watchedBeneficiaryRegion = useWatch({ control, name: "beneficiaryRegion" });
+  const watchedBeneficiaryCity = useWatch({ control, name: "beneficiaryCity" });
+  const watchedBeneficiaryRut = useWatch({ control, name: "beneficiaryRut" });
+
+  // Cascading Tipo → Línea → Producto
+  const watchedBusinessLineId = watch("businessLineId");
+
+  // Recovery checkboxes
+  const watchedRecoveryLegal = watch("recoveryTypeLegal");
+  const watchedRecoveryMaterial = watch("recoveryTypeMaterial");
+  const watchedOwnerSame = watch("ownerSameAsInsured");
+
+  // ──────────────────────────────────────────────────────────────
+  // Geo queries — Incidente (FK-based)
+  // ──────────────────────────────────────────────────────────────
   const { data: countriesList } = useQuery({
     queryKey: ["countries"],
     queryFn: () => getCountries(),
   });
+
   const { data: regionsList } = useQuery({
     queryKey: ["regions", watchedCountryId],
     queryFn: () => getRegions(watchedCountryId),
@@ -539,10 +591,329 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   const cityItems = (citiesList ?? []).map((c) => ({ value: c.id, label: c.name }));
   const communeItems = (communesList ?? []).map((c) => ({ value: c.id, label: c.name }));
 
-  const watchedOwnerSame = watch("ownerSameAsInsured");
-  const watchedRecoveryLegal = watch("recoveryTypeLegal");
-  const watchedRecoveryMaterial = watch("recoveryTypeMaterial");
+  // ──────────────────────────────────────────────────────────────
+  // Geo queries — Participantes (text-based, usa nombres)
+  // ──────────────────────────────────────────────────────────────
 
+  // Asegurado
+  const { data: insuredRegions } = useQuery({
+    queryKey: ["regions", "insured", watchedInsuredCountry],
+    queryFn: () => {
+      const country = countriesList?.find((c) => c.name === watchedInsuredCountry);
+      return getRegions(country?.id);
+    },
+    enabled: !!watchedInsuredCountry && !!countriesList,
+  });
+  const { data: insuredCities } = useQuery({
+    queryKey: ["cities", "insured", watchedInsuredRegion],
+    queryFn: () => {
+      const region = insuredRegions?.find((r) => r.name === watchedInsuredRegion);
+      return getCities(region?.id);
+    },
+    enabled: !!watchedInsuredRegion && !!insuredRegions,
+  });
+  const { data: insuredCommunes } = useQuery({
+    queryKey: ["communes", "insured", watchedInsuredCity],
+    queryFn: () => {
+      const city = insuredCities?.find((c) => c.name === watchedInsuredCity);
+      return getCommunes(city?.id);
+    },
+    enabled: !!watchedInsuredCity && !!insuredCities,
+  });
+
+  // Contratante
+  const { data: contractorRegions } = useQuery({
+    queryKey: ["regions", "contractor", watchedContractorCountry],
+    queryFn: () => {
+      const country = countriesList?.find((c) => c.name === watchedContractorCountry);
+      return getRegions(country?.id);
+    },
+    enabled: !!watchedContractorCountry && !!countriesList,
+  });
+  const { data: contractorCities } = useQuery({
+    queryKey: ["cities", "contractor", watchedContractorRegion],
+    queryFn: () => {
+      const region = contractorRegions?.find((r) => r.name === watchedContractorRegion);
+      return getCities(region?.id);
+    },
+    enabled: !!watchedContractorRegion && !!contractorRegions,
+  });
+  const { data: contractorCommunes } = useQuery({
+    queryKey: ["communes", "contractor", watchedContractorCity],
+    queryFn: () => {
+      const city = contractorCities?.find((c) => c.name === watchedContractorCity);
+      return getCommunes(city?.id);
+    },
+    enabled: !!watchedContractorCity && !!contractorCities,
+  });
+
+  // Beneficiario
+  const { data: beneficiaryRegions } = useQuery({
+    queryKey: ["regions", "beneficiary", watchedBeneficiaryCountry],
+    queryFn: () => {
+      const country = countriesList?.find((c) => c.name === watchedBeneficiaryCountry);
+      return getRegions(country?.id);
+    },
+    enabled: !!watchedBeneficiaryCountry && !!countriesList,
+  });
+  const { data: beneficiaryCities } = useQuery({
+    queryKey: ["cities", "beneficiary", watchedBeneficiaryRegion],
+    queryFn: () => {
+      const region = beneficiaryRegions?.find((r) => r.name === watchedBeneficiaryRegion);
+      return getCities(region?.id);
+    },
+    enabled: !!watchedBeneficiaryRegion && !!beneficiaryRegions,
+  });
+  const { data: beneficiaryCommunes } = useQuery({
+    queryKey: ["communes", "beneficiary", watchedBeneficiaryCity],
+    queryFn: () => {
+      const city = beneficiaryCities?.find((c) => c.name === watchedBeneficiaryCity);
+      return getCommunes(city?.id);
+    },
+    enabled: !!watchedBeneficiaryCity && !!beneficiaryCities,
+  });
+
+  // Visibilidad de campos geo para participantes
+  const hasInsuredRegions = !!insuredRegions && insuredRegions.length > 0;
+  const hasInsuredCities = !!insuredCities && insuredCities.length > 0;
+  const hasInsuredCommunes = !!insuredCommunes && insuredCommunes.length > 0;
+  const hasContractorRegions = !!contractorRegions && contractorRegions.length > 0;
+  const hasContractorCities = !!contractorCities && contractorCities.length > 0;
+  const hasContractorCommunes = !!contractorCommunes && contractorCommunes.length > 0;
+  const hasBeneficiaryRegions = !!beneficiaryRegions && beneficiaryRegions.length > 0;
+  const hasBeneficiaryCities = !!beneficiaryCities && beneficiaryCities.length > 0;
+  const hasBeneficiaryCommunes = !!beneficiaryCommunes && beneficiaryCommunes.length > 0;
+
+  // ──────────────────────────────────────────────────────────────
+  // Filtrado por país (catálogos del tab Asignaciones)
+  // ──────────────────────────────────────────────────────────────
+  const filteredInsuranceCompanies = catalogs.insuranceCompanies.filter(
+    (c) => !watchedCountryId || c.country_id === watchedCountryId
+  );
+  const filteredBrokers = catalogs.brokers.filter(
+    (b) => !watchedCountryId || b.country_id === watchedCountryId
+  );
+  const filteredAdvisors = catalogs.advisors.filter(
+    (a) => !watchedCountryId || a.country_id === watchedCountryId
+  );
+  const filteredBusinessLines = catalogs.businessLines.filter(
+    (b) => !watchedCountryId || b.country_id === watchedCountryId
+  );
+  const filteredClaimCauses = catalogs.claimCauses.filter(
+    (c) => !watchedCountryId || c.country_id === watchedCountryId
+  );
+  const filteredInsuranceProducts = catalogs.insuranceProducts.filter(
+    (p) => !watchedBusinessLineId || p.country_id === watchedBusinessLineId
+  );
+
+  const insuranceCompanyItems = filteredInsuranceCompanies.map((c) => ({ value: c.id, label: c.name }));
+  const businessLineItems = filteredBusinessLines.map((c) => ({ value: c.id, label: c.name }));
+  const insuranceProductItems = filteredInsuranceProducts.map((c) => ({ value: c.id, label: c.name }));
+  const brokerItems = filteredBrokers.map((c) => ({ value: c.id, label: c.name }));
+  const advisorItems = filteredAdvisors.map((c) => ({ value: c.id, label: c.name }));
+  const claimCauseItems = filteredClaimCauses.map((c) => ({ value: c.id, label: c.name }));
+
+  // Reset dependent fields when incident country changes
+  useEffect(() => {
+    if (watchedCountryId) {
+      setValue("insuranceCompanyId", "");
+      setValue("advisorId", "");
+      setValue("brokerId", "");
+      setValue("businessLineId", "");
+      setValue("insuranceProductId", "");
+      setValue("claimCauseId", "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedCountryId]);
+
+  // ──────────────────────────────────────────────────────────────
+  // Autocomplete por RUT
+  // ──────────────────────────────────────────────────────────────
+
+  // Asegurado
+  useEffect(() => {
+    if (!watchedInsuredRut || watchedInsuredRut.trim().length < 3 || !watchedInsuredCountry) {
+      setParticipantSuggestion((prev) => prev?.section === "insured" ? null : prev);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const found = await findParticipantByRut(watchedInsuredRut.trim(), watchedInsuredCountry);
+        if (!cancelled) {
+          if (found && (found.first_name || found.full_name)) {
+            setParticipantSuggestion({ section: "insured", data: found });
+          } else {
+            setParticipantSuggestion((prev) => prev?.section === "insured" ? null : prev);
+          }
+        }
+      } catch {
+        if (!cancelled) setParticipantSuggestion((prev) => prev?.section === "insured" ? null : prev);
+      }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [watchedInsuredRut, watchedInsuredCountry]);
+
+  // Contratante
+  useEffect(() => {
+    if (!watchedContractorRut || watchedContractorRut.trim().length < 3 || !watchedContractorCountry) {
+      setParticipantSuggestion((prev) => prev?.section === "contractor" ? null : prev);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const found = await findParticipantByRut(watchedContractorRut.trim(), watchedContractorCountry);
+        if (!cancelled) {
+          if (found && (found.first_name || found.full_name)) {
+            setParticipantSuggestion({ section: "contractor", data: found });
+          } else {
+            setParticipantSuggestion((prev) => prev?.section === "contractor" ? null : prev);
+          }
+        }
+      } catch {
+        if (!cancelled) setParticipantSuggestion((prev) => prev?.section === "contractor" ? null : prev);
+      }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [watchedContractorRut, watchedContractorCountry]);
+
+  // Beneficiario
+  useEffect(() => {
+    if (!watchedBeneficiaryRut || watchedBeneficiaryRut.trim().length < 3 || !watchedBeneficiaryCountry) {
+      setParticipantSuggestion((prev) => prev?.section === "beneficiary" ? null : prev);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const found = await findParticipantByRut(watchedBeneficiaryRut.trim(), watchedBeneficiaryCountry);
+        if (!cancelled) {
+          if (found && (found.first_name || found.full_name)) {
+            setParticipantSuggestion({ section: "beneficiary", data: found });
+          } else {
+            setParticipantSuggestion((prev) => prev?.section === "beneficiary" ? null : prev);
+          }
+        }
+      } catch {
+        if (!cancelled) setParticipantSuggestion((prev) => prev?.section === "beneficiary" ? null : prev);
+      }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [watchedBeneficiaryRut, watchedBeneficiaryCountry]);
+
+  // ──────────────────────────────────────────────────────────────
+  // Linking functions
+  // ──────────────────────────────────────────────────────────────
+  const toggleContractorLink = () => {
+    if (!contractorLinked) {
+      const firstName = form.getValues("insuredFirstName") || "";
+      const lastName = form.getValues("insuredLastName") || "";
+      setValue("contractorFullName", `${firstName} ${lastName}`.trim());
+      setValue("contractorRut", form.getValues("insuredRut") || "");
+      setValue("contractorEmail", form.getValues("insuredEmail") || "");
+      setValue("contractorCellPhone", form.getValues("insuredCellPhone") || "");
+      setValue("contractorPhone", form.getValues("insuredPhone") || "");
+      setValue("contractorAddress", form.getValues("insuredAddress") || "");
+      setValue("contractorCountry", form.getValues("insuredCountry") || "");
+      setValue("contractorRegion", form.getValues("insuredRegion") || "");
+      setValue("contractorCity", form.getValues("insuredCity") || "");
+      setValue("contractorCommune", form.getValues("insuredCommune") || "");
+      setContractorLinked(true);
+    } else {
+      setContractorLinked(false);
+    }
+  };
+
+  const toggleBeneficiaryLink = () => {
+    if (!beneficiaryLinked) {
+      const firstName = form.getValues("insuredFirstName") || "";
+      const lastName = form.getValues("insuredLastName") || "";
+      setValue("beneficiaryFullName", `${firstName} ${lastName}`.trim());
+      setValue("beneficiaryRut", form.getValues("insuredRut") || "");
+      setValue("beneficiaryEmail", form.getValues("insuredEmail") || "");
+      setValue("beneficiaryCellPhone", form.getValues("insuredCellPhone") || "");
+      setValue("beneficiaryPhone", form.getValues("insuredPhone") || "");
+      setValue("beneficiaryAddress", form.getValues("insuredAddress") || "");
+      setValue("beneficiaryCountry", form.getValues("insuredCountry") || "");
+      setValue("beneficiaryRegion", form.getValues("insuredRegion") || "");
+      setValue("beneficiaryCity", form.getValues("insuredCity") || "");
+      setValue("beneficiaryCommune", form.getValues("insuredCommune") || "");
+      setBeneficiaryLinked(true);
+    } else {
+      setBeneficiaryLinked(false);
+    }
+  };
+
+  const toggleClaimAddressLink = () => {
+    if (!claimAddressLinked) {
+      setValue("claimAddress", form.getValues("insuredAddress") || "");
+      // Nota: el incidente usa FKs (countryId, regionId, etc.) pero el asegurado usa nombres.
+      // Solo copiamos la dirección de texto. El usuario debe seleccionar los FKs manualmente.
+      setClaimAddressLinked(true);
+    } else {
+      setClaimAddressLinked(false);
+    }
+  };
+
+  // ──────────────────────────────────────────────────────────────
+  // Apply RUT suggestion
+  // ──────────────────────────────────────────────────────────────
+  const applySuggestion = (section: "insured" | "contractor" | "beneficiary") => {
+    if (!participantSuggestion) return;
+    const d = participantSuggestion.data;
+    if (section === "insured") {
+      setValue("insuredFirstName", d.first_name || "");
+      setValue("insuredLastName", d.last_name || "");
+      setValue("insuredEmail", d.email || "");
+      setValue("insuredCellPhone", d.cell_phone || "");
+      setValue("insuredPhone", d.phone || "");
+      setValue("insuredAddress", d.address || "");
+      setValue("insuredCountry", d.country || "");
+      setValue("insuredRegion", d.region || "");
+      setValue("insuredCity", d.city || "");
+      setValue("insuredCommune", d.commune || "");
+    } else if (section === "contractor") {
+      setValue("contractorFullName", `${d.first_name || ""} ${d.last_name || ""}`.trim() || d.full_name || "");
+      setValue("contractorEmail", d.email || "");
+      setValue("contractorCellPhone", d.cell_phone || "");
+      setValue("contractorPhone", d.phone || "");
+      setValue("contractorAddress", d.address || "");
+      setValue("contractorCountry", d.country || "");
+      setValue("contractorRegion", d.region || "");
+      setValue("contractorCity", d.city || "");
+      setValue("contractorCommune", d.commune || "");
+    } else if (section === "beneficiary") {
+      setValue("beneficiaryFullName", `${d.first_name || ""} ${d.last_name || ""}`.trim() || d.full_name || "");
+      setValue("beneficiaryEmail", d.email || "");
+      setValue("beneficiaryCellPhone", d.cell_phone || "");
+      setValue("beneficiaryPhone", d.phone || "");
+      setValue("beneficiaryAddress", d.address || "");
+      setValue("beneficiaryCountry", d.country || "");
+      setValue("beneficiaryRegion", d.region || "");
+      setValue("beneficiaryCity", d.city || "");
+      setValue("beneficiaryCommune", d.commune || "");
+    }
+    setParticipantSuggestion(null);
+  };
+
+  // ──────────────────────────────────────────────────────────────
+  // Geo items para participantes (usa nombres como value)
+  // ──────────────────────────────────────────────────────────────
+  const participantCountryItems = (countriesList ?? []).map((c) => ({ value: c.name, label: c.name }));
+  const insuredRegionItems = (insuredRegions ?? []).map((r) => ({ value: r.name, label: r.name }));
+  const insuredCityItems = (insuredCities ?? []).map((c) => ({ value: c.name, label: c.name }));
+  const insuredCommuneItems = (insuredCommunes ?? []).map((c) => ({ value: c.name, label: c.name }));
+  const contractorRegionItems = (contractorRegions ?? []).map((r) => ({ value: r.name, label: r.name }));
+  const contractorCityItems = (contractorCities ?? []).map((c) => ({ value: c.name, label: c.name }));
+  const contractorCommuneItems = (contractorCommunes ?? []).map((c) => ({ value: c.name, label: c.name }));
+  const beneficiaryRegionItems = (beneficiaryRegions ?? []).map((r) => ({ value: r.name, label: r.name }));
+  const beneficiaryCityItems = (beneficiaryCities ?? []).map((c) => ({ value: c.name, label: c.name }));
+  const beneficiaryCommuneItems = (beneficiaryCommunes ?? []).map((c) => ({ value: c.name, label: c.name }));
+
+  // ──────────────────────────────────────────────────────────────
+  // Render
+  // ──────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col gap-6">
       {/* Tabs */}
@@ -590,7 +961,18 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                     <EditInput label="Fecha Siniestro" required type="date" {...register("claimDate")} />
                     <EditInput label="Fecha Denuncio" type="date" {...register("reportDate")} />
                     <EditInput label="Fecha Asignación" type="date" {...register("assignmentDate")} />
-                    <EditSelect label="Tipo" required control={control} name="claimTypeId" placeholder="Seleccionar..." items={claimTypeItems} />
+                    <EditSelect
+                      label="Tipo"
+                      required
+                      control={control}
+                      name="claimTypeId"
+                      placeholder="Seleccionar..."
+                      items={claimTypeItems}
+                      onValueChange={() => {
+                        setValue("businessLineId", "");
+                        setValue("insuranceProductId", "");
+                      }}
+                    />
                     <EditSelect label="Causal" control={control} name="claimCauseId" placeholder="Seleccionar..." clearable items={claimCauseItems} />
                     <EditSelect label="Evento" control={control} name="eventId" placeholder="Seleccionar..." clearable items={eventItems} />
                   </div>
@@ -624,12 +1006,12 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                     <EditCheckbox
                       label="Recupero Legal"
                       checked={watchedRecoveryLegal}
-                      onChange={(v) => form.setValue("recoveryTypeLegal", v)}
+                      onChange={(v) => setValue("recoveryTypeLegal", v)}
                     />
                     <EditCheckbox
                       label="Recupero Material"
                       checked={watchedRecoveryMaterial}
-                      onChange={(v) => form.setValue("recoveryTypeMaterial", v)}
+                      onChange={(v) => setValue("recoveryTypeMaterial", v)}
                     />
                     <EditTextarea label="Comentarios" {...register("recoveryComments")} />
                   </div>
@@ -646,6 +1028,24 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                   <User className="h-4 w-4" />
                   Asegurado
                 </h3>
+                {participantSuggestion?.section === "insured" && (
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 mb-3">
+                    <div className="text-[11px] text-sky-800">
+                      <span className="font-semibold">Persona encontrada:</span>{" "}
+                      {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
+                      {participantSuggestion.data.address && (
+                        <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                      onClick={() => applySuggestion("insured")}
+                    >
+                      Usar datos
+                    </button>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                   <EditInput label="Nombre" required {...register("insuredFirstName")} />
                   <EditInput label="Apellido" {...register("insuredLastName")} />
@@ -663,10 +1063,57 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                 <div className="space-y-3">
                   <EditInput label="Dirección" {...register("insuredAddress")} />
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <EditInput label="País" {...register("insuredCountry")} />
-                    <EditInput label="Región" {...register("insuredRegion")} />
-                    <EditInput label="Ciudad" {...register("insuredCity")} />
-                    <EditInput label="Comuna" {...register("insuredCommune")} />
+                    <EditSelect
+                      label="País"
+                      control={control}
+                      name="insuredCountry"
+                      placeholder="Seleccionar..."
+                      clearable
+                      items={participantCountryItems}
+                      onValueChange={() => {
+                        setValue("insuredRegion", "");
+                        setValue("insuredCity", "");
+                        setValue("insuredCommune", "");
+                      }}
+                    />
+                    {hasInsuredRegions && (
+                      <EditSelect
+                        label="Región"
+                        control={control}
+                        name="insuredRegion"
+                        placeholder="Seleccionar..."
+                        clearable
+                        items={insuredRegionItems}
+                        disabled={!watchedInsuredCountry}
+                        onValueChange={() => {
+                          setValue("insuredCity", "");
+                          setValue("insuredCommune", "");
+                        }}
+                      />
+                    )}
+                    {hasInsuredCities && (
+                      <EditSelect
+                        label="Ciudad"
+                        control={control}
+                        name="insuredCity"
+                        placeholder="Seleccionar..."
+                        clearable
+                        items={insuredCityItems}
+                        disabled={!watchedInsuredRegion}
+                        onValueChange={() => setValue("insuredCommune", "")}
+                      />
+                    )}
+                    {hasInsuredCommunes && (
+                      <EditSelect
+                        label="Comuna"
+                        control={control}
+                        name="insuredCommune"
+                        placeholder="Seleccionar..."
+                        clearable
+                        items={insuredCommuneItems}
+                        disabled={!watchedInsuredCity}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -676,38 +1123,222 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
           {/* ═══ TAB: PARTICIPANTES ═══ */}
           {activeTab === "participantes" && (
             <div className="space-y-6">
-              {/* Contractor */}
-              <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Contratante</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
-                  <EditInput label="Nombre" {...register("contractorFullName")} />
-                  <EditInput label="RUT" {...register("contractorRut")} />
-                  <EditInput label="Email" type="email" {...register("contractorEmail")} />
-                  <EditInput label="Celular" {...register("contractorCellPhone")} />
-                  <EditInput label="Teléfono" {...register("contractorPhone")} />
-                  <EditInput label="Dirección" {...register("contractorAddress")} />
-                  <EditInput label="País" {...register("contractorCountry")} />
-                  <EditInput label="Región" {...register("contractorRegion")} />
-                  <EditInput label="Ciudad" {...register("contractorCity")} />
-                  <EditInput label="Comuna" {...register("contractorCommune")} />
+              {/* Contractor (colapsable) */}
+              <div className="rounded-lg border border-border/50 overflow-hidden">
+                <div className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 flex-1"
+                    onClick={() => setExpandedPanels((p) => ({ ...p, contractor: !p.contractor }))}
+                  >
+                    <span className="text-[11px] font-semibold text-foreground/70">Contratante</span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedPanels.contractor ? "rotate-180" : ""}`} />
+                  </button>
+                  {expandedPanels.contractor && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={`h-6 text-[11px] w-[150px] justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+                      onClick={toggleContractorLink}
+                    >
+                      {contractorLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
+                    </Button>
+                  )}
                 </div>
+                {expandedPanels.contractor && (
+                  <div className="px-3 pb-3 space-y-3">
+                    {participantSuggestion?.section === "contractor" && !contractorLinked && (
+                      <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
+                        <div className="text-[11px] text-sky-800">
+                          <span className="font-semibold">Persona encontrada:</span>{" "}
+                          {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
+                          {participantSuggestion.data.address && (
+                            <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                          onClick={() => applySuggestion("contractor")}
+                        >
+                          Usar datos
+                        </button>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
+                      <EditInput label="Nombre" {...register("contractorFullName")} disabled={contractorLinked} />
+                      <EditInput label="RUT" {...register("contractorRut")} disabled={contractorLinked} />
+                      <EditInput label="Email" type="email" {...register("contractorEmail")} disabled={contractorLinked} />
+                      <EditInput label="Celular" {...register("contractorCellPhone")} disabled={contractorLinked} />
+                      <EditInput label="Teléfono" {...register("contractorPhone")} disabled={contractorLinked} />
+                      <EditInput label="Dirección" {...register("contractorAddress")} disabled={contractorLinked} />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
+                      <EditSelect
+                        label="País"
+                        control={control}
+                        name="contractorCountry"
+                        placeholder="Seleccionar..."
+                        clearable
+                        items={participantCountryItems}
+                        disabled={contractorLinked}
+                        onValueChange={() => {
+                          setValue("contractorRegion", "");
+                          setValue("contractorCity", "");
+                          setValue("contractorCommune", "");
+                        }}
+                      />
+                      {hasContractorRegions && (
+                        <EditSelect
+                          label="Región"
+                          control={control}
+                          name="contractorRegion"
+                          placeholder="Seleccionar..."
+                          clearable
+                          items={contractorRegionItems}
+                          disabled={!watchedContractorCountry || contractorLinked}
+                          onValueChange={() => {
+                            setValue("contractorCity", "");
+                            setValue("contractorCommune", "");
+                          }}
+                        />
+                      )}
+                      {hasContractorCities && (
+                        <EditSelect
+                          label="Ciudad"
+                          control={control}
+                          name="contractorCity"
+                          placeholder="Seleccionar..."
+                          clearable
+                          items={contractorCityItems}
+                          disabled={!watchedContractorRegion || contractorLinked}
+                          onValueChange={() => setValue("contractorCommune", "")}
+                        />
+                      )}
+                      {hasContractorCommunes && (
+                        <EditSelect
+                          label="Comuna"
+                          control={control}
+                          name="contractorCommune"
+                          placeholder="Seleccionar..."
+                          clearable
+                          items={contractorCommuneItems}
+                          disabled={!watchedContractorCity || contractorLinked}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Beneficiary */}
-              <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Beneficiario</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
-                  <EditInput label="Nombre" {...register("beneficiaryFullName")} />
-                  <EditInput label="RUT" {...register("beneficiaryRut")} />
-                  <EditInput label="Email" type="email" {...register("beneficiaryEmail")} />
-                  <EditInput label="Celular" {...register("beneficiaryCellPhone")} />
-                  <EditInput label="Teléfono" {...register("beneficiaryPhone")} />
-                  <EditInput label="Dirección" {...register("beneficiaryAddress")} />
-                  <EditInput label="País" {...register("beneficiaryCountry")} />
-                  <EditInput label="Región" {...register("beneficiaryRegion")} />
-                  <EditInput label="Ciudad" {...register("beneficiaryCity")} />
-                  <EditInput label="Comuna" {...register("beneficiaryCommune")} />
+              {/* Beneficiary (colapsable) */}
+              <div className="rounded-lg border border-border/50 overflow-hidden">
+                <div className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 flex-1"
+                    onClick={() => setExpandedPanels((p) => ({ ...p, beneficiary: !p.beneficiary }))}
+                  >
+                    <span className="text-[11px] font-semibold text-foreground/70">Beneficiario</span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedPanels.beneficiary ? "rotate-180" : ""}`} />
+                  </button>
+                  {expandedPanels.beneficiary && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={`h-6 text-[11px] w-[150px] justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+                      onClick={toggleBeneficiaryLink}
+                    >
+                      {beneficiaryLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
+                    </Button>
+                  )}
                 </div>
+                {expandedPanels.beneficiary && (
+                  <div className="px-3 pb-3 space-y-3">
+                    {participantSuggestion?.section === "beneficiary" && !beneficiaryLinked && (
+                      <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
+                        <div className="text-[11px] text-sky-800">
+                          <span className="font-semibold">Persona encontrada:</span>{" "}
+                          {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
+                          {participantSuggestion.data.address && (
+                            <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                          onClick={() => applySuggestion("beneficiary")}
+                        >
+                          Usar datos
+                        </button>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
+                      <EditInput label="Nombre" {...register("beneficiaryFullName")} disabled={beneficiaryLinked} />
+                      <EditInput label="RUT" {...register("beneficiaryRut")} disabled={beneficiaryLinked} />
+                      <EditInput label="Email" type="email" {...register("beneficiaryEmail")} disabled={beneficiaryLinked} />
+                      <EditInput label="Celular" {...register("beneficiaryCellPhone")} disabled={beneficiaryLinked} />
+                      <EditInput label="Teléfono" {...register("beneficiaryPhone")} disabled={beneficiaryLinked} />
+                      <EditInput label="Dirección" {...register("beneficiaryAddress")} disabled={beneficiaryLinked} />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
+                      <EditSelect
+                        label="País"
+                        control={control}
+                        name="beneficiaryCountry"
+                        placeholder="Seleccionar..."
+                        clearable
+                        items={participantCountryItems}
+                        disabled={beneficiaryLinked}
+                        onValueChange={() => {
+                          setValue("beneficiaryRegion", "");
+                          setValue("beneficiaryCity", "");
+                          setValue("beneficiaryCommune", "");
+                        }}
+                      />
+                      {hasBeneficiaryRegions && (
+                        <EditSelect
+                          label="Región"
+                          control={control}
+                          name="beneficiaryRegion"
+                          placeholder="Seleccionar..."
+                          clearable
+                          items={beneficiaryRegionItems}
+                          disabled={!watchedBeneficiaryCountry || beneficiaryLinked}
+                          onValueChange={() => {
+                            setValue("beneficiaryCity", "");
+                            setValue("beneficiaryCommune", "");
+                          }}
+                        />
+                      )}
+                      {hasBeneficiaryCities && (
+                        <EditSelect
+                          label="Ciudad"
+                          control={control}
+                          name="beneficiaryCity"
+                          placeholder="Seleccionar..."
+                          clearable
+                          items={beneficiaryCityItems}
+                          disabled={!watchedBeneficiaryRegion || beneficiaryLinked}
+                          onValueChange={() => setValue("beneficiaryCommune", "")}
+                        />
+                      )}
+                      {hasBeneficiaryCommunes && (
+                        <EditSelect
+                          label="Comuna"
+                          control={control}
+                          name="beneficiaryCommune"
+                          placeholder="Seleccionar..."
+                          clearable
+                          items={beneficiaryCommuneItems}
+                          disabled={!watchedBeneficiaryCity || beneficiaryLinked}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {contact && (
@@ -725,17 +1356,70 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
           {activeTab === "incidente" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Ubicación del Incidente
-                </h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Ubicación del Incidente
+                  </h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={`h-6 text-[11px] w-[150px] justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+                    onClick={toggleClaimAddressLink}
+                  >
+                    {claimAddressLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
+                  </Button>
+                </div>
                 <div className="space-y-3">
-                  <EditInput label="Dirección" {...register("claimAddress")} />
+                  <EditInput label="Dirección" {...register("claimAddress")} disabled={claimAddressLinked} />
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <EditSelect label="País" control={control} name="countryId" placeholder="Seleccionar..." clearable items={countryItems} />
-                    <EditSelect label="Región" control={control} name="regionId" placeholder="Seleccionar..." clearable items={regionItems} />
-                    <EditSelect label="Ciudad" control={control} name="cityId" placeholder="Seleccionar..." clearable items={cityItems} />
-                    <EditSelect label="Comuna" control={control} name="communeId" placeholder="Seleccionar..." clearable items={communeItems} />
+                    <EditSelect
+                      label="País"
+                      control={control}
+                      name="countryId"
+                      placeholder="Seleccionar..."
+                      clearable
+                      items={countryItems}
+                      disabled={claimAddressLinked}
+                      onValueChange={() => {
+                        setValue("regionId", "");
+                        setValue("cityId", "");
+                        setValue("communeId", "");
+                      }}
+                    />
+                    <EditSelect
+                      label="Región"
+                      control={control}
+                      name="regionId"
+                      placeholder="Seleccionar..."
+                      clearable
+                      items={regionItems}
+                      disabled={!watchedCountryId || claimAddressLinked}
+                      onValueChange={() => {
+                        setValue("cityId", "");
+                        setValue("communeId", "");
+                      }}
+                    />
+                    <EditSelect
+                      label="Ciudad"
+                      control={control}
+                      name="cityId"
+                      placeholder="Seleccionar..."
+                      clearable
+                      items={cityItems}
+                      disabled={!watchedRegionId || claimAddressLinked}
+                      onValueChange={() => setValue("communeId", "")}
+                    />
+                    <EditSelect
+                      label="Comuna"
+                      control={control}
+                      name="communeId"
+                      placeholder="Seleccionar..."
+                      clearable
+                      items={communeItems}
+                      disabled={!watchedCityId || claimAddressLinked}
+                    />
                   </div>
                 </div>
               </div>
@@ -752,7 +1436,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                     <EditCheckbox
                       label="Dueño = Asegurado"
                       checked={watchedOwnerSame}
-                      onChange={(v) => form.setValue("ownerSameAsInsured", v)}
+                      onChange={(v) => setValue("ownerSameAsInsured", v)}
                     />
                   </div>
                 </div>
@@ -779,8 +1463,24 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-x-4 gap-y-3">
                   <EditSelect label="Compañía Aseg." control={control} name="insuranceCompanyId" placeholder="Seleccionar..." clearable items={insuranceCompanyItems} />
-                  <EditSelect label="Línea Negocio" control={control} name="businessLineId" placeholder="Seleccionar..." clearable items={businessLineItems} />
-                  <EditSelect label="Producto" control={control} name="insuranceProductId" placeholder="Seleccionar..." clearable items={insuranceProductItems} />
+                  <EditSelect
+                    label="Línea Negocio"
+                    control={control}
+                    name="businessLineId"
+                    placeholder="Seleccionar..."
+                    clearable
+                    items={businessLineItems}
+                    onValueChange={() => setValue("insuranceProductId", "")}
+                  />
+                  <EditSelect
+                    label="Producto"
+                    control={control}
+                    name="insuranceProductId"
+                    placeholder="Seleccionar..."
+                    clearable
+                    items={insuranceProductItems}
+                    disabled={!watchedBusinessLineId}
+                  />
                   <EditSelect label="Corredor" control={control} name="brokerId" placeholder="Seleccionar..." clearable items={brokerItems} />
                   <EditSelect label="Asesor" control={control} name="advisorId" placeholder="Seleccionar..." clearable items={advisorItems} />
                 </div>
