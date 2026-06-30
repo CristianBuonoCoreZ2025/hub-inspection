@@ -31,11 +31,17 @@ export async function getInspectionSessions(claimId?: string) {
     query GetInspectionSessions {
       inspection_sessions(where: ${where}, order_by: { created_at: desc }) {
         ${SESSION_FIELDS}
-        claim { claim_number insured_name address city insurance_company policy_number }
+        claim {
+          claim_number policy_number claim_date client_reference claim_address
+          claims_participants(where: { type: { _eq: "insured" } }, limit: 1) {
+            full_name
+          }
+          insurance_company { name }
+        }
       }
     }
   `;
-  const data = await graphqlRequest<{ inspection_sessions: (InspectionSession & { claim?: { claim_number: string; insured_name: string; address: string; city: string | null; insurance_company: string | null; policy_number: string } })[] }>(query);
+  const data = await graphqlRequest<{ inspection_sessions: (InspectionSession & { claim?: { claim_number: string; policy_number: string; claim_date: string | null; client_reference: string | null; claim_address: string | null; claims_participants: { full_name: string | null }[]; insurance_company: { name: string } | null } })[] }>(query);
   return data.inspection_sessions;
 }
 
@@ -44,15 +50,22 @@ export async function getInspectionSessionById(id: string) {
     query GetInspectionSessionById($id: uuid!) {
       inspection_sessions_by_pk(id: $id) {
         ${SESSION_FIELDS}
-        claim { claim_number insured_name address city claim_date claim_time contact_name contact_role contact_email
-          insurance_company policy_number liquidation_number client_reference
-          broker_name broker_executive broker_number builder_name advisor
+        claim {
+          claim_number policy_number claim_date client_reference claim_address
+          liquidation_number broker_executive
           inspector_id adjuster_id auditor_id dispatcher_id assistant_id
+          insurance_company_id broker_id advisor_id
+          insurance_company { name }
+          broker { name }
+          advisor { name }
+          claims_participants(where: { type: { _in: ["insured", "contact"] } }) {
+            type full_name first_name last_name email phone cell_phone
+          }
         }
       }
     }
   `;
-  const data = await graphqlRequest<{ inspection_sessions_by_pk: InspectionSession & { claim?: { claim_number: string; insured_name: string; address: string; city: string | null; claim_date: string | null; claim_time: string | null; contact_name: string | null; contact_role: string | null; contact_email: string | null; insurance_company: string | null; policy_number: string; liquidation_number: string | null; client_reference: string | null; broker_name: string | null; broker_executive: string | null; broker_number: string | null; builder_name: string | null; advisor: string | null; inspector_id: string | null; adjuster_id: string | null; auditor_id: string | null; dispatcher_id: string | null; assistant_id: string | null } } }>(query, { id });
+  const data = await graphqlRequest<{ inspection_sessions_by_pk: InspectionSession & { claim?: any } }>(query, { id });
   return data.inspection_sessions_by_pk;
 }
 

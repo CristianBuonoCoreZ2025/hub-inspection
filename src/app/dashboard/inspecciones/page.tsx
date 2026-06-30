@@ -118,8 +118,9 @@ export default function InspectionsPage() {
   });
 
   const filtered = sessions?.filter((s) => {
+    const insuredName = s.claim?.claims_participants?.[0]?.full_name;
     const matchesSearch =
-      [s.claim?.claim_number, s.claim?.insured_name, s.claim?.address, s.claim?.city]
+      [s.claim?.claim_number, insuredName, s.claim?.claim_address]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
@@ -218,15 +219,14 @@ export default function InspectionsPage() {
                   <td>
                     <div className="flex items-center gap-1.5">
                       <User className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>{session.claim?.insured_name}</span>
+                      <span>{session.claim?.claims_participants?.[0]?.full_name || "—"}</span>
                     </div>
                   </td>
                   <td>
                     <div className="flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       <span className="truncate">
-                        {session.claim?.address}
-                        {session.claim?.city ? `, ${session.claim.city}` : ""}
+                        {session.claim?.claim_address || "—"}
                       </span>
                     </div>
                   </td>

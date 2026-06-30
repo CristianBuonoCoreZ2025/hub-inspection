@@ -27,7 +27,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import type { ClaimStatus, InspectionSession } from "@/types";
+import type { InspectionSession } from "@/types";
+import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import ActaForm from "./acta-form";
 import ChecklistTab from "./checklist-tab";
 import DamagesTab from "./damages-tab";
@@ -37,7 +38,8 @@ import ReportTab from "./report-tab";
 import SketchesTab from "./sketches-tab";
 import ChatTab from "./chat-tab";
 
-const sessionToClaimStatus: Record<string, ClaimStatus> = {
+// Mapea estado de inspección → código de estado de claim
+const sessionToClaimStatusCode: Record<string, string> = {
   scheduled: "scheduled",
   active: "in_progress",
   completed: "in_review",
@@ -75,6 +77,7 @@ export default function InspectionDetailPage() {
   const queryClient = useQueryClient();
   const sessionId = params.id as string;
   const [activeTab, setActiveTab] = useState("resumen");
+  const { codeToId } = useClaimStatuses();
 
   const { data: session, isLoading } = useQuery({
     queryKey: ["inspection-session", sessionId],
@@ -91,10 +94,11 @@ export default function InspectionDetailPage() {
 
       const newStatus = variables.input.status;
       if (newStatus && session?.claim_id) {
-        const claimStatus = sessionToClaimStatus[newStatus];
-        if (claimStatus) {
+        const statusCode = sessionToClaimStatusCode[newStatus];
+        const statusId = statusCode ? codeToId[statusCode] : null;
+        if (statusId) {
           try {
-            await updateClaimStatus(session.claim_id, claimStatus);
+            await updateClaimStatus(session.claim_id, statusId);
             queryClient.invalidateQueries({ queryKey: ["claim", session.claim_id] });
             queryClient.invalidateQueries({ queryKey: ["claims"] });
           } catch {
@@ -127,7 +131,9 @@ export default function InspectionDetailPage() {
     );
   }
 
-  const claim = session.claim as Record<string, unknown> | undefined;
+  const claim = session.claim as any;
+  const insuredParticipant = claim?.claims_participants?.find((p: any) => p.type === "insured");
+  const contactParticipant = claim?.claims_participants?.find((p: any) => p.type === "contact");
 
   const statusActions = () => {
     switch (session.status) {
@@ -214,7 +220,7 @@ export default function InspectionDetailPage() {
               </Badge>
             </div>
             <p className="app-page-lead">
-              {claim?.insured_name as string} — {claim?.address as string}
+              {insuredParticipant?.full_name || "—"} — {claim?.claim_address || "—"}
             </p>
           </div>
         </div>
@@ -280,23 +286,15 @@ export default function InspectionDetailPage() {
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Compañia</span>
-                <p className="font-medium">{claim?.insurance_company as string || "—"}</p>
+                <p className="font-medium">{claim?.insurance_company?.name || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Fecha Siniestro</span>
                 <p className="font-medium">{formatDate(claim?.claim_date as string | null)}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Hora</span>
-                <p className="font-medium">{(claim?.claim_time as string) || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Tipo</span>
-                <p className="font-medium">{(claim?.claim_type as string) || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Causal</span>
-                <p className="font-medium">{(claim?.claim_cause as string) || "—"}</p>
+                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Liquidacion</span>
+                <p className="font-medium">{(claim?.liquidation_number as string) || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Liquidacion</span>
@@ -313,31 +311,19 @@ export default function InspectionDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-3 text-[13px]">
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre</span>
-                <p className="font-medium">{claim?.insured_name as string}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">RUT</span>
-                <p className="font-medium">{(claim?.rut as string) || "—"}</p>
+                <p className="font-medium">{insuredParticipant?.full_name || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Email</span>
-                <p className="font-medium">{(claim?.insured_email as string) || "—"}</p>
+                <p className="font-medium">{insuredParticipant?.email || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Telefono</span>
-                <p className="font-medium">{(claim?.insured_phone as string) || "—"}</p>
+                <p className="font-medium">{insuredParticipant?.phone || insuredParticipant?.cell_phone || "—"}</p>
               </div>
               <div className="col-span-2">
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Direccion</span>
-                <p className="font-medium">{claim?.address as string}, {claim?.city as string}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Comuna</span>
-                <p className="font-medium">{(claim?.commune as string) || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Region</span>
-                <p className="font-medium">{(claim?.region as string) || "—"}</p>
+                <p className="font-medium">{claim?.claim_address || "—"}</p>
               </div>
             </div>
           </div>
@@ -350,15 +336,15 @@ export default function InspectionDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre</span>
-                <p className="font-medium">{(claim?.contact_name as string) || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Cargo</span>
-                <p className="font-medium">{(claim?.contact_role as string) || "—"}</p>
+                <p className="font-medium">{contactParticipant?.full_name || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Email</span>
-                <p className="font-medium">{(claim?.contact_email as string) || "—"}</p>
+                <p className="font-medium">{contactParticipant?.email || "—"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Telefono</span>
+                <p className="font-medium">{contactParticipant?.phone || contactParticipant?.cell_phone || "—"}</p>
               </div>
             </div>
           </div>
