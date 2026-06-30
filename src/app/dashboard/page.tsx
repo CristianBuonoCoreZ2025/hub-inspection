@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { Claim, InspectionSession, AuditLog } from "@/types";
+import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -61,6 +62,7 @@ function getActivityIcon(log: AuditLog) {
 }
 
 export default function DashboardPage() {
+  const { statusCode } = useClaimStatuses();
   const { data: claims } = useQuery({
     queryKey: ["claims"],
     queryFn: () => getClaims(),
@@ -77,13 +79,13 @@ export default function DashboardPage() {
   });
 
   const closedClaims =
-    claims?.filter((c: Claim) => c.status === "closed") ?? [];
+    claims?.filter((c: Claim) => statusCode(c.status_id) === "closed") ?? [];
   const pendingClaims =
-    claims?.filter((c: Claim) => c.status === "pending_info") ?? [];
+    claims?.filter((c: Claim) => statusCode(c.status_id) === "pending_info") ?? [];
   const reviewClaims =
-    claims?.filter((c: Claim) => c.status === "in_review") ?? [];
+    claims?.filter((c: Claim) => statusCode(c.status_id) === "in_review") ?? [];
   const openClaims =
-    claims?.filter((c: Claim) => c.status !== "closed") ?? [];
+    claims?.filter((c: Claim) => statusCode(c.status_id) !== "closed") ?? [];
 
   const scheduledSessions =
     sessions?.filter(

@@ -43,20 +43,9 @@ import { Badge } from "@/components/ui/badge";
 import { SelectItem } from "@/components/ui/select";
 import { FormSelect } from "@/components/ui/form-select";
 import { cn } from "@/lib/utils";
+import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 
-import type { ClaimStatus } from "@/types";
-
-const statusLabels: Record<ClaimStatus, string> = {
-  created: "Creado",
-  scheduled: "Agendado",
-  in_progress: "En progreso",
-  pending_info: "Pendiente info",
-  in_review: "En revisión",
-  signed: "Firmado",
-  closed: "Cerrado",
-};
-
-const statusColors: Record<ClaimStatus, string> = {
+const statusColors: Record<string, string> = {
   created: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
   scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
   in_progress: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
@@ -108,6 +97,7 @@ const wizardSteps = [
 export default function ClaimsPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { statusCode, statusLabel, codeToId, idToCode } = useClaimStatuses();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -842,7 +832,7 @@ export default function ClaimsPage() {
 
   const filtered = claims?.filter((c) => {
     const textMatch = [c.claim_number, c.client_reference, c.liquidation_number, getParticipant(c, 'insured')?.full_name, getParticipant(c, 'insured')?.address].join(" ").toLowerCase().includes(search.toLowerCase());
-    const statusMatch = !statusFilter || c.status === statusFilter;
+    const statusMatch = !statusFilter || statusCode(c.status_id) === statusFilter;
     const dateMatch = (!dateFrom || (c.claim_date && c.claim_date >= dateFrom)) && (!dateTo || (c.claim_date && c.claim_date <= dateTo));
     return textMatch && statusMatch && dateMatch;
   });
@@ -905,7 +895,7 @@ export default function ClaimsPage() {
                 ["N° Ref Cliente","N° Liquidación","N° Siniestro Cía","Asegurado","Dirección","Ciudad","Estado","Fecha"].join(","),
                 ...rows.map((c) => [
                   c.client_reference || "", c.liquidation_number || "", c.claim_number || "", getParticipant(c, 'insured')?.full_name || "",
-                  `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", c.status, c.claim_date || ""
+                  `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", statusCode(c.status_id) || "", c.claim_date || ""
                 ].join(",")),
               ].join("\\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -2142,7 +2132,7 @@ export default function ClaimsPage() {
                     <td>{claim.claim_number || "—"}</td>
                     <td>{getParticipant(claim, 'insured')?.full_name || "—"}</td>
                     <td className="truncate">{getParticipant(claim, 'insured')?.address || "—"}, {getParticipant(claim, 'insured')?.city || "—"}</td>
-                    <td><Badge className={statusColors[claim.status]}>{statusLabels[claim.status]}</Badge></td>
+                    <td><Badge className={statusColors[statusCode(claim.status_id) ?? ""]}>{statusLabel(claim.status_id)}</Badge></td>
                     <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">

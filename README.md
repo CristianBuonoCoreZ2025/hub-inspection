@@ -563,20 +563,17 @@ Todas las tarjetas DEBEN usar glass-panel o app-panel.
 | `insurance_products` | Productos/ramos |
 | `lookup_catalog` | Catálogo genérico (monedas, estados, tipos de construcción, etc.) |
 
-### Sincronización `status ↔ status_id`
+### Estado del Siniestro (`status_id`)
 
-La tabla `claims` tiene dos campos para el estado:
+La tabla `claims` usa `status_id` (uuid FK a `lookup_catalog` category=`claim_status`)
+como única representación del estado. No hay columna `status` de texto.
 
-- **`status`** (text) — código machine-readable: `created`, `in_review`, `signed`, `closed`, etc.
-  Usado por la app para lógica de workflow (filtros, badges, transiciones).
-- **`status_id`** (uuid FK) — referencia a `lookup_catalog` (category=`claim_status`).
-  Usado para mostrar el nombre human-readable.
+El frontend resuelve el código y label desde el catálogo vía el hook `useClaimStatuses()`:
+- `statusCode(statusId)` → `"closed"`, `"in_review"`, etc.
+- `statusLabel(statusId)` → `"Cerrado"`, `"En Revisión"`, etc.
+- `codeToId["closed"]` → UUID para escribir a la DB
 
-Un trigger bidireccional (`sync_claim_status`) los mantiene sincronizados:
-- Si la app cambia `status` → el trigger busca y asigna el `status_id` correspondiente
-- Si la app cambia `status_id` → el trigger busca y asigna el `status` correspondiente
-
-> Ver migración 53 para detalles.
+Estados disponibles: `created`, `scheduled`, `in_progress`, `pending_info`, `in_review`, `signed`, `closed`
 
 ---
 

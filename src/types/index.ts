@@ -60,7 +60,6 @@ export interface Claim {
   claim_number: string;
   policy_number: string;
   claim_date: string;
-  status: ClaimStatus;
   status_id: string | null;
   report_date: string | null;
   assignment_date: string | null;

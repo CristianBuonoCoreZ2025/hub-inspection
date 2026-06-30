@@ -98,6 +98,7 @@ export const claimSchema = z.object({
   liquidationNumber: z.string().optional(),
   companyId: z.string().min(1, "Empresa requerida"),
   notes: z.string().optional(),
+  statusId: z.string().optional(),
 });
 
 export type ClaimInput = z.infer<typeof claimSchema>;

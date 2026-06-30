@@ -1,12 +1,11 @@
 import { graphqlRequest } from "@/lib/nhost/graphql";
-import type { Claim, ClaimInput, ClaimStatus } from "@/types";
+import type { Claim, ClaimInput } from "@/types";
 
 const CLAIM_FIELDS = `
   id
   claim_number
   policy_number
   claim_date
-  status
   status_id
   report_date
   assignment_date
@@ -221,7 +220,7 @@ function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }):
     claim_number: input.claimNumber,
     policy_number: input.policyNumber,
     claim_date: input.claimDate,
-    status: "created" as ClaimStatus,
+    status_id: input.statusId || null,
     report_date: input.reportDate || null,
     assignment_date: input.assignmentDate || null,
     client_reference: input.clientReference || null,
@@ -240,7 +239,7 @@ export async function createClaim(input: ClaimInput & { company_id: string }) {
   `;
 
   const data = await graphqlRequest<{ insert_claims_one: Claim }>(mutation, {
-    object: { ...buildClaimObject(input), status: "created" as ClaimStatus },
+    object: { ...buildClaimObject(input) },
   });
   return data.insert_claims_one;
 }
@@ -258,6 +257,7 @@ export async function createClaimMinimal(
     assignmentDate?: string | null;
     reportDate?: string | null;
     summary?: string | null;
+    statusId?: string | null;
     inspectorId?: string | null;
     adjusterId?: string | null;
     auditorId?: string | null;
@@ -343,7 +343,7 @@ export async function createClaimMinimal(
       client_reference: input.clientReference || null,
       assignment_date: input.assignmentDate || null,
       report_date: input.reportDate || null,
-      status: "created" as ClaimStatus,
+      status_id: input.statusId || null,
       summary: input.summary || null,
       inspector_id: input.inspectorId || null,
       adjuster_id: input.adjusterId || null,
@@ -474,16 +474,16 @@ export async function updateClaimFields(id: string, set: Record<string, unknown>
   return data.update_claims_by_pk;
 }
 
-export async function updateClaimStatus(id: string, status: ClaimStatus) {
+export async function updateClaimStatus(id: string, statusId: string) {
   const mutation = `
-    mutation UpdateClaimStatus($id: uuid!, $status: String!) {
-      update_claims_by_pk(pk_columns: { id: $id }, _set: { status: $status }) {
+    mutation UpdateClaimStatus($id: uuid!, $statusId: uuid!) {
+      update_claims_by_pk(pk_columns: { id: $id }, _set: { status_id: $statusId }) {
         ${CLAIM_FIELDS}
       }
     }
   `;
 
-  const data = await graphqlRequest<{ update_claims_by_pk: Claim }>(mutation, { id, status });
+  const data = await graphqlRequest<{ update_claims_by_pk: Claim }>(mutation, { id, statusId });
   return data.update_claims_by_pk;
 }
 

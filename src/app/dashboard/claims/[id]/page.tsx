@@ -8,6 +8,7 @@ import { getUsers } from "@/services/users";
 import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getEvents, getCountryById, getRegionById, getCityById, getCommuneById } from "@/services/catalogs";
 import { createInspectionSession } from "@/services/inspections";
 import type { ClaimsParticipant } from "@/types";
+import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -206,7 +207,7 @@ export default function ClaimDetailPage() {
   });
 
   const closeMutation = useMutation({
-    mutationFn: () => updateClaimStatus(id, "closed"),
+    mutationFn: () => updateClaimStatus(id, codeToId["closed"]!),
     onSuccess: () => {
       toast.success("Caso cerrado");
       queryClient.invalidateQueries({ queryKey: ["claim", id] });
@@ -215,7 +216,9 @@ export default function ClaimDetailPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const status = statusConfig[claim?.status || "created"] || statusConfig.created;
+  const { statusCode, statusLabel, codeToId } = useClaimStatuses();
+  const currentStatusCode = statusCode(claim?.status_id) ?? "created";
+  const status = statusConfig[currentStatusCode] || statusConfig.created;
 
   const inspector = users?.find((u) => u.id === claim?.inspector_id);
   const adjuster = users?.find((u) => u.id === claim?.adjuster_id);
@@ -286,7 +289,7 @@ export default function ClaimDetailPage() {
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </Button>
-              {claim.status === "signed" && (
+              {currentStatusCode === "signed" && (
                 <Button
                   variant="outline"
                   size="sm"
