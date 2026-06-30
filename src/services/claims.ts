@@ -463,6 +463,24 @@ export async function updateClaim(id: string, input: Partial<ClaimInput>) {
   return data.update_claims_by_pk;
 }
 
+/**
+ * Actualización genérica de campos del siniestro.
+ * Acepta cualquier combinación de columnas de la tabla claims.
+ * Los valores null se incluyen en el _set (para limpiar campos).
+ * Los valores undefined se omiten (no se modifican).
+ */
+export async function updateClaimFields(id: string, set: Record<string, unknown>) {
+  const mutation = `
+    mutation UpdateClaimFields($id: uuid!, $set: claims_set_input!) {
+      update_claims_by_pk(pk_columns: { id: $id }, _set: $set) {
+        ${CLAIM_FIELDS}
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ update_claims_by_pk: Claim }>(mutation, { id, set });
+  return data.update_claims_by_pk;
+}
+
 export async function updateClaimStatus(id: string, status: ClaimStatus) {
   const mutation = `
     mutation UpdateClaimStatus($id: uuid!, $status: String!) {

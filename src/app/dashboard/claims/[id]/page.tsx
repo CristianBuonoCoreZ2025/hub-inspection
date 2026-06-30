@@ -7,6 +7,7 @@ import { getClaimById, getClaimParticipants, deleteClaim, updateClaimStatus } fr
 import { getUsers } from "@/services/users";
 import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getEvents } from "@/services/catalogs";
 import { createInspectionSession } from "@/services/inspections";
+import type { ClaimsParticipant } from "@/types";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -31,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import AuditLogSection from "./audit-log-section";
+import EditClaimForm from "./edit-claim-form";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   created: { label: "Creado", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
@@ -72,6 +74,7 @@ export default function ClaimDetailPage() {
   const id = params.id as string;
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("siniestro");
+  const [isEditing, setIsEditing] = useState(false);
 
   const { data: rawClaim, isLoading } = useQuery({
     queryKey: ["claim", id],
@@ -236,76 +239,107 @@ export default function ClaimDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="btn-create btn-sm"
-            onClick={() => createInspectionMutation.mutate(claim.id)}
-            disabled={createInspectionMutation.isPending}
-          >
-            <ClipboardCheck className="mr-2 h-4 w-4" />
-            Inspeccionar
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="btn-neutral btn-sm"
-            onClick={() => { /* TODO: edición en tabs */ }}
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            Editar
-          </Button>
-          {claim.status === "signed" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="btn-save btn-sm"
-              onClick={() => {
-                if (confirm("¿Cerrar este caso? No se podrá revertir.")) closeMutation.mutate();
-              }}
-              disabled={closeMutation.isPending}
-            >
-              <Lock className="mr-2 h-4 w-4" />
-              Cerrar caso
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="btn-danger btn-sm"
-            onClick={() => { if (confirm("¿Eliminar este siniestro?")) deleteMutation.mutate(claim.id); }}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Eliminar
-          </Button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b">
-        <div className="flex gap-1 overflow-x-auto">
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            const isActive = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setActiveTab(t.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  isActive
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
-                }`}
+          {!isEditing && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="btn-create btn-sm"
+                onClick={() => createInspectionMutation.mutate(claim.id)}
+                disabled={createInspectionMutation.isPending}
               >
-                <Icon className="h-4 w-4" />
-                {t.label}
-              </button>
-            );
-          })}
+                <ClipboardCheck className="mr-2 h-4 w-4" />
+                Inspeccionar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="btn-save btn-sm"
+                onClick={() => setIsEditing(true)}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </Button>
+              {claim.status === "signed" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="btn-neutral btn-sm"
+                  onClick={() => {
+                    if (confirm("¿Cerrar este caso? No se podrá revertir.")) closeMutation.mutate();
+                  }}
+                  disabled={closeMutation.isPending}
+                >
+                  <Lock className="mr-2 h-4 w-4" />
+                  Cerrar caso
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="btn-danger btn-sm"
+                onClick={() => { if (confirm("¿Eliminar este siniestro?")) deleteMutation.mutate(claim.id); }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Tab content */}
+      {/* Tabs — solo en modo vista */}
+      {!isEditing && (
+        <div className="border-b">
+          <div className="flex gap-1 overflow-x-auto">
+            {tabs.map((t) => {
+              const Icon = t.icon;
+              const isActive = activeTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTab(t.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Modo edición */}
+      {isEditing ? (
+        <EditClaimForm
+          claim={claim}
+          participants={claim.claims_participants as ClaimsParticipant[]}
+          catalogs={{
+            claimTypes: claimTypesCatalog ?? [],
+            claimCauses: claimCausesCatalog ?? [],
+            insuranceCompanies: insuranceCompaniesCatalog ?? [],
+            businessLines: businessLinesCatalog ?? [],
+            insuranceProducts: insuranceProductsCatalog ?? [],
+            brokers: brokersCatalog ?? [],
+            advisors: advisorsCatalog ?? [],
+            housingDestinations: housingDestinationsCatalog ?? [],
+            propertyClassifications: propertyClassificationsCatalog ?? [],
+            damageClassifications: damageClassificationsCatalog ?? [],
+            constructionTypes: constructionTypesCatalog ?? [],
+            habitability: habitabilityCatalog ?? [],
+            events: eventsCatalog ?? [],
+            users: (users ?? []).map((u) => ({ id: u.id, full_name: u.full_name, email: u.email })),
+          }}
+          onCancel={() => setIsEditing(false)}
+          onSaved={() => setIsEditing(false)}
+        />
+      ) : (
+      /* Tab content — modo vista */
       <div className="min-h-[400px]">
         {/* ═══ TAB: SINIESTRO ═══ */}
         {activeTab === "siniestro" && (
@@ -558,6 +592,7 @@ export default function ClaimDetailPage() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
