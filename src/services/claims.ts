@@ -45,15 +45,10 @@ const CLAIM_FIELDS = `
   service_type_id
   billing_type_id
   claim_address
-  claim_country
-  claim_region
-  claim_city
-  claim_commune
   owner_same_as_insured
   policy_item
   policy_start_date
   policy_end_date
-  policy_currency
   policy_amount
   policy_premium
   recovery_type_legal

@@ -104,16 +104,11 @@ export interface Claim {
   commune_id: string | null;
   // Datos del siniestro
   claim_address: string | null;
-  claim_country: string | null;
-  claim_region: string | null;
-  claim_city: string | null;
-  claim_commune: string | null;
   owner_same_as_insured: boolean | null;
   // Datos de la póliza
   policy_item: string | null;
   policy_start_date: string | null;
   policy_end_date: string | null;
-  policy_currency: string | null;
   policy_amount: number | null;
   policy_premium: number | null;
   // Recovery

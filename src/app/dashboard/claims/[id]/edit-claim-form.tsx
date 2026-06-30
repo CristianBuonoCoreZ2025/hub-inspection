@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   FileText,
@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-select";
 import { SelectItem } from "@/components/ui/select";
 import { updateClaimFields, updateClaimParticipant, createClaimParticipant } from "@/services/claims";
+import { getCountries, getRegions, getCities, getCommunes } from "@/services/catalogs";
 import type { Claim, ClaimsParticipant } from "@/types";
 
 // ──────────────────────────────────────────────────────────────
@@ -127,10 +128,10 @@ interface FormValues {
 
   // Tab Incidente
   claimAddress: string;
-  claimCountry: string;
-  claimRegion: string;
-  claimCity: string;
-  claimCommune: string;
+  countryId: string;
+  regionId: string;
+  cityId: string;
+  communeId: string;
   constructionTypeId: string;
   destinationHousingId: string;
   damageClassificationId: string;
@@ -346,10 +347,10 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
 
       // Incidente
       claimAddress: claim.claim_address || "",
-      claimCountry: claim.claim_country || "",
-      claimRegion: claim.claim_region || "",
-      claimCity: claim.claim_city || "",
-      claimCommune: claim.claim_commune || "",
+      countryId: claim.country_id || "",
+      regionId: claim.region_id || "",
+      cityId: claim.city_id || "",
+      communeId: claim.commune_id || "",
       constructionTypeId: claim.construction_type_id || "",
       destinationHousingId: claim.destination_housing_id || "",
       damageClassificationId: claim.damage_classification_id || "",
@@ -394,10 +395,10 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
         recovery_type_material: values.recoveryTypeMaterial,
         recovery_comments: values.recoveryComments || null,
         claim_address: values.claimAddress || null,
-        claim_country: values.claimCountry || null,
-        claim_region: values.claimRegion || null,
-        claim_city: values.claimCity || null,
-        claim_commune: values.claimCommune || null,
+        country_id: values.countryId || null,
+        region_id: values.regionId || null,
+        city_id: values.cityId || null,
+        commune_id: values.communeId || null,
         construction_type_id: values.constructionTypeId || null,
         destination_housing_id: values.destinationHousingId || null,
         damage_classification_id: values.damageClassificationId || null,
@@ -507,6 +508,36 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   const constructionTypeItems = catalogs.constructionTypes.map((c) => ({ value: c.id, label: c.name }));
   const habitabilityItems = catalogs.habitability.map((c) => ({ value: c.id, label: c.name }));
   const userItems = catalogs.users.map((u) => ({ value: u.id, label: u.full_name || u.email || "—" }));
+
+  // Geo catalogs (cascading: country → region → city → commune)
+  const watchedCountryId = watch("countryId");
+  const watchedRegionId = watch("regionId");
+  const watchedCityId = watch("cityId");
+
+  const { data: countriesList } = useQuery({
+    queryKey: ["countries"],
+    queryFn: () => getCountries(),
+  });
+  const { data: regionsList } = useQuery({
+    queryKey: ["regions", watchedCountryId],
+    queryFn: () => getRegions(watchedCountryId),
+    enabled: !!watchedCountryId,
+  });
+  const { data: citiesList } = useQuery({
+    queryKey: ["cities", watchedRegionId],
+    queryFn: () => getCities(watchedRegionId),
+    enabled: !!watchedRegionId,
+  });
+  const { data: communesList } = useQuery({
+    queryKey: ["communes", watchedCityId],
+    queryFn: () => getCommunes(watchedCityId),
+    enabled: !!watchedCityId,
+  });
+
+  const countryItems = (countriesList ?? []).map((c) => ({ value: c.id, label: c.name }));
+  const regionItems = (regionsList ?? []).map((r) => ({ value: r.id, label: r.name }));
+  const cityItems = (citiesList ?? []).map((c) => ({ value: c.id, label: c.name }));
+  const communeItems = (communesList ?? []).map((c) => ({ value: c.id, label: c.name }));
 
   const watchedOwnerSame = watch("ownerSameAsInsured");
   const watchedRecoveryLegal = watch("recoveryTypeLegal");
@@ -701,10 +732,10 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                 <div className="space-y-3">
                   <EditInput label="Dirección" {...register("claimAddress")} />
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <EditInput label="País" {...register("claimCountry")} />
-                    <EditInput label="Región" {...register("claimRegion")} />
-                    <EditInput label="Ciudad" {...register("claimCity")} />
-                    <EditInput label="Comuna" {...register("claimCommune")} />
+                    <EditSelect label="País" control={control} name="countryId" placeholder="Seleccionar..." clearable items={countryItems} />
+                    <EditSelect label="Región" control={control} name="regionId" placeholder="Seleccionar..." clearable items={regionItems} />
+                    <EditSelect label="Ciudad" control={control} name="cityId" placeholder="Seleccionar..." clearable items={cityItems} />
+                    <EditSelect label="Comuna" control={control} name="communeId" placeholder="Seleccionar..." clearable items={communeItems} />
                   </div>
                 </div>
               </div>

@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaimById, getClaimParticipants, deleteClaim, updateClaimStatus } from "@/services/claims";
 import { getUsers } from "@/services/users";
-import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getEvents } from "@/services/catalogs";
+import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getEvents, getCountryById, getRegionById, getCityById, getCommuneById } from "@/services/catalogs";
 import { createInspectionSession } from "@/services/inspections";
 import type { ClaimsParticipant } from "@/types";
 import { toast } from "sonner";
@@ -20,7 +20,6 @@ import {
   Mail,
   Shield,
   FileText,
-  Clock,
   Lock,
   Users,
   Building,
@@ -164,6 +163,28 @@ export default function ClaimDetailPage() {
   const { data: eventsCatalog } = useQuery({
     queryKey: ["events"],
     queryFn: () => getEvents(),
+  });
+
+  // Geo lookups (resolve FK names)
+  const { data: countryName } = useQuery({
+    queryKey: ["country-by-id", claim?.country_id],
+    queryFn: () => getCountryById(claim!.country_id!),
+    enabled: !!claim?.country_id,
+  });
+  const { data: regionName } = useQuery({
+    queryKey: ["region-by-id", claim?.region_id],
+    queryFn: () => getRegionById(claim!.region_id!),
+    enabled: !!claim?.region_id,
+  });
+  const { data: cityName } = useQuery({
+    queryKey: ["city-by-id", claim?.city_id],
+    queryFn: () => getCityById(claim!.city_id!),
+    enabled: !!claim?.city_id,
+  });
+  const { data: communeName } = useQuery({
+    queryKey: ["commune-by-id", claim?.commune_id],
+    queryFn: () => getCommuneById(claim!.commune_id!),
+    enabled: !!claim?.commune_id,
   });
 
   const createInspectionMutation = useMutation({
@@ -505,10 +526,10 @@ export default function ClaimDetailPage() {
               </h3>
               <div className="space-y-3 text-[13px]">
                 <DataField label="Dirección" value={claim.claim_address || "—"} />
-                <DataField label="País" value={claim.claim_country || "—"} />
-                <DataField label="Región" value={claim.claim_region || "—"} />
-                <DataField label="Ciudad" value={claim.claim_city || "—"} />
-                <DataField label="Comuna" value={claim.claim_commune || "—"} />
+                <DataField label="País" value={countryName?.name || "—"} />
+                <DataField label="Región" value={regionName?.name || "—"} />
+                <DataField label="Ciudad" value={cityName?.name || "—"} />
+                <DataField label="Comuna" value={communeName?.name || "—"} />
               </div>
             </div>
             <div className="space-y-6">

@@ -822,6 +822,34 @@ export async function getEvents() {
   return data.events;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// GEO LOOKUP BY IDs (para resolver nombres en detalle de claim)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getCountryById(id: string) {
+  const query = `query { countries_by_pk(id: "${id}") { id code name } }`;
+  const data = await graphqlRequest<{ countries_by_pk: { id: string; code: string; name: string } | null }>(query);
+  return data.countries_by_pk;
+}
+
+export async function getRegionById(id: string) {
+  const query = `query { regions_by_pk(id: "${id}") { id name } }`;
+  const data = await graphqlRequest<{ regions_by_pk: { id: string; name: string } | null }>(query);
+  return data.regions_by_pk;
+}
+
+export async function getCityById(id: string) {
+  const query = `query { cities_by_pk(id: "${id}") { id name } }`;
+  const data = await graphqlRequest<{ cities_by_pk: { id: string; name: string } | null }>(query);
+  return data.cities_by_pk;
+}
+
+export async function getCommuneById(id: string) {
+  const query = `query { communes_by_pk(id: "${id}") { id name } }`;
+  const data = await graphqlRequest<{ communes_by_pk: { id: string; name: string } | null }>(query);
+  return data.communes_by_pk;
+}
+
 export async function createEvent(input: { country_id?: string; code?: string; name: string; description?: string }) {
   const mutation = `
     mutation CreateEvent($object: events_insert_input!) {
