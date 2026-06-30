@@ -12,7 +12,53 @@
 | 49 | Secuencia `liquidation_number` + `company_report_number` null por defecto |
 | 50 | Migrar `event`→`event_id`, `status`→`status_id`, `policy_currency`→`currency_id`, drop `claim_reference` |
 | 51 | Drop columnas de texto (`event`, `status`, `policy_currency`, `claim_country/region/city/commune`), fix geo FKs faltantes, `recovery_type_legal/material` → boolean |
-| 52 | Restaurar `status` como campo calculado desde `status_id` vía trigger |
+| 52 | Restaurar `status` como campo sincronizado desde `status_id` vía trigger |
+| 53 | Trigger bidireccional `status ↔ status_id` (si cambia uno, actualiza el otro) |
+
+---
+
+## El caso especial de `status`
+
+`status` es el único campo que se dropeó y se restauró. Esto fue porque `status`
+tiene un uso dual en la aplicación:
+
+1. **`status` (text)** — código machine-readable (`created`, `in_review`, `signed`, `closed`)
+   que la app usa para lógica de workflow: filtros, badges, transiciones de estado,
+   botones condicionales, etc. La app escribe este campo directamente con
+   `updateClaimStatus(id, "closed")`.
+
+2. **`status_id` (uuid FK)** — referencia a `lookup_catalog` (category=`claim_status`)
+   que se usa para mostrar el nombre human-readable del estado.
+
+### Qué pasó
+
+- **Migración 50**: se creó `status_id` y se migraron los datos desde `status` (texto → `lookup_catalog.code` → `lookup_catalog.id`)
+- **Migración 51**: se dropeó `status` (junto con las otras columnas de texto)
+- **Migración 52**: se restauró `status` porque la app entera dependía de él para lógica de workflow. Se creó un trigger que sincronizaba `status` desde `status_id` (unidireccional)
+- **Migración 53**: se hizo el trigger **bidireccional** porque la app escribe `status` directamente (no `status_id`), y el trigger unidireccional dejaba `status_id` desactualizado
+
+### Cómo funciona ahora
+
+Un trigger `sync_claim_status` se ejecuta BEFORE INSERT OR UPDATE en `claims`:
+
+- Si cambió `status_id` → busca el `code` en `lookup_catalog` y lo asigna a `status`
+- Si cambió `status` → busca el `id` en `lookup_catalog` y lo asigna a `status_id`
+- Tiene guarda anti-loop: solo procesa si el campo realmente cambió (`IS DISTINCT FROM OLD`)
+
+**Resultado**: ambos campos siempre están sincronizados. La app puede escribir
+cualquiera de los dos y el otro se actualiza automáticamente.
+
+### Estados disponibles en `lookup_catalog` (category=`claim_status`)
+
+| Código (`status`) | Nombre (`lookup_catalog.name`) |
+|--------------------|-------------------------------|
+| `created` | Creado |
+| `scheduled` | Despachado |
+| `in_progress` | En Progreso |
+| `pending_info` | Pendiente Info |
+| `in_review` | En Revisión |
+| `signed` | Firmado |
+| `closed` | Cerrado |
 
 ---
 
@@ -21,7 +67,6 @@
 | Columna texto (dropeada) | Columna FK (vigente) | Tabla de referencia | Cómo se migró |
 |--------------------------|---------------------|---------------------|---------------|
 | `event` | `event_id` | `events` | Match por nombre: texto → `events.name` → `events.id` |
-| `status` | `status_id` | `lookup_catalog` (category=`claim_status`) | Match por código: texto → `lookup_catalog.code` → `lookup_catalog.id` |
 | `policy_currency` | `currency_id` | `lookup_catalog` (category=`currency`) | Match por nombre: texto → `lookup_catalog.name` → `lookup_catalog.id` |
 | `claim_country` | `country_id` | `countries` | Ya estaba poblado desde migración 34 |
 | `claim_region` | `region_id` | `regions` | Ya estaba poblado + fix de 13 claims con sinónimos (migración 51) |
@@ -29,11 +74,7 @@
 | `claim_commune` | `commune_id` | `communes` | Ya estaba poblado + creación de comunas faltantes (migración 51) |
 | `claim_reference` | `client_reference` | — | Renombrada directamente (los datos ya estaban en `client_reference`) |
 
-> **Nota sobre `status`**: Se restauró como columna calculada en migración 52.
-> Un trigger (`sync_claim_status`) la mantiene sincronizada con `status_id`
-> automáticamente. `status` contiene el código machine-readable
-> (`created`, `in_review`, `signed`, `closed`) para lógica de la app.
-> `status_id` es el FK a `lookup_catalog` para el nombre human-readable.
+> **Nota**: `status` NO está en esta tabla porque fue restaurado (ver sección anterior).
 
 ---
 
@@ -171,14 +212,9 @@ Cada participante tiene su propio registro con tipo: `insured`, `contractor`, `b
 
 | Columna Excel | Campo DB | Tipo | FK a tabla | Notas |
 |---------------|----------|------|------------|-------|
-| Estado / status | `status` + `status_id` | text + uuid | `lookup_catalog` (category=`claim_status`) | `status` = código (auto-sync desde `status_id`), `status_id` = FK |
+| Estado / status | `status` + `status_id` | text + uuid | `lookup_catalog` (category=`claim_status`) | Sincronizados bidireccionalmente vía trigger (migración 53) |
 
-> **Estados disponibles en `lookup_catalog` (category=`claim_status`):**
-> - `created` — Creado
-> - `scheduled` — Despachado
-> - `in_progress` — En Progreso
-> - `in_review` — En Revisión
-> - `closed` — Cerrado
+> Ver sección "El caso especial de `status`" arriba para detalles completos.
 
 ---
 
@@ -262,7 +298,7 @@ Cada participante tiene su propio registro con tipo: `insured`, `contractor`, `b
 
 ---
 
-## Verificación de Datos (post-migración 51)
+## Verificación de Datos (post-migración 53)
 
 | Campo FK | Claims con FK poblado | Total |
 |----------|----------------------|-------|
@@ -273,6 +309,7 @@ Cada participante tiene su propio registro con tipo: `insured`, `contractor`, `b
 | `event_id` | 141 | 141 |
 | `status_id` | 141 | 141 |
 | `currency_id` | 140 | 141 (1 sin moneda) |
+| `status` (synced con `status_id`) | 141 | 141 |
 
 ---
 
