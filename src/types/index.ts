@@ -69,7 +69,7 @@ export interface Claim {
   liquidation_number: string | null;
   is_special_claim: boolean | null;
   summary: string | null;
-  event: string | null;
+  event_id: string | null;
   internal_number: string | null;
   notes: string | null;
   // Relaciones a empresa y usuarios

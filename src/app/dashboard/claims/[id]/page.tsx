@@ -156,6 +156,11 @@ export default function ClaimDetailPage() {
     queryFn: () => getLookupCatalog("habitability"),
   });
 
+  const { data: currencyCatalog } = useQuery({
+    queryKey: ["lookup-catalog", "currency"],
+    queryFn: () => getLookupCatalog("currency"),
+  });
+
   const { data: eventsCatalog } = useQuery({
     queryKey: ["events"],
     queryFn: () => getEvents(),
@@ -333,6 +338,7 @@ export default function ClaimDetailPage() {
             constructionTypes: constructionTypesCatalog ?? [],
             habitability: habitabilityCatalog ?? [],
             events: eventsCatalog ?? [],
+            currencies: currencyCatalog ?? [],
             users: (users ?? []).map((u) => ({ id: u.id, full_name: u.full_name, email: u.email })),
           }}
           onCancel={() => setIsEditing(false)}
@@ -362,7 +368,7 @@ export default function ClaimDetailPage() {
                   <DataField label="Fecha Asignación" value={formatDate(claim.assignment_date)} />
                   <DataField label="Tipo" value={resolveName(claim.claim_type_id, claimTypesCatalog)} />
                   <DataField label="Causal" value={resolveName(claim.claim_cause_id, claimCausesCatalog)} />
-                  <DataField label="Evento" value={resolveName(claim.event, eventsCatalog)} />
+                  <DataField label="Evento" value={resolveName(claim.event_id, eventsCatalog)} />
                 </div>
               </div>
 
@@ -372,7 +378,7 @@ export default function ClaimDetailPage() {
                   Datos de la Póliza
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
-                  <DataField label="Moneda" value={claim.policy_currency || "—"} />
+                  <DataField label="Moneda" value={resolveName(claim.currency_id, currencyCatalog)} />
                   <DataField label="Monto Asegurado" value={claim.policy_amount?.toString() || "—"} />
                   <DataField label="Prima" value={claim.policy_premium?.toString() || "—"} />
                   <DataField label="Inicio Vigencia" value={formatDate(claim.policy_start_date)} />

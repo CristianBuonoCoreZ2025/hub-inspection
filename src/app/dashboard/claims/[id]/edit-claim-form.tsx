@@ -57,6 +57,7 @@ interface EditClaimFormProps {
     constructionTypes: Catalog[];
     habitability: Catalog[];
     events: Catalog[];
+    currencies: Catalog[];
     users: UserOption[];
   };
   onCancel: () => void;
@@ -77,7 +78,7 @@ interface FormValues {
   eventId: string;
   summary: string;
   // Póliza
-  policyCurrency: string;
+  currencyId: string;
   policyAmount: string;
   policyPremium: string;
   policyStartDate: string;
@@ -293,10 +294,10 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
       assignmentDate: toDateInput(claim.assignment_date),
       claimTypeId: claim.claim_type_id || "",
       claimCauseId: claim.claim_cause_id || "",
-      eventId: claim.event || "",
+      eventId: claim.event_id || "",
       summary: claim.summary || "",
       // Póliza
-      policyCurrency: claim.policy_currency || "",
+      currencyId: claim.currency_id || "",
       policyAmount: claim.policy_amount?.toString() || "",
       policyPremium: claim.policy_premium?.toString() || "",
       policyStartDate: toDateInput(claim.policy_start_date),
@@ -382,9 +383,9 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
         assignment_date: values.assignmentDate || null,
         claim_type_id: values.claimTypeId || null,
         claim_cause_id: values.claimCauseId || null,
-        event: values.eventId || null,
+        event_id: values.eventId || null,
         summary: values.summary || null,
-        policy_currency: values.policyCurrency || null,
+        currency_id: values.currencyId || null,
         policy_amount: values.policyAmount ? parseFloat(values.policyAmount) : null,
         policy_premium: values.policyPremium ? parseFloat(values.policyPremium) : null,
         policy_start_date: values.policyStartDate || null,
@@ -495,6 +496,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   const claimTypeItems = catalogs.claimTypes.map((c) => ({ value: c.id, label: c.name }));
   const claimCauseItems = catalogs.claimCauses.map((c) => ({ value: c.id, label: c.name }));
   const eventItems = catalogs.events.map((c) => ({ value: c.id, label: c.name }));
+  const currencyItems = catalogs.currencies.map((c) => ({ value: c.id, label: c.name }));
   const insuranceCompanyItems = catalogs.insuranceCompanies.map((c) => ({ value: c.id, label: c.name }));
   const businessLineItems = catalogs.businessLines.map((c) => ({ value: c.id, label: c.name }));
   const insuranceProductItems = catalogs.insuranceProducts.map((c) => ({ value: c.id, label: c.name }));
@@ -569,7 +571,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                     Datos de la Póliza
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
-                    <EditInput label="Moneda" {...register("policyCurrency")} />
+                    <EditSelect label="Moneda" control={control} name="currencyId" placeholder="Seleccionar..." clearable items={currencyItems} />
                     <EditInput label="Monto Asegurado" type="number" step="0.01" {...register("policyAmount")} />
                     <EditInput label="Prima" type="number" step="0.01" {...register("policyPremium")} />
                     <EditInput label="Inicio Vigencia" type="date" {...register("policyStartDate")} />
