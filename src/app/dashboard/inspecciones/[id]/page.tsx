@@ -121,9 +121,10 @@ export default function InspectionDetailPage() {
   const [rescheduleInspectorId, setRescheduleInspectorId] = useState<string>("");
   const { codeToId } = useClaimStatuses();
 
-  const { data: session, isLoading } = useQuery({
+  const { data: session, isLoading, isError, error } = useQuery({
     queryKey: ["inspection-session", sessionId],
     queryFn: () => getInspectionSessionById(sessionId),
+    retry: false,
   });
 
   const { data: users } = useQuery({
@@ -293,6 +294,11 @@ export default function InspectionDetailPage() {
       <div className="app-page">
         <p className="text-muted-foreground py-20 text-center">
           No se encontro la sesion de inspeccion.
+          {isError && (
+            <span className="block mt-2 text-rose-500 text-[12px]">
+              Error: {(error as Error)?.message || "desconocido"}
+            </span>
+          )}
         </p>
       </div>
     );

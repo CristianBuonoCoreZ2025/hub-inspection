@@ -87,19 +87,23 @@ export async function getInspectionSessionByToken(token: string) {
   if (!session) return null;
 
   // Calcular inspection_number
-  const countQuery = `
-    query CountSessionsForClaim($claimId: uuid!, $createdAt: timestamptz!) {
-      inspection_sessions_aggregate(
-        where: { claim_id: { _eq: $claimId }, created_at: { _lte: $createdAt } }
-      ) { aggregate { count } }
-    }
-  `;
-  const countData = await graphqlRequest<{ inspection_sessions_aggregate: { aggregate: { count: number } } }>(countQuery, {
-    claimId: session.claim_id,
-    createdAt: session.created_at,
-  });
-  const seq = countData.inspection_sessions_aggregate.aggregate.count;
-  (session as any).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-${String(seq).padStart(3, "0")}`;
+  try {
+    const countQuery = `
+      query CountSessionsForClaim($claimId: uuid!, $createdAt: timestamptz!) {
+        inspection_sessions(
+          where: { claim_id: { _eq: $claimId }, created_at: { _lte: $createdAt } }
+        ) { id }
+      }
+    `;
+    const countData = await graphqlRequest<{ inspection_sessions: { id: string }[] }>(countQuery, {
+      claimId: session.claim_id,
+      createdAt: session.created_at,
+    });
+    const seq = countData.inspection_sessions.length;
+    (session as any).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-${String(seq).padStart(3, "0")}`;
+  } catch {
+    (session as any).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-001`;
+  }
 
   return session;
 }
@@ -130,19 +134,25 @@ export async function getInspectionSessionById(id: string) {
   if (!session) return null;
 
   // Calcular inspection_number: contar sesiones del mismo claim con created_at <= esta
-  const countQuery = `
-    query CountSessionsForClaim($claimId: uuid!, $createdAt: timestamptz!) {
-      inspection_sessions_aggregate(
-        where: { claim_id: { _eq: $claimId }, created_at: { _lte: $createdAt } }
-      ) { aggregate { count } }
-    }
-  `;
-  const countData = await graphqlRequest<{ inspection_sessions_aggregate: { aggregate: { count: number } } }>(countQuery, {
-    claimId: session.claim_id,
-    createdAt: session.created_at,
-  });
-  const seq = countData.inspection_sessions_aggregate.aggregate.count;
-  (session as any).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-${String(seq).padStart(3, "0")}`;
+  // Usar query simple (no aggregate) para evitar problemas de permisos
+  try {
+    const countQuery = `
+      query CountSessionsForClaim($claimId: uuid!, $createdAt: timestamptz!) {
+        inspection_sessions(
+          where: { claim_id: { _eq: $claimId }, created_at: { _lte: $createdAt } }
+        ) { id }
+      }
+    `;
+    const countData = await graphqlRequest<{ inspection_sessions: { id: string }[] }>(countQuery, {
+      claimId: session.claim_id,
+      createdAt: session.created_at,
+    });
+    const seq = countData.inspection_sessions.length;
+    (session as any).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-${String(seq).padStart(3, "0")}`;
+  } catch {
+    // Si falla el cálculo, usar un fallback
+    (session as any).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-001`;
+  }
 
   return session;
 }
