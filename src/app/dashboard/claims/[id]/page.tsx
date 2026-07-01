@@ -6,7 +6,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaimById, getClaimParticipants, deleteClaim, updateClaimStatus } from "@/services/claims";
 import { getUsers } from "@/services/users";
 import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getEvents, getCountryById, getRegionById, getCityById, getCommuneById } from "@/services/catalogs";
-import { createInspectionSession } from "@/services/inspections";
 import type { ClaimsParticipant } from "@/types";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { toast } from "sonner";
@@ -189,12 +188,14 @@ export default function ClaimDetailPage() {
   });
 
   const createInspectionMutation = useMutation({
-    mutationFn: (claimId: string) => createInspectionSession(claimId),
-    onSuccess: (session) => {
-      toast.success("Inspección creada");
-      router.push(`/dashboard/inspecciones/${session.id}`);
+    mutationFn: async (claimId: string) => {
+      // Redirigir al flujo de agendamiento en la página de inspecciones
+      router.push(`/dashboard/inspecciones?claim=${claimId}`);
+      return null;
     },
-    onError: (err: Error) => toast.error(err.message),
+    onSuccess: () => {
+      toast.info("Selecciona inspector, fecha y hora para agendar la inspección");
+    },
   });
 
   const deleteMutation = useMutation({

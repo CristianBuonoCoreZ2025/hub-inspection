@@ -9,8 +9,9 @@ import {
   cancelInspectionSession,
   rescheduleInspectionSession,
 } from "@/services/inspections";
-import { updateClaimStatus } from "@/services/claims";
+import { updateClaimStatus, updateClaimFields } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
+import { getUsers } from "@/services/users";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -64,6 +65,7 @@ const sessionToClaimStatusCode: Record<string, string> = {
   completed: "in_review",
   cancelled: "pending_info",
 };
+// Nota: "pending" ya no existe en el flujo. La inspección nace como "scheduled".
 
 const sessionStatusLabels: Record<string, string> = {
   pending: "Pendiente",
@@ -103,12 +105,19 @@ export default function InspectionDetailPage() {
   const [rescheduleDate, setRescheduleDate] = useState<string>("");
   const [rescheduleTime, setRescheduleTime] = useState<string>("");
   const [rescheduleType, setRescheduleType] = useState<"onsite" | "remote">("onsite");
+  const [rescheduleInspectorId, setRescheduleInspectorId] = useState<string>("");
   const { codeToId } = useClaimStatuses();
 
   const { data: session, isLoading } = useQuery({
     queryKey: ["inspection-session", sessionId],
     queryFn: () => getInspectionSessionById(sessionId),
   });
+
+  const { data: users } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => getUsers(),
+  });
+  const inspectors = users?.filter((u) => u.role === "inspector") || [];
 
   // Cargar motivos de cancelación
   const { data: cancellationReasons } = useQuery({
@@ -174,7 +183,7 @@ export default function InspectionDetailPage() {
       claimId: string;
       reasonId: string;
       notes?: string;
-      newOptions: { inspectionType: "onsite" | "remote"; scheduledAt: string };
+      newOptions: { inspectionType: "onsite" | "remote"; scheduledAt: string; inspectorId?: string };
     }) => rescheduleInspectionSession(currentId, claimId, reasonId, notes, newOptions),
     onSuccess: (newSession) => {
       toast.success("Inspección reagendada");
@@ -184,6 +193,7 @@ export default function InspectionDetailPage() {
       setCancelNotes("");
       setRescheduleDate("");
       setRescheduleTime("");
+      setRescheduleInspectorId("");
       // Navegar a la nueva inspección
       if (newSession?.id) {
         router.push(`/dashboard/inspecciones/${newSession.id}`);
@@ -219,28 +229,6 @@ export default function InspectionDetailPage() {
 
   const statusActions = () => {
     switch (session.status) {
-      case "pending":
-        return (
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              size="sm"
-              className="btn-create btn-footer"
-              onClick={() => updateMutation.mutate({ id: session.id, input: { status: "scheduled" } })}
-            >
-              <Calendar className="mr-2 h-3.5 w-3.5" />
-              Agendar
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="btn-cancel btn-footer"
-              onClick={() => setCancelModalOpen(true)}
-            >
-              <XCircle className="mr-2 h-3.5 w-3.5" />
-              Cancelar
-            </Button>
-          </div>
-        );
       case "scheduled":
         return (
           <div className="flex gap-2 flex-wrap">
@@ -498,7 +486,7 @@ export default function InspectionDetailPage() {
 
         {/* ── TAB: ACTA DE INSPECCION ── */}
         <TabsContent value="acta" className="mt-4">
-          {session.status === "pending" || session.status === "scheduled" ? (
+          {session.status === "scheduled" ? (
             <div className="app-panel">
               <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
                 Acta de Inspeccion
@@ -628,6 +616,17 @@ export default function InspectionDetailPage() {
           <div className="modal-body space-y-4">
             <div className="modal-grid-3">
               <div className="modal-field">
+                <Label className="app-field-label">Inspector *</Label>
+                <Select value={rescheduleInspectorId} onValueChange={(v) => setRescheduleInspectorId(v ?? "")}>
+                  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                  <SelectContent>
+                    {inspectors.map((i) => (
+                      <SelectItem key={i.id} value={i.id}>{i.full_name || i.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="modal-field">
                 <Label className="app-field-label">Tipo *</Label>
                 <Select value={rescheduleType} onValueChange={(v) => setRescheduleType(v as "onsite" | "remote")}>
                   <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
@@ -674,7 +673,7 @@ export default function InspectionDetailPage() {
             </Button>
             <Button
               size="sm"
-              disabled={!cancelReasonId || !rescheduleDate || !rescheduleTime || rescheduleMutation.isPending}
+              disabled={!cancelReasonId || !rescheduleDate || !rescheduleTime || !rescheduleInspectorId || rescheduleMutation.isPending}
               onClick={() => {
                 const scheduledAt = new Date(`${rescheduleDate}T${rescheduleTime}:00`).toISOString();
                 rescheduleMutation.mutate({
@@ -682,7 +681,7 @@ export default function InspectionDetailPage() {
                   claimId: session.claim_id,
                   reasonId: cancelReasonId,
                   notes: cancelNotes || undefined,
-                  newOptions: { inspectionType: rescheduleType, scheduledAt },
+                  newOptions: { inspectionType: rescheduleType, scheduledAt, inspectorId: rescheduleInspectorId || undefined },
                 });
               }}
               className="btn-create btn-footer"

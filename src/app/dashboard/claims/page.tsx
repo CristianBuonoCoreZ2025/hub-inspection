@@ -28,7 +28,6 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload, ChevronDown } from "lucide-react";
-import { createInspectionSession } from "@/services/inspections";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -741,13 +740,13 @@ export default function ClaimsPage() {
   });
 
   const inspectMutation = useMutation({
-    mutationFn: (claimId: string) => createInspectionSession(claimId),
-    onSuccess: (data) => {
-      toast.success("Inspeccion creada");
-      queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
-      router.push(`/dashboard/inspecciones/${data.id}`);
+    mutationFn: async (claimId: string) => {
+      router.push(`/dashboard/inspecciones?claim=${claimId}`);
+      return null;
     },
-    onError: (err: Error) => toast.error(err.message),
+    onSuccess: () => {
+      toast.info("Agenda la inspección: selecciona inspector, fecha y hora");
+    },
   });
 
   const onSubmit = (values: ClaimCreateMinimalInput) => {

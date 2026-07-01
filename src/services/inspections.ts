@@ -71,15 +71,16 @@ export async function getInspectionSessionById(id: string) {
   return data.inspection_sessions_by_pk;
 }
 
-export async function createInspectionSession(claimId: string, options?: {
-  inspectionType?: "onsite" | "remote";
-  scheduledAt?: string;
+export async function createInspectionSession(claimId: string, options: {
+  inspectionType: "onsite" | "remote";
+  scheduledAt: string;
+  inspectorId?: string;
 }) {
   // Validar que no exista una inspección activa para este siniestro
   const checkQuery = `
     query CheckActiveInspection($claimId: uuid!) {
       inspection_sessions(
-        where: { claim_id: { _eq: $claimId }, status: { _in: ["pending", "scheduled", "active"] } }
+        where: { claim_id: { _eq: $claimId }, status: { _in: ["scheduled", "active"] } }
         limit: 1
       ) { id status }
     }
@@ -89,17 +90,14 @@ export async function createInspectionSession(claimId: string, options?: {
     throw new Error("Ya existe una inspección activa para este siniestro. Debe cancelar o completar la inspección existente antes de crear una nueva.");
   }
 
-  const inspectionType = options?.inspectionType || "onsite";
   const object: Record<string, unknown> = {
     claim_id: claimId,
-    status: options?.scheduledAt ? "scheduled" : "pending",
-    inspection_type: inspectionType,
+    status: "scheduled",
+    inspection_type: options.inspectionType,
+    scheduled_at: options.scheduledAt,
   };
-  if (options?.scheduledAt) {
-    object.scheduled_at = options.scheduledAt;
-  }
   // Si es remota, generar magic link token con expiración de 24h
-  if (inspectionType === "remote") {
+  if (options.inspectionType === "remote") {
     object.magic_link_token = crypto.randomUUID();
     const expires = new Date();
     expires.setHours(expires.getHours() + 24);
@@ -115,6 +113,17 @@ export async function createInspectionSession(claimId: string, options?: {
   const data = await graphqlRequest<{ insert_inspection_sessions_one: InspectionSession }>(mutation, {
     object,
   });
+
+  // Si se especificó un inspector, asignarlo al claim
+  if (options.inspectorId && data.insert_inspection_sessions_one) {
+    try {
+      const { updateClaimFields } = await import("@/services/claims");
+      await updateClaimFields(claimId, { inspector_id: options.inspectorId });
+    } catch {
+      // No bloquear la creación si no se puede asignar el inspector
+    }
+  }
+
   return data.insert_inspection_sessions_one;
 }
 
@@ -159,13 +168,14 @@ export async function rescheduleInspectionSession(
   newOptions: {
     inspectionType: "onsite" | "remote";
     scheduledAt: string;
+    inspectorId?: string;
   },
   cancelledBy?: string,
 ) {
   // 1. Cancelar la inspección actual
   await cancelInspectionSession(currentSessionId, reasonId, notes, cancelledBy);
 
-  // 2. Crear nueva inspección con la nueva fecha
+  // 2. Crear nueva inspección agendada con la nueva fecha
   const newSession = await createInspectionSession(claimId, newOptions);
   return newSession;
 }

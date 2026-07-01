@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getInspectionSessions,
@@ -9,6 +9,7 @@ import {
   updateInspectionSession,
 } from "@/services/inspections";
 import { getClaims, getClaimsParticipants } from "@/services/claims";
+import { getUsers } from "@/services/users";
 import { toast } from "sonner";
 import {
   ClipboardCheck,
@@ -44,7 +45,6 @@ import {
 import type { InspectionSession } from "@/types";
 
 const sessionStatusLabels: Record<string, string> = {
-  pending: "Pendiente",
   scheduled: "Agendada",
   active: "En progreso",
   completed: "Completada",
@@ -52,7 +52,6 @@ const sessionStatusLabels: Record<string, string> = {
 };
 
 const sessionStatusColors: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
   scheduled: "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300",
   active: "bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200",
   completed: "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300",
@@ -66,8 +65,17 @@ function formatDateTime(dateStr: string | null) {
 }
 
 export default function InspectionsPage() {
+  return (
+    <Suspense fallback={<div className="app-page"><p className="text-muted-foreground py-20 text-center">Cargando...</p></div>}>
+      <InspectionsPageContent />
+    </Suspense>
+  );
+}
+
+function InspectionsPageContent() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [openCreate, setOpenCreate] = useState(false);
@@ -75,11 +83,27 @@ export default function InspectionsPage() {
   const [inspectionType, setInspectionType] = useState<"onsite" | "remote">("onsite");
   const [scheduledDate, setScheduledDate] = useState<string>("");
   const [scheduledTime, setScheduledTime] = useState<string>("");
+  const [selectedInspectorId, setSelectedInspectorId] = useState<string>("");
+
+  // Pre-seleccionar siniestro si viene por query param ?claim=...
+  useEffect(() => {
+    const claimFromUrl = searchParams.get("claim");
+    if (claimFromUrl) {
+      setSelectedClaimId(claimFromUrl);
+      setOpenCreate(true);
+    }
+  }, [searchParams]);
 
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["inspection-sessions"],
     queryFn: () => getInspectionSessions(),
   });
+
+  const { data: users } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => getUsers(),
+  });
+  const inspectors = users?.filter((u) => u.role === "inspector") || [];
 
   const { data: rawClaims } = useQuery({
     queryKey: ["claims"],
@@ -101,19 +125,20 @@ export default function InspectionsPage() {
 
   const createMutation = useMutation({
     mutationFn: (claimId: string) => {
-      const scheduledAt = scheduledDate && scheduledTime
-        ? new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString()
-        : undefined;
+      const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
       return createInspectionSession(claimId, {
         inspectionType,
         scheduledAt,
+        inspectorId: selectedInspectorId || undefined,
       });
     },
     onSuccess: (data) => {
-      toast.success("Inspeccion creada");
+      toast.success("Inspección agendada");
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["claims"] });
       setOpenCreate(false);
       setSelectedClaimId("");
+      setSelectedInspectorId("");
       setScheduledDate("");
       setScheduledTime("");
       setInspectionType("onsite");
@@ -148,11 +173,12 @@ export default function InspectionsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  // Siniestros disponibles: los que NO tienen inspección agendada o activa
+  // (completadas y canceladas no bloquean crear una nueva)
   const availableClaims = claims?.filter(
     (c) => !sessions?.some((s) =>
       s.claim_id === c.id &&
-      s.status !== "cancelled" &&
-      s.status !== "completed"
+      (s.status === "scheduled" || s.status === "active")
     )
   );
 
@@ -181,7 +207,6 @@ export default function InspectionsPage() {
             <SelectContent>
               <SelectItem value="">Sin selección</SelectItem>
               <SelectItem value="all">Todos los estados</SelectItem>
-              <SelectItem value="pending">Pendiente</SelectItem>
               <SelectItem value="scheduled">Agendada</SelectItem>
               <SelectItem value="active">En progreso</SelectItem>
               <SelectItem value="completed">Completada</SelectItem>
@@ -283,39 +308,6 @@ export default function InspectionsPage() {
                       </Button>
 
                       {/* Acciones segun estado */}
-                      {session.status === "pending" && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() =>
-                              updateMutation.mutate({
-                                id: session.id,
-                                input: { status: "scheduled" },
-                              })
-                            }
-                          >
-                            <Calendar className="h-3.5 w-3.5 mr-1" />
-                            Agendar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-xs btn-danger"
-                            onClick={() =>
-                              updateMutation.mutate({
-                                id: session.id,
-                                input: { status: "cancelled" },
-                              })
-                            }
-                          >
-                            <XCircle className="h-3.5 w-3.5 mr-1" />
-                            Cancelar
-                          </Button>
-                        </>
-                      )}
-
                       {session.status === "scheduled" && (
                         <>
                           <Button
@@ -387,15 +379,26 @@ export default function InspectionsPage() {
               Nueva Inspeccion
             </DialogTitle>
             <DialogDescription className="modal-subtitle">
-              Selecciona el tipo, agenda y siniestro para crear la inspeccion.
+              Agenda la inspección: selecciona siniestro, inspector, tipo, fecha y hora.
             </DialogDescription>
           </div>
 
           <div className="modal-body">
-            {/* Tipo de inspección + Agendamiento */}
+            {/* Datos del agendamiento */}
             <div className="modal-grid-3 mb-4">
               <div className="modal-field">
-                <label className="app-field-label">Tipo</label>
+                <label className="app-field-label">Inspector *</label>
+                <Select value={selectedInspectorId} onValueChange={(v) => setSelectedInspectorId(v ?? "")}>
+                  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                  <SelectContent>
+                    {inspectors.map((i) => (
+                      <SelectItem key={i.id} value={i.id}>{i.full_name || i.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="modal-field">
+                <label className="app-field-label">Tipo *</label>
                 <Select value={inspectionType} onValueChange={(v) => setInspectionType(v as "onsite" | "remote")}>
                   <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -405,11 +408,11 @@ export default function InspectionsPage() {
                 </Select>
               </div>
               <div className="modal-field">
-                <label className="app-field-label">Fecha</label>
+                <label className="app-field-label">Fecha *</label>
                 <Input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="app-input" />
               </div>
               <div className="modal-field">
-                <label className="app-field-label">Hora</label>
+                <label className="app-field-label">Hora *</label>
                 <Input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="app-input" />
               </div>
             </div>
@@ -474,7 +477,7 @@ export default function InspectionsPage() {
             </Button>
             <Button
               size="sm"
-              disabled={!selectedClaimId || createMutation.isPending}
+              disabled={!selectedClaimId || !selectedInspectorId || !scheduledDate || !scheduledTime || createMutation.isPending}
               onClick={() => createMutation.mutate(selectedClaimId)}
               className="btn-create btn-footer"
             >
@@ -483,7 +486,7 @@ export default function InspectionsPage() {
               ) : (
                 <Plus className="mr-2 h-3.5 w-3.5" />
               )}
-              Crear
+              Agendar
             </Button>
           </div>
         </DialogContent>

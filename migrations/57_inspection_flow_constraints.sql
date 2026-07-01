@@ -35,12 +35,12 @@ ALTER TABLE inspection_sessions
   ON DELETE SET NULL;
 
 -- 4. Índice parcial para garantizar UNA inspección activa por siniestro
--- Los estados "activos" son: pending, scheduled, active
+-- Los estados "activos" son: scheduled, active (no existe "pending")
 -- Este índice UNIQUE parcial evita que se inserten dos inspecciones activas
 DROP INDEX IF EXISTS inspection_sessions_one_active_per_claim;
 CREATE UNIQUE INDEX inspection_sessions_one_active_per_claim
   ON inspection_sessions (claim_id)
-  WHERE status IN ('pending', 'scheduled', 'active');
+  WHERE status IN ('scheduled', 'active');
 
 -- 5. Agregar status 'cancelled' a inspection_reports
 -- Ya existe status con values 'draft', 'generated', 'sent'
