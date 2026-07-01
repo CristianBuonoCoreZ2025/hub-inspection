@@ -350,25 +350,27 @@ function InspectionsPageContent() {
         <table className="app-data-table">
           <thead>
             <tr>
-              <th className="min-w-[140px] sm:w-[170px]">Inspección</th>
-              <th className="min-w-[100px] sm:w-[140px]">Siniestro</th>
-              <th className="min-w-[120px] sm:w-[200px]">Asegurado</th>
+              <th className="min-w-[120px] sm:w-[140px]">Inspección</th>
+              <th className="min-w-[90px] sm:w-[110px]">N° Interno</th>
+              <th className="min-w-[90px] sm:w-[110px]">Ref. Cliente</th>
+              <th className="min-w-[100px] sm:w-[140px]">Inspector</th>
+              <th className="min-w-[100px] sm:w-[160px]">Asegurado</th>
               <th>Direccion</th>
-              <th className="min-w-[90px] sm:w-[110px]">Estado</th>
-              <th className="min-w-[100px] sm:w-[160px]">Programada</th>
-              <th className="min-w-[100px] sm:w-[200px] text-right">Acciones</th>
+              <th className="min-w-[80px] sm:w-[90px]">Estado</th>
+              <th className="min-w-[90px] sm:w-[130px]">Programada</th>
+              <th className="min-w-[90px] sm:w-[160px] text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                <td colSpan={9} className="py-8 text-center text-muted-foreground">
                   Cargando inspecciones...
                 </td>
               </tr>
             ) : filtered?.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                <td colSpan={9} className="py-8 text-center text-muted-foreground">
                   No hay inspecciones registradas.
                 </td>
               </tr>
@@ -376,33 +378,42 @@ function InspectionsPageContent() {
               filtered?.map((session) => (
                 <tr key={session.id} className="hover:bg-muted/40 transition-colors">
                   <td>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-mono text-[12px] font-semibold text-primary">
+                    <div className="flex flex-col gap-0">
+                      <span className="font-mono text-[11px] font-semibold text-primary">
                         {session.inspection_number || session.id.slice(0, 8)}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-[10px] text-muted-foreground">
                         {session.inspection_type === "remote" ? "Remota" : "Presencial"}
                       </span>
                     </div>
                   </td>
                   <td>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-medium">{session.claim?.claim_number}</span>
-                      <span className="text-[11px] text-muted-foreground">
-                        {"Sin compañia"}
+                    <span className="font-mono text-[11px] font-medium">
+                      {session.claim?.liquidation_number || "—"}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-[11px] text-muted-foreground">
+                      {session.claim?.client_reference || "—"}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="flex items-center gap-1">
+                      <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="text-[11px]">
+                        {inspectors.find((i) => i.id === session.claim?.inspector_id)?.full_name || "—"}
                       </span>
                     </div>
                   </td>
                   <td>
-                    <div className="flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>{session.claim?.claims_participants?.[0]?.full_name || "—"}</span>
-                    </div>
+                    <span className="text-[11px]">
+                      {session.claim?.claims_participants?.[0]?.full_name || "—"}
+                    </span>
                   </td>
                   <td>
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="truncate">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="text-[11px] truncate">
                         {session.claim?.claim_address || "—"}
                       </span>
                     </div>
@@ -413,10 +424,10 @@ function InspectionsPageContent() {
                     </Badge>
                   </td>
                   <td>
-                    <div className="flex items-center gap-1.5 text-[13px]">
+                    <div className="flex items-center gap-1 text-[11px]">
                       {session.scheduled_at ? (
                         <>
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
                           {formatDateTime(session.scheduled_at)}
                         </>
                       ) : (

@@ -94,6 +94,17 @@ function formatDate(dateStr: string | null) {
   });
 }
 
+function formatDateTime(dateStr: string | null) {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleString("es-CL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function InspectionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -360,9 +371,6 @@ export default function InspectionDetailPage() {
               <h1 className="app-page-title">
                 {session.inspection_number || `Inspección ${session.id.slice(0, 8)}`}
               </h1>
-              <span className="text-[13px] text-muted-foreground">
-                Siniestro #{session.claim?.claim_number as string}
-              </span>
               <Badge className={sessionStatusColors[session.status]}>
                 {sessionStatusLabels[session.status]}
               </Badge>
@@ -372,8 +380,13 @@ export default function InspectionDetailPage() {
                 </Badge>
               )}
             </div>
-            <p className="app-page-lead">
-              {insuredParticipant?.full_name || "—"} — {claim?.claim_address || "—"}
+            <div className="flex items-center gap-3 mt-1 text-[12px] text-muted-foreground flex-wrap">
+              <span>N° Interno: <strong className="text-foreground font-mono">{session.claim?.liquidation_number || "—"}</strong></span>
+              <span>Ref. Cliente: <strong className="text-foreground">{session.claim?.client_reference || "—"}</strong></span>
+              <span>Inspector: <strong className="text-foreground">{inspectors.find((i) => i.id === session.claim?.inspector_id)?.full_name || "—"}</strong></span>
+            </div>
+            <p className="app-page-lead mt-1">
+              {insuredParticipant?.full_name || "—"} — {session.claim?.claim_address || "—"}
             </p>
             {session.inspection_type === "remote" && session.magic_link_token && (
               <div className="mt-2 flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[12px]">
@@ -451,7 +464,15 @@ export default function InspectionDetailPage() {
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-3 text-[13px]">
               <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">N° Siniestro</span>
+                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">N° Interno</span>
+                <p className="font-mono font-semibold text-primary">{(claim?.liquidation_number as string) || "—"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Ref. Cliente</span>
+                <p className="font-medium">{(claim?.client_reference as string) || "—"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">N° Siniestro Cía</span>
                 <p className="font-medium">{claim?.claim_number as string}</p>
               </div>
               <div>
@@ -463,16 +484,12 @@ export default function InspectionDetailPage() {
                 <p className="font-medium">{claim?.insurance_company?.name || "—"}</p>
               </div>
               <div>
+                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Inspector</span>
+                <p className="font-medium">{inspectors.find((i) => i.id === claim?.inspector_id)?.full_name || "—"}</p>
+              </div>
+              <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Fecha Siniestro</span>
                 <p className="font-medium">{formatDate(claim?.claim_date as string | null)}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Liquidacion</span>
-                <p className="font-medium">{(claim?.liquidation_number as string) || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Liquidacion</span>
-                <p className="font-medium">{(claim?.liquidation_number as string) || "—"}</p>
               </div>
             </div>
           </div>
@@ -502,24 +519,30 @@ export default function InspectionDetailPage() {
             </div>
           </div>
 
-          {/* Contacto */}
+          {/* Contacto del agendamiento (datos guardados al agendar) */}
           <div className="app-panel">
             <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Persona de Contacto
+              Contacto de Inspección
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
               <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre</span>
-                <p className="font-medium">{contactParticipant?.full_name || "—"}</p>
+                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre contacto</span>
+                <p className="font-medium">{session.interviewed_name || contactParticipant?.full_name || "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Email</span>
-                <p className="font-medium">{contactParticipant?.email || "—"}</p>
+                <p className="font-medium">{session.interviewed_email || contactParticipant?.email || "—"}</p>
               </div>
               <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Telefono</span>
-                <p className="font-medium">{contactParticipant?.phone || contactParticipant?.cell_phone || "—"}</p>
+                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Lugar inspección</span>
+                <p className="font-medium">{claim?.claim_address || "—"}</p>
               </div>
+              {session.inspector_observations && (
+                <div className="col-span-2 md:col-span-3">
+                  <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Comentarios del agendamiento</span>
+                  <p className="font-medium whitespace-pre-wrap mt-0.5">{session.inspector_observations}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -539,15 +562,15 @@ export default function InspectionDetailPage() {
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Programada</span>
-                <p className="font-medium">{session.scheduled_at ? formatDate(session.scheduled_at) : "Sin programar"}</p>
+                <p className="font-medium">{session.scheduled_at ? formatDateTime(session.scheduled_at) : "Sin programar"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Iniciada</span>
-                <p className="font-medium">{session.started_at ? formatDate(session.started_at) : "—"}</p>
+                <p className="font-medium">{session.started_at ? formatDateTime(session.started_at) : "—"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Finalizada</span>
-                <p className="font-medium">{session.ended_at ? formatDate(session.ended_at) : "—"}</p>
+                <p className="font-medium">{session.ended_at ? formatDateTime(session.ended_at) : "—"}</p>
               </div>
             </div>
           </div>

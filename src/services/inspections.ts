@@ -34,6 +34,7 @@ export async function getInspectionSessions(claimId?: string) {
         ${SESSION_FIELDS}
         claim {
           claim_number policy_number claim_date client_reference claim_address
+          liquidation_number
           inspector_id
           claims_participants(where: { type: { _eq: "insured" } }, limit: 1) {
             full_name
@@ -43,8 +44,31 @@ export async function getInspectionSessions(claimId?: string) {
       }
     }
   `;
-  const data = await graphqlRequest<{ inspection_sessions: (InspectionSession & { claim?: { claim_number: string; policy_number: string; claim_date: string | null; client_reference: string | null; claim_address: string | null; inspector_id: string | null; claims_participants: { full_name: string | null }[]; insurance_company: { name: string } | null } })[] }>(query);
+  const data = await graphqlRequest<{ inspection_sessions: (InspectionSession & { claim?: { claim_number: string; policy_number: string; claim_date: string | null; client_reference: string | null; claim_address: string | null; liquidation_number: string | null; inspector_id: string | null; claims_participants: { full_name: string | null }[]; insurance_company: { name: string } | null } })[] }>(query);
   return data.inspection_sessions;
+}
+
+export async function getInspectionSessionByToken(token: string) {
+  const query = `
+    query GetInspectionSessionByToken($token: String!) {
+      inspection_sessions(
+        where: { magic_link_token: { _eq: $token } }
+        limit: 1
+      ) {
+        ${SESSION_FIELDS}
+        claim {
+          claim_number policy_number claim_date client_reference claim_address
+          liquidation_number
+          claims_participants(where: { type: { _in: ["insured", "contact"] } }) {
+            type full_name first_name last_name email phone cell_phone
+          }
+          insurance_company { name }
+        }
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ inspection_sessions: (InspectionSession & { claim?: any })[] }>(query, { token });
+  return data.inspection_sessions[0] || null;
 }
 
 export async function getInspectionSessionById(id: string) {
