@@ -680,7 +680,11 @@ export default function InspectionDetailPage() {
               <div className="modal-field">
                 <Label className="app-field-label">Inspector *</Label>
                 <Select value={rescheduleInspectorId} onValueChange={(v) => setRescheduleInspectorId(v ?? "")}>
-                  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                  <SelectTrigger className="app-input">
+                    <SelectValue placeholder="Seleccionar...">
+                      {inspectors.find((i) => i.id === rescheduleInspectorId)?.full_name || inspectors.find((i) => i.id === rescheduleInspectorId)?.email || "Seleccionar..."}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     {inspectors.map((i) => (
                       <SelectItem key={i.id} value={i.id}>{i.full_name || i.email}</SelectItem>

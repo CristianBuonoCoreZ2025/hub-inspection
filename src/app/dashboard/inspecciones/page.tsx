@@ -88,6 +88,12 @@ function InspectionsPageContent() {
   const [scheduledDate, setScheduledDate] = useState<string>("");
   const [scheduledTime, setScheduledTime] = useState<string>("");
   const [selectedInspectorId, setSelectedInspectorId] = useState<string>("");
+  // Campos editables del contacto y agendamiento
+  const [contactName, setContactName] = useState<string>("");
+  const [contactPhone, setContactPhone] = useState<string>("");
+  const [contactEmail, setContactEmail] = useState<string>("");
+  const [inspectionLocation, setInspectionLocation] = useState<string>("");
+  const [schedulingNotes, setSchedulingNotes] = useState<string>("");
 
   // Pre-seleccionar siniestro si viene por query param ?claim=...
   useEffect(() => {
@@ -154,13 +160,20 @@ function InspectionsPageContent() {
       } else {
         setSelectedInspectorId("");
       }
+      // Pre-seleccionar datos de contacto del asegurado
+      const insured = claim?.claims_participants?.find((p: any) => p.type === "insured");
+      const contact = claim?.claims_participants?.find((p: any) => p.type === "contact");
+      const p = contact || insured;
+      setContactName(p?.full_name || "");
+      setContactPhone(p?.cell_phone || p?.phone || "");
+      setContactEmail(p?.email || "");
+      setInspectionLocation(claim?.claim_address || "");
+      setSchedulingNotes("");
     }
   }, [selectedClaimId, claims]);
 
   // Siniestro seleccionado (para mostrar contacto)
   const selectedClaim = claims?.find((c) => c.id === selectedClaimId);
-  const insuredParticipant = selectedClaim?.claims_participants?.find((p: any) => p.type === "insured");
-  const contactParticipant = selectedClaim?.claims_participants?.find((p: any) => p.type === "contact");
 
   // Generar slots disponibles según tipo de inspección
   // Presencial: 2 horas por slot. Remota: 30 minutos por slot.
@@ -216,6 +229,11 @@ function InspectionsPageContent() {
         inspectionType,
         scheduledAt,
         inspectorId: selectedInspectorId || undefined,
+        contactName: contactName || undefined,
+        contactPhone: contactPhone || undefined,
+        contactEmail: contactEmail || undefined,
+        inspectionLocation: inspectionLocation || undefined,
+        schedulingNotes: schedulingNotes || undefined,
       });
     },
     onSuccess: (data) => {
@@ -228,6 +246,11 @@ function InspectionsPageContent() {
       setScheduledDate("");
       setScheduledTime("");
       setInspectionType("onsite");
+      setContactName("");
+      setContactPhone("");
+      setContactEmail("");
+      setInspectionLocation("");
+      setSchedulingNotes("");
       // Navegar al detalle de la inspección creada
       if (data?.id) {
         router.push(`/dashboard/inspecciones/${data.id}`);
@@ -488,7 +511,22 @@ function InspectionsPageContent() {
                 Siniestro *
               </label>
               {!claims ? (
-                <p className="text-muted-foreground text-sm">Cargando siniestros...</p>
+                <p className="text-muted-foreground text-sm">Cargando siniestro...</p>
+              ) : selectedClaim ? (
+                <div className="flex items-center gap-3 rounded-lg border border-primary bg-primary/5 p-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                    <FileText className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium truncate">
+                      #{selectedClaim.claim_number} — {selectedClaim.claims_participants?.find((p: any) => p.type === 'insured')?.full_name || "—"}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {selectedClaim.claim_address || "—"}
+                    </p>
+                  </div>
+                  <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+                </div>
               ) : availableClaims?.length === 0 ? (
                 <div className="text-center py-4">
                   <p className="text-sm text-muted-foreground">
@@ -512,7 +550,7 @@ function InspectionsPageContent() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-medium truncate">
-                          #{claim.claim_number} — {claim.claims_participants?.find((p: {type: string; full_name: string | null}) => p.type === 'insured')?.full_name || "—"}
+                          #{claim.claim_number} — {claim.claims_participants?.find((p: any) => p.type === 'insured')?.full_name || "—"}
                         </p>
                         <p className="text-[11px] text-muted-foreground truncate">
                           {claim.claim_address || "—"}
@@ -527,44 +565,39 @@ function InspectionsPageContent() {
               )}
             </div>
 
-            {/* Info de contacto del siniestro seleccionado */}
-            {selectedClaim && (insuredParticipant || contactParticipant) && (
+            {/* Datos de contacto editables + lugar de inspección + comentarios */}
+            {selectedClaim && (
               <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-3 mb-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300 mb-2">
-                  Contacto del Siniestro
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300 mb-3">
+                  Contacto y Lugar de Inspección
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {insuredParticipant && (
-                    <div className="flex items-center gap-2 text-[12px]">
-                      <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="font-medium">{insuredParticipant.full_name || "—"}</span>
-                    </div>
-                  )}
-                  {insuredParticipant?.phone && (
-                    <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                      <Phone className="h-3.5 w-3.5 shrink-0" />
-                      {insuredParticipant.phone}
-                    </div>
-                  )}
-                  {insuredParticipant?.cell_phone && (
-                    <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                      <Phone className="h-3.5 w-3.5 shrink-0" />
-                      {insuredParticipant.cell_phone}
-                    </div>
-                  )}
-                  {insuredParticipant?.email && (
-                    <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5 shrink-0" />
-                      {insuredParticipant.email}
-                    </div>
-                  )}
-                  {contactParticipant && contactParticipant !== insuredParticipant && (
-                    <div className="flex items-center gap-2 text-[12px]">
-                      <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="font-medium">{contactParticipant.full_name || "—"}</span>
-                      {contactParticipant.phone && <span className="text-muted-foreground">· {contactParticipant.phone}</span>}
-                    </div>
-                  )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="modal-field">
+                    <label className="app-field-label">Nombre contacto</label>
+                    <Input value={contactName} onChange={(e) => setContactName(e.target.value)} className="app-input" placeholder="Nombre..." />
+                  </div>
+                  <div className="modal-field">
+                    <label className="app-field-label">Teléfono</label>
+                    <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="app-input" placeholder="+56..." />
+                  </div>
+                  <div className="modal-field">
+                    <label className="app-field-label">Email</label>
+                    <Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="app-input" placeholder="email@..." />
+                  </div>
+                  <div className="modal-field">
+                    <label className="app-field-label">Lugar de inspección</label>
+                    <Input value={inspectionLocation} onChange={(e) => setInspectionLocation(e.target.value)} className="app-input" placeholder="Dirección..." />
+                  </div>
+                </div>
+                <div className="modal-field mt-3">
+                  <label className="app-field-label">Comentarios del agendamiento</label>
+                  <textarea
+                    value={schedulingNotes}
+                    onChange={(e) => setSchedulingNotes(e.target.value)}
+                    rows={2}
+                    className="app-input resize-none"
+                    placeholder="Indicaciones, referencias, instrucciones para el inspector..."
+                  />
                 </div>
               </div>
             )}
@@ -574,7 +607,11 @@ function InspectionsPageContent() {
               <div className="modal-field">
                 <label className="app-field-label">Inspector *</label>
                 <Select value={selectedInspectorId} onValueChange={(v) => setSelectedInspectorId(v ?? "")}>
-                  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                  <SelectTrigger className="app-input">
+                    <SelectValue placeholder="Seleccionar...">
+                      {inspectors.find((i) => i.id === selectedInspectorId)?.full_name || inspectors.find((i) => i.id === selectedInspectorId)?.email || "Seleccionar..."}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     {inspectors.map((i) => (
                       <SelectItem key={i.id} value={i.id}>{i.full_name || i.email}</SelectItem>

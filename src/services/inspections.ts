@@ -119,6 +119,11 @@ export async function createInspectionSession(claimId: string, options: {
   inspectionType: "onsite" | "remote";
   scheduledAt: string;
   inspectorId?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  inspectionLocation?: string;
+  schedulingNotes?: string;
 }) {
   // Validar que no exista una inspección activa para este siniestro
   const checkQuery = `
@@ -140,6 +145,14 @@ export async function createInspectionSession(claimId: string, options: {
     inspection_type: options.inspectionType,
     scheduled_at: options.scheduledAt,
   };
+  // Datos de contacto editables
+  if (options.contactName) object.interviewed_name = options.contactName;
+  if (options.contactEmail) object.interviewed_email = options.contactEmail;
+  // Comentarios del agendamiento + teléfono → inspector_observations
+  const obsParts: string[] = [];
+  if (options.contactPhone) obsParts.push(`Tel: ${options.contactPhone}`);
+  if (options.schedulingNotes) obsParts.push(options.schedulingNotes);
+  if (obsParts.length > 0) object.inspector_observations = obsParts.join("\n\n");
   // Si es remota, generar magic link token con expiración de 24h
   if (options.inspectionType === "remote") {
     object.magic_link_token = crypto.randomUUID();
@@ -162,7 +175,12 @@ export async function createInspectionSession(claimId: string, options: {
   if (options.inspectorId && data.insert_inspection_sessions_one) {
     try {
       const { updateClaimFields } = await import("@/services/claims");
-      await updateClaimFields(claimId, { inspector_id: options.inspectorId });
+      const fields: Record<string, unknown> = { inspector_id: options.inspectorId };
+      // Si se modificó el lugar de inspección, actualizar el claim_address
+      if (options.inspectionLocation) {
+        fields.claim_address = options.inspectionLocation;
+      }
+      await updateClaimFields(claimId, fields);
     } catch {
       // No bloquear la creación si no se puede asignar el inspector
     }
