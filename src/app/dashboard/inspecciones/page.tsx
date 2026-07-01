@@ -228,8 +228,8 @@ function InspectionsPageContent() {
       setScheduledDate("");
       setScheduledTime("");
       setInspectionType("onsite");
-      // Si es remota, navegar al detalle para ver el magic link
-      if (inspectionType === "remote" && data?.id) {
+      // Navegar al detalle de la inspección creada
+      if (data?.id) {
         router.push(`/dashboard/inspecciones/${data.id}`);
       }
     },
