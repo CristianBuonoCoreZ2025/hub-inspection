@@ -13,6 +13,7 @@ const SESSION_FIELDS = `
   police_report_number police_report_name police_report_rut
   firefighters_company other_insurances other_insurance_company
   inspector_observations
+  cancellation_reason_id cancellation_notes cancelled_at cancelled_by
   property_risk
   property_materiality
   security_measures
@@ -74,6 +75,20 @@ export async function createInspectionSession(claimId: string, options?: {
   inspectionType?: "onsite" | "remote";
   scheduledAt?: string;
 }) {
+  // Validar que no exista una inspección activa para este siniestro
+  const checkQuery = `
+    query CheckActiveInspection($claimId: uuid!) {
+      inspection_sessions(
+        where: { claim_id: { _eq: $claimId }, status: { _in: ["pending", "scheduled", "active"] } }
+        limit: 1
+      ) { id status }
+    }
+  `;
+  const checkData = await graphqlRequest<{ inspection_sessions: { id: string; status: string }[] }>(checkQuery, { claimId });
+  if (checkData.inspection_sessions.length > 0) {
+    throw new Error("Ya existe una inspección activa para este siniestro. Debe cancelar o completar la inspección existente antes de crear una nueva.");
+  }
+
   const inspectionType = options?.inspectionType || "onsite";
   const object: Record<string, unknown> = {
     claim_id: claimId,
@@ -101,6 +116,58 @@ export async function createInspectionSession(claimId: string, options?: {
     object,
   });
   return data.insert_inspection_sessions_one;
+}
+
+/**
+ * Cancelar una inspección con motivo.
+ * Registra el motivo de cancelación y marca cancelled_at (via trigger).
+ */
+export async function cancelInspectionSession(
+  id: string,
+  reasonId: string,
+  notes?: string,
+  cancelledBy?: string,
+) {
+  const mutation = `
+    mutation CancelInspection($id: uuid!, $set: inspection_sessions_set_input!) {
+      update_inspection_sessions_by_pk(pk_columns: { id: $id }, _set: $set) {
+        ${SESSION_FIELDS}
+      }
+    }
+  `;
+  const set: Record<string, unknown> = {
+    status: "cancelled",
+    cancellation_reason_id: reasonId,
+  };
+  if (notes !== undefined) set.cancellation_notes = notes;
+  if (cancelledBy !== undefined) set.cancelled_by = cancelledBy;
+  // cancelled_at lo setea el trigger automáticamente
+  const data = await graphqlRequest<{ update_inspection_sessions_by_pk: InspectionSession }>(mutation, { id, set });
+  return data.update_inspection_sessions_by_pk;
+}
+
+/**
+ * Reagendar una inspección: cancela la actual y crea una nueva
+ * con la nueva fecha/hora y tipo.
+ * Retorna la nueva inspección creada.
+ */
+export async function rescheduleInspectionSession(
+  currentSessionId: string,
+  claimId: string,
+  reasonId: string,
+  notes: string | undefined,
+  newOptions: {
+    inspectionType: "onsite" | "remote";
+    scheduledAt: string;
+  },
+  cancelledBy?: string,
+) {
+  // 1. Cancelar la inspección actual
+  await cancelInspectionSession(currentSessionId, reasonId, notes, cancelledBy);
+
+  // 2. Crear nueva inspección con la nueva fecha
+  const newSession = await createInspectionSession(claimId, newOptions);
+  return newSession;
 }
 
 export async function updateInspectionSession(id: string, input: Partial<InspectionSession>) {
@@ -591,6 +658,7 @@ export async function createSignature(input: Omit<import("@/types").InspectionSi
 
 const REPORT_FIELDS = `
   id session_id report_url generated_at status
+  report_type cancellation_reason_id cancellation_notes
 `;
 
 export async function getReport(sessionId: string) {

@@ -149,7 +149,11 @@ export default function InspectionsPage() {
   });
 
   const availableClaims = claims?.filter(
-    (c) => !sessions?.some((s) => s.claim_id === c.id && s.status !== "cancelled")
+    (c) => !sessions?.some((s) =>
+      s.claim_id === c.id &&
+      s.status !== "cancelled" &&
+      s.status !== "completed"
+    )
   );
 
   return (

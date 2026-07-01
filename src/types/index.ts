@@ -253,6 +253,10 @@ export interface InspectionSession {
   other_insurances: boolean;
   other_insurance_company: string | null;
   inspector_observations: string | null;
+  cancellation_reason_id: string | null;
+  cancellation_notes: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
   property_risk?: ActaPropertyRisk | null;
   property_materiality?: ActaPropertyMateriality | null;
   security_measures?: ActaSecurityMeasures | null;
@@ -402,7 +406,10 @@ export interface InspectionReport {
   session_id: string;
   report_url: string | null;
   generated_at: string | null;
-  status: "draft" | "generated" | "sent";
+  status: "draft" | "generated" | "sent" | "cancellation";
+  report_type?: "completion" | "cancellation";
+  cancellation_reason_id?: string | null;
+  cancellation_notes?: string | null;
 }
 
 // ── Catalogos Maestros ──

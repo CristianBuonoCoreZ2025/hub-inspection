@@ -6,8 +6,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getInspectionSessionById,
   updateInspectionSession,
+  cancelInspectionSession,
+  rescheduleInspectionSession,
 } from "@/services/inspections";
 import { updateClaimStatus } from "@/services/claims";
+import { getLookupCatalog } from "@/services/catalogs";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -22,11 +25,27 @@ import {
   Clock,
   ShieldCheck,
   MessageSquare,
+  RotateCcw,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { InspectionSession } from "@/types";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import ActaForm from "./acta-form";
@@ -77,11 +96,25 @@ export default function InspectionDetailPage() {
   const queryClient = useQueryClient();
   const sessionId = params.id as string;
   const [activeTab, setActiveTab] = useState("resumen");
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [cancelReasonId, setCancelReasonId] = useState<string>("");
+  const [cancelNotes, setCancelNotes] = useState<string>("");
+  const [rescheduleDate, setRescheduleDate] = useState<string>("");
+  const [rescheduleTime, setRescheduleTime] = useState<string>("");
+  const [rescheduleType, setRescheduleType] = useState<"onsite" | "remote">("onsite");
   const { codeToId } = useClaimStatuses();
 
   const { data: session, isLoading } = useQuery({
     queryKey: ["inspection-session", sessionId],
     queryFn: () => getInspectionSessionById(sessionId),
+  });
+
+  // Cargar motivos de cancelación
+  const { data: cancellationReasons } = useQuery({
+    queryKey: ["lookup-catalog", "cancellation_reason"],
+    queryFn: () => getLookupCatalog("cancellation_reason"),
+    enabled: cancelModalOpen || rescheduleModalOpen,
   });
 
   const updateMutation = useMutation({
@@ -105,6 +138,55 @@ export default function InspectionDetailPage() {
             // No bloquear la UI si el claim no se puede actualizar
           }
         }
+      }
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reasonId, notes }: { id: string; reasonId: string; notes?: string }) =>
+      cancelInspectionSession(id, reasonId, notes),
+    onSuccess: async () => {
+      toast.success("Inspección cancelada");
+      queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+      setCancelModalOpen(false);
+      setCancelReasonId("");
+      setCancelNotes("");
+      // Actualizar estado del claim
+      if (session?.claim_id) {
+        const statusId = codeToId["pending_info"];
+        if (statusId) {
+          try {
+            await updateClaimStatus(session.claim_id, statusId);
+            queryClient.invalidateQueries({ queryKey: ["claim", session.claim_id] });
+            queryClient.invalidateQueries({ queryKey: ["claims"] });
+          } catch {}
+        }
+      }
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const rescheduleMutation = useMutation({
+    mutationFn: ({ currentId, claimId, reasonId, notes, newOptions }: {
+      currentId: string;
+      claimId: string;
+      reasonId: string;
+      notes?: string;
+      newOptions: { inspectionType: "onsite" | "remote"; scheduledAt: string };
+    }) => rescheduleInspectionSession(currentId, claimId, reasonId, notes, newOptions),
+    onSuccess: (newSession) => {
+      toast.success("Inspección reagendada");
+      queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+      setRescheduleModalOpen(false);
+      setCancelReasonId("");
+      setCancelNotes("");
+      setRescheduleDate("");
+      setRescheduleTime("");
+      // Navegar a la nueva inspección
+      if (newSession?.id) {
+        router.push(`/dashboard/inspecciones/${newSession.id}`);
       }
     },
     onError: (err: Error) => toast.error(err.message),
@@ -139,7 +221,7 @@ export default function InspectionDetailPage() {
     switch (session.status) {
       case "pending":
         return (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               size="sm"
               className="btn-create btn-footer"
@@ -152,7 +234,7 @@ export default function InspectionDetailPage() {
               size="sm"
               variant="outline"
               className="btn-cancel btn-footer"
-              onClick={() => updateMutation.mutate({ id: session.id, input: { status: "cancelled" } })}
+              onClick={() => setCancelModalOpen(true)}
             >
               <XCircle className="mr-2 h-3.5 w-3.5" />
               Cancelar
@@ -161,20 +243,29 @@ export default function InspectionDetailPage() {
         );
       case "scheduled":
         return (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               size="sm"
               className="btn-create btn-footer"
               onClick={() => updateMutation.mutate({ id: session.id, input: { status: "active" } })}
             >
               <Play className="mr-2 h-3.5 w-3.5" />
-              Iniciar Inspeccion
+              Iniciar
             </Button>
             <Button
               size="sm"
               variant="outline"
               className="btn-cancel btn-footer"
-              onClick={() => updateMutation.mutate({ id: session.id, input: { status: "cancelled" } })}
+              onClick={() => setRescheduleModalOpen(true)}
+            >
+              <RotateCcw className="mr-2 h-3.5 w-3.5" />
+              Reagendar
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="btn-cancel btn-footer"
+              onClick={() => setCancelModalOpen(true)}
             >
               <XCircle className="mr-2 h-3.5 w-3.5" />
               Cancelar
@@ -183,14 +274,14 @@ export default function InspectionDetailPage() {
         );
       case "active":
         return (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               size="sm"
               className="btn-save btn-footer"
               onClick={() => updateMutation.mutate({ id: session.id, input: { status: "completed" } })}
             >
               <CheckCircle className="mr-2 h-3.5 w-3.5" />
-              Completar Inspeccion
+              Finalizar
             </Button>
           </div>
         );
@@ -450,7 +541,14 @@ export default function InspectionDetailPage() {
 
         {/* ── TAB: INFORME ── */}
         <TabsContent value="informe" className="mt-4">
-          <ReportTab sessionId={session.id} claimNumber={session.claim?.claim_number} />
+          <ReportTab
+            sessionId={session.id}
+            claimNumber={session.claim?.claim_number}
+            sessionStatus={session.status}
+            cancellationReason={cancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || null}
+            cancellationNotes={session.cancellation_notes}
+            cancelledAt={session.cancelled_at}
+          />
         </TabsContent>
 
         {/* ── TAB: CHAT ── */}
@@ -458,6 +556,168 @@ export default function InspectionDetailPage() {
           <ChatTab sessionId={session.id} />
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Cancelación */}
+      <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
+        <DialogContent className="modal-content max-w-[480px]">
+          <div className="modal-header">
+            <DialogTitle className="modal-title flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-rose-500" />
+              Cancelar Inspección
+            </DialogTitle>
+            <DialogDescription className="modal-subtitle">
+              Registra el motivo de cancelación. Se generará un informe de cancelación.
+            </DialogDescription>
+          </div>
+          <div className="modal-body space-y-4">
+            <div className="modal-field">
+              <Label className="app-field-label">Motivo de cancelación *</Label>
+              <Select value={cancelReasonId} onValueChange={(v) => setCancelReasonId(v ?? "")}>
+                <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar motivo..." /></SelectTrigger>
+                <SelectContent>
+                  {cancellationReasons?.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="modal-field">
+              <Label className="app-field-label">Notas adicionales</Label>
+              <textarea
+                value={cancelNotes}
+                onChange={(e) => setCancelNotes(e.target.value)}
+                rows={3}
+                className="app-input resize-none"
+                placeholder="Detalle del motivo de cancelación..."
+              />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <Button variant="outline" size="sm" onClick={() => setCancelModalOpen(false)} className="btn-cancel btn-footer">
+              Cerrar
+            </Button>
+            <Button
+              size="sm"
+              disabled={!cancelReasonId || cancelMutation.isPending}
+              onClick={() => cancelMutation.mutate({
+                id: session.id,
+                reasonId: cancelReasonId,
+                notes: cancelNotes || undefined,
+              })}
+              className="btn-cancel btn-footer"
+            >
+              {cancelMutation.isPending ? <Clock className="mr-2 h-3.5 w-3.5 animate-spin" /> : <XCircle className="mr-2 h-3.5 w-3.5" />}
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Reagendamiento */}
+      <Dialog open={rescheduleModalOpen} onOpenChange={setRescheduleModalOpen}>
+        <DialogContent className="modal-content max-w-[480px]">
+          <div className="modal-header">
+            <DialogTitle className="modal-title flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-sky-500" />
+              Reagendar Inspección
+            </DialogTitle>
+            <DialogDescription className="modal-subtitle">
+              La inspección actual se cancelará y se creará una nueva con la fecha indicada.
+            </DialogDescription>
+          </div>
+          <div className="modal-body space-y-4">
+            <div className="modal-grid-3">
+              <div className="modal-field">
+                <Label className="app-field-label">Tipo *</Label>
+                <Select value={rescheduleType} onValueChange={(v) => setRescheduleType(v as "onsite" | "remote")}>
+                  <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="onsite">Presencial</SelectItem>
+                    <SelectItem value="remote">Remota</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="modal-field">
+                <Label className="app-field-label">Fecha *</Label>
+                <Input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} className="app-input" />
+              </div>
+              <div className="modal-field">
+                <Label className="app-field-label">Hora *</Label>
+                <Input type="time" value={rescheduleTime} onChange={(e) => setRescheduleTime(e.target.value)} className="app-input" />
+              </div>
+            </div>
+            <div className="modal-field">
+              <Label className="app-field-label">Motivo de reagendamiento *</Label>
+              <Select value={cancelReasonId} onValueChange={(v) => setCancelReasonId(v ?? "")}>
+                <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar motivo..." /></SelectTrigger>
+                <SelectContent>
+                  {cancellationReasons?.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="modal-field">
+              <Label className="app-field-label">Notas</Label>
+              <textarea
+                value={cancelNotes}
+                onChange={(e) => setCancelNotes(e.target.value)}
+                rows={2}
+                className="app-input resize-none"
+                placeholder="Notas del reagendamiento..."
+              />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <Button variant="outline" size="sm" onClick={() => setRescheduleModalOpen(false)} className="btn-cancel btn-footer">
+              Cerrar
+            </Button>
+            <Button
+              size="sm"
+              disabled={!cancelReasonId || !rescheduleDate || !rescheduleTime || rescheduleMutation.isPending}
+              onClick={() => {
+                const scheduledAt = new Date(`${rescheduleDate}T${rescheduleTime}:00`).toISOString();
+                rescheduleMutation.mutate({
+                  currentId: session.id,
+                  claimId: session.claim_id,
+                  reasonId: cancelReasonId,
+                  notes: cancelNotes || undefined,
+                  newOptions: { inspectionType: rescheduleType, scheduledAt },
+                });
+              }}
+              className="btn-create btn-footer"
+            >
+              {rescheduleMutation.isPending ? <Clock className="mr-2 h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="mr-2 h-3.5 w-3.5" />}
+              Reagendar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Info de cancelación si aplica */}
+      {session.status === "cancelled" && session.cancelled_at && (
+        <div className="app-panel border-rose-500/20 bg-rose-500/5">
+          <div className="flex items-start gap-3">
+            <XCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-[13px] font-semibold text-rose-700 dark:text-rose-300">
+                Inspección Cancelada
+              </h3>
+              <p className="text-[12px] text-muted-foreground mt-1">
+                {cancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || "Motivo no registrado"}
+              </p>
+              {session.cancellation_notes && (
+                <p className="text-[12px] text-muted-foreground mt-1 italic">
+                  "{session.cancellation_notes}"
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Cancelada el {new Date(session.cancelled_at).toLocaleString("es-CL")}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
