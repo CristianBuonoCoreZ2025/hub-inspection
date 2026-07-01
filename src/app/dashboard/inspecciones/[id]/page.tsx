@@ -8,6 +8,7 @@ import {
   updateInspectionSession,
   cancelInspectionSession,
   rescheduleInspectionSession,
+  getInspectorSchedule,
 } from "@/services/inspections";
 import { updateClaimStatus, updateClaimFields } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
@@ -27,6 +28,7 @@ import {
   ShieldCheck,
   MessageSquare,
   RotateCcw,
+  CalendarClock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -125,6 +127,54 @@ export default function InspectionDetailPage() {
       setRescheduleInspectorId(session.claim.inspector_id);
     }
   }, [rescheduleModalOpen, session]);
+
+  // Query: agenda del inspector para la fecha seleccionada (reagendamiento)
+  const rescheduleDateForQuery = rescheduleDate ? new Date(`${rescheduleDate}T00:00:00`) : null;
+  const { data: rescheduleSchedule, isLoading: rescheduleScheduleLoading } = useQuery({
+    queryKey: ["inspector-schedule", rescheduleInspectorId, rescheduleDate],
+    queryFn: () => {
+      if (!rescheduleDateForQuery) return [];
+      const start = new Date(rescheduleDateForQuery);
+      const end = new Date(rescheduleDateForQuery);
+      end.setDate(end.getDate() + 1);
+      return getInspectorSchedule(rescheduleInspectorId, start.toISOString(), end.toISOString());
+    },
+    enabled: !!rescheduleInspectorId && !!rescheduleDate && rescheduleModalOpen,
+  });
+
+  // Generar slots para reagendamiento
+  const RESCHEDULE_SLOT_MIN = rescheduleType === "onsite" ? 120 : 30;
+  const generateRescheduleSlots = () => {
+    const slots: { time: string; label: string; available: boolean; bookedInfo?: string }[] = [];
+    const WORK_START = 9, WORK_END = 18, LUNCH_START = 13, LUNCH_END = 14;
+    const totalMin = (WORK_END - WORK_START) * 60;
+    for (let offset = 0; offset + RESCHEDULE_SLOT_MIN <= totalMin; offset += RESCHEDULE_SLOT_MIN) {
+      const startHour = WORK_START + Math.floor(offset / 60);
+      const startMin = offset % 60;
+      const endHour = WORK_START + Math.floor((offset + RESCHEDULE_SLOT_MIN) / 60);
+      const endMin = (offset + RESCHEDULE_SLOT_MIN) % 60;
+      const timeStr = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
+      const endStr = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
+      if (startHour < LUNCH_START && endHour > LUNCH_START) continue;
+      if (startHour >= LUNCH_START && startHour < LUNCH_END) continue;
+      const slotStart = new Date(`${rescheduleDate}T${timeStr}:00`);
+      const slotEnd = new Date(`${rescheduleDate}T${endStr}:00`);
+      const booked = rescheduleSchedule?.find((s) => {
+        const sStart = new Date(s.scheduled_at);
+        const sDuration = s.inspection_type === "onsite" ? 120 : 30;
+        const sEnd = new Date(sStart.getTime() + sDuration * 60000);
+        return sStart < slotEnd && sEnd > slotStart;
+      });
+      slots.push({
+        time: timeStr,
+        label: `${timeStr} - ${endStr}`,
+        available: !booked,
+        bookedInfo: booked ? `${booked.claim.claim_number}` : undefined,
+      });
+    }
+    return slots;
+  };
+  const rescheduleSlots = rescheduleDate && rescheduleInspectorId ? generateRescheduleSlots() : [];
 
   // Cargar motivos de cancelación
   const { data: cancellationReasons } = useQuery({
@@ -610,14 +660,14 @@ export default function InspectionDetailPage() {
 
       {/* Modal de Reagendamiento */}
       <Dialog open={rescheduleModalOpen} onOpenChange={setRescheduleModalOpen}>
-        <DialogContent className="modal-content max-w-[480px]">
+        <DialogContent className="modal-lg" showCloseButton={false}>
           <div className="modal-header">
             <DialogTitle className="modal-title flex items-center gap-2">
               <RotateCcw className="h-4 w-4 text-sky-500" />
               Reagendar Inspección
             </DialogTitle>
             <DialogDescription className="modal-subtitle">
-              La inspección actual se cancelará y se creará una nueva con la fecha indicada.
+              La inspección actual se cancelará y se creará una nueva agendada.
             </DialogDescription>
           </div>
           <div className="modal-body space-y-4">
@@ -638,20 +688,65 @@ export default function InspectionDetailPage() {
                 <Select value={rescheduleType} onValueChange={(v) => setRescheduleType(v as "onsite" | "remote")}>
                   <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="onsite">Presencial</SelectItem>
-                    <SelectItem value="remote">Remota</SelectItem>
+                    <SelectItem value="onsite">Presencial (2h)</SelectItem>
+                    <SelectItem value="remote">Remota (30min)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="modal-field">
                 <Label className="app-field-label">Fecha *</Label>
-                <Input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} className="app-input" />
-              </div>
-              <div className="modal-field">
-                <Label className="app-field-label">Hora *</Label>
-                <Input type="time" value={rescheduleTime} onChange={(e) => setRescheduleTime(e.target.value)} className="app-input" />
+                <Input type="date" value={rescheduleDate} onChange={(e) => { setRescheduleDate(e.target.value); setRescheduleTime(""); }} className="app-input" />
               </div>
             </div>
+
+            {/* Disponibilidad del inspector */}
+            {rescheduleInspectorId && rescheduleDate ? (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="app-field-label flex items-center gap-1.5">
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    Disponibilidad
+                  </Label>
+                  <span className="text-[11px] text-muted-foreground">
+                    {rescheduleType === "onsite" ? "Bloques de 2 horas" : "Bloques de 30 min"}
+                  </span>
+                </div>
+                {rescheduleScheduleLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Clock className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-sm text-muted-foreground">Cargando...</span>
+                  </div>
+                ) : rescheduleSlots.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Sin horarios disponibles.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[160px] overflow-y-auto p-1">
+                    {rescheduleSlots.map((slot) => (
+                      <button
+                        key={slot.time}
+                        type="button"
+                        disabled={!slot.available}
+                        title={slot.bookedInfo ? `Ocupado: ${slot.bookedInfo}` : "Disponible"}
+                        onClick={() => setRescheduleTime(slot.time)}
+                        className={`rounded-lg border px-3 py-2 text-[12px] font-medium transition-all text-center ${
+                          !slot.available
+                            ? "border-rose-500/20 bg-rose-500/5 text-rose-400 cursor-not-allowed line-through"
+                            : rescheduleTime === slot.time
+                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                            : "border-border bg-card hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
+                        }`}
+                      >
+                        {slot.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border p-4 text-center text-[12px] text-muted-foreground">
+                Selecciona inspector y fecha para ver la disponibilidad.
+              </div>
+            )}
+
             <div className="modal-field">
               <Label className="app-field-label">Motivo de reagendamiento *</Label>
               <Select value={cancelReasonId} onValueChange={(v) => setCancelReasonId(v ?? "")}>

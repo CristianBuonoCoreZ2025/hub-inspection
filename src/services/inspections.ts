@@ -71,6 +71,50 @@ export async function getInspectionSessionById(id: string) {
   return data.inspection_sessions_by_pk;
 }
 
+/**
+ * Obtener las sesiones agendadas de un inspector en un rango de fechas.
+ * El inspector se identifica via claim.inspector_id.
+ * Solo retorna sesiones con status scheduled o active.
+ */
+export async function getInspectorSchedule(
+  inspectorId: string,
+  dateStart: string,
+  dateEnd: string,
+) {
+  const query = `
+    query GetInspectorSchedule($inspectorId: uuid!, $dateStart: timestamptz!, $dateEnd: timestamptz!) {
+      inspection_sessions(
+        where: {
+          scheduled_at: { _gte: $dateStart, _lt: $dateEnd }
+          status: { _in: ["scheduled", "active"] }
+          claim: { inspector_id: { _eq: $inspectorId } }
+        }
+        order_by: { scheduled_at: asc }
+      ) {
+        id
+        scheduled_at
+        inspection_type
+        status
+        claim {
+          claim_number
+          claim_address
+          claims_participants(where: { type: { _eq: "insured" } }, limit: 1) {
+            full_name
+          }
+        }
+      }
+    }
+  `;
+  const data = await graphqlRequest<{ inspection_sessions: {
+    id: string;
+    scheduled_at: string;
+    inspection_type: "onsite" | "remote";
+    status: string;
+    claim: { claim_number: string; claim_address: string | null; claims_participants: { full_name: string | null }[] };
+  }[] }>(query, { inspectorId, dateStart, dateEnd });
+  return data.inspection_sessions;
+}
+
 export async function createInspectionSession(claimId: string, options: {
   inspectionType: "onsite" | "remote";
   scheduledAt: string;
