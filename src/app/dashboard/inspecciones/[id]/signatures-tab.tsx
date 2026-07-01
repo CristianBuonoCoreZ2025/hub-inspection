@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSignatures, createSignature } from "@/services/inspections";
 import { uploadFileToStorage } from "@/lib/nhost/storage-upload";
@@ -9,34 +9,90 @@ import { CheckCircle, User, ShieldCheck } from "lucide-react";
 
 function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => void; label: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
 
-  const getPos = (e: React.MouseEvent | React.TouchEvent) => {
+  // ResizeObserver: ajusta el canvas al contenedor con devicePixelRatio para nitidez
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const resize = () => {
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(200, rect.width);
+      const h = 180;
+      // Guardar contenido actual
+      const prevData = canvas.toDataURL();
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.scale(dpr, dpr);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#0a0a0a";
+        // Restaurar contenido
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, w, h);
+        img.src = prevData;
+      }
+    };
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  const getPos = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
     return { x: clientX - rect.left, y: clientY - rect.top };
-  };
+  }, []);
 
   const start = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
     setIsDrawing(true);
     const ctx = canvasRef.current!.getContext("2d")!;
-    const { x, y } = getPos(e);
+    const pos = getPos(e);
+    lastPosRef.current = pos;
     ctx.beginPath();
-    ctx.moveTo(x, y);
+    ctx.moveTo(pos.x, pos.y);
+    // Dibujar un punto inicial para taps simples
+    ctx.arc(pos.x, pos.y, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDrawing) return;
+    e.preventDefault();
     const ctx = canvasRef.current!.getContext("2d")!;
-    const { x, y } = getPos(e);
-    ctx.lineTo(x, y);
-    ctx.stroke();
+    const pos = getPos(e);
+    // Smoothing: línea cuadrática entre el punto anterior y el actual
+    if (lastPosRef.current) {
+      const midX = (lastPosRef.current.x + pos.x) / 2;
+      const midY = (lastPosRef.current.y + pos.y) / 2;
+      ctx.quadraticCurveTo(lastPosRef.current.x, lastPosRef.current.y, midX, midY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(midX, midY);
+    }
+    lastPosRef.current = pos;
   };
 
   const stop = () => {
     setIsDrawing(false);
+    lastPosRef.current = null;
     const ctx = canvasRef.current!.getContext("2d")!;
     ctx.beginPath();
   };
@@ -60,12 +116,10 @@ function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => void;
   return (
     <div className="app-panel space-y-3">
       <h4 className="text-[13px] font-semibold">{label}</h4>
-      <div className="rounded-lg border bg-white">
+      <div ref={containerRef} className="rounded-lg border bg-white w-full">
         <canvas
           ref={canvasRef}
-          width={500}
-          height={150}
-          className="w-full cursor-crosshair touch-none"
+          className="w-full cursor-crosshair touch-none block"
           onMouseDown={start}
           onMouseMove={draw}
           onMouseUp={stop}

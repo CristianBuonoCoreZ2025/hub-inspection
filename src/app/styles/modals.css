@@ -95,23 +95,48 @@
 /* ═══════════════ GRID / FIELD (portal-seguros, inmune) ═══════════════ */
 .modal-grid {
   display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
+  grid-template-columns: 1fr !important;
   gap: 10px 12px !important;
   margin-top: 6px !important;
+}
+@media (min-width: 640px) {
+  .modal-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
 }
 
 .modal-grid-3 {
   display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
+  grid-template-columns: 1fr !important;
   gap: 10px 12px !important;
   margin-top: 6px !important;
+}
+@media (min-width: 640px) {
+  .modal-grid-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+@media (min-width: 1024px) {
+  .modal-grid-3 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
 }
 
 .modal-grid-4 {
   display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
+  grid-template-columns: 1fr !important;
   gap: 6px 8px !important;
   margin-top: 4px !important;
+}
+@media (min-width: 640px) {
+  .modal-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+@media (min-width: 1024px) {
+  .modal-grid-4 {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
 }
 
 .modal-field {

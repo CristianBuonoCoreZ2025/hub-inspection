@@ -255,7 +255,7 @@ export default function InspectionDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-        <TabsList className="w-fit">
+        <TabsList className="w-full overflow-x-auto flex justify-start sm:justify-center">
           <TabsTrigger value="resumen">
             <FileText className="mr-1.5 h-3.5 w-3.5" />
             Resumen

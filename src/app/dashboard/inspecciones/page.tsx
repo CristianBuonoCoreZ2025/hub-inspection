@@ -171,7 +171,7 @@ export default function InspectionsPage() {
             className="h-9 w-full max-w-sm"
           />
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "all")}>
-            <SelectTrigger className="h-9 w-[160px]">
+            <SelectTrigger className="h-9 w-full sm:w-[160px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
@@ -202,12 +202,12 @@ export default function InspectionsPage() {
         <table className="app-data-table">
           <thead>
             <tr>
-              <th className="w-[140px]">Siniestro</th>
-              <th className="w-[200px]">Asegurado</th>
+              <th className="min-w-[100px] sm:w-[140px]">Siniestro</th>
+              <th className="min-w-[120px] sm:w-[200px]">Asegurado</th>
               <th>Direccion</th>
-              <th className="w-[110px]">Estado</th>
-              <th className="w-[160px]">Programada</th>
-              <th className="w-[200px] text-right">Acciones</th>
+              <th className="min-w-[90px] sm:w-[110px]">Estado</th>
+              <th className="min-w-[100px] sm:w-[160px]">Programada</th>
+              <th className="min-w-[100px] sm:w-[200px] text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>

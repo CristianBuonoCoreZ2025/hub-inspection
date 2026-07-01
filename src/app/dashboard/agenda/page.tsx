@@ -138,7 +138,7 @@ export default function AgendaPage() {
         <div className="flex items-center gap-2">
           <Filter className="h-3.5 w-3.5 text-muted-foreground" />
           <Select value={inspectorFilter} onValueChange={(v) => setInspectorFilter(v ?? "all")}>
-            <SelectTrigger className="h-8 w-[200px] text-[13px]">
+            <SelectTrigger className="h-8 w-full sm:w-[200px] text-[13px]">
               <SelectValue placeholder="Todos los inspectores" />
             </SelectTrigger>
             <SelectContent>
@@ -154,14 +154,14 @@ export default function AgendaPage() {
       </div>
 
       {/* Vista Semanal */}
-      <div className="app-panel overflow-hidden p-0">
+      <div className="app-panel p-0 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Clock className="h-5 w-5 animate-spin text-muted-foreground" />
             <span className="ml-2 text-muted-foreground text-sm">Cargando agenda...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-7 border-b">
+          <div className="flex overflow-x-auto snap-x snap-mandatory border-b">
             {weekDays.map((day, idx) => {
               const isToday = sameDay(day, new Date());
               const daySessions = filteredSessions.filter((s) => {
@@ -173,7 +173,7 @@ export default function AgendaPage() {
               return (
                 <div
                   key={idx}
-                  className={`flex flex-col border-r last:border-r-0 min-h-[320px] ${
+                  className={`flex flex-col border-r last:border-r-0 min-h-[200px] sm:min-h-[320px] snap-start shrink-0 w-[85%] sm:w-1/3 md:w-1/4 lg:w-auto lg:flex-1 ${
                     isToday ? "bg-primary/5" : ""
                   }`}
                 >
