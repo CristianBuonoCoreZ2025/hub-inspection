@@ -631,7 +631,7 @@ function InspectionsPageContent() {
               </div>
               <div className="modal-field">
                 <label className="app-field-label">Fecha *</label>
-                <Input type="date" value={scheduledDate} onChange={(e) => { setScheduledDate(e.target.value); setScheduledTime(""); }} className="app-input" />
+                <Input type="date" min={new Date().toISOString().split("T")[0]} value={scheduledDate} onChange={(e) => { setScheduledDate(e.target.value); setScheduledTime(""); }} className="app-input" />
               </div>
             </div>
 

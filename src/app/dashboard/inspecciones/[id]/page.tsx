@@ -704,7 +704,7 @@ export default function InspectionDetailPage() {
               </div>
               <div className="modal-field">
                 <Label className="app-field-label">Fecha *</Label>
-                <Input type="date" value={rescheduleDate} onChange={(e) => { setRescheduleDate(e.target.value); setRescheduleTime(""); }} className="app-input" />
+                <Input type="date" min={new Date().toISOString().split("T")[0]} value={rescheduleDate} onChange={(e) => { setRescheduleDate(e.target.value); setRescheduleTime(""); }} className="app-input" />
               </div>
             </div>
 
