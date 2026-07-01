@@ -56,7 +56,7 @@ export async function getInspectionSessions(claimId?: string) {
   for (const s of sorted) {
     const seq = (seqMap.get(s.claim_id) || 0) + 1;
     seqMap.set(s.claim_id, seq);
-    (s as any).inspection_number = `${s.claim?.liquidation_number || "UNKNOWN"}-I-${String(seq).padStart(3, "0")}`;
+    (s as InspectionSession & { inspection_number: string }).inspection_number = `${s.claim?.liquidation_number || "UNKNOWN"}-I-${String(seq).padStart(3, "0")}`;
   }
 
   return data.inspection_sessions;
@@ -82,7 +82,7 @@ export async function getInspectionSessionByToken(token: string) {
       }
     }
   `;
-  const data = await graphqlRequest<{ inspection_sessions: (InspectionSession & { created_at: string; claim?: any })[] }>(query, { token });
+  const data = await graphqlRequest<{ inspection_sessions: (InspectionSession & { created_at: string; claim?: Record<string, unknown> })[] }>(query, { token });
   const session = data.inspection_sessions[0];
   if (!session) return null;
 
@@ -100,9 +100,9 @@ export async function getInspectionSessionByToken(token: string) {
       createdAt: session.created_at,
     });
     const seq = countData.inspection_sessions.length;
-    (session as any).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-${String(seq).padStart(3, "0")}`;
+    (session as InspectionSession & { inspection_number: string }).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-${String(seq).padStart(3, "0")}`;
   } catch {
-    (session as any).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-001`;
+    (session as InspectionSession & { inspection_number: string }).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-001`;
   }
 
   return session;
@@ -129,7 +129,7 @@ export async function getInspectionSessionById(id: string) {
       }
     }
   `;
-  const data = await graphqlRequest<{ inspection_sessions_by_pk: InspectionSession & { created_at: string; claim?: any } }>(query, { id });
+  const data = await graphqlRequest<{ inspection_sessions_by_pk: InspectionSession & { created_at: string; claim?: Record<string, unknown> } }>(query, { id });
   const session = data.inspection_sessions_by_pk;
   if (!session) return null;
 
@@ -148,10 +148,10 @@ export async function getInspectionSessionById(id: string) {
       createdAt: session.created_at,
     });
     const seq = countData.inspection_sessions.length;
-    (session as any).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-${String(seq).padStart(3, "0")}`;
+    (session as InspectionSession & { inspection_number: string }).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-${String(seq).padStart(3, "0")}`;
   } catch {
     // Si falla el cálculo, usar un fallback
-    (session as any).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-001`;
+    (session as InspectionSession & { inspection_number: string }).inspection_number = `${session.claim?.liquidation_number || "UNKNOWN"}-I-001`;
   }
 
   return session;

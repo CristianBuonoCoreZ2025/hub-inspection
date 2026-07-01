@@ -90,7 +90,7 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
               ))}
             </select>
           </div>
-          <div className="flex-[2] min-w-[200px]">
+          <div className="flex-2 min-w-[200px]">
             <label className="app-field-label text-[11px]">Item a verificar</label>
             <input
               value={newItem.item}

@@ -135,8 +135,9 @@ export default function InspectionDetailPage() {
 
   // Pre-seleccionar el inspector del siniestro al abrir el modal de reagendamiento
   useEffect(() => {
-    if (rescheduleModalOpen && session?.claim?.inspector_id) {
-      setRescheduleInspectorId(session.claim.inspector_id);
+    const claimData = session?.claim as Record<string, unknown> | undefined;
+    if (rescheduleModalOpen && claimData?.inspector_id) {
+      setRescheduleInspectorId(claimData.inspector_id as string);
     }
   }, [rescheduleModalOpen, session]);
 
@@ -387,12 +388,12 @@ export default function InspectionDetailPage() {
               )}
             </div>
             <div className="flex items-center gap-3 mt-1 text-[12px] text-muted-foreground flex-wrap">
-              <span>N° Interno: <strong className="text-foreground font-mono">{session.claim?.liquidation_number || "—"}</strong></span>
-              <span>Ref. Cliente: <strong className="text-foreground">{session.claim?.client_reference || "—"}</strong></span>
-              <span>Inspector: <strong className="text-foreground">{inspectors.find((i) => i.id === session.claim?.inspector_id)?.full_name || "—"}</strong></span>
+              <span>N° Interno: <strong className="text-foreground font-mono">{claim?.liquidation_number || "—"}</strong></span>
+              <span>Ref. Cliente: <strong className="text-foreground">{claim?.client_reference || "—"}</strong></span>
+              <span>Inspector: <strong className="text-foreground">{inspectors.find((i) => i.id === claim?.inspector_id)?.full_name || "—"}</strong></span>
             </div>
             <p className="app-page-lead mt-1">
-              {insuredParticipant?.full_name || "—"} — {session.claim?.claim_address || "—"}
+              {insuredParticipant?.full_name || "—"} — {claim?.claim_address || "—"}
             </p>
             {session.inspection_type === "remote" && session.magic_link_token && (
               <div className="mt-2 flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[12px]">
@@ -629,7 +630,7 @@ export default function InspectionDetailPage() {
         <TabsContent value="informe" className="mt-4">
           <ReportTab
             sessionId={session.id}
-            claimNumber={session.claim?.claim_number}
+            claimNumber={claim?.claim_number}
             sessionStatus={session.status}
             cancellationReason={cancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || null}
             cancellationNotes={session.cancellation_notes}
