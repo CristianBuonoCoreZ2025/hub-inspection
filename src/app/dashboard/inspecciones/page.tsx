@@ -187,6 +187,9 @@ function InspectionsPageContent() {
   const generateTimeSlots = () => {
     const slots: { time: string; label: string; available: boolean; bookedInfo?: string }[] = [];
     const totalMin = (WORK_END - WORK_START) * 60;
+    const now = new Date();
+    const isToday = scheduledDate === now.toISOString().split("T")[0];
+
     for (let offset = 0; offset + SLOT_DURATION_MIN <= totalMin; offset += SLOT_DURATION_MIN) {
       const startHour = WORK_START + Math.floor(offset / 60);
       const startMin = offset % 60;
@@ -198,6 +201,12 @@ function InspectionsPageContent() {
       // Saltar slots que cruzan el almuerzo
       if (startHour < LUNCH_START && endHour > LUNCH_START) continue;
       if (startHour >= LUNCH_START && startHour < LUNCH_END) continue;
+
+      // Si es hoy, saltar slots que ya pasaron
+      if (isToday) {
+        const slotStart = new Date(`${scheduledDate}T${timeStr}:00`);
+        if (slotStart <= now) continue;
+      }
 
       // Verificar si está ocupado
       const slotStart = new Date(`${scheduledDate}T${timeStr}:00`);

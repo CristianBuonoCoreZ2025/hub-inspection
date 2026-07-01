@@ -148,6 +148,8 @@ export default function InspectionDetailPage() {
     const slots: { time: string; label: string; available: boolean; bookedInfo?: string }[] = [];
     const WORK_START = 9, WORK_END = 18, LUNCH_START = 13, LUNCH_END = 14;
     const totalMin = (WORK_END - WORK_START) * 60;
+    const now = new Date();
+    const isToday = rescheduleDate === now.toISOString().split("T")[0];
     for (let offset = 0; offset + RESCHEDULE_SLOT_MIN <= totalMin; offset += RESCHEDULE_SLOT_MIN) {
       const startHour = WORK_START + Math.floor(offset / 60);
       const startMin = offset % 60;
@@ -157,6 +159,11 @@ export default function InspectionDetailPage() {
       const endStr = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
       if (startHour < LUNCH_START && endHour > LUNCH_START) continue;
       if (startHour >= LUNCH_START && startHour < LUNCH_END) continue;
+      // Si es hoy, saltar slots que ya pasaron
+      if (isToday) {
+        const slotStartCheck = new Date(`${rescheduleDate}T${timeStr}:00`);
+        if (slotStartCheck <= now) continue;
+      }
       const slotStart = new Date(`${rescheduleDate}T${timeStr}:00`);
       const slotEnd = new Date(`${rescheduleDate}T${endStr}:00`);
       const booked = rescheduleSchedule?.find((s) => {
