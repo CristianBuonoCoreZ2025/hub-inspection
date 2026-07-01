@@ -177,36 +177,36 @@ function InspectionsPageContent() {
 
   // Generar slots disponibles según tipo de inspección
   // Presencial: 2 horas por slot. Remota: 30 minutos por slot.
-  // Horario laboral: 9:00 a 18:00. Almuerzo: 13:00-14:00 (no se agenda).
+  // Horario normal: 9:00 a 18:00. Extra horario: 6:00-9:00 y 18:00-22:00.
+  // El almuerzo 13-14 es opcional (se puede agendar pero se marca).
   const SLOT_DURATION_MIN = inspectionType === "onsite" ? 120 : 30;
-  const WORK_START = 9;  // 9:00
-  const WORK_END = 18;   // 18:00
-  const LUNCH_START = 13; // 13:00
-  const LUNCH_END = 14;   // 14:00
+  const DAY_START = 6;   // 6:00
+  const DAY_END = 22;    // 22:00
+  const NORMAL_START = 9;  // 9:00
+  const NORMAL_END = 18;   // 18:00
 
   const generateTimeSlots = () => {
-    const slots: { time: string; label: string; available: boolean; bookedInfo?: string }[] = [];
-    const totalMin = (WORK_END - WORK_START) * 60;
+    const slots: { time: string; label: string; available: boolean; extra: boolean; bookedInfo?: string }[] = [];
+    const totalMin = (DAY_END - DAY_START) * 60;
     const now = new Date();
     const isToday = scheduledDate === now.toISOString().split("T")[0];
 
     for (let offset = 0; offset + SLOT_DURATION_MIN <= totalMin; offset += SLOT_DURATION_MIN) {
-      const startHour = WORK_START + Math.floor(offset / 60);
+      const startHour = DAY_START + Math.floor(offset / 60);
       const startMin = offset % 60;
-      const endHour = WORK_START + Math.floor((offset + SLOT_DURATION_MIN) / 60);
+      const endHour = DAY_START + Math.floor((offset + SLOT_DURATION_MIN) / 60);
       const endMin = (offset + SLOT_DURATION_MIN) % 60;
       const timeStr = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
       const endStr = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
-
-      // Saltar slots que cruzan el almuerzo
-      if (startHour < LUNCH_START && endHour > LUNCH_START) continue;
-      if (startHour >= LUNCH_START && startHour < LUNCH_END) continue;
 
       // Si es hoy, saltar slots que ya pasaron
       if (isToday) {
         const slotStart = new Date(`${scheduledDate}T${timeStr}:00`);
         if (slotStart <= now) continue;
       }
+
+      // Determinar si es extra horario
+      const isExtra = startHour < NORMAL_START || startHour >= NORMAL_END;
 
       // Verificar si está ocupado
       const slotStart = new Date(`${scheduledDate}T${timeStr}:00`);
@@ -223,6 +223,7 @@ function InspectionsPageContent() {
         time: timeStr,
         label: `${timeStr} - ${endStr}`,
         available: !booked,
+        extra: isExtra,
         bookedInfo: booked ? `${booked.claim.claim_number} · ${booked.claim.claims_participants?.[0]?.full_name || ""}` : undefined,
       });
     }
@@ -660,7 +661,7 @@ function InspectionsPageContent() {
                     Disponibilidad de {inspectors.find((i) => i.id === selectedInspectorId)?.full_name || "inspector"}
                   </label>
                   <span className="text-[11px] text-muted-foreground">
-                    {inspectionType === "onsite" ? "Bloques de 2 horas" : "Bloques de 30 min"} · 9:00-13:00 / 14:00-18:00
+                    {inspectionType === "onsite" ? "Bloques de 2h" : "Bloques de 30min"} · Normal 9-18 · Extra 6-9 / 18-22
                   </span>
                 </div>
 
@@ -680,17 +681,26 @@ function InspectionsPageContent() {
                         key={slot.time}
                         type="button"
                         disabled={!slot.available}
-                        title={slot.bookedInfo ? `Ocupado: ${slot.bookedInfo}` : "Disponible"}
+                        title={slot.bookedInfo ? `Ocupado: ${slot.bookedInfo}` : slot.extra ? "Extra horario" : "Disponible"}
                         onClick={() => setScheduledTime(slot.time)}
                         className={`rounded-lg border px-3 py-2 text-[12px] font-medium transition-all text-center ${
                           !slot.available
                             ? "border-rose-500/20 bg-rose-500/5 text-rose-400 cursor-not-allowed line-through"
                             : scheduledTime === slot.time
-                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                            ? slot.extra
+                              ? "border-amber-500 bg-amber-500 text-white shadow-sm"
+                              : "border-primary bg-primary text-primary-foreground shadow-sm"
+                            : slot.extra
+                            ? "border-amber-500/30 bg-amber-500/5 text-amber-600 dark:text-amber-400 hover:border-amber-500/60 hover:bg-amber-500/10 cursor-pointer"
                             : "border-border bg-card hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
                         }`}
                       >
                         {slot.label}
+                        {slot.extra && slot.available && (
+                          <span className="block text-[9px] font-normal text-amber-500/70 truncate mt-0.5">
+                            extra
+                          </span>
+                        )}
                         {!slot.available && slot.bookedInfo && (
                           <span className="block text-[10px] font-normal text-rose-400/70 truncate mt-0.5">
                             {slot.bookedInfo}

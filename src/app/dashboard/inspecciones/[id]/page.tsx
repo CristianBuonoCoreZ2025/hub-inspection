@@ -145,25 +145,24 @@ export default function InspectionDetailPage() {
   // Generar slots para reagendamiento
   const RESCHEDULE_SLOT_MIN = rescheduleType === "onsite" ? 120 : 30;
   const generateRescheduleSlots = () => {
-    const slots: { time: string; label: string; available: boolean; bookedInfo?: string }[] = [];
-    const WORK_START = 9, WORK_END = 18, LUNCH_START = 13, LUNCH_END = 14;
-    const totalMin = (WORK_END - WORK_START) * 60;
+    const slots: { time: string; label: string; available: boolean; extra: boolean; bookedInfo?: string }[] = [];
+    const DAY_START = 6, DAY_END = 22, NORMAL_START = 9, NORMAL_END = 18;
+    const totalMin = (DAY_END - DAY_START) * 60;
     const now = new Date();
     const isToday = rescheduleDate === now.toISOString().split("T")[0];
     for (let offset = 0; offset + RESCHEDULE_SLOT_MIN <= totalMin; offset += RESCHEDULE_SLOT_MIN) {
-      const startHour = WORK_START + Math.floor(offset / 60);
+      const startHour = DAY_START + Math.floor(offset / 60);
       const startMin = offset % 60;
-      const endHour = WORK_START + Math.floor((offset + RESCHEDULE_SLOT_MIN) / 60);
+      const endHour = DAY_START + Math.floor((offset + RESCHEDULE_SLOT_MIN) / 60);
       const endMin = (offset + RESCHEDULE_SLOT_MIN) % 60;
       const timeStr = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
       const endStr = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
-      if (startHour < LUNCH_START && endHour > LUNCH_START) continue;
-      if (startHour >= LUNCH_START && startHour < LUNCH_END) continue;
       // Si es hoy, saltar slots que ya pasaron
       if (isToday) {
         const slotStartCheck = new Date(`${rescheduleDate}T${timeStr}:00`);
         if (slotStartCheck <= now) continue;
       }
+      const isExtra = startHour < NORMAL_START || startHour >= NORMAL_END;
       const slotStart = new Date(`${rescheduleDate}T${timeStr}:00`);
       const slotEnd = new Date(`${rescheduleDate}T${endStr}:00`);
       const booked = rescheduleSchedule?.find((s) => {
@@ -176,6 +175,7 @@ export default function InspectionDetailPage() {
         time: timeStr,
         label: `${timeStr} - ${endStr}`,
         available: !booked,
+        extra: isExtra,
         bookedInfo: booked ? `${booked.claim.claim_number}` : undefined,
       });
     }
@@ -724,7 +724,7 @@ export default function InspectionDetailPage() {
                     Disponibilidad
                   </Label>
                   <span className="text-[11px] text-muted-foreground">
-                    {rescheduleType === "onsite" ? "Bloques de 2 horas" : "Bloques de 30 min"}
+                    {rescheduleType === "onsite" ? "Bloques de 2h" : "Bloques de 30min"} · Normal 9-18 · Extra 6-9 / 18-22
                   </span>
                 </div>
                 {rescheduleScheduleLoading ? (
@@ -741,17 +741,24 @@ export default function InspectionDetailPage() {
                         key={slot.time}
                         type="button"
                         disabled={!slot.available}
-                        title={slot.bookedInfo ? `Ocupado: ${slot.bookedInfo}` : "Disponible"}
+                        title={slot.bookedInfo ? `Ocupado: ${slot.bookedInfo}` : slot.extra ? "Extra horario" : "Disponible"}
                         onClick={() => setRescheduleTime(slot.time)}
                         className={`rounded-lg border px-3 py-2 text-[12px] font-medium transition-all text-center ${
                           !slot.available
                             ? "border-rose-500/20 bg-rose-500/5 text-rose-400 cursor-not-allowed line-through"
                             : rescheduleTime === slot.time
-                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                            ? slot.extra
+                              ? "border-amber-500 bg-amber-500 text-white shadow-sm"
+                              : "border-primary bg-primary text-primary-foreground shadow-sm"
+                            : slot.extra
+                            ? "border-amber-500/30 bg-amber-500/5 text-amber-600 dark:text-amber-400 hover:border-amber-500/60 hover:bg-amber-500/10 cursor-pointer"
                             : "border-border bg-card hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
                         }`}
                       >
                         {slot.label}
+                        {slot.extra && slot.available && (
+                          <span className="block text-[9px] font-normal text-amber-500/70 truncate mt-0.5">extra</span>
+                        )}
                       </button>
                     ))}
                   </div>
