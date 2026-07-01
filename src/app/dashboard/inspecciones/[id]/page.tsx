@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -118,6 +118,13 @@ export default function InspectionDetailPage() {
     queryFn: () => getUsers(),
   });
   const inspectors = users?.filter((u) => u.role === "inspector") || [];
+
+  // Pre-seleccionar el inspector del siniestro al abrir el modal de reagendamiento
+  useEffect(() => {
+    if (rescheduleModalOpen && session?.claim?.inspector_id) {
+      setRescheduleInspectorId(session.claim.inspector_id);
+    }
+  }, [rescheduleModalOpen, session]);
 
   // Cargar motivos de cancelación
   const { data: cancellationReasons } = useQuery({

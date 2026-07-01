@@ -123,6 +123,18 @@ function InspectionsPageContent() {
     claims_participants: participants?.filter((p) => p.claim_id === claim.id) ?? [],
   }));
 
+  // Pre-seleccionar el inspector que ya viene asignado en el siniestro
+  useEffect(() => {
+    if (selectedClaimId && claims) {
+      const claim = claims.find((c) => c.id === selectedClaimId);
+      if (claim?.inspector_id) {
+        setSelectedInspectorId(claim.inspector_id);
+      } else {
+        setSelectedInspectorId("");
+      }
+    }
+  }, [selectedClaimId, claims]);
+
   const createMutation = useMutation({
     mutationFn: (claimId: string) => {
       const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
