@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
 import type { InspectionSession } from "@/types";
 
 const steps = [
@@ -42,6 +44,20 @@ interface ActaFormProps {
 export default function ActaForm({ session }: ActaFormProps) {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
+
+  const { catalogs, isLoading: catalogsLoading } = useLookupCatalogs([
+    "interviewed_relationship",
+    "risk_type",
+    "risk_class",
+    "property_type",
+    "materiality_walls",
+    "materiality_roof",
+    "materiality_flooring",
+    "materiality_ceiling",
+    "materiality_interior_finish",
+    "materiality_exterior_finish",
+    "materiality_closure",
+  ]);
 
   const form = useForm<ActaInput>({
     resolver: standardSchemaResolver(actaSchema),
@@ -127,6 +143,21 @@ export default function ActaForm({ session }: ActaFormProps) {
   const watch = (name: string) => form.watch(name as never);
   const set = (name: string, value: unknown) => form.setValue(name as never, value as never);
 
+  const catalogSelect = (name: string, category: string, placeholder = "Seleccionar...") => {
+    const items = catalogs[category] || [];
+    const current = watch(name) as unknown as string;
+    return (
+      <Select value={current || ""} onValueChange={(v) => set(name, v)}>
+        <SelectTrigger className="app-input"><SelectValue placeholder={placeholder} /></SelectTrigger>
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem key={item.id} value={item.code || item.name}>{item.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
+
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {/* Stepper */}
@@ -180,7 +211,7 @@ export default function ActaForm({ session }: ActaFormProps) {
             </div>
             <div className="modal-field">
               <Label className="app-field-label">Relacion con Asegurado</Label>
-              <Input {...field("interviewed_relationship")} placeholder="Arrendatario" className="app-input" />
+              {catalogSelect("interviewed_relationship", "interviewed_relationship", "Seleccionar...")}
             </div>
           </div>
 
@@ -245,15 +276,15 @@ export default function ActaForm({ session }: ActaFormProps) {
           <div className="modal-grid-3">
             <div className="modal-field">
               <Label className="app-field-label">Tipo de Riesgo</Label>
-              <Input {...field("property_risk.risk_type")} placeholder="Habitacional" className="app-input" />
+              {catalogSelect("property_risk.risk_type", "risk_type")}
             </div>
             <div className="modal-field">
               <Label className="app-field-label">Clase de Riesgo</Label>
-              <Input {...field("property_risk.risk_class")} className="app-input" />
+              {catalogSelect("property_risk.risk_class", "risk_class")}
             </div>
             <div className="modal-field">
               <Label className="app-field-label">Tipo de Inmueble</Label>
-              <Input {...field("property_risk.property_type")} placeholder="Departamento" className="app-input" />
+              {catalogSelect("property_risk.property_type", "property_type")}
             </div>
             <div className="modal-field">
               <Label className="app-field-label">N° Dpto / Oficina</Label>
@@ -323,31 +354,31 @@ export default function ActaForm({ session }: ActaFormProps) {
           <div className="modal-grid-3">
             <div className="modal-field">
               <Label className="app-field-label">Muros</Label>
-              <Input {...field("property_materiality.walls")} placeholder="Hormigon" className="app-input" />
+              {catalogSelect("property_materiality.walls", "materiality_walls")}
             </div>
             <div className="modal-field">
               <Label className="app-field-label">Cubierta / Techumbre</Label>
-              <Input {...field("property_materiality.roof")} placeholder="Zinc" className="app-input" />
+              {catalogSelect("property_materiality.roof", "materiality_roof")}
             </div>
             <div className="modal-field">
               <Label className="app-field-label">Pavimentos Interiores</Label>
-              <Input {...field("property_materiality.interior_flooring")} placeholder="Laminado flotante" className="app-input" />
+              {catalogSelect("property_materiality.interior_flooring", "materiality_flooring")}
             </div>
             <div className="modal-field">
               <Label className="app-field-label">Cielos Interiores</Label>
-              <Input {...field("property_materiality.interior_ceilings")} placeholder="Losa concreto" className="app-input" />
+              {catalogSelect("property_materiality.interior_ceilings", "materiality_ceiling")}
             </div>
             <div className="modal-field">
               <Label className="app-field-label">Terminaciones Interiores</Label>
-              <Input {...field("property_materiality.interior_finishes")} placeholder="Pintura" className="app-input" />
+              {catalogSelect("property_materiality.interior_finishes", "materiality_interior_finish")}
             </div>
             <div className="modal-field">
               <Label className="app-field-label">Terminaciones Exteriores</Label>
-              <Input {...field("property_materiality.exterior_finishes")} className="app-input" />
+              {catalogSelect("property_materiality.exterior_finishes", "materiality_exterior_finish")}
             </div>
             <div className="modal-field">
               <Label className="app-field-label">Cierre Perimetral</Label>
-              <Input {...field("property_materiality.perimeter_closure")} className="app-input" />
+              {catalogSelect("property_materiality.perimeter_closure", "materiality_closure")}
             </div>
             <div className="modal-field modal-field-full">
               <Label className="app-field-label">Otros</Label>

@@ -89,7 +89,7 @@ export default function AgendaPage() {
 
   const filteredSessions = useMemo(() => {
     return sessions?.filter((s) => {
-      const matchesInspector = inspectorFilter === "all" || s.claim_id === inspectorFilter;
+      const matchesInspector = inspectorFilter === "all" || s.claim?.inspector_id === inspectorFilter;
       return matchesInspector && (s.status === "scheduled" || s.status === "active");
     }) || [];
   }, [sessions, inspectorFilter]);
@@ -225,13 +225,18 @@ export default function AgendaPage() {
   );
 }
 
-function EventCard({ session }: { session: InspectionSession & { claim?: Record<string, unknown> } }) {
+function EventCard({ session }: { session: InspectionSession & { claim?: any } }) {
   const time = session.scheduled_at
     ? new Date(session.scheduled_at).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
     : "";
+  const insuredName = session.claim?.claims_participants?.[0]?.full_name;
+  const isRemote = session.inspection_type === "remote";
 
   return (
-    <div className="rounded-lg border border-border bg-card p-2.5 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+    <a
+      href={`/dashboard/inspecciones/${session.id}`}
+      className="block rounded-lg border border-border bg-card p-2.5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+    >
       <div className="flex items-center justify-between gap-1 mb-1">
         <Badge className={`text-[10px] px-1 py-0 ${sessionStatusColors[session.status]}`}>
           {sessionStatusLabels[session.status]}
@@ -244,15 +249,22 @@ function EventCard({ session }: { session: InspectionSession & { claim?: Record<
         )}
       </div>
       <p className="text-[11px] font-medium truncate leading-tight">
-        #{session.claim?.claim_number as string}
+        #{session.claim?.claim_number}
       </p>
       <p className="text-[10px] text-muted-foreground truncate">
-        {session.claim?.insured_name as string}
+        {insuredName || "—"}
       </p>
       <div className="flex items-center gap-0.5 mt-1 text-[10px] text-muted-foreground">
         <MapPin className="h-2.5 w-2.5 shrink-0" />
-        <span className="truncate">{session.claim?.address as string}</span>
+        <span className="truncate">{session.claim?.claim_address || "—"}</span>
       </div>
-    </div>
+      {isRemote && (
+        <div className="mt-1">
+          <Badge className="text-[9px] px-1 py-0 bg-violet-500/10 text-violet-600 border-violet-500/20">
+            Remota
+          </Badge>
+        </div>
+      )}
+    </a>
   );
 }

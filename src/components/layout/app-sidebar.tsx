@@ -8,8 +8,6 @@ import {
   FileText,
   ClipboardCheck,
   Calendar,
-  Image,
-  BarChart3,
   Users,
   Building2,
   Settings,
@@ -50,8 +48,6 @@ const mainLinks = [
   { href: "/dashboard/claims", label: "Siniestros", icon: FileText },
   { href: "/dashboard/inspecciones", label: "Inspecciones", icon: ClipboardCheck },
   { href: "/dashboard/agenda", label: "Agenda", icon: Calendar },
-  { href: "/dashboard/evidencias", label: "Evidencias", icon: Image },
-  { href: "/dashboard/informes", label: "Informes", icon: BarChart3 },
 ]
 
 const catalogLinks = [
