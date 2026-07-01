@@ -70,7 +70,26 @@ export async function getInspectionSessionById(id: string) {
   return data.inspection_sessions_by_pk;
 }
 
-export async function createInspectionSession(claimId: string) {
+export async function createInspectionSession(claimId: string, options?: {
+  inspectionType?: "onsite" | "remote";
+  scheduledAt?: string;
+}) {
+  const inspectionType = options?.inspectionType || "onsite";
+  const object: Record<string, unknown> = {
+    claim_id: claimId,
+    status: options?.scheduledAt ? "scheduled" : "pending",
+    inspection_type: inspectionType,
+  };
+  if (options?.scheduledAt) {
+    object.scheduled_at = options.scheduledAt;
+  }
+  // Si es remota, generar magic link token con expiración de 24h
+  if (inspectionType === "remote") {
+    object.magic_link_token = crypto.randomUUID();
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 24);
+    object.magic_link_expires_at = expires.toISOString();
+  }
   const mutation = `
     mutation CreateInspectionSession($object: inspection_sessions_insert_input!) {
       insert_inspection_sessions_one(object: $object) {
@@ -79,7 +98,7 @@ export async function createInspectionSession(claimId: string) {
     }
   `;
   const data = await graphqlRequest<{ insert_inspection_sessions_one: InspectionSession }>(mutation, {
-    object: { claim_id: claimId, status: "pending" },
+    object,
   });
   return data.insert_inspection_sessions_one;
 }

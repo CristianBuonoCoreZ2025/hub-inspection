@@ -72,6 +72,9 @@ export default function InspectionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [openCreate, setOpenCreate] = useState(false);
   const [selectedClaimId, setSelectedClaimId] = useState<string>("");
+  const [inspectionType, setInspectionType] = useState<"onsite" | "remote">("onsite");
+  const [scheduledDate, setScheduledDate] = useState<string>("");
+  const [scheduledTime, setScheduledTime] = useState<string>("");
 
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["inspection-sessions"],
@@ -97,12 +100,27 @@ export default function InspectionsPage() {
   }));
 
   const createMutation = useMutation({
-    mutationFn: createInspectionSession,
-    onSuccess: () => {
+    mutationFn: (claimId: string) => {
+      const scheduledAt = scheduledDate && scheduledTime
+        ? new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString()
+        : undefined;
+      return createInspectionSession(claimId, {
+        inspectionType,
+        scheduledAt,
+      });
+    },
+    onSuccess: (data) => {
       toast.success("Inspeccion creada");
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
       setOpenCreate(false);
       setSelectedClaimId("");
+      setScheduledDate("");
+      setScheduledTime("");
+      setInspectionType("onsite");
+      // Si es remota, navegar al detalle para ver el magic link
+      if (inspectionType === "remote" && data?.id) {
+        router.push(`/dashboard/inspecciones/${data.id}`);
+      }
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -365,11 +383,38 @@ export default function InspectionsPage() {
               Nueva Inspeccion
             </DialogTitle>
             <DialogDescription className="modal-subtitle">
-              Selecciona un siniestro para crear una nueva sesion de inspeccion.
+              Selecciona el tipo, agenda y siniestro para crear la inspeccion.
             </DialogDescription>
           </div>
 
           <div className="modal-body">
+            {/* Tipo de inspección + Agendamiento */}
+            <div className="modal-grid-3 mb-4">
+              <div className="modal-field">
+                <label className="app-field-label">Tipo</label>
+                <Select value={inspectionType} onValueChange={(v) => setInspectionType(v as "onsite" | "remote")}>
+                  <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="onsite">Presencial</SelectItem>
+                    <SelectItem value="remote">Remota</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="modal-field">
+                <label className="app-field-label">Fecha</label>
+                <Input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="app-input" />
+              </div>
+              <div className="modal-field">
+                <label className="app-field-label">Hora</label>
+                <Input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="app-input" />
+              </div>
+            </div>
+            {inspectionType === "remote" && (
+              <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-3 mb-4 text-[12px] text-violet-700 dark:text-violet-300">
+                <strong>Inspeccion Remota:</strong> Se generara un magic link unico para que el asegurado acceda sin login y vea la inspeccion en tiempo real.
+              </div>
+            )}
+
             {!claims ? (
               <p className="text-muted-foreground">Cargando siniestros...</p>
             ) : availableClaims?.length === 0 ? (

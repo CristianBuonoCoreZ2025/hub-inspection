@@ -741,7 +741,7 @@ export default function ClaimsPage() {
   });
 
   const inspectMutation = useMutation({
-    mutationFn: createInspectionSession,
+    mutationFn: (claimId: string) => createInspectionSession(claimId),
     onSuccess: (data) => {
       toast.success("Inspeccion creada");
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });

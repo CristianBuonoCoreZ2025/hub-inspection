@@ -218,10 +218,36 @@ export default function InspectionDetailPage() {
               <Badge className={sessionStatusColors[session.status]}>
                 {sessionStatusLabels[session.status]}
               </Badge>
+              {session.inspection_type === "remote" && (
+                <Badge className="bg-violet-500/10 text-violet-600 border-violet-500/20">
+                  Remota
+                </Badge>
+              )}
             </div>
             <p className="app-page-lead">
               {insuredParticipant?.full_name || "—"} — {claim?.claim_address || "—"}
             </p>
+            {session.inspection_type === "remote" && session.magic_link_token && (
+              <div className="mt-2 flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[12px]">
+                <span className="text-violet-700 dark:text-violet-300">Magic link:</span>
+                <code className="flex-1 truncate text-muted-foreground">
+                  {typeof window !== "undefined" ? `${window.location.origin}/inspection/${session.magic_link_token}` : `/inspection/${session.magic_link_token}`}
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => {
+                    if (typeof navigator !== "undefined" && navigator.clipboard) {
+                      navigator.clipboard.writeText(`${window.location.origin}/inspection/${session.magic_link_token}`);
+                      toast.success("Link copiado");
+                    }
+                  }}
+                >
+                  Copiar
+                </Button>
+              </div>
+            )}
           </div>
         </div>
         {statusActions()}

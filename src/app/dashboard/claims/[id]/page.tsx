@@ -189,7 +189,7 @@ export default function ClaimDetailPage() {
   });
 
   const createInspectionMutation = useMutation({
-    mutationFn: createInspectionSession,
+    mutationFn: (claimId: string) => createInspectionSession(claimId),
     onSuccess: (session) => {
       toast.success("Inspección creada");
       router.push(`/dashboard/inspecciones/${session.id}`);

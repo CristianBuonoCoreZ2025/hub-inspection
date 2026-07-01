@@ -38,7 +38,7 @@ const steps = [
 ];
 
 interface ActaFormProps {
-  session: InspectionSession;
+  session: InspectionSession & { claim?: any };
 }
 
 export default function ActaForm({ session }: ActaFormProps) {
@@ -59,13 +59,20 @@ export default function ActaForm({ session }: ActaFormProps) {
     "materiality_closure",
   ]);
 
+  // Pre-llenar desde el siniestro: si el acta no tiene datos del entrevistado,
+  // usar los del asegurado desde claims_participants
+  const claim = session.claim as any;
+  const insuredParticipant = claim?.claims_participants?.find((p: any) => p.type === "insured");
+  const preInsuredName = insuredParticipant?.full_name || "";
+  const preInsuredEmail = insuredParticipant?.email || "";
+
   const form = useForm<ActaInput>({
     resolver: standardSchemaResolver(actaSchema),
     defaultValues: {
       inspection_date: session.inspection_date || "",
       inspection_time: session.inspection_time || "",
-      interviewed_name: session.interviewed_name || "",
-      interviewed_email: session.interviewed_email || "",
+      interviewed_name: session.interviewed_name || preInsuredName,
+      interviewed_email: session.interviewed_email || preInsuredEmail,
       interviewed_relationship: session.interviewed_relationship || "",
       police_report_number: session.police_report_number || "",
       police_report_name: session.police_report_name || "",
@@ -78,7 +85,7 @@ export default function ActaForm({ session }: ActaFormProps) {
         risk_type: "", risk_class: "", property_type: "", apartment_number: "",
         floor_count: "", age_years: "", built_surface: "", room_count: "",
         bathroom_count: "", office_count: "", warehouse_count: "",
-        is_habitable: false, owner_name: "", branch_count: "",
+        is_habitable: false, owner_name: preInsuredName, branch_count: "",
         worker_resident_count: "", business_line: "",
         ...(session.property_risk as Record<string, unknown> || {}),
       },
