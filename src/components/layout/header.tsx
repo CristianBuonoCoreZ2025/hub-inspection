@@ -28,6 +28,11 @@ function getPageTitle(pathname: string) {
     companies: "Empresas",
     configuracion: "Configuración",
   }
+  // Si el último segmento es un UUID (detalle), usar el segmento anterior
+  if (last.length > 20 && segments.length >= 2) {
+    const parent = segments[segments.length - 2]
+    return map[parent] ?? parent.charAt(0).toUpperCase() + parent.slice(1)
+  }
   return map[last] ?? last.charAt(0).toUpperCase() + last.slice(1)
 }
 
