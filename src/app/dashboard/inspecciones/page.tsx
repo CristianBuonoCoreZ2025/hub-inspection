@@ -317,6 +317,7 @@ function InspectionsPageContent() {
         <table className="app-data-table">
           <thead>
             <tr>
+              <th className="min-w-[140px] sm:w-[170px]">Inspección</th>
               <th className="min-w-[100px] sm:w-[140px]">Siniestro</th>
               <th className="min-w-[120px] sm:w-[200px]">Asegurado</th>
               <th>Direccion</th>
@@ -328,19 +329,29 @@ function InspectionsPageContent() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                <td colSpan={7} className="py-8 text-center text-muted-foreground">
                   Cargando inspecciones...
                 </td>
               </tr>
             ) : filtered?.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                <td colSpan={7} className="py-8 text-center text-muted-foreground">
                   No hay inspecciones registradas.
                 </td>
               </tr>
             ) : (
               filtered?.map((session) => (
                 <tr key={session.id} className="hover:bg-muted/40 transition-colors">
+                  <td>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-mono text-[12px] font-semibold text-primary">
+                        {session.inspection_number || session.id.slice(0, 8)}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {session.inspection_type === "remote" ? "Remota" : "Presencial"}
+                      </span>
+                    </div>
+                  </td>
                   <td>
                     <div className="flex flex-col gap-0.5">
                       <span className="font-medium">{session.claim?.claim_number}</span>

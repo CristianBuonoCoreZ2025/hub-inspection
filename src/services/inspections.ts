@@ -6,7 +6,7 @@ import type {
 } from "@/types";
 
 const SESSION_FIELDS = `
-  id claim_id scheduled_at started_at ended_at
+  id claim_id inspection_number scheduled_at started_at ended_at
   magic_link_token magic_link_expires_at status inspection_type
   inspection_date inspection_time
   interviewed_name interviewed_email interviewed_relationship

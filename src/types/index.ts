@@ -234,6 +234,7 @@ export interface ActaThirdParty {
 export interface InspectionSession {
   id: string;
   claim_id: string;
+  inspection_number: string | null;
   scheduled_at: string | null;
   started_at: string | null;
   ended_at: string | null;

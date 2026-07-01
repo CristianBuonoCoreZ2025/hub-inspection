@@ -349,8 +349,13 @@ export default function InspectionDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="app-page-title">Inspeccion #{session.claim?.claim_number as string}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="app-page-title">
+                {session.inspection_number || `Inspección ${session.id.slice(0, 8)}`}
+              </h1>
+              <span className="text-[13px] text-muted-foreground">
+                Siniestro #{session.claim?.claim_number as string}
+              </span>
               <Badge className={sessionStatusColors[session.status]}>
                 {sessionStatusLabels[session.status]}
               </Badge>
