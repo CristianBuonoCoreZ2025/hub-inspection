@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,14 +10,14 @@ import {
   rescheduleInspectionSession,
   getInspectorSchedule,
 } from "@/services/inspections";
-import { updateClaimStatus, updateClaimFields } from "@/services/claims";
+import { updateClaimStatus } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getUsers } from "@/services/users";
+import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   ClipboardCheck,
-  Calendar,
   Play,
   CheckCircle,
   XCircle,
@@ -29,11 +29,12 @@ import {
   MessageSquare,
   RotateCcw,
   CalendarClock,
+  Video,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+// Tabs components no longer used — replaced with flat tab style matching claims page
 import {
   Dialog,
   DialogContent,
@@ -52,20 +53,20 @@ import { Label } from "@/components/ui/label";
 import type { InspectionSession } from "@/types";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import ActaForm from "./acta-form";
-import ChecklistTab from "./checklist-tab";
 import DamagesTab from "./damages-tab";
 import EvidencesTab from "./evidences-tab";
 import SignaturesTab from "./signatures-tab";
 import ReportTab from "./report-tab";
 import SketchesTab from "./sketches-tab";
 import ChatTab from "./chat-tab";
+import VideoCall from "@/components/video-call";
 
 // Mapea estado de inspección → código de estado de claim
 const sessionToClaimStatusCode: Record<string, string> = {
-  scheduled: "scheduled",
-  active: "in_progress",
-  completed: "in_review",
-  cancelled: "pending_info",
+  scheduled: "dispatchment",
+  active: "adjustment",
+  completed: "adjustment",
+  cancelled: "created",
 };
 // Nota: "pending" ya no existe en el flujo. La inspección nace como "scheduled".
 
@@ -110,6 +111,7 @@ export default function InspectionDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const sessionId = params.id as string;
+  const { canView } = usePermissions();
   const [activeTab, setActiveTab] = useState("resumen");
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
@@ -119,6 +121,8 @@ export default function InspectionDetailPage() {
   const [rescheduleTime, setRescheduleTime] = useState<string>("");
   const [rescheduleType, setRescheduleType] = useState<"onsite" | "remote">("onsite");
   const [rescheduleInspectorId, setRescheduleInspectorId] = useState<string>("");
+  const [chatPanelOpen, setChatPanelOpen] = useState(true);
+  const [videoCallOpen, setVideoCallOpen] = useState(false);
   const { codeToId } = useClaimStatuses();
 
   const { data: session, isLoading, isError, error } = useQuery({
@@ -132,14 +136,6 @@ export default function InspectionDetailPage() {
     queryFn: () => getUsers(),
   });
   const inspectors = users?.filter((u) => u.role === "inspector") || [];
-
-  // Pre-seleccionar el inspector del siniestro al abrir el modal de reagendamiento
-  useEffect(() => {
-    const claimData = session?.claim as Record<string, unknown> | undefined;
-    if (rescheduleModalOpen && claimData?.inspector_id) {
-      setRescheduleInspectorId(claimData.inspector_id as string);
-    }
-  }, [rescheduleModalOpen, session]);
 
   // Query: agenda del inspector para la fecha seleccionada (reagendamiento)
   const rescheduleDateForQuery = rescheduleDate ? new Date(`${rescheduleDate}T00:00:00`) : null;
@@ -229,6 +225,13 @@ export default function InspectionDetailPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Mutation silencioso para sincronizar el tab activo con el cliente (piloto automático)
+  const syncTabMutation = useMutation({
+    mutationFn: ({ id, tab }: { id: string; tab: string }) =>
+      updateInspectionSession(id, { active_tab: tab }),
+    onError: () => {/* silencioso: no afecta al inspector si falla */},
+  });
+
   const cancelMutation = useMutation({
     mutationFn: ({ id, reasonId, notes }: { id: string; reasonId: string; notes?: string }) =>
       cancelInspectionSession(id, reasonId, notes),
@@ -241,7 +244,7 @@ export default function InspectionDetailPage() {
       setCancelNotes("");
       // Actualizar estado del claim
       if (session?.claim_id) {
-        const statusId = codeToId["pending_info"];
+        const statusId = codeToId["created"];
         if (statusId) {
           try {
             await updateClaimStatus(session.claim_id, statusId);
@@ -305,9 +308,24 @@ export default function InspectionDetailPage() {
     );
   }
 
-  const claim = session.claim as any;
-  const insuredParticipant = claim?.claims_participants?.find((p: any) => p.type === "insured");
-  const contactParticipant = claim?.claims_participants?.find((p: any) => p.type === "contact");
+  type ClaimData = {
+    claim_number?: string | null;
+    client_reference?: string | null;
+    claim_address?: string | null;
+    policy_number?: string | null;
+    claim_date?: string | null;
+    liquidation_number?: string | null;
+    broker_executive?: string | null;
+    inspector_id?: string | null;
+    insurance_company?: { name: string } | null;
+    broker?: { name: string } | null;
+    advisor?: { name: string } | null;
+    claims_participants?: Array<{ type: string; full_name: string | null; email: string | null; phone: string | null; cell_phone: string | null }>;
+  };
+  const claim = session.claim as ClaimData | undefined;
+  const participants = claim?.claims_participants || [];
+  const insuredParticipant = participants.find((p) => p.type === "insured");
+  const contactParticipant = participants.find((p) => p.type === "contact");
 
   const statusActions = () => {
     switch (session.status) {
@@ -326,7 +344,13 @@ export default function InspectionDetailPage() {
               size="sm"
               variant="outline"
               className="btn-cancel btn-footer"
-              onClick={() => setRescheduleModalOpen(true)}
+              onClick={() => {
+                const claimData = session?.claim as Record<string, unknown> | undefined;
+                if (claimData?.inspector_id) {
+                  setRescheduleInspectorId(claimData.inspector_id as string);
+                }
+                setRescheduleModalOpen(true);
+              }}
             >
               <RotateCcw className="mr-2 h-3.5 w-3.5" />
               Reagendar
@@ -348,7 +372,24 @@ export default function InspectionDetailPage() {
             <Button
               size="sm"
               className="btn-save btn-footer"
-              onClick={() => updateMutation.mutate({ id: session.id, input: { status: "completed" } })}
+              onClick={() => {
+                // Validar: al menos una evidencia (foto/doc) o un daño o checklist item
+                const hasEvidences = (session.inspection_evidences?.length ?? 0) > 0;
+                const hasDamages = (session.inspection_damages?.length ?? 0) > 0;
+                const hasChecklist = (session.inspection_checklists?.length ?? 0) > 0;
+                const hasSketches = (session.damage_sketches?.length ?? 0) > 0;
+                const hasActa = session.property_risk && Object.keys(session.property_risk).length > 0;
+
+                if (!hasEvidences && !hasDamages && !hasChecklist && !hasSketches && !hasActa) {
+                  toast.error("No se puede finalizar: la inspección no tiene datos. Suba al menos una foto, documento, daño o item de checklist.");
+                  return;
+                }
+                if (!hasEvidences) {
+                  toast.error("No se puede finalizar: suba al menos una foto o documento como evidencia.");
+                  return;
+                }
+                updateMutation.mutate({ id: session.id, input: { status: "completed" } });
+              }}
             >
               <CheckCircle className="mr-2 h-3.5 w-3.5" />
               Finalizar
@@ -360,51 +401,250 @@ export default function InspectionDetailPage() {
     }
   };
 
+  const allTabs = [
+    { id: "resumen", label: "Resumen", icon: FileText, section: "inspecciones_detalle" },
+    { id: "acta", label: "Acta", icon: ClipboardCheck, section: "inspecciones_acta" },
+    { id: "danos", label: "Daños", icon: ShieldCheck, section: "inspecciones_danos" },
+    { id: "evidencias", label: "Evidencias", icon: MapPin, section: "inspecciones_evidencias" },
+    { id: "croquis", label: "Croquis", icon: MapPin, section: "inspecciones_croquis" },
+    { id: "firmas", label: "Firmas", icon: User, section: "inspecciones_firmas" },
+    { id: "informe", label: "Informe", icon: FileText, section: "inspecciones_informe" },
+  ];
+  const tabs = allTabs.filter(t => canView(t.section));
+
   return (
     <div className="app-page">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3 pb-2">
+        <div className="flex items-center gap-2.5 min-w-0">
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0 shrink-0"
             onClick={() => router.push("/dashboard/inspecciones")}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="app-page-title">
-                {session.inspection_number || `Inspección ${session.id.slice(0, 8)}`}
-              </h1>
-              <Badge className={sessionStatusColors[session.status]}>
-                {sessionStatusLabels[session.status]}
-              </Badge>
-              {session.inspection_type === "remote" && (
-                <Badge className="bg-violet-500/10 text-violet-600 border-violet-500/20">
-                  Remota
-                </Badge>
+          <p className="text-sm font-semibold truncate">
+            {session.inspection_number || `Inspección ${session.id.slice(0, 8)}`}
+          </p>
+          <Badge className={sessionStatusColors[session.status]}>
+            {sessionStatusLabels[session.status]}
+          </Badge>
+          {session.inspection_type === "remote" && (
+            <Badge className="bg-violet-500/10 text-violet-600 border-violet-500/20">
+              Remota
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {statusActions()}
+          {(session.status === "active") && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="btn-save btn-sm"
+              onClick={() => setVideoCallOpen(true)}
+            >
+              <Video className="mr-1.5 h-3.5 w-3.5" />
+              Videollamada
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Modal Videollamada */}
+      {videoCallOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setVideoCallOpen(false)}>
+          <div className="relative w-full max-w-2xl rounded-xl bg-white dark:bg-slate-900 p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Video className="h-4 w-4" />
+                Videollamada con Cliente
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="btn-neutral btn-icon h-7 w-7"
+                onClick={() => setVideoCallOpen(false)}
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            <VideoCall
+              sessionId={session.id}
+              displayName="Inspector"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Layout principal: tabs a la izquierda, chat lateral a la derecha */}
+      <div className="flex gap-4 flex-1">
+        {/* Contenido principal (tabs) */}
+        <div className="flex-1 min-w-0">
+      <div className="border-b">
+        <div className="flex gap-1 overflow-x-auto">
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setActiveTab(t.id);
+                  syncTabMutation.mutate({ id: session.id, tab: t.id });
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  isActive
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+        {/* ── TAB: RESUMEN ── */}
+        {activeTab === "resumen" && (
+        <div className="mt-4 app-stack">
+          {/* Datos del Siniestro */}
+          <div className="app-panel">
+            <h3 className="app-section-title">
+              Datos del Siniestro
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
+              <div>
+                <span className="app-data-label">N° Interno</span>
+                <p className="font-mono font-semibold text-primary">{(claim?.liquidation_number as string) || "—"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Ref. Cliente</span>
+                <p className="font-medium">{(claim?.client_reference as string) || "—"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">N° Siniestro Cía</span>
+                <p className="font-medium">{claim?.claim_number as string}</p>
+              </div>
+              <div>
+                <span className="app-data-label">N° Poliza</span>
+                <p className="font-medium">{claim?.policy_number as string}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Compañia</span>
+                <p className="font-medium">{claim?.insurance_company?.name || "—"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Inspector</span>
+                <p className="font-medium">{inspectors.find((i) => i.id === claim?.inspector_id)?.full_name || "—"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Fecha Siniestro</span>
+                <p className="font-medium">{formatDate(claim?.claim_date as string | null)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Asegurado */}
+          <div className="app-panel">
+            <h3 className="app-section-title">
+              Asegurado
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
+              <div>
+                <span className="app-data-label">Nombre</span>
+                <p className="font-medium">{insuredParticipant?.full_name || "—"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Email</span>
+                <p className="font-medium">{insuredParticipant?.email || "—"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Telefono</span>
+                <p className="font-medium">{insuredParticipant?.phone || insuredParticipant?.cell_phone || "—"}</p>
+              </div>
+              <div className="col-span-2">
+                <span className="app-data-label">Direccion</span>
+                <p className="font-medium">{claim?.claim_address || "—"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Contacto del agendamiento (datos guardados al agendar) */}
+          <div className="app-panel">
+            <h3 className="app-section-title">
+              Contacto de Inspección
+            </h3>
+            <div className="app-data-grid">
+              <div>
+                <span className="app-data-label">Nombre contacto</span>
+                <p className="font-medium">{session.interviewed_name || contactParticipant?.full_name || "—"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Email</span>
+                <p className="font-medium">{session.interviewed_email || contactParticipant?.email || "—"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Lugar inspección</span>
+                <p className="font-medium">{claim?.claim_address || "—"}</p>
+              </div>
+              {session.inspector_observations && (
+                <div className="col-span-2 md:col-span-3">
+                  <span className="app-data-label">Comentarios del agendamiento</span>
+                  <p className="font-medium whitespace-pre-wrap mt-0.5">{session.inspector_observations}</p>
+                </div>
               )}
             </div>
-            <div className="flex items-center gap-3 mt-1 text-[12px] text-muted-foreground flex-wrap">
-              <span>N° Interno: <strong className="text-foreground font-mono">{claim?.liquidation_number || "—"}</strong></span>
-              <span>Ref. Cliente: <strong className="text-foreground">{claim?.client_reference || "—"}</strong></span>
-              <span>Inspector: <strong className="text-foreground">{inspectors.find((i) => i.id === claim?.inspector_id)?.full_name || "—"}</strong></span>
+          </div>
+
+          {/* Estado de la Sesion */}
+          <div className="app-panel">
+            <h3 className="app-section-title">
+              Estado de la Sesion
+            </h3>
+            <div className="app-data-grid-4">
+              <div>
+                <span className="app-data-label">Estado</span>
+                <p>
+                  <Badge className={sessionStatusColors[session.status]}>
+                    {sessionStatusLabels[session.status]}
+                  </Badge>
+                </p>
+              </div>
+              <div>
+                <span className="app-data-label">Programada</span>
+                <p className="font-medium">{session.scheduled_at ? formatDateTime(session.scheduled_at) : "Sin programar"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Iniciada</span>
+                <p className="font-medium">{session.started_at ? formatDateTime(session.started_at) : "—"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Finalizada</span>
+                <p className="font-medium">{session.ended_at ? formatDateTime(session.ended_at) : "—"}</p>
+              </div>
             </div>
-            <p className="app-page-lead mt-1">
-              {insuredParticipant?.full_name || "—"} — {claim?.claim_address || "—"}
-            </p>
-            {session.inspection_type === "remote" && session.magic_link_token && (
-              <div className="mt-2 flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[12px]">
-                <span className="text-violet-700 dark:text-violet-300">Magic link:</span>
+          </div>
+
+          {/* Magic link */}
+          {session.inspection_type === "remote" && session.magic_link_token && (
+            <div className="app-panel">
+              <h3 className="app-section-title">
+                Magic Link
+              </h3>
+              <div className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[12px]">
+                <span className="text-violet-700 dark:text-violet-300 shrink-0">Link:</span>
                 <code className="flex-1 truncate text-muted-foreground">
                   {typeof window !== "undefined" ? `${window.location.origin}/inspection/${session.magic_link_token}` : `/inspection/${session.magic_link_token}`}
                 </code>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-6 px-2 text-[11px]"
+                  className="h-6 px-2 text-[11px] shrink-0"
                   onClick={() => {
                     if (typeof navigator !== "undefined" && navigator.clipboard) {
                       navigator.clipboard.writeText(`${window.location.origin}/inspection/${session.magic_link_token}`);
@@ -415,179 +655,17 @@ export default function InspectionDetailPage() {
                   Copiar
                 </Button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-        {statusActions()}
-      </div>
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-        <TabsList className="w-full overflow-x-auto flex justify-start sm:justify-center">
-          <TabsTrigger value="resumen">
-            <FileText className="mr-1.5 h-3.5 w-3.5" />
-            Resumen
-          </TabsTrigger>
-          <TabsTrigger value="acta">
-            <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" />
-            Acta
-          </TabsTrigger>
-          <TabsTrigger value="checklist">
-            <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" />
-            Checklist
-          </TabsTrigger>
-          <TabsTrigger value="danos">
-            <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
-            Danos
-          </TabsTrigger>
-          <TabsTrigger value="evidencias">
-            <MapPin className="mr-1.5 h-3.5 w-3.5" />
-            Evidencias
-          </TabsTrigger>
-          <TabsTrigger value="croquis">
-            <MapPin className="mr-1.5 h-3.5 w-3.5" />
-            Croquis
-          </TabsTrigger>
-          <TabsTrigger value="firmas">
-            <User className="mr-1.5 h-3.5 w-3.5" />
-            Firmas
-          </TabsTrigger>
-          <TabsTrigger value="informe">
-            <FileText className="mr-1.5 h-3.5 w-3.5" />
-            Informe
-          </TabsTrigger>
-          <TabsTrigger value="chat">
-            <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
-            Chat
-          </TabsTrigger>
-        </TabsList>
-
-        {/* ── TAB: RESUMEN ── */}
-        <TabsContent value="resumen" className="mt-4 space-y-4">
-          {/* Datos del Siniestro */}
-          <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Datos del Siniestro
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-3 text-[13px]">
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">N° Interno</span>
-                <p className="font-mono font-semibold text-primary">{(claim?.liquidation_number as string) || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Ref. Cliente</span>
-                <p className="font-medium">{(claim?.client_reference as string) || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">N° Siniestro Cía</span>
-                <p className="font-medium">{claim?.claim_number as string}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">N° Poliza</span>
-                <p className="font-medium">{claim?.policy_number as string}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Compañia</span>
-                <p className="font-medium">{claim?.insurance_company?.name || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Inspector</span>
-                <p className="font-medium">{inspectors.find((i) => i.id === claim?.inspector_id)?.full_name || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Fecha Siniestro</span>
-                <p className="font-medium">{formatDate(claim?.claim_date as string | null)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Asegurado */}
-          <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Asegurado
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-3 text-[13px]">
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre</span>
-                <p className="font-medium">{insuredParticipant?.full_name || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Email</span>
-                <p className="font-medium">{insuredParticipant?.email || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Telefono</span>
-                <p className="font-medium">{insuredParticipant?.phone || insuredParticipant?.cell_phone || "—"}</p>
-              </div>
-              <div className="col-span-2">
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Direccion</span>
-                <p className="font-medium">{claim?.claim_address || "—"}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Contacto del agendamiento (datos guardados al agendar) */}
-          <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Contacto de Inspección
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre contacto</span>
-                <p className="font-medium">{session.interviewed_name || contactParticipant?.full_name || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Email</span>
-                <p className="font-medium">{session.interviewed_email || contactParticipant?.email || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Lugar inspección</span>
-                <p className="font-medium">{claim?.claim_address || "—"}</p>
-              </div>
-              {session.inspector_observations && (
-                <div className="col-span-2 md:col-span-3">
-                  <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Comentarios del agendamiento</span>
-                  <p className="font-medium whitespace-pre-wrap mt-0.5">{session.inspector_observations}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Estado de la Sesion */}
-          <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              Estado de la Sesion
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-[13px]">
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Estado</span>
-                <p>
-                  <Badge className={sessionStatusColors[session.status]}>
-                    {sessionStatusLabels[session.status]}
-                  </Badge>
-                </p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Programada</span>
-                <p className="font-medium">{session.scheduled_at ? formatDateTime(session.scheduled_at) : "Sin programar"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Iniciada</span>
-                <p className="font-medium">{session.started_at ? formatDateTime(session.started_at) : "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-[11px] uppercase tracking-wide">Finalizada</span>
-                <p className="font-medium">{session.ended_at ? formatDateTime(session.ended_at) : "—"}</p>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
+        )}
 
         {/* ── TAB: ACTA DE INSPECCION ── */}
-        <TabsContent value="acta" className="mt-4">
+        {activeTab === "acta" && (
+        <div className="mt-4">
           {session.status === "scheduled" ? (
             <div className="app-panel">
-              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+              <h3 className="app-section-title">
                 Acta de Inspeccion
               </h3>
               <div className="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30">
@@ -599,50 +677,89 @@ export default function InspectionDetailPage() {
           ) : (
             <ActaForm session={session} />
           )}
-        </TabsContent>
-
-        {/* ── TAB: CHECKLIST ── */}
-        <TabsContent value="checklist" className="mt-4">
-          <ChecklistTab sessionId={session.id} />
-        </TabsContent>
+        </div>
+        )}
 
         {/* ── TAB: DANOS ── */}
-        <TabsContent value="danos" className="mt-4">
+        {activeTab === "danos" && (
+        <div className="mt-4">
           <DamagesTab sessionId={session.id} />
-        </TabsContent>
+        </div>
+        )}
 
         {/* ── TAB: EVIDENCIAS ── */}
-        <TabsContent value="evidencias" className="mt-4">
+        {activeTab === "evidencias" && (
+        <div className="mt-4">
           <EvidencesTab sessionId={session.id} />
-        </TabsContent>
+        </div>
+        )}
 
         {/* ── TAB: CROQUIS ── */}
-        <TabsContent value="croquis" className="mt-4">
+        {activeTab === "croquis" && (
+        <div className="mt-4">
           <SketchesTab sessionId={session.id} />
-        </TabsContent>
+        </div>
+        )}
 
         {/* ── TAB: FIRMAS ── */}
-        <TabsContent value="firmas" className="mt-4">
+        {activeTab === "firmas" && (
+        <div className="mt-4">
           <SignaturesTab sessionId={session.id} />
-        </TabsContent>
+        </div>
+        )}
 
         {/* ── TAB: INFORME ── */}
-        <TabsContent value="informe" className="mt-4">
+        {activeTab === "informe" && (
+        <div className="mt-4">
           <ReportTab
             sessionId={session.id}
-            claimNumber={claim?.claim_number}
+            claimNumber={claim?.claim_number ?? undefined}
             sessionStatus={session.status}
             cancellationReason={cancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || null}
             cancellationNotes={session.cancellation_notes}
             cancelledAt={session.cancelled_at}
           />
-        </TabsContent>
+        </div>
+        )}
 
-        {/* ── TAB: CHAT ── */}
-        <TabsContent value="chat" className="mt-4">
-          <ChatTab sessionId={session.id} />
-        </TabsContent>
-      </Tabs>
+        </div>
+
+        {/* Panel lateral de Chat */}
+        {chatPanelOpen && (
+          <div className="w-[340px] shrink-0 hidden lg:flex flex-col">
+            <div className="app-panel flex flex-col flex-1" style={{ position: "sticky", top: "80px", maxHeight: "calc(100vh - 100px)" }}>
+              <div className="flex items-center justify-between mb-3 pb-2 border-b">
+                <h3 className="text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Chat
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="btn-neutral btn-icon h-6 w-6"
+                  onClick={() => setChatPanelOpen(false)}
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <ChatTab sessionId={session.id} compact />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Botón flotante para reabrir chat */}
+        {!chatPanelOpen && (
+          <button
+            onClick={() => setChatPanelOpen(true)}
+            className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 transition-transform"
+            title="Abrir chat"
+          >
+            <MessageSquare className="h-5 w-5" />
+          </button>
+        )}
+      </div>
 
       {/* Modal de Cancelación */}
       <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
@@ -656,7 +773,7 @@ export default function InspectionDetailPage() {
               Registra el motivo de cancelación. Se generará un informe de cancelación.
             </DialogDescription>
           </div>
-          <div className="modal-body space-y-4">
+          <div className="modal-body space-y-2">
             <div className="modal-field">
               <Label className="app-field-label">Motivo de cancelación *</Label>
               <Select value={cancelReasonId} onValueChange={(v) => setCancelReasonId(v ?? "")}>
@@ -712,7 +829,7 @@ export default function InspectionDetailPage() {
               La inspección actual se cancelará y se creará una nueva agendada.
             </DialogDescription>
           </div>
-          <div className="modal-body space-y-4">
+          <div className="modal-body space-y-2">
             <div className="modal-grid-3">
               <div className="modal-field">
                 <Label className="app-field-label">Inspector *</Label>
@@ -862,7 +979,7 @@ export default function InspectionDetailPage() {
               </p>
               {session.cancellation_notes && (
                 <p className="text-[12px] text-muted-foreground mt-1 italic">
-                  "{session.cancellation_notes}"
+                  &ldquo;{session.cancellation_notes}&rdquo;
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground mt-2">

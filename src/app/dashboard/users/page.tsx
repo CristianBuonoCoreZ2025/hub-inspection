@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUsers, inviteUser, updateUser, deactivateUser } from "@/services/users";
 import { getCompanies } from "@/services/companies";
+import { setUserClients } from "@/services/user-clients";
 import { inviteUserSchema, type InviteUserInput } from "@/lib/validations";
-import type { Company } from "@/types";
+import type { Company, Profile, UserClient, UserRole } from "@/types";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm } from "react-hook-form";
+import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, UserX, UserCheck, Users } from "lucide-react";
 
@@ -28,35 +30,43 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { UserRole } from "@/types";
 
 const roleLabels: Record<UserRole, string> = {
-  super_admin: "Super Admin",
-  admin: "Administrador",
-  supervisor: "Supervisor",
+  internal: "Interno",
   adjuster: "Liquidador",
   inspector: "Inspector",
-  client: "Empresa",
+  client_operator: "Operativo",
 };
 
 const roleColors: Record<UserRole, string> = {
-  super_admin: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
-  admin: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  supervisor: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+  internal: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
   adjuster: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
   inspector: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-  client: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  client_operator: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
 };
+
+const roleDescriptions: Record<UserRole, string> = {
+  internal: "Administrador del sistema. Ve todo, edita todo, gestiona usuarios y empresas.",
+  adjuster: "Liquidador asociado a uno o más clientes. Ve siniestros donde es el ajustador.",
+  inspector: "Inspector asociado a uno o más clientes. Completa inspecciones donde está a cargo.",
+  client_operator: "Operativo del cliente. Solo vista de los siniestros de su empresa.",
+};
+
+// Roles que requieren asignar clientes
+const rolesWithClients: UserRole[] = ["adjuster", "inspector", "client_operator"];
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
+  const { canCreate, canEdit, canDelete } = usePermissions();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
 
   const form = useForm<InviteUserInput>({
     resolver: standardSchemaResolver(inviteUserSchema),
-    defaultValues: { email: "", fullName: "", role: "adjuster", companyId: "" },
+    defaultValues: { email: "", fullName: "", role: "adjuster", companyId: "", clientIds: [] },
   });
 
   const selectedRole = form.watch("role");
@@ -72,23 +82,38 @@ export default function UsersPage() {
   });
 
   const inviteMutation = useMutation({
-    mutationFn: (input: InviteUserInput & { company_id: string }) => inviteUser(input),
+    mutationFn: async (input: InviteUserInput & { company_id: string }) => {
+      const result = await inviteUser(input);
+      // After invite, set user_clients if clientIds provided
+      if (input.clientIds && input.clientIds.length > 0 && result.user?.id) {
+        await setUserClients(result.user.id, input.clientIds);
+      }
+      return result;
+    },
     onSuccess: () => {
-      toast.success("Invitación enviada");
+      toast.success("Usuario invitado. Se envió un código de activación a su correo.");
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setOpen(false);
       form.reset();
+      setSelectedClientIds([]);
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, role }: { id: string; role: UserRole }) => updateUser(id, { role }),
+    mutationFn: async ({ id, userId, role, clientIds }: { id: string; userId: string; role: UserRole; clientIds: string[] }) => {
+      await updateUser(id, { role });
+      if (rolesWithClients.includes(role)) {
+        await setUserClients(userId, clientIds);
+      }
+    },
     onSuccess: () => {
       toast.success("Usuario actualizado");
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setOpen(false);
       setEditingId(null);
+      setEditingUserId(null);
+      setSelectedClientIds([]);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -104,16 +129,55 @@ export default function UsersPage() {
 
   const onSubmit = (values: InviteUserInput) => {
     if (editingId) {
-      updateMutation.mutate({ id: editingId, role: values.role });
+      updateMutation.mutate({
+        id: editingId,
+        userId: editingUserId || "",
+        role: values.role,
+        clientIds: selectedClientIds,
+      });
     } else {
-      const company_id = values.role === "client" ? values.companyId || "" : "";
-      inviteMutation.mutate({ ...values, company_id });
+      const company_id = values.role === "client_operator" ? selectedClientIds[0] || "" : "";
+      inviteMutation.mutate({ ...values, company_id, clientIds: selectedClientIds });
     }
   };
 
   const filtered = users?.filter((u) =>
     [u.full_name, u.email].join(" ").toLowerCase().includes(search.toLowerCase())
   );
+
+  const toggleClient = (companyId: string) => {
+    setSelectedClientIds((prev) =>
+      prev.includes(companyId)
+        ? prev.filter((id) => id !== companyId)
+        : [...prev, companyId]
+    );
+  };
+
+  const openEdit = (user: Profile & { user_clients: UserClient[] }) => {
+    setEditingId(user.id);
+    setEditingUserId(user.user_id);
+    form.reset({
+      email: user.email || "",
+      fullName: user.full_name || "",
+      role: user.role,
+      companyId: user.company_id || "",
+      clientIds: [],
+    });
+    // Load existing user_clients
+    const existingClientIds = user.user_clients?.map((uc: { company_id: string }) => uc.company_id) || [];
+    setSelectedClientIds(existingClientIds);
+    setOpen(true);
+  };
+
+  const openCreate = () => {
+    setEditingId(null);
+    setEditingUserId(null);
+    form.reset({ email: "", fullName: "", role: "adjuster", companyId: "", clientIds: [] });
+    setSelectedClientIds([]);
+    setOpen(true);
+  };
+
+  const showClientsSection = rolesWithClients.includes(selectedRole);
 
   return (
     <div className="app-page">
@@ -129,17 +193,19 @@ export default function UsersPage() {
             placeholder="Buscar usuario..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-full max-w-sm"
+            className="app-input h-7 w-full max-w-sm"
           />
         </div>
-        <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
-          <Plus className="mr-2 h-4 w-4" />
-          Invitar
-        </Button>
+        {canCreate("users") && (
+          <Button onClick={openCreate} className="btn-create btn-sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Invitar
+          </Button>
+        )}
 
-        {/* ── MODAL Usuarios — 520px (formulario simple) ── */}
+        {/* ── MODAL Usuarios ── */}
         <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
-          <DialogContent className="modal-sm" showCloseButton={false}>
+          <DialogContent className="modal-md" showCloseButton={false}>
             <div className="modal-header">
               <DialogTitle className="modal-title flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
@@ -158,14 +224,14 @@ export default function UsersPage() {
                   <>
                     <div className="modal-field modal-field-full">
                       <Label className="app-field-label">Nombre completo <span className="text-red-500">*</span></Label>
-                      <Input {...form.register("fullName")} placeholder="Juan Pérez" className="app-input" />
+                      <Input {...form.register("fullName")} placeholder="Juan Pérez" className="app-input h-7" />
                       {form.formState.errors.fullName && (
                         <p className="text-xs text-red-500">{form.formState.errors.fullName.message}</p>
                       )}
                     </div>
                     <div className="modal-field modal-field-full">
                       <Label className="app-field-label">Email <span className="text-red-500">*</span></Label>
-                      <Input {...form.register("email")} type="email" placeholder="juan@empresa.cl" className="app-input" />
+                      <Input {...form.register("email")} type="email" placeholder="juan@empresa.cl" className="app-input h-7" />
                       {form.formState.errors.email && (
                         <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
                       )}
@@ -173,32 +239,72 @@ export default function UsersPage() {
                   </>
                 )}
                 <div className="modal-field modal-field-full">
-                  <Label className="app-field-label">Rol <span className="text-red-500">*</span></Label>
-                  <Select onValueChange={(v) => form.setValue("role", v as "admin" | "supervisor" | "adjuster" | "inspector" | "client")} defaultValue={form.getValues("role")}>
-                    <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Selecciona un rol" /></SelectTrigger>
+                  <Label className="app-field-label">Tipo de Usuario <span className="text-red-500">*</span></Label>
+                  <Select
+                    value={selectedRole}
+                    onValueChange={(v) => {
+                      form.setValue("role", v as UserRole);
+                      if (!rolesWithClients.includes(v as UserRole)) setSelectedClientIds([]);
+                    }}
+                    items={[
+                      { value: "internal", label: "Interno (Administrador)" },
+                      { value: "adjuster", label: "Liquidador" },
+                      { value: "inspector", label: "Inspector" },
+                      { value: "client_operator", label: "Operativo (Cliente)" },
+                    ]}
+                  >
+                    <SelectTrigger className="app-input h-7"><SelectValue placeholder="Selecciona un tipo" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">Administrador (Interno)</SelectItem>
-                      <SelectItem value="supervisor">Supervisor (Interno)</SelectItem>
-                      <SelectItem value="adjuster">Liquidador (Interno)</SelectItem>
+                      <SelectItem value="internal">Interno (Administrador)</SelectItem>
+                      <SelectItem value="adjuster">Liquidador</SelectItem>
                       <SelectItem value="inspector">Inspector</SelectItem>
-                      <SelectItem value="client">Empresa (Cliente)</SelectItem>
+                      <SelectItem value="client_operator">Operativo (Cliente)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {form.formState.errors.role && (
-                    <p className="text-xs text-red-500">{form.formState.errors.role.message}</p>
-                  )}
+                  <p className="text-[11px] text-muted-foreground mt-1">{roleDescriptions[selectedRole]}</p>
                 </div>
-                {selectedRole === "client" && (
+
+                {showClientsSection && (
                   <div className="modal-field modal-field-full">
-                    <Label className="app-field-label">Empresa asignada <span className="text-red-500">*</span></Label>
-                    <Select onValueChange={(v) => form.setValue("companyId", v ?? "")} defaultValue={form.getValues("companyId")}>
-                      <SelectTrigger className="app-input h-[40px]"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
-                      <SelectContent>
-                        {companies?.map((c: Company) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.companyId && (
-                      <p className="text-xs text-red-500">Debe seleccionar una empresa para el cliente</p>
+                    <Label className="app-field-label">
+                      {selectedRole === "client_operator" ? "Empresa asignada" : "Clientes asignados"}
+                      <span className="text-red-500"> *</span>
+                    </Label>
+                    {selectedRole === "client_operator" ? (
+                      <Select
+                        value={selectedClientIds[0] ?? ""}
+                        onValueChange={(v) => setSelectedClientIds(v ? [v] : [])}
+                        items={companies?.map((c: Company) => ({ value: c.id, label: c.name })) || []}
+                      >
+                        <SelectTrigger className="app-input h-7"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+                        <SelectContent>
+                          {companies?.map((c: Company) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="space-y-1 max-h-[200px] overflow-y-auto rounded-lg border border-border p-2">
+                        {companies?.map((c: Company) => (
+                          <label
+                            key={c.id}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-xs"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedClientIds.includes(c.id)}
+                              onChange={() => toggleClient(c.id)}
+                              className="size-3.5 rounded border-input"
+                            />
+                            {c.name}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    {selectedClientIds.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        {selectedRole === "client_operator" ? "Debe seleccionar una empresa" : "Debe seleccionar al menos un cliente"}
+                      </p>
                     )}
                   </div>
                 )}
@@ -209,7 +315,12 @@ export default function UsersPage() {
               <button type="button" className="btn-cancel" onClick={() => setOpen(false)}>
                 Cancelar
               </button>
-              <button type="button" className="btn-save" disabled={inviteMutation.isPending || updateMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              <button
+                type="button"
+                className="btn-save"
+                disabled={inviteMutation.isPending || updateMutation.isPending}
+                onClick={form.handleSubmit(onSubmit)}
+              >
                 {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Invitar"}
               </button>
             </div>
@@ -224,16 +335,17 @@ export default function UsersPage() {
               <tr>
                 <th>Nombre</th>
                 <th>Email</th>
-                <th>Rol</th>
+                <th>Tipo</th>
+                <th>Clientes</th>
                 <th>Estado</th>
                 <th className="w-[80px]"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+                <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
               ) : filtered?.length === 0 ? (
-                <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron usuarios.</td></tr>
+                <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron usuarios.</td></tr>
               ) : (
                 filtered?.map((user) => (
                   <tr key={user.id}>
@@ -243,8 +355,13 @@ export default function UsersPage() {
                         {user.full_name || "Sin nombre"}
                       </div>
                     </td>
-                    <td>{user.email}</td>
+                    <td className="text-xs">{user.email}</td>
                     <td><Badge className={roleColors[user.role]}>{roleLabels[user.role]}</Badge></td>
+                    <td className="text-xs text-muted-foreground">
+                      {user.user_clients && user.user_clients.length > 0
+                        ? user.user_clients.map((uc: UserClient) => uc.company?.name).filter(Boolean).join(", ")
+                        : user.role === "internal" ? "—" : "Sin asignar"}
+                    </td>
                     <td>
                       {user.is_active ? (
                         <span className="inline-flex items-center gap-1 text-xs text-emerald-600"><UserCheck className="h-3 w-3" /> Activo</span>
@@ -253,13 +370,13 @@ export default function UsersPage() {
                       )}
                     </td>
                     <td>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
-                          setEditingId(user.id);
-                          form.reset({ email: user.email || "", fullName: user.full_name || "", role: user.role as Exclude<UserRole, "super_admin" | "client">, companyId: "" });
-                          setOpen(true);
-                        }}><Pencil className="h-4 w-4" /></Button>
-                        {user.is_active && (
+                      <div className="app-row-actions">
+                        {canEdit("users") && (
+                          <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => openEdit(user)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete("users") && user.is_active && (
                           <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este usuario?")) deactivateMutation.mutate(user.id); }}>
                             <UserX className="h-4 w-4" />
                           </Button>

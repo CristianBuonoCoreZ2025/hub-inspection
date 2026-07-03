@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getBrokers, createBroker, updateBroker, deleteBroker, getCountries } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, Briefcase } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import {
 
 export default function CorredoresPage() {
   const queryClient = useQueryClient();
+  const { canCreate, canEdit, canDelete } = usePermissions();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -84,9 +86,11 @@ export default function CorredoresPage() {
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar corredor..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-full max-w-sm" />
         </div>
-        <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="btn-create btn-sm">
-          <Plus className="mr-2 h-4 w-4" /> Agregar Item
-        </Button>
+        {canCreate("catalogos") && (
+          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="btn-create btn-sm">
+            <Plus className="mr-2 h-4 w-4" /> Agregar Item
+          </Button>
+        )}
       </div>
 
       <div className="app-data-table-wrap">
@@ -104,9 +108,13 @@ export default function CorredoresPage() {
                 <td className="max-w-[200px] truncate text-muted-foreground">{b.address || "—"}</td>
                 <td>{b.contact || "—"}</td>
                 <td>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(b.id); setFormData({ country_id: b.country_id || "", name: b.name, rut: b.rut || "", address: b.address || "", contact: b.contact || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este corredor?")) deleteMutation.mutate(b.id); }}><Trash2 className="h-4 w-4" /></Button>
+                  <div className="app-row-actions">
+                    {canEdit("catalogos") && (
+                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(b.id); setFormData({ country_id: b.country_id || "", name: b.name, rut: b.rut || "", address: b.address || "", contact: b.contact || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                    )}
+                    {canDelete("catalogos") && (
+                      <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este corredor?")) deleteMutation.mutate(b.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -124,7 +132,7 @@ export default function CorredoresPage() {
             </DialogTitle>
           </div>
           <form onSubmit={handleSubmit}>
-            <div className="modal-body space-y-4">
+            <div className="modal-body space-y-2">
               <div className="modal-grid">
                 <div className="modal-field">
                   <Label className="app-field-label">País</Label>
@@ -133,7 +141,7 @@ export default function CorredoresPage() {
                     onValueChange={(v) => setFormData({ ...formData, country_id: v || "" })}
                     items={countries?.map((c) => ({ value: c.id, label: c.name })) || []}
                   >
-                    <SelectTrigger className="app-input h-9">
+                    <SelectTrigger className="app-input h-7">
                       <SelectValue placeholder="Seleccionar país..." />
                     </SelectTrigger>
                     <SelectContent>

@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getHousingDestinations, createHousingDestination, updateHousingDestination, deleteHousingDestination } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, Warehouse } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import {
 
 export default function HousingDestinationPage() {
   const queryClient = useQueryClient();
+  const { canCreate, canEdit, canDelete } = usePermissions();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export default function HousingDestinationPage() {
   const createMutation = useMutation({
     mutationFn: createHousingDestination,
     onSuccess: () => {
-      toast.success("Destinos Vivienda creado");
+      toast.success("Destinos del Bien creado");
       queryClient.invalidateQueries({ queryKey: ["destinos_vivienda"] });
       setOpen(false);
       setFormData({"name":"","description":""});
@@ -41,7 +43,7 @@ export default function HousingDestinationPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateHousingDestination>[1] }) => updateHousingDestination(id, input),
     onSuccess: () => {
-      toast.success("Destinos Vivienda actualizado");
+      toast.success("Destinos del Bien actualizado");
       queryClient.invalidateQueries({ queryKey: ["destinos_vivienda"] });
       setOpen(false);
       setEditingId(null);
@@ -53,7 +55,7 @@ export default function HousingDestinationPage() {
   const deleteMutation = useMutation({
     mutationFn: deleteHousingDestination,
     onSuccess: () => {
-      toast.success("Destinos Vivienda desactivado");
+      toast.success("Destinos del Bien desactivado");
       queryClient.invalidateQueries({ queryKey: ["destinos_vivienda"] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -79,7 +81,7 @@ export default function HousingDestinationPage() {
   return (
     <div className="app-page">
       <header className="app-page-header">
-        <h1 className="app-page-title">Destinos Vivienda</h1>
+        <h1 className="app-page-title">Destinos del Bien</h1>
         <p className="app-page-lead">Mantenedor de catalogo.</p>
       </header>
 
@@ -93,13 +95,15 @@ export default function HousingDestinationPage() {
             className="h-9 w-full max-w-sm"
           />
         </div>
-        <Button
-          onClick={() => { setEditingId(null); setFormData({"name":"","description":""}); setOpen(true); }}
-          className="btn-create btn-sm"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Agregar Item
-        </Button>
+        {canCreate("catalogos") && (
+          <Button
+            onClick={() => { setEditingId(null); setFormData({"name":"","description":""}); setOpen(true); }}
+            className="btn-create btn-sm"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Agregar Item
+          </Button>
+        )}
       </div>
 
       <div className="app-data-table-wrap">
@@ -124,15 +128,19 @@ export default function HousingDestinationPage() {
                   <td className="font-medium">{item.name}</td>
                   <td className="font-medium">{item.description}</td>
                   <td>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
-                        setEditingId(item.id);
-                        setFormData({ name: item.name || "", description: item.description || "" });
-                        setOpen(true);
-                      }}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div className="app-row-actions">
+                      {canEdit("catalogos") && (
+                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+                          setEditingId(item.id);
+                          setFormData({ name: item.name || "", description: item.description || "" });
+                          setOpen(true);
+                        }}><Pencil className="h-4 w-4" /></Button>
+                      )}
+                      {canDelete("catalogos") && (
+                        <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -149,11 +157,11 @@ export default function HousingDestinationPage() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
                 <Warehouse className="h-4 w-4" />
               </div>
-              {editingId ? "Editar" : "Nuevo"} Destinos Vivienda
+              {editingId ? "Editar" : "Nuevo"} Destinos del Bien
             </DialogTitle>
           </div>
           <form onSubmit={handleSubmit}>
-            <div className="modal-body space-y-4">
+            <div className="modal-body space-y-2">
               <div className="modal-field">
                 <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
                 <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre" className="app-input" />

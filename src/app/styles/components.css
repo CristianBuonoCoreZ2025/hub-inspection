@@ -84,7 +84,7 @@
   }
 
   .app-page {
-    @apply mx-auto flex w-full max-w-[min(96rem,calc(100%-2rem))] flex-col gap-6 px-0;
+    @apply mx-auto flex w-full max-w-[min(120rem,calc(100%-1rem))] flex-col gap-3 px-1;
   }
 
   .app-page-stock-wide {
@@ -104,8 +104,21 @@
   }
 
   .app-panel {
-    @apply border border-border bg-card p-4 text-card-foreground shadow-[var(--shadow-card)] sm:p-6;
-    border-radius: 12px !important;
+    @apply border border-border bg-card p-3 text-card-foreground shadow-[var(--shadow-card)] sm:p-4;
+    border-radius: 10px !important;
+  }
+
+  .app-panel-title {
+    @apply text-[11px] font-semibold text-muted-foreground mb-2;
+  }
+
+  .app-data-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--muted-foreground) !important;
+    display: block;
+    line-height: 1.3 !important;
+    margin-bottom: 2px !important;
   }
 
   .app-toolbar {
@@ -118,7 +131,7 @@
   }
 
   .app-data-table {
-    @apply w-full border-collapse text-[13px] text-foreground;
+    @apply w-full border-collapse text-[11px] text-foreground;
   }
 
   .app-data-table thead tr {
@@ -127,11 +140,11 @@
   }
 
   .app-data-table th {
-    @apply px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
+    @apply px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground;
   }
 
   .app-data-table td {
-    @apply px-3 py-2.5;
+    @apply px-3 py-2 text-[11px];
     border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent) !important;
   }
 
@@ -145,5 +158,70 @@
 
   .app-alert-warn {
     @apply rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100;
+  }
+
+  /* ═══════════════ NUEVAS CLASES GLOBALES (centralización) ═══════════════ */
+
+  /* Título de sección dentro de paneles (con ícono opcional) */
+  .app-section-title {
+    @apply text-[11px] font-semibold text-muted-foreground mb-2 flex items-center gap-2;
+  }
+
+  /* Grid de datos — 3 columnas responsive, 4 en xl */
+  .app-data-grid {
+    @apply grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-2 text-[12px];
+  }
+
+  /* Grid de datos — 4 columnas responsive, 6 en xl */
+  .app-data-grid-4 {
+    @apply grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[12px];
+  }
+
+  /* Grid de datos — 2 columnas, 3 en xl */
+  .app-data-grid-2 {
+    @apply grid grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-2 text-[12px];
+  }
+
+  /* Campo de datos: label + valor */
+  .app-data-field {
+    @apply flex flex-col;
+  }
+
+  /* Valor de un campo de datos */
+  .app-data-value {
+    @apply font-medium text-foreground;
+  }
+
+  /* Texto de cuerpo (párrafos descriptivos) */
+  .app-body-text {
+    @apply text-[13px] text-foreground leading-relaxed;
+  }
+
+  /* Barra de tabs */
+  .app-tab-bar {
+    @apply border-b;
+  }
+
+  .app-tab-bar-inner {
+    @apply flex gap-1 overflow-x-auto;
+  }
+
+  /* Tab individual */
+  .app-tab {
+    @apply flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap border-transparent text-muted-foreground hover:text-foreground hover:border-muted;
+  }
+
+  .app-tab-active {
+    @apply border-primary text-primary;
+  }
+
+  /* Espaciado vertical estándar entre paneles */
+  .app-stack {
+    @apply space-y-2;
+  }
+
+  /* Contenedor de acciones en fila de tabla */
+  .app-row-actions {
+    @apply flex items-center gap-1;
   }
 }

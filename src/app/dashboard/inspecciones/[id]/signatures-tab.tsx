@@ -173,7 +173,7 @@ export default function SignaturesTab({ sessionId }: { sessionId: string }) {
   const adjusterSig = signatures?.find((s) => s.role === "adjuster");
 
   return (
-    <div className="space-y-4">
+    <div className="app-stack">
       {isLoading ? (
         <div className="app-panel text-center py-8 text-muted-foreground text-sm">Cargando firmas...</div>
       ) : (
@@ -181,10 +181,10 @@ export default function SignaturesTab({ sessionId }: { sessionId: string }) {
           {/* Firmas existentes */}
           {(insuredSig || adjusterSig) && (
             <div className="app-panel">
-              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+              <h3 className="app-section-title">
                 Firmas Guardadas
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {insuredSig && (
                   <div className="rounded-lg border p-3">
                     <div className="flex items-center gap-2 mb-2">

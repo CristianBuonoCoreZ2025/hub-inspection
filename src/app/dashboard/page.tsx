@@ -80,10 +80,10 @@ export default function DashboardPage() {
 
   const closedClaims =
     claims?.filter((c: Claim) => statusCode(c.status_id) === "closed") ?? [];
-  const pendingClaims =
-    claims?.filter((c: Claim) => statusCode(c.status_id) === "pending_info") ?? [];
-  const reviewClaims =
-    claims?.filter((c: Claim) => statusCode(c.status_id) === "in_review") ?? [];
+  const createdClaims =
+    claims?.filter((c: Claim) => statusCode(c.status_id) === "created") ?? [];
+  const adjustmentClaims =
+    claims?.filter((c: Claim) => statusCode(c.status_id) === "adjustment") ?? [];
   const openClaims =
     claims?.filter((c: Claim) => statusCode(c.status_id) !== "closed") ?? [];
 
@@ -118,13 +118,13 @@ export default function DashboardPage() {
       icon: CheckCircle,
     },
     {
-      label: "Casos pendientes",
-      value: pendingClaims.length,
+      label: "Casos en creación",
+      value: createdClaims.length,
       icon: Clock,
     },
     {
-      label: "Casos en revisión",
-      value: reviewClaims.length,
+      label: "Casos en liquidación",
+      value: adjustmentClaims.length,
       icon: AlertCircle,
     },
     {
@@ -151,7 +151,7 @@ export default function DashboardPage() {
     })) ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
@@ -160,7 +160,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (

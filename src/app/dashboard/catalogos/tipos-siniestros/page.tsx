@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaimTypes, createClaimType, updateClaimType, deleteClaimType } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, FileWarning, Flame, Droplets, Zap, Wind, Home, Car, Wrench, AlertTriangle, Shield, ClipboardCheck, Building, Warehouse, Store, Hotel, Factory, Scale, Gavel, FileText, Badge, Truck, Ship, Plane, Heart, Hospital, HeartPulse, Package2 } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,6 +84,7 @@ function getIconForClaimType(name: string): React.ComponentType<{ className?: st
 
 export default function ClaimTypePage() {
   const queryClient = useQueryClient();
+  const { canCreate, canEdit, canDelete } = usePermissions();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -159,13 +161,15 @@ export default function ClaimTypePage() {
             className="h-9 w-full max-w-sm"
           />
         </div>
-        <Button
-          onClick={() => { setEditingId(null); setFormData({ name: "", description: "", icon: "FileWarning" }); setOpen(true); }}
-          className="btn-create btn-sm"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Agregar Item
-        </Button>
+        {canCreate("catalogos") && (
+          <Button
+            onClick={() => { setEditingId(null); setFormData({ name: "", description: "", icon: "FileWarning" }); setOpen(true); }}
+            className="btn-create btn-sm"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Agregar Item
+          </Button>
+        )}
       </div>
 
       <div className="app-data-table-wrap">
@@ -198,15 +202,19 @@ export default function ClaimTypePage() {
                       </div>
                     </td>
                     <td>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
-                          setEditingId(item.id);
-                          setFormData({ name: item.name || "", description: item.description || "", icon: item.icon || "FileWarning" });
-                          setOpen(true);
-                        }}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="app-row-actions">
+                        {canEdit("catalogos") && (
+                          <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+                            setEditingId(item.id);
+                            setFormData({ name: item.name || "", description: item.description || "", icon: item.icon || "FileWarning" });
+                            setOpen(true);
+                          }}><Pencil className="h-4 w-4" /></Button>
+                        )}
+                        {canDelete("catalogos") && (
+                          <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -228,7 +236,7 @@ export default function ClaimTypePage() {
             </DialogTitle>
           </div>
           <form onSubmit={handleSubmit}>
-            <div className="modal-body space-y-4">
+            <div className="modal-body space-y-2">
               <div className="modal-field">
                 <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
                 <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ej: Incendio" className="app-input" />

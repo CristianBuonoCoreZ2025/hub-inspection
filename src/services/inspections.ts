@@ -14,6 +14,7 @@ const SESSION_FIELDS = `
   firefighters_company other_insurances other_insurance_company
   inspector_observations
   cancellation_reason_id cancellation_notes cancelled_at cancelled_by
+  active_tab acta_step
   property_risk
   property_materiality
   security_measures
@@ -108,6 +109,108 @@ export async function getInspectionSessionByToken(token: string) {
   return session;
 }
 
+/**
+ * Query GraphQL para la vista en vivo del magic link.
+ * Reutilizada por la API route server-side (con admin secret) para evitar
+ * exponer permisos anonymous en Hasura.
+ */
+export const INSPECTION_LIVE_QUERY = `
+  query GetInspectionSessionLive($token: String!) {
+    inspection_sessions(
+      where: { magic_link_token: { _eq: $token } }
+      limit: 1
+    ) {
+      id claim_id status inspection_type scheduled_at started_at ended_at
+      magic_link_token magic_link_expires_at created_at
+      inspection_date inspection_time
+      interviewed_name interviewed_email interviewed_relationship
+      police_report_number police_report_name police_report_rut
+      firefighters_company other_insurances other_insurance_company
+      active_tab acta_step
+      inspector_observations
+      property_risk
+      property_materiality
+      security_measures
+      insured_statement
+      third_parties
+      inspection_evidences(order_by: { created_at: desc }) {
+        id url type description category created_at
+      }
+      inspection_notes(order_by: { created_at: desc }) {
+        id content created_at
+      }
+      inspection_checklists(order_by: { created_at: desc }) {
+        id area item status notes created_at
+      }
+      inspection_damages(order_by: { created_at: desc }) {
+        id category subcategory description observations severity
+        dependency sector materiality_type unit quantity damage_type
+        product brand_model purchase_date estimated_amount
+        created_at
+      }
+      inspection_chat_messages(order_by: { created_at: asc }) {
+        id content sender_name sender_role created_at
+      }
+      inspection_signatures(order_by: { signed_at: asc }) {
+        id role signature_url signed_at
+      }
+      damage_sketches(order_by: { created_at: desc }) {
+        id sketch_url label created_at
+      }
+      claim {
+        claim_number client_reference claim_address policy_number claim_date
+        liquidation_number
+        claims_participants(where: { type: { _in: ["insured", "contact"] } }) {
+          type full_name email phone cell_phone
+        }
+        insurance_company { name }
+      }
+    }
+  }
+`;
+
+/**
+ * Adjunta el inspection_number ({liquidation_number}-I-{seq:3}) a la sesión.
+ * `seq` se calcula contando sesiones del mismo claim con created_at <= al de esta.
+ */
+export function attachInspectionNumber(
+  session: { claim?: { liquidation_number?: string | null } | null; inspection_number?: string },
+  seq: number
+): void {
+  const liquidation = session.claim?.liquidation_number || "UNKNOWN";
+  session.inspection_number = `${liquidation}-I-${String(seq).padStart(3, "0")}`;
+}
+
+/**
+ * Obtener la sesión completa con datos relacionados para vista en tiempo real del magic link.
+ * Trae evidencias, notas, checklist, daños y mensajes del chat.
+ */
+export async function getInspectionSessionLive(token: string) {
+  const data = await graphqlRequest<{ inspection_sessions: any[] }>(INSPECTION_LIVE_QUERY, { token });
+  const session = data.inspection_sessions[0];
+  if (!session) return null;
+
+  // Calcular inspection_number
+  try {
+    const countQuery = `
+      query CountSessionsForClaim($claimId: uuid!, $createdAt: timestamptz!) {
+        inspection_sessions(
+          where: { claim_id: { _eq: $claimId }, created_at: { _lte: $createdAt } }
+        ) { id }
+      }
+    `;
+    const countData = await graphqlRequest<{ inspection_sessions: { id: string }[] }>(countQuery, {
+      claimId: session.claim_id,
+      createdAt: session.created_at || new Date().toISOString(),
+    });
+    attachInspectionNumber(session, countData.inspection_sessions.length);
+  } catch {
+    attachInspectionNumber(session, 1);
+  }
+
+  return session;
+}
+
 export async function getInspectionSessionById(id: string) {
   const query = `
     query GetInspectionSessionById($id: uuid!) {
@@ -126,10 +229,25 @@ export async function getInspectionSessionById(id: string) {
             type full_name first_name last_name email phone cell_phone
           }
         }
+        inspection_evidences(order_by: { created_at: desc }) {
+          id url type description
+        }
+        inspection_checklists(order_by: { created_at: desc }) {
+          id area item status
+        }
+        inspection_damages(order_by: { created_at: desc }) {
+          id description severity
+        }
+        inspection_signatures(order_by: { signed_at: asc }) {
+          id role
+        }
+        damage_sketches(order_by: { created_at: desc }) {
+          id
+        }
       }
     }
   `;
-  const data = await graphqlRequest<{ inspection_sessions_by_pk: InspectionSession & { created_at: string; claim?: Record<string, unknown> } }>(query, { id });
+  const data = await graphqlRequest<{ inspection_sessions_by_pk: InspectionSession & { created_at: string; claim?: Record<string, unknown>; inspection_evidences: { id: string }[]; inspection_checklists: { id: string }[]; inspection_damages: { id: string }[]; inspection_signatures: { id: string }[]; damage_sketches: { id: string }[] } }>(query, { id });
   const session = data.inspection_sessions_by_pk;
   if (!session) return null;
 

@@ -70,10 +70,10 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
   const areas = grouped ? Object.keys(grouped).sort() : [];
 
   return (
-    <div className="space-y-4">
+    <div className="app-stack">
       {/* Agregar item */}
       <div className="app-panel">
-        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        <h3 className="app-section-title">
           Agregar Item
         </h3>
         <div className="flex flex-wrap items-end gap-2">
@@ -82,7 +82,7 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
             <select
               value={newItem.area}
               onChange={(e) => setNewItem({ ...newItem, area: e.target.value })}
-              className="app-input h-8 w-full text-[13px]"
+              className="app-input h-7 w-full text-[13px]"
             >
               <option value="">Seleccionar área...</option>
               {defaultAreas.map((a) => (
@@ -96,7 +96,7 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
               value={newItem.item}
               onChange={(e) => setNewItem({ ...newItem, item: e.target.value })}
               placeholder="Ej. Estado de vigas principales..."
-              className="app-input h-8 w-full text-[13px]"
+              className="app-input h-7 w-full text-[13px]"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newItem.area && newItem.item) {
                   createMutation.mutate({
@@ -139,7 +139,7 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
       ) : (
         areas.map((area) => (
           <div key={area} className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+            <h3 className="app-section-title">
               {area}
             </h3>
             <div className="space-y-2">
@@ -175,7 +175,7 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
                           updateMutation.mutate({ id: item.id, data: { notes: e.target.value || null } });
                         }
                       }}
-                      className="app-input h-7 w-full sm:w-[180px] text-xs"
+                      className="app-input h-6 w-[120px] text-[11px]"
                     />
                     <Button
                       variant="ghost"

@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCompanies, createCompany, updateCompany, deleteCompany } from "@/services/companies";
+import { getUsersByCompany } from "@/services/user-clients";
+import { userTypeLabels } from "@/services/permissions";
 import { getCountries } from "@/services/countries";
 import { uploadFileToStorage } from "@/lib/nhost/storage-upload";
 import { companySchema, type CompanyInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, Controller } from "react-hook-form";
+import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, Upload, X, ImageIcon, Building2, Globe, Mail, Phone } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Upload, X, ImageIcon, Building2, Globe, Mail, Phone, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +26,8 @@ import {
 
 import type { Country } from "@/types";
 
+const userTypeLabel = userTypeLabels;
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -35,10 +40,12 @@ function slugify(text: string): string {
 
 export default function CompaniesPage() {
   const queryClient = useQueryClient();
+  const { canCreate, canEdit, canDelete } = usePermissions();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [usersModalCompany, setUsersModalCompany] = useState<{ id: string; name: string } | null>(null);
 
   const form = useForm<CompanyInput>({
     resolver: standardSchemaResolver(companySchema),
@@ -53,6 +60,12 @@ export default function CompaniesPage() {
   const { data: countries } = useQuery({
     queryKey: ["countries"],
     queryFn: getCountries,
+  });
+
+  const { data: companyUsers, isLoading: loadingUsers } = useQuery({
+    queryKey: ["company-users", usersModalCompany?.id],
+    queryFn: () => getUsersByCompany(usersModalCompany!.id),
+    enabled: !!usersModalCompany?.id,
   });
 
   const selectedCountryId = form.watch("countryId");
@@ -125,10 +138,12 @@ export default function CompaniesPage() {
             className="h-9 w-full max-w-sm"
           />
         </div>
-        <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva
-        </Button>
+        {canCreate("companies") && (
+          <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva
+          </Button>
+        )}
 
         <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
           <DialogContent className="modal-md" showCloseButton={false}>
@@ -295,14 +310,15 @@ export default function CompaniesPage() {
                 <th className="w-[140px]">RUT / ID</th>
                 <th className="w-[200px]">Email</th>
                 <th className="w-[140px]">Teléfono</th>
+                <th className="w-[60px] text-center">Usuarios</th>
                 <th className="w-[80px]"></th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+                <tr><td colSpan={7} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
               ) : filtered?.length === 0 ? (
-                <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron empresas.</td></tr>
+                <tr><td colSpan={7} className="text-center text-muted-foreground py-4">No se encontraron empresas.</td></tr>
               ) : (
                 filtered?.map((company) => (
                   <tr key={company.id}>
@@ -350,20 +366,34 @@ export default function CompaniesPage() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
+                    <td className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setUsersModalCompany({ id: company.id, name: company.name })}
+                        className="inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
+                      >
+                        <Users className="h-3.5 w-3.5" />
+                        Ver
+                      </button>
+                    </td>
                     <td>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
-                          setEditingId(company.id);
-                          form.reset({
-                            name: company.name, slug: company.slug, countryId: company.country_id || "",
-                            rut: company.rut || "", address: company.address || "", phone: company.phone || "", email: company.email || "",
-                            logoUrl: company.logo_url || "",
-                          });
-                          setOpen(true);
-                        }}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Eliminar esta empresa?")) deleteMutation.mutate(company.id); }}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="app-row-actions">
+                        {canEdit("companies") && (
+                          <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+                            setEditingId(company.id);
+                            form.reset({
+                              name: company.name, slug: company.slug, countryId: company.country_id || "",
+                              rut: company.rut || "", address: company.address || "", phone: company.phone || "", email: company.email || "",
+                              logoUrl: company.logo_url || "",
+                            });
+                            setOpen(true);
+                          }}><Pencil className="h-4 w-4" /></Button>
+                        )}
+                        {canDelete("companies") && (
+                          <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Eliminar esta empresa?")) deleteMutation.mutate(company.id); }}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -373,6 +403,74 @@ export default function CompaniesPage() {
           </table>
         </div>
       </div>
+
+      {/* Modal de usuarios de la empresa */}
+      <Dialog open={!!usersModalCompany} onOpenChange={(open) => { if (!open) setUsersModalCompany(null); }} dismissible={false}>
+        <DialogContent className="modal-lg" showCloseButton={false}>
+          <div className="modal-header">
+            <DialogTitle className="modal-title flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+                <Users className="h-4 w-4" />
+              </div>
+              Usuarios de {usersModalCompany?.name}
+            </DialogTitle>
+            <DialogDescription className="modal-subtitle">
+              Liquidadores, inspectores y operativos asociados a esta empresa.
+            </DialogDescription>
+          </div>
+          <div className="modal-body">
+            <div className="app-data-table-wrap">
+              <table className="app-data-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loadingUsers ? (
+                    <tr><td colSpan={4} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+                  ) : (companyUsers?.length === 0 || !companyUsers) ? (
+                    <tr><td colSpan={4} className="text-center text-muted-foreground py-4">No hay usuarios asociados a esta empresa.</td></tr>
+                  ) : (
+                    companyUsers.map((user) => (
+                      <tr key={user.id}>
+                        <td className="font-medium">{user.full_name || "—"}</td>
+                        <td>{user.email || "—"}</td>
+                        <td>
+                          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {userTypeLabel[user.role as keyof typeof userTypeLabel] || user.role}
+                          </span>
+                        </td>
+                        <td>
+                          {user.is_active ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              Activo
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                              Inactivo
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn-cancel" onClick={() => setUsersModalCompany(null)}>
+              Cerrar
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -111,7 +111,7 @@ export default function LandingPage() {
       <section className="relative overflow-hidden border-b bg-background px-4 py-24 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-8 items-center">
-            <div className="space-y-8">
+            <div className="space-y-4">
               <div className="inline-flex items-center rounded-full border bg-muted px-3 py-1 text-xs font-medium">
                 <span className="mr-2 flex size-2 rounded-full bg-emerald-500" />
                 Claims Lifecycle Management Platform

@@ -237,8 +237,9 @@ export type CompanyInput = z.infer<typeof companySchema>;
 export const inviteUserSchema = z.object({
   email: z.string().email("Correo inválido"),
   fullName: z.string().min(1, "Nombre requerido"),
-  role: z.enum(["admin", "supervisor", "adjuster", "inspector", "client"]),
+  role: z.enum(["internal", "adjuster", "inspector", "client_operator"]),
   companyId: z.string().optional(),
+  clientIds: z.array(z.string()).optional(),
 });
 
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;

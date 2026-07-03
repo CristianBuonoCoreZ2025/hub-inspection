@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useState, useEffect, useRef } from "react";
+import { useForm, useWatch, type Control, type FieldValues } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -13,7 +13,6 @@ import {
   Save,
   X,
   Shield,
-  Building,
   ChevronDown,
 } from "lucide-react";
 
@@ -23,8 +22,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-select";
 import { SelectItem } from "@/components/ui/select";
-import { updateClaimFields, updateClaimParticipant, createClaimParticipant, findParticipantByRut } from "@/services/claims";
+import { updateClaimFields, updateClaimStatus, updateClaimParticipant, createClaimParticipant, findParticipantByRut, type ParticipantMatch } from "@/services/claims";
 import { getCountries, getRegions, getCities, getCommunes } from "@/services/catalogs";
+import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import type { Claim, ClaimsParticipant } from "@/types";
 
 // ──────────────────────────────────────────────────────────────
@@ -35,6 +35,7 @@ interface Catalog {
   id: string;
   name: string;
   country_id?: string | null;
+  business_line_id?: string | null;
 }
 
 interface UserOption {
@@ -62,6 +63,8 @@ interface EditClaimFormProps {
     events: Catalog[];
     currencies: Catalog[];
     users: UserOption[];
+    companies: Catalog[];
+    countries: Catalog[];
   };
   onCancel: () => void;
   onSaved: () => void;
@@ -80,6 +83,7 @@ interface FormValues {
   claimCauseId: string;
   eventId: string;
   summary: string;
+  companyId: string;
   // Póliza
   currencyId: string;
   policyAmount: string;
@@ -96,8 +100,7 @@ interface FormValues {
   insuredLastName: string;
   insuredRut: string;
   insuredEmail: string;
-  insuredPhone: string;
-  insuredCellPhone: string;
+  insuredPhones: string;
   insuredAddress: string;
   insuredCountry: string;
   insuredRegion: string;
@@ -105,11 +108,11 @@ interface FormValues {
   insuredCommune: string;
 
   // Tab Participantes — Contractor
-  contractorFullName: string;
+  contractorFirstName: string;
+  contractorLastName: string;
   contractorRut: string;
   contractorEmail: string;
-  contractorCellPhone: string;
-  contractorPhone: string;
+  contractorPhones: string;
   contractorAddress: string;
   contractorCountry: string;
   contractorRegion: string;
@@ -117,11 +120,11 @@ interface FormValues {
   contractorCommune: string;
 
   // Tab Participantes — Beneficiary
-  beneficiaryFullName: string;
+  beneficiaryFirstName: string;
+  beneficiaryLastName: string;
   beneficiaryRut: string;
   beneficiaryEmail: string;
-  beneficiaryCellPhone: string;
-  beneficiaryPhone: string;
+  beneficiaryPhones: string;
   beneficiaryAddress: string;
   beneficiaryCountry: string;
   beneficiaryRegion: string;
@@ -162,6 +165,27 @@ function toDateInput(date: string | null | undefined): string {
   return date.substring(0, 10);
 }
 
+// Deduplicate phone numbers: normalize for comparison (strip spaces, +, -, parens)
+// but keep the first occurrence's original formatting.
+function uniquePhones(...values: (string | null | undefined)[]): string {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const v of values) {
+    if (!v) continue;
+    // Split by comma in case a value already contains multiple phones
+    for (const raw of v.split(",")) {
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+      const normalized = trimmed.replace(/[\s+\-()]/g, "").toLowerCase();
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        result.push(trimmed);
+      }
+    }
+  }
+  return result.join(", ");
+}
+
 function getParticipant(participants: ClaimsParticipant[], type: string): ClaimsParticipant | undefined {
   return participants.find((p) => p.type === type);
 }
@@ -172,7 +196,7 @@ function getParticipant(participants: ClaimsParticipant[], type: string): Claims
 
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
-    <span className="text-muted-foreground text-[11px] uppercase tracking-wide">
+    <span className="app-data-label">
       {label}
       {required && <span className="text-destructive ml-0.5">*</span>}
     </span>
@@ -187,7 +211,7 @@ function EditInput({
   return (
     <div className="space-y-1">
       <FieldLabel label={label} required={required} />
-      <Input className="app-input h-7 text-[13px]" {...props} />
+      <Input className="app-input h-7 text-[12px]" {...props} />
     </div>
   );
 }
@@ -205,7 +229,7 @@ function EditTextarea({
   );
 }
 
-function EditSelect({
+function EditSelect<T extends FieldValues = FieldValues>({
   label,
   required,
   control,
@@ -218,7 +242,7 @@ function EditSelect({
 }: {
   label: string;
   required?: boolean;
-  control: any;
+  control: Control<T>;
   name: string;
   placeholder: string;
   clearable?: boolean;
@@ -236,7 +260,7 @@ function EditSelect({
         clearable={clearable}
         disabled={disabled}
         onValueChange={onValueChange}
-        className="app-input h-7 text-[13px]"
+        className="app-input h-7 text-[12px]"
         items={items}
       >
         {items.map((item) => (
@@ -272,10 +296,8 @@ function EditCheckbox({
 
 const tabs = [
   { id: "siniestro", label: "Siniestro", icon: FileText },
-  { id: "asegurado", label: "Asegurado", icon: User },
   { id: "participantes", label: "Participantes", icon: Users },
   { id: "incidente", label: "Incidente", icon: MapPin },
-  { id: "asignaciones", label: "Asignaciones", icon: Briefcase },
 ];
 
 // ──────────────────────────────────────────────────────────────
@@ -285,22 +307,26 @@ const tabs = [
 export default function EditClaimForm({ claim, participants, catalogs, onCancel, onSaved }: EditClaimFormProps) {
   const [activeTab, setActiveTab] = useState("siniestro");
   const queryClient = useQueryClient();
+  const { statusCode, codeToId } = useClaimStatuses();
+  const currentStatusCode = statusCode(claim.status_id) ?? "created";
 
   // Linking state
-  const [contractorLinked, setContractorLinked] = useState(false);
-  const [beneficiaryLinked, setBeneficiaryLinked] = useState(false);
+
   const [claimAddressLinked, setClaimAddressLinked] = useState(false);
+  const [contractorLinked, setContractorLinked] = useState(() => getParticipant(participants, "contractor")?.linked_to_insured ?? false);
+  const [beneficiaryLinked, setBeneficiaryLinked] = useState(() => getParticipant(participants, "beneficiary")?.linked_to_insured ?? false);
 
   // Collapsible panels
-  const [expandedPanels, setExpandedPanels] = useState<{ contractor: boolean; beneficiary: boolean }>({
-    contractor: !!getParticipant(participants, "contractor")?.full_name,
-    beneficiary: !!getParticipant(participants, "beneficiary")?.full_name,
+  const [expandedPanels, setExpandedPanels] = useState<{ contractor: boolean; beneficiary: boolean }>(() => {
+    const hasContractor = !!getParticipant(participants, "contractor")?.full_name;
+    const hasBeneficiary = !!getParticipant(participants, "beneficiary")?.full_name;
+    return { contractor: hasContractor, beneficiary: !hasContractor && hasBeneficiary };
   });
 
   // RUT autocomplete suggestion
   const [participantSuggestion, setParticipantSuggestion] = useState<{
     section: "insured" | "contractor" | "beneficiary";
-    data: any;
+    data: ParticipantMatch | null;
   } | null>(null);
 
   const insured = getParticipant(participants, "insured");
@@ -322,6 +348,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
       claimCauseId: claim.claim_cause_id || "",
       eventId: claim.event_id || "",
       summary: claim.summary || "",
+      companyId: claim.company_id || "",
       // Póliza
       currencyId: claim.currency_id || "",
       policyAmount: claim.policy_amount?.toString() || "",
@@ -338,8 +365,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
       insuredLastName: insured?.last_name || "",
       insuredRut: insured?.rut || "",
       insuredEmail: insured?.email || "",
-      insuredPhone: insured?.phone || "",
-      insuredCellPhone: insured?.cell_phone || "",
+      insuredPhones: uniquePhones(insured?.phone, insured?.cell_phone),
       insuredAddress: insured?.address || "",
       insuredCountry: insured?.country || "",
       insuredRegion: insured?.region || "",
@@ -347,11 +373,11 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
       insuredCommune: insured?.commune || "",
 
       // Contractor
-      contractorFullName: contractor?.full_name || "",
+      contractorFirstName: contractor?.first_name || "",
+      contractorLastName: contractor?.last_name || "",
       contractorRut: contractor?.rut || "",
       contractorEmail: contractor?.email || "",
-      contractorCellPhone: contractor?.cell_phone || "",
-      contractorPhone: contractor?.phone || "",
+      contractorPhones: uniquePhones(contractor?.phone, contractor?.cell_phone),
       contractorAddress: contractor?.address || "",
       contractorCountry: contractor?.country || "",
       contractorRegion: contractor?.region || "",
@@ -359,11 +385,11 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
       contractorCommune: contractor?.commune || "",
 
       // Beneficiary
-      beneficiaryFullName: beneficiary?.full_name || "",
+      beneficiaryFirstName: beneficiary?.first_name || "",
+      beneficiaryLastName: beneficiary?.last_name || "",
       beneficiaryRut: beneficiary?.rut || "",
       beneficiaryEmail: beneficiary?.email || "",
-      beneficiaryCellPhone: beneficiary?.cell_phone || "",
-      beneficiaryPhone: beneficiary?.phone || "",
+      beneficiaryPhones: uniquePhones(beneficiary?.phone, beneficiary?.cell_phone),
       beneficiaryAddress: beneficiary?.address || "",
       beneficiaryCountry: beneficiary?.country || "",
       beneficiaryRegion: beneficiary?.region || "",
@@ -411,6 +437,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
         claim_cause_id: values.claimCauseId || null,
         event_id: values.eventId || null,
         summary: values.summary || null,
+        company_id: values.companyId || null,
         currency_id: values.currencyId || null,
         policy_amount: values.policyAmount ? parseFloat(values.policyAmount) : null,
         policy_premium: values.policyPremium ? parseFloat(values.policyPremium) : null,
@@ -443,6 +470,14 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
 
       await updateClaimFields(claim.id, claimSet);
 
+      // Si el claim estaba en "created" y ahora tiene inspector o liquidador → cambiar a "adjustment"
+      if (currentStatusCode === "created" && (values.inspectorId || values.adjusterId)) {
+        const adjustmentId = codeToId["adjustment"];
+        if (adjustmentId) {
+          await updateClaimStatus(claim.id, adjustmentId);
+        }
+      }
+
       // 2. Actualizar/crear participante insured
       const insuredData = {
         full_name: `${values.insuredFirstName} ${values.insuredLastName}`.trim(),
@@ -450,8 +485,8 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
         last_name: values.insuredLastName || null,
         rut: values.insuredRut || null,
         email: values.insuredEmail || null,
-        phone: values.insuredPhone || null,
-        cell_phone: values.insuredCellPhone || null,
+        phone: values.insuredPhones || null,
+        cell_phone: null,
         address: values.insuredAddress || null,
         country: values.insuredCountry || null,
         region: values.insuredRegion || null,
@@ -466,43 +501,54 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
 
       // 3. Actualizar/crear contractor
       const contractorData = {
-        full_name: values.contractorFullName,
+        full_name: `${values.contractorFirstName} ${values.contractorLastName}`.trim(),
+        first_name: values.contractorFirstName,
+        last_name: values.contractorLastName || null,
         rut: values.contractorRut || null,
         email: values.contractorEmail || null,
-        phone: values.contractorPhone || null,
-        cell_phone: values.contractorCellPhone || null,
+        phone: values.contractorPhones || null,
+        cell_phone: null,
         address: values.contractorAddress || null,
         country: values.contractorCountry || null,
         region: values.contractorRegion || null,
         city: values.contractorCity || null,
         commune: values.contractorCommune || null,
+        linked_to_insured: contractorLinked,
       };
       if (contractor) {
-        if (values.contractorFullName) {
+        if (values.contractorFirstName) {
           await updateClaimParticipant(contractor.id, contractorData);
+        } else {
+          // Si no hay nombre, desvincular también
+          await updateClaimParticipant(contractor.id, { linked_to_insured: false });
         }
-      } else if (values.contractorFullName) {
+      } else if (values.contractorFirstName) {
         await createClaimParticipant({ claim_id: claim.id, type: "contractor", ...contractorData });
       }
 
       // 4. Actualizar/crear beneficiary
       const beneficiaryData = {
-        full_name: values.beneficiaryFullName,
+        full_name: `${values.beneficiaryFirstName} ${values.beneficiaryLastName}`.trim(),
+        first_name: values.beneficiaryFirstName,
+        last_name: values.beneficiaryLastName || null,
         rut: values.beneficiaryRut || null,
         email: values.beneficiaryEmail || null,
-        phone: values.beneficiaryPhone || null,
-        cell_phone: values.beneficiaryCellPhone || null,
+        phone: values.beneficiaryPhones || null,
+        cell_phone: null,
         address: values.beneficiaryAddress || null,
         country: values.beneficiaryCountry || null,
         region: values.beneficiaryRegion || null,
         city: values.beneficiaryCity || null,
         commune: values.beneficiaryCommune || null,
+        linked_to_insured: beneficiaryLinked,
       };
       if (beneficiary) {
-        if (values.beneficiaryFullName) {
+        if (values.beneficiaryFirstName) {
           await updateClaimParticipant(beneficiary.id, beneficiaryData);
+        } else {
+          await updateClaimParticipant(beneficiary.id, { linked_to_insured: false });
         }
-      } else if (values.beneficiaryFullName) {
+      } else if (values.beneficiaryFirstName) {
         await createClaimParticipant({ claim_id: claim.id, type: "beneficiary", ...beneficiaryData });
       }
     },
@@ -522,6 +568,8 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   // Catálogos para selects
   // ──────────────────────────────────────────────────────────────
   const claimTypeItems = catalogs.claimTypes.map((c) => ({ value: c.id, label: c.name }));
+  const companyItems = catalogs.companies.map((c) => ({ value: c.id, label: c.name }));
+  const countryIdItems = catalogs.countries.map((c) => ({ value: c.id, label: c.name }));
   const eventItems = catalogs.events.map((c) => ({ value: c.id, label: c.name }));
   const currencyItems = catalogs.currencies.map((c) => ({ value: c.id, label: c.name }));
   const housingDestItems = catalogs.housingDestinations.map((c) => ({ value: c.id, label: c.name }));
@@ -703,7 +751,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
     (c) => !watchedCountryId || c.country_id === watchedCountryId
   );
   const filteredInsuranceProducts = catalogs.insuranceProducts.filter(
-    (p) => !watchedBusinessLineId || p.country_id === watchedBusinessLineId
+    (p) => !watchedBusinessLineId || p.business_line_id === watchedBusinessLineId
   );
 
   const insuranceCompanyItems = filteredInsuranceCompanies.map((c) => ({ value: c.id, label: c.name }));
@@ -713,9 +761,16 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   const advisorItems = filteredAdvisors.map((c) => ({ value: c.id, label: c.name }));
   const claimCauseItems = filteredClaimCauses.map((c) => ({ value: c.id, label: c.name }));
 
-  // Reset dependent fields when incident country changes
+  // Reset dependent fields when incident country changes (skip initial load)
+  const prevCountryId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (watchedCountryId) {
+    if (prevCountryId.current === undefined) {
+      // First render: just record the value, don't reset
+      prevCountryId.current = watchedCountryId;
+      return;
+    }
+    if (prevCountryId.current !== watchedCountryId) {
+      prevCountryId.current = watchedCountryId;
       setValue("insuranceCompanyId", "");
       setValue("advisorId", "");
       setValue("brokerId", "");
@@ -803,17 +858,15 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   }, [watchedBeneficiaryRut, watchedBeneficiaryCountry]);
 
   // ──────────────────────────────────────────────────────────────
-  // Linking functions
+  // Copy from insured (one-time copy, fields remain editable)
   // ──────────────────────────────────────────────────────────────
   const toggleContractorLink = () => {
     if (!contractorLinked) {
-      const firstName = form.getValues("insuredFirstName") || "";
-      const lastName = form.getValues("insuredLastName") || "";
-      setValue("contractorFullName", `${firstName} ${lastName}`.trim());
+      setValue("contractorFirstName", form.getValues("insuredFirstName") || "");
+      setValue("contractorLastName", form.getValues("insuredLastName") || "");
       setValue("contractorRut", form.getValues("insuredRut") || "");
       setValue("contractorEmail", form.getValues("insuredEmail") || "");
-      setValue("contractorCellPhone", form.getValues("insuredCellPhone") || "");
-      setValue("contractorPhone", form.getValues("insuredPhone") || "");
+      setValue("contractorPhones", form.getValues("insuredPhones") || "");
       setValue("contractorAddress", form.getValues("insuredAddress") || "");
       setValue("contractorCountry", form.getValues("insuredCountry") || "");
       setValue("contractorRegion", form.getValues("insuredRegion") || "");
@@ -827,13 +880,11 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
 
   const toggleBeneficiaryLink = () => {
     if (!beneficiaryLinked) {
-      const firstName = form.getValues("insuredFirstName") || "";
-      const lastName = form.getValues("insuredLastName") || "";
-      setValue("beneficiaryFullName", `${firstName} ${lastName}`.trim());
+      setValue("beneficiaryFirstName", form.getValues("insuredFirstName") || "");
+      setValue("beneficiaryLastName", form.getValues("insuredLastName") || "");
       setValue("beneficiaryRut", form.getValues("insuredRut") || "");
       setValue("beneficiaryEmail", form.getValues("insuredEmail") || "");
-      setValue("beneficiaryCellPhone", form.getValues("insuredCellPhone") || "");
-      setValue("beneficiaryPhone", form.getValues("insuredPhone") || "");
+      setValue("beneficiaryPhones", form.getValues("insuredPhones") || "");
       setValue("beneficiaryAddress", form.getValues("insuredAddress") || "");
       setValue("beneficiaryCountry", form.getValues("insuredCountry") || "");
       setValue("beneficiaryRegion", form.getValues("insuredRegion") || "");
@@ -862,32 +913,32 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   const applySuggestion = (section: "insured" | "contractor" | "beneficiary") => {
     if (!participantSuggestion) return;
     const d = participantSuggestion.data;
+    if (!d) return;
     if (section === "insured") {
       setValue("insuredFirstName", d.first_name || "");
       setValue("insuredLastName", d.last_name || "");
       setValue("insuredEmail", d.email || "");
-      setValue("insuredCellPhone", d.cell_phone || "");
-      setValue("insuredPhone", d.phone || "");
+      setValue("insuredPhones", uniquePhones(d.phone, d.cell_phone));
       setValue("insuredAddress", d.address || "");
       setValue("insuredCountry", d.country || "");
       setValue("insuredRegion", d.region || "");
       setValue("insuredCity", d.city || "");
       setValue("insuredCommune", d.commune || "");
     } else if (section === "contractor") {
-      setValue("contractorFullName", `${d.first_name || ""} ${d.last_name || ""}`.trim() || d.full_name || "");
+      setValue("contractorFirstName", d.first_name || "");
+      setValue("contractorLastName", d.last_name || "");
       setValue("contractorEmail", d.email || "");
-      setValue("contractorCellPhone", d.cell_phone || "");
-      setValue("contractorPhone", d.phone || "");
+      setValue("contractorPhones", uniquePhones(d.phone, d.cell_phone));
       setValue("contractorAddress", d.address || "");
       setValue("contractorCountry", d.country || "");
       setValue("contractorRegion", d.region || "");
       setValue("contractorCity", d.city || "");
       setValue("contractorCommune", d.commune || "");
     } else if (section === "beneficiary") {
-      setValue("beneficiaryFullName", `${d.first_name || ""} ${d.last_name || ""}`.trim() || d.full_name || "");
+      setValue("beneficiaryFirstName", d.first_name || "");
+      setValue("beneficiaryLastName", d.last_name || "");
       setValue("beneficiaryEmail", d.email || "");
-      setValue("beneficiaryCellPhone", d.cell_phone || "");
-      setValue("beneficiaryPhone", d.phone || "");
+      setValue("beneficiaryPhones", uniquePhones(d.phone, d.cell_phone));
       setValue("beneficiaryAddress", d.address || "");
       setValue("beneficiaryCountry", d.country || "");
       setValue("beneficiaryRegion", d.region || "");
@@ -915,7 +966,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   // Render
   // ──────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-2">
       {/* Tabs */}
       <div className="border-b">
         <div className="flex gap-1 overflow-x-auto">
@@ -941,28 +992,38 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
         </div>
       </div>
 
-      <form onSubmit={handleSubmit((v) => saveMutation.mutate(v))} className="flex flex-col gap-6">
+      <form onSubmit={handleSubmit((v) => saveMutation.mutate(v))} className="flex flex-col gap-2">
         {/* Tab content */}
         <div className="min-h-[300px]">
           {/* ═══ TAB: SINIESTRO ═══ */}
           {activeTab === "siniestro" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+              <div className="lg:col-span-2 space-y-2">
                 <div className="app-panel">
-                  <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+                  <h3 className="app-section-title">
                     <FileText className="h-4 w-4" />
                     Datos del Siniestro
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
-                    <EditInput label="N° Siniestro" required {...register("claimNumber")} />
-                    <EditInput label="N° Póliza" required {...register("policyNumber")} />
-                    <EditInput label="Item Póliza" {...register("policyItem")} />
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
+                    <EditSelect label="País del Siniestro" control={control} name="countryId" placeholder="Seleccionar..." clearable items={countryIdItems} />
+                    <EditSelect label="Empresa (Cliente)" required control={control} name="companyId" placeholder="Seleccionar..." items={companyItems} />
+                    <EditSelect label="Compañía de Seguros" control={control} name="insuranceCompanyId" placeholder="Seleccionar..." clearable items={insuranceCompanyItems} />
                     <EditInput label="N° Ref. Cliente" {...register("clientReference")} />
+                    <EditInput label="N° Siniestro (Cía)" required {...register("claimNumber")} />
                     <EditInput label="Fecha Siniestro" required type="date" {...register("claimDate")} />
                     <EditInput label="Fecha Denuncio" type="date" {...register("reportDate")} />
                     <EditInput label="Fecha Asignación" type="date" {...register("assignmentDate")} />
+                  </div>
+                </div>
+
+                <div className="app-panel">
+                  <h3 className="app-section-title">
+                    <Shield className="h-4 w-4" />
+                    Clasificación
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
                     <EditSelect
-                      label="Tipo"
+                      label="Tipo de Siniestro"
                       required
                       control={control}
                       name="claimTypeId"
@@ -973,22 +1034,42 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                         setValue("insuranceProductId", "");
                       }}
                     />
+                    <EditSelect
+                      label="Línea de Negocios"
+                      control={control}
+                      name="businessLineId"
+                      placeholder="Seleccionar..."
+                      clearable
+                      items={businessLineItems}
+                      onValueChange={() => setValue("insuranceProductId", "")}
+                    />
+                    <EditSelect
+                      label="Ramo/Producto"
+                      control={control}
+                      name="insuranceProductId"
+                      placeholder="Seleccionar..."
+                      clearable
+                      items={insuranceProductItems}
+                      disabled={!watchedBusinessLineId}
+                    />
                     <EditSelect label="Causal" control={control} name="claimCauseId" placeholder="Seleccionar..." clearable items={claimCauseItems} />
                     <EditSelect label="Evento" control={control} name="eventId" placeholder="Seleccionar..." clearable items={eventItems} />
+                    <EditSelect label="Corredor" control={control} name="brokerId" placeholder="Seleccionar..." clearable items={brokerItems} />
                   </div>
                 </div>
 
                 <div className="app-panel">
-                  <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    Datos de la Póliza
+                  <h3 className="app-section-title">
+                    <Briefcase className="h-4 w-4" />
+                    Asignación
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
-                    <EditSelect label="Moneda" control={control} name="currencyId" placeholder="Seleccionar..." clearable items={currencyItems} />
-                    <EditInput label="Monto Asegurado" type="number" step="0.01" {...register("policyAmount")} />
-                    <EditInput label="Prima" type="number" step="0.01" {...register("policyPremium")} />
-                    <EditInput label="Inicio Vigencia" type="date" {...register("policyStartDate")} />
-                    <EditInput label="Término Vigencia" type="date" {...register("policyEndDate")} />
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
+                    <EditSelect label="Inspector" control={control} name="inspectorId" placeholder="Sin asignar" clearable items={userItems} />
+                    <EditSelect label="Ajustador / Liquidador" control={control} name="adjusterId" placeholder="Sin asignar" clearable items={userItems} />
+                    <EditSelect label="Auditor" control={control} name="auditorId" placeholder="Sin asignar" clearable items={userItems} />
+                    <EditSelect label="Despachador" control={control} name="dispatcherId" placeholder="Sin asignar" clearable items={userItems} />
+                    <EditSelect label="Asistente" control={control} name="assistantId" placeholder="Sin asignar" clearable items={userItems} />
+                    <EditSelect label="Asesor" control={control} name="advisorId" placeholder="Sin asignar" clearable items={advisorItems} />
                   </div>
                 </div>
 
@@ -997,23 +1078,27 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                 </div>
               </div>
 
-              <div className="space-y-6">
+              {/* Columna derecha: Datos de la Póliza */}
+              <div className="space-y-2">
                 <div className="app-panel">
-                  <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-                    Información de Recovery
+                  <h3 className="app-section-title">
+                    <Shield className="h-4 w-4" />
+                    Datos de la Póliza
                   </h3>
                   <div className="space-y-3">
-                    <EditCheckbox
-                      label="Recupero Legal"
-                      checked={watchedRecoveryLegal}
-                      onChange={(v) => setValue("recoveryTypeLegal", v)}
-                    />
-                    <EditCheckbox
-                      label="Recupero Material"
-                      checked={watchedRecoveryMaterial}
-                      onChange={(v) => setValue("recoveryTypeMaterial", v)}
-                    />
-                    <EditTextarea label="Comentarios" {...register("recoveryComments")} />
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      <EditInput label="N° Póliza" required {...register("policyNumber")} />
+                      <EditInput label="Item Póliza" {...register("policyItem")} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-x-4 gap-y-1">
+                      <EditSelect label="Moneda" control={control} name="currencyId" placeholder="Seleccionar..." clearable items={currencyItems} />
+                      <EditInput label="Monto Asegurado" type="number" step="0.01" {...register("policyAmount")} />
+                      <EditInput label="Prima" type="number" step="0.01" {...register("policyPremium")} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      <EditInput label="Inicio Vigencia" type="date" {...register("policyStartDate")} />
+                      <EditInput label="Término Vigencia" type="date" {...register("policyEndDate")} />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1021,48 +1106,43 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
           )}
 
           {/* ═══ TAB: ASEGURADO ═══ */}
-          {activeTab === "asegurado" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Asegurado
-                </h3>
-                {participantSuggestion?.section === "insured" && (
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 mb-3">
-                    <div className="text-[11px] text-sky-800">
-                      <span className="font-semibold">Persona encontrada:</span>{" "}
-                      {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
-                      {participantSuggestion.data.address && (
-                        <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
-                      onClick={() => applySuggestion("insured")}
-                    >
-                      Usar datos
-                    </button>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                  <EditInput label="Nombre" required {...register("insuredFirstName")} />
-                  <EditInput label="Apellido" {...register("insuredLastName")} />
-                  <EditInput label="RUT" {...register("insuredRut")} />
-                  <EditInput label="Email" type="email" {...register("insuredEmail")} />
-                  <EditInput label="Teléfono" {...register("insuredPhone")} />
-                  <EditInput label="Celular" {...register("insuredCellPhone")} />
+          {/* ═══ TAB: PARTICIPANTES ═══ */}
+          {activeTab === "participantes" && (
+            <div className="space-y-2">
+              {/* Asegurado (no colapsable) */}
+              <div className="rounded-lg border border-border/50 overflow-hidden">
+                <div className="w-full flex items-center p-3">
+                  <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Asegurado
+                  </span>
                 </div>
-              </div>
-              <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Dirección
-                </h3>
-                <div className="space-y-3">
-                  <EditInput label="Dirección" {...register("insuredAddress")} />
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                <div className="px-3 pb-3 space-y-3">
+                  {participantSuggestion?.section === "insured" && participantSuggestion.data && (
+                    <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
+                      <div className="text-[11px] text-sky-800">
+                        <span className="font-semibold">Persona encontrada:</span>{" "}
+                        {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
+                        {participantSuggestion.data.address && (
+                          <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                        onClick={() => applySuggestion("insured")}
+                      >
+                        Usar datos
+                      </button>
+                    </div>
+                  )}
+                  <div className="app-data-grid-4">
+                    <EditInput label="Nombre" required {...register("insuredFirstName")} />
+                    <EditInput label="Apellido" {...register("insuredLastName")} />
+                    <EditInput label="RUT" {...register("insuredRut")} />
+                    <EditInput label="Email" type="email" {...register("insuredEmail")} />
+                    <EditInput label="Teléfono" {...register("insuredPhones")} placeholder="+56 9 1234 5678, +56 2 2345 6789" />
+                    <EditInput label="Dirección" {...register("insuredAddress")} />
                     <EditSelect
                       label="País"
                       control={control}
@@ -1117,21 +1197,16 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                   </div>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* ═══ TAB: PARTICIPANTES ═══ */}
-          {activeTab === "participantes" && (
-            <div className="space-y-6">
               {/* Contractor (colapsable) */}
               <div className="rounded-lg border border-border/50 overflow-hidden">
                 <div className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                   <button
                     type="button"
                     className="flex items-center gap-2 flex-1"
-                    onClick={() => setExpandedPanels((p) => ({ ...p, contractor: !p.contractor }))}
+                    onClick={() => setExpandedPanels((p) => ({ contractor: !p.contractor, beneficiary: false }))}
                   >
-                    <span className="text-[11px] font-semibold text-foreground/70">Contratante</span>
+                    <span className="text-[11px] font-semibold text-muted-foreground">Contratante</span>
                     <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedPanels.contractor ? "rotate-180" : ""}`} />
                   </button>
                   {expandedPanels.contractor && (
@@ -1148,7 +1223,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                 </div>
                 {expandedPanels.contractor && (
                   <div className="px-3 pb-3 space-y-3">
-                    {participantSuggestion?.section === "contractor" && !contractorLinked && (
+                    {participantSuggestion?.section === "contractor" && !contractorLinked && participantSuggestion.data && (
                       <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
                         <div className="text-[11px] text-sky-800">
                           <span className="font-semibold">Persona encontrada:</span>{" "}
@@ -1166,15 +1241,13 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                         </button>
                       </div>
                     )}
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
-                      <EditInput label="Nombre" {...register("contractorFullName")} disabled={contractorLinked} />
+                    <div className="app-data-grid-4">
+                      <EditInput label="Nombre" {...register("contractorFirstName")} disabled={contractorLinked} />
+                      <EditInput label="Apellido" {...register("contractorLastName")} disabled={contractorLinked} />
                       <EditInput label="RUT" {...register("contractorRut")} disabled={contractorLinked} />
                       <EditInput label="Email" type="email" {...register("contractorEmail")} disabled={contractorLinked} />
-                      <EditInput label="Celular" {...register("contractorCellPhone")} disabled={contractorLinked} />
-                      <EditInput label="Teléfono" {...register("contractorPhone")} disabled={contractorLinked} />
+                      <EditInput label="Teléfono" {...register("contractorPhones")} placeholder="+56 9 1234 5678, +56 2 2345 6789" disabled={contractorLinked} />
                       <EditInput label="Dirección" {...register("contractorAddress")} disabled={contractorLinked} />
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
                       <EditSelect
                         label="País"
                         control={control}
@@ -1238,9 +1311,9 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                   <button
                     type="button"
                     className="flex items-center gap-2 flex-1"
-                    onClick={() => setExpandedPanels((p) => ({ ...p, beneficiary: !p.beneficiary }))}
+                    onClick={() => setExpandedPanels((p) => ({ contractor: false, beneficiary: !p.beneficiary }))}
                   >
-                    <span className="text-[11px] font-semibold text-foreground/70">Beneficiario</span>
+                    <span className="text-[11px] font-semibold text-muted-foreground">Beneficiario</span>
                     <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedPanels.beneficiary ? "rotate-180" : ""}`} />
                   </button>
                   {expandedPanels.beneficiary && (
@@ -1257,7 +1330,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                 </div>
                 {expandedPanels.beneficiary && (
                   <div className="px-3 pb-3 space-y-3">
-                    {participantSuggestion?.section === "beneficiary" && !beneficiaryLinked && (
+                    {participantSuggestion?.section === "beneficiary" && !beneficiaryLinked && participantSuggestion.data && (
                       <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
                         <div className="text-[11px] text-sky-800">
                           <span className="font-semibold">Persona encontrada:</span>{" "}
@@ -1275,15 +1348,13 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                         </button>
                       </div>
                     )}
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
-                      <EditInput label="Nombre" {...register("beneficiaryFullName")} disabled={beneficiaryLinked} />
+                    <div className="app-data-grid-4">
+                      <EditInput label="Nombre" {...register("beneficiaryFirstName")} disabled={beneficiaryLinked} />
+                      <EditInput label="Apellido" {...register("beneficiaryLastName")} disabled={beneficiaryLinked} />
                       <EditInput label="RUT" {...register("beneficiaryRut")} disabled={beneficiaryLinked} />
                       <EditInput label="Email" type="email" {...register("beneficiaryEmail")} disabled={beneficiaryLinked} />
-                      <EditInput label="Celular" {...register("beneficiaryCellPhone")} disabled={beneficiaryLinked} />
-                      <EditInput label="Teléfono" {...register("beneficiaryPhone")} disabled={beneficiaryLinked} />
+                      <EditInput label="Teléfono" {...register("beneficiaryPhones")} placeholder="+56 9 1234 5678, +56 2 2345 6789" disabled={beneficiaryLinked} />
                       <EditInput label="Dirección" {...register("beneficiaryAddress")} disabled={beneficiaryLinked} />
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
                       <EditSelect
                         label="País"
                         control={control}
@@ -1354,10 +1425,10 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
 
           {/* ═══ TAB: INCIDENTE ═══ */}
           {activeTab === "incidente" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
               <div className="app-panel">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                  <h3 className="text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
                     Ubicación del Incidente
                   </h3>
@@ -1373,7 +1444,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                 </div>
                 <div className="space-y-3">
                   <EditInput label="Dirección" {...register("claimAddress")} disabled={claimAddressLinked} />
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                     <EditSelect
                       label="País"
                       control={control}
@@ -1423,10 +1494,10 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                   </div>
                 </div>
               </div>
-              <div className="space-y-6">
+              <div className="space-y-2">
                 <div className="app-panel">
-                  <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Tipo de Siniestro</h3>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                  <h3 className="app-section-title">Tipo de Siniestro</h3>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                     <EditSelect label="Tipo Construcción" control={control} name="constructionTypeId" placeholder="Seleccionar..." clearable items={constructionTypeItems} />
                     <EditSelect label="Destino" control={control} name="destinationHousingId" placeholder="Seleccionar..." clearable items={housingDestItems} />
                     <EditSelect label="Clasif. Daño" control={control} name="damageClassificationId" placeholder="Seleccionar..." clearable items={damageClassItems} />
@@ -1443,50 +1514,29 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                 <div className="app-panel">
                   <EditTextarea label="Resumen del Incidente" {...register("summary")} />
                 </div>
+                <div className="app-panel">
+                  <h3 className="app-section-title">
+                    Recupero
+                  </h3>
+                  <div className="space-y-3">
+                    <EditCheckbox
+                      label="Recupero Legal"
+                      checked={watchedRecoveryLegal}
+                      onChange={(v) => setValue("recoveryTypeLegal", v)}
+                    />
+                    <EditCheckbox
+                      label="Recupero Material"
+                      checked={watchedRecoveryMaterial}
+                      onChange={(v) => setValue("recoveryTypeMaterial", v)}
+                    />
+                    <EditTextarea label="Comentarios" {...register("recoveryComments")} />
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {/* ═══ TAB: ASIGNACIONES ═══ */}
-          {activeTab === "asignaciones" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <EditSelect label="Inspector" control={control} name="inspectorId" placeholder="Sin asignar" clearable items={userItems} />
-              <EditSelect label="Ajustador" control={control} name="adjusterId" placeholder="Sin asignar" clearable items={userItems} />
-              <EditSelect label="Auditor" control={control} name="auditorId" placeholder="Sin asignar" clearable items={userItems} />
-              <EditSelect label="Despachador" control={control} name="dispatcherId" placeholder="Sin asignar" clearable items={userItems} />
-              <EditSelect label="Asistente" control={control} name="assistantId" placeholder="Sin asignar" clearable items={userItems} />
-
-              <div className="app-panel lg:col-span-3">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-                  <Building className="h-4 w-4" />
-                  Compañía e Intermediarios
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-x-4 gap-y-3">
-                  <EditSelect label="Compañía Aseg." control={control} name="insuranceCompanyId" placeholder="Seleccionar..." clearable items={insuranceCompanyItems} />
-                  <EditSelect
-                    label="Línea Negocio"
-                    control={control}
-                    name="businessLineId"
-                    placeholder="Seleccionar..."
-                    clearable
-                    items={businessLineItems}
-                    onValueChange={() => setValue("insuranceProductId", "")}
-                  />
-                  <EditSelect
-                    label="Producto"
-                    control={control}
-                    name="insuranceProductId"
-                    placeholder="Seleccionar..."
-                    clearable
-                    items={insuranceProductItems}
-                    disabled={!watchedBusinessLineId}
-                  />
-                  <EditSelect label="Corredor" control={control} name="brokerId" placeholder="Seleccionar..." clearable items={brokerItems} />
-                  <EditSelect label="Asesor" control={control} name="advisorId" placeholder="Seleccionar..." clearable items={advisorItems} />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer buttons */}

@@ -13,6 +13,8 @@ export function getNhostClient() {
     client = createClient({
       subdomain,
       region,
+      // Nhost usa "hasura." para GraphQL, no "graphql." que es el default del SDK
+      graphqlUrl: `https://${subdomain}.hasura.${region}.nhost.run/v1/graphql`,
       configure: [],
     });
   } else {

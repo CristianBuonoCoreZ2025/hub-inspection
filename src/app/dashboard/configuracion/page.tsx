@@ -3,9 +3,9 @@ import DiagnosticLogToggle from "./DiagnosticLogToggle";
 const profiles = [
   {
     role: "Interno",
-    badge: "Administrador / Supervisor / Liquidador",
+    badge: "Administrador",
     description:
-      "Usuarios internos del sistema. Pueden crear siniestros, gestionar empresas, invitar usuarios y ver toda la información de la plataforma. Son el personal operativo de la aseguradora.",
+      "Usuarios internos del sistema. Pueden crear siniestros, gestionar empresas, invitar usuarios y ver toda la información de la plataforma.",
     permissions: [
       "Ver todos los siniestros",
       "Crear y editar empresas",
@@ -15,22 +15,34 @@ const profiles = [
     ],
   },
   {
-    role: "Inspector",
-    badge: "Inspector de campo",
+    role: "Liquidador",
+    badge: "Asociado a clientes",
     description:
-      "Profesionales externos asignados para realizar inspecciones presenciales o remotas. Solo ven los siniestros que se les asignan específicamente.",
+      "Liquidadores asociados a uno o más clientes. Ven todos los siniestros de sus clientes. Pueden intervenir solo en las gestiones de los siniestros donde son el liquidador asignado.",
     permissions: [
-      "Ver solo siniestros asignados",
-      "Subir evidencias y fotos",
-      "Completar checklist de inspección",
-      "Registrar daños y observaciones",
+      "Ver siniestros de sus clientes",
+      "Ver inspecciones de sus clientes",
+      "Intervenir en gestiones donde es liquidador",
+      "Solo vista en inspecciones (no modificar)",
     ],
   },
   {
-    role: "Empresa (Cliente)",
-    badge: "Cliente / Aseguradora",
+    role: "Inspector",
+    badge: "Asociado a clientes",
     description:
-      "Usuarios de la empresa aseguradora que solo pueden ver los siniestros y el agendamiento de su propia compañía. No pueden modificar datos ni acceder a otras empresas.",
+      "Inspectores asociados a uno o más clientes. Solo pueden ver los casos de sus clientes donde son el inspector asignado. Solo pueden completar la inspección donde están a cargo.",
+    permissions: [
+      "Ver siniestros donde es inspector",
+      "Completar inspección donde está a cargo",
+      "Subir evidencias y fotos",
+      "No puede modificar otros datos del siniestro",
+    ],
+  },
+  {
+    role: "Operativo (Cliente)",
+    badge: "Un solo cliente",
+    description:
+      "Usuarios operativos del cliente. Ven todos los casos de su empresa. Solo lectura, no pueden crear ni editar.",
     permissions: [
       "Ver siniestros de su empresa",
       "Ver agenda de inspecciones",
@@ -55,9 +67,9 @@ export default function SettingsPage() {
       <section className="app-panel">
         <h2 className="text-sm font-semibold">Perfiles de usuario</h2>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          Tres tipos de usuario definen el acceso y las capacidades dentro de Claims Hub.
+          Cuatro tipos de usuario definen el acceso y las capacidades dentro de Claims Hub.
         </p>
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 space-y-2">
           {profiles.map((p) => (
             <div
               key={p.role}
@@ -65,7 +77,7 @@ export default function SettingsPage() {
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-[14px] font-semibold text-foreground">{p.role}</h3>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                   {p.badge}
                 </span>
               </div>

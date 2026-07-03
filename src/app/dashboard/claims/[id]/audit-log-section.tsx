@@ -2,8 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getAuditLogs } from "@/services/audit-logs";
-import { Clock, Plus, Pencil, Trash2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { Profile } from "@/types";
 
 const actionLabels: Record<string, string> = {
@@ -34,6 +34,40 @@ function formatDateTime(dateStr: string) {
   });
 }
 
+// Campos relevantes para mostrar en el detalle del cambio
+const fieldLabels: Record<string, string> = {
+  claim_number: "N° Siniestro",
+  status_id: "Estado",
+  claim_date: "Fecha",
+  policy_number: "Poliza",
+  policy_amount: "Monto Asegurado",
+  policy_premium: "Prima",
+  summary: "Resumen",
+  inspector_id: "Inspector",
+  adjuster_id: "Ajustador",
+  auditor_id: "Auditor",
+  recovery_type_legal: "Recupero Legal",
+  recovery_type_material: "Recupero Material",
+  recovery_comments: "Comentarios Recupero",
+  disabled: "Inhabilitado",
+  disabled_reason: "Razon Inhabilitacion",
+};
+
+function summarizeChange(log: { action: string; old_data?: Record<string, unknown> | null; new_data?: Record<string, unknown> | null }) {
+  if (log.action === "INSERT" && log.new_data) {
+    const fields = Object.keys(log.new_data).filter((k) => fieldLabels[k] && log.new_data![k] != null);
+    if (fields.length === 0) return "Registro creado";
+    return fields.slice(0, 3).map((k) => fieldLabels[k]).join(", ") + (fields.length > 3 ? "..." : "");
+  }
+  if (log.action === "UPDATE" && log.new_data) {
+    const changed = Object.keys(log.new_data).filter((k) => fieldLabels[k]);
+    if (changed.length === 0) return "Actualizacion general";
+    return changed.map((k) => `${fieldLabels[k]}: ${log.new_data![k] ?? "—"}`).join(", ");
+  }
+  if (log.action === "DELETE") return "Registro eliminado";
+  return "—";
+}
+
 interface AuditLogSectionProps {
   claimId: string;
   users?: Profile[];
@@ -48,11 +82,7 @@ export default function AuditLogSection({ claimId, users }: AuditLogSectionProps
   if (isLoading) {
     return (
       <div className="app-panel">
-        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-          <Clock className="h-4 w-4" />
-          Historial de cambios
-        </h3>
-        <p className="text-sm text-muted-foreground">Cargando historial...</p>
+        <div className="text-center py-8 text-muted-foreground text-[13px]">Cargando...</div>
       </div>
     );
   }
@@ -60,55 +90,52 @@ export default function AuditLogSection({ claimId, users }: AuditLogSectionProps
   if (!logs || logs.length === 0) {
     return (
       <div className="app-panel">
-        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-          <Clock className="h-4 w-4" />
-          Historial de cambios
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          No hay registros de cambios para este siniestro.
-        </p>
+        <div className="text-center py-8 text-muted-foreground text-[13px]">
+          No hay registros en el log.
+        </div>
       </div>
     );
   }
 
   return (
     <div className="app-panel">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-        <Clock className="h-4 w-4" />
-        Historial de cambios
-      </h3>
-      <div className="space-y-1">
-        {logs.map((log, index) => {
-          const performer = users?.find((u) => u.id === log.performed_by);
-          const performerName = performer?.full_name || "Sistema";
-          const label = actionLabels[log.action] || log.action;
-          const icon = actionIcons[log.action];
-          const color = actionColors[log.action] || "bg-gray-100 text-gray-700";
+      <div className="app-data-table-wrap">
+        <table className="app-data-table">
+          <thead>
+            <tr>
+              <th className="w-[40px]"></th>
+              <th>Accion</th>
+              <th>Detalle</th>
+              <th>Usuario</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.map((log) => {
+              const performer = users?.find((u) => u.id === log.performed_by);
+              const performerName = performer?.full_name || "Sistema";
+              const label = actionLabels[log.action] || log.action;
+              const icon = actionIcons[log.action];
+              const color = actionColors[log.action] || "bg-gray-100 text-gray-700";
 
-          return (
-            <div key={log.id}>
-              <div className="flex items-start gap-3 py-3">
-                <div
-                  className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ${color}`}
-                >
-                  {icon}
-                </div>
-                <div className="flex flex-1 flex-col gap-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      por {performerName}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateTime(log.created_at)}
-                  </p>
-                </div>
-              </div>
-              {index < logs.length - 1 && <Separator />}
-            </div>
-          );
-        })}
+              return (
+                <tr key={log.id}>
+                  <td>
+                    <div className={`flex size-7 items-center justify-center rounded-full ${color}`}>
+                      {icon}
+                    </div>
+                  </td>
+                  <td><Badge className={color}>{label}</Badge></td>
+                  <td className="text-muted-foreground text-[12px] max-w-md truncate" title={summarizeChange(log)}>
+                    {summarizeChange(log)}
+                  </td>
+                  <td className="font-medium">{performerName}</td>
+                  <td className="text-muted-foreground">{formatDateTime(log.created_at)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

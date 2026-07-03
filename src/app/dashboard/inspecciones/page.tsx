@@ -11,6 +11,7 @@ import {
 } from "@/services/inspections";
 import { getClaims, getClaimsParticipants } from "@/services/claims";
 import { getUsers } from "@/services/users";
+import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
   ClipboardCheck,
@@ -80,6 +81,7 @@ function InspectionsPageContent() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { canCreate, canEdit } = usePermissions();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [openCreate, setOpenCreate] = useState(false);
@@ -320,7 +322,7 @@ function InspectionsPageContent() {
             className="h-9 w-full max-w-sm"
           />
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "all")}>
-            <SelectTrigger className="h-9 w-full sm:w-[160px]">
+            <SelectTrigger className="h-7 w-full sm:w-[160px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
@@ -333,16 +335,18 @@ function InspectionsPageContent() {
             </SelectContent>
           </Select>
         </div>
-        <Button
-          onClick={() => {
-            setOpenCreate(true);
-            setSelectedClaimId("");
-          }}
-          className="btn-create btn-sm"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva
-        </Button>
+        {canCreate("inspecciones") && (
+          <Button
+            onClick={() => {
+              setOpenCreate(true);
+              setSelectedClaimId("");
+            }}
+            className="btn-create btn-sm"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva
+          </Button>
+        )}
       </div>
 
       {/* Tabla de Inspecciones */}
@@ -436,7 +440,7 @@ function InspectionsPageContent() {
                     </div>
                   </td>
                   <td>
-                    <div className="flex items-center gap-1">
+                    <div className="app-row-actions">
                       {/* Ver detalle */}
                       <Button
                         variant="ghost"
@@ -449,7 +453,7 @@ function InspectionsPageContent() {
                       </Button>
 
                       {/* Acciones segun estado */}
-                      {session.status === "scheduled" && (
+                      {canEdit("inspecciones") && session.status === "scheduled" && (
                         <>
                           <Button
                             variant="outline"
@@ -482,21 +486,20 @@ function InspectionsPageContent() {
                         </>
                       )}
 
-                      {session.status === "active" && (
+                      {canEdit("inspecciones") && session.status === "active" && (
                         <>
                           <Button
                             variant="outline"
                             size="sm"
                             className="h-7 px-2 text-xs btn-save"
-                            onClick={() =>
-                              updateMutation.mutate({
-                                id: session.id,
-                                input: { status: "completed" },
-                              })
-                            }
+                            onClick={() => {
+                              // Validar desde la lista: redirigir al detalle para validar
+                              router.push(`/dashboard/inspecciones/${session.id}`);
+                              toast.info("Revise los datos de la inspección antes de finalizar.");
+                            }}
                           >
                             <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                            Completar
+                            Finalizar
                           </Button>
                         </>
                       )}
@@ -589,7 +592,7 @@ function InspectionsPageContent() {
             {/* Datos de contacto editables + lugar de inspección + comentarios */}
             {selectedClaim && (
               <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-3 mb-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300 mb-3">
+                <p className="text-[11px] font-semibold text-sky-700 dark:text-sky-300 mb-3">
                   Contacto y Lugar de Inspección
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

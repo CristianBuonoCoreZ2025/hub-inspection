@@ -2,11 +2,19 @@
 
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getEvidences, createEvidence, deleteEvidence } from "@/services/inspections";
+import { createEvidence, deleteEvidence } from "@/services/inspections";
 import { uploadFileToStorage } from "@/lib/nhost/storage-upload";
 import { toast } from "sonner";
 import { Upload, Trash2, ImageIcon, Video, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// Trae evidencias con presigned URLs desde la API route server-side
+async function fetchEvidences(sessionId: string) {
+  const res = await fetch(`/api/inspection/evidences/${sessionId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Error al cargar evidencias");
+  const data = (await res.json()) as { evidences: any[] };
+  return data.evidences;
+}
 
 export default function EvidencesTab({ sessionId }: { sessionId: string }) {
   const queryClient = useQueryClient();
@@ -15,7 +23,7 @@ export default function EvidencesTab({ sessionId }: { sessionId: string }) {
 
   const { data: evidences, isLoading } = useQuery({
     queryKey: ["evidences", sessionId],
-    queryFn: () => getEvidences(sessionId),
+    queryFn: () => fetchEvidences(sessionId),
   });
 
   const createMutation = useMutation({
@@ -79,7 +87,7 @@ export default function EvidencesTab({ sessionId }: { sessionId: string }) {
     if (!items?.length) return null;
     return (
       <div className="app-panel">
-        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+        <h3 className="app-section-title">
           {icon} {typeLabel} ({items?.length || 0})
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -117,7 +125,7 @@ export default function EvidencesTab({ sessionId }: { sessionId: string }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="app-stack">
       {/* Drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}

@@ -1,6 +1,6 @@
 import { getNhostClient } from "@/lib/nhost/client";
 import { graphqlRequest } from "@/lib/nhost/graphql";
-import type { Profile, InviteUserInput } from "@/types";
+import type { Profile, InviteUserInput, UserClient } from "@/types";
 
 const PROFILE_FIELDS = `
   id
@@ -14,20 +14,31 @@ const PROFILE_FIELDS = `
   is_active
   created_at
   updated_at
+  user_clients {
+    id
+    user_id
+    company_id
+    created_at
+    company {
+      id
+      name
+      slug
+    }
+  }
 `;
 
 export async function getUsers(companyId?: string) {
   const where = companyId
     ? `{ company_id: { _eq: "${companyId}" } }`
-    : `{ is_active: { _eq: true } }`;
+    : `{}`;
   const query = `
     query GetUsers {
-      profiles(where: ${where}, order_by: { full_name: asc }) {
+      profiles(where: ${where}, order_by: { full_name: asc_nulls_last }) {
         ${PROFILE_FIELDS}
       }
     }
   `;
-  const data = await graphqlRequest<{ profiles: Profile[] }>(query);
+  const data = await graphqlRequest<{ profiles: (Profile & { user_clients: UserClient[] })[] }>(query);
   return data.profiles;
 }
 
@@ -46,22 +57,33 @@ export async function getUserById(id: string) {
 export async function inviteUser(input: InviteUserInput & { company_id: string }) {
   const nhost = getNhostClient();
 
-  const tempPassword = Math.random().toString(36).slice(-12);
+  // Generar contraseña temporal aleatoria (el usuario la cambiará via OTP)
+  const tempPassword = Math.random().toString(36).slice(-12) + "A1!";
+
+  // company_id vacío no debe enviarse (causa error de cast UUID en el trigger)
+  const metadata: Record<string, string> = {
+    full_name: input.fullName,
+    role: input.role,
+  };
+  if (input.company_id) {
+    metadata.company_id = input.company_id;
+  }
 
   const response = await nhost.auth.signUpEmailPassword({
     email: input.email,
     password: tempPassword,
-    options: {
-      metadata: {
-        full_name: input.fullName,
-        role: input.role,
-        company_id: input.company_id,
-      },
-    },
+    options: { metadata },
   });
 
-  // Si requiere verificacion de email, session es null pero el trigger
-  // handle_new_user ya creo el perfil con la metadata automaticamente.
+  // Verificar si Nhost Auth devolvió un error
+  const body = response.body as { session?: unknown; error?: { message?: string } | null };
+  if (body.error) {
+    throw new Error(`Nhost Auth: ${body.error.message || JSON.stringify(body.error)}`);
+  }
+
+  // El trigger handle_new_user crea el perfil automáticamente.
+  // Si no hay session (email verification requerida), buscar el perfil por email.
+  let userId: string;
   if (!response.body.session) {
     const query = `
       query GetProfileByEmail($email: String!) {
@@ -74,39 +96,56 @@ export async function inviteUser(input: InviteUserInput & { company_id: string }
     if (data.profiles.length === 0) {
       throw new Error(
         "No se pudo crear el usuario. El trigger de perfil no respondio. " +
-        "Verifica en Nhost Console que la verificacion de email este desactivada " +
-        "o que el trigger handle_new_user exista."
+        "Verifica en Nhost Console que el trigger handle_new_user exista."
       );
     }
-    return { user: { id: data.profiles[0].user_id, email: input.email } };
-  }
-
-  const session = response.body.session;
-  if (!session?.user) {
-    throw new Error("No se pudo crear el usuario: session invalida");
-  }
-
-  // El trigger handle_new_user ya creo el perfil, pero nos aseguramos
-  // de que tenga company_id y role correctos (upsert).
-  const mutation = `
-    mutation UpsertProfile($object: profiles_insert_input!) {
-      insert_profiles_one(object: $object, on_conflict: { constraint: profiles_user_id_key, update_columns: [full_name, role, company_id, is_active] }) {
-        ${PROFILE_FIELDS}
-      }
+    userId = data.profiles[0].user_id;
+  } else {
+    const session = response.body.session;
+    if (!session?.user) {
+      throw new Error("No se pudo crear el usuario: session invalida");
     }
-  `;
-  await graphqlRequest(mutation, {
-    object: {
-      user_id: session.user.id,
-      email: input.email,
-      full_name: input.fullName,
-      role: input.role,
-      company_id: input.company_id,
-      is_active: true,
-    },
-  });
+    userId = session.user.id;
 
-  return { user: session.user };
+    // Upsert profile para asegurar datos correctos
+    const mutation = `
+      mutation UpsertProfile($object: profiles_insert_input!) {
+        insert_profiles_one(object: $object, on_conflict: { constraint: profiles_user_id_key, update_columns: [full_name, role, company_id, is_active] }) {
+          ${PROFILE_FIELDS}
+        }
+      }
+    `;
+    await graphqlRequest(mutation, {
+      object: {
+        user_id: userId,
+        email: input.email,
+        full_name: input.fullName,
+        role: input.role,
+        company_id: input.company_id || null,
+        is_active: true,
+      },
+    });
+
+    // Cerrar la sesión temporal del admin (no queremos dejar sesión abierta)
+    const currentSession = nhost.getUserSession();
+    if (currentSession?.refreshTokenId) {
+      await nhost.auth.signOut({ refreshToken: currentSession.refreshTokenId });
+    }
+  }
+
+  // Enviar código de activación al usuario via nuestro sistema propio
+  // El usuario debe ir a /forgot-password, ingresar su email, recibir el código y setear su contraseña
+  try {
+    await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/auth/send-reset-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: input.email }),
+    });
+  } catch {
+    // Si falla el envío, no es crítico - el usuario puede usar /forgot-password manualmente
+  }
+
+  return { user: { id: userId, email: input.email } };
 }
 
 export async function updateUser(id: string, input: Partial<Profile>) {

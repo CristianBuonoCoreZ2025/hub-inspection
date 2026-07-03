@@ -179,7 +179,7 @@ export default function AgendaPage() {
                 >
                   {/* Header del dia */}
                   <div className={`px-3 py-2 text-center border-b ${isToday ? "bg-primary/10" : "bg-muted/40"}`}>
-                    <p className="text-[11px] font-medium uppercase text-muted-foreground">
+                    <p className="text-[11px] font-medium text-muted-foreground">
                       {dayNames[idx]}
                     </p>
                     <p className={`text-lg font-semibold ${isToday ? "text-primary" : ""}`}>

@@ -13,7 +13,12 @@ export async function getNhostServerClient(): Promise<NhostClient> {
 
   const baseOptions = {
     ...(subdomain && region
-      ? { subdomain, region }
+      ? {
+          subdomain,
+          region,
+          // Nhost usa "hasura." para GraphQL, no "graphql." que es el default del SDK
+          graphqlUrl: `https://${subdomain}.hasura.${region}.nhost.run/v1/graphql`,
+        }
       : {
           authUrl: process.env.NEXT_PUBLIC_NHOST_AUTH_URL || "http://placeholder.local",
           graphqlUrl: process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL || "http://placeholder.local",

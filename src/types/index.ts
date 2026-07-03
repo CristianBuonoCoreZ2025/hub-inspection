@@ -1,10 +1,41 @@
 export type UserRole =
-  | "super_admin"
-  | "admin"
-  | "supervisor"
+  | "internal"
   | "adjuster"
   | "inspector"
-  | "client";
+  | "client_operator";
+
+export interface UserClient {
+  id: string;
+  user_id: string;
+  company_id: string;
+  created_at: string;
+  company?: Company;
+}
+
+export interface UserTypePermission {
+  id: string;
+  user_type: UserRole;
+  section: string;
+  can_view: boolean;
+  can_edit: boolean;
+  can_create: boolean;
+  can_delete: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PermissionSection =
+  | "dashboard"
+  | "claims"
+  | "inspecciones"
+  | "agenda"
+  | "catalogos"
+  | "catalogos_inspeccion"
+  | "operaciones"
+  | "administracion"
+  | "users"
+  | "companies"
+  | "configuracion";
 
 export type { ClaimInput, CompanyInput, InviteUserInput } from "@/lib/validations";
 
@@ -48,12 +79,10 @@ export interface Profile {
 
 export type ClaimStatus =
   | "created"
-  | "scheduled"
-  | "in_progress"
-  | "pending_info"
-  | "in_review"
-  | "signed"
-  | "closed";
+  | "adjustment"
+  | "dispatchment"
+  | "closed"
+  | "reopened";
 
 export interface Claim {
   id: string;
@@ -117,6 +146,23 @@ export interface Claim {
   broker_executive: string | null;
   created_at: string;
   updated_at: string;
+  inspection_sessions?: Array<{
+    id: string;
+    status: string;
+    inspection_number: string | null;
+    inspection_type?: string | null;
+    scheduled_at?: string | null;
+    started_at?: string | null;
+    ended_at?: string | null;
+    created_at?: string;
+  }>;
+  disabled: boolean;
+  disabled_reason: string | null;
+  disabled_at: string | null;
+  disabled_by: string | null;
+  reopened_at: string | null;
+  reopened_by: string | null;
+  reopened_reason: string | null;
 }
 
 export interface ClaimsParticipant {
@@ -139,6 +185,7 @@ export interface ClaimsParticipant {
   longitude: string | null;
   notes: string | null;
   is_active: boolean;
+  linked_to_insured: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -258,11 +305,19 @@ export interface InspectionSession {
   cancellation_notes: string | null;
   cancelled_at: string | null;
   cancelled_by: string | null;
+  active_tab: string | null;
+  acta_step: string | null;
   property_risk?: ActaPropertyRisk | null;
   property_materiality?: ActaPropertyMateriality | null;
   security_measures?: ActaSecurityMeasures | null;
   insured_statement?: ActaInsuredStatement | null;
   third_parties?: ActaThirdParty[] | null;
+  // Relaciones (cargadas por getInspectionSessionById)
+  inspection_evidences?: InspectionEvidence[];
+  inspection_checklists?: InspectionChecklist[];
+  inspection_damages?: InspectionDamage[];
+  inspection_signatures?: InspectionSignature[];
+  damage_sketches?: DamageSketch[];
   created_at: string;
   updated_at: string;
 }
@@ -521,7 +576,7 @@ export interface InspectionDamage {
   materiality_type: string | null;
   unit: string | null;
   quantity: number | null;
-  damage_type: "building" | "content";
+  damage_type: string;
   product: string | null;
   brand_model: string | null;
   purchase_date: string | null;
@@ -628,4 +683,138 @@ export interface Relationship {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Sistema de Acciones (Claim Actions)
+// ═══════════════════════════════════════════════════════════════════
+
+export interface ActionFeature {
+  id: string;
+  name: string;
+  has_specific_screen: boolean;
+  has_control: boolean;
+  has_issue: boolean;
+  has_review: boolean;
+  has_approve: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  characteristics?: Characteristic[];
+}
+
+export interface Characteristic {
+  id: string;
+  action_feature_id: string;
+  name: string;
+  local_name: string | null;
+  screen: boolean;
+  control: boolean;
+  issue: boolean;
+  review: boolean;
+  approve: boolean;
+  document_template: boolean;
+  email_template: boolean;
+  document_type: boolean;
+  is_active: boolean;
+  sort_order: number;
+  action_feature?: ActionFeature;
+}
+
+export interface ActionTemplate {
+  id: string;
+  action_type_id: string;
+  action_features_id: string;
+  line_business_id: string | null;
+  name: string;
+  description: string | null;
+  is_blocker: boolean;
+  is_review_applicable: boolean;
+  is_approval_applicable: boolean;
+  reviewer_role: string | null;
+  approver_role: string | null;
+  days_to_issue: number;
+  days_to_review: number;
+  days_to_approve: number;
+  days_to_alert_to_issue: number;
+  days_to_alert_to_review: number;
+  days_to_alert_to_approve: number;
+  is_active: boolean;
+  issuer_role: string | null;
+  code: string | null;
+  is_dispatch_applicable: boolean | null;
+  company_id: string | null;
+  event_id: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  action_feature?: ActionFeature;
+  action_type?: LookupCatalog;
+  business_line?: { id: string; name: string };
+  claim_statuses?: ActionTemplateClaimStatus[];
+}
+
+export interface ActionTemplateClaimStatus {
+  id: string;
+  action_template_id: string;
+  claim_status_id: string;
+  is_active: boolean;
+  claim_status?: LookupCatalog;
+  action_template?: ActionTemplate;
+}
+
+export type ClaimActionStatus =
+  | "todo"
+  | "issued"
+  | "reviewed"
+  | "approved"
+  | "dispatched"
+  | "rejected"
+  | "cancelled";
+
+export interface ClaimAction {
+  id: string;
+  claim_id: string;
+  action_type_id: string | null;
+  action_features_id: string;
+  action_template_id: string | null;
+  line_business_id: string | null;
+  name: string;
+  description: string | null;
+  code: string | null;
+  action_data: Record<string, unknown> | null;
+  action_status_id: string | null;
+  created_by: string | null;
+  created_on: string;
+  issued_by: string | null;
+  issued_on: string | null;
+  issuer_id: string | null;
+  reviewed_by: string | null;
+  reviewed_on: string | null;
+  reviewer_id: string | null;
+  review_rejected_by: string | null;
+  review_rejected_on: string | null;
+  reviewer_rejection_comment: string | null;
+  approved_by: string | null;
+  approved_on: string | null;
+  approver_id: string | null;
+  approve_rejected_by: string | null;
+  approve_rejected_on: string | null;
+  approver_rejection_comment: string | null;
+  dispatched_by: string | null;
+  dispatched_on: string | null;
+  dispatcher_id: string | null;
+  dispatch_rejected_by: string | null;
+  dispatch_rejected_on: string | null;
+  dispatcher_rejection_comment: string | null;
+  expected_date: string | null;
+  is_blocker: boolean;
+  is_active: boolean;
+  updated_on: string | null;
+  updated_by: string | null;
+  action_feature?: ActionFeature;
+  action_type?: LookupCatalog;
+  action_status?: LookupCatalog;
+  action_template?: ActionTemplate;
 }

@@ -405,7 +405,47 @@ Estructura interna:
 ### Formularios
 ```
 .app-field-label   → text-[11px] font-semibold uppercase tracking-wide
-.app-input         → h-10 rounded-xl border border-input px-3 text-[13px]
+.app-input         → h-7 (28px) rounded-lg border px-2.5 text-[12px]
+```
+
+### Espaciado entre Agrupaciones (OBLIGATORIO)
+```
+Entre cards/grupos dentro de un tab o sección, usar SIEMPRE space-y-2 (8px)
+y gap-2 (8px) para grids. NO usar space-y-4, space-y-6, gap-4, o gap-6
+entre agrupaciones de cards.
+
+Esto aplica a TODAS las pantallas del sistema, tanto de visualización
+como de edición/formularios:
+- Detalle de siniestro (view)
+- Editar siniestro (edit-claim-form)
+- Detalle de inspección
+- Catálogos
+- Operaciones
+- Wizard de creación
+
+Ejemplo correcto:
+<div className="space-y-2">
+  <div className="app-panel">...</div>
+  <div className="app-panel">...</div>
+</div>
+
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+  <div className="lg:col-span-2 space-y-2">...</div>
+  <div className="space-y-2">...</div>
+</div>
+```
+
+### Tamaño de Inputs y Combos (OBLIGATORIO)
+```
+Todos los inputs (.app-input) y combos (FormSelect) DEBEN usar:
+- font-size: 12px (text-xs)
+- height: 28px (h-7)
+
+Esto mantiene consistencia con las pantallas de visualización (text-[12px])
+y evita que los formularios se desordenen con cajas demasiado grandes.
+
+Los FormSelect SIEMPRE deben llevar className="app-input h-7".
+NO usar h-8, h-9, h-10, ni text-sm en inputs o combos.
 ```
 
 ### Tablas
@@ -440,4 +480,327 @@ Selección en sidebar: UiStyleDevSelect recarga la página al cambiar.
 - Sesiones por ruta con métricas (eventos, errores, lentos, duplicados)
 - Exporta a JSON: diagnostic-log__ruta__fecha.json
 - No exponer secrets ni datos sensibles (sanitizeObject)
+```
+
+---
+
+## 11. Estados del Siniestro (Claim Status) — Flujo Definitivo
+
+> Los estados del siniestro son **lineales y no reversibles** (excepto reapertura especial).
+> Una vez que un caso avanza al siguiente estado, no puede volver al anterior por flujo normal.
+
+### Estados (5) — `lookup_catalog` categoría `claim_status`
+
+| Código | Nombre | sort_order | Color Badge |
+|---|---|---|---|
+| `created` | Creación | 1 | slate (gris claro) |
+| `adjustment` | Liquidación | 2 | amber (ámbar) |
+| `dispatchment` | Despacho | 3 | blue (azul) |
+| `closed` | Cierre | 4 | gray (gris) |
+| `reopened` | Reapertura | 5 | purple (púrpura) |
+
+### Flujo de Estados
+
+```
+created → adjustment → dispatchment → closed
+                                              ↓
+                                         [Reapertura especial]
+                                              ↓
+                                         reopened ≡ adjustment
+                                              ↓
+                                         closed (vía gestión de cierre)
+```
+
+### Reglas por Estado
+
+#### 1. Creación (`created`)
+- **Estado inicial** al crear un siniestro.
+- El caso puede o no tener inspector/liquidador asignado (la asignación no determina el estado).
+- Se pueden editar todos los datos del siniestro.
+- Se pueden asignar participantes (asegurado, contratante, beneficiario).
+- **Transición a `adjustment`:** Puede ocurrir por cualquiera de estos triggers:
+  - Asignación de inspector o liquidador.
+  - Creación/agendamiento de la primera inspección.
+  - Cambio manual desde la UI.
+  - Lo importante es que el cambio sea **unidireccional** (no se puede volver a `created`).
+
+#### 2. Liquidación (`adjustment`)
+- Es el estado de **trabajo activo** del caso.
+- Se realizan inspecciones, se cargan evidencias, daños, firmas, etc.
+- Se pueden modificar datos del siniestro (con permisos).
+- Se pueden agregar/editar participantes.
+- Se pueden generar gestiones.
+- **Transición:** Cuando se carga una **gestión de despacho** → `dispatchment`.
+
+#### 3. Despacho (`dispatchment`)
+- El caso ya tiene ciertas gestiones aplicadas.
+- Se solicita el despacho del caso.
+- Se continúa trabajando pero con restricciones.
+- **Transición:** Cuando se carga una **gestión de cierre** → `closed`.
+
+#### 4. Cierre (`closed`)
+- El caso está **totalmente bloqueado**.
+- **NO se pueden ejecutar acciones:**
+  - No se pueden generar nuevas inspecciones.
+  - No se pueden modificar datos del siniestro.
+  - No se pueden agregar/editar participantes.
+  - No se pueden cargar gestiones.
+  - No se pueden modificar evidencias, daños, ni firmas.
+- El caso queda en modo **solo lectura**.
+- **Transición:** Solo vía **Reapertura especial** (proceso administrativo).
+
+#### 5. Reapertura (`reopened`)
+- Es un **proceso especial** (no parte del flujo normal).
+- Se accede desde un **menú de operaciones** (similar al menú de inhabilitación de casos).
+- Requiere permisos especiales (rol administrador/operaciones).
+- Al reabrir, el estado es **funcionalmente idéntico a `adjustment`** (liquidación):
+  - Permite trabajar en el sistema.
+  - Permite modificar datos (con permisos).
+  - Permite generar gestiones e inspecciones.
+- **Transición:** Cuando se carga una nueva **gestión de cierre** → `closed` (vuelve a quedar bloqueado).
+
+### Transiciones Permitidas
+
+| Desde | Hacia | Trigger |
+|---|---|---|
+| `created` | `adjustment` | Asignar inspector/liquidador, agendar primera inspección, o cambio manual |
+| `adjustment` | `dispatchment` | Cargar gestión de despacho |
+| `dispatchment` | `closed` | Cargar gestión de cierre |
+| `closed` | `reopened` | Reapertura especial (menú operaciones) |
+| `reopened` | `closed` | Cargar gestión de cierre |
+
+### Transiciones PROHIBIDAS
+- `adjustment` → `created` (no se puede volver atrás)
+- `dispatchment` → `adjustment` (no se puede volver atrás)
+- `closed` → `adjustment` (solo vía reapertura especial)
+- `closed` → `dispatchment` (no se puede volver atrás)
+- `closed` → `created` (no se puede volver atrás)
+
+### Bloqueos en estado `closed`
+
+Cuando un siniestro está en estado `closed`:
+- **UI:** Todos los formularios de edición se deshabilitan.
+- **Botones de acción:** "Editar", "Nueva Inspección", "Agregar Gestión" se ocultan o deshabilitan.
+- **API:** Las mutaciones de GraphQL deben validar que el claim no esté `closed` antes de permitir cambios.
+- **Excepción:** La reapertura desde el menú de operaciones es la única acción permitida.
+
+### Menú de Reapertura (Operaciones)
+
+- Ubicación: Dashboard → Operaciones (o Configuración avanzada).
+- Similar al menú de inhabilitación de casos existente.
+- Lista solo casos en estado `closed`.
+- Al reabrir:
+  1. Cambia `status_id` al ID correspondiente de `reopened`.
+  2. Registra auditoría (quién, cuándo, motivo).
+  3. El caso vuelve a ser editable como en `adjustment`.
+- Al cerrar nuevamente:
+  1. Se carga una **gestión de cierre** dentro del caso.
+  2. Cambia `status_id` al ID de `closed`.
+  3. El caso vuelve a quedar bloqueado.
+
+### Regla
+```
+Los estados del siniestro son LINEALES: created → adjustment → dispatchment → closed.
+Ningún caso puede retroceder al estado anterior por flujo normal.
+La única excepción es la REAPERTURA especial desde operaciones, que es funcionalmente
+idéntica a liquidación (adjustment) y permite volver a trabajar y cerrar el caso nuevamente.
+El estado closed BLOQUEA TODA acción: no ediciones, no inspecciones, no gestiones, no modificaciones.
+```
+
+---
+
+## 12. Sistema de Acciones (Claim Actions) — Modelo del Cliente
+
+> **Concepto clave:** Todo lo que se hace dentro de un siniestro es una **Acción**.
+> Una inspección es una acción con la característica "Inspección". Una reapertura es una acción
+> con la característica "Reapertura". Un cierre es una acción con la característica "Cierre".
+> Las acciones tienen tipos, características (features), plantillas, y un workflow de emisión/revisión/aprobación/despacho.
+
+### Arquitectura del Modelo (6 tablas + 1 puente)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        CATÁLOGOS GLOBALES                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  action_type          action_features          characteristic       │
+│  (categoría de        (característica/         (configuración       │
+│   la acción)           feature de la acción)    detallada por        │
+│                                              feature)              │
+│  6 registros          22 registros            19+ registros         │
+│                                                                     │
+│  1. Proceso Ajuste    1. Inspección            screen, control,      │
+│  2. Proceso Inspec.   2. Cobertura             issue, review,        │
+│  3. Proceso Impug.    3. Reserva               approve, doc_tpl,     │
+│  4. Cierre siniestro  4. Ajuste                email_tpl, doc_type   │
+│  5. Comunicaciones    5. Coordinación Inspec.                        │
+│  6. Reapertura        6. Informe Liquidación                         │
+│                       7. Solicitud Anteced.                          │
+│                       8. Aviso Asignación                            │
+│                       9. Contacto Email Aseg.                        │
+│                      10. Recepción Anteced.                          │
+│                      11. Cierre                                      │
+│                      12. Reapertura                                  │
+│                      13. Impugnación                                 │
+│                      14. Registro Indemnización                      │
+│                      15. Carta Propuesta Aseg.                       │
+│                      16. Respuesta Impugnación                       │
+│                      17. Prórroga Siniestro                          │
+│                      18. Recepción Prórroga CMF                      │
+│                      19. Genérica                                    │
+│                      20. Solicitud Despacho                          │
+│                      21. Addendum                                    │
+│                      22. Reporte Preliminar                          │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    PLANTILLAS (CONFIGURACIÓN)                       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  action_template                                                     │
+│  (plantilla predefinida por línea de negocio)                       │
+│                                                                     │
+│  - action_type_id     → FK a action_type                             │
+│  - action_features_id → FK a action_features                         │
+│  - line_business_id   → FK a línea de negocio                        │
+│  - company_id         → opcional, específico por empresa             │
+│  - event_id           → opcional, específico por evento              │
+│  - name, description, code                                          │
+│  - is_blocker, is_review_applicable, is_approval_applicable         │
+│  - is_dispatch_applicable                                            │
+│  - roles: issuer_role, reviewer_role, approver_role                  │
+│  - días: days_to_issue/review/approve + alertas                     │
+│                                                                     │
+│         │                                                           │
+│         ├──→ action_template_claim_status                            │
+│         │    (qué plantillas aplican en qué estados del siniestro)   │
+│         │    - action_template_id → FK                               │
+│         │    - claim_status_id    → FK a claim_status                │
+│         │    - is_active                                               │
+│         │                                                           │
+│         └──→ action_template_email                                    │
+│              (plantillas de email asociadas a la acción)              │
+│              - action_template_id → FK                                │
+│              - template_id         → FK a email_template              │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    INSTANCIAS (DATOS DEL SINIESTRO)                 │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  action (claim_actions en nuestro sistema)                          │
+│  (instancia de una acción ejecutada en un siniestro)                │
+│                                                                     │
+│  - action_type_id, action_features_id, line_business_id             │
+│  - action_template_id  → FK a la plantilla origen                    │
+│  - claim_id            → FK al siniestro                             │
+│  - name, description, code (copiados de la plantilla)               │
+│  - action_data         → JSON con datos específicos de la acción     │
+│  - action_status_id    → estado de la acción                         │
+│                                                                     │
+│  WORKFLOW:                                                           │
+│  - created_by, created_on                                           │
+│  - issued_by, issued_on     (emisión)                                │
+│  - reviewed_by, reviewed_on (revisión)                               │
+│  - approved_by, approved_on (aprobación)                             │
+│  - dispatched_by, dispatched_on (despacho)                           │
+│  - rejection fields (review_rejected_*, approve_rejected_*)         │
+│  - expected_date                                                     │
+│  - issuer_id, reviewer_id, approver_id, dispatcher_id                │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Adaptación a Nuestro Sistema (PostgreSQL/UUID)
+
+| Tabla SQL Server (bigint) | Tabla PostgreSQL (uuid) | Categoría |
+|---|---|---|
+| `action_type` | `action_type` (lookup_catalog cat=`action_type`) | Catálogo global |
+| `action_features` | `action_features` (lookup_catalog cat=`action_feature`) | Catálogo global |
+| `characteristic` | `characteristic` (tabla propia) | Catálogo global |
+| `action_template` | `action_template` (tabla propia) | Configuración |
+| `action_template_claim_status` | `action_template_claim_status` (tabla puente) | Configuración |
+| `action_template_email` | `action_template_email` (tabla propia) | Configuración |
+| `action` | `claim_actions` (tabla propia) | Datos del siniestro |
+
+### Workflow de una Acción
+
+```
+CREADA → EMITIDA (issued) → REVISADA (reviewed) → APROBADA (approved) → DESPACHADA (dispatched)
+                ↑                ↑                    ↑                    ↑
+           [issuer_role]    [reviewer_role]      [approver_role]      [dispatcher_role]
+```
+
+Cada fase puede ser **rechazada** (con comentario):
+- `review_rejected_by/on + reviewer_rejection_comment`
+- `approve_rejected_by/on + approver_rejection_comment`
+- `dispatch_rejected_by/on + dispatcher_rejection_comment`
+
+### action_data (JSON) — Datos Específicos
+
+Cada acción guarda sus datos específicos en `action_data` (JSON):
+- **Coordinación Inspección:** `{contact, coordinationMethodId, coordinationTypeId, inspectionDateTime, inspectorId, location}`
+- **Inspección:** `{contact, location, inspectionDateTime, inspectionType, comments}`
+- **Coberturas:** `{coveragesRequested: [...]}`
+- **Cierre:** `{closeReasonId, notes, ...}`
+- **Reapertura:** `{reopenReasonId, notes, ...}`
+
+### action_template_claim_status — Reglas de Visibilidad
+
+Determina qué plantillas de acción están disponibles según el estado del siniestro:
+- En `created` (Creación): pocas acciones disponibles
+- En `adjustment` (Liquidación): la mayoría de acciones disponibles
+- En `dispatchment` (Despacho): acciones de cierre
+- En `closed` (Cierre): NINGUNA acción disponible (caso bloqueado)
+- En `reopened` (Reapertura): mismas acciones que `adjustment`
+
+### Características (characteristic) — Flags por Feature
+
+Cada feature tiene flags que determinan su comportamiento:
+- `screen` → tiene pantalla específica (ej: Inspección tiene pantalla, Informe de Liquidación no)
+- `control` → tiene control de UI
+- `issue` → requiere fase de emisión
+- `review` → requiere fase de revisión
+- `approve` → requiere fase de aprobación
+- `document_template` → genera documento
+- `email_template` → envía email
+- `document_type` → tiene tipo de documento
+
+### Mapeo de Features a Pantallas
+
+| action_feature | Pantalla en nuestro sistema |
+|---|---|
+| Inspección (1) | `/dashboard/inspecciones/[id]` (ya existe) |
+| Coordinación Inspección (5) | Formulario de coordinación |
+| Cobertura (2) | Formulario de coberturas |
+| Reserva (3) | Formulario de reserva |
+| Ajuste (4) | Planilla de cuadro de ajuste |
+| Informe Liquidación (6) | Generación de PDF |
+| Solicitud Antecedentes (7) | Formulario + email |
+| Aviso Asignación (8) | Notificación automática |
+| Contacto Email (9) | Formulario + email |
+| Recepción Anteced. (10) | Confirmación de recepción |
+| Cierre (11) | Formulario de cierre → cambia estado a `closed` |
+| Reapertura (12) | Formulario de reapertura → cambia estado a `reopened` |
+| Impugnación (13) | Formulario de impugnación |
+| Indemnización (14) | Registro de indemnización |
+| Carta Propuesta (15) | Generación de carta + PDF |
+| Respuesta Impug. (16) | Respuesta a impugnación |
+| Prórroga (17) | Solicitud de prórroga |
+| Recepción Prórroga (18) | Confirmación CMF |
+| Genérica (19) | Formulario libre |
+| Solicitud Despacho (20) | Solicitud de despacho → cambia estado a `dispatchment` |
+| Addendum (21) | Addendum |
+| Reporte Preliminar (22) | Reporte preliminar |
+
+### Regla
+```
+TODO lo que se hace en un siniestro es una ACCIÓN (claim_action).
+Las acciones tienen: tipo, característica (feature), plantilla, y workflow.
+Las plantillas determinan qué acciones están disponibles según el estado del siniestro.
+El estado `closed` del siniestro BLOQUEA toda nueva acción.
+La reapertura y el cierre son acciones especiales que cambian el estado del siniestro.
+Cada reapertura queda registrada como una claim_action individual (con su motivo),
+mientras que la última reapertura se refleja en claims.reopened_at/by/reason.
 ```

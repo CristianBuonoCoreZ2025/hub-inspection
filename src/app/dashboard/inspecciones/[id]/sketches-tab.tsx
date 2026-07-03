@@ -98,7 +98,7 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="app-stack">
       {/* Upload zone */}
       <div
         className="app-panel flex cursor-pointer flex-col items-center justify-center gap-2 border-2 border-dashed border-border py-8 transition-colors hover:border-primary/50"
@@ -120,7 +120,7 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
 
       {/* Grid */}
       {sketches && sketches.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {sketches.map((sketch) => (
             <div key={sketch.id} className="app-panel space-y-3">
               <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
@@ -138,7 +138,7 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
                       type="text"
                       value={editingLabel}
                       onChange={(e) => setEditingLabel(e.target.value)}
-                      className="app-input h-8 flex-1"
+                      className="app-input h-7 flex-1"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === "Enter") saveEdit(sketch.id);

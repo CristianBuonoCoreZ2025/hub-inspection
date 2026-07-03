@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { actaSchema, type ActaInput } from "@/lib/validations";
@@ -26,19 +26,21 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
+import { getPropertyClassifications, getHousingDestinations, getBuildingAges } from "@/services/catalogs";
+import { useQuery } from "@tanstack/react-query";
 import type { InspectionSession } from "@/types";
 
 const steps = [
-  { id: 1, label: "Datos Generales", icon: ClipboardList },
-  { id: 2, label: "Riesgo Siniestrado", icon: Building },
-  { id: 3, label: "Materialidad", icon: Hammer },
-  { id: 4, label: "Seguridad", icon: Shield },
-  { id: 5, label: "Declaracion", icon: FileText },
-  { id: 6, label: "Terceros", icon: Users },
+  { id: 1, label: "Datos Generales", icon: ClipboardList, key: "datos" },
+  { id: 2, label: "Riesgo Siniestrado", icon: Building, key: "riesgo" },
+  { id: 3, label: "Materialidad", icon: Hammer, key: "materialidad" },
+  { id: 4, label: "Seguridad", icon: Shield, key: "seguridad" },
+  { id: 5, label: "Declaracion", icon: FileText, key: "declaracion" },
+  { id: 6, label: "Terceros", icon: Users, key: "terceros" },
 ];
 
 interface ActaFormProps {
-  session: InspectionSession & { claim?: any };
+  session: InspectionSession & { claim?: Record<string, unknown> | null };
 }
 
 export default function ActaForm({ session }: ActaFormProps) {
@@ -47,9 +49,6 @@ export default function ActaForm({ session }: ActaFormProps) {
 
   const { catalogs, isLoading: catalogsLoading } = useLookupCatalogs([
     "interviewed_relationship",
-    "risk_type",
-    "risk_class",
-    "property_type",
     "materiality_walls",
     "materiality_roof",
     "materiality_flooring",
@@ -59,10 +58,28 @@ export default function ActaForm({ session }: ActaFormProps) {
     "materiality_closure",
   ]);
 
+  // Catálogos desde tablas separadas
+  const { data: propertyClassifications = [] } = useQuery({
+    queryKey: ["property-classifications"],
+    queryFn: getPropertyClassifications,
+    staleTime: 1000 * 60 * 30,
+  });
+  const { data: housingDestinations = [] } = useQuery({
+    queryKey: ["housing-destinations"],
+    queryFn: getHousingDestinations,
+    staleTime: 1000 * 60 * 30,
+  });
+  const { data: buildingAges = [] } = useQuery({
+    queryKey: ["building-ages"],
+    queryFn: getBuildingAges,
+    staleTime: 1000 * 60 * 30,
+  });
+
   // Pre-llenar desde el siniestro: si el acta no tiene datos del entrevistado,
   // usar los del asegurado desde claims_participants
-  const claim = session.claim as any;
-  const insuredParticipant = claim?.claims_participants?.find((p: any) => p.type === "insured");
+  const claim = session.claim as Record<string, unknown> | null | undefined;
+  const participants = (claim?.claims_participants as Array<{ type: string; full_name: string | null; email: string | null }>) || [];
+  const insuredParticipant = participants.find((p) => p.type === "insured");
   const preInsuredName = insuredParticipant?.full_name || "";
   const preInsuredEmail = insuredParticipant?.email || "";
 
@@ -134,16 +151,64 @@ export default function ActaForm({ session }: ActaFormProps) {
         third_parties: data.third_parties,
       } as Partial<InspectionSession>),
     onSuccess: () => {
-      toast.success("Acta guardada");
       queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const onSubmit = form.handleSubmit((data) => saveMutation.mutate(data));
+  const onSubmit = form.handleSubmit((data) => {
+    saveMutation.mutate(data);
+    toast.success("Acta guardada");
+  });
+
+  // ── Auto-guardado debounced (screen sharing) ──
+  // Cuando el inspector escribe, guarda silenciosamente después de 1.5s
+  // para que el cliente vea los cambios en tiempo real vía polling.
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedDataRef = useRef<string>("");
+
+  useEffect(() => {
+    const subscription = form.watch((formData) => {
+      // Solo guardar si hay cambios reales
+      const dataStr = JSON.stringify(formData);
+      if (dataStr === lastSavedDataRef.current) return;
+
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = setTimeout(() => {
+        lastSavedDataRef.current = dataStr;
+        const validData = form.getValues();
+        updateInspectionSession(session.id, {
+          inspection_date: validData.inspection_date || null,
+          inspection_time: validData.inspection_time || null,
+          interviewed_name: validData.interviewed_name || null,
+          interviewed_email: validData.interviewed_email || null,
+          interviewed_relationship: validData.interviewed_relationship || null,
+          police_report_number: validData.police_report_number || null,
+          police_report_name: validData.police_report_name || null,
+          police_report_rut: validData.police_report_rut || null,
+          firefighters_company: validData.firefighters_company || null,
+          other_insurances: validData.other_insurances,
+          other_insurance_company: validData.other_insurance_company || null,
+          inspector_observations: validData.inspector_observations || null,
+          property_risk: validData.property_risk,
+          property_materiality: validData.property_materiality,
+          security_measures: validData.security_measures,
+          insured_statement: validData.insured_statement,
+          third_parties: validData.third_parties,
+        } as Partial<InspectionSession>).catch(() => {});
+      }, 1500);
+    });
+    return () => subscription.unsubscribe();
+  }, [form, session.id]);
 
   const goNext = () => setStep((s) => Math.min(s + 1, steps.length));
   const goPrev = () => setStep((s) => Math.max(s - 1, 1));
+
+  // Sincronizar el step del acta con el cliente (piloto automático)
+  const currentStepKey = steps.find((s) => s.id === step)?.key || "datos";
+  useEffect(() => {
+    updateInspectionSession(session.id, { acta_step: currentStepKey }).catch(() => {});
+  }, [currentStepKey, session.id]);
 
   // Helpers sin tipado estricto para evitar conflictos con react-hook-form + paths anidados
   const field = (name: string) => form.register(name as never);
@@ -158,15 +223,44 @@ export default function ActaForm({ session }: ActaFormProps) {
         <SelectTrigger className="app-input"><SelectValue placeholder={placeholder} /></SelectTrigger>
         <SelectContent>
           {items.map((item) => (
-            <SelectItem key={item.id} value={item.code || item.name}>{item.name}</SelectItem>
+            <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
           ))}
         </SelectContent>
       </Select>
     );
   };
 
+  const tableSelect = (name: string, items: { id: string; name: string }[], placeholder = "Seleccionar...") => {
+    const current = watch(name) as unknown as string;
+    return (
+      <Select value={current || ""} onValueChange={(v) => set(name, v)}>
+        <SelectTrigger className="app-input"><SelectValue placeholder={placeholder} /></SelectTrigger>
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
+
+  const numberSelect = (name: string, max: number, placeholder = "Seleccionar...") => {
+    const current = watch(name) as unknown as string;
+    return (
+      <Select value={current || ""} onValueChange={(v) => set(name, v)}>
+        <SelectTrigger className="app-input"><SelectValue placeholder={placeholder} /></SelectTrigger>
+        <SelectContent>
+          {Array.from({ length: max }, (_, i) => String(i + 1)).map((n) => (
+            <SelectItem key={n} value={n}>{n}</SelectItem>
+          ))}
+          <SelectItem value="10+">10+</SelectItem>
+        </SelectContent>
+      </Select>
+    );
+  };
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form onSubmit={onSubmit} className="app-stack">
       {/* Stepper */}
       <div className="flex items-center gap-1 overflow-x-auto pb-2">
         {steps.map((s) => {
@@ -195,80 +289,86 @@ export default function ActaForm({ session }: ActaFormProps) {
 
       {/* Paso 1: Datos Generales */}
       {step === 1 && (
-        <div className="space-y-4">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Datos Generales de la Inspeccion
-          </h3>
-          <div className="modal-grid-3">
-            <div className="modal-field">
-              <Label className="app-field-label">Fecha Inspeccion</Label>
-              <Input {...field("inspection_date")} type="date" className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Hora Inspeccion</Label>
-              <Input {...field("inspection_time")} type="time" className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Nombre Entrevistado</Label>
-              <Input {...field("interviewed_name")} placeholder="Gonzalo Meza" className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Email Entrevistado</Label>
-              <Input {...field("interviewed_email")} type="email" placeholder="Pamela@email.com" className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Relacion con Asegurado</Label>
-              {catalogSelect("interviewed_relationship", "interviewed_relationship", "Seleccionar...")}
-            </div>
-          </div>
-
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground pt-2">
-            Parte Policial y Bomberos
-          </h3>
-          <div className="modal-grid-3">
-            <div className="modal-field">
-              <Label className="app-field-label">N° Parte Policial</Label>
-              <Input {...field("police_report_number")} className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Nombre Denunciante</Label>
-              <Input {...field("police_report_name")} className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">RUT Denunciante</Label>
-              <Input {...field("police_report_rut")} className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Compañia Bomberos</Label>
-              <Input {...field("firefighters_company")} placeholder="Nombre compañia" className="app-input" />
-            </div>
-          </div>
-
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground pt-2">
-            Otros Seguros y Observaciones
-          </h3>
-          <div className="modal-grid">
-            <div className="modal-field flex items-center gap-2 pt-4">
-              <Checkbox
-                checked={Boolean(watch("other_insurances"))}
-                onChange={(e) => set("other_insurances", e.target.checked)}
-              />
-              <Label className="text-[13px] font-medium cursor-pointer">¿Presenta otros seguros?</Label>
-            </div>
-            {Boolean(watch("other_insurances")) && (
+        <div className="space-y-3">
+          <div className="app-panel">
+            <h3 className="app-section-title">
+              Datos Generales de la Inspeccion
+            </h3>
+            <div className="modal-grid-3">
               <div className="modal-field">
-                <Label className="app-field-label">Compañia</Label>
-                <Input {...field("other_insurance_company")} className="app-input" />
+                <Label className="app-field-label">Fecha Inspeccion</Label>
+                <Input {...field("inspection_date")} type="date" className="app-input" />
               </div>
-            )}
-            <div className="modal-field modal-field-full">
-              <Label className="app-field-label">Observaciones del Inspector</Label>
-              <textarea
-                {...field("inspector_observations")}
-                rows={4}
-                className="app-input resize-none"
-                placeholder="Observaciones finales del inspector sobre la inspeccion..."
-              />
+              <div className="modal-field">
+                <Label className="app-field-label">Hora Inspeccion</Label>
+                <Input {...field("inspection_time")} type="time" className="app-input" />
+              </div>
+              <div className="modal-field">
+                <Label className="app-field-label">Nombre Entrevistado</Label>
+                <Input {...field("interviewed_name")} placeholder="Gonzalo Meza" className="app-input" />
+              </div>
+              <div className="modal-field">
+                <Label className="app-field-label">Email Entrevistado</Label>
+                <Input {...field("interviewed_email")} type="email" placeholder="Pamela@email.com" className="app-input" />
+              </div>
+              <div className="modal-field">
+                <Label className="app-field-label">Relacion con Asegurado</Label>
+                {catalogSelect("interviewed_relationship", "interviewed_relationship", "Seleccionar...")}
+              </div>
+            </div>
+          </div>
+
+          <div className="app-panel">
+            <h3 className="app-section-title">
+              Parte Policial y Bomberos
+            </h3>
+            <div className="modal-grid-3">
+              <div className="modal-field">
+                <Label className="app-field-label">N° Parte Policial</Label>
+                <Input {...field("police_report_number")} className="app-input" />
+              </div>
+              <div className="modal-field">
+                <Label className="app-field-label">Nombre Denunciante</Label>
+                <Input {...field("police_report_name")} className="app-input" />
+              </div>
+              <div className="modal-field">
+                <Label className="app-field-label">RUT Denunciante</Label>
+                <Input {...field("police_report_rut")} className="app-input" />
+              </div>
+              <div className="modal-field">
+                <Label className="app-field-label">Compañia Bomberos</Label>
+                <Input {...field("firefighters_company")} placeholder="Nombre compañia" className="app-input" />
+              </div>
+            </div>
+          </div>
+
+          <div className="app-panel">
+            <h3 className="app-section-title">
+              Otros Seguros y Observaciones
+            </h3>
+            <div className="modal-grid">
+              <div className="modal-field flex items-center gap-2">
+                <Checkbox
+                  checked={Boolean(watch("other_insurances"))}
+                  onChange={(e) => set("other_insurances", e.target.checked)}
+                />
+                <Label className="text-[12px] font-medium cursor-pointer">¿Presenta otros seguros?</Label>
+              </div>
+              {Boolean(watch("other_insurances")) && (
+                <div className="modal-field">
+                  <Label className="app-field-label">Compañia</Label>
+                  <Input {...field("other_insurance_company")} className="app-input" />
+                </div>
+              )}
+              <div className="modal-field modal-field-full">
+                <Label className="app-field-label">Observaciones del Inspector</Label>
+                <textarea
+                  {...field("inspector_observations")}
+                  rows={4}
+                  className="app-input resize-none"
+                  placeholder="Observaciones finales del inspector sobre la inspeccion..."
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -276,86 +376,92 @@ export default function ActaForm({ session }: ActaFormProps) {
 
       {/* Paso 2: Descripcion del Riesgo */}
       {step === 2 && (
-        <div className="space-y-4">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="app-panel">
+          <h3 className="app-section-title">
             Descripcion del Riesgo Siniestrado
           </h3>
-          <div className="modal-grid-3">
-            <div className="modal-field">
-              <Label className="app-field-label">Tipo de Riesgo</Label>
-              {catalogSelect("property_risk.risk_type", "risk_type")}
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Clase de Riesgo</Label>
-              {catalogSelect("property_risk.risk_class", "risk_class")}
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Tipo de Inmueble</Label>
-              {catalogSelect("property_risk.property_type", "property_type")}
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">N° Dpto / Oficina</Label>
-              <Input {...field("property_risk.apartment_number")} placeholder="606" className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">N° Pisos</Label>
-              <Input {...field("property_risk.floor_count")} placeholder="6" className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Antiguedad (años)</Label>
-              <Input {...field("property_risk.age_years")} placeholder="10" className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Superficie Construida (m²)</Label>
-              <Input {...field("property_risk.built_surface")} placeholder="0" className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Cantidad Espacios</Label>
-              <Input {...field("property_risk.room_count")} placeholder="Dormitorios, baños, oficinas..." className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Cantidad Baños</Label>
-              <Input {...field("property_risk.bathroom_count")} className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Oficinas</Label>
-              <Input {...field("property_risk.office_count")} className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Bodegas</Label>
-              <Input {...field("property_risk.warehouse_count")} className="app-input" />
-            </div>
-            <div className="modal-field flex items-center gap-2 pt-4">
-              <Checkbox
-                checked={Boolean(watch("property_risk.is_habitable"))}
-                onChange={(e) => set("property_risk.is_habitable", e.target.checked)}
-              />
-              <Label className="text-[13px] font-medium cursor-pointer">¿Se encuentra habitado?</Label>
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Nombre Propietario(s)</Label>
-              <Input {...field("property_risk.owner_name")} placeholder="Pamela Becerra" className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Sucursales</Label>
-              <Input {...field("property_risk.branch_count")} className="app-input" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Trabajadores / Habitantes</Label>
-              <Input {...field("property_risk.worker_resident_count")} className="app-input" />
-            </div>
-            <div className="modal-field modal-field-full">
-              <Label className="app-field-label">Rubro de la Empresa</Label>
-              <Input {...field("property_risk.business_line")} className="app-input" />
-            </div>
-          </div>
+          {(() => {
+            const riskClass = String(watch("property_risk.risk_class") ?? "");
+            const isResidential = riskClass === "Residencial";
+            return (
+              <div className="modal-grid-3">
+                <div className="modal-field">
+                  <Label className="app-field-label">Clasificacion del Bien</Label>
+                  {tableSelect("property_risk.risk_class", propertyClassifications)}
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Destino del Bien</Label>
+                  {tableSelect("property_risk.property_type", housingDestinations)}
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">N° Dpto / Oficina</Label>
+                  <Input {...field("property_risk.apartment_number")} placeholder="606" className="app-input" />
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">N° Pisos</Label>
+                  <Input {...field("property_risk.floor_count")} type="number" placeholder="6" className="app-input" />
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Antiguedad del Inmueble</Label>
+                  {tableSelect("property_risk.age_years", buildingAges)}
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Superficie Construida (m²)</Label>
+                  <Input {...field("property_risk.built_surface")} type="number" placeholder="0" className="app-input" />
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Cantidad Espacios</Label>
+                  {numberSelect("property_risk.room_count", 10)}
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Cantidad Baños</Label>
+                  {numberSelect("property_risk.bathroom_count", 10)}
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">N° Oficinas</Label>
+                  {numberSelect("property_risk.office_count", 10)}
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">N° Bodegas</Label>
+                  {numberSelect("property_risk.warehouse_count", 10)}
+                </div>
+                <div className="modal-field flex items-center gap-2">
+                  <Checkbox
+                    checked={Boolean(watch("property_risk.is_habitable"))}
+                    onChange={(e) => set("property_risk.is_habitable", e.target.checked)}
+                  />
+                  <Label className="text-[12px] font-medium cursor-pointer">¿Se encuentra habitable?</Label>
+                </div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Nombre Propietario(s)</Label>
+                  <Input {...field("property_risk.owner_name")} placeholder="Pamela Becerra" className="app-input" />
+                </div>
+                {!isResidential && (
+                  <div className="modal-field">
+                    <Label className="app-field-label">Sucursales</Label>
+                    <Input {...field("property_risk.branch_count")} type="number" className="app-input" />
+                  </div>
+                )}
+                <div className="modal-field">
+                  <Label className="app-field-label">{isResidential ? "N° Habitantes" : "N° Trabajadores"}</Label>
+                  <Input {...field("property_risk.worker_resident_count")} type="number" className="app-input" />
+                </div>
+                {!isResidential && (
+                  <div className="modal-field modal-field-full">
+                    <Label className="app-field-label">Rubro de la Empresa</Label>
+                    <Input {...field("property_risk.business_line")} className="app-input" />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
       {/* Paso 3: Materialidad */}
       {step === 3 && (
-        <div className="space-y-4">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="app-panel">
+          <h3 className="app-section-title">
             Materialidad del Inmueble
           </h3>
           <div className="modal-grid-3">
@@ -397,11 +503,11 @@ export default function ActaForm({ session }: ActaFormProps) {
 
       {/* Paso 4: Medidas de Seguridad */}
       {step === 4 && (
-        <div className="space-y-4">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="app-panel">
+          <h3 className="app-section-title">
             Medidas de Asegurabilidad
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {(
               [
                 { key: "protections", label: "Protecciones Generales" },
@@ -412,21 +518,21 @@ export default function ActaForm({ session }: ActaFormProps) {
                 { key: "other_measures", label: "Otras Medidas" },
               ] as const
             ).map((item) => (
-              <div key={item.key} className="flex items-start gap-4 rounded-lg border border-border p-3">
-                <div className="flex items-center gap-2 pt-1 shrink-0">
+              <div key={item.key} className="flex items-start gap-4 rounded-lg border border-border p-2.5">
+                <div className="flex items-center gap-2 pt-0.5 shrink-0">
                   <Checkbox
                     checked={Boolean(watch(`security_measures.${item.key}.has_it`))}
                     onChange={(e) =>
                       set(`security_measures.${item.key}.has_it`, e.target.checked)
                     }
                   />
-                  <Label className="text-[13px] font-medium cursor-pointer whitespace-nowrap">{item.label}</Label>
+                  <Label className="text-[12px] font-medium cursor-pointer whitespace-nowrap">{item.label}</Label>
                 </div>
                 <div className="flex-1 min-w-0">
                   <Input
                     {...field(`security_measures.${item.key}.detail`)}
                     placeholder="Detalle..."
-                    className="app-input h-8 text-[13px]"
+                    className="app-input h-7 text-[12px]"
                   />
                 </div>
               </div>
@@ -437,8 +543,8 @@ export default function ActaForm({ session }: ActaFormProps) {
 
       {/* Paso 5: Declaracion del Asegurado */}
       {step === 5 && (
-        <div className="space-y-4">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="app-panel">
+          <h3 className="app-section-title">
             Declaracion del Asegurado
           </h3>
           <div className="modal-grid">
@@ -477,15 +583,15 @@ export default function ActaForm({ session }: ActaFormProps) {
 
       {/* Paso 6: Terceros */}
       {step === 6 && (
-        <div className="space-y-4">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="app-panel">
+          <h3 className="app-section-title">
             Datos de Terceros
           </h3>
           <div className="space-y-3">
             {((watch("third_parties") as Array<Record<string, unknown>>) || []).map((_, idx) => (
-              <div key={idx} className="rounded-lg border border-border p-4 space-y-3">
+              <div key={idx} className="rounded-lg border border-border p-3 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-medium">Tercero {idx + 1}</span>
+                  <span className="text-[12px] font-medium">Tercero {idx + 1}</span>
                   <Button
                     type="button"
                     variant="ghost"
@@ -504,7 +610,7 @@ export default function ActaForm({ session }: ActaFormProps) {
                     <Label className="app-field-label">Tipo</Label>
                     <select
                       {...field(`third_parties.${idx}.party_type`)}
-                      className="app-input h-10"
+                      className="app-input h-7"
                     >
                       <option value="afectado">Afectado</option>
                       <option value="responsable">Responsable</option>

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Send, MessageSquare, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function ChatTab({ sessionId }: { sessionId: string }) {
+export default function ChatTab({ sessionId, compact = false }: { sessionId: string; compact?: boolean }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [message, setMessage] = useState("");
@@ -17,7 +17,7 @@ export default function ChatTab({ sessionId }: { sessionId: string }) {
   const { data: messages, isLoading } = useQuery({
     queryKey: ["chat-messages", sessionId],
     queryFn: () => getChatMessages(sessionId),
-    refetchInterval: 10000, // Refrescar cada 10 segundos
+    refetchInterval: 3000, // Refrescar cada 3 segundos (tiempo real)
   });
 
   const sendMutation = useMutation({
@@ -48,21 +48,23 @@ export default function ChatTab({ sessionId }: { sessionId: string }) {
 
   if (isLoading) {
     return (
-      <div className="app-panel">
+      <div className={compact ? "" : "app-panel"}>
         <p className="text-sm text-muted-foreground">Cargando mensajes...</p>
       </div>
     );
   }
 
   return (
-    <div className="app-panel flex flex-col gap-4" style={{ minHeight: "400px" }}>
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-        <MessageSquare className="h-4 w-4" />
-        Chat de Inspección
-      </h3>
+    <div className={`flex flex-col gap-3 ${compact ? "h-full" : "app-panel"}`} style={{ minHeight: compact ? "100%" : "400px" }}>
+      {!compact && (
+        <h3 className="text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" />
+          Chat de Inspección
+        </h3>
+      )}
 
       {/* Messages */}
-      <div className="flex-1 space-y-3 overflow-y-auto pr-1" style={{ maxHeight: "400px" }}>
+      <div className="flex-1 space-y-3 overflow-y-auto pr-1" style={{ maxHeight: compact ? "calc(100vh - 220px)" : "400px" }}>
         {messages && messages.length > 0 ? (
           messages.map((msg) => {
             const isCurrentUser = msg.sender_id === user?.id;

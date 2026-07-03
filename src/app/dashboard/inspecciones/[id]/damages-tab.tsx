@@ -23,9 +23,31 @@ const severityOptions = [
   { value: "total", label: "Total" },
 ];
 
+// Categorías específicas de daño (edificio + contenido)
+const damageCategories = [
+  { value: "structural", label: "Estructural" },
+  { value: "roof", label: "Cubierta / Techumbre" },
+  { value: "electrical", label: "Inst. Eléctricas" },
+  { value: "plumbing", label: "Inst. Sanitarias / Gas" },
+  { value: "finishes", label: "Terminaciones (muros/pisos/cielos)" },
+  { value: "openings", label: "Aberturas (ventanas/puertas)" },
+  { value: "content", label: "Contenido" },
+];
+
+const categoryLabels: Record<string, string> = Object.fromEntries(
+  damageCategories.map((c) => [c.value, c.label])
+);
+
+// Dependencias / recintos comunes
+const dependencyOptions = [
+  "Cocina", "Baño", "Dormitorio principal", "Dormitorio secundario",
+  "Living / Comedor", "Pasillo", "Hall", "Lavadero", "Bodega",
+  "Garage", "Exterior", "Terraza", "Azotea", "Sótano", "Otro",
+];
+
 const emptyDamage: Omit<InspectionDamage, "id" | "created_at" | "updated_at"> = {
   session_id: "",
-  category: "building",
+  category: "structural",
   subcategory: null,
   description: "",
   observations: null,
@@ -35,7 +57,7 @@ const emptyDamage: Omit<InspectionDamage, "id" | "created_at" | "updated_at"> = 
   materiality_type: null,
   unit: null,
   quantity: null,
-  damage_type: "building",
+  damage_type: "structural",
   product: null,
   brand_model: null,
   purchase_date: null,
@@ -87,7 +109,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
   const totalAmount = damages?.reduce((sum, d) => sum + (d.estimated_amount || 0), 0) || 0;
 
   return (
-    <div className="space-y-4">
+    <div className="app-stack">
       {/* Header con total */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
@@ -105,52 +127,54 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
       {/* Formulario de nuevo/edición */}
       {isEditingNew && (
         <div className="app-panel space-y-3">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <h3 className="app-section-title">
             Nuevo Registro de Daño
           </h3>
           <div className="modal-grid-3">
             <div>
               <label className="app-field-label text-[11px]">Categoría</label>
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as "building" | "content" })} className="app-input h-8 w-full text-[13px]">
-                <option value="building">Edificio</option>
-                <option value="content">Contenido</option>
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value, damage_type: e.target.value })} className="app-input h-7 w-full text-[13px]">
+                {damageCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="app-field-label text-[11px]">Subcategoría</label>
-              <input value={form.subcategory || ""} onChange={(e) => setForm({ ...form, subcategory: e.target.value || null })} placeholder="Ej. Estructural" className="app-input h-8 w-full text-[13px]" />
+              <label className="app-field-label text-[11px]">Dependencia / Recinto</label>
+              <select value={form.dependency || ""} onChange={(e) => setForm({ ...form, dependency: e.target.value || null })} className="app-input h-7 w-full text-[13px]">
+                <option value="">Seleccionar...</option>
+                {dependencyOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
             </div>
             <div>
               <label className="app-field-label text-[11px]">Severidad</label>
-              <select value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value as InspectionDamage["severity"] })} className="app-input h-8 w-full text-[13px]">
+              <select value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value as InspectionDamage["severity"] })} className="app-input h-7 w-full text-[13px]">
                 {severityOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             <div className="col-span-3">
               <label className="app-field-label text-[11px]">Descripción</label>
-              <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Descripción del daño..." className="app-input h-8 w-full text-[13px]" />
+              <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ej. Grieta en muro de carga, filtración en techumbre..." className="app-input h-7 w-full text-[13px]" />
             </div>
             <div className="col-span-2">
               <label className="app-field-label text-[11px]">Observaciones</label>
-              <input value={form.observations || ""} onChange={(e) => setForm({ ...form, observations: e.target.value || null })} placeholder="Observaciones adicionales..." className="app-input h-8 w-full text-[13px]" />
+              <input value={form.observations || ""} onChange={(e) => setForm({ ...form, observations: e.target.value || null })} placeholder="Observaciones adicionales..." className="app-input h-7 w-full text-[13px]" />
             </div>
             <div>
               <label className="app-field-label text-[11px]">Monto Estimado ($)</label>
-              <input type="number" value={form.estimated_amount ?? ""} onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : null })} placeholder="0" className="app-input h-8 w-full text-[13px]" />
+              <input type="number" value={form.estimated_amount ?? ""} onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : null })} placeholder="0" className="app-input h-7 w-full text-[13px]" />
             </div>
             {form.category === "content" && (
               <>
                 <div>
                   <label className="app-field-label text-[11px]">Producto</label>
-                  <input value={form.product || ""} onChange={(e) => setForm({ ...form, product: e.target.value || null })} placeholder="Ej. Televisor" className="app-input h-8 w-full text-[13px]" />
+                  <input value={form.product || ""} onChange={(e) => setForm({ ...form, product: e.target.value || null })} placeholder="Ej. Televisor" className="app-input h-7 w-full text-[13px]" />
                 </div>
                 <div>
                   <label className="app-field-label text-[11px]">Marca/Modelo</label>
-                  <input value={form.brand_model || ""} onChange={(e) => setForm({ ...form, brand_model: e.target.value || null })} placeholder="Ej. Samsung 55 pulgadas" className="app-input h-8 w-full text-[13px]" />
+                  <input value={form.brand_model || ""} onChange={(e) => setForm({ ...form, brand_model: e.target.value || null })} placeholder="Ej. Samsung 55 pulgadas" className="app-input h-7 w-full text-[13px]" />
                 </div>
                 <div>
                   <label className="app-field-label text-[11px]">Fecha Compra</label>
-                  <input type="date" value={form.purchase_date || ""} onChange={(e) => setForm({ ...form, purchase_date: e.target.value || null })} className="app-input h-8 w-full text-[13px]" />
+                  <input type="date" value={form.purchase_date || ""} onChange={(e) => setForm({ ...form, purchase_date: e.target.value || null })} className="app-input h-7 w-full text-[13px]" />
                 </div>
               </>
             )}
@@ -181,7 +205,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
             <thead>
               <tr>
                 <th>Categoría</th>
-                <th>Subcategoría</th>
+                <th>Dependencia</th>
                 <th>Descripción</th>
                 <th>Severidad</th>
                 <th className="text-right">Monto ($)</th>
@@ -191,9 +215,9 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
             <tbody>
               {damages.map((d) => (
                 <tr key={d.id}>
-                  <td><Badge variant="outline" className="text-[11px]">{d.category === "content" ? "Contenido" : "Edificio"}</Badge></td>
-                  <td className="text-[13px]">{d.subcategory || "—"}</td>
-                  <td className="text-[13px] max-w-[200px] truncate">{d.description}</td>
+                  <td><Badge variant="outline" className="text-[11px]">{categoryLabels[d.category] || d.category}</Badge></td>
+                  <td className="text-[11px]">{d.dependency || "—"}</td>
+                  <td className="text-[11px] max-w-[200px] truncate">{d.description}</td>
                   <td>
                     <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
                       d.severity === "total" ? "bg-red-100 text-red-700" :
@@ -206,7 +230,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
                   </td>
                   <td className="text-right text-[13px] font-medium">${(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
                   <td>
-                    <div className="flex items-center gap-1">
+                    <div className="app-row-actions">
                       <Button variant="ghost" size="icon" className="btn-neutral btn-icon h-7 w-7" onClick={() => { setEditing(d.id); setForm({ ...d, session_id: sessionId }); }}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>

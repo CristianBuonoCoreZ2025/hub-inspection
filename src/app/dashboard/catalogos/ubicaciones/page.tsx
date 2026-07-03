@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRegions, getCities, getCommunes, createRegion, updateRegion, deleteRegion, createCity, updateCity, deleteCity, createCommune, updateCommune, deleteCommune } from "@/services/catalogs";
 import { getCountries } from "@/services/countries";
 import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag, Plus, Pencil, Trash2 } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ interface BreadcrumbItem {
 
 export default function UbicacionesPage() {
   const queryClient = useQueryClient();
+  const { canCreate, canEdit, canDelete } = usePermissions();
   const [level, setLevel] = useState(0); // 0=paises, 1=regiones, 2=ciudades, 3=comunas
   const [selectedCountry, setSelectedCountry] = useState<{ id: string; name: string } | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<{ id: string; name: string } | null>(null);
@@ -298,7 +300,7 @@ export default function UbicacionesPage() {
         <span className="ml-auto text-sm text-muted-foreground">
           {isLoading ? "Cargando..." : `${currentData.length} registros`}
         </span>
-        {level > 0 && (
+        {level > 0 && canCreate("catalogos") && (
           <Button onClick={handleCreate} className="btn-create btn-sm ml-2">
             <Plus className="mr-2 h-4 w-4" /> Agregar
           </Button>
@@ -335,7 +337,7 @@ export default function UbicacionesPage() {
                   <td className="font-medium">{item.name}</td>
                   {level <= 1 && <td className="text-muted-foreground">{item.code || "—"}</td>}
                   <td>
-                    <div className="flex items-center gap-1">
+                    <div className="app-row-actions">
                       {level < 3 && (
                         <Button variant="ghost" size="sm" className="btn-neutral" onClick={(e) => { e.stopPropagation(); handleRowClick(item); }}>
                           {getNextLevelLabel()} <ChevronRight className="ml-1 h-3.5 w-3.5" />
@@ -343,12 +345,16 @@ export default function UbicacionesPage() {
                       )}
                       {level > 0 && (
                         <>
-                          <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => handleEdit(item)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => handleDelete(item.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {canEdit("catalogos") && (
+                            <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => handleEdit(item)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDelete("catalogos") && (
+                            <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => handleDelete(item.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </>
                       )}
                     </div>
@@ -372,7 +378,7 @@ export default function UbicacionesPage() {
             </DialogTitle>
           </div>
           <form onSubmit={handleSubmit}>
-            <div className="modal-body space-y-4">
+            <div className="modal-body space-y-2">
               <div className="modal-field">
                 <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
                 <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre" className="app-input" />

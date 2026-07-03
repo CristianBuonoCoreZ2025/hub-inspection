@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/hooks/use-permissions";
 import * as XLSX from "xlsx";
 
 type CatalogType =
@@ -125,6 +126,7 @@ async function createCatalogItem(catalogType: CatalogType, data: Record<string, 
 }
 
 export default function CargaCatalogosPage() {
+  const { canCreate } = usePermissions();
   const [catalogType, setCatalogType] = useState<CatalogType>("causas");
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
@@ -224,7 +226,7 @@ export default function CargaCatalogosPage() {
 
       {/* Selector de catálogo */}
       <div className="app-panel">
-        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        <h3 className="app-section-title">
           Seleccionar Catálogo
         </h3>
         <div className="flex flex-wrap gap-2">
@@ -277,7 +279,7 @@ export default function CargaCatalogosPage() {
 
       {/* Preview */}
       {parsedRows.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm">
               <span className="flex items-center gap-1.5">
@@ -289,17 +291,19 @@ export default function CargaCatalogosPage() {
                 {invalidCount} con errores
               </span>
             </div>
-            <Button
-              onClick={() => loadMutation.mutate(parsedRows)}
-              disabled={isUploading || validCount === 0}
-              className="btn-save btn-sm"
-            >
-              {isUploading ? (
-                <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando...</>
-              ) : (
-                <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar {validCount} registros</>
-              )}
-            </Button>
+            {canCreate("operaciones") && (
+              <Button
+                onClick={() => loadMutation.mutate(parsedRows)}
+                disabled={isUploading || validCount === 0}
+                className="btn-save btn-sm"
+              >
+                {isUploading ? (
+                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando...</>
+                ) : (
+                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar {validCount} registros</>
+                )}
+              </Button>
+            )}
           </div>
 
           {/* Progress */}

@@ -806,6 +806,32 @@ export async function getLookupCatalog(category: string) {
   return data.lookup_catalog;
 }
 
+export async function createLookupCatalogItem(input: { category: string; name: string; code?: string; sort_order?: number }) {
+  const mutation = `
+    mutation CreateLookupCatalogItem($object: lookup_catalog_insert_input!) {
+      insert_lookup_catalog_one(object: $object) { id category code name sort_order is_active }
+    }
+  `;
+  const data = await graphqlRequest<{ insert_lookup_catalog_one: LookupCatalog }>(mutation, {
+    object: { ...input, is_active: true, sort_order: input.sort_order ?? 0 },
+  });
+  return data.insert_lookup_catalog_one;
+}
+
+export async function updateLookupCatalogItem(id: string, input: Partial<{ name: string; code: string; sort_order: number; is_active: boolean }>) {
+  const mutation = `
+    mutation UpdateLookupCatalogItem($id: uuid!, $set: lookup_catalog_set_input!) {
+      update_lookup_catalog_by_pk(pk_columns: { id: $id }, _set: $set) { id name code sort_order is_active }
+    }
+  `;
+  const data = await graphqlRequest<{ update_lookup_catalog_by_pk: LookupCatalog }>(mutation, { id, set: input });
+  return data.update_lookup_catalog_by_pk;
+}
+
+export async function deleteLookupCatalogItem(id: string) {
+  return updateLookupCatalogItem(id, { is_active: false });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // EVENTS
 // ═══════════════════════════════════════════════════════════════

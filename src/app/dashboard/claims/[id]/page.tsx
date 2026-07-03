@@ -3,29 +3,30 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getClaimById, getClaimParticipants, deleteClaim, updateClaimStatus } from "@/services/claims";
+import { getClaimById, getClaimParticipants, updateClaimStatus } from "@/services/claims";
+import { getClaimActions } from "@/services/claim-actions";
 import { getUsers } from "@/services/users";
+import { getCompanies } from "@/services/companies";
+import { getCountries } from "@/services/countries";
 import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getEvents, getCountryById, getRegionById, getCityById, getCommuneById } from "@/services/catalogs";
 import type { ClaimsParticipant } from "@/types";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
+import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   Pencil,
-  Trash2,
   ClipboardCheck,
   MapPin,
   User,
-  Phone,
-  Mail,
   Shield,
   FileText,
   Lock,
   Users,
-  Building,
   Briefcase,
   FolderOpen,
-  Video,
+  ClipboardList,
+  History,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,13 +35,11 @@ import AuditLogSection from "./audit-log-section";
 import EditClaimForm from "./edit-claim-form";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  created: { label: "Creado", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
-  scheduled: { label: "Programado", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
-  in_progress: { label: "En Progreso", className: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" },
-  pending_info: { label: "Pendiente Info", className: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" },
-  in_review: { label: "En Revisión", className: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300" },
-  signed: { label: "Firmado", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" },
-  closed: { label: "Cerrado", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
+  created: { label: "Creación", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
+  adjustment: { label: "Liquidación", className: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" },
+  dispatchment: { label: "Despacho", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
+  closed: { label: "Cierre", className: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
+  reopened: { label: "Reapertura", className: "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300" },
 };
 
 function formatDate(date: string | null) {
@@ -48,7 +47,30 @@ function formatDate(date: string | null) {
   return new Date(date).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-function getParticipant(claim: { claims_participants?: { type: string; full_name: string | null; first_name: string | null; last_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[] }, type: string) {
+function formatDateTime(date: string | null) {
+  if (!date) return "—";
+  return new Date(date).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function uniquePhones(...values: (string | null | undefined)[]): string {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const v of values) {
+    if (!v) continue;
+    for (const raw of v.split(",")) {
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+      const normalized = trimmed.replace(/[\s+\-()]/g, "").toLowerCase();
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        result.push(trimmed);
+      }
+    }
+  }
+  return result.join(", ");
+}
+
+function getParticipant(claim: { claims_participants?: { type: string; full_name: string | null; first_name: string | null; last_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null; linked_to_insured: boolean }[] }, type: string) {
   return claim.claims_participants?.find((p) => p.type === type);
 }
 
@@ -57,14 +79,13 @@ function resolveName(id: string | null | undefined, catalog?: { id: string; name
   return catalog?.find((c) => c.id === id)?.name || id;
 }
 
-const tabs = [
-  { id: "siniestro", label: "Siniestro", icon: FileText },
-  { id: "asegurado", label: "Asegurado", icon: User },
-  { id: "participantes", label: "Participantes", icon: Users },
-  { id: "incidente", label: "Incidente", icon: MapPin },
-  { id: "asignaciones", label: "Asignaciones", icon: Briefcase },
-  { id: "documentos", label: "Documentos", icon: FolderOpen },
-  { id: "inspeccion", label: "Inspección", icon: Video },
+const allTabs = [
+  { id: "siniestro", label: "Siniestro", icon: FileText, section: "claims_detalle" },
+  { id: "participantes", label: "Participantes", icon: Users, section: "claims_participantes" },
+  { id: "incidente", label: "Incidente", icon: MapPin, section: "claims_incidente" },
+  { id: "gestiones", label: "Gestiones", icon: ClipboardList, section: "claims_gestiones" },
+  { id: "documentos", label: "Documentos", icon: FolderOpen, section: "claims_documentos" },
+  { id: "log", label: "Log", icon: History, section: "claims_log" },
 ];
 
 export default function ClaimDetailPage() {
@@ -72,8 +93,12 @@ export default function ClaimDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const queryClient = useQueryClient();
+  const { canEdit, canCreate, canView } = usePermissions();
   const [activeTab, setActiveTab] = useState("siniestro");
   const [isEditing, setIsEditing] = useState(false);
+
+  // Filtrar tabs por permisos de sub-sección (con fallback al padre)
+  const tabs = allTabs.filter(t => canView(t.section));
 
   const { data: rawClaim, isLoading } = useQuery({
     queryKey: ["claim", id],
@@ -83,6 +108,12 @@ export default function ClaimDetailPage() {
   const { data: participants } = useQuery({
     queryKey: ["claim-participants", id],
     queryFn: () => getClaimParticipants(id),
+    enabled: !!id,
+  });
+
+  const { data: claimActions } = useQuery({
+    queryKey: ["claim-actions", id],
+    queryFn: () => getClaimActions(id),
     enabled: !!id,
   });
 
@@ -165,6 +196,16 @@ export default function ClaimDetailPage() {
     queryFn: () => getEvents(),
   });
 
+  const { data: companiesCatalog } = useQuery({
+    queryKey: ["companies"],
+    queryFn: () => getCompanies(),
+  });
+
+  const { data: countriesCatalog } = useQuery({
+    queryKey: ["countries"],
+    queryFn: () => getCountries(),
+  });
+
   // Geo lookups (resolve FK names)
   const { data: countryName } = useQuery({
     queryKey: ["country-by-id", claim?.country_id],
@@ -187,37 +228,18 @@ export default function ClaimDetailPage() {
     enabled: !!claim?.commune_id,
   });
 
-  const createInspectionMutation = useMutation({
-    mutationFn: async (claimId: string) => {
-      // Redirigir al flujo de agendamiento en la página de inspecciones
-      router.push(`/dashboard/inspecciones?claim=${claimId}`);
-      return null;
-    },
-    onSuccess: () => {
-      toast.info("Selecciona inspector, fecha y hora para agendar la inspección");
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteClaim,
-    onSuccess: () => {
-      toast.success("Siniestro eliminado");
-      router.push("/dashboard/claims");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
   const closeMutation = useMutation({
     mutationFn: () => updateClaimStatus(id, codeToId["closed"]!),
     onSuccess: () => {
       toast.success("Caso cerrado");
       queryClient.invalidateQueries({ queryKey: ["claim", id] });
       queryClient.invalidateQueries({ queryKey: ["claims"] });
+      queryClient.invalidateQueries({ queryKey: ["claim-actions", id] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const { statusCode, statusLabel, codeToId } = useClaimStatuses();
+  const { statusCode, codeToId } = useClaimStatuses();
   const currentStatusCode = statusCode(claim?.status_id) ?? "created";
   const status = statusConfig[currentStatusCode] || statusConfig.created;
 
@@ -260,37 +282,31 @@ export default function ClaimDetailPage() {
           <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/claims")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-xl font-semibold">Siniestro {claim.claim_number}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge className={status.className}>{status.label}</Badge>
-              <span className="text-xs text-muted-foreground">{formatDate(claim.claim_date)}</span>
-            </div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-semibold">
+              Siniestro {claim.liquidation_number || "—"}
+              {claim.client_reference && (
+                <span className="text-muted-foreground font-normal"> / Ref.Cliente {claim.client_reference}</span>
+              )}
+            </h1>
+            <Badge className={status.className}>{status.label}</Badge>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {!isEditing && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="btn-create btn-sm"
-                onClick={() => createInspectionMutation.mutate(claim.id)}
-                disabled={createInspectionMutation.isPending}
-              >
-                <ClipboardCheck className="mr-2 h-4 w-4" />
-                Inspeccionar
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="btn-save btn-sm"
-                onClick={() => setIsEditing(true)}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar
-              </Button>
-              {currentStatusCode === "signed" && (
+              {canEdit("claims") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="btn-save btn-sm"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar
+                </Button>
+              )}
+              {canEdit("claims") && currentStatusCode === "closed" && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -304,15 +320,6 @@ export default function ClaimDetailPage() {
                   Cerrar caso
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="btn-danger btn-sm"
-                onClick={() => { if (confirm("¿Eliminar este siniestro?")) deleteMutation.mutate(claim.id); }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Eliminar
-              </Button>
             </>
           )}
         </div>
@@ -320,8 +327,8 @@ export default function ClaimDetailPage() {
 
       {/* Tabs — solo en modo vista */}
       {!isEditing && (
-        <div className="border-b">
-          <div className="flex gap-1 overflow-x-auto">
+        <div className="app-tab-bar">
+          <div className="app-tab-bar-inner">
             {tabs.map((t) => {
               const Icon = t.icon;
               const isActive = activeTab === t.id;
@@ -329,11 +336,7 @@ export default function ClaimDetailPage() {
                 <button
                   key={t.id}
                   onClick={() => setActiveTab(t.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
-                    isActive
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
-                  }`}
+                  className={`app-tab ${isActive ? "app-tab-active" : ""}`}
                 >
                   <Icon className="h-4 w-4" />
                   {t.label}
@@ -365,6 +368,8 @@ export default function ClaimDetailPage() {
             events: eventsCatalog ?? [],
             currencies: currencyCatalog ?? [],
             users: (users ?? []).map((u) => ({ id: u.id, full_name: u.full_name, email: u.email })),
+            companies: (companiesCatalog ?? []).map((c) => ({ id: c.id, name: c.name ?? "" })),
+            countries: (countriesCatalog ?? []).map((c) => ({ id: c.id, name: c.name })),
           }}
           onCancel={() => setIsEditing(false)}
           onSaved={() => setIsEditing(false)}
@@ -375,91 +380,111 @@ export default function ClaimDetailPage() {
         {/* ═══ TAB: SINIESTRO ═══ */}
         {activeTab === "siniestro" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-2">
               <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+                <div className="app-data-grid">
+                  <DataField label="N° Liquidación" value={claim.liquidation_number} />
+                  <DataField label="N° Ref. Cliente" value={claim.client_reference} />
+                  <DataField label="N° Siniestro (Cía)" value={claim.claim_number} />
+                </div>
+              </div>
+              <div className="app-panel">
+                <h3 className="app-section-title">
                   <FileText className="h-4 w-4" />
                   Datos del Siniestro
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
-                  <DataField label="N° Siniestro" value={claim.claim_number} />
-                  <DataField label="N° Póliza" value={claim.policy_number} />
-                  <DataField label="Item Póliza" value={claim.policy_item} />
-                  <DataField label="N° Ref. Cliente" value={claim.client_reference} />
-                  <DataField label="N° Siniestro Cía" value={claim.company_report_number} />
-                  <DataField label="N° Liquidación" value={claim.liquidation_number} />
+                <div className="app-data-grid">
+                  <DataField label="País del Siniestro" value={resolveName(claim.country_id, countriesCatalog)} />
+                  <DataField label="Empresa (Cliente)" value={resolveName(claim.company_id, companiesCatalog)} />
+                  <DataField label="Compañía de Seguros" value={resolveName(claim.insurance_company_id, insuranceCompaniesCatalog)} />
                   <DataField label="Fecha Siniestro" value={formatDate(claim.claim_date)} />
                   <DataField label="Fecha Denuncio" value={formatDate(claim.report_date)} />
                   <DataField label="Fecha Asignación" value={formatDate(claim.assignment_date)} />
-                  <DataField label="Tipo" value={resolveName(claim.claim_type_id, claimTypesCatalog)} />
+                </div>
+              </div>
+
+              <div className="app-panel">
+                <h3 className="app-section-title">
+                  <Shield className="h-4 w-4" />
+                  Clasificación
+                </h3>
+                <div className="app-data-grid">
+                  <DataField label="Tipo de Siniestro" value={resolveName(claim.claim_type_id, claimTypesCatalog)} />
+                  <DataField label="Línea de Negocios" value={resolveName(claim.business_line_id, businessLinesCatalog)} />
+                  <DataField label="Ramo/Producto" value={resolveName(claim.insurance_product_id, insuranceProductsCatalog)} />
                   <DataField label="Causal" value={resolveName(claim.claim_cause_id, claimCausesCatalog)} />
                   <DataField label="Evento" value={resolveName(claim.event_id, eventsCatalog)} />
+                  <DataField label="Corredor" value={resolveName(claim.broker_id, brokersCatalog)} />
                 </div>
               </div>
 
               <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Datos de la Póliza
+                <h3 className="app-section-title">
+                  <Briefcase className="h-4 w-4" />
+                  Asignación
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-[13px]">
-                  <DataField label="Moneda" value={resolveName(claim.currency_id, currencyCatalog)} />
-                  <DataField label="Monto Asegurado" value={claim.policy_amount?.toString() || "—"} />
-                  <DataField label="Prima" value={claim.policy_premium?.toString() || "—"} />
-                  <DataField label="Inicio Vigencia" value={formatDate(claim.policy_start_date)} />
-                  <DataField label="Término Vigencia" value={formatDate(claim.policy_end_date)} />
+                <div className="app-data-grid">
+                  <DataField label="Inspector" value={inspector?.full_name || "—"} />
+                  <DataField label="Ajustador / Liquidador" value={adjuster?.full_name || "—"} />
+                  <DataField label="Auditor" value={auditor?.full_name || "—"} />
+                  <DataField label="Despachador" value={dispatcher?.full_name || "—"} />
+                  <DataField label="Asistente" value={assistant?.full_name || "—"} />
+                  <DataField label="Asesor" value={resolveName(claim.advisor_id, advisorsCatalog)} />
                 </div>
               </div>
 
               <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+                <h3 className="app-section-title">
                   <FileText className="h-4 w-4" />
                   Resumen
                 </h3>
-                <p className="text-[13px] text-foreground leading-relaxed">{claim.summary || "Sin resumen."}</p>
+                <p className="app-body-text">{claim.summary || "Sin resumen."}</p>
               </div>
             </div>
 
-            <div className="space-y-6">
+            {/* Columna derecha: Datos de la Póliza */}
+            <div className="space-y-2">
               <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-                  Información de Recovery
+                <h3 className="app-section-title">
+                  <Shield className="h-4 w-4" />
+                  Datos de la Póliza
                 </h3>
-                <div className="space-y-3 text-[13px]">
-                  <DataField label="Recupero Legal" value={claim.recovery_type_legal ? "Sí" : "No"} />
-                  <DataField label="Recupero Material" value={claim.recovery_type_material ? "Sí" : "No"} />
-                  <DataField label="Comentarios" value={claim.recovery_comments || "—"} />
+                <div className="space-y-2 text-[12px]">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <DataField label="N° Póliza" value={claim.policy_number} />
+                    <DataField label="Item Póliza" value={claim.policy_item} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                    <DataField label="Moneda" value={resolveName(claim.currency_id, currencyCatalog)} />
+                    <DataField label="Monto Asegurado" value={claim.policy_amount?.toString() || "—"} />
+                    <DataField label="Prima" value={claim.policy_premium?.toString() || "—"} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <DataField label="Inicio Vigencia" value={formatDate(claim.policy_start_date)} />
+                    <DataField label="Término Vigencia" value={formatDate(claim.policy_end_date)} />
+                  </div>
                 </div>
               </div>
-
-              <AuditLogSection claimId={claim.id} />
             </div>
           </div>
         )}
 
         {/* ═══ TAB: ASEGURADO ═══ */}
-        {activeTab === "asegurado" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ═══ TAB: PARTICIPANTES ═══ */}
+        {activeTab === "participantes" && (
+          <div className="space-y-2">
+            {/* Asegurado */}
             <div className="app-panel">
-              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+              <h3 className="app-section-title">
                 <User className="h-4 w-4" />
                 Asegurado
               </h3>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px]">
+              <div className="app-data-grid-4">
                 <DataField label="Nombre" value={insured?.first_name || insured?.full_name || "—"} />
                 <DataField label="Apellido" value={insured?.last_name || "—"} />
                 <DataField label="RUT" value={insured?.rut || "—"} />
                 <DataField label="Email" value={insured?.email || "—"} />
-                <DataField label="Teléfono" value={insured?.phone || "—"} />
-                <DataField label="Celular" value={insured?.cell_phone || "—"} />
-              </div>
-            </div>
-            <div className="app-panel">
-              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Dirección
-              </h3>
-              <div className="space-y-3 text-[13px]">
+                <DataField label="Teléfono" value={uniquePhones(insured?.phone, insured?.cell_phone) || "—"} />
                 <DataField label="Dirección" value={insured?.address || "—"} />
                 <DataField label="País" value={insured?.country || "—"} />
                 <DataField label="Región" value={insured?.region || "—"} />
@@ -467,54 +492,56 @@ export default function ClaimDetailPage() {
                 <DataField label="Comuna" value={insured?.commune || "—"} />
               </div>
             </div>
-          </div>
-        )}
 
-        {/* ═══ TAB: PARTICIPANTES ═══ */}
-        {activeTab === "participantes" && (
-          <div className="space-y-6">
+            {/* Contratante */}
             {contractor && (
               <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Contratante</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-[13px]">
-                  <DataField label="Nombre" value={contractor.full_name} />
+                <h3 className="app-section-title">Contratante</h3>
+                <div className="app-data-grid-4">
+                  <DataField label="Nombre" value={contractor.first_name || contractor.full_name || "—"} />
+                  <DataField label="Apellido" value={contractor.last_name || "—"} />
                   <DataField label="RUT" value={contractor.rut || "—"} />
                   <DataField label="Email" value={contractor.email || "—"} />
-                  <DataField label="Celular" value={contractor.cell_phone || "—"} />
+                  <DataField label="Teléfono" value={uniquePhones(contractor.phone, contractor.cell_phone) || "—"} />
                   <DataField label="Dirección" value={contractor.address || "—"} />
                   <DataField label="Ciudad" value={contractor.city || "—"} />
                   <DataField label="Comuna" value={contractor.commune || "—"} />
                 </div>
               </div>
             )}
+
+            {/* Beneficiario */}
             {beneficiary && (
               <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Beneficiario</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-[13px]">
-                  <DataField label="Nombre" value={beneficiary.full_name} />
+                <h3 className="app-section-title">Beneficiario</h3>
+                <div className="app-data-grid-4">
+                  <DataField label="Nombre" value={beneficiary.first_name || beneficiary.full_name || "—"} />
+                  <DataField label="Apellido" value={beneficiary.last_name || "—"} />
                   <DataField label="RUT" value={beneficiary.rut || "—"} />
                   <DataField label="Email" value={beneficiary.email || "—"} />
-                  <DataField label="Celular" value={beneficiary.cell_phone || "—"} />
+                  <DataField label="Teléfono" value={uniquePhones(beneficiary.phone, beneficiary.cell_phone) || "—"} />
                   <DataField label="Dirección" value={beneficiary.address || "—"} />
                   <DataField label="Ciudad" value={beneficiary.city || "—"} />
                   <DataField label="Comuna" value={beneficiary.commune || "—"} />
                 </div>
               </div>
             )}
+
+            {/* Persona de Contacto */}
             {contact && (
               <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Persona de Contacto</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-[13px]">
+                <h3 className="app-section-title">Persona de Contacto</h3>
+                <div className="app-data-grid-4">
                   <DataField label="Nombre" value={contact.full_name} />
                   <DataField label="Email" value={contact.email || "—"} />
-                  <DataField label="Teléfono" value={contact.phone || "—"} />
-                  <DataField label="Celular" value={contact.cell_phone || "—"} />
+                  <DataField label="Teléfono" value={uniquePhones(contact.phone, contact.cell_phone) || "—"} />
                 </div>
               </div>
             )}
-            {!contractor && !beneficiary && !contact && (
+
+            {!insured && !contractor && !beneficiary && !contact && (
               <div className="app-panel text-center py-10">
-                <p className="text-muted-foreground text-[13px]">No hay participantes adicionales registrados.</p>
+                <p className="text-muted-foreground text-[13px]">No hay participantes registrados.</p>
               </div>
             )}
           </div>
@@ -522,55 +549,54 @@ export default function ClaimDetailPage() {
 
         {/* ═══ TAB: INCIDENTE ═══ */}
         {activeTab === "incidente" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            {/* Incidente */}
             <div className="app-panel">
-              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Ubicación del Incidente
+              <h3 className="app-section-title">
+                <FileText className="h-4 w-4" />
+                Incidente
               </h3>
-              <div className="space-y-3 text-[13px]">
-                <DataField label="Dirección" value={claim.claim_address || "—"} />
+              <div className="app-data-grid">
+                <DataField label="Causal del Siniestro" value={resolveName(claim.claim_cause_id, claimCausesCatalog)} />
+                <DataField label="Tipo de Construcción" value={resolveName(claim.construction_type_id, constructionTypesCatalog)} />
+                <DataField label="Habitabilidad" value={resolveName(claim.habitability_id, habitabilityCatalog)} />
+                <DataField label="Destino" value={resolveName(claim.destination_housing_id, housingDestinationsCatalog)} />
+                <DataField label="Clasificación del Daño" value={resolveName(claim.damage_classification_id, damageClassificationsCatalog)} />
+                <DataField label="Asegurado/Propietario" value={claim.owner_same_as_insured ? "Propietario" : "Arrendatario"} />
+              </div>
+              <div className="mt-3 pt-3 border-t border-border/40">
+                <span className="app-data-label">Resumen</span>
+                <p className="app-body-text mt-0.5">{claim.summary || "Sin resumen."}</p>
+              </div>
+            </div>
+
+            {/* Dirección del Siniestro */}
+            <div className="app-panel">
+              <h3 className="app-section-title">
+                <MapPin className="h-4 w-4" />
+                Dirección del Siniestro
+              </h3>
+              <div className="app-data-grid">
+                <div className="col-span-full">
+                  <DataField label="Dirección" value={claim.claim_address || "—"} />
+                </div>
                 <DataField label="País" value={countryName?.name || "—"} />
                 <DataField label="Región" value={regionName?.name || "—"} />
                 <DataField label="Ciudad" value={cityName?.name || "—"} />
                 <DataField label="Comuna" value={communeName?.name || "—"} />
               </div>
             </div>
-            <div className="space-y-6">
-              <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Tipo de Siniestro</h3>
-                <div className="space-y-3 text-[13px]">
-                  <DataField label="Tipo Construcción" value={resolveName(claim.construction_type_id, constructionTypesCatalog)} />
-                  <DataField label="Destino" value={resolveName(claim.destination_housing_id, housingDestinationsCatalog)} />
-                  <DataField label="Clasif. Daño" value={resolveName(claim.damage_classification_id, damageClassificationsCatalog)} />
-                  <DataField label="Habitabilidad" value={resolveName(claim.habitability_id, habitabilityCatalog)} />
-                  <DataField label="Dueño = Asegurado" value={claim.owner_same_as_insured ? "Sí" : "No"} />
-                </div>
-              </div>
-              <div className="app-panel">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">Resumen del Incidente</h3>
-                <p className="text-[13px] text-foreground leading-relaxed">{claim.summary || "Sin resumen."}</p>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* ═══ TAB: ASIGNACIONES ═══ */}
-        {activeTab === "asignaciones" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <PersonCard label="Inspector" person={inspector} icon={User} />
-            <PersonCard label="Ajustador" person={adjuster} icon={User} />
-            <PersonCard label="Auditor" person={auditor} icon={User} />
-            <PersonCard label="Despachador" person={dispatcher} icon={User} />
-            <PersonCard label="Asistente" person={assistant} icon={User} />
+            {/* Recupero */}
             <div className="app-panel">
-              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                Intermediarios
+              <h3 className="app-section-title">
+                <Briefcase className="h-4 w-4" />
+                Recupero
               </h3>
-              <div className="space-y-3 text-[13px]">
-                <DataField label="Corredor" value={resolveName(claim.broker_id, brokersCatalog)} />
-                <DataField label="Asesor" value={resolveName(claim.advisor_id, advisorsCatalog)} />
+              <div className="app-data-grid">
+                <DataField label="Recupero Legal" value={claim.recovery_type_legal ? "Sí" : "No"} />
+                <DataField label="Recupero Material" value={claim.recovery_type_material ? "Sí" : "No"} />
+                <DataField label="Comentarios" value={claim.recovery_comments || "—"} />
               </div>
             </div>
           </div>
@@ -579,7 +605,7 @@ export default function ClaimDetailPage() {
         {/* ═══ TAB: DOCUMENTOS ═══ */}
         {activeTab === "documentos" && (
           <div className="app-panel">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+            <h3 className="app-section-title">
               <FolderOpen className="h-4 w-4" />
               Documentos de Soporte
             </h3>
@@ -587,41 +613,137 @@ export default function ClaimDetailPage() {
               <p className="text-muted-foreground text-[13px]">Arrastra archivo(s) o haz clic para seleccionarlos.</p>
               <p className="text-muted-foreground text-xs mt-1">Acepta archivos PDF, Word y Excel de hasta 10 MB.</p>
             </div>
-            <table className="w-full mt-4 text-[13px]">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-3">Nombre de documento</th>
-                  <th className="text-left py-2 px-3">Tipo de documento</th>
-                  <th className="text-left py-2 px-3">Nombre de archivo</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={3} className="text-center text-muted-foreground py-6">No hay documentos cargados.</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="app-data-table-wrap mt-4">
+              <table className="app-data-table">
+                <thead>
+                  <tr>
+                    <th>Nombre de documento</th>
+                    <th>Tipo de documento</th>
+                    <th>Nombre de archivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colSpan={3} className="text-center text-muted-foreground py-6">No hay documentos cargados.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
-        {/* ═══ TAB: INSPECCIÓN ═══ */}
-        {activeTab === "inspeccion" && (
-          <div className="app-panel text-center py-12">
-            <Video className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Inspección Remota</h3>
-            <p className="text-muted-foreground text-[13px] mb-4 max-w-md mx-auto">
-              Inicia una inspección remota en vivo con el asegurado. Se generará una sala de videollamada y un magic link de acceso.
-            </p>
-            <Button
-              className="btn-create btn-sm"
-              onClick={() => createInspectionMutation.mutate(claim.id)}
-              disabled={createInspectionMutation.isPending}
-            >
-              <ClipboardCheck className="mr-2 h-4 w-4" />
-              {createInspectionMutation.isPending ? "Creando..." : "Iniciar Inspección"}
-            </Button>
+        {/* ═══ TAB: GESTIONES ═══ */}
+        {activeTab === "gestiones" && (
+          <div className="app-panel">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Gestiones del Siniestro
+              </h3>
+            </div>
+            {(() => {
+              // Inspecciones (sesiones)
+              const inspections = (claim.inspection_sessions || []).map((s) => ({
+                id: s.id,
+                tipo: "Inspección",
+                referencia: s.inspection_number || "—",
+                estado: s.status,
+                detalle: s.inspection_type === "remote" ? "Remota" : "Presencial",
+                fecha: s.scheduled_at || s.started_at || s.created_at,
+                href: `/dashboard/inspecciones/${s.id}`,
+                esAccion: false,
+              }));
+
+              // Acciones (claim_actions)
+              const actions = (claimActions || []).map((a) => ({
+                id: a.id,
+                tipo: a.action_feature?.name || a.name || "Acción",
+                referencia: a.code || "—",
+                estado: a.action_status?.code || "todo",
+                detalle: a.description || a.name || "—",
+                fecha: a.issued_on || a.created_on,
+                href: null as string | null,
+                esAccion: true,
+              }));
+
+              const gestiones = [...inspections, ...actions].sort((a, b) => {
+                const fa = a.fecha ? new Date(a.fecha).getTime() : 0;
+                const fb = b.fecha ? new Date(b.fecha).getTime() : 0;
+                return fb - fa;
+              });
+
+              const statusLabels: Record<string, string> = {
+                scheduled: "Agendada", active: "En curso", completed: "Completada",
+                cancelled: "Cancelada", signed: "Firmada",
+                todo: "Pendiente", issued: "Emitida", reviewed: "Revisada",
+                approved: "Aprobada", dispatched: "Despachada", rejected: "Rechazada",
+              };
+              const statusColors: Record<string, string> = {
+                scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+                completed: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+                cancelled: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
+                signed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+                todo: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+                issued: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+                reviewed: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300",
+                approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+                dispatched: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300",
+                rejected: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
+              };
+
+              if (gestiones.length === 0) {
+                return (
+                  <div className="text-center py-8 text-muted-foreground text-[13px]">
+                    No hay gestiones registradas.
+                  </div>
+                );
+              }
+              return (
+                <div className="app-data-table-wrap">
+                  <table className="app-data-table">
+                    <thead>
+                      <tr>
+                        <th>Tipo</th>
+                        <th>Referencia</th>
+                        <th>Detalle</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th className="w-[60px]"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gestiones.map((g) => (
+                        <tr
+                          key={g.id}
+                          className={g.href ? "cursor-pointer hover:bg-muted/40" : ""}
+                          onClick={() => g.href && router.push(g.href)}
+                        >
+                          <td className="font-medium">{g.tipo}</td>
+                          <td className="font-mono text-primary">{g.referencia}</td>
+                          <td className="max-w-[250px] truncate text-muted-foreground">{g.detalle}</td>
+                          <td><Badge className={statusColors[g.estado] || ""}>{statusLabels[g.estado] || g.estado}</Badge></td>
+                          <td>{g.fecha ? formatDateTime(g.fecha) : "—"}</td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            {g.esAccion
+                              ? <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                              : <ClipboardCheck className="h-4 w-4 text-muted-foreground" />}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
+
+        {/* ═══ TAB: LOG ═══ */}
+        {activeTab === "log" && (
+          <AuditLogSection claimId={claim.id} users={users} />
+        )}
+
       </div>
       )}
     </div>
@@ -630,35 +752,11 @@ export default function ClaimDetailPage() {
 
 function DataField({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div>
-      <span className="text-muted-foreground text-[11px] uppercase tracking-wide">{label}</span>
-      <p className="font-medium">{value || "—"}</p>
+    <div className="app-data-field">
+      <span className="app-data-label">{label}</span>
+      <p className="app-data-value">{value || "—"}</p>
     </div>
   );
 }
 
-function PersonCard({ label, person, icon: Icon }: { label: string; person?: { full_name: string | null; email: string | null; phone: string | null } | undefined; icon: React.ElementType }) {
-  return (
-    <div className="app-panel">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-        <Icon className="h-4 w-4" />
-        {label}
-      </h3>
-      {person ? (
-        <div className="space-y-2 text-[13px]">
-          <p className="font-medium">{person.full_name || "—"}</p>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Mail className="h-3 w-3" />
-            <span>{person.email || "—"}</span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Phone className="h-3 w-3" />
-            <span>{person.phone || "—"}</span>
-          </div>
-        </div>
-      ) : (
-        <p className="text-muted-foreground text-[13px]">Sin asignar</p>
-      )}
-    </div>
-  );
-}
+

@@ -6,6 +6,7 @@ import { createClaim } from "@/services/claims";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/hooks/use-permissions";
 import * as XLSX from "xlsx";
 
 interface ExcelRow {
@@ -88,6 +89,7 @@ function mapRow(raw: ExcelRow, headers: string[], rowNum: number): ParsedRow {
 }
 
 export default function CargaSiniestrosPage() {
+  const { canCreate } = usePermissions();
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -208,7 +210,7 @@ export default function CargaSiniestrosPage() {
 
       {/* Preview */}
       {parsedRows.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm">
               <span className="flex items-center gap-1.5">
@@ -220,17 +222,19 @@ export default function CargaSiniestrosPage() {
                 {invalidCount} con errores
               </span>
             </div>
-            <Button
-              onClick={() => loadMutation.mutate(parsedRows)}
-              disabled={isUploading || validCount === 0}
-              className="btn-save btn-sm"
-            >
-              {isUploading ? (
-                <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando...</>
-              ) : (
-                <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar {validCount} siniestros</>
-              )}
-            </Button>
+            {canCreate("operaciones") && (
+              <Button
+                onClick={() => loadMutation.mutate(parsedRows)}
+                disabled={isUploading || validCount === 0}
+                className="btn-save btn-sm"
+              >
+                {isUploading ? (
+                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando...</>
+                ) : (
+                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar {validCount} siniestros</>
+                )}
+              </Button>
+            )}
           </div>
 
           {/* Progress bar */}

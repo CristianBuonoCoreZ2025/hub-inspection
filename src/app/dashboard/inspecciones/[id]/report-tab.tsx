@@ -93,7 +93,7 @@ export default function ReportTab({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="app-stack">
       {/* Acciones */}
       <div className="flex items-center gap-2 flex-wrap">
         <Button onClick={handleGenerate} disabled={createMutation.isPending || updateMutation.isPending} className={isCancellation ? "btn-cancel btn-sm" : "btn-create btn-sm"}>
@@ -124,7 +124,7 @@ export default function ReportTab({
 
           {isCancellation ? (
             /* Informe de Cancelación */
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-4">
                 <div className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
@@ -150,7 +150,7 @@ export default function ReportTab({
               </div>
 
               <div>
-                <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground border-b pb-1 mb-2">
+                <h2 className="text-[11px] font-semibold text-muted-foreground border-b pb-1 mb-2">
                   Estado del Informe
                 </h2>
                 <div className="flex items-center gap-2">
@@ -167,9 +167,9 @@ export default function ReportTab({
             </div>
           ) : (
             /* Informe de Finalización */
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div>
-                <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground border-b pb-1 mb-2">
+                <h2 className="text-[11px] font-semibold text-muted-foreground border-b pb-1 mb-2">
                   Resumen del Siniestro
                 </h2>
                 <p className="text-[13px] text-muted-foreground">
@@ -179,7 +179,7 @@ export default function ReportTab({
               </div>
 
               <div>
-                <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground border-b pb-1 mb-2">
+                <h2 className="text-[11px] font-semibold text-muted-foreground border-b pb-1 mb-2">
                   Estado del Informe
                 </h2>
                 <div className="flex items-center gap-2">
@@ -197,7 +197,7 @@ export default function ReportTab({
               </div>
 
               <div>
-                <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground border-b pb-1 mb-2">
+                <h2 className="text-[11px] font-semibold text-muted-foreground border-b pb-1 mb-2">
                   Secciones del Informe
                 </h2>
                 <ul className="text-[13px] text-muted-foreground space-y-1 list-disc list-inside">
