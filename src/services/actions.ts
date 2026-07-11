@@ -27,7 +27,7 @@ export interface ActionFeature {
   is_active: boolean;
   sort_order: number;
   screen_id: string | null;
-  screen?: { id: string; code: string; name: string } | null;
+  screen?: { id: string; code: string; name: string; is_dynamic?: boolean } | null;
   characteristics: Characteristic[];
 }
 
@@ -139,7 +139,7 @@ export async function deleteActionType(id: string) {
 
 export async function getActionFeatures(): Promise<ActionFeature[]> {
   return fetchAll<ActionFeature>("action_features", {
-    select: "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, screen:gestion_screens!action_features_screen_id_fkey(id, code, name), characteristics:characteristic!characteristic_action_feature_id_fkey(id, action_feature_id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order)",
+    select: "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, screen:gestion_screens!action_features_screen_id_fkey(id, code, name, is_dynamic), characteristics:characteristic!characteristic_action_feature_id_fkey(id, action_feature_id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order)",
     order: { column: "name", ascending: true },
   }).then((rows) => {
     // Sort characteristics by sort_order within each feature

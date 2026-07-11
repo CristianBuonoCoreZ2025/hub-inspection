@@ -177,7 +177,7 @@ export default function CaracteristicasPage() {
                         <Pencil className="h-4 w-4" />
                       </Button>
                     )}
-                    {canEdit("catalogos") && f.screen_id && (
+                    {canEdit("catalogos") && f.screen_id && f.screen?.is_dynamic !== false && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -275,9 +275,12 @@ export default function CaracteristicasPage() {
                     <option value="">Pantalla genérica</option>
                     {screens?.map((s) => {
                       const fields = Array.isArray(s.form_schema?.fields) ? s.form_schema.fields as string[] : [];
+                      const label = s.is_dynamic === false
+                        ? `${s.name} (fija)`
+                        : `${s.name} ${fields.length ? `(${fields.length} campos)` : ""}`;
                       return (
                         <option key={s.id} value={s.id}>
-                          {s.name} {fields.length ? `(${fields.length} campos)` : ""}
+                          {label}
                         </option>
                       );
                     })}
