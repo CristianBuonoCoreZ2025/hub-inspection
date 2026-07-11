@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -837,15 +838,12 @@ export default function ClaimDetailPage() {
                 Gestiones del Siniestro
               </h3>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={showRejected}
-                    onChange={(e) => setShowRejected(e.target.checked)}
-                    className="h-3 w-3 rounded border-muted-foreground/30"
-                  />
+                <ToggleChip
+                  active={showRejected}
+                  onClick={(v) => setShowRejected(v)}
+                >
                   Rechazadas
-                </label>
+                </ToggleChip>
                 {canEdit("claims") && (
                   <Button
                     size="sm"
