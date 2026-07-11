@@ -904,7 +904,7 @@ export default function ClaimDetailPage() {
                   <table className="app-data-table">
                     <thead>
                       <tr>
-                        <th className="w-[80px]">Código</th>
+                        <th className="w-[90px]">Código</th>
                         <th>Nombre Gestión</th>
                         <th>Fecha Ejecución</th>
                         <th>Días Restantes</th>
@@ -1031,7 +1031,7 @@ export default function ClaimDetailPage() {
 
                         return (
                           <tr key={g.id}>
-                            <td className="font-mono text-[10px] text-primary">{shortActionCode(g.codigo)}</td>
+                            <td className="font-mono text-[10px] text-primary tabular-nums whitespace-nowrap">{shortActionCode(g.codigo)}</td>
                             <td className="font-medium text-[11px]">{g.nombre}</td>
                             <td className="text-[11px] text-muted-foreground">{g.fecha ? formatDateTime(g.fecha) : "—"}</td>
                             <td className="text-[11px]">
