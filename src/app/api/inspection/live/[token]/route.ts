@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { presignEvidenceUrls, presignSignatureUrls, presignSketchUrls } from "@/lib/supabase/storage-presigned";
-import { attachInspectionNumber } from "@/services/inspections";
 import { logger } from "@/lib/logger";
 
 /**
@@ -22,7 +21,6 @@ export async function GET(
 
     const supabase = createAdminClient();
 
-    // Query equivalente a INSPECTION_LIVE_QUERY
     const { data: sessions, error } = await supabase
       .from("inspection_sessions")
       .select(`
@@ -97,25 +95,10 @@ export async function GET(
     console.log("[inspection/live] counts:", counts);
 
     // Usar el code del claim_action como inspection_number (estándar de gestiones)
-    // Fallback al cálculo client-side si no hay claim_action (inspecciones legacy)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((session as any).claim_action?.code) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (session as any).inspection_number = (session as any).claim_action.code;
-    } else {
-      try {
-        const { count } = await supabase
-          .from("inspection_sessions")
-          .select("*", { count: "exact", head: true })
-          .eq("claim_id", session.claim_id)
-          .lte("created_at", session.created_at || new Date().toISOString());
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        attachInspectionNumber(session as any, count ?? 1);
-      } catch {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        attachInspectionNumber(session as any, 1);
-      }
     }
 
     // Convertir URLs a signed URLs

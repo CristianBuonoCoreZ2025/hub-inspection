@@ -31,7 +31,7 @@ BEGIN
     UPDATE claim_actions SET action_status_id = v_todo_status WHERE id = NEW.claim_action_id;
   ELSIF NEW.status = 'active' THEN
     UPDATE claim_actions 
-    SET action_status_id = v_issued_status, issued_on = NOW(), issued_by = NEW.cancelled_by
+    SET action_status_id = v_issued_status, issued_on = COALESCE(issued_on, NOW())
     WHERE id = NEW.claim_action_id;
   ELSIF NEW.status = 'completed' THEN
     UPDATE claim_actions 

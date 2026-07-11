@@ -1,33 +1,25 @@
-docs: consolidar planes en PLAN_MAESTRO.md + actualizar AGENTS.md
+fix: codigo de inspeccion sigue estandar de gestiones + cleanup
 
-- Creado PLAN_MAESTRO.md: plan unico y ordenado del proyecto
-  - Fase 1: Estabilizacion post-migracion (COMPLETADA)
-  - Fase 2: Mejoras del edit form (PENDIENTE)
-  - Fase 3: Mejoras del modulo de inspeccion (EN PROGRESO)
-  - Fase 4: Magic link mirror (PENDIENTE)
-  - Fase 5: Documentos del siniestro (COMPLETADO)
-  - Fase 6: Mejoras futuras (backlog)
-  - Tabla de migraciones aplicadas
-  - Documentacion de referencia
+Problema: El codigo de la gestion de inspeccion no cumplia con la
+codificacion estandar del sistema. Usaba "L-000000141-I-001" (formato
+viejo sin line_letter) en vez de "L-000000141-HINS-009" (estandar).
 
-- Eliminados 7 planes individuales obsoletos:
-  - PLAN_DOCUMENTOS_SINIESTRO.md (completado)
-  - PLAN_EDIT_FORM.md (consolidado en Fase 2)
-  - PLAN_GESTIONES.md (completado)
-  - PLAN_INSPECCION.md (consolidado en Fase 3)
-  - PLAN_LIVEINSP_MIRROR.md (consolidado en Fase 4)
-  - PLAN_MAGIC_LINK_FIX.md (completado)
-  - PLAN_MIGRACION_SUPABASE.md (completado)
-
-- AGENTS.md actualizado:
-  - Stack: Nhost -> Supabase
-  - Seccion 18: Migracion a Supabase (decision definitiva)
-  - Seccion 19: Dos tipos de pantallas (decision definitiva)
-  - Seccion 20: Inspecciones como gestiones estandar (decision definitiva)
-
-- Mantenidos como referencia:
-  - docs/PLAN_GESTIONES_PANTALLAS.md (arquitectura de gestiones)
-  - src/lib/storage/PLAN.md (arquitectura de storage)
+Cambios:
+- migrations/130: crea claim_actions retroactivamente para inspecciones
+  legacy sin claim_action_id. Busca el template de inspeccion por linea
+  de negocio y vincula la sesion con el claim_action.
+- migrations/129 fix: corrige el trigger sync_inspection_claim_action()
+  que usaba NEW.cancelled_by para issued_by en status active (incorrecto).
+  Ahora usa COALESCE(issued_on, NOW()) sin setear issued_by.
+- Eliminado buildInspectionNumber() y attachInspectionNumber() del
+  service inspections.ts. El inspection_number ahora viene SIEMPRE del
+  claim_action.code (estandar de gestiones).
+- Eliminado INSPECTION_LIVE_QUERY (vestigio de Nhost/GraphQL).
+- getInspectionSessionLive() ahora trae claim_action.code y lo usa
+  como inspection_number.
+- API route /api/inspection/live/[token] simplificada (sin fallback).
+- AGENTS.md seccion 20 actualizada con detalles del estandar.
+- PLAN_MAESTRO.md actualizado con migracion 130 y cleanup.
 
 Generated with [Devin](https://devin.ai)
 

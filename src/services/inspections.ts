@@ -11,22 +11,8 @@ const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, sched
 // SESSIONS
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Genera el número de inspección basándose en la codificación de la gestión vinculada.
- * Formato: {liquidation_number}-{template_code}-{seq:3}
- * Si no hay gestión vinculada, usa "I" como código (compatibilidad hacia atrás).
- */
-function buildInspectionNumber(
-  liquidation: string | null | undefined,
-  templateCode: string | null | undefined,
-  seq: number
-): string {
-  const code = templateCode || "I";
-  return `${liquidation || "UNKNOWN"}-${code}-${String(seq).padStart(3, "0")}`;
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SessionWithRelations = InspectionSession & { created_at: string; action_template?: { code: string | null } | null; claim?: any };
+type SessionWithRelations = InspectionSession & { created_at: string; claim_action?: { code: string | null } | null; action_template?: { code: string | null } | null; claim?: any };
 
 export async function getInspectionSessions(claimId?: string) {
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
@@ -43,17 +29,10 @@ export async function getInspectionSessions(claimId?: string) {
   }
 
   // Usar el code del claim_action como inspection_number (estándar de gestiones)
-  // Fallback al cálculo client-side si no hay claim_action (inspecciones legacy)
-  const sorted = [...sessions].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  const seqMap = new Map<string, number>();
-  for (const s of sorted) {
+  for (const s of sessions) {
     const ca = s as InspectionSession & { claim_action?: { code: string | null } | null; inspection_number: string };
     if (ca.claim_action?.code) {
       ca.inspection_number = ca.claim_action.code;
-    } else {
-      const seq = (seqMap.get(s.claim_id) || 0) + 1;
-      seqMap.set(s.claim_id, seq);
-      ca.inspection_number = buildInspectionNumber(s.claim?.liquidation_number, s.action_template?.code, seq);
     }
   }
 
@@ -76,46 +55,13 @@ export async function getInspectionSessionByToken(token: string) {
     );
   }
 
-  // Usar el code del claim_action como inspection_number (estándar)
+  // Usar el code del claim_action como inspection_number (estándar de gestiones)
   const ca = session as InspectionSession & { claim_action?: { code: string | null } | null; inspection_number: string };
   if (ca.claim_action?.code) {
     ca.inspection_number = ca.claim_action.code;
-  } else {
-    // Fallback para inspecciones legacy sin claim_action
-    try {
-      const countSessions = await fetchAll<{ id: string }>("inspection_sessions", {
-        select: "id",
-        eq: { claim_id: session.claim_id },
-        lte: { created_at: session.created_at },
-      });
-      const seq = countSessions.length;
-      ca.inspection_number = buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, seq);
-    } catch {
-      ca.inspection_number = buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, 1);
-    }
   }
 
   return session;
-}
-
-/**
- * Query GraphQL para la vista en vivo del magic link.
- * Reutilizada por la API route server-side (con admin secret) para evitar
- * exponer permisos anonymous en Hasura.
- * @deprecated Migrado a Supabase — usar getInspectionSessionLive()
- */
-export const INSPECTION_LIVE_QUERY = "";
-
-/**
- * Adjunta el inspection_number ({liquidation_number}-{template_code}-{seq:3}) a la sesión.
- * `seq` se calcula contando sesiones del mismo claim con created_at <= al de esta.
- * Si no hay template_code, usa "I" como código (compatibilidad hacia atrás).
- */
-export function attachInspectionNumber(
-  session: { claim?: { liquidation_number?: string | null } | null; action_template?: { code: string | null } | null; inspection_number?: string },
-  seq: number
-): void {
-  session.inspection_number = buildInspectionNumber(session.claim?.liquidation_number, session.action_template?.code, seq);
 }
 
 /**
@@ -134,6 +80,7 @@ export async function getInspectionSessionLive(token: string) {
       active_tab, acta_step, inspector_observations,
       property_risk, property_materiality, security_measures, insured_statement, third_parties,
       action_template:action_template!inspection_sessions_action_template_id_fkey(code),
+      claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code),
       inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, created_at),
       inspection_notes:inspection_notes!inspection_notes_session_id_fkey(id, content, created_at),
       inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status, notes, created_at),
@@ -178,16 +125,10 @@ export async function getInspectionSessionLive(token: string) {
     );
   }
 
-  // Calcular inspection_number
-  try {
-    const countSessions = await fetchAll<{ id: string }>("inspection_sessions", {
-      select: "id",
-      eq: { claim_id: session.claim_id },
-      lte: { created_at: session.created_at || new Date().toISOString() },
-    });
-    attachInspectionNumber(session, countSessions.length);
-  } catch {
-    attachInspectionNumber(session, 1);
+  // Usar el code del claim_action como inspection_number (estándar de gestiones)
+  const ca = session as any;
+  if (ca.claim_action?.code) {
+    ca.inspection_number = ca.claim_action.code;
   }
 
   return session;
@@ -214,22 +155,9 @@ export async function getInspectionSessionById(id: string) {
     );
   }
 
-  // Usar el code del claim_action como inspection_number (estándar)
+  // Usar el code del claim_action como inspection_number (estándar de gestiones)
   if (session.claim_action?.code) {
     session.inspection_number = session.claim_action.code;
-  } else {
-    // Fallback para inspecciones legacy sin claim_action
-    try {
-      const countSessions = await fetchAll<{ id: string }>("inspection_sessions", {
-        select: "id",
-        eq: { claim_id: session.claim_id },
-        lte: { created_at: session.created_at },
-      });
-      const seq = countSessions.length;
-      session.inspection_number = buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, seq);
-    } catch {
-      session.inspection_number = buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, 1);
-    }
   }
 
   return session;

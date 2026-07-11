@@ -81,11 +81,13 @@ NUNCA intentar hacer configurables los tabs/wizard de inspección.
 - [x] Script de test exhaustivo (24/24 queries OK)
 
 ### 1.3 Inspecciones como Gestiones Estándar ✅
-- [x] Migración 129: `claim_action_id` en `inspection_sessions`
-- [x] Trigger `sync_inspection_claim_action()` sincroniza status automáticamente
-- [x] `createInspectionSession` crea `claim_action` con code estándar
+- [x] Migración 129: `claim_action_id` en `inspection_sessions` + trigger `sync_inspection_claim_action()`
+- [x] Migración 130: crear claim_actions retroactivamente para inspecciones legacy
+- [x] `createInspectionSession` crea `claim_action` con code estándar (ej: `L-000000141-HINS-001`)
 - [x] Listado de gestiones del siniestro muestra inspecciones como claim_actions normales
-- [x] `inspection_number` usa `claim_action.code` (ej: `L-000000141-INS-001`)
+- [x] `inspection_number` usa `claim_action.code` (estándar de gestiones)
+- [x] Eliminado `buildInspectionNumber` y `attachInspectionNumber` (cálculo client-side legacy)
+- [x] Eliminado `INSPECTION_LIVE_QUERY` (vestigio de Nhost/GraphQL)
 
 ---
 
@@ -222,7 +224,8 @@ NUNCA intentar hacer configurables los tabs/wizard de inspección.
 | 126 | atcs_claim_status_fk | ✅ | FK action_template_claim_status + action_type |
 | 127 | missing_fks | ✅ | FKs faltantes en claim_actions y action_features |
 | 128 | action_template_line_business_fk | ✅ | FK action_template.line_business_id |
-| 129 | inspection_claim_action_link | ✅ | Link inspection_sessions ↔ claim_actions |
+| 129 | inspection_claim_action_link | ✅ | Link inspection_sessions ↔ claim_actions + trigger sync |
+| 130 | inspection_legacy_claim_actions | ✅ | Crear claim_actions retroactivamente para inspecciones legacy |
 
 ---
 

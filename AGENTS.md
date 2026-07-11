@@ -1753,22 +1753,25 @@ NUNCA intentar hacer configurables los tabs/wizard de inspección.
 ## 20. Inspecciones como Gestiones Estándar — Decisión Definitiva
 
 ### Problema
-Las inspecciones no creaban `claim_actions`, aparecían en el listado de gestiones del siniestro como objetos "fake" sin código estándar, sin action_status, sin issuer/reviewer/approver.
+Las inspecciones no creaban `claim_actions`, aparecían en el listado de gestiones del siniestro como objetos "fake" sin código estándar, sin action_status, sin issuer/reviewer/approver. El `inspection_number` se calculaba client-side con un formato distinto al estándar de gestiones.
 
 ### Solución Definitiva
 - Cada inspección crea un `claim_action` con `action_features_id` = "Inspección" (INS)
-- El `code` se genera por el trigger `set_claim_action_code()` (ej: `L-000000141-INS-001`)
+- El `code` se genera por el trigger `set_claim_action_code()` siguiendo el estándar: `{liquidation}-{line_letter}{template_code}-{seq}` (ej: `L-000000141-HINS-009`)
 - `inspection_sessions.claim_action_id` vincula la sesión con la gestión
 - El trigger `sync_inspection_claim_action()` sincroniza el status automáticamente:
   - `scheduled` → `todo` (pendiente)
-  - `active` → `issued` (emitida)
-  - `completed` → `issued` (emitida)
+  - `active` → `issued` (emitida, setea `issued_on`)
+  - `completed` → `issued` (emitida, setea `issued_on` si no existe)
   - `cancelled` → `cancelled` (cancelada)
-- El `inspection_number` usa el `code` del `claim_action` (estándar de gestiones)
+- El `inspection_number` se obtiene SIEMPRE del `claim_action.code`
+- Migración 130 creó claim_actions retroactivamente para inspecciones legacy
+- Eliminadas `buildInspectionNumber()` y `attachInspectionNumber()` (cálculo client-side legacy)
 
 ### Regla
 ```
 Toda inspección DEBE crear un claim_action al momento de agendarse.
-El inspection_number DEBE ser el code del claim_action.
+El inspection_number DEBE ser el code del claim_action (estándar de gestiones).
 El status de la inspección y del claim_action se sincronizan automáticamente via trigger.
+NUNCA calcular el inspection_number client-side. Siempre viene del claim_action.code.
 ```
