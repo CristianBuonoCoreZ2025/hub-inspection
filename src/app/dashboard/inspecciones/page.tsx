@@ -110,7 +110,7 @@ function InspectionsPageContent() {
     }
   }, [searchParams]);
 
-  const { data: sessions, isLoading } = useQuery({
+  const { data: sessions, isLoading, error: sessionsError } = useQuery({
     queryKey: ["inspection-sessions"],
     queryFn: () => getInspectionSessions(),
   });
@@ -304,7 +304,7 @@ function InspectionsPageContent() {
       sessionStatusLabels[s.status]?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || s.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }) ?? [];
 
   const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(filtered);
 
@@ -385,6 +385,12 @@ function InspectionsPageContent() {
               <tr>
                 <td colSpan={9} className="py-8 text-center text-muted-foreground">
                   Cargando inspecciones...
+                </td>
+              </tr>
+            ) : sessionsError ? (
+              <tr>
+                <td colSpan={9} className="py-8 text-center text-destructive">
+                  Error al cargar inspecciones: {sessionsError.message}
                 </td>
               </tr>
             ) : filtered?.length === 0 ? (
