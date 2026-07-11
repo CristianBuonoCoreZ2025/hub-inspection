@@ -52,6 +52,7 @@ import AuditLogSection from "./audit-log-section";
 import ClaimDocumentsTab from "./claim-documents-tab";
 import EditClaimForm from "./edit-claim-form";
 import GestionScreenSwitcher from "./gestion-screens";
+import WorkflowView from "./workflow-view";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   created: { label: "Creación", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
@@ -142,6 +143,7 @@ export default function ClaimDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [openGestionModal, setOpenGestionModal] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
+  const [gestionSubTab, setGestionSubTab] = useState<"lista" | "workflow">("lista");
   const [selectedTemplate, setSelectedTemplate] = useState<ActionTemplate | null>(null);
   const [openEditGestionModal, setOpenEditGestionModal] = useState(false);
   const [editingGestion, setEditingGestion] = useState<{
@@ -151,6 +153,21 @@ export default function ClaimDetailPage() {
     nombre: string;
     estado: string;
     fecha: string | undefined;
+    expectedDate: string | null;
+    createdOn: string | undefined;
+    daysToIssue: number;
+    hasIssue: boolean;
+    hasReview: boolean;
+    hasApprove: boolean;
+    issuedOn: string | null;
+    issuedBy: string | null;
+    issuedByEmail: string | null;
+    reviewedOn: string | null;
+    reviewedBy: string | null;
+    reviewedByEmail: string | null;
+    approvedOn: string | null;
+    approvedBy: string | null;
+    approvedByEmail: string | null;
     href: string | null;
     esAccion: boolean;
     esAutomatica: boolean;
@@ -824,18 +841,33 @@ export default function ClaimDetailPage() {
         {activeTab === "gestiones" && (
           <div className="app-panel">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
-                <ClipboardList className="h-4 w-4" />
-                Gestiones del Siniestro
-              </h3>
               <div className="flex items-center gap-3">
-                <ToggleChip
-                  active={showRejected}
-                  onClick={(v) => setShowRejected(v)}
-                >
-                  Rechazadas
-                </ToggleChip>
-                {canEdit("claims") && (
+                {/* Sub-tabs: Lista / Workflow */}
+                <div className="flex items-center gap-1 bg-muted/40 rounded-md p-0.5">
+                  <button
+                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${gestionSubTab === "lista" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    onClick={() => setGestionSubTab("lista")}
+                  >
+                    Lista
+                  </button>
+                  <button
+                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${gestionSubTab === "workflow" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    onClick={() => setGestionSubTab("workflow")}
+                  >
+                    Workflow
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {gestionSubTab === "lista" && (
+                  <ToggleChip
+                    active={showRejected}
+                    onClick={(v) => setShowRejected(v)}
+                  >
+                    Rechazadas
+                  </ToggleChip>
+                )}
+                {canEdit("claims") && gestionSubTab === "lista" && (
                   <Button
                     size="sm"
                     className="btn-create btn-footer"
@@ -849,7 +881,44 @@ export default function ClaimDetailPage() {
                 )}
               </div>
             </div>
-            {(() => {
+            {gestionSubTab === "workflow" ? (
+              <WorkflowView
+                actions={claimActions || []}
+                onOpenAction={(actionId) => {
+                  const a = (claimActions || []).find(x => x.id === actionId);
+                  if (a) {
+                    setEditingGestion({
+                      id: a.id,
+                      tipo: a.action_feature?.name || a.name || "Acción",
+                      codigo: a.code || a.name?.slice(0, 10) || "—",
+                      nombre: a.name || "—",
+                      estado: a.action_status?.code || "todo",
+                      fecha: a.issued_on || a.created_on,
+                      expectedDate: a.expected_date,
+                      createdOn: a.created_on,
+                      daysToIssue: a.action_template?.days_to_issue ?? 0,
+                      hasIssue: a.action_feature?.has_issue ?? false,
+                      hasReview: a.action_feature?.has_review ?? false,
+                      hasApprove: a.action_feature?.has_approve ?? false,
+                      issuedOn: a.issued_on,
+                      issuedBy: a.issuer?.full_name || null,
+                      issuedByEmail: a.issuer?.email || null,
+                      reviewedOn: a.reviewed_on,
+                      reviewedBy: a.reviewer?.full_name || null,
+                      reviewedByEmail: a.reviewer?.email || null,
+                      approvedOn: a.approved_on,
+                      approvedBy: a.approver?.full_name || null,
+                      approvedByEmail: a.approver?.email || null,
+                      href: null,
+                      esAccion: true,
+                      screenType: a.action_feature?.has_specific_screen ? (a.action_feature?.screen?.code || "generica") : null,
+                      esAutomatica: a.is_automatic,
+                    });
+                    setOpenEditGestionModal(true);
+                  }
+                }}
+              />
+            ) : (() => {
               // Mapa de claim_action_id → inspection_session_id para enlazar gestiones de inspección
               const inspectionByActionId = new Map<string, string>();
               for (const s of (claim.inspection_sessions || [])) {
