@@ -116,17 +116,25 @@ export default function PantallasPage() {
             : sortedScreens.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron pantallas.</td></tr>
             : sortedScreens.map((s) => (
               <tr key={s.id}>
-                <td className="font-mono text-[12px] font-semibold text-primary">{s.code}</td>
+                <td className="font-mono text-[12px] font-semibold text-primary">
+                  {s.code}
+                  {!s.is_dynamic && (
+                    <span className="ml-2 text-[10px] text-amber-600 font-normal">(fija)</span>
+                  )}
+                </td>
                 <td className="font-medium">{s.name}</td>
                 <td className="text-[12px] text-muted-foreground max-w-[280px] truncate">{s.description || "—"}</td>
                 <td className="text-[11px] text-muted-foreground">
-                  {getFieldCount(s)} campos
-                  {getFieldCount(s) > 0 && <span className="block truncate max-w-[220px]">{getFieldsPreview(s)}</span>}
+                  {s.is_dynamic ? (
+                    <>{getFieldCount(s)} campos{getFieldCount(s) > 0 && <span className="block truncate max-w-[220px]">{getFieldsPreview(s)}</span>}</>
+                  ) : (
+                    <span className="text-amber-600">Componente fijo</span>
+                  )}
                 </td>
                 <td className="text-center font-mono text-[12px]">{s.sort_order}</td>
                 <td>
                   <div className="app-row-actions">
-                    {canEdit("catalogos") && (
+                    {s.is_dynamic && canEdit("catalogos") && (
                       <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
                         setEditingId(s.id);
                         setFormData({
@@ -141,12 +149,12 @@ export default function PantallasPage() {
                         <Pencil className="h-4 w-4" />
                       </Button>
                     )}
-                    {canEdit("catalogos") && (
+                    {s.is_dynamic && canEdit("catalogos") && (
                       <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => router.push(`/dashboard/catalogos/pantallas/${s.id}`)} title="Diseñar pantalla">
                         <LayoutTemplate className="h-4 w-4" />
                       </Button>
                     )}
-                    {canDelete("catalogos") && (
+                    {s.is_dynamic && canDelete("catalogos") && (
                       <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar esta pantalla?")) deactivateMut.mutate(s.id); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>

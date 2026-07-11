@@ -1,22 +1,23 @@
-fix: gestiones no se eliminan, se rechazan desde emision + switch
+feat: pantalla fija de inspeccion + feature INS corregida
 
-Las gestiones del siniestro no deben eliminarse (soft delete is_active=false).
-El rechazo desde emision las oculta del listado, pero un switch permite
-volver a verlas porque pueden romper el flujo del workflow.
+La caracteristica INS (Inspeccion) apuntaba a la pantalla "coordinacion"
+(dinamica) cuando deberia apuntar a una pantalla fija de inspeccion.
 
 Cambios:
-- deleteClaimAction: ya no hace soft delete (is_active=false). Ahora
-  rechaza desde emision usando rejectClaimAction(actionId, "issue", ...).
-  La gestion queda con action_status="rejected" y se oculta del listado.
-- getClaimActions: nuevo parametro includeRejected (default false).
-  Filtra las rechazadas desde emision (action_status.code="rejected")
-  del listado por defecto.
-- Frontend (claims/[id]/page.tsx):
-  - Boton "Eliminar" (Trash2) reemplazado por "Rechazar" (X)
-  - Switch "Rechazadas" para mostrar/ocultar gestiones rechazadas
-  - Query usa showRejected como dependencia del queryKey
-- migrations/132: reactiva gestiones con is_active=false (soft delete
-  legacy). Todas las gestiones vuelven a estar activas.
+- migrations/133: agrega is_dynamic a gestion_screens (default true).
+  Crea pantalla "inspeccion" con is_dynamic=false. Asigna el feature
+  INS a esta pantalla (antes apuntaba a "coordinacion").
+- types: GestionScreen ahora incluye is_dynamic
+- services/gestion-screens.ts: SCREEN_FIELDS trae is_dynamic
+- services/claim-actions.ts: ACTION_FEATURE_SELECT trae is_dynamic
+- catalogos/pantallas/page.tsx: pantallas fijas muestran "(fija)" y
+  "Componente fijo" en vez de campos. Sin botones editar/disenar/
+  eliminar para pantallas no dinamicas.
+- gestion-screens/index.tsx (GestionScreenSwitcher): si la pantalla es
+  fija (is_dynamic=false) y code="inspeccion", muestra link a la
+  inspeccion en vez de intentar renderizar DynamicScreen.
+- claims/[id]/page.tsx: si screenType="inspeccion", boton abre el
+  detalle de inspeccion (Eye) en vez del modal de gestion (Pencil).
 
 Generated with [Devin](https://devin.ai)
 

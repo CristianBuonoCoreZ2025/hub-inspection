@@ -789,6 +789,7 @@ export interface GestionScreen {
   icon: string | null;
   form_schema: Record<string, unknown> | null;
   is_active: boolean;
+  is_dynamic: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;

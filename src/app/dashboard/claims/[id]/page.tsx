@@ -1084,7 +1084,16 @@ export default function ClaimDetailPage() {
                                     <Eye className="h-3 w-3" />
                                   </Button>
                                 )}
-                                {g.esAccion && g.screenType && (
+                                {g.esAccion && g.screenType === "inspeccion" && g.href && (
+                                  <Button
+                                    size="sm"
+                                    className="btn-icon w-6 h-6"
+                                    onClick={() => router.push(g.href!)}
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                {g.esAccion && g.screenType && g.screenType !== "inspeccion" && (
                                   <Button
                                     size="sm"
                                     className="btn-icon w-6 h-6"
