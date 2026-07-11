@@ -1,13 +1,28 @@
-fix: inspecciones - manejo de error silencioso + FK hints en getInspectorSchedule
+feat: inspecciones siguen el estandar de gestiones (claim_actions)
 
-- page.tsx: anadido manejo de error (sessionsError) para mostrar el mensaje
-  si la query falla, en lugar de mostrar tabla vacia sin feedback
-- page.tsx: filtered ahora usa ?? [] para evitar undefined
-- inspections.ts: SESSION_SELECT cambiado de template literal multilinea
-  a string simple (evita problemas de encoding)
-- inspections.ts: getInspectorSchedule - corregidos embeddings sin FK hint:
-  claim!inner -> claim:claims!inspection_sessions_claim_id_fkey!inner
-  claims_participants -> claims_participants:claims_participants!claim_participants_claim_id_fkey
+Antes las inspecciones no creaban un claim_action, aparecian en el
+listado de gestiones del siniestro como objetos "fake" sin codigo
+estandar, sin action_status, sin issuer/reviewer/approver.
+
+Ahora cada inspeccion crea un claim_action con:
+- action_features_id = "Inspeccion" (INS)
+- action_template_id = template seleccionado
+- action_status_id = todo (pendiente)
+- issuer_id = inspector asignado
+- code generado por trigger set_claim_action_code() (ej: L-000000141-INS-001)
+
+Cambios:
+- migrations/129: agrega claim_action_id a inspection_sessions + trigger
+  sync_inspection_claim_action() que sincroniza el status automaticamente
+  (scheduled->todo, active->issued, completed->issued, cancelled->cancelled)
+- createInspectionSession: crea claim_action antes de la sesion y los vincula
+- getInspectionSessions/getInspectionSessionById/getInspectionSessionByToken:
+  usan claim_action.code como inspection_number (fallback para legacy)
+- api/inspection/live: trae claim_action.code para inspection_number
+- claims/[id]/page.tsx: elimina mapeo fake de inspecciones, ahora aparecen
+  como claim_actions normales con link al detalle de inspeccion
+- types: agrega claim_action_id a InspectionSession y Claim.inspection_sessions
+- CLAIM_SELECT: trae claim_action_id en inspection_sessions
 
 Generated with [Devin](https://devin.ai)
 

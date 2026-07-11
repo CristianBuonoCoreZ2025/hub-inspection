@@ -5,7 +5,7 @@ import type {
   InspectionDamage,
 } from "@/types";
 
-const SESSION_SELECT = "id, claim_id, action_template_id, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, created_at, updated_at";
+const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, created_at, updated_at";
 
 // ═══════════════════════════════════════════════════════════════
 // SESSIONS
@@ -30,7 +30,7 @@ type SessionWithRelations = InspectionSession & { created_at: string; action_tem
 
 export async function getInspectionSessions(claimId?: string) {
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
-    select: `${SESSION_SELECT}, action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, inspector_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, inspector_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
     ...(claimId ? { eq: { claim_id: claimId } } : {}),
     order: { column: "created_at", ascending: false },
   });
@@ -42,15 +42,19 @@ export async function getInspectionSessions(claimId?: string) {
     }
   }
 
-  // Calcular inspection_number client-side: {liquidation_number}-{template_code}-{seq:3}
-  // La secuencia se calcula contando sesiones del mismo claim con created_at menor o igual.
+  // Usar el code del claim_action como inspection_number (estándar de gestiones)
+  // Fallback al cálculo client-side si no hay claim_action (inspecciones legacy)
   const sorted = [...sessions].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const seqMap = new Map<string, number>();
   for (const s of sorted) {
-    const seq = (seqMap.get(s.claim_id) || 0) + 1;
-    seqMap.set(s.claim_id, seq);
-    (s as InspectionSession & { inspection_number: string }).inspection_number =
-      buildInspectionNumber(s.claim?.liquidation_number, s.action_template?.code, seq);
+    const ca = s as InspectionSession & { claim_action?: { code: string | null } | null; inspection_number: string };
+    if (ca.claim_action?.code) {
+      ca.inspection_number = ca.claim_action.code;
+    } else {
+      const seq = (seqMap.get(s.claim_id) || 0) + 1;
+      seqMap.set(s.claim_id, seq);
+      ca.inspection_number = buildInspectionNumber(s.claim?.liquidation_number, s.action_template?.code, seq);
+    }
   }
 
   return sessions;
@@ -58,7 +62,7 @@ export async function getInspectionSessions(claimId?: string) {
 
 export async function getInspectionSessionByToken(token: string) {
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
-    select: `${SESSION_SELECT}, action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
     eq: { magic_link_token: token },
     limit: 1,
   });
@@ -72,19 +76,23 @@ export async function getInspectionSessionByToken(token: string) {
     );
   }
 
-  // Calcular inspection_number: {liquidation_number}-{template_code}-{seq:3}
-  try {
-    const countSessions = await fetchAll<{ id: string }>("inspection_sessions", {
-      select: "id",
-      eq: { claim_id: session.claim_id },
-      lte: { created_at: session.created_at },
-    });
-    const seq = countSessions.length;
-    (session as InspectionSession & { inspection_number: string }).inspection_number =
-      buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, seq);
-  } catch {
-    (session as InspectionSession & { inspection_number: string }).inspection_number =
-      buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, 1);
+  // Usar el code del claim_action como inspection_number (estándar)
+  const ca = session as InspectionSession & { claim_action?: { code: string | null } | null; inspection_number: string };
+  if (ca.claim_action?.code) {
+    ca.inspection_number = ca.claim_action.code;
+  } else {
+    // Fallback para inspecciones legacy sin claim_action
+    try {
+      const countSessions = await fetchAll<{ id: string }>("inspection_sessions", {
+        select: "id",
+        eq: { claim_id: session.claim_id },
+        lte: { created_at: session.created_at },
+      });
+      const seq = countSessions.length;
+      ca.inspection_number = buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, seq);
+    } catch {
+      ca.inspection_number = buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, 1);
+    }
   }
 
   return session;
@@ -188,6 +196,7 @@ export async function getInspectionSessionLive(token: string) {
 export async function getInspectionSessionById(id: string) {
   const session = await fetchById<any>("inspection_sessions", id, `
     ${SESSION_SELECT}, created_at,
+    claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, issuer_id, issued_on, issued_by),
     action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
     claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, broker_executive, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone)),
     inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description),
@@ -205,19 +214,22 @@ export async function getInspectionSessionById(id: string) {
     );
   }
 
-  // Calcular inspection_number: contar sesiones del mismo claim con created_at <= esta
-  try {
-    const countSessions = await fetchAll<{ id: string }>("inspection_sessions", {
-      select: "id",
-      eq: { claim_id: session.claim_id },
-      lte: { created_at: session.created_at },
-    });
-    const seq = countSessions.length;
-    (session as InspectionSession & { inspection_number: string }).inspection_number =
-      buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, seq);
-  } catch {
-    (session as InspectionSession & { inspection_number: string }).inspection_number =
-      buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, 1);
+  // Usar el code del claim_action como inspection_number (estándar)
+  if (session.claim_action?.code) {
+    session.inspection_number = session.claim_action.code;
+  } else {
+    // Fallback para inspecciones legacy sin claim_action
+    try {
+      const countSessions = await fetchAll<{ id: string }>("inspection_sessions", {
+        select: "id",
+        eq: { claim_id: session.claim_id },
+        lte: { created_at: session.created_at },
+      });
+      const seq = countSessions.length;
+      session.inspection_number = buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, seq);
+    } catch {
+      session.inspection_number = buildInspectionNumber((session.claim as any)?.liquidation_number, session.action_template?.code, 1);
+    }
   }
 
   return session;
@@ -288,8 +300,25 @@ export async function createInspectionSession(claimId: string, options: {
     throw new Error("Ya existe una inspección activa para este siniestro. Debe cancelar o completar la inspección existente antes de crear una nueva.");
   }
 
+  // ── 1. Crear claim_action (gestión estándar) ──
+  const { createClaimAction } = await import("@/services/claim-actions");
+  const INSPECTION_FEATURE_ID = "a1000001-0000-0000-0000-000000000001"; // Inspección
+  const inspectionName = options.inspectionType === "remote" ? "Inspección Remota" : "Inspección Presencial";
+
+  const claimAction = await createClaimAction({
+    claim_id: claimId,
+    action_features_id: INSPECTION_FEATURE_ID,
+    action_template_id: options.actionTemplateId,
+    name: inspectionName,
+    description: `Inspección ${options.inspectionType === "remote" ? "remota" : "presencial"} programada para ${new Date(options.scheduledAt).toLocaleString("es-CL")}`,
+    issuer_id: options.inspectorId,
+    expected_date: options.scheduledAt,
+  });
+
+  // ── 2. Crear inspection_session vinculada al claim_action ──
   const object: Record<string, unknown> = {
     claim_id: claimId,
+    claim_action_id: claimAction.id,
     status: "scheduled",
     inspection_type: options.inspectionType,
     scheduled_at: options.scheduledAt,

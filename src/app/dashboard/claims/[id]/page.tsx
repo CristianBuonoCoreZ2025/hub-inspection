@@ -848,33 +848,11 @@ export default function ClaimDetailPage() {
               )}
             </div>
             {(() => {
-              const inspections = (claim.inspection_sessions || []).map((s) => ({
-                id: s.id,
-                tipo: "Inspección",
-                codigo: s.inspection_number || s.id.slice(0, 8),
-                nombre: s.inspection_type === "remote" ? "Inspección Remota" : "Inspección Presencial",
-                estado: s.status,
-                fecha: s.scheduled_at || s.started_at || s.created_at,
-                expectedDate: null as string | null,
-                createdOn: s.created_at,
-                daysToIssue: 0,
-                hasIssue: false,
-                hasReview: false,
-                hasApprove: false,
-                issuedOn: null as string | null,
-                issuedBy: null as string | null,
-                issuedByEmail: null as string | null,
-                reviewedOn: null as string | null,
-                reviewedBy: null as string | null,
-                reviewedByEmail: null as string | null,
-                approvedOn: null as string | null,
-                approvedBy: null as string | null,
-                approvedByEmail: null as string | null,
-                href: `/dashboard/inspecciones/${s.id}`,
-                esAccion: false,
-                esAutomatica: false,
-                screenType: null,
-              }));
+              // Mapa de claim_action_id → inspection_session_id para enlazar gestiones de inspección
+              const inspectionByActionId = new Map<string, string>();
+              for (const s of (claim.inspection_sessions || [])) {
+                if (s.claim_action_id) inspectionByActionId.set(s.claim_action_id, s.id);
+              }
 
               const actions = (claimActions || []).map((a) => ({
                 id: a.id,
@@ -899,13 +877,14 @@ export default function ClaimDetailPage() {
                 approvedOn: a.approved_on,
                 approvedBy: a.approver?.full_name || null,
                 approvedByEmail: a.approver?.email || null,
-                href: null as string | null,
+                // Si es una gestión de inspección, enlazar al detalle de inspección
+                href: inspectionByActionId.has(a.id) ? `/dashboard/inspecciones/${inspectionByActionId.get(a.id)}` : null,
                 esAccion: true,
                 screenType: a.action_feature?.has_specific_screen ? (a.action_feature?.screen?.code || "generica") : null,
                 esAutomatica: a.is_automatic,
               }));
 
-              const gestiones = [...inspections, ...actions].sort((a, b) => {
+              const gestiones = actions.sort((a, b) => {
                 const fa = a.fecha ? new Date(a.fecha).getTime() : 0;
                 const fb = b.fecha ? new Date(b.fecha).getTime() : 0;
                 return fb - fa;

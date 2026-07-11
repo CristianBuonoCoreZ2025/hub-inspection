@@ -37,6 +37,7 @@ export async function GET(
         property_risk, property_materiality, security_measures,
         insured_statement, third_parties,
         action_template:action_template!inspection_sessions_action_template_id_fkey ( code ),
+        claim_action:claim_actions!inspection_sessions_claim_action_id_fkey ( code ),
         inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey ( id, url, type, description, category, created_at ),
         inspection_notes:inspection_notes!inspection_notes_session_id_fkey ( id, content, created_at ),
         inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey ( id, area, item, status, notes, created_at ),
@@ -95,19 +96,26 @@ export async function GET(
     };
     console.log("[inspection/live] counts:", counts);
 
-    // Calcular inspection_number
-    try {
-      const { count } = await supabase
-        .from("inspection_sessions")
-        .select("*", { count: "exact", head: true })
-        .eq("claim_id", session.claim_id)
-        .lte("created_at", session.created_at || new Date().toISOString());
+    // Usar el code del claim_action como inspection_number (estándar de gestiones)
+    // Fallback al cálculo client-side si no hay claim_action (inspecciones legacy)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((session as any).claim_action?.code) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (session as any).inspection_number = (session as any).claim_action.code;
+    } else {
+      try {
+        const { count } = await supabase
+          .from("inspection_sessions")
+          .select("*", { count: "exact", head: true })
+          .eq("claim_id", session.claim_id)
+          .lte("created_at", session.created_at || new Date().toISOString());
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      attachInspectionNumber(session as any, count ?? 1);
-    } catch {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      attachInspectionNumber(session as any, 1);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        attachInspectionNumber(session as any, count ?? 1);
+      } catch {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        attachInspectionNumber(session as any, 1);
+      }
     }
 
     // Convertir URLs a signed URLs

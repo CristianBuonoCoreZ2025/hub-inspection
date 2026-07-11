@@ -154,6 +154,7 @@ export interface Claim {
   updated_at: string;
   inspection_sessions?: Array<{
     id: string;
+    claim_action_id: string | null;
     status: string;
     inspection_number: string | null;
     inspection_type?: string | null;
@@ -295,6 +296,7 @@ export interface ActaThirdParty {
 export interface InspectionSession {
   id: string;
   claim_id: string;
+  claim_action_id: string | null;
   action_template_id: string | null;
   inspection_number: string | null;
   scheduled_at: string | null;
