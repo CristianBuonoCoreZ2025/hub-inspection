@@ -34,6 +34,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Trash2,
+  X,
   XCircle,
   Send,
 } from "lucide-react";
@@ -140,6 +141,7 @@ export default function ClaimDetailPage() {
   const [activeTab, setActiveTab] = useState("siniestro");
   const [isEditing, setIsEditing] = useState(false);
   const [openGestionModal, setOpenGestionModal] = useState(false);
+  const [showRejected, setShowRejected] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ActionTemplate | null>(null);
   const [openEditGestionModal, setOpenEditGestionModal] = useState(false);
   const [editingGestion, setEditingGestion] = useState<{
@@ -173,8 +175,8 @@ export default function ClaimDetailPage() {
   });
 
   const { data: claimActions } = useQuery({
-    queryKey: ["claim-actions", id],
-    queryFn: () => getClaimActions(id),
+    queryKey: ["claim-actions", id, showRejected],
+    queryFn: () => getClaimActions(id, showRejected),
     enabled: !!id,
   });
 
@@ -257,9 +259,9 @@ export default function ClaimDetailPage() {
   });
 
   const deleteGestionMutation = useMutation({
-    mutationFn: (actionId: string) => deleteClaimAction(actionId),
+    mutationFn: (actionId: string) => deleteClaimAction(actionId, profile?.id),
     onSuccess: () => {
-      toast.success("Gestión eliminada");
+      toast.success("Gestión rechazada");
       queryClient.invalidateQueries({ queryKey: ["claim-actions", id] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -834,18 +836,29 @@ export default function ClaimDetailPage() {
                 <ClipboardList className="h-4 w-4" />
                 Gestiones del Siniestro
               </h3>
-              {canEdit("claims") && (
-                <Button
-                  size="sm"
-                  className="btn-create btn-footer"
-                  onClick={() => setOpenGestionModal(true)}
-                  disabled={!claim?.policy_id}
-                  title={!claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Nuevo
-                </Button>
-              )}
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showRejected}
+                    onChange={(e) => setShowRejected(e.target.checked)}
+                    className="h-3 w-3 rounded border-muted-foreground/30"
+                  />
+                  Rechazadas
+                </label>
+                {canEdit("claims") && (
+                  <Button
+                    size="sm"
+                    className="btn-create btn-footer"
+                    onClick={() => setOpenGestionModal(true)}
+                    disabled={!claim?.policy_id}
+                    title={!claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Nuevo
+                  </Button>
+                )}
+              </div>
             </div>
             {(() => {
               // Mapa de claim_action_id → inspection_session_id para enlazar gestiones de inspección
@@ -1089,12 +1102,12 @@ export default function ClaimDetailPage() {
                                     className="btn-icon w-6 h-6 btn-danger"
                                     disabled={deleteGestionMutation.isPending}
                                     onClick={() => {
-                                      if (confirm("¿Eliminar esta gestión? Esta acción no se puede deshacer.")) {
+                                      if (confirm("¿Rechazar esta gestión? Quedará oculta del listado pero puede volver a verse con el switch de rechazadas.")) {
                                         deleteGestionMutation.mutate(g.id);
                                       }
                                     }}
                                   >
-                                    <Trash2 className="h-3 w-3" />
+                                    <X className="h-3 w-3" />
                                   </Button>
                                 )}
                               </div>

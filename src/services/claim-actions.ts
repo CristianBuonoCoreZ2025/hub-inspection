@@ -84,13 +84,21 @@ export async function getActionFeatures(): Promise<ActionFeature[]> {
 }
 
 // ═══ Listar acciones de un siniestro ═══
+// Por defecto excluye las rechazadas desde emisión (action_status.code = "rejected")
+// use includeRejected=true para incluir las rechazadas
 
-export async function getClaimActions(claimId: string): Promise<ClaimAction[]> {
-  return fetchAll<ClaimAction>("claim_actions", {
+export async function getClaimActions(claimId: string, includeRejected = false): Promise<ClaimAction[]> {
+  const all = await fetchAll<ClaimAction>("claim_actions", {
     select: CLAIM_ACTION_SELECT,
     eq: { claim_id: claimId, is_active: true },
     order: { column: "created_on", ascending: false },
   });
+
+  // Filtrar rechazadas desde emisión si no se piden explícitamente
+  if (!includeRejected) {
+    return all.filter((a) => a.action_status?.code !== "rejected");
+  }
+  return all;
 }
 
 // ═══ Validación de cadenas de gestión ═══
@@ -643,13 +651,14 @@ export async function rejectClaimAction(
   return result;
 }
 
-// ═══ Eliminar una acción (soft delete) ═══
+// ═══ Rechazar (eliminar) una acción pendiente ═══
 // Reglas:
-//   - Solo gestiones manuales (is_automatic = false) se pueden eliminar
+//   - Solo gestiones manuales (is_automatic = false) se pueden rechazar
 //   - Solo si están pendientes (action_status.code = "todo")
-//   - Soft delete: marca is_active = false
+//   - Marca como rechazada desde emisión (action_status = "rejected")
+//   - La gestión queda oculta del listado por defecto (switch para verla)
 
-export async function deleteClaimAction(actionId: string): Promise<void> {
+export async function deleteClaimAction(actionId: string, userId?: string, comment?: string): Promise<void> {
   // 1. Obtener la acción con su estado
   const action = await fetchById<{
     id: string;
@@ -664,18 +673,15 @@ export async function deleteClaimAction(actionId: string): Promise<void> {
 
   // 2. Validar reglas de negocio
   if (action.is_automatic) {
-    throw new Error("Las gestiones automáticas no se pueden eliminar");
-  }
-  if (!action.is_active) {
-    throw new Error("La gestión ya está eliminada");
+    throw new Error("Las gestiones automáticas no se pueden rechazar");
   }
   const statusCode = action.action_status?.code;
   if (statusCode && statusCode !== "todo") {
-    throw new Error("Solo se pueden eliminar gestiones pendientes");
+    throw new Error("Solo se pueden rechazar gestiones pendientes");
   }
 
-  // 3. Soft delete
-  await updateRow("claim_actions", actionId, { is_active: false }, "id, is_active");
+  // 3. Rechazar desde emisión (no soft delete)
+  await rejectClaimAction(actionId, "issue", userId, comment || "Gestión rechazada desde el listado");
 }
 
 // ═══ Obtener usuarios que pueden ser responsables según los roles configurados ═══
