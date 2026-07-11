@@ -1,25 +1,19 @@
-fix: codigo de inspeccion sigue estandar de gestiones + cleanup
+fix: correlativo del code de gestion por template_code
 
-Problema: El codigo de la gestion de inspeccion no cumplia con la
-codificacion estandar del sistema. Usaba "L-000000141-I-001" (formato
-viejo sin line_letter) en vez de "L-000000141-HINS-009" (estandar).
+El correlativo del code era global (contaba todas las gestiones del
+siniestro), ahora es por template_code dentro de cada claim.
+
+Antes: HCOB-003, HCOB-004, HCOB-005, HRES-006, HRES-007, HINS-008
+Ahora: HCOB-001, HCOB-002, HCOB-003, HRES-001, HRES-002, HINS-001
 
 Cambios:
-- migrations/130: crea claim_actions retroactivamente para inspecciones
-  legacy sin claim_action_id. Busca el template de inspeccion por linea
-  de negocio y vincula la sesion con el claim_action.
-- migrations/129 fix: corrige el trigger sync_inspection_claim_action()
-  que usaba NEW.cancelled_by para issued_by en status active (incorrecto).
-  Ahora usa COALESCE(issued_on, NOW()) sin setear issued_by.
-- Eliminado buildInspectionNumber() y attachInspectionNumber() del
-  service inspections.ts. El inspection_number ahora viene SIEMPRE del
-  claim_action.code (estandar de gestiones).
-- Eliminado INSPECTION_LIVE_QUERY (vestigio de Nhost/GraphQL).
-- getInspectionSessionLive() ahora trae claim_action.code y lo usa
-  como inspection_number.
-- API route /api/inspection/live/[token] simplificada (sin fallback).
-- AGENTS.md seccion 20 actualizada con detalles del estandar.
-- PLAN_MAESTRO.md actualizado con migracion 130 y cleanup.
+- migrations/131: corrige set_claim_action_code() para contar solo
+  gestiones del mismo template_code. Recorregi todos los codes
+  existentes con ROW_NUMBER() particionado por claim_id + template_code.
+- Eliminado claim_action duplicado de inspeccion (HINS-008 sin sesion)
+- Codes legacy rotos (B, R) recorregidos al estandar
+- AGENTS.md seccion 20: documenta correlativo por template
+- PLAN_MAESTRO: migracion 131 agregada
 
 Generated with [Devin](https://devin.ai)
 

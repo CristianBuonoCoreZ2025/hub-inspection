@@ -226,6 +226,7 @@ NUNCA intentar hacer configurables los tabs/wizard de inspección.
 | 128 | action_template_line_business_fk | ✅ | FK action_template.line_business_id |
 | 129 | inspection_claim_action_link | ✅ | Link inspection_sessions ↔ claim_actions + trigger sync |
 | 130 | inspection_legacy_claim_actions | ✅ | Crear claim_actions retroactivamente para inspecciones legacy |
+| 131 | correlativo_por_template | ✅ | Correlativo por template_code + recorregir codes legacy |
 
 ---
 

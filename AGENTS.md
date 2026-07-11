@@ -1757,7 +1757,8 @@ Las inspecciones no creaban `claim_actions`, aparecían en el listado de gestion
 
 ### Solución Definitiva
 - Cada inspección crea un `claim_action` con `action_features_id` = "Inspección" (INS)
-- El `code` se genera por el trigger `set_claim_action_code()` siguiendo el estándar: `{liquidation}-{line_letter}{template_code}-{seq}` (ej: `L-000000141-HINS-009`)
+- El `code` se genera por el trigger `set_claim_action_code()` siguiendo el estándar: `{liquidation}-{line_letter}{template_code}-{seq}` (ej: `L-000000141-HINS-001`)
+- **Correlativo por template:** la secuencia es por `template_code` dentro de cada claim, no global. Ej: HCOB-001, HCOB-002, HRES-001, HINS-001
 - `inspection_sessions.claim_action_id` vincula la sesión con la gestión
 - El trigger `sync_inspection_claim_action()` sincroniza el status automáticamente:
   - `scheduled` → `todo` (pendiente)
@@ -1766,12 +1767,14 @@ Las inspecciones no creaban `claim_actions`, aparecían en el listado de gestion
   - `cancelled` → `cancelled` (cancelada)
 - El `inspection_number` se obtiene SIEMPRE del `claim_action.code`
 - Migración 130 creó claim_actions retroactivamente para inspecciones legacy
+- Migración 131 corrigió el correlativo a por-template y recorregió los codes legacy
 - Eliminadas `buildInspectionNumber()` y `attachInspectionNumber()` (cálculo client-side legacy)
 
 ### Regla
 ```
 Toda inspección DEBE crear un claim_action al momento de agendarse.
 El inspection_number DEBE ser el code del claim_action (estándar de gestiones).
+El correlativo del code es POR TEMPLATE_CODE dentro de cada claim, no global.
 El status de la inspección y del claim_action se sincronizan automáticamente via trigger.
 NUNCA calcular el inspection_number client-side. Siempre viene del claim_action.code.
 ```
