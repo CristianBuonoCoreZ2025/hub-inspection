@@ -2,6 +2,7 @@ export type UserRole =
   | "internal"
   | "adjuster"
   | "inspector"
+  | "assistant"
   | "client_operator";
 
 export interface UserClient {
@@ -68,8 +69,12 @@ export interface Profile {
   user_id: string;
   company_id: string | null;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   email: string | null;
   phone: string | null;
+  rut: string | null;
+  country_id: string | null;
   avatar_url: string | null;
   role: UserRole;
   is_active: boolean;
@@ -134,6 +139,7 @@ export interface Claim {
   claim_address: string | null;
   owner_same_as_insured: boolean | null;
   // Datos de la póliza
+  policy_id: string | null;
   policy_item: string | null;
   policy_start_date: string | null;
   policy_end_date: string | null;
@@ -163,6 +169,14 @@ export interface Claim {
   reopened_at: string | null;
   reopened_by: string | null;
   reopened_reason: string | null;
+  // Relaciones (opcionales, según lo que traiga el query)
+  status?: { id: string; category: string; code: string; name: string } | null;
+  assigned_adjuster?: { id: string; full_name: string; email: string } | null;
+  adjuster?: { id: string; full_name: string; email: string } | null;
+  inspector?: { id: string; full_name: string; email: string } | null;
+  assistant?: { id: string; full_name: string; email: string } | null;
+  broker?: { id: string; name: string } | null;
+  insurance_company?: { id: string; name: string } | null;
 }
 
 export interface ClaimsParticipant {
@@ -281,6 +295,7 @@ export interface ActaThirdParty {
 export interface InspectionSession {
   id: string;
   claim_id: string;
+  action_template_id: string | null;
   inspection_number: string | null;
   scheduled_at: string | null;
   started_at: string | null;
@@ -313,6 +328,7 @@ export interface InspectionSession {
   insured_statement?: ActaInsuredStatement | null;
   third_parties?: ActaThirdParty[] | null;
   // Relaciones (cargadas por getInspectionSessionById)
+  action_template?: { id: string; name: string; code: string | null; action_features_id: string } | null;
   inspection_evidences?: InspectionEvidence[];
   inspection_checklists?: InspectionChecklist[];
   inspection_damages?: InspectionDamage[];
@@ -510,6 +526,7 @@ export interface BusinessLine {
   id: string;
   country_id: string;
   name: string;
+  code_prefix: string | null;
   claim_type: string | null;
   claim_type_id: string | null;
   ramo_fecu: string | null;
@@ -692,6 +709,7 @@ export interface Relationship {
 export interface ActionFeature {
   id: string;
   name: string;
+  code: string | null;
   has_specific_screen: boolean;
   has_control: boolean;
   has_issue: boolean;
@@ -699,9 +717,11 @@ export interface ActionFeature {
   has_approve: boolean;
   is_active: boolean;
   sort_order: number;
+  screen_id: string | null;
   created_at: string;
   updated_at: string;
   characteristics?: Characteristic[];
+  screen?: GestionScreen | null;
 }
 
 export interface Characteristic {
@@ -719,6 +739,7 @@ export interface Characteristic {
   document_type: boolean;
   is_active: boolean;
   sort_order: number;
+  screen_id: string | null;
   action_feature?: ActionFeature;
 }
 
@@ -732,8 +753,8 @@ export interface ActionTemplate {
   is_blocker: boolean;
   is_review_applicable: boolean;
   is_approval_applicable: boolean;
-  reviewer_role: string | null;
-  approver_role: string | null;
+  reviewer_roles: string[];
+  approver_roles: string[];
   days_to_issue: number;
   days_to_review: number;
   days_to_approve: number;
@@ -741,7 +762,10 @@ export interface ActionTemplate {
   days_to_alert_to_review: number;
   days_to_alert_to_approve: number;
   is_active: boolean;
-  issuer_role: string | null;
+  issuer_roles: string[];
+  default_issuer_role: string | null;
+  default_reviewer_role: string | null;
+  default_approver_role: string | null;
   code: string | null;
   is_dispatch_applicable: boolean | null;
   company_id: string | null;
@@ -755,6 +779,28 @@ export interface ActionTemplate {
   claim_statuses?: ActionTemplateClaimStatus[];
 }
 
+export interface GestionScreen {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  form_schema: Record<string, unknown> | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CharacteristicScreen {
+  id: string;
+  characteristic_id: string;
+  screen_id: string;
+  is_default: boolean;
+  created_at: string;
+  screen?: GestionScreen;
+}
+
 export interface ActionTemplateClaimStatus {
   id: string;
   action_template_id: string;
@@ -763,6 +809,8 @@ export interface ActionTemplateClaimStatus {
   claim_status?: LookupCatalog;
   action_template?: ActionTemplate;
 }
+
+export interface GestionScreenType extends GestionScreen {}
 
 export type ClaimActionStatus =
   | "todo"
@@ -790,6 +838,9 @@ export interface ClaimAction {
   issued_by: string | null;
   issued_on: string | null;
   issuer_id: string | null;
+  issue_rejected_by: string | null;
+  issue_rejected_on: string | null;
+  issuer_rejection_comment: string | null;
   reviewed_by: string | null;
   reviewed_on: string | null;
   reviewer_id: string | null;
@@ -811,10 +862,14 @@ export interface ClaimAction {
   expected_date: string | null;
   is_blocker: boolean;
   is_active: boolean;
+  is_automatic: boolean;
   updated_on: string | null;
   updated_by: string | null;
   action_feature?: ActionFeature;
   action_type?: LookupCatalog;
   action_status?: LookupCatalog;
   action_template?: ActionTemplate;
+  issuer?: { id: string; full_name: string | null; email: string | null; name?: string } | null;
+  reviewer?: { id: string; full_name: string | null; email: string | null; name?: string } | null;
+  approver?: { id: string; full_name: string | null; email: string | null; name?: string } | null;
 }

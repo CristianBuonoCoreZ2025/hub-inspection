@@ -78,7 +78,7 @@
 |-----------------------------------|----------|------|------------|--------|
 | N° Siniestro / claim_number / siniestro | `claim_number` | text | — | Directo |
 | N° Póliza / policy_number / poliza | `policy_number` | text | — | Directo |
-| N° Liquidación / liquidation_number | `liquidation_number` | text | — | **Auto-generado** por trigger (formato `L-0000001`) |
+| N° Liquidación / liquidation_number | `liquidation_number` | text | — | **Auto-generado** por trigger (formato `L-000000001`, 9 dígitos) |
 | N° Ref Cliente / client_reference | `client_reference` | text | — | Directo (antes era `claim_reference`) |
 | N° Siniestro Cía / company_report_number | `company_report_number` | text | — | Directo (null por defecto) |
 | Fecha Siniestro / claim_date / fecha | `claim_date` | date | — | Directo |
@@ -224,7 +224,7 @@ Cada participante tiene su propio registro con tipo: `insured`, `contractor`, `b
 | `assignment_date` | date | Fecha de asignación |
 | `client_reference` | text | N° Ref Cliente |
 | `company_report_number` | text | N° Siniestro Cía (reporte) |
-| `liquidation_number` | text | N° Liquidación (auto-generado: L-0000001) |
+| `liquidation_number` | text | N° Liquidación (auto-generado: L-000000001, 9 dígitos) |
 | `is_special_claim` | boolean | Siniestro especial |
 | `summary` | text | Resumen |
 | `internal_number` | text | N° interno |

@@ -804,3 +804,884 @@ La reapertura y el cierre son acciones especiales que cambian el estado del sini
 Cada reapertura queda registrada como una claim_action individual (con su motivo),
 mientras que la última reapertura se refleja en claims.reopened_at/by/reason.
 ```
+
+---
+
+## 13. Storage en Cloudflare R2 — Estructura de Archivos
+
+### Problema
+Nhost Storage solo ofrece 1GB gratis y cobra egress. Los siniestros generan muchos archivos (documentos, imágenes, firmas) que necesitan almacenamiento escalable y barato.
+
+### Solución Definitiva
+Usar **Cloudflare R2** (S3-compatible, 10GB free, egress gratis) con estructura de carpetas basada en códigos.
+
+### Variables de Entorno (`.env.local`)
+```env
+R2_ACCOUNT_ID=xxx
+R2_ACCESS_KEY_ID=xxx
+R2_SECRET_ACCESS_KEY=xxx
+R2_BUCKET_NAME=hub-inspection
+R2_PUBLIC_URL=https://pub-xxx.r2.dev
+```
+
+### Estructura de Carpetas
+```
+configuracion/gestiones/{CODIGO_COMPUESTO}/{CODIGO_COMPUESTO}-NNNNN.docx
+siniestros/{L-NNNNNNNNN}/
+  documentos/{L-NNNNNNNNN}-DOC-NNNNNN.pdf
+  gestiones/{L-NNNNNNNNN}-{CODIGO_COMPUESTO}-NNNN/
+    {L-NNNNNNNNN}-{CODIGO_COMPUESTO}-NNNN.docx
+    documentos/{L-NNNNNNNNN}-{CODIGO_COMPUESTO}-NNNN-DOC-NNNN.pdf
+    imagenes/{L-NNNNNNNNN}-{CODIGO_COMPUESTO}-NNNN-EVI-NNNN.jpg
+empresas/{company_id}/logos/logo.png
+```
+
+### Codificación
+- **Liquidación**: `L-NNNNNNNNN` (9 dígitos, secuencia global)
+- **Línea de negocios**: 1 letra en `business_lines.code_prefix` (H, C, R, V, T)
+- **Característica**: 3 letras en `action_features.code` (INS, ILI, PCA, RES, etc.)
+- **Compuesto**: Línea + Característica = HILI, CILI, HINS, PCA
+- **Template**: 5 dígitos por código compuesto (00001)
+- **Instancia de gestión**: 4 dígitos por siniestro + código compuesto (0001)
+
+### 4 Tipos de Gestiones
+| Tipo | Template | Workflow | Pantalla | Ejemplo |
+|------|----------|----------|----------|---------|
+| Con template + workflow | Sí | 0-3 niveles | No | ILI, PCA |
+| Con pantalla, sin template | No | 0-3 niveles | Sí | INS, CIN |
+| Híbrida | Sí | 0-3 niveles | Sí | RES |
+| Gestión muerta | No | 0 niveles | No | IMP, RTA |
+
+### Trazabilidad de Templates
+- `template_usage_log`: registra qué template se usó en cada gestión, cuándo y quién
+- `template_modification_log`: historial de modificaciones (nunca se sobreescribe, se sube nueva versión)
+- Hash del archivo para detectar cambios
+
+### Vinculación Documento ↔ Gestión
+- Los documentos del siniestro viven en `siniestros/{L}/documentos/`
+- Se vinculan a gestiones vía `claim_document_gestions` (sin duplicar archivos)
+
+### Regla
+```
+Los archivos se renombran al código al subir (el nombre original se guarda en BD).
+Si se pierde la BD, los archivos se identifican por su nombre.
+Los templates NUNCA se sobreescriben — cada modificación es una nueva versión.
+R2 se configura con variables de entorno R2_* en .env.local.
+```
+
+---
+
+## 14. Layout de Formularios de Configuración — Regla de Diseño
+
+### Problema
+Los formularios de configuración apilan todas las cards verticalmente, dejando mucho espacio vacío a los lados en pantallas anchas y obligando a scroll excesivo.
+
+### Solución Definitiva
+Usar **layout de 2 columnas** en pantallas anchas (`xl`) para aprovechar el espacio horizontal.
+
+### Patrón Obligatorio
+```tsx
+<form className="space-y-4">
+  {/* Grid 2 columnas en xl, apila en pantallas pequeñas */}
+  <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-4 items-start">
+    {/* Columna izquierda */}
+    <div className="space-y-4">
+      {/* Card 1: Configuración principal */}
+      <section className="app-panel">...</section>
+      {/* Card 2: Workflow / configuración secundaria */}
+      <section className="app-panel">...</section>
+    </div>
+    {/* Columna derecha */}
+    <div>
+      {/* Card 3: Plantillas / datos relacionados */}
+      <section className="app-panel">...</section>
+    </div>
+  </div>
+  {/* Footer full-width con botones */}
+  <div className="flex items-center justify-end gap-2 pt-2">
+    <button className="btn-cancel">Cancelar</button>
+    <button className="btn-save">Guardar</button>
+  </div>
+</form>
+```
+
+### Reglas de Distribución
+```
+1. Columna izquierda: configuración principal + workflow
+2. Columna derecha: datos relacionados (plantillas, asociaciones, etc.)
+3. Footer: SIEMPRE full-width debajo del grid, nunca dentro de una columna
+4. items-start: para que las columnas no se estiren verticalmente
+5. En pantallas pequeñas (< xl): todo se apila verticalmente automáticamente
+```
+
+### Densidad de Campos dentro de Cards
+```
+1. Usar grid de 3 columnas (no 6) para campos de formulario dentro de cards
+2. Agrupar campos relacionados en filas lógicas:
+   - Fila 1: identificación (código, nombre, tipo)
+   - Fila 2: clasificación (característica, línea, despacho)
+   - Fila 3: descripción (full-width)
+3. Toggles + chips: usar grid [auto_1fr] para que el toggle ocupe lo mínimo
+4. Textareas: min-h-[50px] (no 60px+) para reducir altura
+5. Labels: text-[10px] para compactar
+6. Inputs: h-7 (no h-9) dentro de cards de configuración
+```
+
+### Estado Vacío en Columna Derecha
+```
+Si la columna derecha depende de que el registro exista (ej: plantillas de una gestión
+que aún no se ha guardado), mostrar un panel con mensaje placeholder:
+  "Guarda el registro primero para configurar [X]."
+NUNCA dejar la columna derecha vacía o sin renderizar.
+```
+
+### Regla
+```
+TODO formulario de configuración con 2+ cards DEBE usar layout de 2 columnas en xl.
+Los campos dentro de cards DEBEN usar grid de 3 columnas (no 6).
+El footer con botones SIEMPRE va full-width debajo del grid.
+NUNCA dejar columnas vacías — usar estado vacío con mensaje.
+```
+
+---
+
+## 15. Grillas de Listado — Regla de Diseño
+
+### Problema
+Las grillas siempre están desordenadas, los comboboxes no tienen orden, y el usuario pierde tiempo buscando visualmente.
+
+### Solución Definitiva
+Toda grilla de listado DEBE tener: filtros, ordenamiento por columna, orden alfabético por defecto, y paginación.
+
+### Componentes Reutilizables
+- `src/hooks/use-table-sort.ts` — hook con accessors para campos anidados
+- `src/components/ui/sortable-th.tsx` — header con indicador visual (▲▼)
+
+### Patrón Obligatorio — Ejemplo: Grilla de Gestiones
+
+#### 1. Estado de filtros + sort
+```tsx
+const [search, setSearch] = useState("");
+const [filterFeature, setFilterFeature] = useState("");
+const [filterLine, setFilterLine] = useState("");
+
+// Filtro combinado
+const filtered = data?.filter((t) => {
+  const matchText = [t.name, t.code].join(" ").toLowerCase().includes(search.toLowerCase());
+  const matchFeature = !filterFeature || t.action_features_id === filterFeature;
+  const matchLine = !filterLine || t.line_business_id === filterLine;
+  return matchText && matchFeature && matchLine;
+});
+
+// Sort con accessors (soporta campos anidados)
+const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
+  name: (t) => t.name,
+  code: (t) => (t.line_business?.code_prefix || "") + (t.action_feature?.code || ""),
+  action_type: (t) => t.action_type?.name || "",
+  days_to_issue: (t) => t.days_to_issue,
+}, "name"); // "name" = orden por defecto
+
+const { paginatedData, ... } = usePagination(sorted);
+```
+
+#### 2. Toolbar con filtros compactos en una fila
+```tsx
+<div className="app-toolbar">
+  <div className="flex items-center gap-3 flex-wrap">
+    <Search className="h-4 w-4 text-muted-foreground" />
+    <Input placeholder="Buscar..." className="h-9 max-w-[200px]" />
+    <Select> {/* Filtro 1 */} </Select>
+    <Select> {/* Filtro 2 */} </Select>
+    {(filter1 || filter2 || search) && (
+      <Button variant="ghost" size="sm" onClick={clearAll}>
+        <X /> Limpiar
+      </Button>
+    )}
+  </div>
+  <Button className="btn-create btn-sm"><Plus /> Agregar</Button>
+</div>
+```
+
+#### 3. Tabla con SortableTh en todas las columnas ordenables
+```tsx
+<table className="app-data-table">
+  <thead><tr>
+    <th className="w-10"></th> {/* estado (no ordenable) */}
+    <SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Código</SortableTh>
+    <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
+    <SortableTh sortKey="action_type" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Tipo</SortableTh>
+    <th className="w-[80px]"></th> {/* acciones (no ordenable) */}
+  </tr></thead>
+  <tbody>
+    {isLoading ? <tr><td colSpan={N}>Cargando...</td></tr>
+    : paginatedData.length === 0 ? <tr><td colSpan={N}>No se encontraron registros.</td></tr>
+    : paginatedData.map((t) => ( <tr>...</tr> ))}
+  </tbody>
+</table>
+```
+
+### Reglas
+
+```
+1. ORDEN POR DEFECTO: Toda grilla DEBE ordenar por "name" asc por defecto.
+   Si no tiene campo "name", ordenar por el campo principal de identificación.
+
+2. SORT EN TODAS LAS COLUMNAS: Toda columna de datos DEBE ser ordenable
+   con <SortableTh>. Solo se exceptúan: columna de estado (bolita),
+   columna de acciones (botones), y columnas calculadas complejas.
+
+3. COMPORTAMIENTO DE SORT (3 estados cíclicos):
+   - Click 1: ascendente (▲)
+   - Click 2: descendente (▼)
+   - Click 3: sin orden (icono neutral) — vuelve al orden por defecto
+
+4. FILTROS: Toda grilla con >10 registros DEBE tener al menos:
+   - Búsqueda por texto (Input)
+   - Filtro por categoría padre (Select) si aplica
+   - Botón "Limpiar" visible solo cuando hay filtros activos
+
+5. ORDEN DE COMBOS: Todos los <Select> y comboboxes DEBEN recibir datos
+   ordenados alfabéticamente por nombre desde la query (order_by: { name: asc }).
+   NUNCA ordenar por sort_order en catálogos de selección.
+
+6. PAGINACIÓN: Toda grilla con >20 registros DEBE paginar.
+   <Pagination> va arriba y abajo de la tabla.
+
+7. ESTADOS DE LA GRILLA (3 estados obligatorios):
+   - isLoading: "Cargando..."
+   - error: "Error: {mensaje}"
+   - empty: "No se encontraron registros."
+   Todos con colSpan={N} y text-center text-muted-foreground py-4.
+
+8. ACCIONES POR FILA: Botones icon-only (Pencil, Trash2) en columna
+   fija w-[80px], alineados a la derecha con app-row-actions.
+
+9. COLUMNAS DE CÓDIGO: Usar font-mono text-[12px] para códigos.
+   Mostrar código compuesto si existe (ej: prefijo + característica).
+
+10. ANCHO DE COLUMNS: Solo columnas especiales tienen w-* fijo:
+    - Estado: w-10
+    - Acciones: w-[80px]
+    - Resto: automático
+```
+
+### Hook useTableSort — API
+```tsx
+const { sorted, sortKey, sortDir, toggleSort } = useTableSort(
+  data,                    // T[] | undefined
+  accessors,               // Record<string, (item: T) => unknown>
+  initialKey?,             // string | null (default: "name")
+  initialDirection?        // SortDirection (default: "asc")
+);
+```
+
+### Regla
+```
+TODA grilla de listado DEBE usar useTableSort + SortableTh.
+TODA query de catálogo DEBE ordenar por name: asc (excepto claim_status).
+TODA grilla con >10 registros DEBE tener filtros + botón Limpiar.
+EL orden por defecto SIEMPRE es name asc.
+```
+
+---
+
+## 16. Centralización de Estilos — Regla Absoluta
+
+### Problema
+Los estilos están repartidos entre componentes shadcn (`.tsx`), hojas CSS, y clases inline `className`. Un cambio visual requiere revisar todas las páginas y componentes individualmente.
+
+### Solución Definitiva
+**TODA regla visual va en `src/app/styles/*.css`.** Los componentes `.tsx` solo definen estructura y layout mínimo.
+
+### Estructura de Hojas de Estilo
+```
+src/app/styles/
+├── buttons.css      → botones (.btn-save, .btn-cancel, .btn-create, etc.)
+├── components.css   → layout (.app-page, .app-panel, .app-data-table, etc.)
+├── forms.css        → inputs, selects, textareas (.app-input, [data-slot])
+├── modals.css       → modales (.modal-body, .modal-footer, etc.)
+└── animations.css   → animaciones
+```
+
+Todas se importan en `src/app/globals.css`:
+```css
+@import "./styles/buttons.css";
+@import "./styles/modals.css";
+@import "./styles/components.css";
+@import "./styles/animations.css";
+@import "./styles/forms.css";
+```
+
+### Regla Absoluta
+```
+1. NUNCA poner estilos visuales (fondo, color, borde, sombra, hover, focus,
+   disabled) en los componentes .tsx. Solo layout (flex, grid, gap, w-, h-).
+
+2. Los componentes shadcn (input.tsx, select.tsx, textarea.tsx, etc.) solo
+   definen estructura. El estilo visual se aplica via [data-slot] en forms.css.
+
+3. Los selectores [data-slot] son la forma canónica de estilizar componentes
+   shadcn desde CSS centralizado:
+     [data-slot="input"] { background: var(--card) !important; }
+     [data-slot="select-trigger"] { background: var(--card) !important; }
+     [data-slot="textarea"] { background: var(--card) !important; }
+
+4. La clase .app-input es un override compacto (28px, 12px, 10px radius)
+   para formularios densos. Se aplica solo donde se necesita.
+
+5. Si necesitas un estilo nuevo, lo agregas a la hoja CSS correspondiente,
+   NUNCA al componente .tsx.
+
+6. Los componentes .tsx pueden tener className para layout (flex, grid,
+   gap, w-, h-, max-w-) pero NUNCA para bg-, text-, border-, shadow-.
+   Excepción: clases semánticas (.btn-save, .app-input, .app-panel).
+```
+
+### Ejemplo Correcto
+```tsx
+// ✅ BIEN: input.tsx solo tiene layout
+className={cn(
+  "h-8 w-full min-w-0 rounded-lg border border-input px-2.5 py-1 ...",
+  className
+)}
+
+// ❌ MAL: input.tsx con estilos visuales inline
+className={cn(
+  "h-8 w-full bg-card text-foreground border-input dark:bg-card ...",
+  className
+)}
+```
+
+```css
+/* ✅ BIEN: el fondo, color, focus van en forms.css */
+[data-slot="input"] {
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+}
+[data-slot="input"]:focus-visible {
+  border-color: #0095DA !important;
+  box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
+}
+```
+
+### Regla
+```
+TODA regla visual va en src/app/styles/*.css.
+LOS componentes .tsx SOLO definen layout (flex, grid, gap, w-, h-).
+LOS selectores [data-slot] estilizan componentes shadcn desde CSS.
+NUNCA poner bg-, text-, border-, shadow- en className de componentes.
+```
+
+---
+
+## 17. Sistema de Permisos — Documentación Completa y Definitiva
+
+### Visión General
+
+El sistema de permisos tiene **3 niveles de seguridad** que se aplican en cascada.
+Ningún nivel por sí solo es suficiente; los tres trabajan juntos para garantizar
+que un usuario no pueda hacer algo que no debe, **incluso si manipula el DOM
+con DevTools del navegador**.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ NIVEL 1: Permisos de Sección (user_type_permissions)            │
+│ ¿El rol del usuario puede acceder al módulo?                    │
+│ Ej: adjuster puede "view" claims pero no "edit" catalogos       │
+├─────────────────────────────────────────────────────────────────┤
+│ NIVEL 2: Permisos de Campo (field_permissions)                  │
+│ ¿El rol del usuario puede editar este campo específico?         │
+│ Ej: adjuster puede editar "name" pero no "is_blocker"           │
+├─────────────────────────────────────────────────────────────────┤
+│ NIVEL 3: Campos Inmutables (código del server action)           │
+│ ¿Este campo NUNCA se puede cambiar después de crear?            │
+│ Ej: action_features_id y line_business_id en gestiones          │
+│         (nadie puede cambiarlos, ni siquiera internal)          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Regla Absoluta
+```
+NUNCA confiar en el cliente para seguridad. El UI (disabled, hidden)
+es solo para UX. Toda validación de seguridad DEBE hacerse en el
+servidor via Server Actions ("use server").
+
+Un usuario puede:
+  - Habilitar campos disabled con DevTools
+  - Llamar mutations directamente con curl/fetch
+  - Inyectar campos extra en el payload
+
+El servidor DEBE:
+  1. Verificar permisos del rol (requirePermission)
+  2. Validar campos inmutables (validateImmutableFields)
+  3. Filtrar campos permitidos (filterAllowedFields)
+  4. Filtrar por permisos dinámicos del rol (filterFieldsByPermission)
+  5. Validar reglas de negocio (validateBusinessRules)
+```
+
+---
+
+### Nivel 1 — Permisos de Sección (`user_type_permissions`)
+
+#### Tabla
+```sql
+user_type_permissions (
+  id          UUID PRIMARY KEY,
+  user_type   TEXT NOT NULL,  -- 'internal' | 'adjuster' | 'inspector' | 'client_operator'
+  section     TEXT NOT NULL,  -- 'dashboard' | 'claims' | 'catalogos' | 'catalogos_gestiones' | ...
+  can_view    BOOLEAN DEFAULT false,
+  can_edit    BOOLEAN DEFAULT false,
+  can_create  BOOLEAN DEFAULT false,
+  can_delete  BOOLEAN DEFAULT false,
+  UNIQUE(user_type, section)
+)
+```
+
+#### Migración
+- `migrations/69_user_type_permissions.sql` — tabla + seed inicial
+- `migrations/71_subsection_permissions.sql` — sub-secciones (claims_detalle, etc.)
+- `migrations/76_gestiones_permissions.sql` — sección "gestiones"
+
+#### Secciones del Sistema
+| Sección | Descripción | Sub-secciones |
+|---------|-------------|---------------|
+| `dashboard` | Dashboard principal | — |
+| `claims` | Siniestros | `claims_listado`, `claims_detalle`, `claims_participantes`, `claims_incidente`, `claims_gestiones`, `claims_documentos`, `claims_log` |
+| `inspecciones` | Inspecciones | `inspecciones_listado`, `inspecciones_detalle`, `inspecciones_acta`, `inspecciones_danos`, `inspecciones_evidencias`, `inspecciones_croquis`, `inspecciones_firmas`, `inspecciones_informe` |
+| `agenda` | Agenda | — |
+| `catalogos` | Catálogos | `catalogos_gestiones`, `catalogos_ubicaciones`, `catalogos_causas`, `catalogos_tipos_siniestros`, `catalogos_eventos`, `catalogos_companias`, `catalogos_corredores`, `catalogos_asesores`, `catalogos_lineas_negocio`, `catalogos_productos`, `catalogos_tipos_polizas`, `catalogos_parentescos`, `catalogos_tipos_documentos`, `catalogos_antiguedades`, `catalogos_clasificacion_bien`, `catalogos_clasificacion_danos`, `catalogos_destinos_vivienda` |
+| `catalogos_inspeccion` | Catálogos de Inspección | `catalogos_inspeccion_muros`, `catalogos_inspeccion_cubierta`, `catalogos_inspeccion_pavimentos`, `catalogos_inspeccion_cielos`, `catalogos_inspeccion_cierre_perimetral`, `catalogos_inspeccion_terminaciones_exteriores`, `catalogos_inspeccion_terminaciones_interiores`, `catalogos_inspeccion_relacion_asegurado`, `catalogos_inspeccion_categorias_evidencia` |
+| `operaciones` | Operaciones | `operaciones_carga_siniestros`, `operaciones_carga_catalogos`, `operaciones_inhabilitar`, `operaciones_reabrir` |
+| `administracion` | Administración | — |
+| `users` | Usuarios | — |
+| `companies` | Empresas | — |
+| `configuracion` | Configuración | — |
+
+#### Resolución de Sub-secciones (Fallback al Padre)
+```
+Si se consulta "catalogos_causas" y no existe fila para esa sub-sección,
+se hace fallback al padre "catalogos" y se usan sus permisos.
+
+Orden de fallback:
+  1. Buscar permiso exacto de la sub-sección
+  2. Si no existe, buscar el primer prefijo: section.split("_")[0]
+     Ej: "catalogos_inspeccion_muros" → "catalogos"
+  3. Si no existe, buscar dos prefijos: section.split("_").slice(0,2).join("_")
+     Ej: "catalogos_inspeccion_muros" → "catalogos_inspeccion"
+  4. Si no existe, deny (false)
+```
+
+#### Roles
+| Rol | Descripción | Acceso por defecto |
+|-----|-------------|-------------------|
+| `internal` | Usuarios internos del sistema | Todo (view + edit + create + delete en casi todo) |
+| `adjuster` | Liquidadores asociados a clientes | Claims (view + edit), Inspecciones (view), Agenda (view) |
+| `inspector` | Inspectores asociados a clientes | Claims (view), Inspecciones (view + edit + create), Agenda (view) |
+| `client_operator` | Operativos del cliente | Claims (view), Inspecciones (view), Agenda (view) — solo lectura |
+
+#### Archivos Clave
+| Archivo | Propósito |
+|---------|-----------|
+| `src/services/permissions.ts` | Service cliente: `getAllPermissions`, `updatePermission`, `sectionLabels`, `sectionActions`, `sectionSubPages`, `subSectionActions` |
+| `src/hooks/use-permissions.ts` | Hook cliente: `canView`, `canEdit`, `canCreate`, `canDelete` con fallback al padre |
+| `src/hooks/use-auth.ts` | Carga permisos del usuario al hacer login (los guarda en React Query) |
+| `src/server/lib/session.ts` | Helper server-side: `getServerUser`, `getServerPermissions`, `checkPermission`, `requirePermission` |
+| `src/app/dashboard/permisos/page.tsx` | UI de configuración de permisos (tabla por rol × sección con sub-páginas expandibles) |
+
+---
+
+### Nivel 2 — Permisos de Campo (`field_permissions`)
+
+#### Tabla
+```sql
+field_permissions (
+  id          UUID PRIMARY KEY,
+  user_type   TEXT NOT NULL,  -- 'internal' | 'adjuster' | 'inspector' | 'client_operator'
+  section     TEXT NOT NULL,  -- ej: 'catalogos_gestiones'
+  field_name  TEXT NOT NULL,  -- ej: 'is_blocker'
+  can_edit    BOOLEAN DEFAULT true,
+  UNIQUE(user_type, section, field_name)
+)
+```
+
+#### Regla de Default
+```
+Si NO existe fila para (user_type, section, field_name), el campo
+es EDITABLE por defecto. Solo se insertan filas para RESTRINGIR.
+
+Esto significa que:
+  - internal no tiene filas → puede editar todo
+  - adjuster tiene filas con can_edit=false → no puede editar esos campos
+  - Si se agrega un campo nuevo a una entidad, es editable por todos
+    hasta que alguien lo restrinja explícitamente
+```
+
+#### Migración
+- `migrations/89_field_permissions.sql` — tabla + seed inicial
+
+#### Seed Inicial (Gestiones)
+Para `catalogos_gestiones`, los roles `adjuster`, `inspector` y `client_operator`
+tienen restringidos los campos estructurales:
+- `is_blocker` — no pueden cambiar si una gestión es bloqueante
+- `review_levels` — no pueden cambiar los niveles de revisión
+- `is_dispatch_applicable` — no pueden cambiar el flag de despacho
+- `issuer_roles` — no pueden cambiar los roles del emisor
+- `reviewer_roles` — no pueden cambiar los roles del revisor
+- `approver_roles` — no pueden cambiar los roles del aprobador
+- `is_active` — no pueden desactivar gestiones
+
+Sí pueden editar: `name`, `description`, `code`, `days_to_*`, `days_to_alert_*`.
+
+#### Catálogo de Campos
+El catálogo de campos configurables por entidad está en:
+`src/lib/field-catalog.ts`
+
+```ts
+export const fieldCatalog: EntityFieldCatalog[] = [
+  {
+    section: "catalogos_gestiones",
+    label: "Gestiones",
+    fields: [
+      { name: "name", label: "Nombre", group: "Básico" },
+      { name: "is_blocker", label: "Es Bloqueante", group: "Estructura" },
+      { name: "review_levels", label: "Niveles de Revisión", group: "Estructura" },
+      { name: "days_to_issue", label: "Días para Emitir", group: "Plazos" },
+      { name: "issuer_roles", label: "Roles Emisor", group: "Roles" },
+      // ... etc
+    ],
+  },
+];
+```
+
+#### Archivos Clave
+| Archivo | Propósito |
+|---------|-----------|
+| `src/lib/field-catalog.ts` | Catálogo de campos por entidad (labels, grupos) |
+| `src/services/field-permissions.ts` | Service cliente: `getAllFieldPermissions`, `getFieldPermissions`, `upsertFieldPermission`, `deleteFieldPermission` |
+| `src/server/lib/field-permissions.ts` | Helper server-side: `getEditableFields`, `filterFieldsByPermission`, `isFieldEditable` |
+| `src/app/dashboard/permisos/page.tsx` | UI: expandir sub-página → botón "Campos" → toggle por campo |
+
+#### UI de Configuración
+1. Ir a **Administración → Permisos**
+2. Expandir el módulo (ej: "Catálogos")
+3. Ver las sub-páginas (ej: "Gestiones")
+4. Al lado de cada sub-página con campos configurables, hay un botón **"Campos"** con ícono de engranaje
+5. Al clic, se expande la lista de campos agrupados por categoría
+6. Cada campo tiene un toggle: verde = editable, gris = restringido
+7. Los cambios se guardan inmediatamente (upsert en `field_permissions`)
+
+---
+
+### Nivel 3 — Campos Inmutables (Server Action)
+
+#### Concepto
+Algunos campos **NUNCA** pueden cambiarse después de crear el registro,
+sin importar el rol del usuario. Esto se define en el código del server action
+(hardcoded, no configurable desde UI).
+
+#### Ejemplo: Gestiones
+```ts
+// src/server/actions/gestiones.ts
+const IMMUTABLE_ON_UPDATE = [
+  "action_features_id",   // la característica define toda la estructura
+  "line_business_id",     // la línea de negocio afecta el código
+] as const;
+```
+
+#### Validación
+```ts
+// 1. Obtener registro actual de la BD
+const current = await getCurrentTemplate(id);
+
+// 2. Comparar campos inmutables
+validateImmutableFields(current, input, IMMUTABLE_ON_UPDATE);
+// → Si action_features_id cambió, lanza:
+//   "No se pueden modificar campos inmutables: action_features_id"
+```
+
+#### Diferencia con Field Permissions
+| | Inmutable | Field Permission |
+|---|-----------|------------------|
+| **Quién** | Nadie (ni internal) | Depende del rol |
+| **Cuándo** | Solo en update (al crear sí se puede) | Solo en update |
+| **Dónde se configura** | Código del server action | Tabla BD + UI |
+| **Propósito** | Integridad referencial | Seguridad por rol |
+
+---
+
+### Server Actions — Patrón Obligatorio
+
+Todo módulo que permita crear/editar/eliminar registros DEBE usar Server Actions
+con esta estructura:
+
+```ts
+// src/server/actions/<modulo>.ts
+"use server";
+
+import { graphqlRequest } from "@/lib/nhost/graphql";
+import { logger } from "@/lib/logger";
+import { requirePermission, getServerUser } from "@/server/lib/session";
+import {
+  validateImmutableFields,
+  filterAllowedFields,
+} from "@/server/lib/immutable-fields";
+import { filterFieldsByPermission } from "@/server/lib/field-permissions";
+
+// ─── Configuración de campos ───
+const IMMUTABLE_ON_UPDATE = ["campo1", "campo2"] as const;
+const ALLOWED_ON_UPDATE = ["campo3", "campo4", ...] as const;
+const ALLOWED_ON_CREATE = ["campo1", "campo2", "campo3", ...] as const;
+const SECTION = "catalogos_gestiones"; // sección para field permissions
+
+// ─── Create ───
+export async function createX(input: Record<string, unknown>) {
+  try {
+    await requirePermission("catalogos", "create");
+    const filtered = filterAllowedFields(input, ALLOWED_ON_CREATE as string[]);
+    // validar reglas de negocio
+    // graphql mutation insert
+  } catch (err) {
+    logger.error("createX falló", err as Error, { ... });
+    throw err;
+  }
+}
+
+// ─── Update ───
+export async function updateX(id: string, input: Record<string, unknown>) {
+  try {
+    // 1. Permiso de sección
+    await requirePermission("catalogos", "edit");
+
+    // 2. Obtener registro actual
+    const current = await getCurrentX(id);
+
+    // 3. Validar inmutables
+    validateImmutableFields(current, input, IMMUTABLE_ON_UPDATE as string[]);
+
+    // 4. Filtrar por lista estática
+    const staticFiltered = filterAllowedFields(input, ALLOWED_ON_UPDATE as string[]);
+
+    // 5. Filtrar por permisos dinámicos del rol
+    const user = await getServerUser();
+    const filtered = await filterFieldsByPermission(
+      staticFiltered,
+      ALLOWED_ON_UPDATE as string[],
+      user.role,
+      SECTION
+    );
+
+    // 6. Validar reglas de negocio
+    // 7. graphql mutation update
+  } catch (err) {
+    logger.error("updateX falló", err as Error, { ... });
+    throw err;
+  }
+}
+
+// ─── Delete (soft) ───
+export async function deleteX(id: string) {
+  try {
+    await requirePermission("catalogos", "delete");
+    // marcar is_active = false o eliminar
+  } catch (err) {
+    logger.error("deleteX falló", err as Error, { ... });
+    throw err;
+  }
+}
+```
+
+### Regla
+```
+TODO módulo que permita crear/editar/eliminar DEBE:
+  1. Usar Server Actions ("use server") — NUNCA services del cliente
+  2. Llamar requirePermission() al inicio de cada acción
+  3. Validar campos inmutables con validateImmutableFields()
+  4. Filtrar campos con filterAllowedFields()
+  5. Filtrar por permisos dinámicos con filterFieldsByPermission()
+  6. Loguear errores con logger.error()
+  7. Usar try/catch y relanzar el error
+
+NUNCA hacer mutations directamente desde el cliente (src/services/).
+Los services del cliente solo se usan para QUERIES (lectura).
+```
+
+---
+
+### Cliente — Cómo deshabilitar campos según permisos
+
+En el page.tsx del formulario:
+
+```tsx
+import { useAuth } from "@/hooks/use-auth";
+import { getFieldPermissions, type FieldPermission } from "@/services/field-permissions";
+
+// 1. Obtener el rol del usuario
+const { profile } = useAuth();
+
+// 2. Consultar field permissions para esta sección
+const { data: fieldPerms } = useQuery<FieldPermission[]>({
+  queryKey: ["field-permissions", profile?.role, "catalogos_gestiones"],
+  queryFn: () => getFieldPermissions(profile!.role, "catalogos_gestiones"),
+  enabled: !!profile?.role,
+});
+
+// 3. Helper: ¿este campo está restringido?
+const fieldRestricted = new Set(
+  (fieldPerms ?? []).filter(p => !p.can_edit).map(p => p.field_name)
+);
+const isFieldDisabled = (fieldName: string): boolean => {
+  if (!editingId) return false; // creando: todo habilitado
+  return fieldRestricted.has(fieldName);
+};
+
+// 4. Usar en los inputs
+<Input
+  value={form.name}
+  onChange={...}
+  disabled={isFieldDisabled("name")}
+/>
+<Checkbox
+  checked={form.is_blocker}
+  disabled={isFieldDisabled("is_blocker")}
+/>
+```
+
+### Regla
+```
+LOS campos del formulario DEBEN usar isFieldDisabled() para deshabilitarse
+según los permisos del rol. Esto es UX, no seguridad — la seguridad real
+está en el server action que filtra los campos antes de llegar a la BD.
+
+Al CREAR (sin editingId), todos los campos están habilitados.
+Al EDITAR (con editingId), los campos restringidos se deshabilitan.
+Los campos inmutables (action_features_id, line_business_id) se
+deshabilitan siempre al editar (marcados con "(inmutable)" en el label).
+```
+
+---
+
+### Cómo replicar el sistema para un nuevo módulo
+
+#### Paso a paso (ej: "Causas")
+
+1. **Migración**: Si la sección no existe, agregarla a `user_type_permissions`:
+   ```sql
+   INSERT INTO user_type_permissions (user_type, section, can_view, can_edit, can_create, can_delete) VALUES
+     ('internal', 'catalogos_causas', true, true, true, true),
+     ('adjuster', 'catalogos_causas', false, false, false, false),
+     ...
+   ON CONFLICT (user_type, section) DO NOTHING;
+   ```
+
+2. **Sub-página**: Agregar a `sectionSubPages` en `src/services/permissions.ts`:
+   ```ts
+   // Ya existe si es sub-página de catalogos:
+   { section: "catalogos_causas", label: "Causas" },
+   ```
+
+3. **Catálogo de campos**: Agregar a `fieldCatalog` en `src/lib/field-catalog.ts`:
+   ```ts
+   {
+     section: "catalogos_causas",
+     label: "Causas",
+     fields: [
+       { name: "name", label: "Nombre", group: "Básico" },
+       { name: "code", label: "Código", group: "Básico" },
+       { name: "is_active", label: "Activo", group: "Básico" },
+     ],
+   }
+   ```
+
+4. **Server Action**: Crear `src/server/actions/causas.ts`:
+   ```ts
+   "use server";
+   import { requirePermission, getServerUser } from "@/server/lib/session";
+   import { validateImmutableFields, filterAllowedFields } from "@/server/lib/immutable-fields";
+   import { filterFieldsByPermission } from "@/server/lib/field-permissions";
+
+   const IMMUTABLE_ON_UPDATE: string[] = []; // causas no tiene inmutables
+   const ALLOWED_ON_UPDATE = ["name", "code", "is_active"] as const;
+   const ALLOWED_ON_CREATE = ["name", "code"] as const;
+   const SECTION = "catalogos_causas";
+
+   export async function createCausa(input) { ... }
+   export async function updateCausa(id, input) { ... }
+   export async function deleteCausa(id) { ... }
+   ```
+
+5. **Page.tsx**: Reemplazar imports de services por server actions:
+   ```ts
+   // ANTES (inseguro):
+   import { createCausa } from "@/services/causas";
+   // AHORA (seguro):
+   import { createCausa } from "@/server/actions/causas";
+   ```
+
+6. **Form**: Agregar `isFieldDisabled()` a los campos del formulario.
+
+7. **Hasura**: Hacer track de la tabla si es nueva (`pnpm tsx scripts/hasura-track-tables.ts`).
+
+### Regla
+```
+TODO nuevo módulo que permita editar datos DEBE implementar los 3 niveles
+de permisos desde el inicio. No se puede agregar seguridad después como
+un "patch" — debe ser parte del diseño desde el primer commit.
+```
+
+---
+
+### Archivos del Sistema de Permisos — Mapa Completo
+
+```
+src/
+├── lib/
+│   └── field-catalog.ts                    # Catálogo de campos por entidad
+├── services/
+│   ├── permissions.ts                      # Service cliente: permisos de sección
+│   └── field-permissions.ts                # Service cliente: permisos de campo
+├── hooks/
+│   ├── use-auth.ts                         # Carga perfil + permisos al login
+│   └── use-permissions.ts                  # Hook: canView, canEdit, canCreate, canDelete
+├── server/
+│   ├── lib/
+│   │   ├── session.ts                      # Server: getServerUser, requirePermission
+│   │   ├── immutable-fields.ts             # Server: validateImmutableFields, filterAllowedFields
+│   │   └── field-permissions.ts            # Server: getEditableFields, filterFieldsByPermission
+│   └── actions/
+│       └── gestiones.ts                    # Server action: createGestion, updateGestion, deleteGestion
+├── app/dashboard/
+│   ├── permisos/page.tsx                   # UI: configuración de permisos (sección + campo)
+│   └── catalogos/gestiones/gestiones/
+│       └── page.tsx                        # UI: form con isFieldDisabled()
+└── types/
+    └── index.ts                            # Tipos: UserRole, UserTypePermission
+
+migrations/
+├── 69_user_type_permissions.sql            # Tabla user_type_permissions + seed
+├── 71_subsection_permissions.sql           # Sub-secciones (claims_detalle, etc.)
+├── 76_gestiones_permissions.sql            # Sección "gestiones"
+└── 89_field_permissions.sql                # Tabla field_permissions + seed
+```
+
+---
+
+### Hasura Permissions (Capa Adicional)
+
+Además del sistema de permisos de la aplicación, Hasura tiene su propio
+sistema de permisos que actúa como última línea de defensa a nivel BD.
+
+#### Configuración
+1. Ir a **Hasura Console → Data → [Tabla] → Permissions**
+2. Configurar por rol (`user`, `admin`, etc.)
+3. Las mutations hechas desde Server Actions usan el JWT del usuario,
+   por lo que Hasura Permissions se aplican automáticamente
+
+#### Regla
+```
+Las Hasura Permissions son la ÚLTIMA línea de defensa. No se debe
+confiar solo en ellas. El control de acceso real se hace en los
+Server Actions de la aplicación.
+
+Si alguien bypassa el server action y llama GraphQL directamente,
+Hasura Permissions bloquean según el rol del JWT.
+```

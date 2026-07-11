@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   LogOut,
   Loader2,
+  Palette,
   type LucideIcon,
 } from "lucide-react";
 
@@ -16,6 +17,20 @@ import { useNavLinks } from "@/hooks/use-nav-links";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  getUiStyleSnapshot,
+  subscribeUiStyle,
+  persistUiStyleChoice,
+  UI_STYLE_LABELS,
+  type UiStyleSkin,
+} from "@/lib/ui-style-client-store";
+import { useSyncExternalStore } from "react";
 import type { NavLink, NavGroup } from "@/components/layout/nav-data";
 
 function getInitials(email?: string | null) {
@@ -45,7 +60,7 @@ function IconTooltip({ label, children }: { label: string; children: React.React
     <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       {children}
       {show && (
-        <div className="pointer-events-none absolute left-full top-1/2 z-[60] ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1 text-xs font-medium text-background shadow-lg">
+        <div className="pointer-events-none absolute left-full top-1/2 z-[60] ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1 text-xs font-medium text-background shadow-lg backdrop-blur-sm">
           {label}
           {/* Flecha */}
           <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-foreground" />
@@ -111,7 +126,7 @@ function HybridFlyout({
           {/* Bridge invisible para evitar gap entre icono y panel */}
           <div className="absolute left-full top-0 h-full w-2 z-40" />
 
-          <div className="absolute left-full top-0 ml-2 z-50 w-64 rounded-xl border border-border bg-popover shadow-2xl overflow-hidden">
+          <div className="absolute left-full top-0 ml-2 z-50 w-64 rounded-xl border border-border bg-popover shadow-2xl overflow-hidden backdrop-blur-xl">
             {/* Header del flyout */}
             <div className="flex items-center gap-2 border-b border-border px-3 py-2 bg-muted/40">
               <div className={cn(
@@ -160,6 +175,38 @@ function HybridFlyout({
         </>
       )}
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Selector de skin — simple como el ThemeToggle
+// ═══════════════════════════════════════════════════════════════
+function SkinToggle() {
+  const skin = useSyncExternalStore(subscribeUiStyle, getUiStyleSnapshot, getUiStyleSnapshot);
+
+  const handleSelect = (value: UiStyleSkin) => {
+    persistUiStyleChoice(value);
+    window.location.reload();
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="ghost" size="icon-sm" aria-label="Estilo de interfaz">
+            <Palette className="size-4" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end" side="right">
+        {(Object.keys(UI_STYLE_LABELS) as UiStyleSkin[]).map((key) => (
+          <DropdownMenuItem key={key} onClick={() => handleSelect(key)}>
+            <span className={cn("mr-2 size-2 rounded-full", skin === key ? "bg-primary" : "bg-transparent border border-border")} />
+            <span>{UI_STYLE_LABELS[key]}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -213,8 +260,12 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      {/* Icon rail (left) */}
-      <aside className="hidden lg:flex lg:w-[56px] lg:flex-col lg:border-r lg:bg-card items-center py-3 gap-1">
+      {/* Icon rail (left) — premium glass + gradient */}
+      <aside className="hidden lg:flex lg:w-[56px] lg:flex-col lg:border-r lg:border-sidebar-border lg:bg-sidebar items-center py-3 gap-1 relative">
+        {/* Gradient overlay sutil */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-primary/[0.02]" />
+        {/* Contenido */}
+        <div className="relative z-10 flex flex-col items-center w-full h-full gap-1">
         {/* Logo */}
         <IconTooltip label="Dashboard">
           <Link
@@ -253,13 +304,15 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
           ))}
         </div>
 
-        {/* User + theme at bottom */}
+        {/* User + theme + skin at bottom */}
         <div className="mt-auto flex flex-col items-center gap-1 w-full px-1.5">
-          <IconTooltip label="Tema claro/oscuro">
-            <div className="flex items-center justify-center rounded-lg py-1.5 transition-colors hover:bg-muted">
-              <ThemeToggle />
-            </div>
-          </IconTooltip>
+          <div className="flex items-center justify-center rounded-lg py-1.5 transition-colors hover:bg-muted">
+            <SkinToggle />
+          </div>
+
+          <div className="flex items-center justify-center rounded-lg py-1.5 transition-colors hover:bg-muted">
+            <ThemeToggle />
+          </div>
 
           <IconTooltip label={isLoading ? "Cargando..." : (user?.email ?? "Usuario")}>
             <div ref={userRef} className="relative">
@@ -279,7 +332,7 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
                 <>
                   {/* Bridge */}
                   <div className="absolute left-full bottom-0 h-full w-2 z-40" />
-                  <div className="absolute left-full bottom-0 ml-2 z-50 w-56 rounded-xl border border-border bg-popover shadow-2xl overflow-hidden">
+                  <div className="absolute left-full bottom-0 ml-2 z-50 w-56 rounded-xl border border-border bg-popover shadow-2xl overflow-hidden backdrop-blur-xl">
                     <div className="flex items-center gap-2.5 border-b border-border px-4 py-3 bg-muted/40">
                       <Avatar size="sm">
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
@@ -307,6 +360,7 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
               )}
             </div>
           </IconTooltip>
+        </div>
         </div>
       </aside>
     </>

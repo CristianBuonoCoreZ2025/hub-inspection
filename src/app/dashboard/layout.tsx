@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { NavWrapper } from "@/components/layout/nav-wrapper";
-import { getNhostServerClient } from "@/lib/nhost/server";
+import { createServerClient } from "@/lib/supabase/server";
 import { getUserProfile } from "@/lib/db";
 import { DashboardClientWrapper } from "@/components/dashboard-client-wrapper";
 
@@ -10,11 +10,13 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   try {
-    const nhost = await getNhostServerClient();
-    const session = nhost.getUserSession();
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (session?.user) {
-      const profile = await getUserProfile(session.user.id);
+    if (user) {
+      const profile = await getUserProfile(user.id);
       if (!profile?.company_id) {
         redirect("/onboarding");
       }

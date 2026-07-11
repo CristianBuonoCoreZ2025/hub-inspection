@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { getDocumentTypes, createDocumentType, updateDocumentType, deleteDocumentType, getCountries } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, FileText } from "lucide-react";
@@ -76,6 +80,13 @@ export default function TiposDocumentosPage() {
     [d.name, d.code, d.description].join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
+    name: (d) => d.name,
+    code: (d) => d.code,
+    description: (d) => d.description,
+  }, "name");
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
+
   const resetForm = () => {
     setFormData({ country_id: countries?.find((c) => c.code === "CL")?.id || "", code: "", name: "", description: "" });
   };
@@ -89,32 +100,29 @@ export default function TiposDocumentosPage() {
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
-        <h1 className="app-page-title">Tipos de Documentos</h1>
-        <p className="app-page-lead">Mantenedor de catálogo de tipos de documentos por país.</p>
-      </header>
-
-      <div className="app-toolbar">
-        <div className="flex items-center gap-3">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar tipo..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-full max-w-sm" />
+      <div className="app-grid-header">
+        <h1 className="app-page-title shrink-0">Tipos de Documentos</h1>
+        <div className="app-grid-filters">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="app-input h-8 max-w-[180px]" />
         </div>
         {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="btn-create btn-sm">
-            <Plus className="mr-2 h-4 w-4" /> Agregar Tipo
+          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="btn-create btn-sm shrink-0">
+            <Plus className="mr-2 h-4 w-4" /> Agregar
           </Button>
         )}
       </div>
 
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       <div className="app-data-table-wrap">
         <table className="app-data-table">
-          <thead><tr><th className="w-10"></th><th>Pais</th><th>Código</th><th>Nombre</th><th>Descripcion</th><th className="w-[80px]"></th></tr></thead>
+          <thead><tr><th className="w-10"></th><th>Pais</th><SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Código</SortableTh><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripcion</SortableTh><th className="w-[80px]"></th></tr></thead>
           <tbody>
             {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
             : filtered?.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
-            : filtered?.map((d) => (
+            : paginatedData.map((d) => (
               <tr key={d.id}>
-                <td><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /></td>
+                <td><span className={`app-status-dot ${d.is_active ? "app-status-on" : "app-status-off"}`} /></td>
                 <td>{countries?.find((c) => c.id === d.country_id)?.name || "—"}</td>
                 <td className="text-muted-foreground">{d.code || "—"}</td>
                 <td className="font-medium">{d.name}</td>
@@ -134,6 +142,7 @@ export default function TiposDocumentosPage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>

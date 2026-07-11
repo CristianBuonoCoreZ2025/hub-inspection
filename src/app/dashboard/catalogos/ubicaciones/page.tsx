@@ -2,9 +2,13 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { getRegions, getCities, getCommunes, createRegion, updateRegion, deleteRegion, createCity, updateCity, deleteCity, createCommune, updateCommune, deleteCommune } from "@/services/catalogs";
 import { getCountries } from "@/services/countries";
-import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag, Plus, Pencil, Trash2 } from "lucide-react";
+import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag, Plus, Pencil, Trash2, Search } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 
@@ -16,13 +20,6 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface BreadcrumbItem {
   label: string;
@@ -39,6 +36,7 @@ export default function UbicacionesPage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", code: "", parent_id: "" });
+  const [search, setSearch] = useState("");
 
   const { data: countries, isLoading: loadingCountries } = useQuery({
     queryKey: ["countries"],
@@ -163,6 +161,17 @@ export default function UbicacionesPage() {
     }
   }, [level, countries, regions, cities, communes]);
 
+  const filtered = useMemo(() =>
+    currentData.filter((item) =>
+      [item.name, item.code || ""].join(" ").toLowerCase().includes(search.toLowerCase())
+    ), [currentData, search]);
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
+    name: (item) => item.name,
+    code: (item) => item.code || "",
+  }, "name");
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
+
   const getLevelTitle = () => {
     switch (level) {
       case 0: return "Paises";
@@ -265,10 +274,18 @@ export default function UbicacionesPage() {
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
-        <h1 className="app-page-title">Ubicaciones</h1>
-        <p className="app-page-lead">Catalogo jerarquico: Pais → Region → Ciudad → Comuna.</p>
-      </header>
+      <div className="app-grid-header">
+        <h1 className="app-page-title shrink-0">Ubicaciones</h1>
+        <div className="app-grid-filters">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="app-input h-8 max-w-[180px]" />
+        </div>
+        {level > 0 && canCreate("catalogos") && (
+          <Button onClick={handleCreate} className="btn-create btn-sm shrink-0">
+            <Plus className="mr-2 h-4 w-4" /> Agregar
+          </Button>
+        )}
+      </div>
 
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
@@ -300,31 +317,27 @@ export default function UbicacionesPage() {
         <span className="ml-auto text-sm text-muted-foreground">
           {isLoading ? "Cargando..." : `${currentData.length} registros`}
         </span>
-        {level > 0 && canCreate("catalogos") && (
-          <Button onClick={handleCreate} className="btn-create btn-sm ml-2">
-            <Plus className="mr-2 h-4 w-4" /> Agregar
-          </Button>
-        )}
       </div>
 
       {/* Data table */}
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       <div className="app-data-table-wrap">
         <table className="app-data-table">
           <thead>
             <tr>
               <th className="w-10"></th>
-              <th>Nombre</th>
-              {level <= 1 && <th>Codigo</th>}
+              <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
+              {level <= 1 && <SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Codigo</SortableTh>}
               <th className="w-[140px]"></th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr><td colSpan={4} className="text-center text-muted-foreground py-8">Cargando...</td></tr>
-            ) : currentData.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <tr><td colSpan={4} className="text-center text-muted-foreground py-8">No se encontraron registros.</td></tr>
             ) : (
-              currentData.map((item) => (
+              paginatedData.map((item) => (
                 <tr key={item.id} className="group">
                   <td>
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
@@ -365,6 +378,7 @@ export default function UbicacionesPage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       {/* Modal for create/edit */}
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>

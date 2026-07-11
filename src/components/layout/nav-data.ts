@@ -28,6 +28,13 @@ import {
   Paintbrush,
   Fence,
   Camera,
+  Monitor,
+  ListChecks,
+  Boxes,
+  FileSpreadsheet,
+  Code2,
+  FileCheck,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,6 +55,7 @@ export interface NavGroup {
 // ── Links principales ──
 export const mainLinks: NavLink[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "dashboard" },
+  { href: "/dashboard/catalogos/polizas", label: "Pólizas", icon: FileCheck, section: "claims" },
   { href: "/dashboard/claims", label: "Siniestros", icon: FileText, section: "claims" },
   { href: "/dashboard/inspecciones", label: "Inspecciones", icon: ClipboardCheck, section: "inspecciones" },
   { href: "/dashboard/agenda", label: "Agenda", icon: Calendar, section: "agenda" },
@@ -65,6 +73,7 @@ export const catalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/lineas-negocio", label: "Líneas de Negocio", icon: Tag },
   { href: "/dashboard/catalogos/productos", label: "Ramos/Productos", icon: Box },
   { href: "/dashboard/catalogos/tipos-polizas", label: "Tipos Pólizas", icon: Shield },
+  { href: "/dashboard/catalogos/coberturas", label: "Coberturas", icon: ShieldCheck },
   { href: "/dashboard/catalogos/parentescos", label: "Parentescos", icon: Heart },
   { href: "/dashboard/catalogos/tipos-documentos", label: "Tipos Documentos", icon: FileText },
 ];
@@ -84,6 +93,15 @@ export const inspectionCatalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/inspeccion/terminaciones-exteriores", label: "Terminaciones Exteriores", icon: Paintbrush },
   { href: "/dashboard/catalogos/inspeccion/cierre-perimetral", label: "Cierre Perimetral", icon: Fence },
   { href: "/dashboard/catalogos/inspeccion/categorias-evidencia", label: "Categorías Evidencia", icon: Camera },
+];
+
+// ── Configuración de Gestiones ──
+export const gestionCatalogLinks: NavLink[] = [
+  { href: "/dashboard/catalogos/gestiones/tipos", label: "Tipos de Gestión", icon: ListChecks },
+  { href: "/dashboard/catalogos/gestiones/caracteristicas", label: "Características", icon: Boxes },
+  { href: "/dashboard/catalogos/pantallas", label: "Pantallas", icon: Monitor },
+  { href: "/dashboard/catalogos/gestiones/gestiones", label: "Gestiones", icon: FileSpreadsheet },
+  { href: "/dashboard/catalogos/gestiones/campos", label: "Campos Plantillas", icon: Code2 },
 ];
 
 // ── Operaciones ──
@@ -115,6 +133,12 @@ export const navGroups: NavGroup[] = [
     section: "catalogos_inspeccion",
     icon: ClipboardCheck,
     links: inspectionCatalogLinks,
+  },
+  {
+    title: "Configuración de Gestiones",
+    section: "gestiones",
+    icon: ListChecks,
+    links: gestionCatalogLinks,
   },
   {
     title: "Operaciones",

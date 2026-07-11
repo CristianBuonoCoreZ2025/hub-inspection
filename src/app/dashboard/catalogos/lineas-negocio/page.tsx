@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { getBusinessLines, createBusinessLine, updateBusinessLine, deleteBusinessLine, getCountries, getClaimTypes } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, Tag } from "lucide-react";
@@ -29,7 +33,7 @@ export default function LineasNegocioPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ country_id: "", name: "", claim_type: "", claim_type_id: "", ramo_fecu: "", description: "" });
+  const [formData, setFormData] = useState({ country_id: "", name: "", code_prefix: "", claim_type: "", claim_type_id: "", ramo_fecu: "", description: "" });
 
   const { data: lines, isLoading } = useQuery({
     queryKey: ["business-lines"],
@@ -70,7 +74,15 @@ export default function LineasNegocioPage() {
     [l.name, l.claim_type, l.ramo_fecu, l.description].join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
-  const resetForm = () => setFormData({ country_id: defaultCountryId, name: "", claim_type: "", claim_type_id: "", ramo_fecu: "", description: "" });
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
+    name: (l) => l.name,
+    claim_type: (l) => claimTypes?.find((ct) => ct.id === l.claim_type_id)?.name || l.claim_type || "",
+    ramo_fecu: (l) => l.ramo_fecu || "",
+    description: (l) => l.description || "",
+  }, "name");
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
+
+  const resetForm = () => setFormData({ country_id: defaultCountryId, name: "", code_prefix: "", claim_type: "", claim_type_id: "", ramo_fecu: "", description: "" });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,32 +93,29 @@ export default function LineasNegocioPage() {
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
-        <h1 className="app-page-title">Lineas de Negocio</h1>
-        <p className="app-page-lead">Mantenedor de catalogo de lineas de negocio / ramos.</p>
-      </header>
-
-      <div className="app-toolbar">
-        <div className="flex items-center gap-3">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar linea..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-full max-w-sm" />
+      <div className="app-grid-header">
+        <h1 className="app-page-title shrink-0">Lineas de Negocio</h1>
+        <div className="app-grid-filters">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="app-input h-8 max-w-[180px]" />
         </div>
         {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="btn-create btn-sm">
-            <Plus className="mr-2 h-4 w-4" /> Agregar Item
+          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="btn-create btn-sm shrink-0">
+            <Plus className="mr-2 h-4 w-4" /> Agregar
           </Button>
         )}
       </div>
 
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       <div className="app-data-table-wrap">
         <table className="app-data-table">
-          <thead><tr><th className="w-10"></th><th>País</th><th>Tipo Siniestro</th><th>Línea de Negocio</th><th>Ramo FECU</th><th>Descripcion</th><th className="w-[80px]"></th></tr></thead>
+          <thead><tr><th className="w-10"></th><th>País</th><SortableTh sortKey="claim_type" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Tipo Siniestro</SortableTh><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Línea de Negocio</SortableTh><SortableTh sortKey="ramo_fecu" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Ramo FECU</SortableTh><SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripcion</SortableTh><th className="w-[80px]"></th></tr></thead>
           <tbody>
             {isLoading ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
             : filtered?.length === 0 ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
-            : filtered?.map((l) => (
+            : paginatedData.map((l) => (
               <tr key={l.id}>
-                <td><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /></td>
+                <td><span className="app-status-dot app-status-on" /></td>
                 <td>{countries?.find((c) => c.id === l.country_id)?.name || "—"}</td>
                 <td>{claimTypes?.find((ct) => ct.id === l.claim_type_id)?.name || l.claim_type || "—"}</td>
                 <td className="font-medium">{l.name}</td>
@@ -115,7 +124,7 @@ export default function LineasNegocioPage() {
                 <td>
                   <div className="app-row-actions">
                     {canEdit("catalogos") && (
-                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(l.id); setFormData({ country_id: l.country_id || "", name: l.name, claim_type: l.claim_type || "", claim_type_id: l.claim_type_id || "", ramo_fecu: l.ramo_fecu || "", description: l.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(l.id); setFormData({ country_id: l.country_id || "", name: l.name, code_prefix: (l as { code_prefix?: string }).code_prefix || "", claim_type: l.claim_type || "", claim_type_id: l.claim_type_id || "", ramo_fecu: l.ramo_fecu || "", description: l.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                     )}
                     {canDelete("catalogos") && (
                       <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar esta linea?")) deleteMutation.mutate(l.id); }}><Trash2 className="h-4 w-4" /></Button>
@@ -127,6 +136,7 @@ export default function LineasNegocioPage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>
@@ -168,6 +178,20 @@ export default function LineasNegocioPage() {
                       {claimTypes?.map((ct) => (<SelectItem key={ct.id} value={ct.id}>{ct.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="modal-field" style={{ flex: "0 0 100px" }}>
+                  <Label className="app-field-label">
+                    Código {!editingId && <span className="text-red-500">*</span>}
+                    {editingId && <span className="text-amber-600 ml-1">(inmutable)</span>}
+                  </Label>
+                  <Input
+                    value={formData.code_prefix}
+                    onChange={(e) => setFormData({ ...formData, code_prefix: e.target.value.toUpperCase().slice(0, 1) })}
+                    placeholder="Ej: H"
+                    className="app-input font-mono text-center"
+                    disabled={!!editingId}
+                    required={!editingId}
+                  />
                 </div>
                 <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Línea de Negocio <span className="text-red-500">*</span></Label>

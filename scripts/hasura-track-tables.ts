@@ -67,24 +67,68 @@ async function trackTable(table: string) {
 }
 
 async function trackRelationships(table: string) {
-  try {
-    await sendMetadata({
-      type: "pg_track_relationships",
-      args: {
-        source: "default",
-        table: { schema: "public", name: table },
-      },
-    });
-    console.log(`  ✓ Tracked relationships: ${table}`);
-  } catch (err) {
-    const msg = (err as Error).message;
-    if (msg.includes("no new foreign keys") || msg.includes("already tracked")) {
-      console.log(`  ℹ No new relationships for ${table}`);
-    } else {
-      console.error(`  ✗ Error tracking relationships ${table}:`, msg);
+  // En Hasura v2+, las relaciones objeto se trackean individualmente con pg_track_relationship
+  // Las FKs se detectan automáticamente al trackear la tabla, pero las relaciones
+  // (object/array) necesitan trackearse explícitamente
+  const rels = tableRelationships[table];
+  if (!rels) {
+    console.log(`  ℹ No relationships defined for ${table}`);
+    return;
+  }
+
+  for (const rel of rels) {
+    try {
+      await sendMetadata({
+        type: "pg_track_relationship",
+        args: {
+          source: "default",
+          table: { schema: "public", name: table },
+          name: rel.name,
+          using: rel.type === "object"
+            ? { foreign_key_constraint_on: rel.column }
+            : { foreign_key_constraint_on: { column: rel.column, table: { schema: "public", name: rel.foreignTable! } } },
+        },
+      });
+      console.log(`  ✓ Tracked relationship: ${table}.${rel.name}`);
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg.includes("already tracked") || msg.includes("already exists") || msg.includes("no new foreign keys")) {
+        console.log(`  ℹ Relationship ${table}.${rel.name} already tracked`);
+      } else {
+        console.error(`  ✗ Error tracking relationship ${table}.${rel.name}:`, msg);
+      }
     }
   }
 }
+
+// Definición de relaciones por tabla
+const tableRelationships: Record<string, { name: string; type: "object" | "array"; column: string; foreignTable?: string }[]> = {
+  policies: [
+    { name: "insurance_company", type: "object", column: "insurance_company_id" },
+    { name: "country", type: "object", column: "country_id" },
+    { name: "broker", type: "object", column: "broker_id" },
+    { name: "business_line", type: "object", column: "business_line_id" },
+    { name: "company", type: "object", column: "company_id" },
+    { name: "policy_coverages", type: "array", column: "policy_id", foreignTable: "policy_coverages" },
+  ],
+  policy_coverages: [
+    { name: "policy", type: "object", column: "policy_id" },
+  ],
+  policy_documents: [
+    { name: "policy", type: "object", column: "policy_id" },
+  ],
+  claim_coverages: [
+    { name: "claim", type: "object", column: "claim_id" },
+  ],
+  claim_reserves: [
+    { name: "claim", type: "object", column: "claim_id" },
+    { name: "reserve_coverages", type: "array", column: "claim_reserve_id", foreignTable: "reserve_coverages" },
+  ],
+  reserve_coverages: [
+    { name: "claim_reserve", type: "object", column: "claim_reserve_id" },
+    { name: "claim_coverage", type: "object", column: "claim_coverage_id" },
+  ],
+};
 
 async function untrackTable(table: string) {
   try {
@@ -124,6 +168,31 @@ async function main() {
     "housing_destinations",
     "damage_classifications",
     "document_types",
+    // Sistema de gestiones
+    "action_type",
+    "action_feature",
+    "action_template",
+    "action_template_claim_status",
+    "claim_status",
+    // Plantillas de documentos
+    "document_templates",
+    // Permisos a nivel de campo
+    "field_permissions",
+    // Coberturas de póliza
+    "policy_coverages",
+    "claim_coverages",
+    "claim_reserves",
+    "reserve_coverages",
+    // Pólizas
+    "policies",
+    "policy_documents",
+    "policy_business_lines",
+    "coverage_catalog",
+    "subcoverage_catalog",
+    // Sistema de documentos
+    "document_requirements",
+    "claim_document_requests",
+    "claim_document_request_items",
   ];
 
   console.log(`\nUntracking stale tables in Hasura...`);

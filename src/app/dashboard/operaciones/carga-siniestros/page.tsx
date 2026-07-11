@@ -176,10 +176,9 @@ export default function CargaSiniestrosPage() {
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
-        <h1 className="app-page-title">Carga Masiva de Siniestros</h1>
-        <p className="app-page-lead">Sube un archivo Excel para cargar múltiples siniestros.</p>
-      </header>
+      <div className="app-grid-header">
+        <h1 className="app-page-title shrink-0">Carga Masiva de Siniestros</h1>
+      </div>
 
       {/* Drop Zone */}
       <div

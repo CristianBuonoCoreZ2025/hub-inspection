@@ -455,8 +455,8 @@ export default function InspectionDetailPage() {
 
       {/* Modal Videollamada */}
       {videoCallOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setVideoCallOpen(false)}>
-          <div className="relative w-full max-w-2xl rounded-xl bg-white dark:bg-slate-900 p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="relative w-full max-w-2xl rounded-xl bg-white dark:bg-slate-900 p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <Video className="h-4 w-4" />
@@ -474,6 +474,7 @@ export default function InspectionDetailPage() {
             <VideoCall
               sessionId={session.id}
               displayName="Inspector"
+              onHangup={() => setVideoCallOpen(false)}
             />
           </div>
         </div>
@@ -541,6 +542,10 @@ export default function InspectionDetailPage() {
               <div>
                 <span className="app-data-label">Inspector</span>
                 <p className="font-medium">{inspectors.find((i) => i.id === claim?.inspector_id)?.full_name || "—"}</p>
+              </div>
+              <div>
+                <span className="app-data-label">Gestión</span>
+                <p className="font-medium">{session?.action_template?.name || "—"}</p>
               </div>
               <div>
                 <span className="app-data-label">Fecha Siniestro</span>

@@ -1,6 +1,10 @@
 /*
  * FORMULARIOS — Claims Hub (estilo portal-seguros)
  * INMUNE a skins: todas las propiedades de layout usan !important.
+ *
+ * ESTA ES LA ÚNICA HOJA DE ESTILOS PARA FORMULARIOS.
+ * Los componentes shadcn (input.tsx, select.tsx, textarea.tsx) solo
+ * definen layout mínimo. TODO el estilo visual va aquí via [data-slot].
  */
 
 @layer components {
@@ -17,6 +21,81 @@
     margin-bottom: 4px !important;
     line-height: 1.3 !important;
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * ESTILOS BASE DE INPUTS / SELECTS / TEXTAREAS
+   * Se aplican via [data-slot] a TODOS los componentes shadcn.
+   * Esto centraliza el fondo, borde, focus, disabled, etc.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  /* Input — fondo siempre card (blanco en light, gris en dark) */
+  [data-slot="input"] {
+    background: var(--card) !important;
+    color: var(--foreground) !important;
+    border-color: var(--input) !important;
+  }
+  [data-slot="input"]::placeholder {
+    color: var(--muted-foreground) !important;
+    opacity: 0.6 !important;
+  }
+  [data-slot="input"]:focus-visible {
+    border-color: #0095DA !important;
+    box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
+  }
+  [data-slot="input"]:disabled {
+    background: color-mix(in srgb, var(--muted) 50%, transparent) !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+  }
+
+  /* Select trigger — mismo fondo que input */
+  [data-slot="select-trigger"] {
+    background: var(--card) !important;
+    color: var(--foreground) !important;
+    border-color: var(--input) !important;
+  }
+  [data-slot="select-trigger"]:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--input) 70%, var(--foreground) 30%) !important;
+  }
+  [data-slot="select-trigger"]:focus-visible {
+    border-color: #0095DA !important;
+    box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
+  }
+  [data-slot="select-trigger"]:disabled {
+    background: color-mix(in srgb, var(--muted) 50%, transparent) !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+  }
+
+  /* Textarea — mismo fondo que input */
+  [data-slot="textarea"] {
+    background: var(--card) !important;
+    color: var(--foreground) !important;
+    border-color: var(--input) !important;
+  }
+  [data-slot="textarea"]::placeholder {
+    color: var(--muted-foreground) !important;
+    opacity: 0.6 !important;
+  }
+  [data-slot="textarea"]:focus-visible {
+    border-color: #0095DA !important;
+    box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
+  }
+  [data-slot="textarea"]:disabled {
+    background: color-mix(in srgb, var(--muted) 50%, transparent) !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+  }
+
+  /* Select items en el dropdown — tipografía */
+  [data-slot="select-item"] {
+    font-size: 12px !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * CLASE .app-input — override compacto para formularios densos
+   * (alturas 28px, fuente 12px, borde 10px)
+   * ═══════════════════════════════════════════════════════════════ */
 
   /* Input (inmune a --radius, --border, --input) */
   .app-input {
@@ -47,11 +126,6 @@
   /* Select trigger (combobox) — misma altura y fuente que app-input */
   [data-slot="select-trigger"].app-input {
     height: 28px !important;
-    font-size: 12px !important;
-  }
-
-  /* Select items en el dropdown — también 12px */
-  [data-slot="select-item"] {
     font-size: 12px !important;
   }
 

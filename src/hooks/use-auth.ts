@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getNhostClient } from "@/lib/nhost/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
-import type { User } from "@nhost/nhost-js/auth";
-import { graphqlRequest } from "@/lib/nhost/graphql";
+import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import type { UserRole, UserTypePermission } from "@/types";
 
 interface UserProfile {
@@ -18,45 +16,66 @@ interface UserProfile {
   company_id: string | null;
 }
 
+interface AppUser {
+  id: string;
+  email: string;
+  user_metadata: Record<string, unknown>;
+  app_metadata: Record<string, unknown>;
+}
+
+function toAppUser(user: SupabaseUser | null): AppUser | null {
+  if (!user) return null;
+  return {
+    id: user.id,
+    email: user.email || "",
+    user_metadata: user.user_metadata || {},
+    app_metadata: user.app_metadata || {},
+  };
+}
+
 export function useAuth() {
-  const nhost = getNhostClient();
+  const supabase = getSupabaseClient();
   const queryClient = useQueryClient();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const syncUser = async () => {
-      try {
-        await nhost.refreshSession();
-      } catch {
-        // ignore refresh errors
-      }
-      const session = nhost.getUserSession();
-      setUser(session?.user ?? null);
+    let mounted = true;
+
+    const init = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setUser(toAppUser(session?.user ?? null));
       setIsLoading(false);
     };
-    syncUser();
-  }, [nhost]);
+    init();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
+      setUser(toAppUser(session?.user ?? null));
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   // Obtener perfil del usuario
   const { data: profile } = useQuery<UserProfile | null>({
     queryKey: ["auth-profile", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const query = `
-        query GetProfileByUserId($userId: uuid!) {
-          profiles(where: { user_id: { _eq: $userId } }) {
-            id
-            user_id
-            email
-            full_name
-            role
-            company_id
-          }
-        }
-      `;
-      const data = await graphqlRequest<{ profiles: UserProfile[] }>(query, { userId: user.id });
-      return data.profiles[0] ?? null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, user_id, email, full_name, role, company_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return (data as UserProfile) ?? null;
     },
     enabled: !!user?.id,
   });
@@ -66,37 +85,24 @@ export function useAuth() {
     queryKey: ["auth-permissions", profile?.role],
     queryFn: async () => {
       if (!profile?.role) return [];
-      const query = `
-        query GetPermissionsByType($userType: String!) {
-          user_type_permissions(where: { user_type: { _eq: $userType } }) {
-            id
-            user_type
-            section
-            can_view
-            can_edit
-            can_create
-            can_delete
-            created_at
-            updated_at
-          }
-        }
-      `;
-      const data = await graphqlRequest<{ user_type_permissions: UserTypePermission[] }>(query, { userType: profile.role });
-      return data.user_type_permissions;
+      const { data, error } = await supabase
+        .from("user_type_permissions")
+        .select(
+          "id, user_type, section, can_view, can_edit, can_create, can_delete, created_at, updated_at"
+        )
+        .eq("user_type", profile.role);
+      if (error) throw new Error(error.message);
+      return (data as UserTypePermission[]) ?? [];
     },
     enabled: !!profile?.role,
   });
 
   const signOut = async () => {
     try {
-      const session = nhost.getUserSession();
-      if (session?.refreshToken) {
-        await nhost.auth.signOut({ refreshToken: session.refreshToken });
-      }
+      await supabase.auth.signOut();
     } catch (err) {
       toast.error((err as Error).message || "Error al cerrar sesión");
     } finally {
-      nhost.clearSession();
       queryClient.invalidateQueries({ queryKey: ["auth-user"] });
       queryClient.invalidateQueries({ queryKey: ["auth-profile"] });
       window.location.href = "/login";

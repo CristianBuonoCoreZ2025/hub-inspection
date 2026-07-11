@@ -1,145 +1,46 @@
-import { graphqlRequest } from "@/lib/nhost/graphql";
+import { fetchAll, fetchById, insertRow, updateRow, deleteRow } from "@/lib/supabase/db";
 import type { Claim, ClaimInput } from "@/types";
 
-const CLAIM_FIELDS = `
-  id
-  claim_number
-  policy_number
-  claim_date
-  status_id
-  report_date
-  assignment_date
-  client_reference
-  company_report_number
-  liquidation_number
-  is_special_claim
-  summary
-  event_id
-  internal_number
-  notes
-  company_id
-  assigned_adjuster_id
-  inspector_id
-  adjuster_id
-  auditor_id
-  dispatcher_id
-  assistant_id
-  insurance_company_id
-  broker_id
-  advisor_id
-  claim_cause_id
-  claim_type_id
-  business_line_id
-  insurance_product_id
-  country_id
-  region_id
-  city_id
-  commune_id
-  construction_type_id
-  destination_housing_id
-  damage_classification_id
-  habitability_id
-  type_id
-  currency_id
-  service_type_id
-  billing_type_id
-  claim_address
-  owner_same_as_insured
-  policy_item
-  policy_start_date
-  policy_end_date
-  policy_amount
-  policy_premium
-  recovery_type_legal
-  recovery_type_material
-  recovery_comments
-  broker_executive
-  created_at
-  updated_at
-  disabled
-  disabled_reason
-  disabled_at
-  disabled_by
-  reopened_at
-  reopened_by
-  reopened_reason
-  inspection_sessions(order_by: { created_at: desc }) {
-    id
-    status
-    inspection_number
-    inspection_type
-    scheduled_at
-    started_at
-    ended_at
-    created_at
-  }
-`;
+const CLAIM_SELECT =
+  "id, claim_number, policy_number, policy_id, claim_date, status_id, report_date, assignment_date, client_reference, company_report_number, liquidation_number, is_special_claim, summary, event_id, internal_number, notes, company_id, assigned_adjuster_id, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, claim_cause_id, claim_type_id, business_line_id, insurance_product_id, country_id, region_id, city_id, commune_id, construction_type_id, destination_housing_id, damage_classification_id, habitability_id, type_id, currency_id, service_type_id, billing_type_id, claim_address, owner_same_as_insured, policy_item, policy_start_date, policy_end_date, policy_amount, policy_premium, recovery_type_legal, recovery_type_material, recovery_comments, broker_executive, created_at, updated_at, disabled, disabled_reason, disabled_at, disabled_by, reopened_at, reopened_by, reopened_reason, inspection_sessions:inspection_sessions(id, status, inspection_number, inspection_type, scheduled_at, started_at, ended_at, created_at), status:lookup_catalog!claims_status_id_fkey(id, category, code, name), assigned_adjuster:profiles!claims_assigned_adjuster_id_fkey(id, full_name, email), adjuster:profiles!claims_adjuster_id_fkey(id, full_name, email), inspector:profiles!claims_inspector_id_fkey(id, full_name, email), assistant:profiles!claims_assistant_id_fkey(id, full_name, email), broker:brokers!claims_broker_id_fkey(id, name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name)";
 
 export async function getClaims(companyId?: string) {
-  const where = companyId
-    ? `{ company_id: { _eq: "${companyId}" }, disabled: { _eq: false } }`
-    : `{ disabled: { _eq: false } }`;
-  const query = `
-    query GetClaims {
-      claims(where: ${where}, order_by: { created_at: desc }) {
-        ${CLAIM_FIELDS}
-      }
-    }
-  `;
+  const eq: Record<string, unknown> = { disabled: false };
+  if (companyId) eq.company_id = companyId;
 
-  const data = await graphqlRequest<{ claims: Claim[] }>(query);
-  return data.claims;
+  return fetchAll<Claim>("claims", {
+    select: CLAIM_SELECT,
+    eq,
+    order: { column: "created_at", ascending: false },
+  });
 }
 
 export async function checkClaimNumberExists(claimNumber: string, insuranceCompanyId: string, excludeClaimId?: string) {
-  const where = excludeClaimId
-    ? `{ claim_number: { _eq: "${claimNumber}" }, insurance_company_id: { _eq: "${insuranceCompanyId}" }, id: { _neq: "${excludeClaimId}" } }`
-    : `{ claim_number: { _eq: "${claimNumber}" }, insurance_company_id: { _eq: "${insuranceCompanyId}" } }`;
-  const query = `
-    query CheckClaimNumber {
-      claims(where: ${where}, limit: 1) {
-        id
-        claim_number
-      }
-    }
-  `;
+  const eq: Record<string, unknown> = {
+    claim_number: claimNumber,
+    insurance_company_id: insuranceCompanyId,
+  };
+  const neq: Record<string, unknown> = {};
+  if (excludeClaimId) neq.id = excludeClaimId;
 
-  const data = await graphqlRequest<{ claims: { id: string; claim_number: string }[] }>(query);
-  return data.claims.length > 0;
+  const rows = await fetchAll<{ id: string; claim_number: string }>("claims", {
+    select: "id, claim_number",
+    eq,
+    neq: Object.keys(neq).length > 0 ? neq : undefined,
+    limit: 1,
+  });
+  return rows.length > 0;
 }
 
 export async function findParticipantByRut(rut: string, country: string) {
   if (!rut || !country) return null;
-  const query = `
-    query FindParticipantByRut {
-      claims_participants(
-        where: {
-          rut: { _ilike: "${rut}" },
-          country: { _ilike: "${country}" }
-        },
-        limit: 1,
-        order_by: { created_at: desc }
-      ) {
-        id
-        type
-        full_name
-        first_name
-        last_name
-        rut
-        email
-        phone
-        cell_phone
-        address
-        country
-        region
-        city
-        commune
-      }
-    }
-  `;
-
-  const data = await graphqlRequest<{ claims_participants: ParticipantMatch[] }>(query);
-  return data.claims_participants[0] || null;
+  const rows = await fetchAll<ParticipantMatch>("claims_participants", {
+    select: "id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune",
+    ilike: { rut, country },
+    limit: 1,
+    order: { column: "created_at", ascending: false },
+  });
+  return rows[0] || null;
 }
 
 export type ParticipantMatch = {
@@ -161,14 +62,6 @@ export type ParticipantMatch = {
 
 export async function getClaimsParticipants(claimIds: string[]) {
   if (claimIds.length === 0) return [];
-  const ids = claimIds.map((id) => `"${id}"`).join(",");
-  const query = `
-    query GetClaimsParticipants {
-      claims_participants(where: { claim_id: { _in: [${ids}] } }) {
-        id claim_id type full_name first_name last_name rut email phone cell_phone address country region city commune
-      }
-    }
-  `;
   type Participant = {
     id: string;
     claim_id: string;
@@ -186,285 +79,201 @@ export async function getClaimsParticipants(claimIds: string[]) {
     city: string | null;
     commune: string | null;
   };
-  const data = await graphqlRequest<{ claims_participants: Participant[] }>(query);
-  return data.claims_participants;
+  return fetchAll<Participant>("claims_participants", {
+    select: "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune",
+    in: { claim_id: claimIds },
+  });
 }
 
 export async function getClaimById(id: string) {
-  const query = `
-    query GetClaimById($id: uuid!) {
-      claims_by_pk(id: $id) {
-        ${CLAIM_FIELDS}
-      }
-    }
-  `;
-
-  const data = await graphqlRequest<{ claims_by_pk: Claim }>(query, { id });
-  return data.claims_by_pk;
+  return fetchById<Claim>("claims", id, CLAIM_SELECT);
 }
 
 export async function disableClaim(id: string, reason: string, userId?: string) {
-  const mutation = `
-    mutation DisableClaim($id: uuid!, $reason: String!, $userId: uuid) {
-      update_claims_by_pk(
-        pk_columns: { id: $id },
-        _set: { disabled: true, disabled_reason: $reason, disabled_at: now, disabled_by: $userId }
-      ) { id disabled }
-    }
-  `;
-  const data = await graphqlRequest<{ update_claims_by_pk: { id: string; disabled: boolean } }>(mutation, { id, reason, userId });
-  return data.update_claims_by_pk;
+  return updateRow<{ id: string; disabled: boolean }>("claims", id, {
+    disabled: true,
+    disabled_reason: reason,
+    disabled_at: new Date().toISOString(),
+    disabled_by: userId || null,
+  }, "id, disabled");
 }
 
 export async function enableClaim(id: string) {
-  const mutation = `
-    mutation EnableClaim($id: uuid!) {
-      update_claims_by_pk(
-        pk_columns: { id: $id },
-        _set: { disabled: false, disabled_reason: null, disabled_at: null, disabled_by: null }
-      ) { id disabled }
-    }
-  `;
-  const data = await graphqlRequest<{ update_claims_by_pk: { id: string; disabled: boolean } }>(mutation, { id });
-  return data.update_claims_by_pk;
+  return updateRow<{ id: string; disabled: boolean }>("claims", id, {
+    disabled: false,
+    disabled_reason: null,
+    disabled_at: null,
+    disabled_by: null,
+  }, "id, disabled");
 }
 
 export async function getDisabledClaims(companyId?: string) {
-  const where = companyId
-    ? `{ company_id: { _eq: "${companyId}" }, disabled: { _eq: true } }`
-    : `{ disabled: { _eq: true } }`;
-  const query = `
-    query GetDisabledClaims {
-      claims(where: ${where}, order_by: { disabled_at: desc }) {
-        ${CLAIM_FIELDS}
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ claims: Claim[] }>(query);
-  return data.claims;
+  const eq: Record<string, unknown> = { disabled: true };
+  if (companyId) eq.company_id = companyId;
+
+  return fetchAll<Claim>("claims", {
+    select: CLAIM_SELECT,
+    eq,
+    order: { column: "disabled_at", ascending: false },
+  });
 }
 
 export async function getClosedClaims() {
   // Obtener el status_id correspondiente a "closed"
-  const statusQuery = `
-    query GetClosedStatusId {
-      lookup_catalog(where: { category: { _eq: "claim_status" }, code: { _eq: "closed" } }, limit: 1) { id }
-    }
-  `;
-  const statusData = await graphqlRequest<{ lookup_catalog: { id: string }[] }>(statusQuery);
-  const closedStatusId = statusData.lookup_catalog[0]?.id;
+  const statusRows = await fetchAll<{ id: string }>("lookup_catalog", {
+    select: "id",
+    eq: { category: "claim_status", code: "closed" },
+    limit: 1,
+  });
+  const closedStatusId = statusRows[0]?.id;
   if (!closedStatusId) throw new Error("No se encontró el estado 'closed'");
 
-  const query = `
-    query GetClosedClaims {
-      claims(where: { status_id: { _eq: "${closedStatusId}" }, disabled: { _eq: false } }, order_by: { updated_at: desc }) {
-        ${CLAIM_FIELDS}
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ claims: Claim[] }>(query);
-  return data.claims;
+  return fetchAll<Claim>("claims", {
+    select: CLAIM_SELECT,
+    eq: { status_id: closedStatusId, disabled: false },
+    order: { column: "updated_at", ascending: false },
+  });
 }
 
 export async function reopenClaim(id: string, reason: string, userId?: string) {
   // Obtener el status_id correspondiente a "reopened"
-  const statusQuery = `
-    query GetReopenedStatusId {
-      lookup_catalog(where: { category: { _eq: "claim_status" }, code: { _eq: "reopened" } }, limit: 1) { id }
-    }
-  `;
-  const statusData = await graphqlRequest<{ lookup_catalog: { id: string }[] }>(statusQuery);
-  const reopenedStatusId = statusData.lookup_catalog[0]?.id;
+  const statusRows = await fetchAll<{ id: string }>("lookup_catalog", {
+    select: "id",
+    eq: { category: "claim_status", code: "reopened" },
+    limit: 1,
+  });
+  const reopenedStatusId = statusRows[0]?.id;
   if (!reopenedStatusId) throw new Error("No se encontró el estado 'reopened'");
 
   // 1. Cambiar estado del siniestro a "reopened"
-  const mutation = `
-    mutation ReopenClaim($id: uuid!, $statusId: uuid!, $reason: String!, $userId: uuid) {
-      update_claims_by_pk(
-        pk_columns: { id: $id },
-        _set: { status_id: $statusId, reopened_reason: $reason, reopened_at: now, reopened_by: $userId }
-      ) { id status_id reopened_at reopened_reason }
-    }
-  `;
-  const data = await graphqlRequest<{ update_claims_by_pk: { id: string } }>(mutation, {
-    id, statusId: reopenedStatusId, reason, userId
-  });
+  const data = await updateRow<{ id: string }>("claims", id, {
+    status_id: reopenedStatusId,
+    reopened_reason: reason,
+    reopened_at: new Date().toISOString(),
+    reopened_by: userId || null,
+  }, "id, status_id, reopened_at, reopened_reason");
 
   // 2. Crear claim_action de reapertura (registra el motivo individual)
   //    action_features_id para "Reapertura" = a1000001-0000-0000-0000-000000000012
   //    action_template_id para "Reapertura" = b2000001-0000-0000-0000-000000000013
   try {
-    const actionInsert = `
-      mutation CreateReopenAction($claimId: uuid!, $userId: uuid, $reason: String!) {
-        insert_claim_actions_one(object: {
-          claim_id: $claimId
-          action_features_id: "a1000001-0000-0000-0000-000000000012"
-          action_template_id: "b2000001-0000-0000-0000-000000000013"
-          name: "Reapertura"
-          description: $reason
-          code: "REA"
-          action_data: { "reason": $reason }
-          is_blocker: false
-          created_by: $userId
-          issued_by: $userId
-          issued_on: now
-        }) { id }
-      }
-    `;
-    await graphqlRequest(actionInsert, { claimId: id, userId: userId || null, reason });
+    await insertRow("claim_actions", {
+      claim_id: id,
+      action_features_id: "a1000001-0000-0000-0000-000000000012",
+      action_template_id: "b2000001-0000-0000-0000-000000000013",
+      name: "Reapertura",
+      description: reason,
+      code: "REA",
+      action_data: { reason },
+      is_blocker: false,
+      created_by: userId || null,
+      issued_by: userId || null,
+      issued_on: new Date().toISOString(),
+    }, "id");
   } catch (e) {
     // No fallar la reapertura si no se puede crear la acción
     console.error("No se pudo crear claim_action de reapertura:", e);
   }
 
-  return data.update_claims_by_pk;
+  return data;
 }
 
 // ═══ Cerrar siniestro (gestión de cierre) ═══
 
 export async function closeClaim(id: string, reason: string, closeReasonId: string | null, userId?: string) {
   // Obtener el status_id correspondiente a "closed"
-  const statusQuery = `
-    query GetClosedStatusId {
-      lookup_catalog(where: { category: { _eq: "claim_status" }, code: { _eq: "closed" } }, limit: 1) { id }
-    }
-  `;
-  const statusData = await graphqlRequest<{ lookup_catalog: { id: string }[] }>(statusQuery);
-  const closedStatusId = statusData.lookup_catalog[0]?.id;
+  const statusRows = await fetchAll<{ id: string }>("lookup_catalog", {
+    select: "id",
+    eq: { category: "claim_status", code: "closed" },
+    limit: 1,
+  });
+  const closedStatusId = statusRows[0]?.id;
   if (!closedStatusId) throw new Error("No se encontró el estado 'closed'");
 
   // 1. Cambiar estado del siniestro a "closed"
-  const mutation = `
-    mutation CloseClaim($id: uuid!, $statusId: uuid!) {
-      update_claims_by_pk(
-        pk_columns: { id: $id },
-        _set: { status_id: $statusId }
-      ) { id status_id }
-    }
-  `;
-  const data = await graphqlRequest<{ update_claims_by_pk: { id: string } }>(mutation, {
-    id, statusId: closedStatusId
-  });
+  const data = await updateRow<{ id: string }>("claims", id, {
+    status_id: closedStatusId,
+  }, "id, status_id");
 
   // 2. Crear claim_action de cierre
   try {
-    const actionInsert = `
-      mutation CreateCloseAction($claimId: uuid!, $userId: uuid, $reason: String!, $closeReasonId: uuid) {
-        insert_claim_actions_one(object: {
-          claim_id: $claimId
-          action_features_id: "a1000001-0000-0000-0000-000000000011"
-          action_template_id: "b2000001-0000-0000-0000-000000000012"
-          name: "Cierre de carpeta"
-          description: $reason
-          code: "C"
-          action_data: { "reason": $reason, "close_reason_id": $closeReasonId }
-          is_blocker: false
-          created_by: $userId
-          issued_by: $userId
-          issued_on: now
-        }) { id }
-      }
-    `;
-    await graphqlRequest(actionInsert, {
-      claimId: id,
-      userId: userId || null,
-      reason,
-      closeReasonId: closeReasonId || null
-    });
+    await insertRow("claim_actions", {
+      claim_id: id,
+      action_features_id: "a1000001-0000-0000-0000-000000000011",
+      action_template_id: "b2000001-0000-0000-0000-000000000012",
+      name: "Cierre de carpeta",
+      description: reason,
+      code: "C",
+      action_data: { reason, close_reason_id: closeReasonId || null },
+      is_blocker: false,
+      created_by: userId || null,
+      issued_by: userId || null,
+      issued_on: new Date().toISOString(),
+    }, "id");
   } catch (e) {
     console.error("No se pudo crear claim_action de cierre:", e);
   }
 
-  return data.update_claims_by_pk;
+  return data;
 }
 
 // ═══ Despachar siniestro (gestión de despacho) ═══
 
 export async function dispatchClaim(id: string, notes: string, userId?: string) {
   // Obtener el status_id correspondiente a "dispatchment"
-  const statusQuery = `
-    query GetDispatchmentStatusId {
-      lookup_catalog(where: { category: { _eq: "claim_status" }, code: { _eq: "dispatchment" } }, limit: 1) { id }
-    }
-  `;
-  const statusData = await graphqlRequest<{ lookup_catalog: { id: string }[] }>(statusQuery);
-  const dispatchmentStatusId = statusData.lookup_catalog[0]?.id;
+  const statusRows = await fetchAll<{ id: string }>("lookup_catalog", {
+    select: "id",
+    eq: { category: "claim_status", code: "dispatchment" },
+    limit: 1,
+  });
+  const dispatchmentStatusId = statusRows[0]?.id;
   if (!dispatchmentStatusId) throw new Error("No se encontró el estado 'dispatchment'");
 
   // 1. Cambiar estado del siniestro a "dispatchment"
-  const mutation = `
-    mutation DispatchClaim($id: uuid!, $statusId: uuid!) {
-      update_claims_by_pk(
-        pk_columns: { id: $id },
-        _set: { status_id: $statusId }
-      ) { id status_id }
-    }
-  `;
-  const data = await graphqlRequest<{ update_claims_by_pk: { id: string } }>(mutation, {
-    id, statusId: dispatchmentStatusId
-  });
+  const data = await updateRow<{ id: string }>("claims", id, {
+    status_id: dispatchmentStatusId,
+  }, "id, status_id");
 
   // 2. Crear claim_action de solicitud de despacho
   try {
-    const actionInsert = `
-      mutation CreateDispatchAction($claimId: uuid!, $userId: uuid, $notes: String!) {
-        insert_claim_actions_one(object: {
-          claim_id: $claimId
-          action_features_id: "a1000001-0000-0000-0000-000000000020"
-          action_template_id: "b2000001-0000-0000-0000-000000000014"
-          name: "Solicitud de Despacho"
-          description: $notes
-          code: "DES"
-          action_data: { "notes": $notes }
-          is_blocker: false
-          created_by: $userId
-          issued_by: $userId
-          issued_on: now
-        }) { id }
-      }
-    `;
-    await graphqlRequest(actionInsert, {
-      claimId: id,
-      userId: userId || null,
-      notes
-    });
+    await insertRow("claim_actions", {
+      claim_id: id,
+      action_features_id: "a1000001-0000-0000-0000-000000000020",
+      action_template_id: "b2000001-0000-0000-0000-000000000014",
+      name: "Solicitud de Despacho",
+      description: notes,
+      code: "DES",
+      action_data: { notes },
+      is_blocker: false,
+      created_by: userId || null,
+      issued_by: userId || null,
+      issued_on: new Date().toISOString(),
+    }, "id");
   } catch (e) {
     console.error("No se pudo crear claim_action de despacho:", e);
   }
 
-  return data.update_claims_by_pk;
+  return data;
 }
 
 export async function getReopenedClaims() {
   // Obtener el status_id correspondiente a "reopened"
-  const statusQuery = `
-    query GetReopenedStatusId {
-      lookup_catalog(where: { category: { _eq: "claim_status" }, code: { _eq: "reopened" } }, limit: 1) { id }
-    }
-  `;
-  const statusData = await graphqlRequest<{ lookup_catalog: { id: string }[] }>(statusQuery);
-  const reopenedStatusId = statusData.lookup_catalog[0]?.id;
+  const statusRows = await fetchAll<{ id: string }>("lookup_catalog", {
+    select: "id",
+    eq: { category: "claim_status", code: "reopened" },
+    limit: 1,
+  });
+  const reopenedStatusId = statusRows[0]?.id;
   if (!reopenedStatusId) throw new Error("No se encontró el estado 'reopened'");
 
-  const query = `
-    query GetReopenedClaims {
-      claims(where: { status_id: { _eq: "${reopenedStatusId}" }, disabled: { _eq: false } }, order_by: { reopened_at: desc }) {
-        ${CLAIM_FIELDS}
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ claims: Claim[] }>(query);
-  return data.claims;
+  return fetchAll<Claim>("claims", {
+    select: CLAIM_SELECT,
+    eq: { status_id: reopenedStatusId, disabled: false },
+    order: { column: "reopened_at", ascending: false },
+  });
 }
 
 export async function getClaimParticipants(id: string) {
-  const query = `
-    query GetClaimParticipants {
-      claims_participants(where: { claim_id: { _eq: "${id}" } }) {
-        id claim_id type full_name first_name last_name rut email phone cell_phone address country region city commune linked_to_insured
-      }
-    }
-  `;
   type Participant = {
     id: string;
     claim_id: string;
@@ -483,8 +292,10 @@ export async function getClaimParticipants(id: string) {
     commune: string | null;
     linked_to_insured: boolean;
   };
-  const data = await graphqlRequest<{ claims_participants: Participant[] }>(query);
-  return data.claims_participants;
+  return fetchAll<Participant>("claims_participants", {
+    select: "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, linked_to_insured",
+    eq: { claim_id: id },
+  });
 }
 
 function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }): Record<string, unknown> {
@@ -502,18 +313,7 @@ function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }):
 }
 
 export async function createClaim(input: ClaimInput & { company_id: string }) {
-  const mutation = `
-    mutation CreateClaim($object: claims_insert_input!) {
-      insert_claims_one(object: $object) {
-        ${CLAIM_FIELDS}
-      }
-    }
-  `;
-
-  const data = await graphqlRequest<{ insert_claims_one: Claim }>(mutation, {
-    object: { ...buildClaimObject(input) },
-  });
-  return data.insert_claims_one;
+  return insertRow<Claim>("claims", { ...buildClaimObject(input) }, CLAIM_SELECT);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -600,49 +400,38 @@ export async function createClaimMinimal(
   } | null
 ) {
   // 1. Crear claim
-  const mutation = `
-    mutation CreateClaimMinimal($object: claims_insert_input!) {
-      insert_claims_one(object: $object) {
-        ${CLAIM_FIELDS}
-      }
-    }
-  `;
-
-  const data = await graphqlRequest<{ insert_claims_one: Claim }>(mutation, {
-    object: {
-      claim_number: input.claimNumber,
-      policy_number: input.policyNumber,
-      claim_date: input.claimDate,
-      client_reference: input.clientReference || null,
-      assignment_date: input.assignmentDate || null,
-      report_date: input.reportDate || null,
-      status_id: input.statusId || null,
-      summary: input.summary || null,
-      inspector_id: input.inspectorId || null,
-      adjuster_id: input.adjusterId || null,
-      auditor_id: input.auditorId || null,
-      dispatcher_id: input.dispatcherId || null,
-      assistant_id: input.assistantId || null,
-      insurance_company_id: input.insuranceCompanyId || null,
-      claim_type_id: input.claimTypeId || null,
-      claim_cause_id: input.claimCauseId || null,
-      business_line_id: input.businessLineId || null,
-      insurance_product_id: input.insuranceProductId || null,
-      advisor_id: input.advisorId || null,
-      broker_id: input.brokerId || null,
-      event_id: input.eventId || null,
-      construction_type_id: input.constructionTypeId || null,
-      habitability_id: input.habitabilityId || null,
-      destination_housing_id: input.destinationHousingId || null,
-      damage_classification_id: input.damageClassificationId || null,
-      property_classification_id: input.propertyClassificationId || null,
-      owner_same_as_insured: input.ownerSameAsInsured ?? null,
-      claim_address: claimAddress.claimAddress,
-      country_id: input.countryId || null,
-      company_id: input.company_id,
-    },
-  });
-  const claim = data.insert_claims_one;
+  const claim = await insertRow<Claim>("claims", {
+    claim_number: input.claimNumber,
+    policy_number: input.policyNumber,
+    claim_date: input.claimDate,
+    client_reference: input.clientReference || null,
+    assignment_date: input.assignmentDate || null,
+    report_date: input.reportDate || null,
+    status_id: input.statusId || null,
+    summary: input.summary || null,
+    inspector_id: input.inspectorId || null,
+    adjuster_id: input.adjusterId || null,
+    auditor_id: input.auditorId || null,
+    dispatcher_id: input.dispatcherId || null,
+    assistant_id: input.assistantId || null,
+    insurance_company_id: input.insuranceCompanyId || null,
+    claim_type_id: input.claimTypeId || null,
+    claim_cause_id: input.claimCauseId || null,
+    business_line_id: input.businessLineId || null,
+    insurance_product_id: input.insuranceProductId || null,
+    advisor_id: input.advisorId || null,
+    broker_id: input.brokerId || null,
+    event_id: input.eventId || null,
+    construction_type_id: input.constructionTypeId || null,
+    habitability_id: input.habitabilityId || null,
+    destination_housing_id: input.destinationHousingId || null,
+    damage_classification_id: input.damageClassificationId || null,
+    property_classification_id: input.propertyClassificationId || null,
+    owner_same_as_insured: input.ownerSameAsInsured ?? null,
+    claim_address: claimAddress.claimAddress,
+    country_id: input.countryId || null,
+    company_id: input.company_id,
+  }, CLAIM_SELECT);
 
   // 2. Crear participant insured
   await createClaimParticipant({
@@ -706,14 +495,6 @@ export async function createClaimMinimal(
 }
 
 export async function updateClaim(id: string, input: Partial<ClaimInput>) {
-  const mutation = `
-    mutation UpdateClaim($id: uuid!, $set: claims_set_input!) {
-      update_claims_by_pk(pk_columns: { id: $id }, _set: $set) {
-        ${CLAIM_FIELDS}
-      }
-    }
-  `;
-
   const set: Record<string, unknown> = {};
   const obj = buildClaimObject(input);
   for (const [key, value] of Object.entries(obj)) {
@@ -722,8 +503,7 @@ export async function updateClaim(id: string, input: Partial<ClaimInput>) {
     }
   }
 
-  const data = await graphqlRequest<{ update_claims_by_pk: Claim }>(mutation, { id, set });
-  return data.update_claims_by_pk;
+  return updateRow<Claim>("claims", id, set, CLAIM_SELECT);
 }
 
 /**
@@ -733,39 +513,15 @@ export async function updateClaim(id: string, input: Partial<ClaimInput>) {
  * Los valores undefined se omiten (no se modifican).
  */
 export async function updateClaimFields(id: string, set: Record<string, unknown>) {
-  const mutation = `
-    mutation UpdateClaimFields($id: uuid!, $set: claims_set_input!) {
-      update_claims_by_pk(pk_columns: { id: $id }, _set: $set) {
-        ${CLAIM_FIELDS}
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ update_claims_by_pk: Claim }>(mutation, { id, set });
-  return data.update_claims_by_pk;
+  return updateRow<Claim>("claims", id, set, CLAIM_SELECT);
 }
 
 export async function updateClaimStatus(id: string, statusId: string) {
-  const mutation = `
-    mutation UpdateClaimStatus($id: uuid!, $statusId: uuid!) {
-      update_claims_by_pk(pk_columns: { id: $id }, _set: { status_id: $statusId }) {
-        ${CLAIM_FIELDS}
-      }
-    }
-  `;
-
-  const data = await graphqlRequest<{ update_claims_by_pk: Claim }>(mutation, { id, statusId });
-  return data.update_claims_by_pk;
+  return updateRow<Claim>("claims", id, { status_id: statusId }, CLAIM_SELECT);
 }
 
 export async function deleteClaim(id: string) {
-  const mutation = `
-    mutation DeleteClaim($id: uuid!) {
-      delete_claims_by_pk(id: $id) {
-        id
-      }
-    }
-  `;
-  await graphqlRequest(mutation, { id });
+  await deleteRow("claims", id);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -789,15 +545,7 @@ export async function createClaimParticipant(input: {
   commune?: string | null;
   linked_to_insured?: boolean;
 }) {
-  const mutation = `
-    mutation CreateClaimParticipant($object: claims_participants_insert_input!) {
-      insert_claims_participants_one(object: $object) {
-        id claim_id type full_name first_name last_name rut email phone cell_phone address country region city commune linked_to_insured
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_claims_participants_one: { id: string } }>(mutation, { object: input });
-  return data.insert_claims_participants_one;
+  return insertRow<{ id: string }>("claims_participants", input, "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, linked_to_insured");
 }
 
 export async function updateClaimParticipant(id: string, input: Partial<{
@@ -815,17 +563,9 @@ export async function updateClaimParticipant(id: string, input: Partial<{
   commune: string | null;
   linked_to_insured: boolean;
 }>) {
-  const mutation = `
-    mutation UpdateClaimParticipant($id: uuid!, $set: claims_participants_set_input!) {
-      update_claims_participants_by_pk(pk_columns: { id: $id }, _set: $set) {
-        id claim_id type full_name first_name last_name rut email phone cell_phone address country region city commune
-      }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_claims_participants_by_pk: { id: string } }>(mutation, { id, set });
-  return data.update_claims_participants_by_pk;
+  return updateRow<{ id: string }>("claims_participants", id, set, "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune");
 }

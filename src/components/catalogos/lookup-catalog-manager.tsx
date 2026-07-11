@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { getLookupCatalog, createLookupCatalogItem, updateLookupCatalogItem, deleteLookupCatalogItem } from "@/services/catalogs";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
@@ -80,6 +84,13 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
     [c.name, c.code].join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
+    name: (i) => i.name,
+    code: (i) => i.code || "",
+  }, "name");
+
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -95,39 +106,39 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
-        <h1 className="app-page-title">{title}</h1>
-        <p className="app-page-lead">Mantenedor de catalogo de inspeccion.</p>
-      </header>
-
-      <div className="app-toolbar">
-        <div className="flex items-center gap-3">
-          <Search className="h-4 w-4 text-muted-foreground" />
+      <div className="app-grid-header">
+        <h1 className="app-page-title flex items-center gap-2 shrink-0">
+          <Icon className="h-5 w-5" />
+          {title}
+        </h1>
+        <div className="app-grid-filters">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <Input
             placeholder="Buscar..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-full max-w-sm"
+            className="app-input h-8 max-w-[180px]"
           />
         </div>
         {canCreate(section) && (
           <Button
             onClick={() => { setEditingId(null); setFormData({ name: "", code: "" }); setOpen(true); }}
-            className="btn-create btn-sm"
+            className="btn-create btn-sm shrink-0"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Agregar Item
+            Agregar
           </Button>
         )}
       </div>
 
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       <div className="app-data-table-wrap">
         <table className="app-data-table">
           <thead>
             <tr>
               <th className="w-10"></th>
-              <th>Nombre</th>
-              <th>Codigo</th>
+              <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
+              <SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Código</SortableTh>
               <th className="w-[80px]"></th>
             </tr>
           </thead>
@@ -137,9 +148,9 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
             ) : filtered?.length === 0 ? (
               <tr><td colSpan={4} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
             ) : (
-              filtered?.map((item) => (
+              paginatedData.map((item) => (
                 <tr key={item.id}>
-                  <td><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /></td>
+                  <td><span className={`app-status-dot ${item.is_active ? "app-status-on" : "app-status-off"}`} /></td>
                   <td className="font-medium">{item.name}</td>
                   <td className="text-muted-foreground">{item.code || "—"}</td>
                   <td>
@@ -164,6 +175,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>

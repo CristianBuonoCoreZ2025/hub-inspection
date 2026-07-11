@@ -219,10 +219,9 @@ export default function CargaCatalogosPage() {
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
-        <h1 className="app-page-title">Carga Masiva de Catálogos</h1>
-        <p className="app-page-lead">Sube un archivo Excel para cargar múltiples registros en un catálogo.</p>
-      </header>
+      <div className="app-grid-header">
+        <h1 className="app-page-title shrink-0">Carga Masiva de Catálogos</h1>
+      </div>
 
       {/* Selector de catálogo */}
       <div className="app-panel">

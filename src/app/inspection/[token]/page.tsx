@@ -310,8 +310,8 @@ export default function MagicLinkPage() {
 
       {/* Modal Videollamada */}
       {videoCallOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setVideoCallOpen(false)}>
-          <div className="relative w-full max-w-2xl mx-4 rounded-xl bg-slate-900 p-4 border border-slate-800" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="relative w-full max-w-2xl mx-4 rounded-xl bg-slate-900 p-4 border border-slate-800">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                 <Video className="h-4 w-4 text-sky-400" />
@@ -327,6 +327,7 @@ export default function MagicLinkPage() {
             <VideoCall
               sessionId={session.id}
               displayName={session.interviewed_name || "Cliente"}
+              onHangup={() => setVideoCallOpen(false)}
             />
           </div>
         </div>

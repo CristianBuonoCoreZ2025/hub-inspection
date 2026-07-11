@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
-import { mainLinks, catalogLinks, inspectionCatalogLinks, operationLinks, adminLinks, navGroups, type NavLink, type NavGroup } from "@/components/layout/nav-data";
+import { mainLinks, catalogLinks, inspectionCatalogLinks, gestionCatalogLinks, operationLinks, adminLinks, navGroups, type NavLink, type NavGroup } from "@/components/layout/nav-data";
 
 export function useNavLinks() {
   const { permissions } = useAuth();
@@ -19,31 +19,34 @@ export function useNavLinks() {
 
   const visibleCatalogLinks = canView("catalogos") ? catalogLinks : [];
   const visibleInspectionCatalogLinks = canView("catalogos_inspeccion") ? inspectionCatalogLinks : [];
+  const visibleGestionCatalogLinks = canView("gestiones") ? gestionCatalogLinks : [];
   const visibleOperationLinks = canView("operaciones") ? operationLinks : [];
   const visibleAdminLinks = adminLinks.filter(link => {
     const section = link.section;
     return section ? canView(section) : true;
   });
 
-  // Grupos visibles
+  // Grupos visibles — buscar por section para no depender del orden
   const visibleGroups: (NavGroup & { visibleLinks: NavLink[] })[] = [];
-  if (visibleCatalogLinks.length > 0) {
-    visibleGroups.push({ ...navGroups[0], visibleLinks: visibleCatalogLinks });
-  }
-  if (visibleInspectionCatalogLinks.length > 0) {
-    visibleGroups.push({ ...navGroups[1], visibleLinks: visibleInspectionCatalogLinks });
-  }
-  if (visibleOperationLinks.length > 0) {
-    visibleGroups.push({ ...navGroups[2], visibleLinks: visibleOperationLinks });
-  }
-  if (visibleAdminLinks.length > 0) {
-    visibleGroups.push({ ...navGroups[3], visibleLinks: visibleAdminLinks });
+  const groupBySection: Record<string, NavLink[]> = {
+    catalogos: visibleCatalogLinks,
+    catalogos_inspeccion: visibleInspectionCatalogLinks,
+    gestiones: visibleGestionCatalogLinks,
+    operaciones: visibleOperationLinks,
+    administracion: visibleAdminLinks,
+  };
+  for (const g of navGroups) {
+    const links = groupBySection[g.section];
+    if (links && links.length > 0) {
+      visibleGroups.push({ ...g, visibleLinks: links });
+    }
   }
 
   return {
     visibleMainLinks,
     visibleCatalogLinks,
     visibleInspectionCatalogLinks,
+    visibleGestionCatalogLinks,
     visibleOperationLinks,
     visibleAdminLinks,
     visibleGroups,

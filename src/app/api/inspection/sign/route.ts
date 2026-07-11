@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminGraphqlRequest } from "@/lib/nhost/admin-graphql";
+import { createAdminClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
 /**
  * API route para que el cliente (magic link) guarde su firma.
  * Recibe: { sessionId, role, signatureDataUrl (base64 PNG) }
- * 1. Sube la imagen a Nhost Storage con admin secret
- * 2. Crea el registro en inspection_signatures con admin secret
+ * 1. Sube la imagen a Supabase Storage
+ * 2. Crea el registro en inspection_signatures
  */
 export async function POST(request: NextRequest) {
   try {
@@ -15,75 +15,54 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
     }
 
-    const adminSecret = process.env.NHOST_ADMIN_SECRET;
-    if (!adminSecret) {
-      return NextResponse.json({ error: "Falta admin secret" }, { status: 500 });
-    }
+    const supabase = createAdminClient();
 
-    const subdomain = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN;
-    const region = process.env.NEXT_PUBLIC_NHOST_REGION;
-    const storageUrl =
-      process.env.NEXT_PUBLIC_NHOST_STORAGE_URL ||
-      (subdomain && region
-        ? `https://${subdomain}.storage.${region}.nhost.run`
-        : null);
-    if (!storageUrl) {
-      return NextResponse.json({ error: "Storage URL no configurado" }, { status: 500 });
-    }
-
-    // 1. Convertir base64 a blob y subir a Storage
+    // 1. Convertir base64 a buffer y subir a Storage
     const base64Response = await fetch(signatureDataUrl);
     const blob = await base64Response.blob();
-    const file = new File([blob], `signature_${role}_${Date.now()}.png`, { type: "image/png" });
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    const filePath = `signatures/signature_${role}_${Date.now()}.png`;
 
-    const uploadFormData = new FormData();
-    uploadFormData.append("file[]", file);
+    const { error: uploadError } = await supabase.storage
+      .from("inspection-evidences")
+      .upload(filePath, buffer, { contentType: "image/png" });
 
-    const uploadRes = await fetch(`${storageUrl}/v1/files`, {
-      method: "POST",
-      headers: { "x-hasura-admin-secret": adminSecret },
-      body: uploadFormData,
-    });
-
-    if (!uploadRes.ok) {
-      const text = await uploadRes.text().catch(() => "");
-      logger.error("Sign API: upload falló", new Error(`HTTP ${uploadRes.status}`), {
+    if (uploadError) {
+      logger.error("Sign API: upload falló", new Error(uploadError.message), {
         component: "inspection-sign-route",
         action: "storage.upload",
-        metadata: { status: uploadRes.status, body: text.slice(0, 200) },
+        metadata: { error: uploadError.message },
       });
       return NextResponse.json({ error: "Error al subir firma" }, { status: 500 });
     }
 
-    const uploadData = (await uploadRes.json()) as { processedFiles?: { id: string }[] };
-    const fileId = uploadData.processedFiles?.[0]?.id;
-    if (!fileId) {
-      return NextResponse.json({ error: "No se recibió ID del archivo" }, { status: 500 });
-    }
+    const { data: urlData } = supabase.storage
+      .from("inspection-evidences")
+      .getPublicUrl(filePath);
 
-    const signatureUrl = `${storageUrl}/v1/files/${fileId}`;
+    const signatureUrl = urlData.publicUrl;
 
     // 2. Crear registro en inspection_signatures
-    const mutation = `
-      mutation CreateSignature($object: inspection_signatures_insert_input!) {
-        insert_inspection_signatures_one(object: $object) {
-          id role signature_url signed_at
-        }
-      }
-    `;
-    const data = await adminGraphqlRequest<{ insert_inspection_signatures_one: { id: string; role: string; signature_url: string; signed_at: string } }>(
-      mutation,
-      {
-        object: {
-          session_id: sessionId,
-          role,
-          signature_url: signatureUrl,
-          signed_at: new Date().toISOString(),
-        },
-      }
-    );
+    const { data: signature, error: insertError } = await supabase
+      .from("inspection_signatures")
+      .insert({
+        session_id: sessionId,
+        role,
+        signature_url: signatureUrl,
+        signed_at: new Date().toISOString(),
+      })
+      .select("id, role, signature_url, signed_at")
+      .single();
 
-    return NextResponse.json({ signature: data.insert_inspection_signatures_one });
+    if (insertError) {
+      logger.error("Sign API: insert falló", new Error(insertError.message), {
+        component: "inspection-sign-route",
+        action: "insert.signature",
+      });
+      return NextResponse.json({ error: "Error al guardar firma" }, { status: 500 });
+    }
+
+    return NextResponse.json({ signature });
   } catch (err) {
     logger.error("API /api/inspection/sign error", err as Error, {
       component: "inspection-sign-route",

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
-import { getNhostClient } from "@/lib/nhost/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
@@ -22,7 +22,7 @@ type OnboardingInput = z.infer<typeof onboardingSchema>;
 export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const nhost = getNhostClient();
+  const supabase = getSupabaseClient();
 
   const {
     register,
@@ -35,21 +35,24 @@ export default function OnboardingPage() {
 
   const onSubmit = async (data: OnboardingInput) => {
     setIsLoading(true);
-    let session = null;
+    let userId: string | null = null;
     try {
-      session = nhost.getUserSession();
-      if (!session?.user) {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+      if (!authUser) {
         toast.error("Sesión no válida. Por favor inicia sesión.");
         router.push("/login");
         return;
       }
+      userId = authUser.id;
 
       const response = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companyName: data.companyName,
-          userId: session.user.id,
+          userId: authUser.id,
         }),
       });
 
@@ -69,7 +72,7 @@ export default function OnboardingPage() {
         action: "createCompany",
         metadata: {
           companyName: data.companyName,
-          userId: session?.user?.id,
+          userId,
         },
       });
       toast.error(error.message || "Ocurrió un error inesperado");

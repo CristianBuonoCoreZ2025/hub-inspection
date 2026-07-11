@@ -1,0 +1,619 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  Save,
+  Eye,
+  Code2,
+  LayoutTemplate,
+  Monitor,
+  Undo2,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { getGestionScreens, updateGestionScreen } from "@/services/gestion-screens";
+
+import {
+  type ScreenField,
+  type FieldCategory,
+  widthClass,
+  createField,
+  OWN_FIELD_TYPES,
+  CLAIM_ENTITIES,
+  ACTION_ENTITIES,
+  COMPLEX_ENTITIES,
+} from "./types";
+import { PaletteItem } from "./PaletteItem";
+import { SortableFieldCard } from "./SortableFieldCard";
+import { FieldPropertiesPanel } from "./FieldPropertiesPanel";
+import { FieldPreview } from "./FieldPreview";
+
+type ViewMode = "design" | "preview" | "json";
+
+export default function ScreenBuilderPage() {
+  const params = useParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const screenId = params.screenId as string;
+
+  const [fields, setFields] = useState<ScreenField[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeDrag, setActiveDrag] = useState<{ type: string; label: string; icon: string } | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("design");
+  const [dirty, setDirty] = useState(false);
+
+  const { data: screens, isLoading } = useQuery({
+    queryKey: ["gestion-screens"],
+    queryFn: () => getGestionScreens(),
+  });
+
+  const screen = screens?.find((s) => s.id === screenId);
+
+  // Cargar campos desde la pantalla
+  useEffect(() => {
+    if (screen) {
+      const loaded = Array.isArray(screen.form_schema?.fields)
+        ? (screen.form_schema.fields as ScreenField[])
+        : [];
+      setFields(loaded);
+      setDirty(false);
+    }
+  }, [screen?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveMut = useMutation({
+    mutationFn: ({ id, schema }: { id: string; schema: Record<string, unknown> }) =>
+      updateGestionScreen(id, schema),
+    onSuccess: () => {
+      toast.success("Pantalla guardada");
+      queryClient.invalidateQueries({ queryKey: ["gestion-screens"] });
+      setDirty(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Sensores para drag-and-drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  // ═══ Operaciones sobre campos ═══
+
+  const addField = useCallback((category: FieldCategory, type: string, label: string) => {
+    const newField = createField(category, type, label);
+    setFields((prev) => [...prev, newField]);
+    setSelectedId(newField.id);
+    setDirty(true);
+  }, []);
+
+  const updateField = useCallback((id: string, updates: Partial<ScreenField>) => {
+    setFields((prev) => prev.map((f) => (f.id === id ? { ...f, ...updates } : f)));
+    setDirty(true);
+  }, []);
+
+  const removeField = useCallback((id: string) => {
+    setFields((prev) => prev.filter((f) => f.id !== id));
+    setSelectedId((prev) => (prev === id ? null : prev));
+    setDirty(true);
+  }, []);
+
+  const reorderFields = useCallback((oldIndex: number, newIndex: number) => {
+    setFields((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(oldIndex, 1);
+      next.splice(newIndex, 0, moved);
+      return next;
+    });
+    setDirty(true);
+  }, []);
+
+  const duplicateField = useCallback((id: string) => {
+    setFields((prev) => {
+      const idx = prev.findIndex((f) => f.id === id);
+      if (idx === -1) return prev;
+      const orig = prev[idx];
+      const copy: ScreenField = {
+        ...orig,
+        id: `${orig.type}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        label: `${orig.label} (copia)`,
+      };
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      setSelectedId(copy.id);
+      return next;
+    });
+    setDirty(true);
+  }, []);
+
+  // ═══ DnD ═══
+
+  const onDragStart = (e: DragStartEvent) => {
+    const data = e.active.data.current;
+    if (data?.source === "palette") {
+      // Buscar info del item en catálogos
+      const all = [...OWN_FIELD_TYPES, ...CLAIM_ENTITIES, ...ACTION_ENTITIES, ...COMPLEX_ENTITIES];
+      const item = all.find((t) => t.code === data.code);
+      if (item) setActiveDrag({ type: data.code, label: item.label, icon: item.icon });
+    } else if (data?.source === "canvas") {
+      const field = fields.find((f) => f.id === e.active.id);
+      if (field) {
+        const all = [...OWN_FIELD_TYPES, ...CLAIM_ENTITIES, ...ACTION_ENTITIES, ...COMPLEX_ENTITIES];
+        const item = all.find((t) => t.code === field.type);
+        setActiveDrag({ type: field.type, label: field.label, icon: item?.icon || "□" });
+      }
+    }
+  };
+
+  const onDragEnd = (e: DragEndEvent) => {
+    setActiveDrag(null);
+    const { active, over } = e;
+    if (!over) return;
+
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    // Drop desde paleta → agregar campo
+    if (activeData?.source === "palette") {
+      const code = activeData.code as string;
+      const isOwn = OWN_FIELD_TYPES.some((t) => t.code === code);
+      const isClaim = CLAIM_ENTITIES.some((t) => t.code === code);
+      const isAction = ACTION_ENTITIES.some((t) => t.code === code);
+      const isComplex = COMPLEX_ENTITIES.some((t) => t.code === code);
+
+      const all = [...OWN_FIELD_TYPES, ...CLAIM_ENTITIES, ...ACTION_ENTITIES, ...COMPLEX_ENTITIES];
+      const item = all.find((t) => t.code === code);
+      if (!item) return;
+
+      let category: FieldCategory = "own";
+      if (isClaim || isAction) category = "simple_entity";
+      if (isComplex) category = "complex_entity";
+
+      addField(category, code, item.label);
+
+      // Si se soltó sobre un campo existente, insertar antes de él
+      if (overData?.source === "canvas" && overData.fieldId) {
+        const overIdx = fields.findIndex((f) => f.id === overData.fieldId);
+        if (overIdx >= 0) {
+          // Mover el último (recién agregado) a la posición overIdx
+          setFields((prev) => {
+            const next = [...prev];
+            const last = next.pop()!;
+            next.splice(overIdx, 0, last);
+            return next;
+          });
+        }
+      }
+      return;
+    }
+
+    // Reorder dentro del canvas
+    if (activeData?.source === "canvas" && overData?.source === "canvas") {
+      const oldIndex = fields.findIndex((f) => f.id === active.id);
+      const newIndex = fields.findIndex((f) => f.id === overData.fieldId);
+      if (oldIndex >= 0 && newIndex >= 0 && oldIndex !== newIndex) {
+        reorderFields(oldIndex, newIndex);
+      }
+    }
+  };
+
+  const handleSave = () => {
+    if (!screen) return;
+    saveMut.mutate({ id: screen.id, schema: { fields } });
+  };
+
+  const handleBack = () => {
+    if (dirty && !confirm("Hay cambios sin guardar. ¿Salir de todas formas?")) return;
+    router.push("/dashboard/catalogos/pantallas");
+  };
+
+  const selectedField = fields.find((f) => f.id === selectedId) || null;
+  const dateFields = fields.filter((f) => f.type === "date" && f.id !== selectedId);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center text-muted-foreground">
+        Cargando pantalla...
+      </div>
+    );
+  }
+
+  if (!screen) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-3 text-muted-foreground">
+        <Monitor className="h-12 w-12 opacity-30" />
+        <p>Pantalla no encontrada</p>
+        <Button onClick={() => router.push("/dashboard/catalogos/pantallas")} className="btn-cancel btn-sm">
+          <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Volver
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
+      {/* ═══════════════════════════════════════════════════════════
+          Top Bar
+          ═══════════════════════════════════════════════════════════ */}
+      <header className="flex h-12 shrink-0 items-center justify-between border-b bg-card px-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleBack}
+            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
+            title="Volver"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+              <LayoutTemplate className="h-4 w-4" />
+            </div>
+            <div className="leading-tight">
+              <h1 className="text-[13px] font-semibold">{screen.name}</h1>
+              <p className="text-[10px] text-muted-foreground font-mono">{screen.code}</p>
+            </div>
+          </div>
+          {dirty && (
+            <span className="ml-2 flex items-center gap-1 text-[10px] text-amber-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Sin guardar
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Toggle vista */}
+          <div className="flex items-center rounded-md border bg-muted/30 p-0.5">
+            {([
+              { mode: "design" as ViewMode, icon: LayoutTemplate, label: "Diseño" },
+              { mode: "preview" as ViewMode, icon: Eye, label: "Vista" },
+              { mode: "json" as ViewMode, icon: Code2, label: "JSON" },
+            ]).map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  viewMode === mode
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {dirty && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (screen) {
+                  const loaded = Array.isArray(screen.form_schema?.fields)
+                    ? (screen.form_schema.fields as ScreenField[])
+                    : [];
+                  setFields(loaded);
+                  setDirty(false);
+                }
+              }}
+              className="btn-cancel btn-sm"
+              title="Deshacer cambios"
+            >
+              <Undo2 className="h-3.5 w-3.5 mr-1" /> Revertir
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={saveMut.isPending || !dirty}
+            className="btn-save btn-sm"
+          >
+            <Save className="h-3.5 w-3.5 mr-1" />
+            {saveMut.isPending ? "Guardando" : "Guardar"}
+          </Button>
+        </div>
+      </header>
+
+      {/* ═══════════════════════════════════════════════════════════
+          Cuerpo: 3 paneles
+          ═══════════════════════════════════════════════════════════ */}
+      {viewMode === "json" ? (
+        <div className="flex-1 overflow-auto bg-zinc-950 p-6">
+          <pre className="text-[11px] text-zinc-300 font-mono leading-relaxed">
+            {JSON.stringify({ fields }, null, 2)}
+          </pre>
+        </div>
+      ) : viewMode === "preview" ? (
+        <PreviewMode fields={fields} screenName={screen.name} />
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+        >
+          <div className="flex flex-1 overflow-hidden">
+            {/* ─── Panel izquierdo: Paleta ─── */}
+            <aside className="flex w-[260px] shrink-0 flex-col border-r bg-muted/20">
+              <div className="border-b px-3 py-2">
+                <p className="text-[11px] font-semibold text-muted-foreground">Componentes</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Arrastra al lienzo →</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                {/* Campos propios */}
+                <PaletteSection title="Campos propios" subtitle="Editables por el usuario">
+                  {OWN_FIELD_TYPES.map((t) => (
+                    <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                  ))}
+                </PaletteSection>
+
+                {/* Datos del siniestro */}
+                <PaletteSection title="Datos del siniestro" subtitle="Solo lectura">
+                  {CLAIM_ENTITIES.map((t) => (
+                    <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                  ))}
+                </PaletteSection>
+
+                {/* Datos de la gestión */}
+                <PaletteSection title="Datos de la gestión" subtitle="Solo lectura">
+                  {ACTION_ENTITIES.map((t) => (
+                    <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                  ))}
+                </PaletteSection>
+
+                {/* Entidades complejas */}
+                <PaletteSection title="Entidades complejas" subtitle="Solo lectura · Estructuras">
+                  {COMPLEX_ENTITIES.map((t) => (
+                    <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                  ))}
+                </PaletteSection>
+              </div>
+            </aside>
+
+            {/* ─── Panel central: Canvas ─── */}
+            <main className="flex flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+              {/* Toolbar del canvas */}
+              <div className="flex h-9 shrink-0 items-center justify-between border-b bg-card px-4">
+                <div className="flex items-center gap-3">
+                  <p className="text-[11px] font-medium text-muted-foreground">Lienzo</p>
+                  <span className="text-[10px] text-muted-foreground">
+                    {fields.length} campo{fields.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border bg-muted px-1 py-0.5 text-[9px]">Espacio</kbd>
+                    arrastrar
+                  </span>
+                </div>
+              </div>
+
+              {/* Canvas scrollable */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {/* "Hoja" del formulario */}
+                <div className="mx-auto max-w-3xl rounded-xl border bg-card shadow-sm">
+                  <div className="border-b px-5 py-3">
+                    <p className="text-[13px] font-semibold">{screen.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{screen.description || "Vista previa del formulario"}</p>
+                  </div>
+
+                  {fields.length === 0 ? (
+                    <DropEmptyZone onAdd={addField} />
+                  ) : (
+                    <div className="grid grid-cols-12 gap-3 p-5">
+                      {fields.map((field) => (
+                        <div key={field.id} className={widthClass(field.width)}>
+                          <SortableFieldCard
+                            field={field}
+                            selected={selectedId === field.id}
+                            onSelect={() => setSelectedId(field.id)}
+                            onRemove={() => removeField(field.id)}
+                            onDuplicate={() => duplicateField(field.id)}
+                          />
+                        </div>
+                      ))}
+
+                      {/* Drop zone al final */}
+                      <div className="col-span-12">
+                        <DropZone />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </main>
+
+            {/* ─── Panel derecho: Propiedades ─── */}
+            <aside className="flex w-[300px] shrink-0 flex-col border-l bg-muted/20">
+              <div className="border-b px-3 py-2">
+                <p className="text-[11px] font-semibold text-muted-foreground">Propiedades</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3">
+                {selectedField ? (
+                  <FieldPropertiesPanel
+                    field={selectedField}
+                    allFields={fields}
+                    dateFields={dateFields}
+                    onUpdate={(updates) => updateField(selectedField.id, updates)}
+                    onRemove={() => removeField(selectedField.id)}
+                    onDuplicate={() => duplicateField(selectedField.id)}
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+                    <LayoutTemplate className="h-8 w-8 opacity-20" />
+                    <p className="text-[11px] px-4">
+                      Selecciona un campo del lienzo para editar sus propiedades
+                    </p>
+                  </div>
+                )}
+              </div>
+            </aside>
+          </div>
+
+          {/* Drag overlay */}
+          <DragOverlay>
+            {activeDrag ? (
+              <div className="flex items-center gap-2 rounded-lg border-2 border-primary bg-card px-3 py-2 shadow-lg opacity-90">
+                <span className="text-[14px]">{activeDrag.icon}</span>
+                <span className="text-[12px] font-medium">{activeDrag.label}</span>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Sección de paleta
+// ═══════════════════════════════════════════════════════════════
+
+function PaletteSection({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold mb-0.5">{title}</p>
+      <p className="text-[9px] text-muted-foreground mb-2">{subtitle}</p>
+      <div className="space-y-1.5">{children}</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Zona de drop vacía
+// ═══════════════════════════════════════════════════════════════
+
+function DropEmptyZone({ onAdd }: { onAdd: (cat: FieldCategory, type: string, label: string) => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/30">
+        <LayoutTemplate className="h-8 w-8 text-muted-foreground/40" />
+      </div>
+      <div>
+        <p className="text-[13px] font-medium text-muted-foreground">El lienzo está vacío</p>
+        <p className="text-[11px] text-muted-foreground/70 mt-1">
+          Arrastra componentes desde el panel izquierdo
+        </p>
+      </div>
+      <div className="flex flex-wrap justify-center gap-1.5 max-w-sm">
+        {OWN_FIELD_TYPES.slice(0, 4).map((t) => (
+          <button
+            key={t.code}
+            onClick={() => onAdd("own", t.code, t.label)}
+            className="flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-[11px] hover:border-primary/40 hover:bg-accent/50 transition-colors"
+          >
+            <span>{t.icon}</span> {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Drop zone al final del canvas
+// ═══════════════════════════════════════════════════════════════
+
+function DropZone() {
+  return (
+    <div className="flex items-center justify-center rounded-lg border border-dashed border-border/50 py-3 text-[10px] text-muted-foreground/50">
+      Suelta aquí para agregar al final
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Modo vista previa
+// ═══════════════════════════════════════════════════════════════
+
+function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName: string }) {
+  const ownFields = fields.filter((f) => f.category === "own");
+  const simpleEntities = fields.filter((f) => f.category === "simple_entity");
+  const complexEntities = fields.filter((f) => f.category === "complex_entity");
+
+  return (
+    <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 p-6">
+      <div className="mx-auto max-w-3xl space-y-4">
+        <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <h2 className="text-base font-semibold mb-1">{screenName}</h2>
+          <p className="text-[12px] text-muted-foreground mb-4">Vista previa del formulario</p>
+
+          {simpleEntities.length > 0 && (
+            <section className="mb-4">
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
+                Datos del Siniestro / Gestión
+              </h4>
+              <div className="grid grid-cols-12 gap-3">
+                {simpleEntities.map((field) => (
+                  <div key={field.id} className={widthClass(field.width)}>
+                    <FieldPreview field={field} allFields={fields} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {ownFields.length > 0 && (
+            <section className="mb-4">
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
+                Formulario
+              </h4>
+              <div className="grid grid-cols-12 gap-3">
+                {ownFields.map((field) => (
+                  <div key={field.id} className={widthClass(field.width)}>
+                    <FieldPreview field={field} allFields={fields} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {complexEntities.length > 0 && (
+            <section>
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
+                Entidades Complejas
+              </h4>
+              <div className="space-y-3">
+                {complexEntities.map((field) => (
+                  <div key={field.id}>
+                    <FieldPreview field={field} allFields={fields} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {fields.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <LayoutTemplate className="h-10 w-10 opacity-20" />
+              <p className="text-[12px] mt-2">Sin campos para previsualizar</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

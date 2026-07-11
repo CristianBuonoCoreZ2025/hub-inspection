@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createEvidence, deleteEvidence } from "@/services/inspections";
-import { uploadFileToStorage } from "@/lib/nhost/storage-upload";
+import { uploadFileToStorage } from "@/lib/supabase/storage-upload";
 import { toast } from "sonner";
 import { Upload, Trash2, ImageIcon, Video, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -1,0 +1,81 @@
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
+const graphqlUrl = process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL!;
+const url = new URL(graphqlUrl);
+url.hostname = url.hostname.replace(/\.graphql\./, ".hasura.");
+url.pathname = "/v1/metadata";
+const metadataUrl = url.toString();
+const adminSecret = process.env.NHOST_ADMIN_SECRET!;
+
+async function createPermission(table: string, role: string, op: "select" | "insert" | "update" | "delete", columns: string = "*") {
+  const opKey = `pg_create_${op}_permission`;
+  try {
+    const res = await fetch(metadataUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-hasura-admin-secret": adminSecret },
+      body: JSON.stringify({
+        type: opKey,
+        args: {
+          source: "default",
+          table: { schema: "public", name: table },
+          role,
+          permission: op === "select"
+            ? { columns, filter: {}, allow_aggregations: false }
+            : op === "insert"
+            ? { columns, check: {} }
+            : { columns, filter: {} },
+        },
+      }),
+    });
+    const text = await res.text();
+    let data: any;
+    try { data = JSON.parse(text); } catch { console.log(`${op} ${table}.${role}: HTTP ${res.status} (no JSON)`); return; }
+    const status = data.message === "success" ? "OK" : data.error?.code === "already-exists" ? "ya existe" : JSON.stringify(data.error || data.message);
+    console.log(`${op} ${table}.${role}: ${status}`);
+  } catch (e: any) {
+    console.log(`${op} ${table}.${role}: ERROR ${e.message}`);
+  }
+}
+
+(async () => {
+  console.log("metadata URL:", metadataUrl);
+
+  // Permisos completos para gestion_screens (user)
+  await createPermission("gestion_screens", "user", "select");
+  await createPermission("gestion_screens", "user", "insert");
+  await createPermission("gestion_screens", "user", "update");
+  await createPermission("gestion_screens", "user", "delete");
+
+  // Permisos para action_features (user)
+  await createPermission("action_features", "user", "select");
+  await createPermission("action_features", "user", "insert");
+  await createPermission("action_features", "user", "update");
+  await createPermission("action_features", "user", "delete");
+
+  // Permisos para characteristic_screens (user)
+  await createPermission("characteristic_screens", "user", "select");
+  await createPermission("characteristic_screens", "user", "insert");
+  await createPermission("characteristic_screens", "user", "update");
+  await createPermission("characteristic_screens", "user", "delete");
+
+  // Permisos para claim_coverages (user)
+  await createPermission("claim_coverages", "user", "select");
+  await createPermission("claim_coverages", "user", "insert");
+  await createPermission("claim_coverages", "user", "update");
+  await createPermission("claim_coverages", "user", "delete");
+
+  // Permisos para claim_reserves (user)
+  await createPermission("claim_reserves", "user", "select");
+  await createPermission("claim_reserves", "user", "insert");
+  await createPermission("claim_reserves", "user", "update");
+  await createPermission("claim_reserves", "user", "delete");
+
+  // Permisos para reserve_coverages (user)
+  await createPermission("reserve_coverages", "user", "select");
+  await createPermission("reserve_coverages", "user", "insert");
+  await createPermission("reserve_coverages", "user", "update");
+  await createPermission("reserve_coverages", "user", "delete");
+
+  console.log("\nListo.");
+})();

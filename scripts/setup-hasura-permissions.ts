@@ -51,6 +51,14 @@ const TABLES = [
   "lookup_catalog",
   "events",
   "document_types",
+  // Sistema de gestiones
+  "action_type",
+  "action_feature",
+  "action_template",
+  "action_template_claim_status",
+  "claim_status",
+  // Plantillas de documentos
+  "document_templates",
 ];
 
 const ROLE = "user";

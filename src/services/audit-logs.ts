@@ -1,63 +1,39 @@
-import { graphqlRequest } from "@/lib/nhost/graphql";
+import { fetchAll } from "@/lib/supabase/db";
 import type { AuditLog } from "@/types";
 
-const AUDIT_LOG_FIELDS = `
-  id
-  table_name
-  record_id
-  action
-  old_data
-  new_data
-  performed_by
-  company_id
-  created_at
-`;
+const AUDIT_LOG_FIELDS =
+  "id, table_name, record_id, action, old_data, new_data, performed_by, company_id, created_at";
 
 export async function getAuditLogs(
   tableName: string,
   recordId: string,
   companyId?: string
 ) {
-  const companyFilter = companyId
-    ? `, company_id: { _eq: "${companyId}" }`
-    : "";
+  const eq: Record<string, string> = {
+    table_name: tableName,
+    record_id: recordId,
+  };
+  if (companyId) {
+    eq.company_id = companyId;
+  }
 
-  const query = `
-    query GetAuditLogs {
-      audit_logs(
-        where: {
-          table_name: { _eq: "${tableName}" }
-          record_id: { _eq: "${recordId}" }
-          ${companyFilter}
-        }
-        order_by: { created_at: desc }
-      ) {
-        ${AUDIT_LOG_FIELDS}
-      }
-    }
-  `;
-
-  const data = await graphqlRequest<{ audit_logs: AuditLog[] }>(query);
-  return data.audit_logs;
+  return fetchAll<AuditLog>("audit_logs", {
+    select: AUDIT_LOG_FIELDS,
+    eq,
+    order: { column: "created_at", ascending: false },
+  });
 }
 
 export async function getRecentAuditLogs(companyId?: string, limit = 10) {
-  const companyFilter = companyId
-    ? `company_id: { _eq: "${companyId}" }`
-    : "";
+  const eq: Record<string, string> = {};
+  if (companyId) {
+    eq.company_id = companyId;
+  }
 
-  const query = `
-    query GetRecentAuditLogs {
-      audit_logs(
-        where: { ${companyFilter} }
-        order_by: { created_at: desc }
-        limit: ${limit}
-      ) {
-        ${AUDIT_LOG_FIELDS}
-      }
-    }
-  `;
-
-  const data = await graphqlRequest<{ audit_logs: AuditLog[] }>(query);
-  return data.audit_logs;
+  return fetchAll<AuditLog>("audit_logs", {
+    select: AUDIT_LOG_FIELDS,
+    eq,
+    order: { column: "created_at", ascending: false },
+    limit,
+  });
 }

@@ -1,77 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/server";
 
 /**
- * API route server-side para subir archivos a Nhost Storage.
- * Usa el admin secret para evitar problemas de permisos del rol 'user'
- * en la tabla storage.files.
+ * API route server-side para subir archivos a Supabase Storage.
+ * Usa service role key para evitar problemas de permisos.
  *
  * Recibe multipart/form-data con campo "file" (archivo único).
  * Devuelve { url } con la URL pública del archivo subido.
  */
 export async function POST(request: NextRequest) {
   try {
-    const adminSecret = process.env.NHOST_ADMIN_SECRET;
-    if (!adminSecret) {
-      return NextResponse.json({ error: "Falta NHOST_ADMIN_SECRET" }, { status: 500 });
-    }
-
-    const subdomain = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN;
-    const region = process.env.NEXT_PUBLIC_NHOST_REGION;
-    const storageUrl =
-      process.env.NEXT_PUBLIC_NHOST_STORAGE_URL ||
-      (subdomain && region
-        ? `https://${subdomain}.storage.${region}.nhost.run`
-        : null);
-    if (!storageUrl) {
-      return NextResponse.json({ error: "Storage URL no configurado" }, { status: 500 });
-    }
-
     const formData = await request.formData();
     const file = formData.get("file");
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "No se encontró el archivo" }, { status: 400 });
     }
 
-    // Reenviar a Nhost Storage con admin secret
-    const uploadFormData = new FormData();
-    uploadFormData.append("file[]", file);
+    const supabase = createAdminClient();
+    const filePath = `inspection-evidences/${Date.now()}_${file.name}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    const res = await fetch(`${storageUrl}/v1/files`, {
-      method: "POST",
-      headers: {
-        "x-hasura-admin-secret": adminSecret,
-      },
-      body: uploadFormData,
-    });
+    const { error: uploadError } = await supabase.storage
+      .from("inspection-evidences")
+      .upload(filePath, buffer, {
+        contentType: file.type || "application/octet-stream",
+      });
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      logger.error("Upload API: Storage respondió error", new Error(`HTTP ${res.status}`), {
+    if (uploadError) {
+      logger.error("Upload API: Storage error", new Error(uploadError.message), {
         component: "upload-route",
         action: "storage.upload",
-        metadata: { status: res.status, body: text.slice(0, 300) },
+        metadata: { error: uploadError.message },
       });
       return NextResponse.json(
-        { error: `Error al subir archivo (${res.status})` },
-        { status: res.status }
-      );
-    }
-
-    const data = (await res.json()) as {
-      processedFiles?: { id: string }[];
-      error?: { message: string };
-    };
-
-    const fileId = data.processedFiles?.[0]?.id;
-    if (!fileId) {
-      return NextResponse.json(
-        { error: data.error?.message || "No se recibió ID del archivo" },
+        { error: `Error al subir archivo: ${uploadError.message}` },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ url: `${storageUrl}/v1/files/${fileId}` });
+    const { data: urlData } = supabase.storage
+      .from("inspection-evidences")
+      .getPublicUrl(filePath);
+
+    return NextResponse.json({ url: urlData.publicUrl, fileId: filePath });
   } catch (err) {
     logger.error("Upload API error", err as Error, {
       component: "upload-route",

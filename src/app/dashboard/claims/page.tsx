@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { Pagination } from "@/components/ui/pagination";
 import { getClaims, getClaimsParticipants, createClaimMinimal, deleteClaim, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
@@ -838,6 +840,8 @@ export default function ClaimsPage() {
     const dateMatch = (!dateFrom || (c.claim_date && c.claim_date >= dateFrom)) && (!dateTo || (c.claim_date && c.claim_date <= dateTo));
     return textMatch && statusMatch && dateMatch;
   });
+
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(filtered);
 
   return (
     <div className="app-page">
@@ -2100,6 +2104,7 @@ export default function ClaimsPage() {
       </Dialog>
 
       <div className="app-panel">
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         <div className="app-data-table-wrap">
           <table className="app-data-table">
             <thead>
@@ -2120,7 +2125,7 @@ export default function ClaimsPage() {
               ) : filtered?.length === 0 ? (
                 <tr><td colSpan={8} className="text-center text-muted-foreground py-4">No se encontraron siniestros.</td></tr>
               ) : (
-                filtered?.map((claim) => (
+                paginatedData.map((claim) => (
                   <tr
                     key={claim.id}
                     className="cursor-pointer hover:bg-muted/40"
@@ -2172,6 +2177,7 @@ export default function ClaimsPage() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
     </div>
   );

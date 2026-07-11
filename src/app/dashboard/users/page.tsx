@@ -2,13 +2,18 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { getUsers, inviteUser, updateUser, deactivateUser } from "@/services/users";
 import { getCompanies } from "@/services/companies";
+import { getCountries } from "@/services/countries";
 import { setUserClients } from "@/services/user-clients";
 import { inviteUserSchema, type InviteUserInput } from "@/lib/validations";
 import type { Company, Profile, UserClient, UserRole } from "@/types";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, UserX, UserCheck, Users } from "lucide-react";
@@ -35,6 +40,7 @@ const roleLabels: Record<UserRole, string> = {
   internal: "Interno",
   adjuster: "Liquidador",
   inspector: "Inspector",
+  assistant: "Asistente",
   client_operator: "Operativo",
 };
 
@@ -42,6 +48,7 @@ const roleColors: Record<UserRole, string> = {
   internal: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
   adjuster: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
   inspector: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+  assistant: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300",
   client_operator: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
 };
 
@@ -49,11 +56,12 @@ const roleDescriptions: Record<UserRole, string> = {
   internal: "Administrador del sistema. Ve todo, edita todo, gestiona usuarios y empresas.",
   adjuster: "Liquidador asociado a uno o más clientes. Ve siniestros donde es el ajustador.",
   inspector: "Inspector asociado a uno o más clientes. Completa inspecciones donde está a cargo.",
+  assistant: "Asistente del liquidador. Realiza gestiones asignadas en los siniestros.",
   client_operator: "Operativo del cliente. Solo vista de los siniestros de su empresa.",
 };
 
 // Roles que requieren asignar clientes
-const rolesWithClients: UserRole[] = ["adjuster", "inspector", "client_operator"];
+const rolesWithClients: UserRole[] = ["adjuster", "inspector", "assistant", "client_operator"];
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
@@ -63,13 +71,24 @@ export default function UsersPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+  const [editForm, setEditForm] = useState({
+    fullName: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    rut: "",
+    countryId: "",
+    role: "adjuster" as UserRole,
+  });
 
   const form = useForm<InviteUserInput>({
     resolver: standardSchemaResolver(inviteUserSchema),
     defaultValues: { email: "", fullName: "", role: "adjuster", companyId: "", clientIds: [] },
   });
 
-  const selectedRole = form.watch("role");
+  const watchedRole = useWatch({ control: form.control, name: "role" });
+  const selectedRole = editingId ? editForm.role : watchedRole;
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
@@ -79,6 +98,11 @@ export default function UsersPage() {
   const { data: companies } = useQuery({
     queryKey: ["companies"],
     queryFn: () => getCompanies(),
+  });
+
+  const { data: countries } = useQuery({
+    queryKey: ["countries"],
+    queryFn: () => getCountries(),
   });
 
   const inviteMutation = useMutation({
@@ -101,9 +125,9 @@ export default function UsersPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, userId, role, clientIds }: { id: string; userId: string; role: UserRole; clientIds: string[] }) => {
-      await updateUser(id, { role });
-      if (rolesWithClients.includes(role)) {
+    mutationFn: async ({ id, userId, data, clientIds }: { id: string; userId: string; data: Partial<Profile>; clientIds: string[] }) => {
+      await updateUser(id, data);
+      if (rolesWithClients.includes(data.role as UserRole)) {
         await setUserClients(userId, clientIds);
       }
     },
@@ -132,7 +156,16 @@ export default function UsersPage() {
       updateMutation.mutate({
         id: editingId,
         userId: editingUserId || "",
-        role: values.role,
+        data: {
+          full_name: editForm.fullName,
+          first_name: editForm.firstName || null,
+          last_name: editForm.lastName || null,
+          email: editForm.email,
+          phone: editForm.phone || null,
+          rut: editForm.rut || null,
+          country_id: editForm.countryId || null,
+          role: editForm.role,
+        },
         clientIds: selectedClientIds,
       });
     } else {
@@ -144,6 +177,14 @@ export default function UsersPage() {
   const filtered = users?.filter((u) =>
     [u.full_name, u.email].join(" ").toLowerCase().includes(search.toLowerCase())
   );
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
+    name: (u) => u.full_name,
+    email: (u) => u.email,
+    role: (u) => u.role,
+    status: (u) => u.is_active,
+  }, "name");
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
 
   const toggleClient = (companyId: string) => {
     setSelectedClientIds((prev) =>
@@ -163,7 +204,16 @@ export default function UsersPage() {
       companyId: user.company_id || "",
       clientIds: [],
     });
-    // Load existing user_clients
+    setEditForm({
+      fullName: user.full_name || "",
+      firstName: user.first_name || "",
+      lastName: user.last_name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      rut: user.rut || "",
+      countryId: user.country_id || "",
+      role: user.role,
+    });
     const existingClientIds = user.user_clients?.map((uc: { company_id: string }) => uc.company_id) || [];
     setSelectedClientIds(existingClientIds);
     setOpen(true);
@@ -173,6 +223,16 @@ export default function UsersPage() {
     setEditingId(null);
     setEditingUserId(null);
     form.reset({ email: "", fullName: "", role: "adjuster", companyId: "", clientIds: [] });
+    setEditForm({
+      fullName: "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      rut: "",
+      countryId: "",
+      role: "adjuster" as UserRole,
+    });
     setSelectedClientIds([]);
     setOpen(true);
   };
@@ -181,29 +241,20 @@ export default function UsersPage() {
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
-        <h1 className="app-page-title">Usuarios</h1>
-        <p className="app-page-lead">Gestión de usuarios y permisos del sistema.</p>
-      </header>
-
-      <div className="app-toolbar">
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar usuario..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="app-input h-7 w-full max-w-sm"
-          />
+      <div className="app-grid-header">
+        <h1 className="app-page-title shrink-0">Usuarios</h1>
+        <div className="app-grid-filters">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="app-input h-8 max-w-[180px]" />
         </div>
         {canCreate("users") && (
-          <Button onClick={openCreate} className="btn-create btn-sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Invitar
+          <Button onClick={openCreate} className="btn-create btn-sm shrink-0">
+            <Plus className="mr-2 h-4 w-4" /> Invitar
           </Button>
         )}
+      </div>
 
-        {/* ── MODAL Usuarios ── */}
+      {/* ── MODAL Usuarios ── */}
         <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
           <DialogContent className="modal-md" showCloseButton={false}>
             <div className="modal-header">
@@ -220,8 +271,83 @@ export default function UsersPage() {
 
             <div className="modal-body">
               <div className="modal-grid">
-                {!editingId && (
-                  <>
+                {editingId ? (
+                  <div key="edit-mode" className="contents">
+                    {/* ── Modo edición: campos completos ── */}
+                    <div className="modal-field">
+                      <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
+                      <Input
+                        className="app-input h-7"
+                        value={editForm.firstName ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                        placeholder="Juan"
+                      />
+                    </div>
+                    <div className="modal-field">
+                      <Label className="app-field-label">Apellido</Label>
+                      <Input
+                        className="app-input h-7"
+                        value={editForm.lastName ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                        placeholder="Pérez"
+                      />
+                    </div>
+                    <div className="modal-field modal-field-full">
+                      <Label className="app-field-label">Nombre completo <span className="text-red-500">*</span></Label>
+                      <Input
+                        className="app-input h-7"
+                        value={editForm.fullName ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                        placeholder="Juan Pérez"
+                      />
+                    </div>
+                    <div className="modal-field">
+                      <Label className="app-field-label">Email <span className="text-red-500">*</span></Label>
+                      <Input
+                        type="email"
+                        className="app-input h-7"
+                        value={editForm.email ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        placeholder="juan@empresa.cl"
+                      />
+                    </div>
+                    <div className="modal-field">
+                      <Label className="app-field-label">Teléfono</Label>
+                      <Input
+                        className="app-input h-7"
+                        value={editForm.phone ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        placeholder="+56 9 1234 5678"
+                      />
+                    </div>
+                    <div className="modal-field">
+                      <Label className="app-field-label">RUT</Label>
+                      <Input
+                        className="app-input h-7"
+                        value={editForm.rut ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, rut: e.target.value })}
+                        placeholder="12.345.678-9"
+                      />
+                    </div>
+                    <div className="modal-field">
+                      <Label className="app-field-label">País</Label>
+                      <Select
+                        value={editForm.countryId ?? ""}
+                        onValueChange={(v) => setEditForm({ ...editForm, countryId: v || "" })}
+                        items={countries?.map((c: { id: string; name: string }) => ({ value: c.id, label: c.name })) || []}
+                      >
+                        <SelectTrigger className="app-input h-7"><SelectValue placeholder="Seleccionar país" /></SelectTrigger>
+                        <SelectContent>
+                          {countries?.map((c: { id: string; name: string }) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ) : (
+                  <div key="create-mode" className="contents">
+                    {/* ── Modo creación: campos mínimos ── */}
                     <div className="modal-field modal-field-full">
                       <Label className="app-field-label">Nombre completo <span className="text-red-500">*</span></Label>
                       <Input {...form.register("fullName")} placeholder="Juan Pérez" className="app-input h-7" />
@@ -236,20 +362,26 @@ export default function UsersPage() {
                         <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
                 <div className="modal-field modal-field-full">
                   <Label className="app-field-label">Tipo de Usuario <span className="text-red-500">*</span></Label>
                   <Select
                     value={selectedRole}
                     onValueChange={(v) => {
-                      form.setValue("role", v as UserRole);
-                      if (!rolesWithClients.includes(v as UserRole)) setSelectedClientIds([]);
+                      const role = v as UserRole;
+                      if (editingId) {
+                        setEditForm({ ...editForm, role });
+                      } else {
+                        form.setValue("role", role);
+                      }
+                      if (!rolesWithClients.includes(role)) setSelectedClientIds([]);
                     }}
                     items={[
                       { value: "internal", label: "Interno (Administrador)" },
                       { value: "adjuster", label: "Liquidador" },
                       { value: "inspector", label: "Inspector" },
+                      { value: "assistant", label: "Asistente" },
                       { value: "client_operator", label: "Operativo (Cliente)" },
                     ]}
                   >
@@ -258,6 +390,7 @@ export default function UsersPage() {
                       <SelectItem value="internal">Interno (Administrador)</SelectItem>
                       <SelectItem value="adjuster">Liquidador</SelectItem>
                       <SelectItem value="inspector">Inspector</SelectItem>
+                      <SelectItem value="assistant">Asistente</SelectItem>
                       <SelectItem value="client_operator">Operativo (Cliente)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -326,18 +459,18 @@ export default function UsersPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
 
       <div className="app-panel">
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         <div className="app-data-table-wrap">
           <table className="app-data-table">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Tipo</th>
+                <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
+                <SortableTh sortKey="email" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Email</SortableTh>
+                <SortableTh sortKey="role" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Tipo</SortableTh>
                 <th>Clientes</th>
-                <th>Estado</th>
+                <SortableTh sortKey="status" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Estado</SortableTh>
                 <th className="w-[80px]"></th>
               </tr>
             </thead>
@@ -347,7 +480,7 @@ export default function UsersPage() {
               ) : filtered?.length === 0 ? (
                 <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron usuarios.</td></tr>
               ) : (
-                filtered?.map((user) => (
+                paginatedData.map((user) => (
                   <tr key={user.id}>
                     <td className="font-medium">
                       <div className="flex items-center gap-2">
@@ -389,6 +522,7 @@ export default function UsersPage() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
     </div>
   );

@@ -6,23 +6,25 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
-import { getNhostClient } from "@/lib/nhost/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { loginSchema, LoginInput } from "@/lib/validations";
 import { logger } from "@/lib/logger";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const nhost = getNhostClient();
+  const supabase = getSupabaseClient();
 
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: standardSchemaResolver(loginSchema),
@@ -36,32 +38,43 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginInput) => {
     setIsLoading(true);
     try {
-      const response = await nhost.auth.signInEmailPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
-      if (response.body.session) {
+      if (error) {
+        // Supabase Auth errors sometimes have empty .message — extract from the object
+        const errMsg =
+          error.message ||
+          (error as { msg?: string })?.msg ||
+          (error as { error_code?: string })?.error_code ||
+          "Credenciales inválidas";
+        throw new Error(errMsg);
+      }
+
+      if (authData.session) {
         toast.success("Sesión iniciada correctamente");
         router.push("/dashboard");
         router.refresh();
-      } else if (response.body.mfa) {
-        toast.info("Se requiere verificación MFA");
       } else {
         toast.error("Error al iniciar sesión");
       }
     } catch (err: unknown) {
-      const error = err as { body?: { message?: string }; status?: number; message?: string };
+      const error = err as { message?: string };
+      const displayMsg =
+        error.message && error.message !== "{}"
+          ? error.message
+          : "Credenciales inválidas. Verifica tu email y contraseña.";
       logger.error("Login failed", err instanceof Error ? err : new Error(String(err)), {
         component: "LoginPage",
-        action: "signInEmailPassword",
+        action: "signInWithPassword",
         metadata: {
           email: data.email,
-          errorBody: error.body,
-          errorStatus: error.status,
+          errorMessage: error.message,
         },
       });
-      toast.error(error.message || "Ocurrió un error inesperado");
+      toast.error(displayMsg);
     } finally {
       setIsLoading(false);
     }
@@ -104,11 +117,13 @@ export default function LoginPage() {
               <p className="text-sm text-destructive">{errors.password.message}</p>
             )}
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox id="remember" {...register("remember")} />
-            <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+          <div className="flex items-center">
+            <ToggleChip
+              active={Boolean(watch("remember"))}
+              onClick={(v) => setValue("remember", v)}
+            >
               Recordar sesión
-            </Label>
+            </ToggleChip>
           </div>
           <div className="flex flex-col gap-4 pt-2">
             <Button type="submit" className="w-full btn-save btn-lg-block" disabled={isLoading}>

@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSignatures, createSignature } from "@/services/inspections";
-import { uploadFileToStorage } from "@/lib/nhost/storage-upload";
+import { uploadFileToStorage } from "@/lib/supabase/storage-upload";
 import { toast } from "sonner";
 import { CheckCircle, User, ShieldCheck } from "lucide-react";
 

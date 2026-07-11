@@ -40,3 +40,34 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# temporary scripts (debug/check/fix one-off scripts)
+scripts/debug-*.cjs
+scripts/check-*.cjs
+scripts/fix-*.cjs
+scripts/test-*.cjs
+scripts/apply-migration-*.cjs
+scripts/audit-*.cjs
+scripts/migrate-*.cjs
+scripts/recreate-*.cjs
+scripts/retrack-*.cjs
+scripts/reload-*.cjs
+scripts/track-*.cjs
+scripts/scrape-*.cjs
+scripts/list-*.cjs
+scripts/screenshot*
+scripts/hasura-*.ts
+scripts/setup-hasura-*.ts
+
+# binary/temp files
+*.traineddata
+hasura-meta.json
+tmp-*
+tmp_*
+
+# screenshots
+screenshots/
+
+# database dumps
+migrations/supabase_data.sql
+migrations/supabase_schema.sql

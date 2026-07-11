@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAllPermissions,
@@ -13,9 +13,14 @@ import {
   userTypeLabels,
   type PermissionAction,
 } from "@/services/permissions";
+import {
+  getAllFieldPermissions,
+  upsertFieldPermission,
+} from "@/services/field-permissions";
+import { getFieldsForSection } from "@/lib/field-catalog";
 import type { UserTypePermission, UserRole, PermissionSection } from "@/types";
 import { toast } from "sonner";
-import { Shield, Check, Lock, Unlock, ChevronRight, ChevronDown } from "lucide-react";
+import { Check, Lock, Unlock, ChevronRight, ChevronDown, Settings2 } from "lucide-react";
 
 const userTypes: UserRole[] = ["internal", "adjuster", "inspector", "client_operator"];
 
@@ -24,10 +29,34 @@ type ColumnKey = "can_view" | "can_edit" | "can_create" | "can_delete";
 export default function PermisosPage() {
   const queryClient = useQueryClient();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
   const { data: permissions, isLoading } = useQuery({
     queryKey: ["permissions"],
     queryFn: getAllPermissions,
+  });
+
+  const { data: fieldPermissions } = useQuery({
+    queryKey: ["field-permissions"],
+    queryFn: getAllFieldPermissions,
+  });
+
+  const fieldPermMutation = useMutation({
+    mutationFn: ({
+      userType,
+      section,
+      fieldName,
+      canEdit,
+    }: {
+      userType: string;
+      section: string;
+      fieldName: string;
+      canEdit: boolean;
+    }) => upsertFieldPermission(userType, section, fieldName, canEdit),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["field-permissions"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const updateMutation = useMutation({
@@ -112,11 +141,40 @@ export default function PermisosPage() {
     });
   };
 
+  // Toggle expansión de campos de una sub-página
+  const toggleFieldExpand = (key: string) => {
+    setExpandedFields(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // Verificar si una sub-página tiene campos configurables
+  const hasFieldPermissions = (section: string): boolean => {
+    return getFieldsForSection(section) !== null;
+  };
+
+  // Obtener el valor actual de can_edit para un campo
+  const getFieldCanEdit = (
+    userType: string,
+    section: string,
+    fieldName: string
+  ): boolean => {
+    const perm = fieldPermissions?.find(
+      p => p.user_type === userType && p.section === section && p.field_name === fieldName
+    );
+    if (!perm) return true; // default: editable
+    return perm.can_edit;
+  };
+
   // Organizar permisos por tipo y sección
   const permissionsByType: Record<UserRole, Record<string, UserTypePermission>> = {
     internal: {},
     adjuster: {},
     inspector: {},
+    assistant: {},
     client_operator: {},
   };
 
@@ -129,10 +187,9 @@ export default function PermisosPage() {
   if (isLoading) {
     return (
       <div className="app-page">
-        <header className="app-page-header">
-          <h1 className="app-page-title">Permisos</h1>
-          <p className="app-page-lead">Cargando...</p>
-        </header>
+        <div className="app-grid-header">
+          <h1 className="app-page-title shrink-0">Permisos</h1>
+        </div>
       </div>
     );
   }
@@ -147,16 +204,9 @@ export default function PermisosPage() {
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
-        <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-muted-foreground" />
-          <h1 className="app-page-title">Permisos por tipo de usuario</h1>
-        </div>
-        <p className="app-page-lead">
-          Define qué secciones puede ver, editar, crear y eliminar cada tipo de usuario.
-          Los módulos con sub-páginas se pueden expandir para configurar permisos por pantalla.
-        </p>
-      </header>
+      <div className="app-grid-header">
+        <h1 className="app-page-title shrink-0">Permisos</h1>
+      </div>
 
       <div className="space-y-2">
         {userTypes.map((userType) => {
@@ -281,6 +331,18 @@ export default function PermisosPage() {
                               onToggle={(subPerm, col) => handleToggle(subPerm, col)}
                               onToggleRow={(subPerm, subSection, val) => handleToggleRow(subPerm, subSection, val)}
                               allColumns={allColumns}
+                              expandedFields={expandedFields}
+                              onToggleFieldExpand={toggleFieldExpand}
+                              hasFieldPermissions={hasFieldPermissions}
+                              getFieldCanEdit={getFieldCanEdit}
+                              onFieldToggle={(sectionName, fieldName, canEdit) =>
+                                fieldPermMutation.mutate({
+                                  userType,
+                                  section: sectionName,
+                                  fieldName,
+                                  canEdit,
+                                })
+                              }
                             />
                           )}
                         </SectionRow>
@@ -411,6 +473,11 @@ function SubPagesList({
   onToggle,
   onToggleRow,
   allColumns,
+  expandedFields,
+  onToggleFieldExpand,
+  hasFieldPermissions,
+  getFieldCanEdit,
+  onFieldToggle,
 }: {
   subPages: { section: string; label: string }[];
   userType: UserRole;
@@ -419,6 +486,11 @@ function SubPagesList({
   onToggle: (perm: UserTypePermission, col: ColumnKey) => void;
   onToggleRow: (perm: UserTypePermission, section: string, val: boolean) => void;
   allColumns: { key: ColumnKey; label: string }[];
+  expandedFields: Set<string>;
+  onToggleFieldExpand: (key: string) => void;
+  hasFieldPermissions: (section: string) => boolean;
+  getFieldCanEdit: (userType: string, section: string, fieldName: string) => boolean;
+  onFieldToggle: (section: string, fieldName: string, canEdit: boolean) => void;
 }) {
   return (
     <>
@@ -428,63 +500,156 @@ function SubPagesList({
         const allTrue = subPerm
           ? actions.every(a => subPerm[`can_${a}` as ColumnKey])
           : false;
+        const canExpandFields = hasFieldPermissions(sub.section);
+        const fieldKey = `${userType}-${sub.section}`;
+        const isFieldsExpanded = expandedFields.has(fieldKey);
+        const catalog = getFieldsForSection(sub.section);
 
         return (
-          <tr key={sub.section} className="border-b border-border/30 bg-muted/20">
-            <td className="py-1.5 px-2 pl-8 text-muted-foreground">
-              <span className="text-[11px]">↳ {sub.label}</span>
-              {!subPerm && (
-                <span className="ml-2 text-[9px] text-muted-foreground/60 italic">(hereda)</span>
-              )}
-            </td>
-            {allColumns.map((col) => {
-              const actionKey = col.key.replace("can_", "") as PermissionAction;
-              if (!actions.includes(actionKey)) {
-                return <td key={col.key} className="text-center py-1.5 px-2 text-muted-foreground/20">—</td>;
-              }
-              if (!subPerm) {
-                return (
-                  <td key={col.key} className="text-center py-1.5 px-2">
-                    <span className="text-[9px] text-muted-foreground/40 italic">hereda</span>
-                  </td>
-                );
-              }
-              return (
-                <td key={col.key} className="text-center py-1.5 px-2">
+          <Fragment key={sub.section}>
+            <tr className="border-b border-border/30 bg-muted/20">
+              <td className="py-1.5 px-2 pl-8 text-muted-foreground">
+                <span className="text-[11px]">↳ {sub.label}</span>
+                {!subPerm && (
+                  <span className="ml-2 text-[9px] text-muted-foreground/60 italic">(hereda)</span>
+                )}
+                {canExpandFields && (
                   <button
                     type="button"
-                    onClick={() => onToggle(subPerm, col.key)}
+                    onClick={() => onToggleFieldExpand(fieldKey)}
+                    className="ml-2 inline-flex items-center gap-0.5 text-[9px] text-violet-600 hover:text-violet-700 transition-colors"
+                    title="Configurar campos editables"
+                  >
+                    <Settings2 className="h-3 w-3" />
+                    Campos
+                  </button>
+                )}
+              </td>
+              {allColumns.map((col) => {
+                const actionKey = col.key.replace("can_", "") as PermissionAction;
+                if (!actions.includes(actionKey)) {
+                  return <td key={col.key} className="text-center py-1.5 px-2 text-muted-foreground/20">—</td>;
+                }
+                if (!subPerm) {
+                  return (
+                    <td key={col.key} className="text-center py-1.5 px-2">
+                      <span className="text-[9px] text-muted-foreground/40 italic">hereda</span>
+                    </td>
+                  );
+                }
+                return (
+                  <td key={col.key} className="text-center py-1.5 px-2">
+                    <button
+                      type="button"
+                      onClick={() => onToggle(subPerm, col.key)}
+                      className={`inline-flex h-4 w-4 items-center justify-center rounded transition-colors ${
+                        subPerm[col.key]
+                          ? "bg-emerald-500 text-white"
+                          : "bg-muted text-muted-foreground hover:bg-muted/70"
+                      }`}
+                    >
+                      {subPerm[col.key] && <Check className="h-2.5 w-2.5" />}
+                    </button>
+                  </td>
+                );
+              })}
+              <td className="text-center py-1.5 px-2">
+                {subPerm ? (
+                  <button
+                    type="button"
+                    onClick={() => onToggleRow(subPerm, sub.section, !allTrue)}
                     className={`inline-flex h-4 w-4 items-center justify-center rounded transition-colors ${
-                      subPerm[col.key]
+                      allTrue
                         ? "bg-emerald-500 text-white"
                         : "bg-muted text-muted-foreground hover:bg-muted/70"
                     }`}
                   >
-                    {subPerm[col.key] && <Check className="h-2.5 w-2.5" />}
+                    {allTrue && <Check className="h-2.5 w-2.5" />}
                   </button>
-                </td>
-              );
-            })}
-            <td className="text-center py-1.5 px-2">
-              {subPerm ? (
-                <button
-                  type="button"
-                  onClick={() => onToggleRow(subPerm, sub.section, !allTrue)}
-                  className={`inline-flex h-4 w-4 items-center justify-center rounded transition-colors ${
-                    allTrue
-                      ? "bg-emerald-500 text-white"
-                      : "bg-muted text-muted-foreground hover:bg-muted/70"
-                  }`}
-                >
-                  {allTrue && <Check className="h-2.5 w-2.5" />}
-                </button>
-              ) : (
-                <span className="text-[9px] text-muted-foreground/40 italic">—</span>
-              )}
-            </td>
-          </tr>
+                ) : (
+                  <span className="text-[9px] text-muted-foreground/40 italic">—</span>
+                )}
+              </td>
+            </tr>
+            {/* Filas de campos editables */}
+            {canExpandFields && isFieldsExpanded && catalog && (
+              <FieldPermissionsRows
+                userType={userType}
+                section={sub.section}
+                catalog={catalog}
+                getFieldCanEdit={getFieldCanEdit}
+                onFieldToggle={onFieldToggle}
+              />
+            )}
+          </Fragment>
         );
       })}
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Filas de permisos a nivel de campo
+// ═══════════════════════════════════════════════════════════════
+function FieldPermissionsRows({
+  userType,
+  section,
+  catalog,
+  getFieldCanEdit,
+  onFieldToggle,
+}: {
+  userType: string;
+  section: string;
+  catalog: NonNullable<ReturnType<typeof getFieldsForSection>>;
+  getFieldCanEdit: (userType: string, section: string, fieldName: string) => boolean;
+  onFieldToggle: (section: string, fieldName: string, canEdit: boolean) => void;
+}) {
+  // Agrupar campos por grupo
+  const groups = new Map<string, typeof catalog.fields>();
+  for (const field of catalog.fields) {
+    const g = field.group ?? "General";
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g)!.push(field);
+  }
+
+  return (
+    <>
+      {Array.from(groups.entries()).map(([group, fields]) => (
+        <Fragment key={group}>
+          <tr className="border-b border-border/20 bg-violet-500/5">
+            <td colSpan={6} className="py-1 px-2 pl-12 text-[9px] font-semibold uppercase tracking-wide text-violet-600/70">
+              {group}
+            </td>
+          </tr>
+          {fields.map((field) => {
+            const canEdit = getFieldCanEdit(userType, section, field.name);
+            return (
+              <tr key={field.name} className="border-b border-border/10 bg-violet-500/5">
+                <td className="py-1 px-2 pl-12 text-muted-foreground">
+                  <span className="text-[10px]">{field.label}</span>
+                </td>
+                <td colSpan={4} className="py-1 px-2">
+                  {/* Espacio para alinear con las columnas de acciones */}
+                </td>
+                <td className="text-center py-1 px-2">
+                  <button
+                    type="button"
+                    onClick={() => onFieldToggle(section, field.name, !canEdit)}
+                    className={`inline-flex h-4 w-4 items-center justify-center rounded transition-colors ${
+                      canEdit
+                        ? "bg-emerald-500 text-white"
+                        : "bg-muted text-muted-foreground hover:bg-muted/70"
+                    }`}
+                    title={canEdit ? "Editable (clic para restringir)" : "Restringido (clic para permitir)"}
+                  >
+                    {canEdit && <Check className="h-2.5 w-2.5" />}
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </Fragment>
+      ))}
     </>
   );
 }

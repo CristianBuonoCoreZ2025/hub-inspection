@@ -3,6 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { Pagination } from "@/components/ui/pagination";
 import {
   getInspectionSessions,
   createInspectionSession,
@@ -11,6 +13,7 @@ import {
 } from "@/services/inspections";
 import { getClaims, getClaimsParticipants } from "@/services/claims";
 import { getUsers } from "@/services/users";
+import { getInspectionTemplates } from "@/services/actions";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
@@ -96,6 +99,7 @@ function InspectionsPageContent() {
   const [contactEmail, setContactEmail] = useState<string>("");
   const [inspectionLocation, setInspectionLocation] = useState<string>("");
   const [schedulingNotes, setSchedulingNotes] = useState<string>("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
   // Pre-seleccionar siniestro si viene por query param ?claim=...
   useEffect(() => {
@@ -116,6 +120,12 @@ function InspectionsPageContent() {
     queryFn: () => getUsers(),
   });
   const inspectors = users?.filter((u) => u.role === "inspector") || [];
+
+  // Gestiones de tipo inspección disponibles
+  const { data: inspectionTemplates } = useQuery({
+    queryKey: ["inspection-templates"],
+    queryFn: () => getInspectionTemplates(),
+  });
 
   // Query: agenda del inspector para la fecha seleccionada
   const selectedDateForQuery = scheduledDate ? new Date(`${scheduledDate}T00:00:00`) : null;
@@ -246,6 +256,7 @@ function InspectionsPageContent() {
         contactEmail: contactEmail || undefined,
         inspectionLocation: inspectionLocation || undefined,
         schedulingNotes: schedulingNotes || undefined,
+        actionTemplateId: selectedTemplateId || undefined,
       });
     },
     onSuccess: (data) => {
@@ -263,6 +274,7 @@ function InspectionsPageContent() {
       setContactEmail("");
       setInspectionLocation("");
       setSchedulingNotes("");
+      setSelectedTemplateId("");
       // Navegar al detalle de la inspección creada
       if (data?.id) {
         router.push(`/dashboard/inspecciones/${data.id}`);
@@ -293,6 +305,8 @@ function InspectionsPageContent() {
     const matchesStatus = statusFilter === "all" || s.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(filtered);
 
   // Siniestros disponibles: los que NO tienen inspección agendada o activa
   // (completadas y canceladas no bloquean crear una nueva)
@@ -350,6 +364,7 @@ function InspectionsPageContent() {
       </div>
 
       {/* Tabla de Inspecciones */}
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       <div className="app-data-table-wrap">
         <table className="app-data-table">
           <thead>
@@ -379,7 +394,7 @@ function InspectionsPageContent() {
                 </td>
               </tr>
             ) : (
-              filtered?.map((session) => (
+              paginatedData.map((session) => (
                 <tr key={session.id} className="hover:bg-muted/40 transition-colors">
                   <td>
                     <div className="flex flex-col gap-0">
@@ -511,6 +526,7 @@ function InspectionsPageContent() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       {/* Modal Crear Inspeccion - Agenda tipo médico */}
       <Dialog open={openCreate} onOpenChange={setOpenCreate} dismissible={false}>
@@ -588,6 +604,52 @@ function InspectionsPageContent() {
                 </div>
               )}
             </div>
+
+            {/* Paso 2: Gestión (tipo de inspección) */}
+            {selectedClaim && (
+              <div className="mb-4">
+                <label className="app-field-label flex items-center gap-1.5 mb-2">
+                  <ClipboardCheck className="h-3.5 w-3.5" />
+                  Gestión *
+                </label>
+                {!inspectionTemplates || inspectionTemplates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No hay gestiones de inspección configuradas. Cree una gestión con característica "Inspección" en el catálogo.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5 max-h-[120px] overflow-y-auto">
+                    {inspectionTemplates.map((tpl) => (
+                      <div
+                        key={tpl.id}
+                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors ${
+                          selectedTemplateId === tpl.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:bg-muted/50"
+                        }`}
+                        onClick={() => setSelectedTemplateId(tpl.id)}
+                      >
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted">
+                          <ClipboardCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-medium truncate">
+                            {tpl.name}
+                          </p>
+                          {tpl.code && (
+                            <p className="text-[11px] text-muted-foreground truncate">
+                              {tpl.code}
+                            </p>
+                          )}
+                        </div>
+                        {selectedTemplateId === tpl.id && (
+                          <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Datos de contacto editables + lugar de inspección + comentarios */}
             {selectedClaim && (
@@ -745,7 +807,7 @@ function InspectionsPageContent() {
             </Button>
             <Button
               size="sm"
-              disabled={!selectedClaimId || !selectedInspectorId || !scheduledDate || !scheduledTime || createMutation.isPending}
+              disabled={!selectedClaimId || !selectedTemplateId || !selectedInspectorId || !scheduledDate || !scheduledTime || createMutation.isPending}
               onClick={() => createMutation.mutate(selectedClaimId)}
               className="btn-create btn-footer"
             >

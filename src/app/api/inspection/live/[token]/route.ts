@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminGraphqlRequest } from "@/lib/nhost/admin-graphql";
-import { presignEvidenceUrls, presignSignatureUrls, presignSketchUrls } from "@/lib/nhost/storage-presigned";
-import {
-  INSPECTION_LIVE_QUERY,
-  attachInspectionNumber,
-} from "@/services/inspections";
+import { createAdminClient } from "@/lib/supabase/server";
+import { presignEvidenceUrls, presignSignatureUrls, presignSketchUrls } from "@/lib/supabase/storage-presigned";
+import { attachInspectionNumber } from "@/services/inspections";
 import { logger } from "@/lib/logger";
 
 /**
  * API route pública (sin auth) que devuelve la sesión de inspección en vivo
  * para la página del magic link `/inspection/[token]`.
  *
- * Usa el admin secret server-side para leer los datos sin requerir permisos
- * anonymous en Hasura (más seguro: no expone evidencias/notas de otros tenants).
- *
- * El control de expiración del link lo hace el cliente con `magic_link_expires_at`.
+ * Usa service role key server-side para leer los datos sin requerir auth.
  */
 export async function GET(
   _request: NextRequest,
@@ -26,17 +20,70 @@ export async function GET(
       return NextResponse.json({ session: null }, { status: 400 });
     }
 
-    const data = await adminGraphqlRequest<{ inspection_sessions: any[] }>(
-      INSPECTION_LIVE_QUERY,
-      { token }
-    );
-    const session = data.inspection_sessions?.[0];
+    const supabase = createAdminClient();
+
+    // Query equivalente a INSPECTION_LIVE_QUERY
+    const { data: sessions, error } = await supabase
+      .from("inspection_sessions")
+      .select(`
+        id, claim_id, status, inspection_type, scheduled_at, started_at, ended_at,
+        magic_link_token, magic_link_expires_at, created_at,
+        inspection_date, inspection_time,
+        interviewed_name, interviewed_email, interviewed_relationship,
+        police_report_number, police_report_name, police_report_rut,
+        firefighters_company, other_insurances, other_insurance_company,
+        active_tab, acta_step,
+        inspector_observations,
+        property_risk, property_materiality, security_measures,
+        insured_statement, third_parties,
+        action_template ( code ),
+        inspection_evidences ( id, url, type, description, category, created_at ),
+        inspection_notes ( id, content, created_at ),
+        inspection_checklists ( id, area, item, status, notes, created_at ),
+        inspection_damages ( id, category, subcategory, description, observations, severity,
+          dependency, sector, materiality_type, unit, quantity, damage_type,
+          product, brand_model, purchase_date, estimated_amount, created_at ),
+        inspection_chat_messages ( id, content, sender_name, sender_role, created_at ),
+        inspection_signatures ( id, role, signature_url, signed_at ),
+        damage_sketches ( id, sketch_url, label, created_at ),
+        claim (
+          claim_number, client_reference, claim_address, policy_number, claim_date,
+          liquidation_number,
+          claims_participants!inner ( type, full_name, email, phone, cell_phone ),
+          insurance_company ( name )
+        )
+      `)
+      .eq("magic_link_token", token)
+      .limit(1);
+
+    if (error) throw new Error(error.message);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const session = sessions?.[0] as any;
     if (!session) {
       console.log("[inspection/live] token no encontrado:", token);
       return NextResponse.json({ session: null });
     }
 
-    // Log diagnóstico de counts (server-side)
+    // Supabase returns nested relations as arrays; unwrap single-item relations
+    if (Array.isArray(session.claim)) {
+      session.claim = session.claim[0] ?? null;
+    }
+    if (session.claim && Array.isArray(session.claim.insurance_company)) {
+      session.claim.insurance_company = session.claim.insurance_company[0] ?? null;
+    }
+    if (session.action_template && Array.isArray(session.action_template)) {
+      session.action_template = session.action_template[0] ?? null;
+    }
+
+    // Filtrar claims_participants por tipo
+    if (session.claim?.claims_participants) {
+      session.claim.claims_participants = session.claim.claims_participants.filter(
+        (p: { type: string }) => p.type === "insured" || p.type === "contact"
+      );
+    }
+
+    // Log diagnóstico
     const counts = {
       id: session.id,
       status: session.status,
@@ -48,29 +95,22 @@ export async function GET(
     };
     console.log("[inspection/live] counts:", counts);
 
-    // Calcular inspection_number ({liquidation_number}-I-{seq:3})
+    // Calcular inspection_number
     try {
-      const countQuery = `
-        query CountSessionsForClaim($claimId: uuid!, $createdAt: timestamptz!) {
-          inspection_sessions(
-            where: { claim_id: { _eq: $claimId }, created_at: { _lte: $createdAt } }
-          ) { id }
-        }
-      `;
-      const countData = await adminGraphqlRequest<{ inspection_sessions: { id: string }[] }>(
-        countQuery,
-        {
-          claimId: session.claim_id,
-          createdAt: session.created_at || new Date().toISOString(),
-        }
-      );
-      attachInspectionNumber(session, countData.inspection_sessions.length);
+      const { count } = await supabase
+        .from("inspection_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("claim_id", session.claim_id)
+        .lte("created_at", session.created_at || new Date().toISOString());
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      attachInspectionNumber(session as any, count ?? 1);
     } catch {
-      attachInspectionNumber(session, 1);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      attachInspectionNumber(session as any, 1);
     }
 
-    // Convertir URLs a presigned URLs (acceso público temporal)
-    // para que el navegador del cliente (sin auth) pueda cargar las imágenes.
+    // Convertir URLs a signed URLs
     if (session.inspection_evidences?.length) {
       await presignEvidenceUrls(session.inspection_evidences);
     }
@@ -88,7 +128,6 @@ export async function GET(
       component: "inspection-live-route",
       action: "get.live-session",
     });
-    // En desarrollo, incluir el mensaje de error real para diagnóstico
     const isDev = process.env.NODE_ENV !== "production";
     return NextResponse.json(
       {

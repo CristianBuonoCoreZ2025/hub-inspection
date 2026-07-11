@@ -2,7 +2,5 @@ allowBuilds:
   bcrypt: true
   esbuild: true
   sharp: true
+  tesseract.js: true
   unrs-resolver: true
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver

@@ -1,0 +1,662 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getClaimCoverages } from "@/services/claim-coverages";
+import { getClaimReserves } from "@/services/claim-reserves";
+import type { GestionScreenProps } from "./types";
+
+// ═══════════════════════════════════════════════════════════════
+// Tipos
+// ═══════════════════════════════════════════════════════════════
+
+export type FieldCategory = "own" | "simple_entity" | "complex_entity";
+
+export interface DateValidation {
+  type: "greater_than" | "less_than" | "equal_to" | "greater_or_equal" | "less_or_equal" |
+        "greater_than_today" | "less_than_today" | "equal_today";
+  compareField?: string;
+  label?: string;
+}
+
+export interface ScreenField {
+  id: string;
+  category: FieldCategory;
+  type: string;
+  label: string;
+  required?: boolean;
+  inputType?: "alphanumeric" | "numeric";
+  maxLength?: number;
+  placeholder?: string;
+  rows?: number;
+  dateType?: "date" | "datetime";
+  dateValidation?: DateValidation;
+  options?: { value: string; label: string }[];
+  columns?: string[];
+}
+
+export interface DynamicScreenProps extends GestionScreenProps {
+  fields: ScreenField[];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Catálogos de campos disponibles para el constructor
+// ═══════════════════════════════════════════════════════════════
+
+export const OWN_FIELD_TYPES: { code: string; label: string; icon: string; desc: string }[] = [
+  { code: "text", label: "Texto corto", icon: "Aa", desc: "Input para nombre, título, referencia" },
+  { code: "textarea", label: "Descripción", icon: "¶", desc: "Texto largo para descripciones o comentarios" },
+  { code: "number", label: "Número", icon: "#", desc: "Campo numérico con decimales" },
+  { code: "date", label: "Fecha", icon: "📅", desc: "Calendario con validaciones opcionales" },
+  { code: "select", label: "Selección", icon: "▼", desc: "Lista desplegable de opciones" },
+  { code: "checkbox", label: "Checkbox", icon: "✓", desc: "Casilla de verificación" },
+  { code: "table", label: "Tabla", icon: "⊞", desc: "Tabla editable con columnas" },
+  { code: "section", label: "Sección", icon: "§", desc: "Título separador de grupos" },
+];
+
+export const CLAIM_ENTITIES: { code: string; label: string; icon: string; desc: string }[] = [
+  { code: "claim_number", label: "N° Siniestro", icon: "#", desc: "Número del siniestro" },
+  { code: "liquidation_number", label: "N° Liquidación", icon: "#", desc: "Número de liquidación" },
+  { code: "claim_status", label: "Estado del Siniestro", icon: "▼", desc: "Estado actual" },
+  { code: "claim_date", label: "Fecha Siniestro", icon: "📅", desc: "Fecha de ocurrencia" },
+  { code: "policy_number", label: "N° Póliza", icon: "#", desc: "Número de póliza" },
+  { code: "insured_name", label: "Asegurado", icon: "👤", desc: "Nombre del asegurado" },
+  { code: "claimant_name", label: "Reclamante", icon: "👤", desc: "Nombre del reclamante" },
+  { code: "broker_name", label: "Corredor", icon: "👤", desc: "Nombre del corredor" },
+  { code: "adjuster_name", label: "Liquidador", icon: "👤", desc: "Nombre del liquidador asignado" },
+  { code: "claim_address", label: "Dirección", icon: "📍", desc: "Dirección del siniestro" },
+];
+
+export const ACTION_ENTITIES: { code: string; label: string; icon: string; desc: string }[] = [
+  { code: "action_name", label: "Acción / Gestión", icon: "⚡", desc: "Nombre de la gestión actual" },
+  { code: "action_issuer", label: "Emisor", icon: "👤", desc: "Persona que emitió la gestión" },
+  { code: "action_reviewer", label: "Revisor", icon: "👤", desc: "Persona que revisa la gestión" },
+  { code: "action_approver", label: "Aprobador", icon: "👤", desc: "Persona que aprueba la gestión" },
+  { code: "action_created_at", label: "Fecha de Creación", icon: "📅", desc: "Fecha de creación de la gestión" },
+  { code: "action_updated_at", label: "Actualización", icon: "📅", desc: "Fecha de última actualización" },
+  { code: "action_expected_date", label: "Fecha Esperada", icon: "📅", desc: "Fecha esperada de la gestión" },
+];
+
+export const COMPLEX_ENTITIES: { code: string; label: string; icon: string; desc: string }[] = [
+  { code: "claim_coverages", label: "Coberturas", icon: "⊞", desc: "Todas las coberturas del siniestro" },
+  { code: "claim_reserve", label: "Reserva", icon: "$", desc: "Reserva completa del siniestro" },
+  { code: "claim_documents", label: "Documentos", icon: "📄", desc: "Documentos requeridos y recibidos" },
+  { code: "claim_participants", label: "Participantes", icon: "👥", desc: "Personas relacionadas al siniestro" },
+  { code: "claim_history", label: "Historial", icon: "📋", desc: "Gestiones anteriores del siniestro" },
+];
+
+export const ALL_SYSTEM_CODES = new Set([
+  ...CLAIM_ENTITIES.map((e) => e.code),
+  ...ACTION_ENTITIES.map((e) => e.code),
+  ...COMPLEX_ENTITIES.map((e) => e.code),
+]);
+
+// ═══════════════════════════════════════════════════════════════
+// Componente principal — agrupa campos por categoría
+// ═══════════════════════════════════════════════════════════════
+
+export default function DynamicScreen({ action, fields, onChange, readOnly }: DynamicScreenProps) {
+  const values = (action.action_data || {}) as Record<string, unknown>;
+
+  const updateValue = (id: string, value: unknown) => {
+    onChange?.({ ...values, [id]: value });
+  };
+
+  // Separar campos por categoría
+  const claimEntities = fields.filter((f) => f.category === "simple_entity" && CLAIM_ENTITIES.some((e) => e.code === f.type));
+  const actionEntities = fields.filter((f) => f.category === "simple_entity" && ACTION_ENTITIES.some((e) => e.code === f.type));
+  const otherEntities = fields.filter((f) => f.category === "simple_entity" && !CLAIM_ENTITIES.some((e) => e.code === f.type) && !ACTION_ENTITIES.some((e) => e.code === f.type));
+  const complexEntities = fields.filter((f) => f.category === "complex_entity");
+  const ownFields = fields.filter((f) => f.category === "own");
+
+  return (
+    <div className="space-y-4">
+      {/* ─── Datos de la gestión ─── */}
+      {actionEntities.length > 0 && (
+        <section className="app-panel p-3">
+          <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">Datos de la Gestión</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {actionEntities.map((field) => (
+              <EntityField key={field.id} field={field} value={values[field.id]} action={action} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ─── Datos del siniestro ─── */}
+      {claimEntities.length > 0 && (
+        <section className="app-panel p-3">
+          <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">Datos del Siniestro</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {claimEntities.map((field) => (
+              <EntityField key={field.id} field={field} value={values[field.id]} action={action} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ─── Otras entidades simples ─── */}
+      {otherEntities.length > 0 && (
+        <section className="app-panel p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {otherEntities.map((field) => (
+              <EntityField key={field.id} field={field} value={values[field.id]} action={action} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ─── Formulario (campos propios) ─── */}
+      {ownFields.length > 0 && (
+        <section className="app-panel p-3">
+          <div className="space-y-3">
+            {ownFields.map((field) => (
+              <OwnField
+                key={field.id}
+                field={field}
+                value={values[field.id]}
+                allFields={fields}
+                onChange={updateValue}
+                readOnly={readOnly}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ─── Entidades complejas ─── */}
+      {complexEntities.length > 0 && (
+        <div className="space-y-4">
+          {complexEntities.map((field) => (
+            <section key={field.id} className="app-panel p-3">
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">{field.label}</h4>
+              <ComplexEntityView type={field.type} action={action} />
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Entidades simples (solo lectura)
+// ═══════════════════════════════════════════════════════════════
+
+function EntityField({ field, value, action }: { field: ScreenField; value: unknown; action: any }) {
+  const isActionEntity = ACTION_ENTITIES.some((e) => e.code === field.type);
+  const displayValue = isActionEntity ? getActionEntityValue(field.type, action, value) : String(value || "");
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Label className="app-field-label text-[10px] text-muted-foreground">{field.label}</Label>
+      <Input
+        type="text"
+        className="app-input h-8 text-[12px] bg-muted/30 border-dashed"
+        value={displayValue}
+        readOnly
+        placeholder={`Se completa automáticamente`}
+      />
+    </div>
+  );
+}
+
+function getActionEntityValue(type: string, action: any, fallback: unknown): string {
+  if (!action) return String(fallback || "");
+  switch (type) {
+    case "action_name":
+      return action.name || action.action_feature?.name || action.action_template?.name || String(fallback || "");
+    case "action_issuer":
+      return action.issuer?.name || action.issuer?.email || "Emisor asignado";
+    case "action_reviewer":
+      return action.reviewer?.name || action.reviewer?.email || "Revisor asignado";
+    case "action_approver":
+      return action.approver?.name || action.approver?.email || "Aprobador asignado";
+    case "action_created_at":
+      return action.created_at ? new Date(action.created_at).toLocaleString("es-CL") : String(fallback || "");
+    case "action_updated_at":
+      return action.updated_at ? new Date(action.updated_at).toLocaleString("es-CL") : String(fallback || "");
+    case "action_expected_date":
+      return action.expected_date || String(fallback || "");
+    default:
+      return String(fallback || "");
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Entidades complejas (solo vista, datos reales)
+// ═══════════════════════════════════════════════════════════════
+
+function ComplexEntityView({ type, action }: { type: string; action: any }) {
+  switch (type) {
+    case "claim_coverages":
+      return <ClaimCoveragesView claimId={action?.claim_id} />;
+    case "claim_reserve":
+      return <ClaimReservesView claimId={action?.claim_id} />;
+    case "claim_documents":
+      return <div className="text-[11px] text-muted-foreground py-3 text-center">📄 Documentos del siniestro (próximamente)</div>;
+    case "claim_participants":
+      return <div className="text-[11px] text-muted-foreground py-3 text-center">👥 Participantes del siniestro (próximamente)</div>;
+    case "claim_history":
+      return <div className="text-[11px] text-muted-foreground py-3 text-center">📋 Historial de gestiones (próximamente)</div>;
+    default:
+      return <div className="text-[11px] text-muted-foreground py-3 text-center">Datos del siniestro</div>;
+  }
+}
+
+function formatMoney(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  return value.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function ClaimCoveragesView({ claimId }: { claimId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["claim-coverages", claimId],
+    queryFn: () => getClaimCoverages(claimId),
+    enabled: !!claimId,
+  });
+
+  if (isLoading) return <div className="text-[11px] text-muted-foreground py-2">Cargando coberturas...</div>;
+  if (!data || data.length === 0) {
+    return <div className="text-[11px] text-muted-foreground py-3 text-center">No hay coberturas cargadas en este siniestro.</div>;
+  }
+
+  return (
+    <div className="rounded-lg border border-border overflow-hidden">
+      <table className="w-full text-[11px]">
+        <thead className="bg-muted/50">
+          <tr>
+            <th className="px-3 py-1.5 text-left font-medium">Cobertura</th>
+            <th className="px-3 py-1.5 text-right font-medium">Asegurado</th>
+            <th className="px-3 py-1.5 text-right font-medium">Reclamado</th>
+            <th className="px-3 py-1.5 text-right font-medium">Reserva</th>
+            <th className="px-3 py-1.5 text-right font-medium">Recuperado</th>
+            <th className="px-3 py-1.5 text-right font-medium">Deducible</th>
+            <th className="px-3 py-1.5 text-right font-medium">Neta</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((c) => (
+            <tr key={c.id} className="border-t border-border">
+              <td className="px-3 py-1.5">
+                <div className="font-medium">{c.coverage_name || "—"}</div>
+                <div className="text-[10px] text-muted-foreground">{c.subcoverage_name || ""}</div>
+              </td>
+              <td className="px-3 py-1.5 text-right font-mono">{formatMoney(c.insured_amount)}</td>
+              <td className="px-3 py-1.5 text-right font-mono">{formatMoney(c.claimed_amount)}</td>
+              <td className="px-3 py-1.5 text-right font-mono">{formatMoney(c.reserved_amount)}</td>
+              <td className="px-3 py-1.5 text-right font-mono">{formatMoney(c.recovered_amount)}</td>
+              <td className="px-3 py-1.5 text-right font-mono">{formatMoney(c.deductible_amount)}</td>
+              <td className="px-3 py-1.5 text-right font-mono">{formatMoney(c.net_reserve)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ClaimReservesView({ claimId }: { claimId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["claim-reserves", claimId],
+    queryFn: () => getClaimReserves(claimId),
+    enabled: !!claimId,
+  });
+
+  if (isLoading) return <div className="text-[11px] text-muted-foreground py-2">Cargando reservas...</div>;
+  if (!data || data.length === 0) {
+    return <div className="text-[11px] text-muted-foreground py-3 text-center">No hay reservas creadas en este siniestro.</div>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {data.map((r) => (
+        <div key={r.id} className="rounded-lg border border-border p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[12px] font-semibold">Reserva {r.reserve_number || r.id.slice(0, 8)}</span>
+            <span className="text-[11px] text-muted-foreground">{r.currency}</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] mb-2">
+            <div><span className="text-muted-foreground">Capital:</span> <span className="font-mono">{formatMoney(r.capital_amount)}</span></div>
+            <div><span className="text-muted-foreground">Reclamado:</span> <span className="font-mono">{formatMoney(r.claimed_amount)}</span></div>
+            <div><span className="text-muted-foreground">Reserva:</span> <span className="font-mono">{formatMoney(r.reserve_amount)}</span></div>
+            <div><span className="text-muted-foreground">Final:</span> <span className="font-mono">{formatMoney(r.final_amount)}</span></div>
+          </div>
+          {r.reserve_coverages.length > 0 && (
+            <div className="rounded-md border border-border overflow-hidden">
+              <table className="w-full text-[10px]">
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="px-2 py-1 text-left font-medium">Cobertura</th>
+                    <th className="px-2 py-1 text-right font-medium">Reserva</th>
+                    <th className="px-2 py-1 text-right font-medium">Deducible</th>
+                    <th className="px-2 py-1 text-right font-medium">Neta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.reserve_coverages.map((rc) => (
+                    <tr key={rc.id} className="border-t border-border">
+                      <td className="px-2 py-1">{rc.claim_coverage?.coverage_name || rc.claim_coverage_id.slice(0, 8)}</td>
+                      <td className="px-2 py-1 text-right font-mono">{formatMoney(rc.reserved_amount)}</td>
+                      <td className="px-2 py-1 text-right font-mono">{formatMoney(rc.deductible_amount)}</td>
+                      <td className="px-2 py-1 text-right font-mono">{formatMoney(rc.net_reserve)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Campos propios (editables)
+// ═══════════════════════════════════════════════════════════════
+
+function OwnField({
+  field,
+  value,
+  allFields,
+  onChange,
+  readOnly,
+}: {
+  field: ScreenField;
+  value: unknown;
+  allFields: ScreenField[];
+  onChange: (id: string, value: unknown) => void;
+  readOnly?: boolean;
+}) {
+  const inputClass = "app-input h-8 text-[12px]";
+
+  switch (field.type) {
+    case "section":
+      return (
+        <div className="pt-2 pb-1 border-b border-border">
+          <p className="text-[13px] font-semibold">{field.label}</p>
+        </div>
+      );
+
+    case "text":
+      return (
+        <div className="flex flex-col gap-1">
+          <Label className="app-field-label text-[11px]">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </Label>
+          <Input
+            type="text"
+            inputMode={field.inputType === "numeric" ? "decimal" : "text"}
+            className={inputClass}
+            value={String(value || "")}
+            onChange={(e) => {
+              let v = e.target.value;
+              if (field.inputType === "numeric") v = v.replace(/[^0-9.,-]/g, "");
+              if (field.maxLength) v = v.slice(0, field.maxLength);
+              onChange(field.id, v);
+            }}
+            disabled={readOnly}
+            placeholder={field.placeholder}
+            maxLength={field.maxLength}
+          />
+          {field.maxLength && (
+            <p className="text-[9px] text-muted-foreground">
+              Máx {field.maxLength} · {field.inputType === "numeric" ? "Numérico" : "Alfanumérico"}
+            </p>
+          )}
+        </div>
+      );
+
+    case "number":
+      return (
+        <div className="flex flex-col gap-1">
+          <Label className="app-field-label text-[11px]">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </Label>
+          <Input
+            type="number"
+            className={inputClass}
+            value={value === undefined || value === null ? "" : String(value)}
+            onChange={(e) => onChange(field.id, e.target.value === "" ? null : Number(e.target.value))}
+            disabled={readOnly}
+            placeholder={field.placeholder}
+          />
+        </div>
+      );
+
+    case "date":
+      return <DateField field={field} value={value} allFields={allFields} onChange={onChange} readOnly={readOnly} />;
+
+    case "textarea":
+      return (
+        <div className="flex flex-col gap-1">
+          <Label className="app-field-label text-[11px]">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </Label>
+          <Textarea
+            className="app-input text-[12px]"
+            value={String(value || "")}
+            onChange={(e) => {
+              let v = e.target.value;
+              if (field.maxLength) v = v.slice(0, field.maxLength);
+              onChange(field.id, v);
+            }}
+            disabled={readOnly}
+            placeholder={field.placeholder}
+            rows={field.rows || 3}
+          />
+          {field.maxLength && (
+            <p className="text-[9px] text-muted-foreground">
+              {String(value || "").length}/{field.maxLength} caracteres
+            </p>
+          )}
+        </div>
+      );
+
+    case "select":
+      return (
+        <div className="flex flex-col gap-1">
+          <Label className="app-field-label text-[11px]">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </Label>
+          <select
+            className="app-input h-8 text-[12px] w-full"
+            value={String(value || "")}
+            onChange={(e) => onChange(field.id, e.target.value)}
+            disabled={readOnly}
+          >
+            <option value="">{field.placeholder || "Seleccionar..."}</option>
+            {field.options?.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      );
+
+    case "checkbox":
+      return (
+        <label className="flex items-center gap-2 text-[12px] py-1">
+          <Checkbox
+            checked={!!value}
+            onChange={(e) => onChange(field.id, (e.target as HTMLInputElement).checked)}
+            disabled={readOnly}
+          />
+          {field.label}
+        </label>
+      );
+
+    case "table":
+      return <TableField field={field} value={value} onChange={onChange} readOnly={readOnly} />;
+
+    default:
+      return <div className="text-[11px] text-amber-600">Tipo no soportado: <strong>{field.type}</strong></div>;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Campo de fecha con validaciones
+// ═══════════════════════════════════════════════════════════════
+
+function DateField({
+  field,
+  value,
+  allFields,
+  onChange,
+  readOnly,
+}: {
+  field: ScreenField;
+  value: unknown;
+  allFields: ScreenField[];
+  onChange: (id: string, value: unknown) => void;
+  readOnly?: boolean;
+}) {
+  const [error, setError] = useState<string | null>(null);
+
+  const validate = (dateStr: string) => {
+    if (!dateStr || !field.dateValidation) { setError(null); return; }
+    const date = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const v = field.dateValidation!;
+    if (v.type === "greater_than_today") {
+      if (date <= today) { setError("Debe ser mayor a la fecha actual"); return; }
+    } else if (v.type === "less_than_today") {
+      if (date >= today) { setError("Debe ser menor a la fecha actual"); return; }
+    } else if (v.type === "equal_today") {
+      if (date.toDateString() !== today.toDateString()) { setError("Debe ser igual a la fecha actual"); return; }
+    }
+    setError(null);
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Label className="app-field-label text-[11px]">
+        {field.label} {field.required && <span className="text-red-500">*</span>}
+      </Label>
+      <Input
+        type={field.dateType === "datetime" ? "datetime-local" : "date"}
+        className="app-input h-8 text-[12px]"
+        value={String(value || "")}
+        onChange={(e) => {
+          onChange(field.id, e.target.value);
+          validate(e.target.value);
+        }}
+        disabled={readOnly}
+      />
+      {field.dateValidation && (
+        <p className="text-[10px] text-amber-600">⚠ {getDateValidationLabel(field.dateValidation, allFields)}</p>
+      )}
+      {error && <p className="text-[10px] text-red-500">{error}</p>}
+    </div>
+  );
+}
+
+function getDateValidationLabel(v: DateValidation, allFields: ScreenField[]): string {
+  const compareField = v.compareField ? allFields.find((f) => f.id === v.compareField) : null;
+  switch (v.type) {
+    case "greater_than_today": return "Debe ser mayor a la fecha actual";
+    case "less_than_today": return "Debe ser menor a la fecha actual";
+    case "equal_today": return "Debe ser igual a la fecha actual";
+    case "greater_than": return `Debe ser mayor que ${compareField?.label || "otro campo"}`;
+    case "less_than": return `Debe ser menor que ${compareField?.label || "otro campo"}`;
+    case "equal_to": return `Debe ser igual a ${compareField?.label || "otro campo"}`;
+    case "greater_or_equal": return `Debe ser mayor o igual que ${compareField?.label || "otro campo"}`;
+    case "less_or_equal": return `Debe ser menor o igual que ${compareField?.label || "otro campo"}`;
+    default: return "";
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Tabla editable
+// ═══════════════════════════════════════════════════════════════
+
+function TableField({
+  field,
+  value,
+  onChange,
+  readOnly,
+}: {
+  field: ScreenField;
+  value: unknown;
+  onChange: (id: string, value: unknown) => void;
+  readOnly?: boolean;
+}) {
+  const rows = Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+  const columns = field.columns || ["Columna 1"];
+
+  const updateCell = (rowIdx: number, col: string, cellValue: unknown) => {
+    const next = rows.map((r, idx) => (idx === rowIdx ? { ...r, [col]: cellValue } : r));
+    onChange(field.id, next);
+  };
+
+  const addRow = () => {
+    const newRow: Record<string, unknown> = {};
+    columns.forEach((c) => (newRow[c] = ""));
+    onChange(field.id, [...rows, newRow]);
+  };
+
+  const removeRow = (idx: number) => {
+    onChange(field.id, rows.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label className="app-field-label text-[11px]">
+        {field.label} {field.required && <span className="text-red-500">*</span>}
+      </Label>
+      {rows.length > 0 && (
+        <div className="rounded-lg border border-border overflow-x-auto">
+          <table className="w-full text-[11px]">
+            <thead className="bg-muted/50">
+              <tr>
+                {columns.map((c) => (
+                  <th key={c} className="px-2 py-1.5 text-left font-medium">{c}</th>
+                ))}
+                {!readOnly && <th className="px-2 py-1.5 w-8"></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, idx) => (
+                <tr key={idx} className="border-t border-border">
+                  {columns.map((c) => (
+                    <td key={c} className="px-1 py-0.5">
+                      <Input
+                        className="h-7 text-[11px] border-0 bg-transparent px-1"
+                        value={String(row[c] || "")}
+                        onChange={(e) => updateCell(idx, c, e.target.value)}
+                        disabled={readOnly}
+                      />
+                    </td>
+                  ))}
+                  {!readOnly && (
+                    <td className="px-1 py-0.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => removeRow(idx)}
+                        className="text-[10px] text-red-500 hover:text-red-700"
+                        title="Eliminar fila"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {!readOnly && (
+        <button type="button" className="text-[11px] text-primary hover:underline w-fit" onClick={addRow}>
+          + Agregar fila
+        </button>
+      )}
+    </div>
+  );
+}

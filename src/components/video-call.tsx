@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Video, VideoOff, PhoneOff, Mic, MicOff } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Video, VideoOff, PhoneOff, Mic, MicOff, Loader2, AlertCircle } from "lucide-react";
 
 interface VideoCallProps {
   /** ID único de la sesión de inspección (genera el room name) */
@@ -10,6 +10,8 @@ interface VideoCallProps {
   displayName: string;
   /** Modo compacto para panel lateral */
   compact?: boolean;
+  /** Callback cuando se cuelga la llamada */
+  onHangup?: () => void;
 }
 
 /**
@@ -17,11 +19,14 @@ interface VideoCallProps {
  * Sin costo, sin SDK, sin servidor propio.
  * Cada sesión tiene su room único: hub-inspection-{sessionId}
  */
-export default function VideoCall({ sessionId, displayName, compact = false }: VideoCallProps) {
+export default function VideoCall({ sessionId, displayName, compact = false, onHangup }: VideoCallProps) {
   const [joined, setJoined] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<unknown>(null);
 
   const roomName = `hub-inspection-${sessionId.slice(0, 12)}`;
@@ -35,17 +40,42 @@ export default function VideoCall({ sessionId, displayName, compact = false }: V
     const script = document.createElement("script");
     script.src = "https://meet.jit.si/external_api.js";
     script.async = true;
+    script.onerror = () => setError("No se pudo cargar el servicio de videollamada.");
     document.body.appendChild(script);
   }, [joined]);
 
-  function handleJoin() {
+  const disposeApi = useCallback(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const api = apiRef.current as any;
+    if (api) {
+      try {
+        api.dispose();
+      } catch {
+        // ignore dispose errors
+      }
+      apiRef.current = null;
+    }
+    // Limpiar el contenedor del iframe
+    if (containerRef.current) {
+      containerRef.current.innerHTML = "";
+    }
+  }, []);
+
+  const handleJoin = useCallback(() => {
+    setError(null);
+    setLoading(true);
     setJoined(true);
 
-    // Esperar a que el script cargue
     const tryInit = () => {
       const JitsiMeetExternalAPI = (window as unknown as Record<string, unknown>).JitsiMeetExternalAPI;
       if (!JitsiMeetExternalAPI) {
+        // Timeout después de 10s
         setTimeout(tryInit, 200);
+        return;
+      }
+
+      if (!containerRef.current) {
+        setTimeout(tryInit, 100);
         return;
       }
 
@@ -54,97 +84,119 @@ export default function VideoCall({ sessionId, displayName, compact = false }: V
         roomName,
         width: "100%",
         height: compact ? 280 : 480,
-        parentNode: iframeRef.current,
+        parentNode: containerRef.current,
         configOverwrite: {
           prejoinPageEnabled: false,
           startWithAudioMuted: false,
           startWithVideoMuted: false,
           disableInviteMore: true,
           disableJoinExitSounds: true,
+          hideConferenceSubject: true,
+          hideConferenceTimer: true,
+          hideParticipantsStats: true,
+          // Ocultar elementos promocionales
           toolbarButtons: [
-            "microphone", "camera", "closedcaptions", "desktop",
-            "fullscreen", "fodeviceselection", "hangup", "profile",
-            "chat", "settings", "raisehand", "videoquality",
-            "filmstrip", "shortcuts", "tileview", "select-background",
+            "microphone", "camera", "desktop", "fullscreen",
+            "fodeviceselection", "hangup", "settings",
+            "raisehand", "videoquality", "filmstrip", "tileview",
           ],
         },
         interfaceConfigOverwrite: {
-          TOOLBAR_BUTTONS: [
-            "microphone", "camera", "desktop", "fullscreen",
-            "fodeviceselection", "hangup", "profile", "settings",
-            "raisehand", "videoquality", "filmstrip", "tileview",
-          ],
           SHOW_JITSI_WATERMARK: false,
           SHOW_WATERMARK_FOR_GUESTS: false,
           SHOW_POWERED_BY: false,
+          SHOW_PROMOTIONAL_CLOSE_PAGE: false,
           DISPLAY_WELCOME_PAGE_TOOLBAR_ADDITIONAL_CONTENT: false,
           MOBILE_APP_PROMO: false,
           DEFAULT_BACKGROUND: "#0a0a0a",
           INITIAL_TOOLBAR_TIMEOUT: 5000,
           TOOLBAR_TIMEOUT: 4000,
+          // Ocultar banners y anuncios
+          SHOW_BRAND_WATERMARK: false,
+          JITSI_WATERMARK_LINK: "",
+          BRAND_WATERMARK_LINK: "",
+          // Ocultar página de cierre promocional
+          HIDE_INVITE_MORE_HEADER: true,
         },
         userInfo: {
           displayName,
         },
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const api = new (JitsiMeetExternalAPI as any)(domain, options);
-      apiRef.current = api;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const api = new (JitsiMeetExternalAPI as any)(domain, options);
+        apiRef.current = api;
+        setLoading(false);
 
-      api.addEventListener("audioMuteStatusChanged", (e: { muted: boolean }) => {
-        setMuted(e.muted);
-      });
-      api.addEventListener("videoMuteStatusChanged", (e: { muted: boolean }) => {
-        setVideoOff(e.muted);
-      });
-      api.addEventListener("participantLeft", () => {
-        // Si el otro participante se va, no cerrar automáticamente
-      });
+        api.addEventListener("audioMuteStatusChanged", (e: { muted: boolean }) => {
+          setMuted(e.muted);
+        });
+        api.addEventListener("videoMuteStatusChanged", (e: { muted: boolean }) => {
+          setVideoOff(e.muted);
+        });
+        api.addEventListener("participantLeft", () => {
+          // Si el otro participante se va, no cerrar automáticamente
+        });
+        api.addEventListener("readyToClose", () => {
+          disposeApi();
+          setJoined(false);
+          setMuted(false);
+          setVideoOff(false);
+          onHangup?.();
+        });
+      } catch (err) {
+        setError("Error al iniciar la videollamada.");
+        setLoading(false);
+        setJoined(false);
+      }
     };
 
     setTimeout(tryInit, 300);
-  }
+  }, [roomName, compact, displayName, onHangup, disposeApi]);
 
-  function handleHangup() {
+  const handleHangup = useCallback(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const api = apiRef.current as any;
     if (api) {
-      api.dispose();
-      apiRef.current = null;
+      try {
+        api.executeCommand("hangup");
+      } catch {
+        // ignore
+      }
     }
+    disposeApi();
     setJoined(false);
     setMuted(false);
     setVideoOff(false);
-  }
+    setLoading(false);
+    onHangup?.();
+  }, [disposeApi, onHangup]);
 
-  function toggleMute() {
+  const toggleMute = useCallback(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const api = apiRef.current as any;
     if (api) {
       api.executeCommand("toggleAudio");
     }
-  }
+  }, []);
 
-  function toggleVideo() {
+  const toggleVideo = useCallback(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const api = apiRef.current as any;
     if (api) {
       api.executeCommand("toggleVideo");
     }
-  }
+  }, []);
 
   // Limpiar al desmontar
   useEffect(() => {
     return () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const api = apiRef.current as any;
-      if (api) {
-        api.dispose();
-      }
+      disposeApi();
     };
-  }, []);
+  }, [disposeApi]);
 
+  // Estado: no joined — pantalla inicial
   if (!joined) {
     return (
       <div className={`flex flex-col items-center justify-center gap-3 ${compact ? "py-4" : "py-8"}`}>
@@ -157,6 +209,12 @@ export default function VideoCall({ sessionId, displayName, compact = false }: V
             Conéctese con {compact ? "el cliente" : "el inspector"}
           </p>
         </div>
+        {error && (
+          <div className="flex items-center gap-2 rounded-md bg-red-50 dark:bg-red-950/30 px-3 py-2 text-[11px] text-red-600 dark:text-red-400">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            {error}
+          </div>
+        )}
         <button
           onClick={handleJoin}
           className="flex items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-2 text-white text-[13px] font-medium hover:bg-sky-500 transition-colors"
@@ -168,14 +226,22 @@ export default function VideoCall({ sessionId, displayName, compact = false }: V
     );
   }
 
+  // Estado: joined — videollamada activa
   return (
     <div className="flex flex-col gap-2">
       {/* Contenedor del iframe */}
       <div
-        ref={iframeRef}
-        className="w-full overflow-hidden rounded-lg border border-slate-700 bg-black"
+        ref={containerRef}
+        className="w-full overflow-hidden rounded-lg border border-slate-700 bg-black relative"
         style={{ minHeight: compact ? 280 : 480 }}
-      />
+      >
+        {loading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black z-10">
+            <Loader2 className="h-6 w-6 animate-spin text-sky-400" />
+            <p className="text-[11px] text-slate-400">Conectando...</p>
+          </div>
+        )}
+      </div>
 
       {/* Controles */}
       <div className="flex items-center justify-center gap-2">

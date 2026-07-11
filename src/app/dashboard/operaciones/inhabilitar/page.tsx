@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaims, getDisabledClaims, disableClaim, enableClaim } from "@/services/claims";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -62,18 +66,20 @@ export default function InhabilitarPage() {
     );
   });
 
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filteredActive, {
+    claim_number: (c) => c.claim_number,
+    liquidation_number: (c) => c.liquidation_number,
+    client_reference: (c) => c.client_reference,
+    claim_date: (c) => c.claim_date,
+  }, "claim_number");
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
+
   const selectedClaim = filteredActive.find((c) => c.id === selectedClaimId);
 
   return (
     <div className="app-page">
-      <div className="app-page-header">
-        <h1 className="app-page-title flex items-center gap-2">
-          <Ban className="h-5 w-5" />
-          Inhabilitar Siniestros
-        </h1>
-        <p className="app-page-lead">
-          Operación especial: inhabilita un siniestro con motivo. El siniestro queda fuera de la lista normal pero no se elimina.
-        </p>
+      <div className="app-grid-header">
+        <h1 className="app-page-title shrink-0">Inhabilitar Siniestros</h1>
       </div>
 
       {/* Sección 1: Buscar y inhabilitar */}
@@ -90,7 +96,7 @@ export default function InhabilitarPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por N° siniestro, liquidación, referencia..."
-              className="app-input h-9 w-full pl-9"
+              className="app-input h-8 w-full pl-9"
             />
           </div>
         </div>
@@ -104,19 +110,21 @@ export default function InhabilitarPage() {
             {searchTerm ? "No se encontraron siniestros." : "No hay siniestros activos."}
           </p>
         ) : (
+          <>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
           <div className="overflow-auto max-h-[300px] border rounded-lg">
             <table className="app-data-table">
               <thead>
                 <tr>
-                  <th>N° Siniestro</th>
-                  <th>Liquidación</th>
-                  <th>Ref. Cliente</th>
-                  <th>Fecha</th>
+                  <SortableTh sortKey="claim_number" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>N° Siniestro</SortableTh>
+                  <SortableTh sortKey="liquidation_number" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Liquidación</SortableTh>
+                  <SortableTh sortKey="client_reference" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Ref. Cliente</SortableTh>
+                  <SortableTh sortKey="claim_date" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Fecha</SortableTh>
                   <th className="w-[60px]"></th>
                 </tr>
               </thead>
               <tbody>
-                {filteredActive.slice(0, 50).map((claim) => (
+                {paginatedData.map((claim) => (
                   <tr
                     key={claim.id}
                     className={`cursor-pointer ${selectedClaimId === claim.id ? "bg-rose-500/5" : ""}`}
@@ -136,6 +144,8 @@ export default function InhabilitarPage() {
               </tbody>
             </table>
           </div>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+          </>
         )}
 
         {/* Formulario de inhabilitación */}

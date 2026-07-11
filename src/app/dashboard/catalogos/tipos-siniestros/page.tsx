@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaimTypes, createClaimType, updateClaimType, deleteClaimType } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, FileWarning, Flame, Droplets, Zap, Wind, Home, Car, Wrench, AlertTriangle, Shield, ClipboardCheck, Building, Warehouse, Store, Hotel, Factory, Scale, Gavel, FileText, Badge, Truck, Ship, Plane, Heart, Hospital, HeartPulse, Package2 } from "lucide-react";
@@ -131,6 +135,12 @@ export default function ClaimTypePage() {
     [c.name, c.description].join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
+    name: (c) => c.name,
+    description: (c) => c.description || "",
+  }, "name");
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -146,39 +156,31 @@ export default function ClaimTypePage() {
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
-        <h1 className="app-page-title">Tipos de Siniestro</h1>
-        <p className="app-page-lead">Mantenedor de catálogo de tipos de siniestro.</p>
-      </header>
-
-      <div className="app-toolbar">
-        <div className="flex items-center gap-3">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-full max-w-sm"
-          />
+      <div className="app-grid-header">
+        <h1 className="app-page-title shrink-0">Tipos de Siniestro</h1>
+        <div className="app-grid-filters">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="app-input h-8 max-w-[180px]" />
         </div>
         {canCreate("catalogos") && (
           <Button
             onClick={() => { setEditingId(null); setFormData({ name: "", description: "", icon: "FileWarning" }); setOpen(true); }}
-            className="btn-create btn-sm"
+            className="btn-create btn-sm shrink-0"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Agregar Item
+            Agregar
           </Button>
         )}
       </div>
 
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       <div className="app-data-table-wrap">
         <table className="app-data-table">
           <thead>
             <tr>
               <th className="w-10"></th>
-              <th>Nombre</th>
-              <th>Descripción</th>
+              <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
+              <SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripción</SortableTh>
               <th>Ícono</th>
               <th className="w-[80px]"></th>
             </tr>
@@ -189,11 +191,11 @@ export default function ClaimTypePage() {
             ) : filtered?.length === 0 ? (
               <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
             ) : (
-              filtered?.map((item) => {
+              paginatedData.map((item) => {
                 const IconComponent = ICON_MAP[item.icon || "FileWarning"] || FileWarning;
                 return (
                   <tr key={item.id}>
-                    <td><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /></td>
+                    <td><span className="app-status-dot app-status-on" /></td>
                     <td className="font-medium">{item.name}</td>
                     <td className="text-muted-foreground">{item.description || "—"}</td>
                     <td>
@@ -224,6 +226,7 @@ export default function ClaimTypePage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>

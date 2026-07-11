@@ -7,7 +7,7 @@ import { HybridNav } from "@/components/layout/nav-hybrid";
  */
 export function NavWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background premium-bg-mesh">
       <HybridNav />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto p-3 lg:p-4">

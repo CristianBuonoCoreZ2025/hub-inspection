@@ -1,4 +1,4 @@
-import { graphqlRequest } from "@/lib/nhost/graphql";
+import { fetchAll, fetchById, insertRow, updateRow } from "@/lib/supabase/db";
 import type {
   ClaimCause,
   InsuranceCompanyCatalog,
@@ -27,43 +27,27 @@ import type {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getClaimCauses() {
-  const query = `
-    query GetClaimCauses {
-      claim_causes(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name description country_id is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ claim_causes: ClaimCause[] }>(query);
-  return data.claim_causes;
+  return fetchAll<ClaimCause>("claim_causes", {
+    select: "id, name, description, country_id, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createClaimCause(input: { name: string; description?: string; country_id?: string }) {
-  const mutation = `
-    mutation CreateClaimCause($object: claim_causes_insert_input!) {
-      insert_claim_causes_one(object: $object) { id name description country_id is_active }
-    }
-  `;
   const { country_id, ...rest } = input;
   const object: Record<string, unknown> = { ...rest, is_active: true };
   if (country_id && country_id !== "") object.country_id = country_id;
-  const data = await graphqlRequest<{ insert_claim_causes_one: ClaimCause }>(mutation, { object });
-  return data.insert_claim_causes_one;
+  return insertRow<ClaimCause>("claim_causes", object, "id, name, description, country_id, is_active");
 }
 
 export async function updateClaimCause(id: string, input: Partial<ClaimCause>) {
-  const mutation = `
-    mutation UpdateClaimCause($id: uuid!, $set: claim_causes_set_input!) {
-      update_claim_causes_by_pk(pk_columns: { id: $id }, _set: $set) { id name description country_id is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   if (input.name !== undefined) set.name = input.name;
   if (input.description !== undefined) set.description = input.description;
   if (input.country_id && input.country_id !== "") set.country_id = input.country_id;
   if (input.is_active !== undefined) set.is_active = input.is_active;
-  const data = await graphqlRequest<{ update_claim_causes_by_pk: ClaimCause }>(mutation, { id, set });
-  return data.update_claim_causes_by_pk;
+  return updateRow<ClaimCause>("claim_causes", id, set, "id, name, description, country_id, is_active");
 }
 
 export async function deleteClaimCause(id: string) {
@@ -75,35 +59,21 @@ export async function deleteClaimCause(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getInsuranceCompanies() {
-  const query = `
-    query GetInsuranceCompanies {
-      insurance_companies(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name rut address line_of_business code type country_id is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ insurance_companies: InsuranceCompanyCatalog[] }>(query);
-  return data.insurance_companies;
+  return fetchAll<InsuranceCompanyCatalog>("insurance_companies", {
+    select: "id, name, rut, address, line_of_business, code, type, country_id, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createInsuranceCompany(input: { name: string; rut?: string; address?: string; line_of_business?: string; code?: string; type?: string; country_id?: string }) {
-  const mutation = `
-    mutation CreateInsuranceCompany($object: insurance_companies_insert_input!) {
-      insert_insurance_companies_one(object: $object) { id name rut address line_of_business code type country_id is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_insurance_companies_one: InsuranceCompanyCatalog }>(mutation, {
-    object: { ...input, is_active: true },
-  });
-  return data.insert_insurance_companies_one;
+  return insertRow<InsuranceCompanyCatalog>("insurance_companies", {
+    ...input,
+    is_active: true,
+  }, "id, name, rut, address, line_of_business, code, type, country_id, is_active");
 }
 
 export async function updateInsuranceCompany(id: string, input: Partial<InsuranceCompanyCatalog>) {
-  const mutation = `
-    mutation UpdateInsuranceCompany($id: uuid!, $set: insurance_companies_set_input!) {
-      update_insurance_companies_by_pk(pk_columns: { id: $id }, _set: $set) { id name rut address line_of_business code type country_id is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) {
@@ -111,8 +81,7 @@ export async function updateInsuranceCompany(id: string, input: Partial<Insuranc
       set[key] = value;
     }
   }
-  const data = await graphqlRequest<{ update_insurance_companies_by_pk: InsuranceCompanyCatalog }>(mutation, { id, set });
-  return data.update_insurance_companies_by_pk;
+  return updateRow<InsuranceCompanyCatalog>("insurance_companies", id, set, "id, name, rut, address, line_of_business, code, type, country_id, is_active");
 }
 
 export async function deleteInsuranceCompany(id: string) {
@@ -124,35 +93,21 @@ export async function deleteInsuranceCompany(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getBrokers() {
-  const query = `
-    query GetBrokers {
-      brokers(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name rut address contact country_id is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ brokers: BrokerCatalog[] }>(query);
-  return data.brokers;
+  return fetchAll<BrokerCatalog>("brokers", {
+    select: "id, name, rut, address, contact, country_id, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createBroker(input: { name: string; rut?: string; address?: string; contact?: string; country_id?: string }) {
-  const mutation = `
-    mutation CreateBroker($object: brokers_insert_input!) {
-      insert_brokers_one(object: $object) { id name rut address contact country_id is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_brokers_one: BrokerCatalog }>(mutation, {
-    object: { ...input, is_active: true },
-  });
-  return data.insert_brokers_one;
+  return insertRow<BrokerCatalog>("brokers", {
+    ...input,
+    is_active: true,
+  }, "id, name, rut, address, contact, country_id, is_active");
 }
 
 export async function updateBroker(id: string, input: Partial<BrokerCatalog>) {
-  const mutation = `
-    mutation UpdateBroker($id: uuid!, $set: brokers_set_input!) {
-      update_brokers_by_pk(pk_columns: { id: $id }, _set: $set) { id name rut address contact country_id is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) {
@@ -160,8 +115,7 @@ export async function updateBroker(id: string, input: Partial<BrokerCatalog>) {
       set[key] = value;
     }
   }
-  const data = await graphqlRequest<{ update_brokers_by_pk: BrokerCatalog }>(mutation, { id, set });
-  return data.update_brokers_by_pk;
+  return updateRow<BrokerCatalog>("brokers", id, set, "id, name, rut, address, contact, country_id, is_active");
 }
 
 export async function deleteBroker(id: string) {
@@ -174,39 +128,25 @@ export async function deleteBroker(id: string) {
 
 export async function getBusinessLines() {
   try {
-    const query = `
-      query GetBusinessLines {
-        business_lines(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-          id country_id name claim_type claim_type_id ramo_fecu description is_active created_at updated_at
-        }
-      }
-    `;
-    const data = await graphqlRequest<{ business_lines: BusinessLine[] }>(query);
-    return data.business_lines;
+    return await fetchAll<BusinessLine>("business_lines", {
+      select: "id, country_id, name, code_prefix, claim_type, claim_type_id, ramo_fecu, description, is_active, created_at, updated_at",
+      eq: { is_active: true },
+      order: { column: "name", ascending: true },
+    });
   } catch (err) {
     console.error("[getBusinessLines] Error:", err);
     throw err;
   }
 }
 
-export async function createBusinessLine(input: { country_id?: string; name: string; claim_type?: string; claim_type_id?: string; ramo_fecu?: string; description?: string }) {
-  const mutation = `
-    mutation CreateBusinessLine($object: business_lines_insert_input!) {
-      insert_business_lines_one(object: $object) { id country_id name claim_type claim_type_id ramo_fecu description is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_business_lines_one: BusinessLine }>(mutation, {
-    object: { ...input, is_active: true },
-  });
-  return data.insert_business_lines_one;
+export async function createBusinessLine(input: { country_id?: string; name: string; code_prefix?: string; claim_type?: string; claim_type_id?: string; ramo_fecu?: string; description?: string }) {
+  return insertRow<BusinessLine>("business_lines", {
+    ...input,
+    is_active: true,
+  }, "id, country_id, name, code_prefix, claim_type, claim_type_id, ramo_fecu, description, is_active");
 }
 
 export async function updateBusinessLine(id: string, input: Partial<BusinessLine>) {
-  const mutation = `
-    mutation UpdateBusinessLine($id: uuid!, $set: business_lines_set_input!) {
-      update_business_lines_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id name claim_type claim_type_id ramo_fecu description is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) {
@@ -214,8 +154,7 @@ export async function updateBusinessLine(id: string, input: Partial<BusinessLine
       set[key] = value;
     }
   }
-  const data = await graphqlRequest<{ update_business_lines_by_pk: BusinessLine }>(mutation, { id, set });
-  return data.update_business_lines_by_pk;
+  return updateRow<BusinessLine>("business_lines", id, set, "id, country_id, name, code_prefix, claim_type, claim_type_id, ramo_fecu, description, is_active");
 }
 
 export async function deleteBusinessLine(id: string) {
@@ -228,15 +167,11 @@ export async function deleteBusinessLine(id: string) {
 
 export async function getInsuranceProducts() {
   try {
-    const query = `
-      query GetInsuranceProducts {
-        insurance_products(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-          id business_line_id name description country_id is_active created_at updated_at
-        }
-      }
-    `;
-    const data = await graphqlRequest<{ insurance_products: InsuranceProduct[] }>(query);
-    return data.insurance_products;
+    return await fetchAll<InsuranceProduct>("insurance_products", {
+      select: "id, business_line_id, name, description, country_id, is_active, created_at, updated_at",
+      eq: { is_active: true },
+      order: { column: "name", ascending: true },
+    });
   } catch (err) {
     console.error("[getInsuranceProducts] Error:", err);
     throw err;
@@ -244,23 +179,13 @@ export async function getInsuranceProducts() {
 }
 
 export async function createInsuranceProduct(input: { business_line_id: string; name: string; description?: string; country_id?: string }) {
-  const mutation = `
-    mutation CreateInsuranceProduct($object: insurance_products_insert_input!) {
-      insert_insurance_products_one(object: $object) { id business_line_id name description country_id is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_insurance_products_one: InsuranceProduct }>(mutation, {
-    object: { ...input, is_active: true },
-  });
-  return data.insert_insurance_products_one;
+  return insertRow<InsuranceProduct>("insurance_products", {
+    ...input,
+    is_active: true,
+  }, "id, business_line_id, name, description, country_id, is_active");
 }
 
 export async function updateInsuranceProduct(id: string, input: Partial<InsuranceProduct>) {
-  const mutation = `
-    mutation UpdateInsuranceProduct($id: uuid!, $set: insurance_products_set_input!) {
-      update_insurance_products_by_pk(pk_columns: { id: $id }, _set: $set) { id name description country_id is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) {
@@ -268,8 +193,7 @@ export async function updateInsuranceProduct(id: string, input: Partial<Insuranc
       set[key] = value;
     }
   }
-  const data = await graphqlRequest<{ update_insurance_products_by_pk: InsuranceProduct }>(mutation, { id, set });
-  return data.update_insurance_products_by_pk;
+  return updateRow<InsuranceProduct>("insurance_products", id, set, "id, name, description, country_id, is_active");
 }
 
 export async function deleteInsuranceProduct(id: string) {
@@ -281,35 +205,21 @@ export async function deleteInsuranceProduct(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getAdvisors() {
-  const query = `
-    query GetAdvisors {
-      advisors(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name email phone country_id is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ advisors: Advisor[] }>(query);
-  return data.advisors;
+  return fetchAll<Advisor>("advisors", {
+    select: "id, name, email, phone, country_id, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createAdvisor(input: { name: string; email?: string; phone?: string; country_id?: string }) {
-  const mutation = `
-    mutation CreateAdvisor($object: advisors_insert_input!) {
-      insert_advisors_one(object: $object) { id name email phone country_id is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_advisors_one: Advisor }>(mutation, {
-    object: { ...input, is_active: true },
-  });
-  return data.insert_advisors_one;
+  return insertRow<Advisor>("advisors", {
+    ...input,
+    is_active: true,
+  }, "id, name, email, phone, country_id, is_active");
 }
 
 export async function updateAdvisor(id: string, input: Partial<Advisor>) {
-  const mutation = `
-    mutation UpdateAdvisor($id: uuid!, $set: advisors_set_input!) {
-      update_advisors_by_pk(pk_columns: { id: $id }, _set: $set) { id name email phone country_id is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) {
@@ -317,8 +227,7 @@ export async function updateAdvisor(id: string, input: Partial<Advisor>) {
       set[key] = value;
     }
   }
-  const data = await graphqlRequest<{ update_advisors_by_pk: Advisor }>(mutation, { id, set });
-  return data.update_advisors_by_pk;
+  return updateRow<Advisor>("advisors", id, set, "id, name, email, phone, country_id, is_active");
 }
 
 export async function deleteAdvisor(id: string) {
@@ -330,42 +239,30 @@ export async function deleteAdvisor(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getRegions(countryId?: string) {
-  const where = countryId ? `{ country_id: { _eq: "${countryId}" }, is_active: { _eq: true } }` : `{ is_active: { _eq: true } }`;
-  const query = `
-    query GetRegions {
-      regions(where: ${where}, order_by: { name: asc }) {
-        id country_id code name is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ regions: Region[] }>(query);
-  return data.regions;
+  const options: Parameters<typeof fetchAll>[1] = {
+    select: "id, country_id, code, name, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  };
+  if (countryId) {
+    options.eq = { ...options.eq, country_id: countryId };
+  }
+  return fetchAll<Region>("regions", options);
 }
 
 export async function createRegion(input: { country_id: string; code?: string; name: string }) {
-  const mutation = `
-    mutation CreateRegion($object: regions_insert_input!) {
-      insert_regions_one(object: $object) { id country_id code name is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_regions_one: Region }>(mutation, {
-    object: { ...input, is_active: true },
-  });
-  return data.insert_regions_one;
+  return insertRow<Region>("regions", {
+    ...input,
+    is_active: true,
+  }, "id, country_id, code, name, is_active");
 }
 
 export async function updateRegion(id: string, input: Partial<Region>) {
-  const mutation = `
-    mutation UpdateRegion($id: uuid!, $set: regions_set_input!) {
-      update_regions_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id code name is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_regions_by_pk: Region }>(mutation, { id, set });
-  return data.update_regions_by_pk;
+  return updateRow<Region>("regions", id, set, "id, country_id, code, name, is_active");
 }
 
 export async function deleteRegion(id: string) {
@@ -377,42 +274,30 @@ export async function deleteRegion(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getCities(regionId?: string) {
-  const where = regionId ? `{ region_id: { _eq: "${regionId}" }, is_active: { _eq: true } }` : `{ is_active: { _eq: true } }`;
-  const query = `
-    query GetCities {
-      cities(where: ${where}, order_by: { name: asc }) {
-        id region_id name is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ cities: City[] }>(query);
-  return data.cities;
+  const options: Parameters<typeof fetchAll>[1] = {
+    select: "id, region_id, name, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  };
+  if (regionId) {
+    options.eq = { ...options.eq, region_id: regionId };
+  }
+  return fetchAll<City>("cities", options);
 }
 
 export async function createCity(input: { region_id: string; name: string }) {
-  const mutation = `
-    mutation CreateCity($object: cities_insert_input!) {
-      insert_cities_one(object: $object) { id region_id name is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_cities_one: City }>(mutation, {
-    object: { ...input, is_active: true },
-  });
-  return data.insert_cities_one;
+  return insertRow<City>("cities", {
+    ...input,
+    is_active: true,
+  }, "id, region_id, name, is_active");
 }
 
 export async function updateCity(id: string, input: Partial<City>) {
-  const mutation = `
-    mutation UpdateCity($id: uuid!, $set: cities_set_input!) {
-      update_cities_by_pk(pk_columns: { id: $id }, _set: $set) { id region_id name is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_cities_by_pk: City }>(mutation, { id, set });
-  return data.update_cities_by_pk;
+  return updateRow<City>("cities", id, set, "id, region_id, name, is_active");
 }
 
 export async function deleteCity(id: string) {
@@ -424,42 +309,30 @@ export async function deleteCity(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getCommunes(cityId?: string) {
-  const where = cityId ? `{ city_id: { _eq: "${cityId}" }, is_active: { _eq: true } }` : `{ is_active: { _eq: true } }`;
-  const query = `
-    query GetCommunes {
-      communes(where: ${where}, order_by: { name: asc }) {
-        id city_id name is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ communes: Commune[] }>(query);
-  return data.communes;
+  const options: Parameters<typeof fetchAll>[1] = {
+    select: "id, city_id, name, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  };
+  if (cityId) {
+    options.eq = { ...options.eq, city_id: cityId };
+  }
+  return fetchAll<Commune>("communes", options);
 }
 
 export async function createCommune(input: { city_id: string; name: string }) {
-  const mutation = `
-    mutation CreateCommune($object: communes_insert_input!) {
-      insert_communes_one(object: $object) { id city_id name is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_communes_one: Commune }>(mutation, {
-    object: { ...input, is_active: true },
-  });
-  return data.insert_communes_one;
+  return insertRow<Commune>("communes", {
+    ...input,
+    is_active: true,
+  }, "id, city_id, name, is_active");
 }
 
 export async function updateCommune(id: string, input: Partial<Commune>) {
-  const mutation = `
-    mutation UpdateCommune($id: uuid!, $set: communes_set_input!) {
-      update_communes_by_pk(pk_columns: { id: $id }, _set: $set) { id city_id name is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_communes_by_pk: Commune }>(mutation, { id, set });
-  return data.update_communes_by_pk;
+  return updateRow<Commune>("communes", id, set, "id, city_id, name, is_active");
 }
 
 export async function deleteCommune(id: string) {
@@ -471,39 +344,26 @@ export async function deleteCommune(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getPropertyClassifications() {
-  const query = `
-    query GetPropertyClassifications {
-      property_classifications(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name  description is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ property_classifications: PropertyClassification[] }>(query);
-  return data.property_classifications;
+  return fetchAll<PropertyClassification>("property_classifications", {
+    select: "id, name, description, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createPropertyClassification(input: { name: string; description?: string }) {
-  const mutation = `
-    mutation CreatePropertyClassification($object: property_classifications_insert_input!) {
-      insert_property_classifications_one(object: $object) { id name  description is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_property_classifications_one: PropertyClassification }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_property_classifications_one;
+  return insertRow<PropertyClassification>("property_classifications", {
+    ...input,
+    is_active: true,
+  }, "id, name, description, is_active");
 }
 
 export async function updatePropertyClassification(id: string, input: Partial<PropertyClassification>) {
-  const mutation = `
-    mutation UpdatePropertyClassification($id: uuid!, $set: property_classifications_set_input!) {
-      update_property_classifications_by_pk(pk_columns: { id: $id }, _set: $set) { id name description is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_property_classifications_by_pk: PropertyClassification }>(mutation, { id, set });
-  return data.update_property_classifications_by_pk;
+  return updateRow<PropertyClassification>("property_classifications", id, set, "id, name, description, is_active");
 }
 
 export async function deletePropertyClassification(id: string) {
@@ -515,39 +375,26 @@ export async function deletePropertyClassification(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getDamageClassifications() {
-  const query = `
-    query GetDamageClassifications {
-      damage_classifications(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name  description is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ damage_classifications: DamageClassification[] }>(query);
-  return data.damage_classifications;
+  return fetchAll<DamageClassification>("damage_classifications", {
+    select: "id, name, description, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createDamageClassification(input: { name: string; description?: string }) {
-  const mutation = `
-    mutation CreateDamageClassification($object: damage_classifications_insert_input!) {
-      insert_damage_classifications_one(object: $object) { id name  description is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_damage_classifications_one: DamageClassification }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_damage_classifications_one;
+  return insertRow<DamageClassification>("damage_classifications", {
+    ...input,
+    is_active: true,
+  }, "id, name, description, is_active");
 }
 
 export async function updateDamageClassification(id: string, input: Partial<DamageClassification>) {
-  const mutation = `
-    mutation UpdateDamageClassification($id: uuid!, $set: damage_classifications_set_input!) {
-      update_damage_classifications_by_pk(pk_columns: { id: $id }, _set: $set) { id name description is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_damage_classifications_by_pk: DamageClassification }>(mutation, { id, set });
-  return data.update_damage_classifications_by_pk;
+  return updateRow<DamageClassification>("damage_classifications", id, set, "id, name, description, is_active");
 }
 
 export async function deleteDamageClassification(id: string) {
@@ -559,39 +406,26 @@ export async function deleteDamageClassification(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getPolicyTypes() {
-  const query = `
-    query GetPolicyTypes {
-      policy_types(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name description is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ policy_types: PolicyType[] }>(query);
-  return data.policy_types;
+  return fetchAll<PolicyType>("policy_types", {
+    select: "id, name, description, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createPolicyType(input: { name: string; description?: string }) {
-  const mutation = `
-    mutation CreatePolicyType($object: policy_types_insert_input!) {
-      insert_policy_types_one(object: $object) { id name description is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_policy_types_one: PolicyType }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_policy_types_one;
+  return insertRow<PolicyType>("policy_types", {
+    ...input,
+    is_active: true,
+  }, "id, name, description, is_active");
 }
 
 export async function updatePolicyType(id: string, input: Partial<PolicyType>) {
-  const mutation = `
-    mutation UpdatePolicyType($id: uuid!, $set: policy_types_set_input!) {
-      update_policy_types_by_pk(pk_columns: { id: $id }, _set: $set) { id name description is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_policy_types_by_pk: PolicyType }>(mutation, { id, set });
-  return data.update_policy_types_by_pk;
+  return updateRow<PolicyType>("policy_types", id, set, "id, name, description, is_active");
 }
 
 export async function deletePolicyType(id: string) {
@@ -603,39 +437,26 @@ export async function deletePolicyType(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getClaimTypes() {
-  const query = `
-    query GetClaimTypes {
-      claim_types(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name description icon is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ claim_types: ClaimType[] }>(query);
-  return data.claim_types;
+  return fetchAll<ClaimType>("claim_types", {
+    select: "id, name, description, icon, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createClaimType(input: { name: string; description?: string; icon?: string }) {
-  const mutation = `
-    mutation CreateClaimType($object: claim_types_insert_input!) {
-      insert_claim_types_one(object: $object) { id name description icon is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_claim_types_one: ClaimType }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_claim_types_one;
+  return insertRow<ClaimType>("claim_types", {
+    ...input,
+    is_active: true,
+  }, "id, name, description, icon, is_active");
 }
 
 export async function updateClaimType(id: string, input: Partial<ClaimType>) {
-  const mutation = `
-    mutation UpdateClaimType($id: uuid!, $set: claim_types_set_input!) {
-      update_claim_types_by_pk(pk_columns: { id: $id }, _set: $set) { id name description icon is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_claim_types_by_pk: ClaimType }>(mutation, { id, set });
-  return data.update_claim_types_by_pk;
+  return updateRow<ClaimType>("claim_types", id, set, "id, name, description, icon, is_active");
 }
 
 export async function deleteClaimType(id: string) {
@@ -647,39 +468,26 @@ export async function deleteClaimType(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getHousingDestinations() {
-  const query = `
-    query GetHousingDestinations {
-      housing_destinations(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name  description is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ housing_destinations: HousingDestination[] }>(query);
-  return data.housing_destinations;
+  return fetchAll<HousingDestination>("housing_destinations", {
+    select: "id, name, description, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createHousingDestination(input: { name: string; description?: string }) {
-  const mutation = `
-    mutation CreateHousingDestination($object: housing_destinations_insert_input!) {
-      insert_housing_destinations_one(object: $object) { id name  description is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_housing_destinations_one: HousingDestination }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_housing_destinations_one;
+  return insertRow<HousingDestination>("housing_destinations", {
+    ...input,
+    is_active: true,
+  }, "id, name, description, is_active");
 }
 
 export async function updateHousingDestination(id: string, input: Partial<HousingDestination>) {
-  const mutation = `
-    mutation UpdateHousingDestination($id: uuid!, $set: housing_destinations_set_input!) {
-      update_housing_destinations_by_pk(pk_columns: { id: $id }, _set: $set) { id name description is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_housing_destinations_by_pk: HousingDestination }>(mutation, { id, set });
-  return data.update_housing_destinations_by_pk;
+  return updateRow<HousingDestination>("housing_destinations", id, set, "id, name, description, is_active");
 }
 
 export async function deleteHousingDestination(id: string) {
@@ -691,39 +499,26 @@ export async function deleteHousingDestination(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getBuildingAges() {
-  const query = `
-    query GetBuildingAges {
-      building_ages(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ building_ages: BuildingAge[] }>(query);
-  return data.building_ages;
+  return fetchAll<BuildingAge>("building_ages", {
+    select: "id, name, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createBuildingAge(input: { name: string }) {
-  const mutation = `
-    mutation CreateBuildingAge($object: building_ages_insert_input!) {
-      insert_building_ages_one(object: $object) { id name is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_building_ages_one: BuildingAge }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_building_ages_one;
+  return insertRow<BuildingAge>("building_ages", {
+    ...input,
+    is_active: true,
+  }, "id, name, is_active");
 }
 
 export async function updateBuildingAge(id: string, input: Partial<BuildingAge>) {
-  const mutation = `
-    mutation UpdateBuildingAge($id: uuid!, $set: building_ages_set_input!) {
-      update_building_ages_by_pk(pk_columns: { id: $id }, _set: $set) { id name is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_building_ages_by_pk: BuildingAge }>(mutation, { id, set });
-  return data.update_building_ages_by_pk;
+  return updateRow<BuildingAge>("building_ages", id, set, "id, name, is_active");
 }
 
 export async function deleteBuildingAge(id: string) {
@@ -735,39 +530,26 @@ export async function deleteBuildingAge(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getRelationships() {
-  const query = `
-    query GetRelationships {
-      relationships(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id name  is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ relationships: Relationship[] }>(query);
-  return data.relationships;
+  return fetchAll<Relationship>("relationships", {
+    select: "id, name, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createRelationship(input: { name: string }) {
-  const mutation = `
-    mutation CreateRelationship($object: relationships_insert_input!) {
-      insert_relationships_one(object: $object) { id name  is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_relationships_one: Relationship }>(mutation, { object: { ...input, is_active: true } });
-  return data.insert_relationships_one;
+  return insertRow<Relationship>("relationships", {
+    ...input,
+    is_active: true,
+  }, "id, name, is_active");
 }
 
 export async function updateRelationship(id: string, input: Partial<Relationship>) {
-  const mutation = `
-    mutation UpdateRelationship($id: uuid!, $set: relationships_set_input!) {
-      update_relationships_by_pk(pk_columns: { id: $id }, _set: $set) { id name is_active }
-    }
-  `;
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  const data = await graphqlRequest<{ update_relationships_by_pk: Relationship }>(mutation, { id, set });
-  return data.update_relationships_by_pk;
+  return updateRow<Relationship>("relationships", id, set, "id, name, is_active");
 }
 
 export async function deleteRelationship(id: string) {
@@ -783,49 +565,33 @@ export async function deleteRelationship(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getCountries() {
-  const query = `
-    query GetCountries {
-      countries(order_by: { name: asc }) {
-        id code name phone_prefix created_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ countries: Country[] }>(query);
-  return data.countries;
+  return fetchAll<Country>("countries", {
+    select: "id, code, name, phone_prefix, created_at",
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function getLookupCatalog(category: string) {
-  const query = `
-    query GetLookupCatalog($category: String!) {
-      lookup_catalog(where: { category: { _eq: $category }, is_active: { _eq: true } }, order_by: { sort_order: asc, name: asc }) {
-        id country_id category code name description sort_order is_active
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ lookup_catalog: LookupCatalog[] }>(query, { category });
-  return data.lookup_catalog;
+  return fetchAll<LookupCatalog>("lookup_catalog", {
+    select: "id, country_id, category, code, name, description, sort_order, is_active",
+    eq: { category, is_active: true },
+    order: { column: "sort_order", ascending: true },
+  }).then((rows) => rows.sort((a, b) => {
+    if (a.sort_order === b.sort_order) return a.name.localeCompare(b.name);
+    return a.sort_order - b.sort_order;
+  }));
 }
 
 export async function createLookupCatalogItem(input: { category: string; name: string; code?: string; sort_order?: number }) {
-  const mutation = `
-    mutation CreateLookupCatalogItem($object: lookup_catalog_insert_input!) {
-      insert_lookup_catalog_one(object: $object) { id category code name sort_order is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_lookup_catalog_one: LookupCatalog }>(mutation, {
-    object: { ...input, is_active: true, sort_order: input.sort_order ?? 0 },
-  });
-  return data.insert_lookup_catalog_one;
+  return insertRow<LookupCatalog>("lookup_catalog", {
+    ...input,
+    is_active: true,
+    sort_order: input.sort_order ?? 0,
+  }, "id, category, code, name, sort_order, is_active");
 }
 
 export async function updateLookupCatalogItem(id: string, input: Partial<{ name: string; code: string; sort_order: number; is_active: boolean }>) {
-  const mutation = `
-    mutation UpdateLookupCatalogItem($id: uuid!, $set: lookup_catalog_set_input!) {
-      update_lookup_catalog_by_pk(pk_columns: { id: $id }, _set: $set) { id name code sort_order is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ update_lookup_catalog_by_pk: LookupCatalog }>(mutation, { id, set: input });
-  return data.update_lookup_catalog_by_pk;
+  return updateRow<LookupCatalog>("lookup_catalog", id, input, "id, name, code, sort_order, is_active");
 }
 
 export async function deleteLookupCatalogItem(id: string) {
@@ -837,15 +603,11 @@ export async function deleteLookupCatalogItem(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getEvents() {
-  const query = `
-    query GetEvents {
-      events(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id country_id code name description is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ events: Event[] }>(query);
-  return data.events;
+  return fetchAll<Event>("events", {
+    select: "id, country_id, code, name, description, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -853,51 +615,36 @@ export async function getEvents() {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getCountryById(id: string) {
-  const query = `query { countries_by_pk(id: "${id}") { id code name } }`;
-  const data = await graphqlRequest<{ countries_by_pk: { id: string; code: string; name: string } | null }>(query);
-  return data.countries_by_pk;
+  return fetchById<{ id: string; code: string; name: string }>("countries", id, "id, code, name");
 }
 
 export async function getRegionById(id: string) {
-  const query = `query { regions_by_pk(id: "${id}") { id name } }`;
-  const data = await graphqlRequest<{ regions_by_pk: { id: string; name: string } | null }>(query);
-  return data.regions_by_pk;
+  return fetchById<{ id: string; name: string }>("regions", id, "id, name");
 }
 
 export async function getCityById(id: string) {
-  const query = `query { cities_by_pk(id: "${id}") { id name } }`;
-  const data = await graphqlRequest<{ cities_by_pk: { id: string; name: string } | null }>(query);
-  return data.cities_by_pk;
+  return fetchById<{ id: string; name: string }>("cities", id, "id, name");
 }
 
 export async function getCommuneById(id: string) {
-  const query = `query { communes_by_pk(id: "${id}") { id name } }`;
-  const data = await graphqlRequest<{ communes_by_pk: { id: string; name: string } | null }>(query);
-  return data.communes_by_pk;
+  return fetchById<{ id: string; name: string }>("communes", id, "id, name");
 }
 
 export async function createEvent(input: { country_id?: string; code?: string; name: string; description?: string }) {
-  const mutation = `
-    mutation CreateEvent($object: events_insert_input!) {
-      insert_events_one(object: $object) { id country_id code name description is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_events_one: Event }>(mutation, {
-    object: { ...input, is_active: true },
-  });
-  return data.insert_events_one;
+  return insertRow<Event>("events", {
+    ...input,
+    is_active: true,
+  }, "id, country_id, code, name, description, is_active");
 }
 
 export async function updateEvent(id: string, input: { country_id?: string; code?: string; name?: string; description?: string; is_active?: boolean }) {
-  const mutation = `
-    mutation UpdateEvent($id: uuid!, $set: events_set_input!) {
-      update_events_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id code name description is_active }
-    }
-  `;
-  const { country_id, code, name, description, is_active, ...rest } = input;
-  const set = { country_id, code, name, description, is_active };
-  const data = await graphqlRequest<{ update_events_by_pk: Event }>(mutation, { id, set });
-  return data.update_events_by_pk;
+  const set: Record<string, unknown> = {};
+  if (input.country_id !== undefined) set.country_id = input.country_id;
+  if (input.code !== undefined) set.code = input.code;
+  if (input.name !== undefined) set.name = input.name;
+  if (input.description !== undefined) set.description = input.description;
+  if (input.is_active !== undefined) set.is_active = input.is_active;
+  return updateRow<Event>("events", id, set, "id, country_id, code, name, description, is_active");
 }
 
 export async function deleteEvent(id: string) {
@@ -909,39 +656,28 @@ export async function deleteEvent(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getDocumentTypes() {
-  const query = `
-    query GetDocumentTypes {
-      document_types(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-        id country_id code name description is_active created_at updated_at
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ document_types: DocumentType[] }>(query);
-  return data.document_types;
+  return fetchAll<DocumentType>("document_types", {
+    select: "id, country_id, code, name, description, is_active, created_at, updated_at",
+    eq: { is_active: true },
+    order: { column: "name", ascending: true },
+  });
 }
 
 export async function createDocumentType(input: { country_id?: string; code?: string; name: string; description?: string }) {
-  const mutation = `
-    mutation CreateDocumentType($object: document_types_insert_input!) {
-      insert_document_types_one(object: $object) { id country_id code name description is_active }
-    }
-  `;
-  const data = await graphqlRequest<{ insert_document_types_one: DocumentType }>(mutation, {
-    object: { ...input, is_active: true },
-  });
-  return data.insert_document_types_one;
+  return insertRow<DocumentType>("document_types", {
+    ...input,
+    is_active: true,
+  }, "id, country_id, code, name, description, is_active");
 }
 
 export async function updateDocumentType(id: string, input: { country_id?: string; code?: string; name?: string; description?: string; is_active?: boolean }) {
-  const mutation = `
-    mutation UpdateDocumentType($id: uuid!, $set: document_types_set_input!) {
-      update_document_types_by_pk(pk_columns: { id: $id }, _set: $set) { id country_id code name description is_active }
-    }
-  `;
-  const { country_id, code, name, description, is_active, ...rest } = input;
-  const set = { country_id, code, name, description, is_active };
-  const data = await graphqlRequest<{ update_document_types_by_pk: DocumentType }>(mutation, { id, set });
-  return data.update_document_types_by_pk;
+  const set: Record<string, unknown> = {};
+  if (input.country_id !== undefined) set.country_id = input.country_id;
+  if (input.code !== undefined) set.code = input.code;
+  if (input.name !== undefined) set.name = input.name;
+  if (input.description !== undefined) set.description = input.description;
+  if (input.is_active !== undefined) set.is_active = input.is_active;
+  return updateRow<DocumentType>("document_types", id, set, "id, country_id, code, name, description, is_active");
 }
 
 export async function deleteDocumentType(id: string) {

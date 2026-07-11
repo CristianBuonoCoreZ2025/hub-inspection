@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { getCompanies, createCompany, updateCompany, deleteCompany } from "@/services/companies";
 import { getUsersByCompany } from "@/services/user-clients";
 import { userTypeLabels } from "@/services/permissions";
 import { getCountries } from "@/services/countries";
-import { uploadFileToStorage } from "@/lib/nhost/storage-upload";
+import { uploadFileToStorage } from "@/lib/supabase/storage-upload";
 import { companySchema, type CompanyInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, Controller } from "react-hook-form";
@@ -114,36 +118,29 @@ export default function CompaniesPage() {
     [c.name, c.rut, c.address].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
+    name: (c) => c.name,
+    country: (c) => countries?.find((co: Country) => co.id === c.country_id)?.name || "",
+    rut: (c) => c.rut,
+    email: (c) => c.email,
+    phone: (c) => c.phone,
+  }, "name");
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
+
   return (
     <div className="app-page">
-      <header className="app-page-header">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Building2 className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="app-page-title">Empresas</h1>
-            <p className="app-page-lead">Administra las compañías aseguradoras y sus datos de contacto. Cada empresa puede tener siniestros y usuarios asignados.</p>
-          </div>
-        </div>
-      </header>
-
-      <div className="app-toolbar">
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar empresa..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-full max-w-sm"
-          />
+      <div className="app-grid-header">
+        <h1 className="app-page-title shrink-0">Empresas</h1>
+        <div className="app-grid-filters">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="app-input h-8 max-w-[180px]" />
         </div>
         {canCreate("companies") && (
-          <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva
+          <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm shrink-0">
+            <Plus className="mr-2 h-4 w-4" /> Nueva
           </Button>
         )}
+      </div>
 
         <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
           <DialogContent className="modal-md" showCloseButton={false}>
@@ -298,18 +295,18 @@ export default function CompaniesPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
 
       <div className="app-panel">
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         <div className="app-data-table-wrap">
           <table className="app-data-table">
             <thead>
               <tr>
-                <th className="w-[220px]">Empresa</th>
-                <th className="w-[120px]">País</th>
-                <th className="w-[140px]">RUT / ID</th>
-                <th className="w-[200px]">Email</th>
-                <th className="w-[140px]">Teléfono</th>
+                <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[220px]">Empresa</SortableTh>
+                <SortableTh sortKey="country" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[120px]">País</SortableTh>
+                <SortableTh sortKey="rut" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[140px]">RUT / ID</SortableTh>
+                <SortableTh sortKey="email" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[200px]">Email</SortableTh>
+                <SortableTh sortKey="phone" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[140px]">Teléfono</SortableTh>
                 <th className="w-[60px] text-center">Usuarios</th>
                 <th className="w-[80px]"></th>
               </tr>
@@ -320,7 +317,7 @@ export default function CompaniesPage() {
               ) : filtered?.length === 0 ? (
                 <tr><td colSpan={7} className="text-center text-muted-foreground py-4">No se encontraron empresas.</td></tr>
               ) : (
-                filtered?.map((company) => (
+                paginatedData.map((company) => (
                   <tr key={company.id}>
                     <td className="font-medium">
                       <div className="flex items-center gap-3">
@@ -402,6 +399,7 @@ export default function CompaniesPage() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
 
       {/* Modal de usuarios de la empresa */}
@@ -447,12 +445,12 @@ export default function CompaniesPage() {
                         <td>
                           {user.is_active ? (
                             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              <span className="app-status-dot app-status-on" />
                               Activo
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                              <span className="app-status-dot app-status-off" />
                               Inactivo
                             </span>
                           )}

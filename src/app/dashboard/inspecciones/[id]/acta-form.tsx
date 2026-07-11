@@ -23,8 +23,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
 import { getPropertyClassifications, getHousingDestinations, getBuildingAges } from "@/services/catalogs";
 import { useQuery } from "@tanstack/react-query";
@@ -347,12 +347,13 @@ export default function ActaForm({ session }: ActaFormProps) {
               Otros Seguros y Observaciones
             </h3>
             <div className="modal-grid">
-              <div className="modal-field flex items-center gap-2">
-                <Checkbox
-                  checked={Boolean(watch("other_insurances"))}
-                  onChange={(e) => set("other_insurances", e.target.checked)}
-                />
-                <Label className="text-[12px] font-medium cursor-pointer">¿Presenta otros seguros?</Label>
+              <div className="modal-field">
+                <ToggleChip
+                  active={Boolean(watch("other_insurances"))}
+                  onClick={(v) => set("other_insurances", v)}
+                >
+                  ¿Presenta otros seguros?
+                </ToggleChip>
               </div>
               {Boolean(watch("other_insurances")) && (
                 <div className="modal-field">
@@ -425,12 +426,13 @@ export default function ActaForm({ session }: ActaFormProps) {
                   <Label className="app-field-label">N° Bodegas</Label>
                   {numberSelect("property_risk.warehouse_count", 10)}
                 </div>
-                <div className="modal-field flex items-center gap-2">
-                  <Checkbox
-                    checked={Boolean(watch("property_risk.is_habitable"))}
-                    onChange={(e) => set("property_risk.is_habitable", e.target.checked)}
-                  />
-                  <Label className="text-[12px] font-medium cursor-pointer">¿Se encuentra habitable?</Label>
+                <div className="modal-field">
+                  <ToggleChip
+                    active={Boolean(watch("property_risk.is_habitable"))}
+                    onClick={(v) => set("property_risk.is_habitable", v)}
+                  >
+                    ¿Se encuentra habitable?
+                  </ToggleChip>
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Nombre Propietario(s)</Label>
@@ -518,15 +520,14 @@ export default function ActaForm({ session }: ActaFormProps) {
                 { key: "other_measures", label: "Otras Medidas" },
               ] as const
             ).map((item) => (
-              <div key={item.key} className="flex items-start gap-4 rounded-lg border border-border p-2.5">
-                <div className="flex items-center gap-2 pt-0.5 shrink-0">
-                  <Checkbox
-                    checked={Boolean(watch(`security_measures.${item.key}.has_it`))}
-                    onChange={(e) =>
-                      set(`security_measures.${item.key}.has_it`, e.target.checked)
-                    }
-                  />
-                  <Label className="text-[12px] font-medium cursor-pointer whitespace-nowrap">{item.label}</Label>
+              <div key={item.key} className="flex items-start gap-3 rounded-lg border border-border p-2.5">
+                <div className="pt-0.5 shrink-0">
+                  <ToggleChip
+                    active={Boolean(watch(`security_measures.${item.key}.has_it`))}
+                    onClick={(v) => set(`security_measures.${item.key}.has_it`, v)}
+                  >
+                    {item.label}
+                  </ToggleChip>
                 </div>
                 <div className="flex-1 min-w-0">
                   <Input

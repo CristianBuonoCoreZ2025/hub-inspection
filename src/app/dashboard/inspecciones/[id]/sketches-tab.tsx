@@ -8,7 +8,7 @@ import {
   updateDamageSketch,
   deleteDamageSketch,
 } from "@/services/inspections";
-import { uploadFileToStorage } from "@/lib/nhost/storage-upload";
+import { uploadFileToStorage } from "@/lib/supabase/storage-upload";
 import { toast } from "sonner";
 import { Upload, Trash2, ImageIcon, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";

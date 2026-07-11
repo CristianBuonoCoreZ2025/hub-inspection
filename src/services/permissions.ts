@@ -1,58 +1,39 @@
-import { graphqlRequest } from "@/lib/nhost/graphql";
+import { fetchAll, updateRow } from "@/lib/supabase/db";
 import type { UserTypePermission, UserRole, PermissionSection } from "@/types";
 
-const PERMISSION_FIELDS = `
-  id
-  user_type
-  section
-  can_view
-  can_edit
-  can_create
-  can_delete
-  created_at
-  updated_at
-`;
+const PERMISSION_FIELDS =
+  "id, user_type, section, can_view, can_edit, can_create, can_delete, created_at, updated_at";
 
 export async function getAllPermissions(): Promise<UserTypePermission[]> {
-  const query = `
-    query GetAllPermissions {
-      user_type_permissions(order_by: { user_type: asc, section: asc }) {
-        ${PERMISSION_FIELDS}
+  return fetchAll<UserTypePermission>("user_type_permissions", {
+    select: PERMISSION_FIELDS,
+    order: { column: "user_type", ascending: true },
+  }).then((rows) =>
+    rows.sort((a, b) => {
+      if (a.user_type === b.user_type) {
+        return a.section.localeCompare(b.section);
       }
-    }
-  `;
-  const data = await graphqlRequest<{ user_type_permissions: UserTypePermission[] }>(query);
-  return data.user_type_permissions;
+      return a.user_type.localeCompare(b.user_type);
+    })
+  );
 }
 
 export async function getPermissionsByType(userType: UserRole): Promise<UserTypePermission[]> {
-  const query = `
-    query GetPermissionsByType($userType: String!) {
-      user_type_permissions(where: { user_type: { _eq: $userType } }, order_by: { section: asc }) {
-        ${PERMISSION_FIELDS}
-      }
-    }
-  `;
-  const data = await graphqlRequest<{ user_type_permissions: UserTypePermission[] }>(query, { userType });
-  return data.user_type_permissions;
+  return fetchAll<UserTypePermission>("user_type_permissions", {
+    select: PERMISSION_FIELDS,
+    eq: { user_type: userType },
+    order: { column: "section", ascending: true },
+  });
 }
 
 export async function updatePermission(id: string, input: Partial<UserTypePermission>): Promise<UserTypePermission> {
-  const mutation = `
-    mutation UpdatePermission($id: uuid!, $set: user_type_permissions_set_input!) {
-      update_user_type_permissions_by_pk(pk_columns: { id: $id }, _set: $set) {
-        ${PERMISSION_FIELDS}
-      }
-    }
-  `;
   const set: Record<string, unknown> = {};
   if (input.can_view !== undefined) set.can_view = input.can_view;
   if (input.can_edit !== undefined) set.can_edit = input.can_edit;
   if (input.can_create !== undefined) set.can_create = input.can_create;
   if (input.can_delete !== undefined) set.can_delete = input.can_delete;
 
-  const data = await graphqlRequest<{ update_user_type_permissions_by_pk: UserTypePermission }>(mutation, { id, set });
-  return data.update_user_type_permissions_by_pk;
+  return updateRow<UserTypePermission>("user_type_permissions", id, set, PERMISSION_FIELDS);
 }
 
 // Secciones del sistema con sus labels
@@ -88,6 +69,7 @@ export const userTypeLabels: Record<UserRole, string> = {
   internal: "Interno",
   adjuster: "Liquidador",
   inspector: "Inspector",
+  assistant: "Asistente",
   client_operator: "Operativo",
 };
 
@@ -178,6 +160,7 @@ export const sectionSubPages: Partial<Record<PermissionSection, SubPage[]>> = {
     { section: "inspecciones_informe", label: "Informe" },
   ],
   catalogos: [
+    { section: "catalogos_gestiones", label: "Gestiones" },
     { section: "catalogos_ubicaciones", label: "Ubicaciones" },
     { section: "catalogos_causas", label: "Causas" },
     { section: "catalogos_tipos_siniestros", label: "Tipos de Siniestros" },
