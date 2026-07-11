@@ -929,7 +929,7 @@ export default function ClaimDetailPage() {
                           done:     { dot: "bg-emerald-500",             label: "text-emerald-600 dark:text-emerald-400" },
                           active:   { dot: "bg-amber-400",              label: "text-amber-600 dark:text-amber-400" },
                           alert:    { dot: "bg-amber-400",              label: "text-amber-600 dark:text-amber-400" },
-                          late:     { dot: "bg-rose-500",               label: "text-rose-600 dark:text-rose-400" },
+                          late:     { dot: "bg-red-500",                label: "text-red-600 dark:text-red-400" },
                           rejected: { dot: "bg-rose-500",               label: "text-rose-600 dark:text-rose-400" },
                           pending:  { dot: "bg-slate-300 dark:bg-slate-600", label: "text-muted-foreground" },
                           none:     { dot: "bg-transparent border border-dashed border-slate-200 dark:border-slate-700", label: "text-muted-foreground/40" },
@@ -1037,7 +1037,7 @@ export default function ClaimDetailPage() {
                             <td className="text-[11px] text-muted-foreground">{g.fecha ? formatDateTime(g.fecha) : "—"}</td>
                             <td className="text-[11px]">
                               {daysLeft !== null && daysLeft < 0 ? (
-                                <span className="text-rose-600 font-medium">{daysLeft}</span>
+                                <span className="text-red-600 font-medium">{daysLeft}</span>
                               ) : daysLeft !== null ? (
                                 <span className="text-muted-foreground">{daysLeft}</span>
                               ) : (
