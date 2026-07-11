@@ -8,7 +8,7 @@
 - **Formularios:** React Hook Form + Zod
 - **Gestión de Estado:** Zustand
 - **Datos/Cache:** TanStack Query (React Query)
-- **Backend:** Nhost (PostgreSQL + Hasura GraphQL, Auth, Storage, Functions)
+- **Backend:** Supabase (PostgreSQL + PostgREST, Auth, Storage, Edge Functions)
 - **Gestor de paquetes:** pnpm
 - **Deploy:** Vercel
 
@@ -19,10 +19,10 @@
   - `src/components/` — componentes compartidos (ui, layout)
   - `src/lib/` — utilidades, configuraciones (nhost, etc.)
   - `src/hooks/` — custom hooks reutilizables
-  - `src/services/` — lógica de acceso a datos (Nhost GraphQL clients)
+  - `src/services/` — lógica de acceso a datos (Supabase PostgREST clients)
   - `src/server/` — server actions y lógica server-only
   - `src/types/` — tipos TypeScript globales
-- No usar mocks ni funcionalidades simuladas. Todo conectado a Nhost desde la primera versión.
+- No usar mocks ni funcionalidades simuladas. Todo conectado a Supabase desde la primera versión.
 
 ## Convenciones de Código
 - Usar **function components** en lugar de arrow functions para componentes React.
@@ -31,7 +31,7 @@
 - Validar todos los inputs de usuario con **Zod**.
 - Usar **React Hook Form** para todos los formularios.
 - Mantener separación clara entre Server Actions y Client Components.
-- Usar `@nhost/nhost-js` para autenticación en Next.js (cookies via SessionStorage).
+- Usar `@supabase/ssr` para autenticación en Next.js (cookies via middleware).
 
 ## Multi Tenant & Seguridad
 - Todas las tablas deben tener `company_id` o `tenant_id`.
@@ -40,11 +40,12 @@
 - Usar `NHOST_ADMIN_SECRET` solo en server actions o Nhost Functions, nunca en cliente.
 - Auditoría completa: registrar quién crea/modifica/elimina registros.
 
-## Base de Datos (Nhost / Hasura)
+## Base de Datos (Supabase / PostgreSQL)
 - Usar migraciones SQL manuales versionadas en `migrations/`.
-- Hasura debe "track" las tablas después de aplicar migraciones.
-- Configurar permisos de Hasura (además de RLS PostgreSQL) desde Nhost Console.
-- Tablas clave: `companies`, `tenants`, `profiles`, `roles`, `user_roles`, `claims`, `claim_participants`, `inspection_sessions`, `inspection_checklists`, `inspection_damages`, `inspection_evidences`, `inspection_notes`, `inspection_signatures`, `inspection_reports`, `inspection_chat_messages`, `magic_links`, `audit_logs`.
+- Supabase auto-detecta todas las tablas (sin "tracking" manual como Hasura).
+- Configurar **Row Level Security (RLS)** en TODAS las tablas.
+- Usar `SUPABASE_SERVICE_ROLE_KEY` solo en server actions o API routes, nunca en cliente.
+- Tablas clave: `companies`, `tenants`, `profiles`, `roles`, `user_roles`, `claims`, `claim_participants`, `claim_actions`, `action_template`, `action_features`, `gestion_screens`, `inspection_sessions`, `inspection_checklists`, `inspection_damages`, `inspection_evidences`, `inspection_notes`, `inspection_signatures`, `inspection_reports`, `inspection_chat_messages`, `audit_logs`.
 
 ## Branding & UI
 - Diseño premium inspirado en Vercel, Stripe, Linear, Notion, Clerk, Nhost.
@@ -1684,4 +1685,90 @@ Server Actions de la aplicación.
 
 Si alguien bypassa el server action y llama GraphQL directamente,
 Hasura Permissions bloquean según el rol del JWT.
+```
+
+---
+
+## 18. Migración a Supabase — Decisión Definitiva
+
+### Problema
+Hasura (Nhost) presentaba inestabilidad persistente (502/503 intermitentes) que afectaba el desarrollo y la experiencia de usuario.
+
+### Solución Definitiva
+- **Backend:** Supabase (PostgreSQL + PostgREST + Auth + Storage + Edge Functions)
+- **Data access:** `supabase.from('table').select()` (PostgREST REST API)
+- **Auth:** `@supabase/ssr` con cookies via middleware
+- **Storage:** Cloudflare R2 para archivos + Supabase Storage para archivos temporales
+- **RLS:** Policies en todas las tablas con `TO public` (no `TO authenticated`)
+
+### Regla
+```
+TODO el data access usa Supabase PostgREST. NO usar GraphQL.
+Las queries con embeddings usan FK hints: alias:table!fk_constraint_name(fields)
+El service role key SOLO se usa en server-side (API routes, server actions).
+```
+
+---
+
+## 19. Dos Tipos de Pantallas — Decisión Definitiva
+
+### Problema
+El sistema de pantallas dinámicas (gestion-screens) no soporta tabs, wizard steps, upload de archivos, canvas de firmas, chat en tiempo real ni videollamada. La inspección necesita todos estos componentes especializados.
+
+### Solución Definitiva
+El sistema tiene **dos tipos de pantallas** que coexisten:
+
+#### 1. Pantallas Dinámicas (Gestion Screens)
+- **Propósito:** Formularios configurables para gestiones de siniestros
+- **Configuración:** `form_schema` JSONB + constructor visual drag-and-drop
+- **Tipos de campo:** text, textarea, number, date, select, checkbox, table, section
+- **Entidades:** 13 simples (read-only del claim), 7 de gestión, 10 complejas (componentes React)
+- **Layout:** Secciones verticales apiladas (sin tabs, sin wizard)
+- **Uso:** Email, coberturas, reservas, documentos, liquidación, etc.
+
+#### 2. Pantallas Fijas (Inspection Screens)
+- **Propósito:** Aplicación colaborativa en tiempo real para inspecciones
+- **Configuración:** Hardcoded por diseño (proceso regulado)
+- **Componentes:** 7 tabs + wizard de 6 pasos (acta)
+- **Especializados:** Canvas de firmas, upload de evidencias, chat real-time, videollamada LiveKit, CRUD de daños, croquis
+- **Sync:** Inspector controla tabs, cliente sigue via magic link (polling 2s)
+
+### Integración
+- Las pantallas dinámicas pueden incrustar vistas de inspección via `complex_entity` (`inspection_coordination`, `inspection_session_view`)
+- El `action_template` de inspección puede tener una pantalla dinámica asociada para campos adicionales configurables
+- Las inspecciones crean `claim_actions` estándar y aparecen en el listado de gestiones del siniestro
+
+### Regla
+```
+Las pantallas dinámicas son para FORMULARIOS configurables.
+Las pantallas fijas son para APLICACIONES especializadas con componentes
+que no se pueden expresar en un form_schema JSONB (videollamada, canvas,
+chat, upload, wizard, sync real-time).
+NUNCA intentar meter inspección dentro de pantallas dinámicas.
+NUNCA intentar hacer configurables los tabs/wizard de inspección.
+```
+
+---
+
+## 20. Inspecciones como Gestiones Estándar — Decisión Definitiva
+
+### Problema
+Las inspecciones no creaban `claim_actions`, aparecían en el listado de gestiones del siniestro como objetos "fake" sin código estándar, sin action_status, sin issuer/reviewer/approver.
+
+### Solución Definitiva
+- Cada inspección crea un `claim_action` con `action_features_id` = "Inspección" (INS)
+- El `code` se genera por el trigger `set_claim_action_code()` (ej: `L-000000141-INS-001`)
+- `inspection_sessions.claim_action_id` vincula la sesión con la gestión
+- El trigger `sync_inspection_claim_action()` sincroniza el status automáticamente:
+  - `scheduled` → `todo` (pendiente)
+  - `active` → `issued` (emitida)
+  - `completed` → `issued` (emitida)
+  - `cancelled` → `cancelled` (cancelada)
+- El `inspection_number` usa el `code` del `claim_action` (estándar de gestiones)
+
+### Regla
+```
+Toda inspección DEBE crear un claim_action al momento de agendarse.
+El inspection_number DEBE ser el code del claim_action.
+El status de la inspección y del claim_action se sincronizan automáticamente via trigger.
 ```

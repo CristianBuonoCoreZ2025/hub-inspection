@@ -1,28 +1,33 @@
-feat: inspecciones siguen el estandar de gestiones (claim_actions)
+docs: consolidar planes en PLAN_MAESTRO.md + actualizar AGENTS.md
 
-Antes las inspecciones no creaban un claim_action, aparecian en el
-listado de gestiones del siniestro como objetos "fake" sin codigo
-estandar, sin action_status, sin issuer/reviewer/approver.
+- Creado PLAN_MAESTRO.md: plan unico y ordenado del proyecto
+  - Fase 1: Estabilizacion post-migracion (COMPLETADA)
+  - Fase 2: Mejoras del edit form (PENDIENTE)
+  - Fase 3: Mejoras del modulo de inspeccion (EN PROGRESO)
+  - Fase 4: Magic link mirror (PENDIENTE)
+  - Fase 5: Documentos del siniestro (COMPLETADO)
+  - Fase 6: Mejoras futuras (backlog)
+  - Tabla de migraciones aplicadas
+  - Documentacion de referencia
 
-Ahora cada inspeccion crea un claim_action con:
-- action_features_id = "Inspeccion" (INS)
-- action_template_id = template seleccionado
-- action_status_id = todo (pendiente)
-- issuer_id = inspector asignado
-- code generado por trigger set_claim_action_code() (ej: L-000000141-INS-001)
+- Eliminados 7 planes individuales obsoletos:
+  - PLAN_DOCUMENTOS_SINIESTRO.md (completado)
+  - PLAN_EDIT_FORM.md (consolidado en Fase 2)
+  - PLAN_GESTIONES.md (completado)
+  - PLAN_INSPECCION.md (consolidado en Fase 3)
+  - PLAN_LIVEINSP_MIRROR.md (consolidado en Fase 4)
+  - PLAN_MAGIC_LINK_FIX.md (completado)
+  - PLAN_MIGRACION_SUPABASE.md (completado)
 
-Cambios:
-- migrations/129: agrega claim_action_id a inspection_sessions + trigger
-  sync_inspection_claim_action() que sincroniza el status automaticamente
-  (scheduled->todo, active->issued, completed->issued, cancelled->cancelled)
-- createInspectionSession: crea claim_action antes de la sesion y los vincula
-- getInspectionSessions/getInspectionSessionById/getInspectionSessionByToken:
-  usan claim_action.code como inspection_number (fallback para legacy)
-- api/inspection/live: trae claim_action.code para inspection_number
-- claims/[id]/page.tsx: elimina mapeo fake de inspecciones, ahora aparecen
-  como claim_actions normales con link al detalle de inspeccion
-- types: agrega claim_action_id a InspectionSession y Claim.inspection_sessions
-- CLAIM_SELECT: trae claim_action_id en inspection_sessions
+- AGENTS.md actualizado:
+  - Stack: Nhost -> Supabase
+  - Seccion 18: Migracion a Supabase (decision definitiva)
+  - Seccion 19: Dos tipos de pantallas (decision definitiva)
+  - Seccion 20: Inspecciones como gestiones estandar (decision definitiva)
+
+- Mantenidos como referencia:
+  - docs/PLAN_GESTIONES_PANTALLAS.md (arquitectura de gestiones)
+  - src/lib/storage/PLAN.md (arquitectura de storage)
 
 Generated with [Devin](https://devin.ai)
 
