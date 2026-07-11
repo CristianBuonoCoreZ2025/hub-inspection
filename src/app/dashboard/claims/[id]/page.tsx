@@ -178,6 +178,7 @@ export default function ClaimDetailPage() {
     queryKey: ["claim-actions", id, showRejected],
     queryFn: () => getClaimActions(id, showRejected),
     enabled: !!id,
+    staleTime: 0,
   });
 
   const claim = rawClaim

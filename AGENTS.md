@@ -1750,6 +1750,17 @@ NUNCA intentar hacer configurables los tabs/wizard de inspección.
 
 ---
 
+## 19b. Glosario: Gestiones = Acciones
+
+### Regla
+```
+Cuando hablamos de "gestiones" o "acciones" nos referimos a lo mismo.
+Una gestión del siniestro = un claim_action.
+Usar los términos indistintamente.
+```
+
+---
+
 ## 20. Inspecciones como Gestiones Estándar — Decisión Definitiva
 
 ### Problema
