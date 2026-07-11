@@ -1,7 +1,7 @@
 import { fetchAll, insertRow, deleteRow, deleteWhere, insertMany } from "@/lib/supabase/db";
 import type { UserClient, Profile } from "@/types";
 
-const USER_CLIENT_SELECT = "id, user_id, company_id, created_at, company(id, name, slug)";
+const USER_CLIENT_SELECT = "id, user_id, company_id, created_at, company:companies!user_clients_company_id_fkey(id, name, slug)";
 
 export async function getUserClients(userId: string): Promise<UserClient[]> {
   return fetchAll<UserClient>("user_clients", {

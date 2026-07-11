@@ -307,7 +307,7 @@ export async function deletePolicy(id: string): Promise<boolean> {
 
 export async function getPolicyCoveragesByPolicyId(policyId: string): Promise<PolicyCoverage[]> {
   return fetchAll<PolicyCoverage>("policy_coverages", {
-    select: "id, policy_id, policy_number, coverage_name, subcoverage_name, insured_amount, deductible_amount, currency, is_active, created_at, updated_at, coverage_catalog_id, subcoverage_catalog_id, coverage_catalog(code, name), subcoverage_catalog(code, name)",
+    select: "id, policy_id, policy_number, coverage_name, subcoverage_name, insured_amount, deductible_amount, currency, is_active, created_at, updated_at, coverage_catalog_id, subcoverage_catalog_id, coverage_catalog:coverage_catalog!policy_coverages_coverage_catalog_id_fkey(code, name), subcoverage_catalog:subcoverage_catalog!policy_coverages_subcoverage_catalog_id_fkey(code, name)",
     eq: { policy_id: policyId, is_active: true },
     order: { column: "coverage_name", ascending: true },
   });

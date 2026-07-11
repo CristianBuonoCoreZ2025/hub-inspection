@@ -3,7 +3,7 @@ import { fetchAll, fetchById, updateRow } from "@/lib/supabase/db";
 import type { Profile, InviteUserInput, UserClient } from "@/types";
 
 const PROFILE_FIELDS =
-  "id, user_id, company_id, full_name, first_name, last_name, email, phone, rut, country_id, avatar_url, role, is_active, created_at, updated_at, user_clients(id, user_id, company_id, created_at, company(id, name, slug))";
+  "id, user_id, company_id, full_name, first_name, last_name, email, phone, rut, country_id, avatar_url, role, is_active, created_at, updated_at, user_clients:user_clients!user_clients_user_id_fkey(id, user_id, company_id, created_at, company:companies!user_clients_company_id_fkey(id, name, slug))";
 
 export async function getUsers(companyId?: string) {
   const options: Parameters<typeof fetchAll>[1] = {

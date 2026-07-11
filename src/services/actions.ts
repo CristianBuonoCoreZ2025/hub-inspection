@@ -139,7 +139,7 @@ export async function deleteActionType(id: string) {
 
 export async function getActionFeatures(): Promise<ActionFeature[]> {
   return fetchAll<ActionFeature>("action_features", {
-    select: "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, screen(id, code, name), characteristics(id, action_feature_id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order)",
+    select: "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, screen:gestion_screens!action_features_screen_id_fkey(id, code, name), characteristics:characteristic!characteristic_action_feature_id_fkey(id, action_feature_id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order)",
     order: { column: "name", ascending: true },
   }).then((rows) => {
     // Sort characteristics by sort_order within each feature
@@ -260,7 +260,7 @@ export async function deleteCharacteristic(id: string) {
 // ──────────────────────────────────────────────────────────────
 
 const ACTION_TEMPLATE_FIELDS =
-  "id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, review_levels, issuer_roles, reviewer_roles, approver_roles, default_issuer_role, default_reviewer_role, default_approver_role, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, code, is_dispatch_applicable, company_id, insurance_company_id, event_id, country_id, sort_order, action_feature(id, name, code), line_business(id, name, code_prefix), company(id, name), event(id, name), claim_statuses(claim_status_id, is_active)";
+  "id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, review_levels, issuer_roles, reviewer_roles, approver_roles, default_issuer_role, default_reviewer_role, default_approver_role, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, code, is_dispatch_applicable, company_id, insurance_company_id, event_id, country_id, sort_order, action_feature:action_features!action_template_action_features_id_fkey(id, name, code), line_business:business_lines!action_template_line_business_id_fkey(id, name, code_prefix), company:companies!action_template_company_id_fkey(id, name), event:events!action_template_event_id_fkey(id, name), claim_statuses:action_template_claim_status!action_template_claim_status_action_template_id_fkey(claim_status_id, is_active)";
 
 export async function getActionTemplates(): Promise<ActionTemplate[]> {
   const templates = await fetchAll<ActionTemplate>("action_template", {

@@ -33,7 +33,7 @@ export async function getGestionScreenByCode(code: string): Promise<GestionScree
 
 export async function getCharacteristicScreens(characteristicId: string): Promise<CharacteristicScreen[]> {
   return fetchAll<CharacteristicScreen>("characteristic_screens", {
-    select: "id, characteristic_id, screen_id, is_default, screen(id, code, name, description, icon, form_schema)",
+    select: "id, characteristic_id, screen_id, is_default, screen:gestion_screens!characteristic_screens_screen_id_fkey(id, code, name, description, icon, form_schema)",
     eq: { characteristic_id: characteristicId },
     order: { column: "is_default", ascending: false },
   });
@@ -66,7 +66,7 @@ export async function associateScreenToCharacteristic(
     characteristic_id: characteristicId,
     screen_id: screenId,
     is_default: isDefault,
-  }, "id, characteristic_id, screen_id, is_default, screen(id, code, name)");
+  }, "id, characteristic_id, screen_id, is_default, screen:gestion_screens!characteristic_screens_screen_id_fkey(id, code, name)");
 }
 
 /**

@@ -61,15 +61,15 @@ interface ClaimData {
   commune: CatalogRef | null;
   status: (CatalogRef & { code: string }) | null;
   currency: (CatalogRef & { code: string }) | null;
-  adjuster: { id: string; display_name: string; email: string | null } | null;
-  inspector: { id: string; display_name: string; email: string | null } | null;
-  auditor: { id: string; display_name: string; email: string | null } | null;
-  dispatcher: { id: string; display_name: string; email: string | null } | null;
-  assistant: { id: string; display_name: string; email: string | null } | null;
+  adjuster: { id: string; full_name: string; email: string | null } | null;
+  inspector: { id: string; full_name: string; email: string | null } | null;
+  auditor: { id: string; full_name: string; email: string | null } | null;
+  dispatcher: { id: string; full_name: string; email: string | null } | null;
+  assistant: { id: string; full_name: string; email: string | null } | null;
 }
 
 const CLAIM_SELECT =
-  "id, claim_number, internal_number, client_reference, company_report_number, liquidation_number, is_special_claim, claim_date, report_date, assignment_date, summary, notes, claim_address, owner_same_as_insured, policy_number, policy_item, policy_amount, policy_premium, policy_start_date, policy_end_date, recovery_type_legal, recovery_type_material, recovery_comments, broker_executive, created_at, company(id, name), insurance_company(id, name), broker(id, name), advisor(id, name), claim_type(id, name), business_line(id, name), insurance_product(id, name), claim_cause(id, name), event(id, name), type(id, name), construction_type(id, name), destination_housing(id, name), damage_classification(id, name), habitability(id, name), service_type(id, name), billing_type(id, name), country(id, name), region(id, name), city(id, name), commune(id, name), status(id, name, code), currency(id, name, code), adjuster_user(id, display_name, email), inspector_user(id, display_name, email), auditor_user(id, display_name, email), dispatcher_user(id, display_name, email), assistant_user(id, display_name, email)";
+  "id, claim_number, internal_number, client_reference, company_report_number, liquidation_number, is_special_claim, claim_date, report_date, assignment_date, summary, notes, claim_address, owner_same_as_insured, policy_number, policy_item, policy_amount, policy_premium, policy_start_date, policy_end_date, recovery_type_legal, recovery_type_material, recovery_comments, broker_executive, created_at, company:companies!claims_company_id_fkey(id, name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name), broker:brokers!claims_broker_id_fkey(id, name), advisor:advisors!claims_advisor_id_fkey(id, name), claim_type:claim_types!claims_claim_type_id_fkey(id, name), business_line:business_lines!claims_business_line_id_fkey(id, name), insurance_product:insurance_products!claims_insurance_product_id_fkey(id, name), claim_cause:claim_causes!claims_claim_cause_id_fkey(id, name), event:events!claims_event_id_fkey(id, name), type:lookup_catalog!claims_type_id_fkey(id, name), construction_type:lookup_catalog!claims_construction_type_id_fkey(id, name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(id, name), damage_classification:damage_classifications!claims_damage_classification_id_fkey(id, name), habitability:lookup_catalog!claims_habitability_id_fkey(id, name), service_type:lookup_catalog!claims_service_type_id_fkey(id, name), billing_type:lookup_catalog!claims_billing_type_id_fkey(id, name), country:countries!claims_country_id_fkey(id, name), region:regions!claims_region_id_fkey(id, name), city:cities!claims_city_id_fkey(id, name), commune:communes!claims_commune_id_fkey(id, name), status:lookup_catalog!claims_status_id_fkey(id, name, code), currency:lookup_catalog!claims_currency_id_fkey(id, name, code), adjuster_user:profiles!claims_adjuster_id_fkey(id, full_name, email), inspector_user:profiles!claims_inspector_id_fkey(id, full_name, email), auditor_user:profiles!claims_auditor_id_fkey(id, full_name, email), dispatcher_user:profiles!claims_dispatcher_id_fkey(id, full_name, email), assistant_user:profiles!claims_assistant_id_fkey(id, full_name, email)";
 
 interface RawParticipant {
   type: string;
@@ -108,9 +108,9 @@ function toParticipant(p: RawParticipant): ParticipantData {
 }
 
 /** Mapea un usuario asignado crudo a UserData */
-function toUser(u: { id: string; display_name: string; email: string | null } | null): UserData | null {
+function toUser(u: { id: string; full_name: string; email: string | null } | null): UserData | null {
   if (!u) return null;
-  return { full_name: u.display_name, display_name: u.display_name, email: u.email ?? undefined };
+  return { full_name: u.full_name, display_name: u.full_name, email: u.email ?? undefined };
 }
 
 /**
