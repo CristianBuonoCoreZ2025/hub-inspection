@@ -958,12 +958,12 @@ export default function ClaimDetailPage() {
                           let issueState: LightState = "none";
                           let issueTitle = "";
                           if (g.hasIssue) {
-                            if (g.issuedOn && g.issuedBy) {
-                              issueState = "done";
-                              issueTitle = `Emisión ✓\nPor: ${g.issuedBy}${g.issuedByEmail ? ` (${g.issuedByEmail})` : ""}\nFecha: ${fmtDate(g.issuedOn)}`;
-                            } else if (g.estado === "rejected") {
+                            if (g.estado === "rejected") {
                               issueState = "rejected";
                               issueTitle = "Emisión rechazada";
+                            } else if (g.issuedOn && g.issuedBy) {
+                              issueState = "done";
+                              issueTitle = `Emisión ✓\nPor: ${g.issuedBy}${g.issuedByEmail ? ` (${g.issuedByEmail})` : ""}\nFecha: ${fmtDate(g.issuedOn)}`;
                             } else if (g.estado === "todo") {
                               const createdDate = g.createdOn ? new Date(g.createdOn) : null;
                               const daysSince = createdDate ? Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
@@ -979,8 +979,8 @@ export default function ClaimDetailPage() {
                                 issueTitle = "Emisión pendiente";
                               }
                             } else {
-                              issueState = "done";
-                              issueTitle = "Emisión completada";
+                              issueState = "pending";
+                              issueTitle = "Emisión pendiente";
                             }
                           }
 
