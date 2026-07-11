@@ -1031,10 +1031,10 @@ export default function ClaimDetailPage() {
 
                         return (
                           <tr key={g.id}>
-                            <td className="font-mono text-[11px] text-primary">{shortActionCode(g.codigo)}</td>
-                            <td className="font-medium text-[13px]">{g.nombre}</td>
-                            <td className="text-[12px] text-muted-foreground">{g.fecha ? formatDateTime(g.fecha) : "—"}</td>
-                            <td className="text-[12px]">
+                            <td className="font-mono text-[10px] text-primary">{shortActionCode(g.codigo)}</td>
+                            <td className="font-medium text-[11px]">{g.nombre}</td>
+                            <td className="text-[11px] text-muted-foreground">{g.fecha ? formatDateTime(g.fecha) : "—"}</td>
+                            <td className="text-[11px]">
                               {daysLeft !== null && daysLeft < 0 ? (
                                 <span className="text-rose-600 font-medium">{daysLeft}</span>
                               ) : daysLeft !== null ? (
