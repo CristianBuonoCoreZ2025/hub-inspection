@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClaimById, getClaimParticipants, updateClaimStatus } from "@/services/claims";
-import { getClaimActions, getActionTemplatesByClaimStatus, createClaimAction, getClaimActionById, updateClaimAction, deleteClaimAction, issueClaimAction, reviewClaimAction, approveClaimAction, rejectClaimAction } from "@/services/claim-actions";
+import { getClaimActions, getActionTemplatesByClaimStatus, createClaimAction, getClaimActionById, updateClaimAction, issueClaimAction, reviewClaimAction, approveClaimAction, rejectClaimAction } from "@/services/claim-actions";
 import { getActionHistory } from "@/services/claim-action-history";
 import { getGestionScreensForClaimAction } from "@/services/gestion-screens";
 import { getUsers } from "@/services/users";
@@ -34,7 +34,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Trash2,
-  X,
   XCircle,
   Send,
 } from "lucide-react";
@@ -255,15 +254,6 @@ export default function ClaimDetailPage() {
       toast.success("Gestión actualizada");
       queryClient.invalidateQueries({ queryKey: ["claim-actions", id] });
       queryClient.invalidateQueries({ queryKey: ["claim-action", editingActionId] });
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const deleteGestionMutation = useMutation({
-    mutationFn: (actionId: string) => deleteClaimAction(actionId, profile?.id),
-    onSuccess: () => {
-      toast.success("Gestión rechazada");
-      queryClient.invalidateQueries({ queryKey: ["claim-actions", id] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -1101,20 +1091,6 @@ export default function ClaimDetailPage() {
                                     }}
                                   >
                                     <Pencil className="h-3 w-3" />
-                                  </Button>
-                                )}
-                                {g.esAccion && !g.esAutomatica && g.estado === "todo" && canEdit("claims") && (
-                                  <Button
-                                    size="sm"
-                                    className="btn-icon w-6 h-6 btn-danger"
-                                    disabled={deleteGestionMutation.isPending}
-                                    onClick={() => {
-                                      if (confirm("¿Rechazar esta gestión? Quedará oculta del listado pero puede volver a verse con el switch de rechazadas.")) {
-                                        deleteGestionMutation.mutate(g.id);
-                                      }
-                                    }}
-                                  >
-                                    <X className="h-3 w-3" />
                                   </Button>
                                 )}
                               </div>
