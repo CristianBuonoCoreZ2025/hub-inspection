@@ -28,9 +28,11 @@
    * Esto centraliza el fondo, borde, focus, disabled, etc.
    * ═══════════════════════════════════════════════════════════════ */
 
-  /* Input — fondo siempre card (blanco en light, gris en dark) */
+  /* Input — fondo translúcido con glass sutil */
   [data-slot="input"] {
-    background: var(--card) !important;
+    background: color-mix(in srgb, var(--card) 75%, transparent) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: var(--foreground) !important;
     border-color: var(--input) !important;
   }
@@ -48,9 +50,11 @@
     cursor: not-allowed !important;
   }
 
-  /* Select trigger — mismo fondo que input */
+  /* Select trigger — mismo fondo glass que input */
   [data-slot="select-trigger"] {
-    background: var(--card) !important;
+    background: color-mix(in srgb, var(--card) 75%, transparent) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: var(--foreground) !important;
     border-color: var(--input) !important;
   }
@@ -67,9 +71,11 @@
     cursor: not-allowed !important;
   }
 
-  /* Textarea — mismo fondo que input */
+  /* Textarea — mismo fondo glass que input */
   [data-slot="textarea"] {
-    background: var(--card) !important;
+    background: color-mix(in srgb, var(--card) 75%, transparent) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: var(--foreground) !important;
     border-color: var(--input) !important;
   }
@@ -105,7 +111,9 @@
     padding: 0 10px !important;
     border: 1px solid var(--input) !important;
     border-radius: 10px !important;
-    background: var(--card) !important;
+    background: color-mix(in srgb, var(--card) 75%, transparent) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: var(--foreground) !important;
     box-sizing: border-box !important;
     outline: none !important;
