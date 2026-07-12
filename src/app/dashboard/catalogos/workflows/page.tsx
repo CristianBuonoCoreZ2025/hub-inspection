@@ -362,10 +362,15 @@ export default function WorkflowsPage() {
                                                   />
                                                   {lExp && selectedConfigId === config.id && (
                                                     <div className="ml-2 mt-2 mb-3">
-                                                      {isOnline && (
+                                                      {isOnline ? (
                                                         <div className="mb-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10 px-3 py-1.5 text-[11px] text-emerald-400/80 flex items-center gap-1.5">
                                                           <Shield className="h-3 w-3" />
                                                           Workflow en línea — no editable. Suspender para modificar.
+                                                        </div>
+                                                      ) : (
+                                                        <div className="mb-2 rounded-lg bg-amber-500/5 border border-amber-500/20 px-3 py-1.5 text-[11px] text-amber-400 flex items-center gap-1.5 animate-pulse">
+                                                          <Settings2 className="h-3 w-3" />
+                                                          Modo edición — arrastrar gestiones disponibles al flujo
                                                         </div>
                                                       )}
                                                       <StepsCanvas
@@ -380,6 +385,79 @@ export default function WorkflowsPage() {
                                                         isLoading={!steps}
                                                         steps={steps || []}
                                                       />
+                                                      {/* Paleta inline de gestiones disponibles (solo si no esta online) */}
+                                                      {!isOnline && canEdit("catalogos") && (
+                                                        <div className="mt-2 rounded-xl border border-dashed border-white/10 dark:border-white/5
+                                                                        bg-white/[0.02] backdrop-blur-sm p-2">
+                                                          <div className="flex items-center gap-1.5 mb-1.5 px-1">
+                                                            <Plus className="h-3 w-3 text-violet-400" />
+                                                            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                                              Gestiones disponibles
+                                                            </span>
+                                                            <span className="text-[9px] text-muted-foreground/50">
+                                                              click para agregar
+                                                            </span>
+                                                          </div>
+                                                          {availableToAdd.length === 0 ? (
+                                                            <p className="text-[10px] text-muted-foreground/60 italic px-1 py-1">
+                                                              No hay gestiones disponibles para este estado y línea.
+                                                            </p>
+                                                          ) : (
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                              {availableToAdd.map(t => (
+                                                                <button
+                                                                  key={t.id}
+                                                                  className="flex items-center gap-1.5 rounded-lg px-2 py-1
+                                                                             bg-white/5 hover:bg-violet-500/15
+                                                                             border border-white/10 hover:border-violet-500/30
+                                                                             transition-all duration-200 active:scale-95 group"
+                                                                  onClick={() => {
+                                                                    if (addDependentParent) {
+                                                                      createStepMut.mutate({
+                                                                        workflow_config_id: config.id,
+                                                                        action_template_id: t.id,
+                                                                        level: addDependentParent.level + 1,
+                                                                        depends_on_template_id: addDependentParent.action_template_id,
+                                                                      });
+                                                                    } else {
+                                                                      createStepMut.mutate({
+                                                                        workflow_config_id: config.id,
+                                                                        action_template_id: t.id,
+                                                                        level: 1,
+                                                                      });
+                                                                    }
+                                                                  }}
+                                                                >
+                                                                  <div className="flex h-5 w-5 items-center justify-center rounded-md bg-violet-500/10 border border-violet-500/20
+                                                                                  group-hover:scale-110 transition-transform">
+                                                                    <span className="font-mono text-[8px] font-bold text-violet-400">{(t.code || "?").slice(0, 2)}</span>
+                                                                  </div>
+                                                                  <div className="flex flex-col">
+                                                                    <span className="font-mono text-[10px] font-semibold leading-tight">{t.code}</span>
+                                                                    <span className="text-[8px] text-muted-foreground leading-tight max-w-[100px] truncate">{t.name}</span>
+                                                                  </div>
+                                                                  {addDependentParent && (
+                                                                    <span className="text-[8px] text-sky-400/60 ml-1">→ N{addDependentParent.level + 1}</span>
+                                                                  )}
+                                                                </button>
+                                                              ))}
+                                                            </div>
+                                                          )}
+                                                          {addDependentParent && (
+                                                            <div className="mt-1.5 flex items-center gap-2 px-1">
+                                                              <span className="text-[9px] text-sky-400">
+                                                                Agregando como dependiente de: <strong>{addDependentParent.action_template?.code}</strong>
+                                                              </span>
+                                                              <button
+                                                                className="text-[9px] text-muted-foreground hover:text-rose-400 transition-colors"
+                                                                onClick={() => setAddDependentParent(null)}
+                                                              >
+                                                                cancelar
+                                                              </button>
+                                                            </div>
+                                                          )}
+                                                        </div>
+                                                      )}
                                                     </div>
                                                   )}
                                                 </div>
@@ -490,87 +568,6 @@ export default function WorkflowsPage() {
         existingCombos={configs || []}
       />
 
-      {/* Modal: agregar step (raíz o dependiente) */}
-      <Dialog open={!!showAddStep} onOpenChange={(v) => { if (!v) { setShowAddStep(null); setAddDependentParent(null); } }}>
-        <DialogContent className="modal-sm !bg-white/80 dark:!bg-zinc-900/80 !backdrop-blur-xl !border-white/20 dark:!border-white/10 !shadow-2xl">
-          <div className="modal-header">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500/20 to-sky-500/20 border border-white/10">
-              <Plus className="h-4 w-4 text-violet-400" />
-            </div>
-            {addDependentParent ? "Agregar Gestión Dependiente" : "Agregar Gestión Raíz"}
-          </div>
-          <div className="modal-body space-y-1.5">
-            {/* Contexto del padre si es dependiente */}
-            {addDependentParent && (
-              <div className="flex items-center gap-2 rounded-lg bg-sky-500/5 border border-sky-500/10 px-3 py-2 text-[11px]">
-                <span className="text-muted-foreground">Depende de:</span>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-md bg-sky-500/20 border border-sky-500/30">
-                    <span className="font-mono text-[9px] font-bold text-sky-400">{(addDependentParent.action_template?.code || "?").slice(0, 2)}</span>
-                  </div>
-                  <span className="font-mono font-bold text-sky-400">{addDependentParent.action_template?.code}</span>
-                  <span className="text-muted-foreground">{addDependentParent.action_template?.name}</span>
-                </div>
-              </div>
-            )}
-            {availableToAdd.length === 0 ? (
-              <p className="text-[12px] text-muted-foreground text-center py-6">
-                No hay gestiones disponibles.
-                <br />
-                Todas las gestiones de este estado y línea ya están en el workflow.
-              </p>
-            ) : (
-              availableToAdd.map(t => {
-                return (
-                  <button
-                    key={t.id}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl
-                               bg-white/5 hover:bg-white/10 dark:bg-white/5 dark:hover:bg-white/10
-                               border border-white/10 hover:border-violet-500/30
-                               text-left transition-all duration-200 active:scale-[0.98]
-                               group"
-                    onClick={() => {
-                      if (addDependentParent) {
-                        // Crear como dependiente del step padre
-                        createStepMut.mutate({
-                          workflow_config_id: showAddStep!,
-                          action_template_id: t.id,
-                          level: addDependentParent.level + 1,
-                          depends_on_template_id: addDependentParent.action_template_id,
-                        });
-                      } else {
-                        // Crear como raíz
-                        createStepMut.mutate({
-                          workflow_config_id: showAddStep!,
-                          action_template_id: t.id,
-                          level: 1,
-                        });
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500/10 border border-violet-500/20
-                                      group-hover:scale-110 transition-transform">
-                        <span className="font-mono text-[10px] font-bold text-violet-400">{(t.code || "?").slice(0, 2)}</span>
-                      </div>
-                      <div>
-                        <div className="font-mono text-[12px] font-semibold">{t.code}</div>
-                        <div className="text-[10px] text-muted-foreground">{t.name}</div>
-                      </div>
-                    </div>
-                    {addDependentParent && (
-                      <div className="flex items-center gap-1 text-[9px] text-sky-400/60">
-                        <ArrowRight className="h-2.5 w-2.5" />
-                        <span>Nivel {addDependentParent.level + 1}</span>
-                      </div>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -870,45 +867,45 @@ function StepsCanvas({
     return (
       <div key={step.id} className="relative">
         {/* Nodo */}
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-1.5 mb-0.5">
           <div
-            className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2
+            className={`relative flex items-center gap-1.5 rounded-lg px-2 py-1
                         bg-linear-to-br ${lc.bg} backdrop-blur-sm
                         border ${lc.border}
                         cursor-pointer transition-all duration-200 active:scale-95
-                        ${isSelected ? "ring-2 ring-offset-0 ring-violet-500/40 " : "hover:scale-[1.02]"}`}
+                        ${isSelected ? "ring-1 ring-offset-0 ring-violet-500/40 " : "hover:scale-[1.02]"}`}
             onClick={() => onSelectStep(step.id)}
             onMouseEnter={() => onHoverStep(step.id)}
             onMouseLeave={() => onHoverStep(null)}
           >
             {/* Glow decorativo */}
-            <div className={`pointer-events-none absolute -inset-1 rounded-xl ${lc.glow} blur-md opacity-50 -z-10`} />
+            <div className={`pointer-events-none absolute -inset-0.5 rounded-lg ${lc.glow} blur-sm opacity-30 -z-10`} />
 
             {/* Icono del codigo */}
-            <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${lc.glow} border ${lc.border}`}>
-              <span className={`font-mono text-[10px] font-bold ${lc.text}`}>
+            <div className={`flex h-5 w-5 items-center justify-center rounded-md ${lc.glow} border ${lc.border}`}>
+              <span className={`font-mono text-[8px] font-bold ${lc.text}`}>
                 {(step.action_template?.code || "?").slice(0, 2)}
               </span>
             </div>
 
             {/* Info */}
             <div className="flex flex-col">
-              <span className="text-[12px] font-semibold leading-tight">{step.action_template?.code}</span>
-              <span className="text-[9px] text-muted-foreground leading-tight max-w-[140px] truncate">
+              <span className="text-[10px] font-semibold leading-tight">{step.action_template?.code}</span>
+              <span className="text-[8px] text-muted-foreground leading-tight max-w-[120px] truncate">
                 {step.action_template?.name}
               </span>
             </div>
 
             {/* Badges */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               {step.is_automatic && (
-                <span className="flex items-center gap-0.5 rounded px-1 py-0.5 bg-emerald-500/10 text-emerald-400 text-[8px] font-medium">
-                  <Zap className="h-2 w-2" />
+                <span className="flex items-center rounded px-0.5 py-0.5 bg-emerald-500/10 text-emerald-400">
+                  <Zap className="h-1.5 w-1.5" />
                 </span>
               )}
               {step.is_required && (
-                <span className="flex items-center gap-0.5 rounded px-1 py-0.5 bg-rose-500/10 text-rose-400 text-[8px] font-medium">
-                  <Shield className="h-2 w-2" />
+                <span className="flex items-center rounded px-0.5 py-0.5 bg-rose-500/10 text-rose-400">
+                  <Shield className="h-1.5 w-1.5" />
                 </span>
               )}
             </div>
@@ -916,13 +913,13 @@ function StepsCanvas({
             {/* Boton agregar dependiente */}
             {canEdit && (
               <button
-                className="ml-1 flex h-5 w-5 items-center justify-center rounded-md
+                className="ml-0.5 flex h-4 w-4 items-center justify-center rounded
                            bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/30
                            text-muted-foreground hover:text-violet-400 transition-all active:scale-90"
                 title="Agregar gestión dependiente"
                 onClick={(e) => { e.stopPropagation(); onAddDependent(step); }}
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-2.5 w-2.5" />
               </button>
             )}
           </div>

@@ -256,6 +256,21 @@ export async function updateWorkflowStep(id: string, input: Partial<{
   return updateRow<WorkflowStep>("workflow_steps", id, input, WORKFLOW_STEP_SELECT);
 }
 
+/**
+ * Reordena multiples steps en una sola llamada.
+ * Recibe array de {id, sort_order} y actualiza cada uno.
+ */
+export async function reorderWorkflowSteps(items: { id: string; sort_order: number }[]): Promise<void> {
+  const supabase = getSupabaseClient();
+  for (const item of items) {
+    const { error } = await supabase
+      .from("workflow_steps")
+      .update({ sort_order: item.sort_order })
+      .eq("id", item.id);
+    if (error) throw new Error(error.message);
+  }
+}
+
 export async function deleteWorkflowStep(id: string): Promise<void> {
   await deleteRow("workflow_steps", id);
 }
