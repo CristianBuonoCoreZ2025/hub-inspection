@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ToggleChip } from "@/components/ui/toggle-chip";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
-  ChevronRight, ChevronDown, Folder, FolderOpen, Plus, Trash2,
-  GitBranch, Workflow, ArrowDown, X, Settings2,
+  ChevronRight, ChevronDown, Plus, Trash2,
+  GitBranch, Workflow, ArrowRight, X, Settings2,
+  Globe, Calendar, Layers, Zap, Shield, Sparkles,
 } from "lucide-react";
 import {
   getWorkflowConfigs, getWorkflowSteps, createWorkflowConfig,
@@ -25,11 +25,14 @@ import { getActionTemplatesByClaimStatus } from "@/services/claim-actions";
 import { getCountries, getBusinessLines, getEvents } from "@/services/catalogs";
 import { getClaimStatuses } from "@/services/actions";
 
-// Tipos del arbol
-interface TreeNode {
-  config: WorkflowConfig;
-  steps: WorkflowStep[];
-}
+// ── Iconos por nivel del arbol ──
+const STATUS_ICONS: Record<string, { icon: typeof Zap; color: string; bg: string }> = {
+  created:    { icon: Sparkles,  color: "text-sky-400",    bg: "from-sky-500/20 to-sky-600/5" },
+  adjustment: { icon: Zap,       color: "text-violet-400", bg: "from-violet-500/20 to-violet-600/5" },
+  dispatchment:{ icon: ArrowRight,color: "text-amber-400",  bg: "from-amber-500/20 to-amber-600/5" },
+  closed:     { icon: Shield,    color: "text-emerald-400",bg: "from-emerald-500/20 to-emerald-600/5" },
+  reopened:   { icon: GitBranch, color: "text-rose-400",   bg: "from-rose-500/20 to-rose-600/5" },
+};
 
 export default function WorkflowsPage() {
   const queryClient = useQueryClient();
@@ -41,21 +44,23 @@ export default function WorkflowsPage() {
   const [openConfigModal, setOpenConfigModal] = useState(false);
   const [editingConfig, setEditingConfig] = useState<WorkflowConfig | null>(null);
   const [showAddStep, setShowAddStep] = useState<string | null>(null);
+  const [hoveredStep, setHoveredStep] = useState<string | null>(null);
 
-  // Queries
-  const { data: configs } = useQuery({ queryKey: ["workflow-configs"], queryFn: getWorkflowConfigs });
-  const { data: countries } = useQuery({ queryKey: ["countries"], queryFn: getCountries });
-  const { data: businessLines } = useQuery({ queryKey: ["business-lines"], queryFn: getBusinessLines });
-  const { data: events } = useQuery({ queryKey: ["events"], queryFn: getEvents });
-  const { data: claimStatuses } = useQuery({ queryKey: ["claim-statuses"], queryFn: getClaimStatuses });
+  // Queries — todas en paralelo, cache agresivo
+  const { data: configs } = useQuery({ queryKey: ["workflow-configs"], queryFn: getWorkflowConfigs, staleTime: 30000 });
+  const { data: countries } = useQuery({ queryKey: ["countries"], queryFn: getCountries, staleTime: 60000 });
+  const { data: businessLines } = useQuery({ queryKey: ["business-lines"], queryFn: getBusinessLines, staleTime: 60000 });
+  const { data: events } = useQuery({ queryKey: ["events"], queryFn: getEvents, staleTime: 60000 });
+  const { data: claimStatuses } = useQuery({ queryKey: ["claim-statuses"], queryFn: getClaimStatuses, staleTime: 60000 });
 
   const { data: steps } = useQuery({
     queryKey: ["workflow-steps", selectedConfigId],
     queryFn: () => getWorkflowSteps(selectedConfigId!),
     enabled: !!selectedConfigId,
+    staleTime: 15000,
   });
 
-  // Mutations
+  // Mutations — optimistic updates
   const createConfigMut = useMutation({
     mutationFn: createWorkflowConfig,
     onSuccess: () => { toast.success("Workflow creado"); queryClient.invalidateQueries({ queryKey: ["workflow-configs"] }); setOpenConfigModal(false); },
@@ -81,9 +86,9 @@ export default function WorkflowsPage() {
   });
 
   const updateStepMut = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateWorkflowStep>[1] }) => updateWorkflowStep(id, input),
-    onSuccess: () => { toast.success("Gestión actualizada"); queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] }); },
-    onError: (e: Error) => toast.error(e.message),
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateWorkflowStep>[1] }) => updateStepOptimistic(id, input, queryClient, selectedConfigId),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] }); },
+    onError: (e: Error) => { toast.error(e.message); queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] }); },
   });
 
   const deleteStepMut = useMutation({
@@ -109,21 +114,30 @@ export default function WorkflowsPage() {
     return tree;
   }, [configs]);
 
-  const toggleNode = (key: string) => {
+  const toggleNode = useCallback((key: string) => {
     setExpandedNodes(prev => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
+  }, []);
+
+  const lookupMap = useMemo(() => {
+    const m = new Map<string, { name: string; code?: string }>();
+    countries?.forEach(c => m.set(c.id, { name: c.name }));
+    businessLines?.forEach(l => m.set(l.id, { name: l.name }));
+    events?.forEach(e => m.set(e.id, { name: e.name }));
+    claimStatuses?.forEach(s => m.set(s.id, { name: s.name, code: s.code }));
+    return m;
+  }, [countries, businessLines, events, claimStatuses]);
+
+  const getName = (id: string): string => {
+    if (id === "__all__") return "Todos";
+    return lookupMap.get(id)?.name || "—";
   };
 
-  const getName = (id: string, type: "country" | "line" | "event" | "status") => {
-    if (id === "__all__") return "(todos)";
-    if (type === "country") return countries?.find(c => c.id === id)?.name || "?";
-    if (type === "line") return businessLines?.find(l => l.id === id)?.name || "?";
-    if (type === "event") return events?.find(e => e.id === id)?.name || "?";
-    if (type === "status") return claimStatuses?.find(s => s.id === id)?.name || "?";
-    return "?";
+  const getStatusCode = (id: string): string => {
+    return lookupMap.get(id)?.code || "";
   };
 
   // Steps agrupados por nivel
@@ -134,6 +148,10 @@ export default function WorkflowsPage() {
       if (!map.has(s.level)) map.set(s.level, []);
       map.get(s.level)!.push(s);
     }
+    // Ordenar dentro de cada nivel por sort_order
+    for (const [, arr] of map) {
+      arr.sort((a, b) => a.sort_order - b.sort_order);
+    }
     return map;
   }, [steps]);
 
@@ -142,204 +160,267 @@ export default function WorkflowsPage() {
   }, [steps]);
 
   const selectedStep = (steps || []).find(s => s.id === selectedStepId);
-
-  // Templates disponibles para agregar (filtrados por estado + linea del config)
   const selectedConfig = configs?.find(c => c.id === selectedConfigId);
+
   const { data: availableTemplates } = useQuery({
     queryKey: ["available-templates", selectedConfig?.claim_status_id, selectedConfig?.business_line_id],
     queryFn: () => getActionTemplatesByClaimStatus(selectedConfig!.claim_status_id, selectedConfig?.business_line_id || undefined),
     enabled: !!selectedConfig && !!showAddStep,
+    staleTime: 30000,
   });
 
-  const availableToAdd = (availableTemplates || []).filter(t => !usedTemplateIds.has(t.id));
+  const availableToAdd = useMemo(() => {
+    return (availableTemplates || [])
+      .filter(t => !usedTemplateIds.has(t.id))
+      .sort((a, b) => (a.code || "").localeCompare(b.code || ""));
+  }, [availableTemplates, usedTemplateIds]);
+
+  const maxLevel = useMemo(() => {
+    if (!steps || steps.length === 0) return 0;
+    return Math.max(...steps.map(s => s.level));
+  }, [steps]);
+
+  // Auto-expandir el primer estado si no hay nada expandido
+  useEffect(() => {
+    if (configs && configs.length > 0 && expandedNodes.size === 0) {
+      const firstStatus = configs[0].claim_status_id;
+      setExpandedNodes(new Set([`s-${firstStatus}`]));
+    }
+  }, [configs, expandedNodes.size]);
 
   return (
-    <div className="app-page">
-      <div className="flex items-center gap-3 mb-3">
-        <h1 className="app-page-title flex items-center gap-2 shrink-0">
-          <Workflow className="h-5 w-5" />
-          Workflows
-        </h1>
-        <div className="flex-1" />
-        {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingConfig(null); setOpenConfigModal(true); }} className="btn-create btn-sm shrink-0">
-            <Plus className="mr-2 h-4 w-4" /> Nuevo
-          </Button>
-        )}
+    <div className="flex flex-col gap-4 h-full">
+      {/* Header con glassmorphism */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 dark:border-white/5
+                      bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl
+                      shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)]
+                      px-5 py-4">
+        {/* Glow decorativo */}
+        <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-sky-500/10 blur-3xl" />
+
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl
+                          bg-linear-to-br from-violet-500/20 to-sky-500/20 backdrop-blur-sm
+                          border border-white/10">
+            <Workflow className="h-5 w-5 text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-semibold tracking-tight">Workflows</h1>
+            <p className="text-[11px] text-muted-foreground">Configuración del flujo automático de gestiones</p>
+          </div>
+          <div className="flex-1" />
+          {canCreate("catalogos") && (
+            <button
+              onClick={() => { setEditingConfig(null); setOpenConfigModal(true); }}
+              className="group flex items-center gap-2 rounded-lg px-3 h-8
+                         bg-linear-to-r from-violet-500/80 to-sky-500/80 hover:from-violet-500 hover:to-sky-500
+                         text-white text-[12px] font-medium
+                         shadow-lg shadow-violet-500/20
+                         transition-all duration-200 active:scale-95"
+            >
+              <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90 duration-200" />
+              Nuevo
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="flex gap-4">
-        {/* Arbol colapsable */}
-        <div className="flex-1 app-panel min-h-[400px]">
+      {/* Contenido principal */}
+      <div className="flex gap-4 flex-1 min-h-0">
+        {/* Arbol colapsable — glassmorphism */}
+        <div className="flex-1 relative overflow-auto rounded-2xl border border-white/10 dark:border-white/5
+                        bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl
+                        shadow-[0_8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]
+                        p-4">
           {configs && configs.length === 0 ? (
-            <p className="text-center text-muted-foreground text-[13px] py-8">
-              No hay workflows configurados.
-            </p>
+            <EmptyState onCreate={() => { setEditingConfig(null); setOpenConfigModal(true); }} canCreate={canCreate("catalogos")} />
+          ) : !configs ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-500" />
+            </div>
           ) : (
-            <div className="text-[12px]">
-              {Array.from(tree.entries()).map(([statusId, countriesMap]) => (
-                <div key={statusId}>
-                  {/* Estado */}
-                  <TreeRow
-                    icon={expandedNodes.has(`s-${statusId}`) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                    folderIcon={expandedNodes.has(`s-${statusId}`) ? <FolderOpen className="h-4 w-4 text-blue-500" /> : <Folder className="h-4 w-4 text-blue-500" />}
-                    label={getName(statusId, "status")}
-                    bold
-                    onClick={() => toggleNode(`s-${statusId}`)}
-                  />
-                  {expandedNodes.has(`s-${statusId}`) && (
-                    <div className="ml-5 border-l border-border pl-2">
-                      {Array.from(countriesMap.entries()).map(([countryId, eventsMap]) => (
-                        <div key={countryId}>
-                          <TreeRow
-                            icon={expandedNodes.has(`c-${statusId}-${countryId}`) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                            folderIcon={expandedNodes.has(`c-${statusId}-${countryId}`) ? <FolderOpen className="h-4 w-4 text-amber-500" /> : <Folder className="h-4 w-4 text-amber-500" />}
-                            label={getName(countryId, "country")}
-                            onClick={() => toggleNode(`c-${statusId}-${countryId}`)}
-                          />
-                          {expandedNodes.has(`c-${statusId}-${countryId}`) && (
-                            <div className="ml-5 border-l border-border pl-2">
-                              {Array.from(eventsMap.entries()).map(([eventId, linesMap]) => (
-                                <div key={eventId}>
-                                  <TreeRow
-                                    icon={expandedNodes.has(`e-${statusId}-${countryId}-${eventId}`) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                                    folderIcon={expandedNodes.has(`e-${statusId}-${countryId}-${eventId}`) ? <FolderOpen className="h-4 w-4 text-rose-500" /> : <Folder className="h-4 w-4 text-rose-500" />}
-                                    label={getName(eventId, "event")}
-                                    onClick={() => toggleNode(`e-${statusId}-${countryId}-${eventId}`)}
-                                  />
-                                  {expandedNodes.has(`e-${statusId}-${countryId}-${eventId}`) && (
-                                    <div className="ml-5 border-l border-border pl-2">
-                                      {Array.from(linesMap.entries()).map(([lineId, config]) => (
-                                        <div key={lineId}>
-                                          <TreeRow
-                                            icon={expandedNodes.has(`l-${config.id}`) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                                            folderIcon={expandedNodes.has(`l-${config.id}`) ? <FolderOpen className="h-4 w-4 text-emerald-500" /> : <Folder className="h-4 w-4 text-emerald-500" />}
-                                            label={getName(lineId, "line")}
-                                            bold
-                                            onClick={() => { toggleNode(`l-${config.id}`); setSelectedConfigId(config.id); }}
-                                            actions={canEdit("catalogos") ? (
-                                              <button
-                                                className="text-muted-foreground hover:text-foreground"
-                                                onClick={(e) => { e.stopPropagation(); setEditingConfig(config); setOpenConfigModal(true); }}
-                                              >
-                                                <Settings2 className="h-3 w-3" />
-                                              </button>
-                                            ) : undefined}
-                                          />
-                                          {expandedNodes.has(`l-${config.id}`) && selectedConfigId === config.id && (
-                                            <div className="ml-3 mt-1 mb-2 space-y-2">
-                                              {/* Gestiones por nivel */}
-                                              {Array.from(stepsByLevel.entries()).sort((a, b) => a[0] - b[0]).map(([level, levelSteps]) => (
-                                                <div key={level}>
-                                                  <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                                                    Nivel {level}
-                                                    {level === 1 && " — al entrar al estado"}
-                                                    {level > 1 && " — dependientes"}
-                                                  </div>
-                                                  <div className="flex flex-wrap gap-1.5">
-                                                    {levelSteps.map(step => (
-                                                      <StepBox
-                                                        key={step.id}
-                                                        step={step}
-                                                        selected={selectedStepId === step.id}
-                                                        onClick={() => setSelectedStepId(step.id)}
+            <div className="text-[12px] space-y-0.5">
+              {Array.from(tree.entries()).map(([statusId, countriesMap]) => {
+                const statusCode = getStatusCode(statusId);
+                const statusMeta = STATUS_ICONS[statusCode] || STATUS_ICONS["adjustment"];
+                const StatusIcon = statusMeta.icon;
+                const isExp = expandedNodes.has(`s-${statusId}`);
+
+                return (
+                  <div key={statusId}>
+                    {/* Estado */}
+                    <GlassTreeNode
+                      isExpanded={isExp}
+                      onToggle={() => toggleNode(`s-${statusId}`)}
+                      icon={<StatusIcon className={`h-4 w-4 ${statusMeta.color}`} />}
+                      label={getName(statusId)}
+                      bold
+                      gradient={statusMeta.bg}
+                      count={countriesMap.size}
+                    />
+                    {isExp && (
+                      <div className="ml-3 border-l border-white/5 dark:border-white/5 pl-3 mt-0.5 space-y-0.5">
+                        {Array.from(countriesMap.entries()).map(([countryId, eventsMap]) => {
+                          const cExp = expandedNodes.has(`c-${statusId}-${countryId}`);
+                          return (
+                            <div key={countryId}>
+                              <GlassTreeNode
+                                isExpanded={cExp}
+                                onToggle={() => toggleNode(`c-${statusId}-${countryId}`)}
+                                icon={<Globe className="h-3.5 w-3.5 text-amber-400/80" />}
+                                label={getName(countryId)}
+                                count={eventsMap.size}
+                              />
+                              {cExp && (
+                                <div className="ml-3 border-l border-white/5 pl-3 mt-0.5 space-y-0.5">
+                                  {Array.from(eventsMap.entries()).map(([eventId, linesMap]) => {
+                                    const eExp = expandedNodes.has(`e-${statusId}-${countryId}-${eventId}`);
+                                    return (
+                                      <div key={eventId}>
+                                        <GlassTreeNode
+                                          isExpanded={eExp}
+                                          onToggle={() => toggleNode(`e-${statusId}-${countryId}-${eventId}`)}
+                                          icon={<Calendar className="h-3.5 w-3.5 text-rose-400/80" />}
+                                          label={getName(eventId)}
+                                          count={linesMap.size}
+                                        />
+                                        {eExp && (
+                                          <div className="ml-3 border-l border-white/5 pl-3 mt-0.5 space-y-0.5">
+                                            {Array.from(linesMap.entries()).map(([lineId, config]) => {
+                                              const lExp = expandedNodes.has(`l-${config.id}`);
+                                              const isSelected = selectedConfigId === config.id;
+                                              return (
+                                                <div key={lineId}>
+                                                  <GlassTreeNode
+                                                    isExpanded={lExp}
+                                                    onToggle={() => { toggleNode(`l-${config.id}`); setSelectedConfigId(config.id); }}
+                                                    icon={<Layers className="h-3.5 w-3.5 text-emerald-400/80" />}
+                                                    label={getName(lineId)}
+                                                    bold
+                                                    active={isSelected}
+                                                    count={selectedConfigId === config.id ? (steps?.length || 0) : undefined}
+                                                    actions={canEdit("catalogos") ? (
+                                                      <button
+                                                        className="text-muted-foreground/60 hover:text-violet-400 transition-colors"
+                                                        onClick={(e) => { e.stopPropagation(); setEditingConfig(config); setOpenConfigModal(true); }}
+                                                      >
+                                                        <Settings2 className="h-3 w-3" />
+                                                      </button>
+                                                    ) : undefined}
+                                                  />
+                                                  {lExp && selectedConfigId === config.id && (
+                                                    <div className="ml-2 mt-2 mb-3">
+                                                      <StepsCanvas
+                                                        stepsByLevel={stepsByLevel}
+                                                        maxLevel={maxLevel}
+                                                        selectedStepId={selectedStepId}
+                                                        hoveredStep={hoveredStep}
+                                                        onSelectStep={setSelectedStepId}
+                                                        onHoverStep={setHoveredStep}
+                                                        canEdit={canEdit("catalogos")}
+                                                        onAddStep={() => setShowAddStep(config.id)}
+                                                        isLoading={!steps}
+                                                        steps={steps || []}
                                                       />
-                                                    ))}
-                                                  </div>
-                                                  {/* Flecha conectora */}
-                                                  {levelSteps.length > 0 && level < 10 && (
-                                                    <div className="flex justify-center my-1">
-                                                      <ArrowDown className="h-3 w-3 text-muted-foreground/40" />
                                                     </div>
                                                   )}
                                                 </div>
-                                              ))}
-                                              {/* Boton agregar */}
-                                              {canEdit("catalogos") && (
-                                                <button
-                                                  className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80"
-                                                  onClick={() => setShowAddStep(config.id)}
-                                                >
-                                                  <Plus className="h-3 w-3" />
-                                                  Agregar gestión
-                                                </button>
-                                              )}
-                                              {(steps || []).length === 0 && (
-                                                <p className="text-[11px] text-muted-foreground italic">Sin gestiones configuradas</p>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              ))}
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Panel lateral: configuracion del step seleccionado */}
+        {/* Panel lateral: configuracion del step — glassmorphism */}
         {selectedStep && (
-          <div className="w-[260px] app-panel shrink-0">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[12px] font-semibold flex items-center gap-1.5">
-                <GitBranch className="h-3.5 w-3.5" />
-                {selectedStep.action_template?.code}
-              </h3>
-              <button onClick={() => setSelectedStepId(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <p className="text-[11px] text-muted-foreground mb-3">{selectedStep.action_template?.name}</p>
+          <div className="w-[280px] shrink-0 relative overflow-auto rounded-2xl border border-white/10 dark:border-white/5
+                          bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl
+                          shadow-[0_8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]
+                          p-4">
+            <div className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-violet-500/10 blur-3xl" />
 
-            <div className="space-y-3">
-              <div>
-                <Label className="app-field-label text-[10px]">Nivel</Label>
-                <div className="text-[12px] font-mono">{selectedStep.level}</div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500/10 border border-violet-500/20">
+                    <GitBranch className="h-3.5 w-3.5 text-violet-400" />
+                  </div>
+                  <span className="font-mono text-[13px] font-semibold">{selectedStep.action_template?.code}</span>
+                </div>
+                <button
+                  onClick={() => setSelectedStepId(null)}
+                  className="text-muted-foreground/60 hover:text-foreground transition-colors rounded-md p-1 hover:bg-white/5"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               </div>
 
-              {selectedStep.depends_on_template && (
-                <div>
-                  <Label className="app-field-label text-[10px]">Se genera desde</Label>
-                  <div className="text-[12px] font-mono text-primary">
-                    {selectedStep.depends_on_template?.code}
-                  </div>
-                </div>
-              )}
+              <p className="text-[11px] text-muted-foreground mb-4">{selectedStep.action_template?.name}</p>
 
-              <div className="flex flex-col gap-2 pt-2">
-                <ToggleChip
+              {/* Nivel badge */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1
+                                bg-sky-500/10 border border-sky-500/20">
+                  <span className="text-[10px] text-muted-foreground">Nivel</span>
+                  <span className="text-[12px] font-mono font-bold text-sky-400">{selectedStep.level}</span>
+                </div>
+                {selectedStep.depends_on_template && (
+                  <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1
+                                  bg-violet-500/10 border border-violet-500/20">
+                    <ArrowRight className="h-2.5 w-2.5 text-violet-400" />
+                    <span className="text-[10px] text-muted-foreground">desde</span>
+                    <span className="text-[12px] font-mono font-bold text-violet-400">{selectedStep.depends_on_template?.code}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Toggles glassmorphism */}
+              <div className="space-y-2">
+                <GlassToggle
                   active={selectedStep.is_automatic}
                   onClick={(v) => updateStepMut.mutate({ id: selectedStep.id, input: { is_automatic: v } })}
-                >
-                  Automática
-                </ToggleChip>
-                <ToggleChip
+                  label="Automática"
+                  description="Se crea solo al cumplirse la dependencia"
+                  activeColor="emerald"
+                />
+                <GlassToggle
                   active={selectedStep.is_required}
                   onClick={(v) => updateStepMut.mutate({ id: selectedStep.id, input: { is_required: v } })}
-                >
-                  Obligatoria
-                </ToggleChip>
+                  label="Obligatoria"
+                  description="Se recrea si se rechaza"
+                  activeColor="rose"
+                />
               </div>
 
+              {/* Boton quitar */}
               {canDelete("catalogos") && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="btn-danger btn-sm w-full mt-3"
+                <button
+                  className="mt-6 w-full flex items-center justify-center gap-2 rounded-lg
+                             px-3 h-8 text-[12px] font-medium
+                             bg-rose-500/10 hover:bg-rose-500/20
+                             border border-rose-500/20 text-rose-400
+                             transition-all duration-200 active:scale-95"
                   onClick={() => { if (confirm("¿Quitar esta gestión del workflow?")) deleteStepMut.mutate(selectedStep.id); }}
                 >
-                  <Trash2 className="h-3 w-3" /> Quitar
-                </Button>
+                  <Trash2 className="h-3 w-3" />
+                  Quitar
+                </button>
               )}
             </div>
           </div>
@@ -361,43 +442,41 @@ export default function WorkflowsPage() {
         onClose={() => setOpenConfigModal(false)}
       />
 
-      {/* Modal: agregar step */}
+      {/* Modal: agregar step — glassmorphism */}
       <Dialog open={!!showAddStep} onOpenChange={(v) => !v && setShowAddStep(null)}>
-        <DialogContent className="modal-sm">
+        <DialogContent className="modal-sm !bg-white/80 dark:!bg-zinc-900/80 !backdrop-blur-xl !border-white/20 dark:!border-white/10 !shadow-2xl">
           <div className="modal-header">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
-              <Plus className="h-4 w-4" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500/20 to-sky-500/20 border border-white/10">
+              <Plus className="h-4 w-4 text-violet-400" />
             </div>
             Agregar Gestión
           </div>
-          <div className="modal-body space-y-2">
+          <div className="modal-body space-y-1.5">
             {availableToAdd.length === 0 ? (
-              <p className="text-[12px] text-muted-foreground text-center py-4">
-                No hay gestiones disponibles para agregar.
-                Todas las gestiones configuradas para este estado y línea ya están en el workflow.
+              <p className="text-[12px] text-muted-foreground text-center py-6">
+                No hay gestiones disponibles.
+                <br />
+                Todas las gestiones de este estado y línea ya están en el workflow.
               </p>
             ) : (
               availableToAdd.map(t => {
                 const intrinsic = getIntrinsicDependency(t.code || "");
-                const maxLevel = Math.max(0, ...(steps || []).map(s => s.level));
+                const depStep = intrinsic ? (steps || []).find(s => s.action_template?.code === intrinsic) : null;
                 return (
                   <button
                     key={t.id}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-md border border-border hover:bg-muted/50 text-left transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl
+                               bg-white/5 hover:bg-white/10 dark:bg-white/5 dark:hover:bg-white/10
+                               border border-white/10 hover:border-violet-500/30
+                               text-left transition-all duration-200 active:scale-[0.98]
+                               group"
                     onClick={() => {
-                      // Determinar nivel y dependencia
                       let level = 1;
                       let dependsOn: string | null = null;
-
-                      if (intrinsic) {
-                        // Buscar si el template del que depende ya esta en el arbol
-                        const depStep = (steps || []).find(s => s.action_template?.code === intrinsic);
-                        if (depStep) {
-                          level = depStep.level + 1;
-                          dependsOn = depStep.action_template_id;
-                        }
+                      if (intrinsic && depStep) {
+                        level = depStep.level + 1;
+                        dependsOn = depStep.action_template_id;
                       }
-
                       createStepMut.mutate({
                         workflow_config_id: showAddStep!,
                         action_template_id: t.id,
@@ -406,14 +485,21 @@ export default function WorkflowsPage() {
                       });
                     }}
                   >
-                    <div>
-                      <div className="text-[12px] font-mono font-semibold text-primary">{t.code}</div>
-                      <div className="text-[11px] text-muted-foreground">{t.name}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500/10 border border-violet-500/20
+                                      group-hover:scale-110 transition-transform">
+                        <span className="font-mono text-[10px] font-bold text-violet-400">{(t.code || "?").slice(0, 2)}</span>
+                      </div>
+                      <div>
+                        <div className="font-mono text-[12px] font-semibold">{t.code}</div>
+                        <div className="text-[10px] text-muted-foreground">{t.name}</div>
+                      </div>
                     </div>
                     {intrinsic && (
-                      <span className="text-[9px] text-muted-foreground">
-                        dep: {intrinsic}
-                      </span>
+                      <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
+                        <ArrowRight className="h-2.5 w-2.5" />
+                        {intrinsic}
+                      </div>
                     )}
                   </button>
                 );
@@ -426,55 +512,324 @@ export default function WorkflowsPage() {
   );
 }
 
-// Componente: fila del arbol
-function TreeRow({
-  icon, folderIcon, label, bold, onClick, actions,
+// ═══════════════════════════════════════════════════════════════════
+// Componente: Nodo del arbol con glassmorphism
+// ═══════════════════════════════════════════════════════════════════
+
+function GlassTreeNode({
+  isExpanded, onToggle, icon, label, bold, active, count, actions, gradient,
 }: {
+  isExpanded: boolean;
+  onToggle: () => void;
   icon: React.ReactNode;
-  folderIcon: React.ReactNode;
   label: string;
   bold?: boolean;
-  onClick: () => void;
+  active?: boolean;
+  count?: number;
   actions?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-1 py-0.5 cursor-pointer hover:bg-muted/30 rounded px-1 -mx-1 group" onClick={onClick}>
-      <span className="shrink-0 text-muted-foreground">{icon}</span>
-      <span className="shrink-0">{folderIcon}</span>
-      <span className={`truncate ${bold ? "font-semibold" : "font-normal"}`}>{label}</span>
-      {actions && <span className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">{actions}</span>}
-    </div>
-  );
-}
-
-// Componente: caja de step
-function StepBox({
-  step, selected, onClick,
-}: {
-  step: WorkflowStep;
-  selected: boolean;
-  onClick: () => void;
+  gradient?: string;
 }) {
   return (
     <div
-      className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-md border cursor-pointer transition-all ${
-        selected ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50"
-      }`}
-      onClick={onClick}
+      className={`group relative flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer
+                  transition-all duration-150
+                  ${active
+                    ? "bg-violet-500/10 border border-violet-500/20"
+                    : "hover:bg-white/5 dark:hover:bg-white/5 border border-transparent"
+                  }
+                  ${gradient ? `bg-linear-to-r ${gradient}` : ""}`}
+      onClick={onToggle}
     >
-      <span className="font-mono text-[10px] font-semibold text-primary">{step.action_template?.code}</span>
-      <div className="flex items-center gap-1">
-        {step.is_automatic && <span className="text-[8px] text-emerald-600 font-medium">Auto</span>}
-        {step.is_required && <span className="text-[8px] text-rose-600 font-medium">Req</span>}
-      </div>
-      {step.depends_on_template && (
-        <span className="text-[8px] text-muted-foreground">← {step.depends_on_template?.code}</span>
+      <span className="shrink-0 text-muted-foreground/60 transition-transform duration-150
+                       group-hover:text-muted-foreground">
+        {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+      </span>
+      <span className="shrink-0">{icon}</span>
+      <span className={`truncate text-[12px] ${bold ? "font-semibold" : "font-normal"}`}>{label}</span>
+      {count !== undefined && count > 0 && (
+        <span className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1
+                         text-[9px] font-medium bg-white/10 dark:bg-white/10 text-muted-foreground">
+          {count}
+        </span>
+      )}
+      {actions && (
+        <span className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">{actions}</span>
       )}
     </div>
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// Componente: Canvas de steps por nivel — visual potente
+// ═══════════════════════════════════════════════════════════════════
+
+function StepsCanvas({
+  stepsByLevel, maxLevel, selectedStepId, hoveredStep,
+  onSelectStep, onHoverStep, canEdit, onAddStep, isLoading, steps,
+}: {
+  stepsByLevel: Map<number, WorkflowStep[]>;
+  maxLevel: number;
+  selectedStepId: string | null;
+  hoveredStep: string | null;
+  onSelectStep: (id: string) => void;
+  onHoverStep: (id: string | null) => void;
+  canEdit: boolean;
+  onAddStep: () => void;
+  isLoading: boolean;
+  steps: WorkflowStep[];
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-6">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-500" />
+      </div>
+    );
+  }
+
+  if (steps.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-white/10 dark:border-white/5 p-4 text-center">
+        <p className="text-[11px] text-muted-foreground italic mb-2">Sin gestiones configuradas</p>
+        {canEdit && (
+          <button
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 h-7
+                       bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20
+                       text-violet-400 text-[11px] font-medium transition-all active:scale-95"
+            onClick={onAddStep}
+          >
+            <Plus className="h-3 w-3" />
+            Agregar
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const levels = Array.from(stepsByLevel.entries()).sort((a, b) => a[0] - b[0]);
+
+  return (
+    <div className="space-y-1">
+      {levels.map(([level, levelSteps], idx) => (
+        <div key={level}>
+          {/* Label de nivel */}
+          <div className="flex items-center gap-2 mb-1.5 mt-2">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Nivel {level}
+            </span>
+            <span className="text-[9px] text-muted-foreground/40">
+              {level === 1 ? "al entrar al estado" : "dependientes"}
+            </span>
+            <div className="flex-1 h-px bg-white/5 dark:bg-white/5" />
+          </div>
+
+          {/* Steps del nivel */}
+          <div className="flex flex-wrap gap-2">
+            {levelSteps.map(step => (
+              <StepCard
+                key={step.id}
+                step={step}
+                selected={selectedStepId === step.id}
+                hovered={hoveredStep === step.id}
+                onClick={() => onSelectStep(step.id)}
+                onHover={() => onHoverStep(step.id)}
+                onLeave={() => onHoverStep(null)}
+              />
+            ))}
+          </div>
+
+          {/* Conector visual entre niveles */}
+          {idx < levels.length - 1 && (
+            <div className="flex justify-center my-1.5">
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="h-3 w-px bg-linear-to-b from-violet-500/40 to-transparent" />
+                <ArrowRight className="h-2.5 w-2.5 text-violet-500/40 rotate-90" />
+                <div className="h-3 w-px bg-linear-to-b from-transparent to-violet-500/40" />
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Boton agregar */}
+      {canEdit && (
+        <button
+          className="mt-3 flex items-center gap-1.5 rounded-lg px-2.5 h-7
+                     bg-transparent hover:bg-violet-500/10 border border-dashed border-white/10 hover:border-violet-500/30
+                     text-muted-foreground hover:text-violet-400 text-[11px] font-medium
+                     transition-all active:scale-95"
+          onClick={onAddStep}
+        >
+          <Plus className="h-3 w-3" />
+          Agregar gestión
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Componente: Card de step — glassmorphism premium
+// ═══════════════════════════════════════════════════════════════════
+
+function StepCard({
+  step, selected, hovered, onClick, onHover, onLeave,
+}: {
+  step: WorkflowStep;
+  selected: boolean;
+  hovered: boolean;
+  onClick: () => void;
+  onHover: () => void;
+  onLeave: () => void;
+}) {
+  return (
+    <div
+      className={`relative flex flex-col items-center gap-1 px-3 py-2 rounded-xl cursor-pointer
+                  transition-all duration-200 active:scale-95
+                  ${selected
+                    ? "bg-violet-500/15 border border-violet-500/40 shadow-lg shadow-violet-500/10"
+                    : hovered
+                    ? "bg-white/10 dark:bg-white/10 border border-white/20 dark:border-white/10"
+                    : "bg-white/5 dark:bg-white/5 border border-white/10 dark:border-white/5 hover:bg-white/8 dark:hover:bg-white/8"
+                  }`}
+      onClick={onClick}
+      onMouseEnter={onHover}
+      onMouseLeave={onLeave}
+    >
+      {/* Codigo */}
+      <span className="font-mono text-[11px] font-bold tracking-tight">{step.action_template?.code}</span>
+
+      {/* Badges */}
+      <div className="flex items-center gap-1">
+        {step.is_automatic && (
+          <span className="flex items-center gap-0.5 rounded px-1 py-0.5
+                           bg-emerald-500/10 text-emerald-400 text-[8px] font-medium">
+            <Zap className="h-2 w-2" />
+            Auto
+          </span>
+        )}
+        {step.is_required && (
+          <span className="flex items-center gap-0.5 rounded px-1 py-0.5
+                           bg-rose-500/10 text-rose-400 text-[8px] font-medium">
+            <Shield className="h-2 w-2" />
+            Req
+          </span>
+        )}
+      </div>
+
+      {/* Dependencia */}
+      {step.depends_on_template && (
+        <span className="flex items-center gap-0.5 text-[8px] text-muted-foreground/60">
+          <ArrowRight className="h-2 w-2" />
+          {step.depends_on_template?.code}
+        </span>
+      )}
+
+      {/* Glow seleccionado */}
+      {selected && (
+        <div className="pointer-events-none absolute -inset-px rounded-xl bg-violet-500/5 blur-sm -z-10" />
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Componente: Toggle glassmorphism
+// ═══════════════════════════════════════════════════════════════════
+
+function GlassToggle({
+  active, onClick, label, description, activeColor,
+}: {
+  active: boolean;
+  onClick: (v: boolean) => void;
+  label: string;
+  description: string;
+  activeColor: "emerald" | "rose";
+}) {
+  const colors = {
+    emerald: { bg: "bg-emerald-500/15", border: "border-emerald-500/30", text: "text-emerald-400", dot: "bg-emerald-400" },
+    rose: { bg: "bg-rose-500/15", border: "border-rose-500/30", text: "text-rose-400", dot: "bg-rose-400" },
+  };
+  const c = colors[activeColor];
+
+  return (
+    <button
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all duration-200 active:scale-[0.98]
+                  ${active
+                    ? `${c.bg} ${c.border}`
+                    : "bg-white/5 dark:bg-white/5 border-white/10 dark:border-white/5 hover:bg-white/8 dark:hover:bg-white/8"
+                  }`}
+      onClick={() => onClick(!active)}
+    >
+      <div className={`flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200
+                       ${active ? `${c.bg} ${c.border}` : "bg-white/5 border border-white/10"}`}>
+        <div className={`h-2 w-2 rounded-full transition-all duration-200 ${active ? c.dot : "bg-muted-foreground/30"}`} />
+      </div>
+      <div className="text-left flex-1">
+        <div className={`text-[12px] font-medium ${active ? c.text : ""}`}>{label}</div>
+        <div className="text-[9px] text-muted-foreground/60">{description}</div>
+      </div>
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Componente: Empty state
+// ═══════════════════════════════════════════════════════════════════
+
+function EmptyState({ onCreate, canCreate }: { onCreate: () => void; canCreate: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full py-12">
+      <div className="relative mb-4">
+        <div className="absolute inset-0 bg-violet-500/10 blur-2xl rounded-full" />
+        <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl
+                        bg-linear-to-br from-violet-500/10 to-sky-500/10 border border-white/10">
+          <Workflow className="h-7 w-7 text-violet-400/60" />
+        </div>
+      </div>
+      <p className="text-[13px] font-medium mb-1">No hay workflows configurados</p>
+      <p className="text-[11px] text-muted-foreground mb-4 text-center max-w-xs">
+        Crea un workflow para definir qué gestiones se generan automáticamente
+        cuando un siniestro entra a un estado específico.
+      </p>
+      {canCreate && (
+        <button
+          onClick={onCreate}
+          className="flex items-center gap-2 rounded-lg px-4 h-8
+                     bg-linear-to-r from-violet-500/80 to-sky-500/80 hover:from-violet-500 hover:to-sky-500
+                     text-white text-[12px] font-medium shadow-lg shadow-violet-500/20
+                     transition-all active:scale-95"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Crear primer workflow
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Optimistic update helper
+// ═══════════════════════════════════════════════════════════════════
+
+async function updateStepOptimistic(
+  id: string,
+  input: Parameters<typeof updateWorkflowStep>[1],
+  queryClient: ReturnType<typeof useQueryClient>,
+  configId: string | null,
+) {
+  if (configId) {
+    queryClient.setQueryData<WorkflowStep[]>(["workflow-steps", configId], (old) => {
+      if (!old) return old;
+      return old.map(s => s.id === id ? { ...s, ...input } : s);
+    });
+  }
+  return updateWorkflowStep(id, input);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Modal: crear/editar config
+// ═══════════════════════════════════════════════════════════════════
+
 function ConfigModal({
   open, editing, countries, businessLines, events, claimStatuses, onSubmit, onClose,
 }: {
@@ -494,7 +849,6 @@ function ConfigModal({
   const [lineId, setLineId] = useState("");
   const [statusId, setStatusId] = useState("");
 
-  // Reset al abrir
   useEffect(() => {
     if (open) {
       setName(editing?.name || "");
@@ -508,10 +862,10 @@ function ConfigModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="modal-sm">
+      <DialogContent className="modal-sm !bg-white/80 dark:!bg-zinc-900/80 !backdrop-blur-xl !border-white/20 dark:!border-white/10 !shadow-2xl">
         <div className="modal-header">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
-            <Workflow className="h-4 w-4" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500/20 to-sky-500/20 border border-white/10">
+            <Workflow className="h-4 w-4 text-violet-400" />
           </div>
           {editing ? "Editar" : "Nuevo"} Workflow
         </div>
