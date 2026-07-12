@@ -1,0 +1,15 @@
+feat: workflow global de siniestros con arbol colapsable y badges M/W
+
+- Migraciones 135+136: tablas workflow_configs/workflow_steps + triggers
+  (execute_workflow, cascade_workflow, auto_recreate_rejected)
+- Columna origin en claim_actions (M=manual, W=workflow)
+- Servicio workflow-configs.ts con CRUD completo
+- Pagina /dashboard/catalogos/workflows con arbol colapsable
+  Estado > Pais > Evento > Linea > Gestiones por nivel
+- Badge M/W en listado de gestiones del siniestro
+- Validacion: no desactivar template si esta en workflow
+- Link en nav-data bajo Configuracion de Gestiones
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

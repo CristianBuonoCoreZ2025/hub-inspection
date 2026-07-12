@@ -172,6 +172,7 @@ export default function ClaimDetailPage() {
     esAccion: boolean;
     esAutomatica: boolean;
     screenType: string | null;
+    origin: string;
   } | null>(null);
   const [editingActionData, setEditingActionData] = useState<Record<string, unknown>>({});
   const [expectedDate, setExpectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
@@ -913,6 +914,7 @@ export default function ClaimDetailPage() {
                       esAccion: true,
                       screenType: a.action_feature?.has_specific_screen ? (a.action_feature?.screen?.code || "generica") : null,
                       esAutomatica: a.is_automatic,
+                      origin: a.origin || "M",
                     });
                     setOpenEditGestionModal(true);
                   }
@@ -953,6 +955,7 @@ export default function ClaimDetailPage() {
                 esAccion: true,
                 screenType: a.action_feature?.has_specific_screen ? (a.action_feature?.screen?.code || "generica") : null,
                 esAutomatica: a.is_automatic,
+                origin: a.origin || "M",
               }));
 
               const gestiones = actions.sort((a, b) => {
@@ -1101,7 +1104,12 @@ export default function ClaimDetailPage() {
 
                         return (
                           <tr key={g.id}>
-                            <td className="font-mono text-[10px] text-primary tabular-nums whitespace-nowrap">{shortActionCode(g.codigo)}</td>
+                            <td className="font-mono text-[10px] text-primary tabular-nums whitespace-nowrap">
+                              <span>{shortActionCode(g.codigo)}</span>
+                              <span className={`ml-1 inline-flex items-center justify-center rounded px-0.5 text-[8px] font-bold ${
+                                g.origin === "W" ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                              }`}>{g.origin}</span>
+                            </td>
                             <td className="font-medium text-[11px]">{g.nombre}</td>
                             <td className="text-[11px] text-muted-foreground">{g.fecha ? formatDateTime(g.fecha) : "—"}</td>
                             <td className="text-[11px]">

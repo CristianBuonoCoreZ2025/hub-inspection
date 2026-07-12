@@ -35,6 +35,7 @@ import {
   Code2,
   FileCheck,
   ShieldCheck,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -102,6 +103,7 @@ export const gestionCatalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/pantallas", label: "Pantallas", icon: Monitor },
   { href: "/dashboard/catalogos/gestiones/gestiones", label: "Gestiones", icon: FileSpreadsheet },
   { href: "/dashboard/catalogos/gestiones/campos", label: "Campos Plantillas", icon: Code2 },
+  { href: "/dashboard/catalogos/workflows", label: "Workflows", icon: Workflow },
 ];
 
 // ── Operaciones ──

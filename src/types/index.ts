@@ -866,6 +866,7 @@ export interface ClaimAction {
   is_blocker: boolean;
   is_active: boolean;
   is_automatic: boolean;
+  origin: string;
   updated_on: string | null;
   updated_by: string | null;
   action_feature?: ActionFeature;

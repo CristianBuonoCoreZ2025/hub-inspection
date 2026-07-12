@@ -377,6 +377,12 @@ export async function updateActionTemplate(id: string, input: Partial<{
 }
 
 export async function deleteActionTemplate(id: string) {
+  // Validar que no esté en un workflow activo
+  const { isTemplateInWorkflow } = await import("@/services/workflow-configs");
+  const inWorkflow = await isTemplateInWorkflow(id);
+  if (inWorkflow) {
+    throw new Error("No se puede desactivar esta gestión porque está en uso en uno o más workflows. Quítala del workflow primero.");
+  }
   return updateActionTemplate(id, { is_active: false });
 }
 
