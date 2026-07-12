@@ -1,17 +1,17 @@
-feat: rediseño workflow con glassmorphism premium + optimistic updates
+fix: workflow sin todos, sin nombre, cascading dropdowns filtrados, unique constraint
 
-- Header con glassmorphism, glows decorativos violeta/sky
-- Tree nodes con glassmorphism: bg blur, bordes sutiles, hover suave
-- StepCards premium: glassmorphism, badges con iconos, glow al seleccionar
-- GlassToggle: toggles con animacion de dot, colores semánticos
-- EmptyState con glow y CTA atractivo
-- Conectores visuales entre niveles con gradiente
-- Optimistic updates en toggles (instantáneo)
-- Cache agresivo (staleTime 30-60s) para velocidad
-- Auto-expandir primer estado al cargar
-- Iconos por tipo de estado (Sparkles, Zap, ArrowRight, Shield, GitBranch)
-- Contadores en cada nodo del árbol
-- Modal agregar gestión con cards glassmorphism
+- Migracion 137: country_id, event_id, business_line_id NOT NULL
+  Unique constraint en (estado + pais + evento + linea)
+  Eliminadas columnas name y description
+- Servicio: createWorkflowConfig sin nombre/descripcion
+  Nuevas funciones cascading: getAvailableCountriesForStatus,
+  getAvailableEventsForStatusAndCountry, getAvailableLinesForStatusCountryEvent
+  Solo muestra paises/eventos/lineas que tienen gestiones configuradas
+- UI: modal crear con dropdowns en cascada (estado > pais > evento > linea)
+  Todos especificos, no hay opcion "todos"
+  Validacion: no permite crear workflow duplicado
+  Boton eliminar workflow completo en el nodo linea
+  Fix guardar: el modal ahora funciona correctamente
 
 Generated with [Devin](https://devin.ai)
 

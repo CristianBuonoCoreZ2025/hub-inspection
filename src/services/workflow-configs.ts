@@ -1,25 +1,22 @@
-import { fetchAll, fetchById, insertRow, updateRow, deleteRow } from "@/lib/supabase/db";
+import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
 
 // ═══════════════════════════════════════════════════════════════════
 // Servicio para Workflow de Siniestros
 // ═══════════════════════════════════════════════════════════════════
 
 const WORKFLOW_CONFIG_SELECT =
-  "id, name, description, country_id, business_line_id, event_id, claim_status_id, is_active, sort_order, created_at, updated_at, country:countries(id, name), business_line:business_lines(id, name, code_letter), event:events(id, name), claim_status:lookup_catalog(id, code, name)";
+  "id, country_id, business_line_id, event_id, claim_status_id, is_active, created_at, updated_at, country:countries!workflow_configs_country_id_fkey(id, name), business_line:business_lines!workflow_configs_business_line_id_fkey(id, name, code_letter), event:events!workflow_configs_event_id_fkey(id, name), claim_status:lookup_catalog!workflow_configs_claim_status_id_fkey(id, code, name)";
 
 const WORKFLOW_STEP_SELECT =
   "id, workflow_config_id, action_template_id, depends_on_template_id, level, sort_order, is_automatic, is_required, created_at, updated_at, action_template:action_template!workflow_steps_action_template_id_fkey(id, name, code, action_features_id, line_business_id, action_feature:action_features!action_template_action_features_id_fkey(id, name, code)), depends_on_template:action_template!workflow_steps_depends_on_template_id_fkey(id, name, code)";
 
 export interface WorkflowConfig {
   id: string;
-  name: string;
-  description: string | null;
-  country_id: string | null;
-  business_line_id: string | null;
-  event_id: string | null;
+  country_id: string;
+  business_line_id: string;
+  event_id: string;
   claim_status_id: string;
   is_active: boolean;
-  sort_order: number;
   created_at: string;
   updated_at: string;
   country?: { id: string; name: string } | null;
@@ -55,7 +52,6 @@ export interface WorkflowStep {
 export async function getWorkflowConfigs(): Promise<WorkflowConfig[]> {
   return fetchAll<WorkflowConfig>("workflow_configs", {
     select: WORKFLOW_CONFIG_SELECT,
-    order: { column: "sort_order", ascending: true },
   });
 }
 
@@ -64,34 +60,21 @@ export async function getWorkflowConfigById(id: string): Promise<WorkflowConfig 
 }
 
 export async function createWorkflowConfig(input: {
-  name: string;
-  description?: string;
-  country_id?: string | null;
-  business_line_id?: string | null;
-  event_id?: string | null;
+  country_id: string;
+  business_line_id: string;
+  event_id: string;
   claim_status_id: string;
-  sort_order?: number;
 }): Promise<WorkflowConfig> {
   return insertRow<WorkflowConfig>("workflow_configs", {
-    name: input.name,
-    description: input.description || null,
-    country_id: input.country_id || null,
-    business_line_id: input.business_line_id || null,
-    event_id: input.event_id || null,
+    country_id: input.country_id,
+    business_line_id: input.business_line_id,
+    event_id: input.event_id,
     claim_status_id: input.claim_status_id,
-    sort_order: input.sort_order || 0,
   }, WORKFLOW_CONFIG_SELECT);
 }
 
 export async function updateWorkflowConfig(id: string, input: Partial<{
-  name: string;
-  description: string | null;
-  country_id: string | null;
-  business_line_id: string | null;
-  event_id: string | null;
-  claim_status_id: string;
   is_active: boolean;
-  sort_order: number;
 }>): Promise<WorkflowConfig> {
   return updateRow<WorkflowConfig>("workflow_configs", id, input, WORKFLOW_CONFIG_SELECT);
 }
@@ -154,14 +137,93 @@ export async function isTemplateInWorkflow(templateId: string): Promise<boolean>
   return rows.length > 0;
 }
 
+// ═══ Cascading: obtener paises/eventos/lineas que tienen gestiones ═══
+
+export async function getAvailableCountriesForStatus(claimStatusId: string): Promise<{ id: string; name: string }[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("action_template_claim_status")
+    .select(`
+      action_template:action_template!inner(
+        line_business_id,
+        business_lines:business_lines!inner(
+          country:countries!inner(id, name)
+        )
+      )
+    `)
+    .eq("claim_status_id", claimStatusId)
+    .eq("is_active", true)
+    .eq("action_template.is_active", true);
+
+  if (error) throw new Error(error.message);
+
+  const countries = new Map<string, { id: string; name: string }>();
+  for (const row of (data as any[]) || []) {
+    const country = row.action_template?.business_lines?.country;
+    if (country) countries.set(country.id, country);
+  }
+  return Array.from(countries.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function getAvailableEventsForStatusAndCountry(claimStatusId: string, countryId: string): Promise<{ id: string; name: string }[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("action_template_claim_status")
+    .select(`
+      action_template:action_template!inner(
+        event_id,
+        event:events!inner(id, name),
+        business_lines:business_lines!inner(country_id)
+      )
+    `)
+    .eq("claim_status_id", claimStatusId)
+    .eq("is_active", true)
+    .eq("action_template.is_active", true)
+    .eq("action_template.business_lines.country_id", countryId);
+
+  if (error) throw new Error(error.message);
+
+  const events = new Map<string, { id: string; name: string }>();
+  for (const row of (data as any[]) || []) {
+    const event = row.action_template?.event;
+    if (event) events.set(event.id, event);
+  }
+  return Array.from(events.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function getAvailableLinesForStatusCountryEvent(claimStatusId: string, countryId: string, eventId: string): Promise<{ id: string; name: string; code_letter: string }[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("action_template_claim_status")
+    .select(`
+      action_template:action_template!inner(
+        line_business_id,
+        business_lines:business_lines!inner(id, name, code_letter, country_id)
+      )
+    `)
+    .eq("claim_status_id", claimStatusId)
+    .eq("is_active", true)
+    .eq("action_template.is_active", true)
+    .eq("action_template.business_lines.country_id", countryId)
+    .eq("action_template.event_id", eventId);
+
+  if (error) throw new Error(error.message);
+
+  const lines = new Map<string, { id: string; name: string; code_letter: string }>();
+  for (const row of (data as any[]) || []) {
+    const line = row.action_template?.business_lines;
+    if (line) lines.set(line.id, line);
+  }
+  return Array.from(lines.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // ═══ Dependencias intrinsecas conocidas ═══
-// El sistema sabe que ciertas gestiones dependen de otras por defecto
 
 export const INTRINSIC_DEPENDENCIES: Record<string, string> = {
-  RES: "COB",  // Reserva depende de Coberturas
-  PCA: "RES",  // Cuadro de Ajuste depende de Reserva
-  RTA: "NSA",  // Recepción Total depende de Notificación
-  INS: "COI",  // Inspección depende de Coordinación
+  RES: "COB",
+  PCA: "RES",
+  RTA: "NSA",
+  INS: "COI",
 };
 
 export function getIntrinsicDependency(templateCode: string): string | null {

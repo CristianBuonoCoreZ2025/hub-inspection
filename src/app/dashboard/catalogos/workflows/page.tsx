@@ -4,9 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
@@ -15,23 +13,25 @@ import {
   Globe, Calendar, Layers, Zap, Shield, Sparkles,
 } from "lucide-react";
 import {
-  getWorkflowConfigs, getWorkflowSteps, createWorkflowConfig,
-  updateWorkflowConfig, deleteWorkflowConfig,
+  getWorkflowConfigs, getWorkflowSteps,
+  createWorkflowConfig, deleteWorkflowConfig,
   createWorkflowStep, updateWorkflowStep, deleteWorkflowStep,
   getIntrinsicDependency,
+  getAvailableCountriesForStatus,
+  getAvailableEventsForStatusAndCountry,
+  getAvailableLinesForStatusCountryEvent,
   type WorkflowConfig, type WorkflowStep,
 } from "@/services/workflow-configs";
 import { getActionTemplatesByClaimStatus } from "@/services/claim-actions";
-import { getCountries, getBusinessLines, getEvents } from "@/services/catalogs";
 import { getClaimStatuses } from "@/services/actions";
 
 // ── Iconos por nivel del arbol ──
 const STATUS_ICONS: Record<string, { icon: typeof Zap; color: string; bg: string }> = {
-  created:    { icon: Sparkles,  color: "text-sky-400",    bg: "from-sky-500/20 to-sky-600/5" },
-  adjustment: { icon: Zap,       color: "text-violet-400", bg: "from-violet-500/20 to-violet-600/5" },
-  dispatchment:{ icon: ArrowRight,color: "text-amber-400",  bg: "from-amber-500/20 to-amber-600/5" },
-  closed:     { icon: Shield,    color: "text-emerald-400",bg: "from-emerald-500/20 to-emerald-600/5" },
-  reopened:   { icon: GitBranch, color: "text-rose-400",   bg: "from-rose-500/20 to-rose-600/5" },
+  created:     { icon: Sparkles,   color: "text-sky-400",    bg: "from-sky-500/20 to-sky-600/5" },
+  adjustment:  { icon: Zap,        color: "text-violet-400", bg: "from-violet-500/20 to-violet-600/5" },
+  dispatchment:{ icon: ArrowRight,  color: "text-amber-400",  bg: "from-amber-500/20 to-amber-600/5" },
+  closed:      { icon: Shield,     color: "text-emerald-400",bg: "from-emerald-500/20 to-emerald-600/5" },
+  reopened:    { icon: GitBranch,  color: "text-rose-400",   bg: "from-rose-500/20 to-rose-600/5" },
 };
 
 export default function WorkflowsPage() {
@@ -41,16 +41,12 @@ export default function WorkflowsPage() {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
-  const [openConfigModal, setOpenConfigModal] = useState(false);
-  const [editingConfig, setEditingConfig] = useState<WorkflowConfig | null>(null);
+  const [openCreateModal, setOpenCreateModal] = useState(false);
   const [showAddStep, setShowAddStep] = useState<string | null>(null);
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
 
-  // Queries — todas en paralelo, cache agresivo
+  // Queries
   const { data: configs } = useQuery({ queryKey: ["workflow-configs"], queryFn: getWorkflowConfigs, staleTime: 30000 });
-  const { data: countries } = useQuery({ queryKey: ["countries"], queryFn: getCountries, staleTime: 60000 });
-  const { data: businessLines } = useQuery({ queryKey: ["business-lines"], queryFn: getBusinessLines, staleTime: 60000 });
-  const { data: events } = useQuery({ queryKey: ["events"], queryFn: getEvents, staleTime: 60000 });
   const { data: claimStatuses } = useQuery({ queryKey: ["claim-statuses"], queryFn: getClaimStatuses, staleTime: 60000 });
 
   const { data: steps } = useQuery({
@@ -60,16 +56,17 @@ export default function WorkflowsPage() {
     staleTime: 15000,
   });
 
-  // Mutations — optimistic updates
+  // Mutations
   const createConfigMut = useMutation({
     mutationFn: createWorkflowConfig,
-    onSuccess: () => { toast.success("Workflow creado"); queryClient.invalidateQueries({ queryKey: ["workflow-configs"] }); setOpenConfigModal(false); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const updateConfigMut = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateWorkflowConfig>[1] }) => updateWorkflowConfig(id, input),
-    onSuccess: () => { toast.success("Workflow actualizado"); queryClient.invalidateQueries({ queryKey: ["workflow-configs"] }); setOpenConfigModal(false); },
+    onSuccess: (data) => {
+      toast.success("Workflow creado");
+      queryClient.invalidateQueries({ queryKey: ["workflow-configs"] });
+      setOpenCreateModal(false);
+      // Auto-expandir el nuevo
+      setSelectedConfigId(data.id);
+      setExpandedNodes(prev => new Set([...prev, `l-${data.id}`]));
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -86,7 +83,7 @@ export default function WorkflowsPage() {
   });
 
   const updateStepMut = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateWorkflowStep>[1] }) => updateStepOptimistic(id, input, queryClient, selectedConfigId),
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateWorkflowStep>[1] }) => updateWorkflowStep(id, input),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] }); },
     onError: (e: Error) => { toast.error(e.message); queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] }); },
   });
@@ -97,19 +94,34 @@ export default function WorkflowsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Lookup para nombres
+  const lookupMap = useMemo(() => {
+    const m = new Map<string, { name: string; code?: string }>();
+    configs?.forEach(c => {
+      if (c.country) m.set(c.country.id, { name: c.country.name });
+      if (c.business_line) m.set(c.business_line.id, { name: c.business_line.name });
+      if (c.event) m.set(c.event.id, { name: c.event.name });
+      if (c.claim_status) m.set(c.claim_status.id, { name: c.claim_status.name, code: c.claim_status.code });
+    });
+    claimStatuses?.forEach(s => m.set(s.id, { name: s.name, code: s.code }));
+    return m;
+  }, [configs, claimStatuses]);
+
+  const getName = (id: string): string => lookupMap.get(id)?.name || "—";
+  const getStatusCode = (id: string): string => lookupMap.get(id)?.code || "";
+
   // Agrupar configs por jerarquia: Estado > Pais > Evento > Linea
   const tree = useMemo(() => {
-    if (!configs) return new Map<string, Map<string, Map<string, Map<string, WorkflowConfig>>>>();
     const tree = new Map<string, Map<string, Map<string, Map<string, WorkflowConfig>>>>();
-    for (const c of configs) {
-      const statusKey = c.claim_status_id;
-      const countryKey = c.country_id || "__all__";
-      const eventKey = c.event_id || "__all__";
-      const lineKey = c.business_line_id || "__all__";
-      if (!tree.has(statusKey)) tree.set(statusKey, new Map());
-      if (!tree.get(statusKey)!.has(countryKey)) tree.get(statusKey)!.set(countryKey, new Map());
-      if (!tree.get(statusKey)!.get(countryKey)!.has(eventKey)) tree.get(statusKey)!.get(countryKey)!.set(eventKey, new Map());
-      tree.get(statusKey)!.get(countryKey)!.get(eventKey)!.set(lineKey, c);
+    for (const c of (configs || [])) {
+      const sk = c.claim_status_id;
+      const ck = c.country_id;
+      const ek = c.event_id;
+      const lk = c.business_line_id;
+      if (!tree.has(sk)) tree.set(sk, new Map());
+      if (!tree.get(sk)!.has(ck)) tree.get(sk)!.set(ck, new Map());
+      if (!tree.get(sk)!.get(ck)!.has(ek)) tree.get(sk)!.get(ck)!.set(ek, new Map());
+      tree.get(sk)!.get(ck)!.get(ek)!.set(lk, c);
     }
     return tree;
   }, [configs]);
@@ -122,24 +134,6 @@ export default function WorkflowsPage() {
     });
   }, []);
 
-  const lookupMap = useMemo(() => {
-    const m = new Map<string, { name: string; code?: string }>();
-    countries?.forEach(c => m.set(c.id, { name: c.name }));
-    businessLines?.forEach(l => m.set(l.id, { name: l.name }));
-    events?.forEach(e => m.set(e.id, { name: e.name }));
-    claimStatuses?.forEach(s => m.set(s.id, { name: s.name, code: s.code }));
-    return m;
-  }, [countries, businessLines, events, claimStatuses]);
-
-  const getName = (id: string): string => {
-    if (id === "__all__") return "Todos";
-    return lookupMap.get(id)?.name || "—";
-  };
-
-  const getStatusCode = (id: string): string => {
-    return lookupMap.get(id)?.code || "";
-  };
-
   // Steps agrupados por nivel
   const stepsByLevel = useMemo(() => {
     if (!steps) return new Map<number, WorkflowStep[]>();
@@ -148,17 +142,11 @@ export default function WorkflowsPage() {
       if (!map.has(s.level)) map.set(s.level, []);
       map.get(s.level)!.push(s);
     }
-    // Ordenar dentro de cada nivel por sort_order
-    for (const [, arr] of map) {
-      arr.sort((a, b) => a.sort_order - b.sort_order);
-    }
+    for (const [, arr] of map) arr.sort((a, b) => a.sort_order - b.sort_order);
     return map;
   }, [steps]);
 
-  const usedTemplateIds = useMemo(() => {
-    return new Set((steps || []).map(s => s.action_template_id));
-  }, [steps]);
-
+  const usedTemplateIds = useMemo(() => new Set((steps || []).map(s => s.action_template_id)), [steps]);
   const selectedStep = (steps || []).find(s => s.id === selectedStepId);
   const selectedConfig = configs?.find(c => c.id === selectedConfigId);
 
@@ -175,12 +163,7 @@ export default function WorkflowsPage() {
       .sort((a, b) => (a.code || "").localeCompare(b.code || ""));
   }, [availableTemplates, usedTemplateIds]);
 
-  const maxLevel = useMemo(() => {
-    if (!steps || steps.length === 0) return 0;
-    return Math.max(...steps.map(s => s.level));
-  }, [steps]);
-
-  // Auto-expandir el primer estado si no hay nada expandido
+  // Auto-expandir primer estado
   useEffect(() => {
     if (configs && configs.length > 0 && expandedNodes.size === 0) {
       const firstStatus = configs[0].claim_status_id;
@@ -190,12 +173,11 @@ export default function WorkflowsPage() {
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      {/* Header con glassmorphism */}
+      {/* Header glassmorphism */}
       <div className="relative overflow-hidden rounded-2xl border border-white/10 dark:border-white/5
                       bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl
                       shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)]
                       px-5 py-4">
-        {/* Glow decorativo */}
         <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-violet-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-sky-500/10 blur-3xl" />
 
@@ -212,11 +194,10 @@ export default function WorkflowsPage() {
           <div className="flex-1" />
           {canCreate("catalogos") && (
             <button
-              onClick={() => { setEditingConfig(null); setOpenConfigModal(true); }}
+              onClick={() => setOpenCreateModal(true)}
               className="group flex items-center gap-2 rounded-lg px-3 h-8
                          bg-linear-to-r from-violet-500/80 to-sky-500/80 hover:from-violet-500 hover:to-sky-500
-                         text-white text-[12px] font-medium
-                         shadow-lg shadow-violet-500/20
+                         text-white text-[12px] font-medium shadow-lg shadow-violet-500/20
                          transition-all duration-200 active:scale-95"
             >
               <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90 duration-200" />
@@ -228,13 +209,13 @@ export default function WorkflowsPage() {
 
       {/* Contenido principal */}
       <div className="flex gap-4 flex-1 min-h-0">
-        {/* Arbol colapsable — glassmorphism */}
+        {/* Arbol colapsable */}
         <div className="flex-1 relative overflow-auto rounded-2xl border border-white/10 dark:border-white/5
                         bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl
                         shadow-[0_8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]
                         p-4">
           {configs && configs.length === 0 ? (
-            <EmptyState onCreate={() => { setEditingConfig(null); setOpenConfigModal(true); }} canCreate={canCreate("catalogos")} />
+            <EmptyState onCreate={() => setOpenCreateModal(true)} canCreate={canCreate("catalogos")} />
           ) : !configs ? (
             <div className="flex items-center justify-center h-full">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-500" />
@@ -249,7 +230,6 @@ export default function WorkflowsPage() {
 
                 return (
                   <div key={statusId}>
-                    {/* Estado */}
                     <GlassTreeNode
                       isExpanded={isExp}
                       onToggle={() => toggleNode(`s-${statusId}`)}
@@ -260,7 +240,7 @@ export default function WorkflowsPage() {
                       count={countriesMap.size}
                     />
                     {isExp && (
-                      <div className="ml-3 border-l border-white/5 dark:border-white/5 pl-3 mt-0.5 space-y-0.5">
+                      <div className="ml-3 border-l border-white/5 pl-3 mt-0.5 space-y-0.5">
                         {Array.from(countriesMap.entries()).map(([countryId, eventsMap]) => {
                           const cExp = expandedNodes.has(`c-${statusId}-${countryId}`);
                           return (
@@ -300,20 +280,26 @@ export default function WorkflowsPage() {
                                                     bold
                                                     active={isSelected}
                                                     count={selectedConfigId === config.id ? (steps?.length || 0) : undefined}
-                                                    actions={canEdit("catalogos") ? (
-                                                      <button
-                                                        className="text-muted-foreground/60 hover:text-violet-400 transition-colors"
-                                                        onClick={(e) => { e.stopPropagation(); setEditingConfig(config); setOpenConfigModal(true); }}
-                                                      >
-                                                        <Settings2 className="h-3 w-3" />
-                                                      </button>
-                                                    ) : undefined}
+                                                    actions={
+                                                      <div className="flex items-center gap-1">
+                                                        {canDelete("catalogos") && (
+                                                          <button
+                                                            className="text-muted-foreground/60 hover:text-rose-400 transition-colors"
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              if (confirm("¿Eliminar este workflow completo?")) deleteConfigMut.mutate(config.id);
+                                                            }}
+                                                          >
+                                                            <Trash2 className="h-3 w-3" />
+                                                          </button>
+                                                        )}
+                                                      </div>
+                                                    }
                                                   />
                                                   {lExp && selectedConfigId === config.id && (
                                                     <div className="ml-2 mt-2 mb-3">
                                                       <StepsCanvas
                                                         stepsByLevel={stepsByLevel}
-                                                        maxLevel={maxLevel}
                                                         selectedStepId={selectedStepId}
                                                         hoveredStep={hoveredStep}
                                                         onSelectStep={setSelectedStepId}
@@ -347,7 +333,7 @@ export default function WorkflowsPage() {
           )}
         </div>
 
-        {/* Panel lateral: configuracion del step — glassmorphism */}
+        {/* Panel lateral: configuracion del step */}
         {selectedStep && (
           <div className="w-[280px] shrink-0 relative overflow-auto rounded-2xl border border-white/10 dark:border-white/5
                           bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl
@@ -373,7 +359,6 @@ export default function WorkflowsPage() {
 
               <p className="text-[11px] text-muted-foreground mb-4">{selectedStep.action_template?.name}</p>
 
-              {/* Nivel badge */}
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1
                                 bg-sky-500/10 border border-sky-500/20">
@@ -390,7 +375,6 @@ export default function WorkflowsPage() {
                 )}
               </div>
 
-              {/* Toggles glassmorphism */}
               <div className="space-y-2">
                 <GlassToggle
                   active={selectedStep.is_automatic}
@@ -408,7 +392,6 @@ export default function WorkflowsPage() {
                 />
               </div>
 
-              {/* Boton quitar */}
               {canDelete("catalogos") && (
                 <button
                   className="mt-6 w-full flex items-center justify-center gap-2 rounded-lg
@@ -427,22 +410,16 @@ export default function WorkflowsPage() {
         )}
       </div>
 
-      {/* Modal: crear/editar config */}
-      <ConfigModal
-        open={openConfigModal}
-        editing={editingConfig}
-        countries={countries || []}
-        businessLines={businessLines || []}
-        events={events || []}
+      {/* Modal: crear workflow con cascading dropdowns */}
+      <CreateWorkflowModal
+        open={openCreateModal}
         claimStatuses={claimStatuses || []}
-        onSubmit={(data) => {
-          if (editingConfig) updateConfigMut.mutate({ id: editingConfig.id, input: data });
-          else createConfigMut.mutate(data);
-        }}
-        onClose={() => setOpenConfigModal(false)}
+        onSubmit={(data) => createConfigMut.mutate(data)}
+        onClose={() => setOpenCreateModal(false)}
+        existingCombos={configs || []}
       />
 
-      {/* Modal: agregar step — glassmorphism */}
+      {/* Modal: agregar step */}
       <Dialog open={!!showAddStep} onOpenChange={(v) => !v && setShowAddStep(null)}>
         <DialogContent className="modal-sm !bg-white/80 dark:!bg-zinc-900/80 !backdrop-blur-xl !border-white/20 dark:!border-white/10 !shadow-2xl">
           <div className="modal-header">
@@ -513,6 +490,171 @@ export default function WorkflowsPage() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Modal: crear workflow con cascading dropdowns
+// ═══════════════════════════════════════════════════════════════════
+
+function CreateWorkflowModal({
+  open, claimStatuses, onSubmit, onClose, existingCombos,
+}: {
+  open: boolean;
+  claimStatuses: { id: string; code: string; name: string }[];
+  onSubmit: (data: { country_id: string; business_line_id: string; event_id: string; claim_status_id: string }) => void;
+  onClose: () => void;
+  existingCombos: WorkflowConfig[];
+}) {
+  const [statusId, setStatusId] = useState("");
+  const [countryId, setCountryId] = useState("");
+  const [eventId, setEventId] = useState("");
+  const [lineId, setLineId] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setStatusId("");
+      setCountryId("");
+      setEventId("");
+      setLineId("");
+    }
+  }, [open]);
+
+  // Cascading queries
+  const { data: countries } = useQuery({
+    queryKey: ["wf-countries", statusId],
+    queryFn: () => getAvailableCountriesForStatus(statusId),
+    enabled: !!statusId,
+    staleTime: 60000,
+  });
+
+  const { data: events } = useQuery({
+    queryKey: ["wf-events", statusId, countryId],
+    queryFn: () => getAvailableEventsForStatusAndCountry(statusId, countryId),
+    enabled: !!statusId && !!countryId,
+    staleTime: 60000,
+  });
+
+  const { data: lines } = useQuery({
+    queryKey: ["wf-lines", statusId, countryId, eventId],
+    queryFn: () => getAvailableLinesForStatusCountryEvent(statusId, countryId, eventId),
+    enabled: !!statusId && !!countryId && !!eventId,
+    staleTime: 60000,
+  });
+
+  // Verificar si la combinacion ya existe
+  const alreadyExists = useMemo(() => {
+    if (!statusId || !countryId || !eventId || !lineId) return false;
+    return existingCombos.some(c =>
+      c.claim_status_id === statusId &&
+      c.country_id === countryId &&
+      c.event_id === eventId &&
+      c.business_line_id === lineId
+    );
+  }, [statusId, countryId, eventId, lineId, existingCombos]);
+
+  const canSubmit = statusId && countryId && eventId && lineId && !alreadyExists;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="modal-sm !bg-white/80 dark:!bg-zinc-900/80 !backdrop-blur-xl !border-white/20 dark:!border-white/10 !shadow-2xl">
+        <div className="modal-header">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500/20 to-sky-500/20 border border-white/10">
+            <Workflow className="h-4 w-4 text-violet-400" />
+          </div>
+          Nuevo Workflow
+        </div>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (!canSubmit) return;
+          onSubmit({ country_id: countryId, business_line_id: lineId, event_id: eventId, claim_status_id: statusId });
+        }}>
+          <div className="modal-body space-y-3">
+            {/* Paso 1: Estado */}
+            <div>
+              <Label className="app-field-label flex items-center gap-1.5">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-violet-500/20 text-violet-400 text-[9px] font-bold">1</span>
+                Estado
+              </Label>
+              <select
+                className="app-input w-full"
+                value={statusId}
+                onChange={(e) => { setStatusId(e.target.value); setCountryId(""); setEventId(""); setLineId(""); }}
+                required
+              >
+                <option value="">Seleccionar estado...</option>
+                {claimStatuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+
+            {/* Paso 2: Pais */}
+            <div>
+              <Label className="app-field-label flex items-center gap-1.5">
+                <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${countryId ? "bg-violet-500/20 text-violet-400" : "bg-muted text-muted-foreground"}`}>2</span>
+                País
+              </Label>
+              <select
+                className="app-input w-full disabled:opacity-40"
+                value={countryId}
+                onChange={(e) => { setCountryId(e.target.value); setEventId(""); setLineId(""); }}
+                disabled={!statusId || !countries}
+                required
+              >
+                <option value="">{!statusId ? "Primero selecciona estado..." : !countries ? "Cargando..." : "Seleccionar país..."}</option>
+                {countries?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            {/* Paso 3: Evento */}
+            <div>
+              <Label className="app-field-label flex items-center gap-1.5">
+                <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${eventId ? "bg-violet-500/20 text-violet-400" : "bg-muted text-muted-foreground"}`}>3</span>
+                Evento
+              </Label>
+              <select
+                className="app-input w-full disabled:opacity-40"
+                value={eventId}
+                onChange={(e) => { setEventId(e.target.value); setLineId(""); }}
+                disabled={!countryId || !events}
+                required
+              >
+                <option value="">{!countryId ? "Primero selecciona país..." : !events ? "Cargando..." : "Seleccionar evento..."}</option>
+                {events?.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+
+            {/* Paso 4: Linea */}
+            <div>
+              <Label className="app-field-label flex items-center gap-1.5">
+                <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${lineId ? "bg-violet-500/20 text-violet-400" : "bg-muted text-muted-foreground"}`}>4</span>
+                Línea de Negocio
+              </Label>
+              <select
+                className="app-input w-full disabled:opacity-40"
+                value={lineId}
+                onChange={(e) => setLineId(e.target.value)}
+                disabled={!eventId || !lines}
+                required
+              >
+                <option value="">{!eventId ? "Primero selecciona evento..." : !lines ? "Cargando..." : "Seleccionar línea..."}</option>
+                {lines?.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+
+            {/* Warning: ya existe */}
+            {alreadyExists && (
+              <div className="rounded-lg px-3 py-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px]">
+                Ya existe un workflow para esta combinación. No se pueden crear workflows duplicados.
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            <Button type="button" className="btn-cancel btn-footer" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" className="btn-save btn-footer" disabled={!canSubmit}>Crear</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Componente: Nodo del arbol con glassmorphism
 // ═══════════════════════════════════════════════════════════════════
 
@@ -560,15 +702,14 @@ function GlassTreeNode({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Componente: Canvas de steps por nivel — visual potente
+// Componente: Canvas de steps por nivel
 // ═══════════════════════════════════════════════════════════════════
 
 function StepsCanvas({
-  stepsByLevel, maxLevel, selectedStepId, hoveredStep,
+  stepsByLevel, selectedStepId, hoveredStep,
   onSelectStep, onHoverStep, canEdit, onAddStep, isLoading, steps,
 }: {
   stepsByLevel: Map<number, WorkflowStep[]>;
-  maxLevel: number;
   selectedStepId: string | null;
   hoveredStep: string | null;
   onSelectStep: (id: string) => void;
@@ -611,7 +752,6 @@ function StepsCanvas({
     <div className="space-y-1">
       {levels.map(([level, levelSteps], idx) => (
         <div key={level}>
-          {/* Label de nivel */}
           <div className="flex items-center gap-2 mb-1.5 mt-2">
             <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
               Nivel {level}
@@ -622,7 +762,6 @@ function StepsCanvas({
             <div className="flex-1 h-px bg-white/5 dark:bg-white/5" />
           </div>
 
-          {/* Steps del nivel */}
           <div className="flex flex-wrap gap-2">
             {levelSteps.map(step => (
               <StepCard
@@ -637,7 +776,6 @@ function StepsCanvas({
             ))}
           </div>
 
-          {/* Conector visual entre niveles */}
           {idx < levels.length - 1 && (
             <div className="flex justify-center my-1.5">
               <div className="flex flex-col items-center gap-0.5">
@@ -650,7 +788,6 @@ function StepsCanvas({
         </div>
       ))}
 
-      {/* Boton agregar */}
       {canEdit && (
         <button
           className="mt-3 flex items-center gap-1.5 rounded-lg px-2.5 h-7
@@ -668,7 +805,7 @@ function StepsCanvas({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Componente: Card de step — glassmorphism premium
+// Componente: Card de step
 // ═══════════════════════════════════════════════════════════════════
 
 function StepCard({
@@ -695,10 +832,8 @@ function StepCard({
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
     >
-      {/* Codigo */}
       <span className="font-mono text-[11px] font-bold tracking-tight">{step.action_template?.code}</span>
 
-      {/* Badges */}
       <div className="flex items-center gap-1">
         {step.is_automatic && (
           <span className="flex items-center gap-0.5 rounded px-1 py-0.5
@@ -716,7 +851,6 @@ function StepCard({
         )}
       </div>
 
-      {/* Dependencia */}
       {step.depends_on_template && (
         <span className="flex items-center gap-0.5 text-[8px] text-muted-foreground/60">
           <ArrowRight className="h-2 w-2" />
@@ -724,7 +858,6 @@ function StepCard({
         </span>
       )}
 
-      {/* Glow seleccionado */}
       {selected && (
         <div className="pointer-events-none absolute -inset-px rounded-xl bg-violet-500/5 blur-sm -z-10" />
       )}
@@ -773,7 +906,7 @@ function GlassToggle({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Componente: Empty state
+// Empty state
 // ═══════════════════════════════════════════════════════════════════
 
 function EmptyState({ onCreate, canCreate }: { onCreate: () => void; canCreate: boolean }) {
@@ -804,130 +937,5 @@ function EmptyState({ onCreate, canCreate }: { onCreate: () => void; canCreate: 
         </button>
       )}
     </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Optimistic update helper
-// ═══════════════════════════════════════════════════════════════════
-
-async function updateStepOptimistic(
-  id: string,
-  input: Parameters<typeof updateWorkflowStep>[1],
-  queryClient: ReturnType<typeof useQueryClient>,
-  configId: string | null,
-) {
-  if (configId) {
-    queryClient.setQueryData<WorkflowStep[]>(["workflow-steps", configId], (old) => {
-      if (!old) return old;
-      return old.map(s => s.id === id ? { ...s, ...input } : s);
-    });
-  }
-  return updateWorkflowStep(id, input);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Modal: crear/editar config
-// ═══════════════════════════════════════════════════════════════════
-
-function ConfigModal({
-  open, editing, countries, businessLines, events, claimStatuses, onSubmit, onClose,
-}: {
-  open: boolean;
-  editing: WorkflowConfig | null;
-  countries: { id: string; name: string }[];
-  businessLines: { id: string; name: string }[];
-  events: { id: string; name: string }[];
-  claimStatuses: { id: string; code: string; name: string }[];
-  onSubmit: (data: { name: string; description?: string; country_id?: string | null; business_line_id?: string | null; event_id?: string | null; claim_status_id: string }) => void;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [countryId, setCountryId] = useState("");
-  const [eventId, setEventId] = useState("");
-  const [lineId, setLineId] = useState("");
-  const [statusId, setStatusId] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      setName(editing?.name || "");
-      setDescription(editing?.description || "");
-      setCountryId(editing?.country_id || "");
-      setEventId(editing?.event_id || "");
-      setLineId(editing?.business_line_id || "");
-      setStatusId(editing?.claim_status_id || "");
-    }
-  }, [open, editing]);
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="modal-sm !bg-white/80 dark:!bg-zinc-900/80 !backdrop-blur-xl !border-white/20 dark:!border-white/10 !shadow-2xl">
-        <div className="modal-header">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500/20 to-sky-500/20 border border-white/10">
-            <Workflow className="h-4 w-4 text-violet-400" />
-          </div>
-          {editing ? "Editar" : "Nuevo"} Workflow
-        </div>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          if (!name.trim()) { toast.error("El nombre es requerido"); return; }
-          if (!statusId) { toast.error("El estado es requerido"); return; }
-          onSubmit({
-            name,
-            description: description || undefined,
-            country_id: countryId || null,
-            event_id: eventId || null,
-            business_line_id: lineId || null,
-            claim_status_id: statusId,
-          });
-        }}>
-          <div className="modal-body space-y-3">
-            <div>
-              <Label className="app-field-label">Nombre *</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} className="app-input" placeholder="Ej: Liquidación Hogar Chile" required />
-            </div>
-            <div>
-              <Label className="app-field-label">Descripción</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="app-input text-[12px] resize-none" rows={2} />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="app-field-label">Estado *</Label>
-                <select className="app-input w-full" value={statusId} onChange={(e) => setStatusId(e.target.value)} required>
-                  <option value="">Seleccionar...</option>
-                  {claimStatuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label className="app-field-label">País</Label>
-                <select className="app-input w-full" value={countryId} onChange={(e) => setCountryId(e.target.value)}>
-                  <option value="">(todos)</option>
-                  {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label className="app-field-label">Evento</Label>
-                <select className="app-input w-full" value={eventId} onChange={(e) => setEventId(e.target.value)}>
-                  <option value="">(todos)</option>
-                  {events.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label className="app-field-label">Línea de Negocio</Label>
-                <select className="app-input w-full" value={lineId} onChange={(e) => setLineId(e.target.value)}>
-                  <option value="">(todas)</option>
-                  {businessLines.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-          <div className="modal-footer">
-            <Button type="button" className="btn-cancel btn-footer" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" className="btn-save btn-footer">Guardar</Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
