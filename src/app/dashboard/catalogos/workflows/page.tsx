@@ -43,6 +43,7 @@ export default function WorkflowsPage() {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [showAddStep, setShowAddStep] = useState<string | null>(null);
+  const [addDependentParent, setAddDependentParent] = useState<WorkflowStep | null>(null);
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
 
   // Queries
@@ -93,6 +94,7 @@ export default function WorkflowsPage() {
       toast.success(steps.length > 1 ? `Gestión agregada con ${steps.length - 1} dependientes` : "Gestión agregada");
       queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] });
       setShowAddStep(null);
+      setAddDependentParent(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -374,6 +376,7 @@ export default function WorkflowsPage() {
                                                         onHoverStep={setHoveredStep}
                                                         canEdit={canEdit("catalogos") && !isOnline}
                                                         onAddStep={() => !isOnline && setShowAddStep(config.id)}
+                                                        onAddDependent={(parent) => { setAddDependentParent(parent); setShowAddStep(config.id); }}
                                                         isLoading={!steps}
                                                         steps={steps || []}
                                                       />
@@ -487,16 +490,29 @@ export default function WorkflowsPage() {
         existingCombos={configs || []}
       />
 
-      {/* Modal: agregar step */}
-      <Dialog open={!!showAddStep} onOpenChange={(v) => !v && setShowAddStep(null)}>
+      {/* Modal: agregar step (raíz o dependiente) */}
+      <Dialog open={!!showAddStep} onOpenChange={(v) => { if (!v) { setShowAddStep(null); setAddDependentParent(null); } }}>
         <DialogContent className="modal-sm !bg-white/80 dark:!bg-zinc-900/80 !backdrop-blur-xl !border-white/20 dark:!border-white/10 !shadow-2xl">
           <div className="modal-header">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500/20 to-sky-500/20 border border-white/10">
               <Plus className="h-4 w-4 text-violet-400" />
             </div>
-            Agregar Gestión
+            {addDependentParent ? "Agregar Gestión Dependiente" : "Agregar Gestión Raíz"}
           </div>
           <div className="modal-body space-y-1.5">
+            {/* Contexto del padre si es dependiente */}
+            {addDependentParent && (
+              <div className="flex items-center gap-2 rounded-lg bg-sky-500/5 border border-sky-500/10 px-3 py-2 text-[11px]">
+                <span className="text-muted-foreground">Depende de:</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-md bg-sky-500/20 border border-sky-500/30">
+                    <span className="font-mono text-[9px] font-bold text-sky-400">{(addDependentParent.action_template?.code || "?").slice(0, 2)}</span>
+                  </div>
+                  <span className="font-mono font-bold text-sky-400">{addDependentParent.action_template?.code}</span>
+                  <span className="text-muted-foreground">{addDependentParent.action_template?.name}</span>
+                </div>
+              </div>
+            )}
             {availableToAdd.length === 0 ? (
               <p className="text-[12px] text-muted-foreground text-center py-6">
                 No hay gestiones disponibles.
@@ -514,11 +530,22 @@ export default function WorkflowsPage() {
                                text-left transition-all duration-200 active:scale-[0.98]
                                group"
                     onClick={() => {
-                      createStepMut.mutate({
-                        workflow_config_id: showAddStep!,
-                        action_template_id: t.id,
-                        level: 1,
-                      });
+                      if (addDependentParent) {
+                        // Crear como dependiente del step padre
+                        createStepMut.mutate({
+                          workflow_config_id: showAddStep!,
+                          action_template_id: t.id,
+                          level: addDependentParent.level + 1,
+                          depends_on_template_id: addDependentParent.action_template_id,
+                        });
+                      } else {
+                        // Crear como raíz
+                        createStepMut.mutate({
+                          workflow_config_id: showAddStep!,
+                          action_template_id: t.id,
+                          level: 1,
+                        });
+                      }
                     }}
                   >
                     <div className="flex items-center gap-3">
@@ -531,6 +558,12 @@ export default function WorkflowsPage() {
                         <div className="text-[10px] text-muted-foreground">{t.name}</div>
                       </div>
                     </div>
+                    {addDependentParent && (
+                      <div className="flex items-center gap-1 text-[9px] text-sky-400/60">
+                        <ArrowRight className="h-2.5 w-2.5" />
+                        <span>Nivel {addDependentParent.level + 1}</span>
+                      </div>
+                    )}
                   </button>
                 );
               })
@@ -758,9 +791,14 @@ function GlassTreeNode({
 // Componente: Canvas de steps por nivel
 // ═══════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════
+// Componente: StepsCanvas (diagrama de flujo con glassmorphism)
+// Muestra los steps como un arbol visual con flechas de dependencia
+// ═══════════════════════════════════════════════════════════════════
+
 function StepsCanvas({
   stepsByLevel, selectedStepId, hoveredStep,
-  onSelectStep, onHoverStep, canEdit, onAddStep, isLoading, steps,
+  onSelectStep, onHoverStep, canEdit, onAddStep, onAddDependent, isLoading, steps,
 }: {
   stepsByLevel: Map<number, WorkflowStep[]>;
   selectedStepId: string | null;
@@ -769,6 +807,7 @@ function StepsCanvas({
   onHoverStep: (id: string | null) => void;
   canEdit: boolean;
   onAddStep: () => void;
+  onAddDependent: (parentStep: WorkflowStep) => void;
   isLoading: boolean;
   steps: WorkflowStep[];
 }) {
@@ -782,11 +821,14 @@ function StepsCanvas({
 
   if (steps.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-white/10 dark:border-white/5 p-4 text-center">
-        <p className="text-[11px] text-muted-foreground italic mb-2">Sin gestiones configuradas</p>
+      <div className="relative overflow-hidden rounded-xl border border-dashed border-white/10 dark:border-white/5
+                      bg-white/[0.02] backdrop-blur-sm p-6 text-center">
+        <div className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-violet-500/5 blur-2xl" />
+        <Workflow className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
+        <p className="text-[11px] text-muted-foreground italic mb-3">Sin gestiones configuradas</p>
         {canEdit && (
           <button
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 h-7
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 h-7
                        bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20
                        text-violet-400 text-[11px] font-medium transition-all active:scale-95"
             onClick={onAddStep}
@@ -799,120 +841,136 @@ function StepsCanvas({
     );
   }
 
-  const levels = Array.from(stepsByLevel.entries()).sort((a, b) => a[0] - b[0]);
+  // Construir arbol: cada step -> sus hijos (steps que dependen de el)
+  const childrenMap = new Map<string, WorkflowStep[]>();
+  const roots: WorkflowStep[] = [];
+  for (const s of steps) {
+    if (s.depends_on_template_id) {
+      const parentKey = s.depends_on_template_id;
+      if (!childrenMap.has(parentKey)) childrenMap.set(parentKey, []);
+      childrenMap.get(parentKey)!.push(s);
+    } else {
+      roots.push(s);
+    }
+  }
 
-  return (
-    <div className="space-y-1">
-      {levels.map(([level, levelSteps], idx) => (
-        <div key={level}>
-          <div className="flex items-center gap-2 mb-1.5 mt-2">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
-              Nivel {level}
-            </span>
-            <span className="text-[9px] text-muted-foreground/40">
-              {level === 1 ? "al entrar al estado" : "dependientes"}
-            </span>
-            <div className="flex-1 h-px bg-white/5 dark:bg-white/5" />
+  // Renderizar arbol recursivamente
+  function renderNode(step: WorkflowStep, level: number, isLast: boolean): React.ReactNode {
+    const children = childrenMap.get(step.action_template_id) || [];
+    const isSelected = selectedStepId === step.id;
+    const isHovered = hoveredStep === step.id;
+    const levelColors = [
+      { bg: "from-violet-500/15 to-violet-600/5", border: "border-violet-500/30", text: "text-violet-400", glow: "bg-violet-500/10" },
+      { bg: "from-sky-500/15 to-sky-600/5", border: "border-sky-500/30", text: "text-sky-400", glow: "bg-sky-500/10" },
+      { bg: "from-emerald-500/15 to-emerald-600/5", border: "border-emerald-500/30", text: "text-emerald-400", glow: "bg-emerald-500/10" },
+      { bg: "from-amber-500/15 to-amber-600/5", border: "border-amber-500/30", text: "text-amber-400", glow: "bg-amber-500/10" },
+    ];
+    const lc = levelColors[Math.min(level, 3)];
+
+    return (
+      <div key={step.id} className="relative">
+        {/* Nodo */}
+        <div className="flex items-center gap-2 mb-1">
+          <div
+            className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2
+                        bg-linear-to-br ${lc.bg} backdrop-blur-sm
+                        border ${lc.border}
+                        cursor-pointer transition-all duration-200 active:scale-95
+                        ${isSelected ? "ring-2 ring-offset-0 ring-violet-500/40 " : "hover:scale-[1.02]"}`}
+            onClick={() => onSelectStep(step.id)}
+            onMouseEnter={() => onHoverStep(step.id)}
+            onMouseLeave={() => onHoverStep(null)}
+          >
+            {/* Glow decorativo */}
+            <div className={`pointer-events-none absolute -inset-1 rounded-xl ${lc.glow} blur-md opacity-50 -z-10`} />
+
+            {/* Icono del codigo */}
+            <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${lc.glow} border ${lc.border}`}>
+              <span className={`font-mono text-[10px] font-bold ${lc.text}`}>
+                {(step.action_template?.code || "?").slice(0, 2)}
+              </span>
+            </div>
+
+            {/* Info */}
+            <div className="flex flex-col">
+              <span className="text-[12px] font-semibold leading-tight">{step.action_template?.code}</span>
+              <span className="text-[9px] text-muted-foreground leading-tight max-w-[140px] truncate">
+                {step.action_template?.name}
+              </span>
+            </div>
+
+            {/* Badges */}
+            <div className="flex items-center gap-1">
+              {step.is_automatic && (
+                <span className="flex items-center gap-0.5 rounded px-1 py-0.5 bg-emerald-500/10 text-emerald-400 text-[8px] font-medium">
+                  <Zap className="h-2 w-2" />
+                </span>
+              )}
+              {step.is_required && (
+                <span className="flex items-center gap-0.5 rounded px-1 py-0.5 bg-rose-500/10 text-rose-400 text-[8px] font-medium">
+                  <Shield className="h-2 w-2" />
+                </span>
+              )}
+            </div>
+
+            {/* Boton agregar dependiente */}
+            {canEdit && (
+              <button
+                className="ml-1 flex h-5 w-5 items-center justify-center rounded-md
+                           bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/30
+                           text-muted-foreground hover:text-violet-400 transition-all active:scale-90"
+                title="Agregar gestión dependiente"
+                onClick={(e) => { e.stopPropagation(); onAddDependent(step); }}
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            )}
           </div>
+        </div>
 
-          <div className="flex flex-wrap gap-2">
-            {levelSteps.map(step => (
-              <StepCard
-                key={step.id}
-                step={step}
-                selected={selectedStepId === step.id}
-                hovered={hoveredStep === step.id}
-                onClick={() => onSelectStep(step.id)}
-                onHover={() => onHoverStep(step.id)}
-                onLeave={() => onHoverStep(null)}
-              />
+        {/* Hijos con conector visual */}
+        {children.length > 0 && (
+          <div className="ml-4 pl-4 border-l-2 border-white/10 dark:border-white/5 space-y-1">
+            {children.map((child, idx) => (
+              <div key={child.id} className="relative">
+                {/* Conector horizontal */}
+                <div className="absolute -left-4 top-5 h-px w-4 bg-white/10 dark:bg-white/5" />
+                {renderNode(child, level + 1, idx === children.length - 1)}
+              </div>
             ))}
           </div>
+        )}
+      </div>
+    );
+  }
 
-          {idx < levels.length - 1 && (
-            <div className="flex justify-center my-1.5">
-              <div className="flex flex-col items-center gap-0.5">
-                <div className="h-3 w-px bg-linear-to-b from-violet-500/40 to-transparent" />
-                <ArrowRight className="h-2.5 w-2.5 text-violet-500/40 rotate-90" />
-                <div className="h-3 w-px bg-linear-to-b from-transparent to-violet-500/40" />
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-white/10 dark:border-white/5
+                    bg-white/[0.02] backdrop-blur-sm p-4">
+      <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-violet-500/5 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-sky-500/5 blur-3xl" />
+
+      <div className="relative space-y-1">
+        {roots.length === 0 ? (
+          <p className="text-[11px] text-muted-foreground italic text-center py-4">
+            Configuración inválida — no hay gestiones raíz
+          </p>
+        ) : (
+          roots.map((step, idx) => renderNode(step, 0, idx === roots.length - 1))
+        )}
+      </div>
 
       {canEdit && (
         <button
-          className="mt-3 flex items-center gap-1.5 rounded-lg px-2.5 h-7
+          className="mt-3 flex items-center gap-1.5 rounded-lg px-3 h-7
                      bg-transparent hover:bg-violet-500/10 border border-dashed border-white/10 hover:border-violet-500/30
                      text-muted-foreground hover:text-violet-400 text-[11px] font-medium
                      transition-all active:scale-95"
           onClick={onAddStep}
         >
           <Plus className="h-3 w-3" />
-          Agregar gestión
+          Agregar gestión raíz
         </button>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Componente: Card de step
-// ═══════════════════════════════════════════════════════════════════
-
-function StepCard({
-  step, selected, hovered, onClick, onHover, onLeave,
-}: {
-  step: WorkflowStep;
-  selected: boolean;
-  hovered: boolean;
-  onClick: () => void;
-  onHover: () => void;
-  onLeave: () => void;
-}) {
-  return (
-    <div
-      className={`relative flex flex-col items-center gap-1 px-3 py-2 rounded-xl cursor-pointer
-                  transition-all duration-200 active:scale-95
-                  ${selected
-                    ? "bg-violet-500/15 border border-violet-500/40 shadow-lg shadow-violet-500/10"
-                    : hovered
-                    ? "bg-white/10 dark:bg-white/10 border border-white/20 dark:border-white/10"
-                    : "bg-white/5 dark:bg-white/5 border border-white/10 dark:border-white/5 hover:bg-white/8 dark:hover:bg-white/8"
-                  }`}
-      onClick={onClick}
-      onMouseEnter={onHover}
-      onMouseLeave={onLeave}
-    >
-      <span className="font-mono text-[11px] font-bold tracking-tight">{step.action_template?.code}</span>
-
-      <div className="flex items-center gap-1">
-        {step.is_automatic && (
-          <span className="flex items-center gap-0.5 rounded px-1 py-0.5
-                           bg-emerald-500/10 text-emerald-400 text-[8px] font-medium">
-            <Zap className="h-2 w-2" />
-            Auto
-          </span>
-        )}
-        {step.is_required && (
-          <span className="flex items-center gap-0.5 rounded px-1 py-0.5
-                           bg-rose-500/10 text-rose-400 text-[8px] font-medium">
-            <Shield className="h-2 w-2" />
-            Req
-          </span>
-        )}
-      </div>
-
-      {step.depends_on_template && (
-        <span className="flex items-center gap-0.5 text-[8px] text-muted-foreground/60">
-          <ArrowRight className="h-2 w-2" />
-          {step.depends_on_template?.code}
-        </span>
-      )}
-
-      {selected && (
-        <div className="pointer-events-none absolute -inset-px rounded-xl bg-violet-500/5 blur-sm -z-10" />
       )}
     </div>
   );

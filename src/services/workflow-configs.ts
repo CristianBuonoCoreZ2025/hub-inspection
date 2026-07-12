@@ -132,11 +132,15 @@ export async function createWorkflowStep(input: {
  * Usa action_template_dependencies (por codigo) para encontrar hijos.
  * Busca el template hijo por codigo + business_line del workflow config.
  * Retorna todos los steps creados.
+ *
+ * Si se pasa depends_on_template_id, crea el step como dependiente de ese template
+ * (per-workflow dependency, no global).
  */
 export async function createWorkflowStepWithChain(input: {
   workflow_config_id: string;
   action_template_id: string;
   level: number;
+  depends_on_template_id?: string | null;
   sort_order?: number;
 }): Promise<WorkflowStep[]> {
   const supabase = getSupabaseClient();
@@ -161,12 +165,12 @@ export async function createWorkflowStepWithChain(input: {
 
   if (!rootCode) throw new Error("Template no tiene codigo");
 
-  // 1. Crear el step raíz
+  // 1. Crear el step raíz (o dependiente si se especifica depends_on_template_id)
   const root = await insertRow<WorkflowStep>("workflow_steps", {
     workflow_config_id: input.workflow_config_id,
     action_template_id: input.action_template_id,
     level: input.level,
-    depends_on_template_id: null,
+    depends_on_template_id: input.depends_on_template_id || null,
     sort_order: input.sort_order || 0,
     is_automatic: true,
     is_required: true,
