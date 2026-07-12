@@ -170,7 +170,7 @@ export default function WorkflowsPage() {
   const { data: availableTemplates } = useQuery({
     queryKey: ["available-templates", selectedConfig?.claim_status_id, selectedConfig?.business_line_id],
     queryFn: () => getActionTemplatesByClaimStatus(selectedConfig!.claim_status_id, selectedConfig?.business_line_id || undefined),
-    enabled: !!selectedConfig && !!showAddStep,
+    enabled: !!selectedConfig,
     staleTime: 30000,
   });
 
@@ -316,7 +316,8 @@ export default function WorkflowsPage() {
                                                 ? { label: "Suspendido", cls: "bg-amber-500/15 text-amber-400 border-amber-500/30" }
                                                 : { label: "Borrador", cls: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30" };
                                               return (
-                                                <div key={lineId} className={nodeOpacity}>
+                                                <div key={lineId}>
+                                                  <div className={nodeOpacity}>
                                                   <GlassTreeNode
                                                     isExpanded={lExp}
                                                     onToggle={() => { toggleNode(`l-${config.id}`); setSelectedConfigId(config.id); }}
@@ -373,6 +374,7 @@ export default function WorkflowsPage() {
                                                       </div>
                                                     }
                                                   />
+                                                  </div>
                                                   {lExp && selectedConfigId === config.id && (
                                                     <div className="ml-2 mt-2 mb-3">
                                                       {isOnline ? (
