@@ -37,19 +37,29 @@
 
   .glass-panel {
     border-radius: 12px !important;
-    border: 1px solid var(--border) !important;
-    background-color: var(--surface-elevated);
-    box-shadow: var(--shadow-card);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent) !important;
+    background-color: color-mix(in srgb, var(--surface-elevated) 70%, transparent) !important;
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    box-shadow: var(--shadow-card), 0 0 0 1px color-mix(in srgb, var(--border) 20%, transparent) !important;
+  }
+
+  .dark .glass-panel {
+    background-color: color-mix(in srgb, var(--surface-elevated) 50%, transparent) !important;
+    border-color: color-mix(in srgb, rgb(255 255 255) 8%, transparent) !important;
   }
 
   .glass-panel-subtle {
     border-radius: 10px !important;
-    border: 1px solid var(--border) !important;
-    background-color: var(--muted);
+    border: 1px solid color-mix(in srgb, var(--border) 50%, transparent) !important;
+    background-color: color-mix(in srgb, var(--muted) 60%, transparent) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 
   .dark .glass-panel-subtle {
-    background-color: rgb(39 39 42 / 0.5);
+    background-color: rgb(39 39 42 / 0.4) !important;
+    border-color: color-mix(in srgb, rgb(255 255 255) 6%, transparent) !important;
   }
 
   .auth-shell {
@@ -57,7 +67,16 @@
   }
 
   .auth-card {
-    @apply w-full max-w-[400px] rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-card)];
+    @apply w-full max-w-[400px] rounded-2xl border border-border p-8 shadow-[var(--shadow-card)];
+    background-color: color-mix(in srgb, var(--card) 70%, transparent) !important;
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border-color: color-mix(in srgb, var(--border) 40%, transparent) !important;
+  }
+
+  .dark .auth-card {
+    background-color: color-mix(in srgb, var(--card) 50%, transparent) !important;
+    border-color: color-mix(in srgb, rgb(255 255 255) 8%, transparent) !important;
   }
 
   .auth-brand {
@@ -104,8 +123,18 @@
   }
 
   .app-panel {
-    @apply border border-border bg-card p-3 text-card-foreground shadow-[var(--shadow-card)] sm:p-4;
+    @apply border border-border p-3 text-card-foreground sm:p-4;
     border-radius: 10px !important;
+    background-color: color-mix(in srgb, var(--card) 80%, transparent) !important;
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+    box-shadow: var(--shadow-card) !important;
+    border-color: color-mix(in srgb, var(--border) 50%, transparent) !important;
+  }
+
+  .dark .app-panel {
+    background-color: color-mix(in srgb, var(--card) 60%, transparent) !important;
+    border-color: color-mix(in srgb, rgb(255 255 255) 6%, transparent) !important;
   }
 
   .app-panel-title {
@@ -126,8 +155,17 @@
   }
 
   .app-data-table-wrap {
-    @apply overflow-x-auto border border-border bg-card shadow-[var(--shadow-card)];
+    @apply overflow-x-auto border border-border shadow-[var(--shadow-card)];
     border-radius: 12px !important;
+    background-color: color-mix(in srgb, var(--card) 75%, transparent) !important;
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+    border-color: color-mix(in srgb, var(--border) 50%, transparent) !important;
+  }
+
+  .dark .app-data-table-wrap {
+    background-color: color-mix(in srgb, var(--card) 55%, transparent) !important;
+    border-color: color-mix(in srgb, rgb(255 255 255) 6%, transparent) !important;
   }
 
   .app-data-table {

@@ -261,7 +261,7 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       {/* Icon rail (left) — premium glass + gradient */}
-      <aside className="hidden lg:flex lg:w-[56px] lg:flex-col lg:border-r lg:border-sidebar-border lg:bg-sidebar items-center py-3 gap-1 relative">
+      <aside className="hidden lg:flex lg:w-[56px] lg:flex-col lg:border-r lg:border-sidebar-border lg:bg-sidebar/80 lg:backdrop-blur-xl items-center py-3 gap-1 relative">
         {/* Gradient overlay sutil */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-primary/[0.02]" />
         {/* Contenido */}
