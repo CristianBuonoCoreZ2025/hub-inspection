@@ -113,6 +113,61 @@ export async function createWorkflowStep(input: {
   }, WORKFLOW_STEP_SELECT);
 }
 
+/**
+ * Crea un step raíz + todos sus steps dependientes en cadena.
+ * Usa action_template_dependencies para encontrar hijos recursivamente.
+ * Retorna todos los steps creados.
+ */
+export async function createWorkflowStepWithChain(input: {
+  workflow_config_id: string;
+  action_template_id: string;
+  level: number;
+  sort_order?: number;
+}): Promise<WorkflowStep[]> {
+  const supabase = getSupabaseClient();
+  const created: WorkflowStep[] = [];
+
+  // 1. Crear el step raíz
+  const root = await insertRow<WorkflowStep>("workflow_steps", {
+    workflow_config_id: input.workflow_config_id,
+    action_template_id: input.action_template_id,
+    level: input.level,
+    depends_on_template_id: null,
+    sort_order: input.sort_order || 0,
+    is_automatic: true,
+    is_required: true,
+  }, WORKFLOW_STEP_SELECT);
+  created.push(root);
+
+  // 2. Recorrer cadena de dependencias recursivamente
+  async function addChildren(parentTemplateId: string, parentLevel: number) {
+    const { data, error } = await supabase
+      .from("action_template_dependencies")
+      .select("child_template_id")
+      .eq("parent_template_id", parentTemplateId);
+    if (error) throw new Error(error.message);
+
+    for (const row of (data as any[]) || []) {
+      const childStep = await insertRow<WorkflowStep>("workflow_steps", {
+        workflow_config_id: input.workflow_config_id,
+        action_template_id: row.child_template_id,
+        level: parentLevel + 1,
+        depends_on_template_id: parentTemplateId,
+        sort_order: 0,
+        is_automatic: true,
+        is_required: true,
+      }, WORKFLOW_STEP_SELECT);
+      created.push(childStep);
+
+      // Recursión: buscar hijos del hijo
+      await addChildren(row.child_template_id, parentLevel + 1);
+    }
+  }
+
+  await addChildren(input.action_template_id, input.level);
+  return created;
+}
+
 export async function updateWorkflowStep(id: string, input: Partial<{
   level: number;
   sort_order: number;

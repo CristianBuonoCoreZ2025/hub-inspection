@@ -1,14 +1,23 @@
-fix: filtrar is_active en todos los listados de catálogos
+feat: sistema de dependencias entre gestiones (paquetes)
 
-Se listaban registros inactivos (eliminados lógicamente) en:
-- events del workflow (getAvailableEventsForStatusAndCountry)
-- business_lines del workflow (fetchTemplatesWithLine)
-- business_lines de gestiones (getBusinessLinesForActions)
-- claim_statuses del workflow (getClaimStatuses)
-- action_types (getActionTypes)
-- action_features (getActionFeatures)
+Nuevo sistema que reemplaza las dependencias hardcoded (INTRINSIC_DEPENDENCIES)
+por una tabla configurable action_template_dependencies.
 
-Todas las queries ahora filtran is_active=true.
+Cambios:
+- Migration 139: tabla action_template_dependencies + RLS + migracion de datos
+- Migration 140: trigger cascade_workflow_on_issue reescrito para usar la tabla
+- Servicio template-dependencies.ts: CRUD + getChildTemplateIds + getDependencyChain
+- Pagina /dashboard/catalogos/gestiones/dependencias: gestionar dependencias
+- Menu: link "Dependencias" bajo Configuracion de Gestiones
+- Workflow builder: solo muestra templates raiz (oculta dependientes)
+- Workflow builder: createWorkflowStepWithChain agrega hijos automaticamente
+- Eliminado getIntrinsicDependency del workflow builder
+
+Modelo:
+- Las dependencias son globales (no por pais/evento/linea)
+- Al emitir una gestion padre, se crea la hija en estado "todo"
+- La cadena es recursiva (cobertura→reserva→ajuste)
+- El usuario configura las relaciones en la nueva pantalla
 
 Generated with [Devin](https://devin.ai)
 

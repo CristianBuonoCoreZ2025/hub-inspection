@@ -15,8 +15,7 @@ import {
 import {
   getWorkflowConfigs, getWorkflowSteps,
   createWorkflowConfig, deleteWorkflowConfig,
-  createWorkflowStep, updateWorkflowStep, deleteWorkflowStep,
-  getIntrinsicDependency,
+  createWorkflowStepWithChain, updateWorkflowStep, deleteWorkflowStep,
   getAvailableCountriesForStatus,
   getAvailableEventsForStatusAndCountry,
   getAvailableLinesForStatusCountryEvent,
@@ -24,6 +23,7 @@ import {
 } from "@/services/workflow-configs";
 import { getActionTemplatesByClaimStatus } from "@/services/claim-actions";
 import { getClaimStatuses } from "@/services/actions";
+import { getChildTemplateIds } from "@/services/template-dependencies";
 
 // ── Iconos por nivel del arbol ──
 const STATUS_ICONS: Record<string, { icon: typeof Zap; color: string; bg: string }> = {
@@ -77,8 +77,12 @@ export default function WorkflowsPage() {
   });
 
   const createStepMut = useMutation({
-    mutationFn: createWorkflowStep,
-    onSuccess: () => { toast.success("Gestión agregada"); queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] }); setShowAddStep(null); },
+    mutationFn: createWorkflowStepWithChain,
+    onSuccess: (steps) => {
+      toast.success(steps.length > 1 ? `Gestión agregada con ${steps.length - 1} dependientes` : "Gestión agregada");
+      queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] });
+      setShowAddStep(null);
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -157,11 +161,20 @@ export default function WorkflowsPage() {
     staleTime: 30000,
   });
 
+  // Cargar IDs de templates que son hijos (dependientes) para ocultarlos
+  const { data: childTemplateIds } = useQuery({
+    queryKey: ["child-template-ids"],
+    queryFn: getChildTemplateIds,
+    staleTime: 60000,
+  });
+
   const availableToAdd = useMemo(() => {
+    const childIds = childTemplateIds || new Set<string>();
     return (availableTemplates || [])
       .filter(t => !usedTemplateIds.has(t.id))
+      .filter(t => !childIds.has(t.id)) // Ocultar templates que son dependientes de otros
       .sort((a, b) => (a.code || "").localeCompare(b.code || ""));
-  }, [availableTemplates, usedTemplateIds]);
+  }, [availableTemplates, usedTemplateIds, childTemplateIds]);
 
   // Auto-expandir primer estado
   useEffect(() => {
@@ -437,8 +450,6 @@ export default function WorkflowsPage() {
               </p>
             ) : (
               availableToAdd.map(t => {
-                const intrinsic = getIntrinsicDependency(t.code || "");
-                const depStep = intrinsic ? (steps || []).find(s => s.action_template?.code === intrinsic) : null;
                 return (
                   <button
                     key={t.id}
@@ -448,17 +459,10 @@ export default function WorkflowsPage() {
                                text-left transition-all duration-200 active:scale-[0.98]
                                group"
                     onClick={() => {
-                      let level = 1;
-                      let dependsOn: string | null = null;
-                      if (intrinsic && depStep) {
-                        level = depStep.level + 1;
-                        dependsOn = depStep.action_template_id;
-                      }
                       createStepMut.mutate({
                         workflow_config_id: showAddStep!,
                         action_template_id: t.id,
-                        level,
-                        depends_on_template_id: dependsOn,
+                        level: 1,
                       });
                     }}
                   >
@@ -472,12 +476,6 @@ export default function WorkflowsPage() {
                         <div className="text-[10px] text-muted-foreground">{t.name}</div>
                       </div>
                     </div>
-                    {intrinsic && (
-                      <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
-                        <ArrowRight className="h-2.5 w-2.5" />
-                        {intrinsic}
-                      </div>
-                    )}
                   </button>
                 );
               })
