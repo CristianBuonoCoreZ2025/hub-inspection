@@ -183,7 +183,7 @@ export default function DependenciasGestionPage() {
                   return (
                     <div key={`${item.code}-${idx}`} className="flex items-center gap-2">
                       {/* Nodo */}
-                      <div className={`group relative flex items-center gap-2.5 rounded-xl px-3 py-2
+                      <div className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2
                                        border transition-all duration-200
                                        ${isRoot
                                          ? "bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/15"
@@ -207,7 +207,7 @@ export default function DependenciasGestionPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="btn-danger btn-icon ml-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="btn-danger btn-icon ml-1 h-6 w-6"
                             onClick={() => {
                               if (confirm(`¿Eliminar dependencia ${chain[idx - 1].code} → ${item.code}?`))
                                 deleteMutation.mutate(depId);
