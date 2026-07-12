@@ -1,18 +1,22 @@
-feat: regla de soft-delete (desactivar vs eliminar) en todo el sistema
+fix: dependencias por codigo (no template ID) + glassmorphism
 
-Regla fundamental: NUNCA se elimina un registro utilizado. Se desactiva.
-- Los desactivados no aparecen en dropdowns de creación
-- Los desactivados SÍ aparecen en detalles de datos existentes
-- Documentado en AGENTS.md como regla obligatoria
+Problema: la migracion 139 hizo CROSS JOIN creando 16 dependencias
+duplicadas (4 COB x 4 RES = 16 pares COB->RES).
+
+Solucion: cambiar el modelo a dependencias por CODIGO, no por template ID.
+Los paquetes son globales (COB->RES->PCA) pero al crear la gestion,
+el trigger busca el template hijo por codigo + business_line del claim.
 
 Cambios:
-- Migration 141: agregar is_active a countries, characteristic_screens,
-  property_materiality, property_risk, security_measures, third_parties
-- getCountries: filtrar is_active=true
-- deleteWorkflowConfig: soft-delete (is_active=false) en lugar de DELETE
-- deleteCharacteristic: soft-delete en lugar de DELETE
-- removeCharacteristicScreen: soft-delete en lugar de DELETE
-- RLS policy para countries
+- Migration 142: tabla action_template_dependencies usa parent_code/child_code
+- Migration 143: trigger cascade reescrito para buscar por code + business_line
+- Servicio template-dependencies.ts: usa codes en lugar de IDs
+- Servicio workflow-configs.ts: createWorkflowStepWithChain busca por code + line
+- Pagina dependencias: rediseñada con glassmorphism, cadenas visuales
+- AGENTS.md: glassmorphism documentado como regla de app
+
+Antes: 16 dependencias duplicadas (4x4 por linea de negocio)
+Ahora: 4 dependencias limpias (COB->RES, RES->PCA, NSA->RTA, COI->INS)
 
 Generated with [Devin](https://devin.ai)
 

@@ -2,30 +2,24 @@ import { fetchAll, insertRow, deleteRow, getSupabaseClient } from "@/lib/supabas
 
 export interface TemplateDependency {
   id: string;
-  parent_template_id: string;
-  child_template_id: string;
-  parent_template?: { id: string; code: string; name: string };
-  child_template?: { id: string; code: string; name: string };
+  parent_code: string;
+  child_code: string;
   created_at: string;
 }
 
-const DEPENDENCY_SELECT = `
-  id, parent_template_id, child_template_id, created_at,
-  parent_template:action_template!action_template_dependencies_parent_template_id_fkey(id, code, name),
-  child_template:action_template!action_template_dependencies_child_template_id_fkey(id, code, name)
-`;
+const DEPENDENCY_SELECT = "id, parent_code, child_code, created_at";
 
 export async function getDependencies(): Promise<TemplateDependency[]> {
   return fetchAll<TemplateDependency>("action_template_dependencies", {
     select: DEPENDENCY_SELECT,
-    order: { column: "created_at", ascending: true },
+    order: { column: "parent_code", ascending: true },
   });
 }
 
-export async function createDependency(parentTemplateId: string, childTemplateId: string): Promise<TemplateDependency> {
+export async function createDependency(parentCode: string, childCode: string): Promise<TemplateDependency> {
   return insertRow<TemplateDependency>(
     "action_template_dependencies",
-    { parent_template_id: parentTemplateId, child_template_id: childTemplateId },
+    { parent_code: parentCode, child_code: childCode },
     DEPENDENCY_SELECT
   );
 }
@@ -35,55 +29,38 @@ export async function deleteDependency(id: string): Promise<void> {
 }
 
 /**
- * Obtiene los template_ids que son hijos (dependientes) de otros.
+ * Obtiene los codigos de templates que son hijos (dependientes) de otros.
  * Sirve para filtrar en el workflow builder: solo mostrar templates raiz.
  */
-export async function getChildTemplateIds(): Promise<Set<string>> {
+export async function getChildTemplateCodes(): Promise<Set<string>> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("action_template_dependencies")
-    .select("child_template_id");
+    .select("child_code");
   if (error) throw new Error(error.message);
-  return new Set(((data as any[]) || []).map(r => r.child_template_id));
+  return new Set(((data as any[]) || []).map(r => r.child_code));
 }
 
 /**
- * Obtiene los hijos directos de un template.
+ * Obtiene toda la cadena de dependencias de un template por su codigo.
+ * Retorna array ordenado por profundidad: [hijo, nieto, ...]
  */
-export async function getChildTemplates(parentTemplateId: string): Promise<{ id: string; code: string; name: string }[]> {
+export async function getDependencyChainByCode(rootCode: string): Promise<{ code: string; parent_code: string; level: number }[]> {
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("action_template_dependencies")
-    .select(`
-      child_template:action_template!action_template_dependencies_child_template_id_fkey(id, code, name)
-    `)
-    .eq("parent_template_id", parentTemplateId);
-  if (error) throw new Error(error.message);
-  return ((data as any[]) || [])
-    .map(r => r.child_template)
-    .filter(Boolean) as { id: string; code: string; name: string }[];
-}
+  const result: { code: string; parent_code: string; level: number }[] = [];
 
-/**
- * Obtiene toda la cadena de dependencias de un template (hijos, nietos, etc).
- * Retorna array ordenado por profundidad: [hijo1, hijo2_de_hijo1, ...]
- */
-export async function getDependencyChain(rootTemplateId: string): Promise<{ template_id: string; parent_template_id: string; level: number }[]> {
-  const supabase = getSupabaseClient();
-  const result: { template_id: string; parent_template_id: string; level: number }[] = [];
-
-  async function traverse(parentId: string, level: number) {
+  async function traverse(parentCode: string, level: number) {
     const { data, error } = await supabase
       .from("action_template_dependencies")
-      .select("child_template_id")
-      .eq("parent_template_id", parentId);
+      .select("child_code")
+      .eq("parent_code", parentCode);
     if (error) throw new Error(error.message);
     for (const row of (data as any[]) || []) {
-      result.push({ template_id: row.child_template_id, parent_template_id: parentId, level });
-      await traverse(row.child_template_id, level + 1);
+      result.push({ code: row.child_code, parent_code: parentCode, level });
+      await traverse(row.child_code, level + 1);
     }
   }
 
-  await traverse(rootTemplateId, 1);
+  await traverse(rootCode, 1);
   return result;
 }

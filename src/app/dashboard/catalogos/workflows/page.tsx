@@ -23,7 +23,7 @@ import {
 } from "@/services/workflow-configs";
 import { getActionTemplatesByClaimStatus } from "@/services/claim-actions";
 import { getClaimStatuses } from "@/services/actions";
-import { getChildTemplateIds } from "@/services/template-dependencies";
+import { getChildTemplateCodes } from "@/services/template-dependencies";
 
 // ── Iconos por nivel del arbol ──
 const STATUS_ICONS: Record<string, { icon: typeof Zap; color: string; bg: string }> = {
@@ -161,20 +161,20 @@ export default function WorkflowsPage() {
     staleTime: 30000,
   });
 
-  // Cargar IDs de templates que son hijos (dependientes) para ocultarlos
-  const { data: childTemplateIds } = useQuery({
-    queryKey: ["child-template-ids"],
-    queryFn: getChildTemplateIds,
+  // Cargar codigos de templates que son hijos (dependientes) para ocultarlos
+  const { data: childTemplateCodes } = useQuery({
+    queryKey: ["child-template-codes"],
+    queryFn: getChildTemplateCodes,
     staleTime: 60000,
   });
 
   const availableToAdd = useMemo(() => {
-    const childIds = childTemplateIds || new Set<string>();
+    const childCodes = childTemplateCodes || new Set<string>();
     return (availableTemplates || [])
       .filter(t => !usedTemplateIds.has(t.id))
-      .filter(t => !childIds.has(t.id)) // Ocultar templates que son dependientes de otros
+      .filter(t => !childCodes.has(t.code || "")) // Ocultar templates que son dependientes
       .sort((a, b) => (a.code || "").localeCompare(b.code || ""));
-  }, [availableTemplates, usedTemplateIds, childTemplateIds]);
+  }, [availableTemplates, usedTemplateIds, childTemplateCodes]);
 
   // Auto-expandir primer estado
   useEffect(() => {

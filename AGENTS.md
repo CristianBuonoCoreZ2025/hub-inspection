@@ -1562,6 +1562,60 @@ workflow_configs, action_template_dependencies.
 
 ---
 
+## Regla de Diseño: Glassmorphism en Páginas de Catálogo
+
+### Principio
+Todas las páginas de catálogo y configuración (workflows, dependencias, gestiones, etc.)
+DEBEN usar el estilo **glassmorphism** para headers, cards y contenedores principales.
+
+### Implementación
+```tsx
+// Header glassmorphism (patrón obligatorio)
+<div className="relative overflow-hidden rounded-2xl border border-white/10 dark:border-white/5
+                bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl
+                shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)]
+                px-5 py-4">
+  {/* Blurs decorativos */}
+  <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-violet-500/10 blur-3xl" />
+  <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-sky-500/10 blur-3xl" />
+
+  <div className="relative flex items-center gap-3">
+    {/* Icono con gradiente */}
+    <div className="flex h-10 w-10 items-center justify-center rounded-xl
+                    bg-linear-to-br from-violet-500/20 to-sky-500/20 backdrop-blur-sm
+                    border border-white/10">
+      <Icon className="h-5 w-5 text-violet-400" />
+    </div>
+    {/* Contenido */}
+  </div>
+</div>
+
+// Card glassmorphism
+<div className="relative overflow-hidden rounded-2xl border border-white/10 dark:border-white/5
+                bg-white/5 dark:bg-white/[0.02] backdrop-blur-xl
+                shadow-[0_4px_16px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.2)]
+                p-4">
+  <div className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-violet-500/5 blur-2xl" />
+  {/* Contenido */}
+</div>
+
+// Modal glassmorphism
+<DialogContent className="modal-sm !bg-white/80 dark:!bg-zinc-900/80 !backdrop-blur-xl
+                          !border-white/20 dark:!border-white/10 !shadow-2xl">
+```
+
+### Regla
+```
+1. Headers de páginas de catálogo: SIEMPRE glassmorphism con blurs decorativos.
+2. Cards contenedoras: glassmorphism con border sutil y shadow suave.
+3. Modales: usar !bg-white/80 dark:!bg-zinc-900/80 + !backdrop-blur-xl.
+4. Blurs decorativos: bg-violet-500/10 y bg-sky-500/10, SIEMPRE pointer-events-none.
+5. Iconos header: gradiente from-violet-500/20 to-sky-500/20 con border-white/10.
+6. NUNCA usar fondos sólidos opacos en páginas de catálogo. Siempre translucidos.
+```
+
+---
+
 ### Cliente — Cómo deshabilitar campos según permisos
 
 En el page.tsx del formulario:

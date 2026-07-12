@@ -116,7 +116,8 @@ export async function createWorkflowStep(input: {
 
 /**
  * Crea un step raíz + todos sus steps dependientes en cadena.
- * Usa action_template_dependencies para encontrar hijos recursivamente.
+ * Usa action_template_dependencies (por codigo) para encontrar hijos.
+ * Busca el template hijo por codigo + business_line del workflow config.
  * Retorna todos los steps creados.
  */
 export async function createWorkflowStepWithChain(input: {
@@ -127,6 +128,25 @@ export async function createWorkflowStepWithChain(input: {
 }): Promise<WorkflowStep[]> {
   const supabase = getSupabaseClient();
   const created: WorkflowStep[] = [];
+
+  // Obtener el codigo del template raiz y la business_line del config
+  const { data: rootTemplate } = await supabase
+    .from("action_template")
+    .select("code, line_business_id")
+    .eq("id", input.action_template_id)
+    .limit(1);
+  const rootCode = (rootTemplate as any[])?.[0]?.code;
+  const rootLineId = (rootTemplate as any[])?.[0]?.line_business_id;
+
+  // Obtener business_line del workflow config
+  const { data: config } = await supabase
+    .from("workflow_configs")
+    .select("business_line_id")
+    .eq("id", input.workflow_config_id)
+    .limit(1);
+  const configLineId = (config as any[])?.[0]?.business_line_id;
+
+  if (!rootCode) throw new Error("Template no tiene codigo");
 
   // 1. Crear el step raíz
   const root = await insertRow<WorkflowStep>("workflow_steps", {
@@ -140,18 +160,58 @@ export async function createWorkflowStepWithChain(input: {
   }, WORKFLOW_STEP_SELECT);
   created.push(root);
 
-  // 2. Recorrer cadena de dependencias recursivamente
-  async function addChildren(parentTemplateId: string, parentLevel: number) {
+  // 2. Recorrer cadena de dependencias por codigo
+  async function addChildren(parentCode: string, parentTemplateId: string, parentLevel: number) {
     const { data, error } = await supabase
       .from("action_template_dependencies")
-      .select("child_template_id")
-      .eq("parent_template_id", parentTemplateId);
+      .select("child_code")
+      .eq("parent_code", parentCode);
     if (error) throw new Error(error.message);
 
     for (const row of (data as any[]) || []) {
+      const childCode = row.child_code;
+
+      // Buscar el template hijo por codigo + business_line del config (o del padre)
+      let childQuery = supabase
+        .from("action_template")
+        .select("id, code, name")
+        .eq("code", childCode)
+        .eq("is_active", true);
+
+      if (configLineId) {
+        childQuery = childQuery.eq("line_business_id", configLineId);
+      }
+
+      const { data: childTemplates } = await childQuery.limit(1);
+      const childTemplate = (childTemplates as any[])?.[0];
+
+      if (!childTemplate) {
+        // Fallback: buscar por codigo sin business_line
+        const { data: fallback } = await supabase
+          .from("action_template")
+          .select("id, code, name")
+          .eq("code", childCode)
+          .eq("is_active", true)
+          .limit(1);
+        const fb = (fallback as any[])?.[0];
+        if (!fb) continue;
+        const childStep = await insertRow<WorkflowStep>("workflow_steps", {
+          workflow_config_id: input.workflow_config_id,
+          action_template_id: fb.id,
+          level: parentLevel + 1,
+          depends_on_template_id: parentTemplateId,
+          sort_order: 0,
+          is_automatic: true,
+          is_required: true,
+        }, WORKFLOW_STEP_SELECT);
+        created.push(childStep);
+        await addChildren(childCode, fb.id, parentLevel + 1);
+        continue;
+      }
+
       const childStep = await insertRow<WorkflowStep>("workflow_steps", {
         workflow_config_id: input.workflow_config_id,
-        action_template_id: row.child_template_id,
+        action_template_id: childTemplate.id,
         level: parentLevel + 1,
         depends_on_template_id: parentTemplateId,
         sort_order: 0,
@@ -161,11 +221,11 @@ export async function createWorkflowStepWithChain(input: {
       created.push(childStep);
 
       // Recursión: buscar hijos del hijo
-      await addChildren(row.child_template_id, parentLevel + 1);
+      await addChildren(childCode, childTemplate.id, parentLevel + 1);
     }
   }
 
-  await addChildren(input.action_template_id, input.level);
+  await addChildren(rootCode, input.action_template_id, input.level);
   return created;
 }
 
