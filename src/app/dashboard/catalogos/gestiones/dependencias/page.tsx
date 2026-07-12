@@ -300,12 +300,12 @@ export default function DependenciasGestionPage() {
           <form onSubmit={handleSubmit}>
             <div className="modal-body space-y-3">
               <div className="rounded-xl bg-violet-500/5 border border-violet-500/10 px-3 py-2.5 text-[11px] text-muted-foreground">
-                La gestión <strong className="text-violet-400">padre</strong> es la que se agrega al workflow.
-                La gestión <strong className="text-sky-400">hija</strong> se crea automáticamente al emitir la padre,
-                en estado pendiente.
+                La gestión <strong className="text-violet-400">padre</strong> puede ser cualquier gestión, incluso
+                una que ya es hija de otra. La gestión <strong className="text-sky-400">hija</strong> se crea
+                automáticamente al emitir la padre, en estado pendiente.
               </div>
               <div>
-                <Label className="app-field-label">Gestión Padre (raíz) <span className="text-red-500">*</span></Label>
+                <Label className="app-field-label">Gestión Padre <span className="text-red-500">*</span></Label>
                 <select
                   className="app-input w-full"
                   value={parentCode}
