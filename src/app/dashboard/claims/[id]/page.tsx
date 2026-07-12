@@ -192,6 +192,28 @@ export default function ClaimDetailPage() {
     enabled: !!id,
   });
 
+  // Sync workflow: al cargar el claim, crear gestiones faltantes del workflow
+  useQuery({
+    queryKey: ["sync-workflow", id],
+    queryFn: async () => {
+      const res = await fetch("/api/workflows/sync-claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claimId: id }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      // Si se crearon gestiones nuevas, invalidar el cache de claim-actions
+      if (data.created > 0) {
+        queryClient.invalidateQueries({ queryKey: ["claim-actions", id] });
+      }
+      return data;
+    },
+    enabled: !!id,
+    staleTime: 30000, // No re-sync cada vez que se navega entre tabs
+    refetchOnWindowFocus: false,
+  });
+
   const { data: claimActions } = useQuery({
     queryKey: ["claim-actions", id, showRejected],
     queryFn: () => getClaimActions(id, showRejected),
