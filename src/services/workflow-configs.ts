@@ -5,10 +5,12 @@ import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient
 // ═══════════════════════════════════════════════════════════════════
 
 const WORKFLOW_CONFIG_SELECT =
-  "id, country_id, business_line_id, event_id, claim_status_id, is_active, created_at, updated_at, country:countries!workflow_configs_country_id_fkey(id, name), business_line:business_lines!workflow_configs_business_line_id_fkey(id, name, code_letter), event:events!workflow_configs_event_id_fkey(id, name), claim_status:lookup_catalog!workflow_configs_claim_status_id_fkey(id, code, name)";
+  "id, country_id, business_line_id, event_id, claim_status_id, is_active, status, created_at, updated_at, country:countries!workflow_configs_country_id_fkey(id, name), business_line:business_lines!workflow_configs_business_line_id_fkey(id, name, code_letter), event:events!workflow_configs_event_id_fkey(id, name), claim_status:lookup_catalog!workflow_configs_claim_status_id_fkey(id, code, name)";
 
 const WORKFLOW_STEP_SELECT =
   "id, workflow_config_id, action_template_id, depends_on_template_id, level, sort_order, is_automatic, is_required, created_at, updated_at, action_template:action_template!workflow_steps_action_template_id_fkey(id, name, code, action_features_id, line_business_id, action_feature:action_features!action_template_action_features_id_fkey(id, name, code)), depends_on_template:action_template!workflow_steps_depends_on_template_id_fkey(id, name, code)";
+
+export type WorkflowStatus = "draft" | "online" | "suspended";
 
 export interface WorkflowConfig {
   id: string;
@@ -17,6 +19,7 @@ export interface WorkflowConfig {
   event_id: string;
   claim_status_id: string;
   is_active: boolean;
+  status: WorkflowStatus;
   created_at: string;
   updated_at: string;
   country?: { id: string; name: string } | null;
@@ -82,6 +85,16 @@ export async function updateWorkflowConfig(id: string, input: Partial<{
 export async function deleteWorkflowConfig(id: string): Promise<void> {
   // Soft-delete: desactivar en lugar de eliminar
   await updateRow("workflow_configs", id, { is_active: false }, WORKFLOW_CONFIG_SELECT);
+}
+
+/**
+ * Cambiar el status del workflow: draft -> online -> suspended -> online ...
+ * Online: no editable, crea gestiones.
+ * Suspended: editable, no crea gestiones.
+ * Draft: editable, no crea gestiones.
+ */
+export async function setWorkflowStatus(id: string, status: WorkflowStatus): Promise<WorkflowConfig> {
+  return updateRow<WorkflowConfig>("workflow_configs", id, { status }, WORKFLOW_CONFIG_SELECT);
 }
 
 // ═══ Workflow Steps ═══

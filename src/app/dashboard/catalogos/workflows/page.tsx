@@ -10,16 +10,16 @@ import { toast } from "sonner";
 import {
   ChevronRight, ChevronDown, Plus, Trash2,
   GitBranch, Workflow, ArrowRight, X, Settings2,
-  Globe, Calendar, Layers, Zap, Shield, Sparkles,
+  Globe, Calendar, Layers, Zap, Shield, Sparkles, Ban,
 } from "lucide-react";
 import {
   getWorkflowConfigs, getWorkflowSteps,
-  createWorkflowConfig, deleteWorkflowConfig,
+  createWorkflowConfig, deleteWorkflowConfig, setWorkflowStatus,
   createWorkflowStepWithChain, updateWorkflowStep, deleteWorkflowStep,
   getAvailableCountriesForStatus,
   getAvailableEventsForStatusAndCountry,
   getAvailableLinesForStatusCountryEvent,
-  type WorkflowConfig, type WorkflowStep,
+  type WorkflowConfig, type WorkflowStep, type WorkflowStatus,
 } from "@/services/workflow-configs";
 import { getActionTemplatesByClaimStatus } from "@/services/claim-actions";
 import { getClaimStatuses } from "@/services/actions";
@@ -73,6 +73,17 @@ export default function WorkflowsPage() {
   const deleteConfigMut = useMutation({
     mutationFn: deleteWorkflowConfig,
     onSuccess: () => { toast.success("Workflow eliminado"); queryClient.invalidateQueries({ queryKey: ["workflow-configs"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const statusMut = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: WorkflowStatus }) => setWorkflowStatus(id, status),
+    onSuccess: (_, vars) => {
+      const msg = vars.status === "online" ? "Workflow puesto en línea" : vars.status === "suspended" ? "Workflow suspendido" : "Workflow en borrador";
+      toast.success(msg);
+      queryClient.invalidateQueries({ queryKey: ["workflow-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -283,6 +294,12 @@ export default function WorkflowsPage() {
                                             {Array.from(linesMap.entries()).map(([lineId, config]) => {
                                               const lExp = expandedNodes.has(`l-${config.id}`);
                                               const isSelected = selectedConfigId === config.id;
+                                              const isOnline = config.status === "online";
+                                              const statusBadge = config.status === "online"
+                                                ? { label: "Online", cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" }
+                                                : config.status === "suspended"
+                                                ? { label: "Suspendido", cls: "bg-amber-500/15 text-amber-400 border-amber-500/30" }
+                                                : { label: "Borrador", cls: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30" };
                                               return (
                                                 <div key={lineId}>
                                                   <GlassTreeNode
@@ -294,8 +311,40 @@ export default function WorkflowsPage() {
                                                     active={isSelected}
                                                     count={selectedConfigId === config.id ? (steps?.length || 0) : undefined}
                                                     actions={
-                                                      <div className="flex items-center gap-1">
-                                                        {canDelete("catalogos") && (
+                                                      <div className="flex items-center gap-1.5">
+                                                        <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${statusBadge.cls}`}>
+                                                          {statusBadge.label}
+                                                        </span>
+                                                        {/* Botones de status */}
+                                                        {config.status === "draft" && canEdit("catalogos") && (
+                                                          <button
+                                                            className="text-emerald-400/70 hover:text-emerald-400 transition-colors"
+                                                            title="Poner en línea"
+                                                            onClick={(e) => { e.stopPropagation(); statusMut.mutate({ id: config.id, status: "online" }); }}
+                                                          >
+                                                            <Shield className="h-3 w-3" />
+                                                          </button>
+                                                        )}
+                                                        {config.status === "online" && canEdit("catalogos") && (
+                                                          <button
+                                                            className="text-amber-400/70 hover:text-amber-400 transition-colors"
+                                                            title="Suspender"
+                                                            onClick={(e) => { e.stopPropagation(); statusMut.mutate({ id: config.id, status: "suspended" }); }}
+                                                          >
+                                                            <Ban className="h-3 w-3" />
+                                                          </button>
+                                                        )}
+                                                        {config.status === "suspended" && canEdit("catalogos") && (
+                                                          <button
+                                                            className="text-emerald-400/70 hover:text-emerald-400 transition-colors"
+                                                            title="Poner en línea"
+                                                            onClick={(e) => { e.stopPropagation(); statusMut.mutate({ id: config.id, status: "online" }); }}
+                                                          >
+                                                            <Shield className="h-3 w-3" />
+                                                          </button>
+                                                        )}
+                                                        {/* Eliminar solo si no esta online */}
+                                                        {canDelete("catalogos") && !isOnline && (
                                                           <button
                                                             className="text-muted-foreground/60 hover:text-rose-400 transition-colors"
                                                             onClick={(e) => {
@@ -311,14 +360,20 @@ export default function WorkflowsPage() {
                                                   />
                                                   {lExp && selectedConfigId === config.id && (
                                                     <div className="ml-2 mt-2 mb-3">
+                                                      {isOnline && (
+                                                        <div className="mb-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10 px-3 py-1.5 text-[11px] text-emerald-400/80 flex items-center gap-1.5">
+                                                          <Shield className="h-3 w-3" />
+                                                          Workflow en línea — no editable. Suspender para modificar.
+                                                        </div>
+                                                      )}
                                                       <StepsCanvas
                                                         stepsByLevel={stepsByLevel}
                                                         selectedStepId={selectedStepId}
                                                         hoveredStep={hoveredStep}
                                                         onSelectStep={setSelectedStepId}
                                                         onHoverStep={setHoveredStep}
-                                                        canEdit={canEdit("catalogos")}
-                                                        onAddStep={() => setShowAddStep(config.id)}
+                                                        canEdit={canEdit("catalogos") && !isOnline}
+                                                        onAddStep={() => !isOnline && setShowAddStep(config.id)}
                                                         isLoading={!steps}
                                                         steps={steps || []}
                                                       />
