@@ -104,7 +104,7 @@ export interface ClaimStatus {
 export async function getActionTypes(): Promise<ActionType[]> {
   return fetchAll<ActionType>("lookup_catalog", {
     select: "id, code, name, description, is_active, sort_order",
-    eq: { category: "action_type" },
+    eq: { category: "action_type", is_active: true },
     order: { column: "name", ascending: true },
   });
 }
@@ -140,6 +140,7 @@ export async function deleteActionType(id: string) {
 export async function getActionFeatures(): Promise<ActionFeature[]> {
   return fetchAll<ActionFeature>("action_features", {
     select: "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, screen:gestion_screens!action_features_screen_id_fkey(id, code, name, is_dynamic), characteristics:characteristic!characteristic_action_feature_id_fkey(id, action_feature_id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order)",
+    eq: { is_active: true },
     order: { column: "name", ascending: true },
   }).then((rows) => {
     // Sort characteristics by sort_order within each feature
@@ -410,7 +411,7 @@ export async function setTemplateClaimStatuses(templateId: string, statusIds: st
 export async function getClaimStatuses(): Promise<ClaimStatus[]> {
   return fetchAll<ClaimStatus>("lookup_catalog", {
     select: "id, code, name, sort_order",
-    eq: { category: "claim_status" },
+    eq: { category: "claim_status", is_active: true },
     order: { column: "sort_order", ascending: true },
   });
 }
@@ -422,6 +423,7 @@ export async function getClaimStatuses(): Promise<ClaimStatus[]> {
 export async function getBusinessLinesForActions(): Promise<{ id: string; name: string; code_prefix: string | null }[]> {
   return fetchAll<{ id: string; name: string; code_prefix: string | null }>("business_lines", {
     select: "id, name, code_prefix",
+    eq: { is_active: true },
     order: { column: "name", ascending: true },
   });
 }

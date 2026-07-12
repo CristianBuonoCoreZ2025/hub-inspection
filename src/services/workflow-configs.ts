@@ -175,11 +175,12 @@ async function fetchTemplatesWithLine(claimStatusId: string): Promise<{
   const lineIds = ((templates as any[]) || []).map(t => t.line_business_id).filter(Boolean);
   if (lineIds.length === 0) return [];
 
-  // 3. Obtener business_lines con country_id
+  // 3. Obtener business_lines activas con country_id
   const { data: lines, error: linesError } = await supabase
     .from("business_lines")
     .select("id, name, code_letter, country_id")
     .in("id", lineIds)
+    .eq("is_active", true)
     .not("country_id", "is", null);
 
   if (linesError) throw new Error(linesError.message);
@@ -208,11 +209,12 @@ export async function getAvailableCountriesForStatus(claimStatusId: string): Pro
 }
 
 export async function getAvailableEventsForStatusAndCountry(claimStatusId: string, countryId: string): Promise<{ id: string; name: string }[]> {
-  // Los eventos no estan vinculados a templates. Mostrar todos los eventos.
+  // Los eventos no estan vinculados a templates. Mostrar todos los eventos activos.
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("events")
-    .select("id, name");
+    .select("id, name")
+    .eq("is_active", true);
 
   if (error) throw new Error(error.message);
   return ((data as any[]) || []).map(e => ({ id: e.id, name: e.name })).sort((a, b) => a.name.localeCompare(b.name));
