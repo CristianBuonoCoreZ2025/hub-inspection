@@ -1759,6 +1759,27 @@ Una gestión del siniestro = un claim_action.
 Usar los términos indistintamente.
 ```
 
+### Vocabulario Importante: Gestión vs Plantilla
+```
+Gestión / Acción (claim_actions):
+  Cada tarea dentro de un siniestro (Reserva, Coberturas, Inspección, etc.).
+  Es la instancia concreta en un siniestro específico.
+
+Definición de Gestión (action_template):
+  El catálogo de gestiones disponibles. Configura roles, plazos, pantallas,
+  características. NO es una "plantilla" en el sentido documental.
+  Una definición de gestión genera gestiones (claim_actions) en los siniestros.
+
+Plantilla (document_template — futuro):
+  Un documento Word/PDF con campos y logos de la aseguradora, que se asocia
+  a una gestión de tipo ofimática para que el liquidador genere el documento
+  rápido al ejecutar la gestión. Ej: un Word de "Informe de Liquidación"
+  con campos merge y logos de la cia.
+
+NUNCA llamar "template" a una definición de gestión (action_template).
+"Template" se reserva exclusivamente para documentos ofimáticos.
+```
+
 ---
 
 ## 20. Inspecciones como Gestiones Estándar — Decisión Definitiva

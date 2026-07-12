@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -495,7 +495,7 @@ function ConfigModal({
   const [statusId, setStatusId] = useState("");
 
   // Reset al abrir
-  useMemo(() => {
+  useEffect(() => {
     if (open) {
       setName(editing?.name || "");
       setDescription(editing?.description || "");
