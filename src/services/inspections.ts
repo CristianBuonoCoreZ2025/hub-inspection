@@ -174,16 +174,29 @@ export async function getInspectorSchedule(
   dateEnd: string,
 ) {
   const supabase = getSupabaseClient();
+
+  // 1. Obtener claim_ids donde el inspector esta asignado
+  const { data: claimsData, error: claimsError } = await supabase
+    .from("claims")
+    .select("id, claim_number, claim_address")
+    .eq("inspector_id", inspectorId);
+
+  if (claimsError) throw new Error(claimsError.message);
+  const claims = (claimsData as any[]) || [];
+  const claimIds = claims.map(c => c.id);
+  if (claimIds.length === 0) return [];
+
+  // 2. Obtener sesiones de inspeccion para esos claims en el rango de fechas
   const { data, error } = await supabase
     .from("inspection_sessions")
     .select(`
-      id, scheduled_at, inspection_type, status,
-      claim:claims!inspection_sessions_claim_id_fkey!inner(claim_number, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))
+      id, scheduled_at, inspection_type, status, claim_id,
+      claim:claims!inspection_sessions_claim_id_fkey(claim_number, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))
     `)
+    .in("claim_id", claimIds)
     .gte("scheduled_at", dateStart)
     .lt("scheduled_at", dateEnd)
     .in("status", ["scheduled", "active"])
-    .eq("claim.inspector_id", inspectorId)
     .order("scheduled_at", { ascending: true });
 
   if (error) throw new Error(error.message);

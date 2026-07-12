@@ -48,7 +48,7 @@ export async function GET(
         claim:claims!inspection_sessions_claim_id_fkey (
           claim_number, client_reference, claim_address, policy_number, claim_date,
           liquidation_number,
-          claims_participants:claims_participants!claim_participants_claim_id_fkey!inner ( type, full_name, email, phone, cell_phone ),
+          claims_participants:claims_participants!claim_participants_claim_id_fkey ( type, full_name, email, phone, cell_phone ),
           insurance_company:insurance_companies!claims_insurance_company_id_fkey ( name )
         )
       `)

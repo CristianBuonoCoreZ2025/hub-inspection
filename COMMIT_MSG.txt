@@ -1,11 +1,15 @@
-fix: reescribir queries cascading sin relaciones anidadas de Supabase
+fix: eliminar todas las queries anidadas de Supabase (!inner con .eq en relacion)
 
-Las queries anidadas de Supabase (!inner con .eq en relacion) no funcionan
-correctamente. Reescritas como queries separadas + join client-side.
+Revisados TODOS los comboboxes y queries de la app. Encontradas y corregidas
+3 funciones mas que usaban el patron roto:
 
-- fetchTemplatesWithLine: 3 queries separadas (atcs → templates → business_lines)
-- getActionTemplatesByClaimStatus: 2 queries separadas (atcs → templates)
-- Esto arregla TODOS los comboboxes en cascada del workflow
+- checkPrerequisiteGestion: 2 queries separadas (template por codigo → claim_actions)
+- checkGestionExists: 2 queries separadas (template por codigo → claim_actions)
+- getInspectorSchedule: 2 queries separadas (claims del inspector → sesiones)
+- inspection/live route: quitado !inner innecesario en claims_participants
+
+Patron correcto: queries separadas + join/filtro client-side
+Patron roto: .eq("relacion.campo", valor) no filtra en Supabase
 
 Generated with [Devin](https://devin.ai)
 

@@ -127,27 +127,55 @@ export async function getClaimActions(claimId: string, includeRejected = false):
 
 async function checkPrerequisiteGestion(claimId: string, templateCode: string): Promise<boolean> {
   const supabase = getSupabaseClient();
+
+  // 1. Obtener el template_id por codigo
+  const { data: templateRow, error: templateError } = await supabase
+    .from("action_template")
+    .select("id")
+    .eq("code", templateCode)
+    .limit(1);
+  if (templateError) throw new Error(templateError.message);
+  const templateId = (templateRow as any[])?.[0]?.id;
+  if (!templateId) return false;
+
+  // 2. Buscar claim_actions de ese template con status cerrado
   const { data, error } = await supabase
     .from("claim_actions")
-    .select("id, action_template:action_template!inner(code), action_status:lookup_catalog!claim_actions_action_status_id_fkey!inner(code)")
+    .select("id, action_status:lookup_catalog!claim_actions_action_status_id_fkey(code)")
     .eq("claim_id", claimId)
     .eq("is_active", true)
-    .eq("action_template.code", templateCode)
-    .in("action_status.code", ["issued", "reviewed", "approved", "dispatched"])
+    .eq("action_template_id", templateId)
     .limit(1);
   if (error) throw new Error(error.message);
-  return (data?.length ?? 0) > 0;
+
+  const rows = (data as any[]) || [];
+  return rows.some(r => {
+    const statusCode = r.action_status?.code;
+    return ["issued", "reviewed", "approved", "dispatched"].includes(statusCode);
+  });
 }
 
 // Verifica si existe al menos una gestión con el código de template dado (en cualquier estado activo)
 async function checkGestionExists(claimId: string, templateCode: string): Promise<boolean> {
   const supabase = getSupabaseClient();
+
+  // 1. Obtener el template_id por codigo
+  const { data: templateRow, error: templateError } = await supabase
+    .from("action_template")
+    .select("id")
+    .eq("code", templateCode)
+    .limit(1);
+  if (templateError) throw new Error(templateError.message);
+  const templateId = (templateRow as any[])?.[0]?.id;
+  if (!templateId) return false;
+
+  // 2. Buscar claim_actions de ese template
   const { data, error } = await supabase
     .from("claim_actions")
-    .select("id, action_template:action_template!inner(code)")
+    .select("id")
     .eq("claim_id", claimId)
     .eq("is_active", true)
-    .eq("action_template.code", templateCode)
+    .eq("action_template_id", templateId)
     .limit(1);
   if (error) throw new Error(error.message);
   return (data?.length ?? 0) > 0;
