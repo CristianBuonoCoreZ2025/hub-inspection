@@ -32,21 +32,40 @@ async function getProfileName(userId: string): Promise<string | null> {
 
 export async function getActionTemplatesByClaimStatus(claimStatusId: string, businessLineId?: string): Promise<ActionTemplate[]> {
   const supabase = getSupabaseClient();
-  let query = supabase
+
+  // 1. Obtener template_ids para este estado
+  const { data: atcsRows, error: atcsError } = await supabase
     .from("action_template_claim_status")
-    .select(`action_template:action_template!inner(${ACTION_TEMPLATE_SELECT})`)
+    .select("action_template_id")
     .eq("claim_status_id", claimStatusId)
     .eq("is_active", true);
 
+  if (atcsError) throw new Error(atcsError.message);
+  const templateIds = ((atcsRows as any[]) || []).map(r => r.action_template_id).filter(Boolean);
+  if (templateIds.length === 0) return [];
+
+  // 2. Obtener templates activos con toda su info
+  let query = supabase
+    .from("action_template")
+    .select(ACTION_TEMPLATE_SELECT)
+    .in("id", templateIds)
+    .eq("is_active", true);
+
   if (businessLineId) {
-    query = query.eq("action_template.line_business_id", businessLineId);
+    query = query.eq("line_business_id", businessLineId);
   }
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  const rows = (data as { action_template: ActionTemplate }[]) ?? [];
-  return rows.map((r) => r.action_template).filter(Boolean);
+  const rows = (data as ActionTemplate[]) ?? [];
+  // Filtrar characteristics activas
+  return rows.map((tpl) => {
+    if (tpl.action_feature?.characteristics) {
+      tpl.action_feature.characteristics = tpl.action_feature.characteristics.filter((c) => c.is_active);
+    }
+    return tpl;
+  });
 }
 
 // ═══ Obtener todas las plantillas activas ═══

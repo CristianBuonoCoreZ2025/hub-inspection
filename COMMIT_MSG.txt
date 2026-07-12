@@ -1,10 +1,11 @@
-fix: cascading dropdowns — eventos muestran todos, paises/lineas filtran por templates
+fix: reescribir queries cascading sin relaciones anidadas de Supabase
 
-Los templates tienen line_business_id (con country_id) pero NO event_id.
-El evento es una dimension del workflow, no un filtro de templates.
-- Pais: filtra por templates que tienen line_business_id con country_id
-- Evento: muestra TODOS los eventos (no filtrado por templates)
-- Linea: filtra por estado + pais (via templates), no por evento
+Las queries anidadas de Supabase (!inner con .eq en relacion) no funcionan
+correctamente. Reescritas como queries separadas + join client-side.
+
+- fetchTemplatesWithLine: 3 queries separadas (atcs → templates → business_lines)
+- getActionTemplatesByClaimStatus: 2 queries separadas (atcs → templates)
+- Esto arregla TODOS los comboboxes en cascada del workflow
 
 Generated with [Devin](https://devin.ai)
 

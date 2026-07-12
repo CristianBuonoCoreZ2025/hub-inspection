@@ -141,6 +141,8 @@ export async function isTemplateInWorkflow(templateId: string): Promise<boolean>
 // Los templates tienen line_business_id (con country_id) pero NO event_id.
 // El evento es una dimension del workflow, no un filtro de templates.
 // Cascada: Estado > Pais (filtra por templates) > Evento (TODOS) > Linea (filtra por templates)
+// IMPORTANTE: No usar queries anidadas de Supabase (!inner con .eq en relacion)
+// porque no funcionan. Hacer queries separadas y unir client-side.
 
 async function fetchTemplatesWithLine(claimStatusId: string): Promise<{
   line_id: string;
@@ -149,50 +151,57 @@ async function fetchTemplatesWithLine(claimStatusId: string): Promise<{
   country_id: string;
 }[]> {
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
+
+  // 1. Obtener template_ids para este estado
+  const { data: atcsRows, error: atcsError } = await supabase
     .from("action_template_claim_status")
-    .select(`
-      action_template:action_template!inner(
-        id,
-        line_business_id,
-        is_active,
-        business_line:business_lines(
-          id, name, code_letter, country_id
-        )
-      )
-    `)
+    .select("action_template_id")
     .eq("claim_status_id", claimStatusId)
+    .eq("is_active", true);
+
+  if (atcsError) throw new Error(atcsError.message);
+  const templateIds = ((atcsRows as any[]) || []).map(r => r.action_template_id).filter(Boolean);
+  if (templateIds.length === 0) return [];
+
+  // 2. Obtener templates activos con su line_business_id
+  const { data: templates, error: templatesError } = await supabase
+    .from("action_template")
+    .select("id, line_business_id")
+    .in("id", templateIds)
     .eq("is_active", true)
-    .eq("action_template.is_active", true);
+    .not("line_business_id", "is", null);
 
-  if (error) throw new Error(error.message);
+  if (templatesError) throw new Error(templatesError.message);
+  const lineIds = ((templates as any[]) || []).map(t => t.line_business_id).filter(Boolean);
+  if (lineIds.length === 0) return [];
 
-  const rows = (data as any[]) || [];
-  const lines = new Map<string, { line_id: string; line_name: string; line_code_letter: string; country_id: string }>();
-  for (const row of rows) {
-    const bl = row.action_template?.business_line;
-    if (bl?.id && bl?.country_id) {
-      lines.set(bl.id, {
-        line_id: bl.id,
-        line_name: bl.name,
-        line_code_letter: bl.code_letter || "",
-        country_id: bl.country_id,
-      });
-    }
-  }
-  return Array.from(lines.values());
+  // 3. Obtener business_lines con country_id
+  const { data: lines, error: linesError } = await supabase
+    .from("business_lines")
+    .select("id, name, code_letter, country_id")
+    .in("id", lineIds)
+    .not("country_id", "is", null);
+
+  if (linesError) throw new Error(linesError.message);
+
+  return ((lines as any[]) || []).map(bl => ({
+    line_id: bl.id,
+    line_name: bl.name,
+    line_code_letter: bl.code_letter || "",
+    country_id: bl.country_id,
+  }));
 }
 
 export async function getAvailableCountriesForStatus(claimStatusId: string): Promise<{ id: string; name: string }[]> {
   const supabase = getSupabaseClient();
   const templates = await fetchTemplatesWithLine(claimStatusId);
-  const countryIds = new Set(templates.map(t => t.country_id));
-  if (countryIds.size === 0) return [];
+  const countryIds = Array.from(new Set(templates.map(t => t.country_id)));
+  if (countryIds.length === 0) return [];
 
   const { data, error } = await supabase
     .from("countries")
     .select("id, name")
-    .in("id", Array.from(countryIds));
+    .in("id", countryIds);
 
   if (error) throw new Error(error.message);
   return ((data as any[]) || []).map(c => ({ id: c.id, name: c.name })).sort((a, b) => a.name.localeCompare(b.name));
