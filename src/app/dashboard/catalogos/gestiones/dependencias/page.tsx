@@ -98,16 +98,49 @@ export default function DependenciasGestionPage() {
     }));
   }, [dependencies]);
 
-  // Codigos hijos ya usados (para no duplicar)
+  // Codigos hijos ya usados (una gestion solo puede tener un padre)
   const usedChildCodes = useMemo(() => new Set((dependencies || []).map(d => d.child_code)), [dependencies]);
 
-  // Para el select de hijos: excluir el padre y los que ya son hijos de ese padre
+  // Construir mapa padre->hijos para deteccion de ciclos
+  const parentToChildren = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const dep of dependencies || []) {
+      if (!m.has(dep.parent_code)) m.set(dep.parent_code, []);
+      m.get(dep.parent_code)!.push(dep.child_code);
+    }
+    return m;
+  }, [dependencies]);
+
+  // Detectar si agregar child bajo parent crearia un ciclo
+  function wouldCreateCycle(parent: string, child: string): boolean {
+    // Si child es ancestro de parent, hay ciclo
+    // Buscar hacia arriba desde parent: ¿llega a child?
+    function isAncestor(code: string, target: string): boolean {
+      // Buscar quien es padre de code
+      for (const dep of dependencies || []) {
+        if (dep.child_code === code) {
+          if (dep.parent_code === target) return true;
+          if (isAncestor(dep.parent_code, target)) return true;
+        }
+      }
+      return false;
+    }
+    return isAncestor(parent, child);
+  }
+
+  // Para el select de hijos: excluir el padre, los que ya son hijos de ese padre,
+  // los que ya tienen otro padre, y los que crearian ciclo
   const availableChildren = useMemo(() => {
     const existingForParent = new Set(
       (dependencies || []).filter(d => d.parent_code === parentCode).map(d => d.child_code)
     );
-    return codeMap.filter(c => c.code !== parentCode && !existingForParent.has(c.code));
-  }, [codeMap, dependencies, parentCode]);
+    return codeMap.filter(c =>
+      c.code !== parentCode &&
+      !existingForParent.has(c.code) &&
+      !usedChildCodes.has(c.code) && // ya tiene otro padre
+      !wouldCreateCycle(parentCode, c.code) // no crear ciclo
+    );
+  }, [codeMap, dependencies, parentCode, usedChildCodes]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,7 +212,9 @@ export default function DependenciasGestionPage() {
                 {chain.map((item, idx) => {
                   const isRoot = item.level === 0;
                   const isLast = idx === chain.length - 1;
-                  const depId = item.level > 0 ? depIdFor(chain[idx - 1].code, item.code) : undefined;
+                  // Buscar el depId: encontrar quien es el padre real de este item
+                  const parentCodeForItem = (dependencies || []).find(d => d.child_code === item.code)?.parent_code;
+                  const depId = parentCodeForItem ? depIdFor(parentCodeForItem, item.code) : undefined;
                   const levelStyles = [
                     { bg: "bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/15", icon: "bg-violet-500/20 text-violet-400 border-violet-500/30", badge: "bg-violet-500/15 text-violet-400", label: "RAÍZ" },
                     { bg: "bg-sky-500/10 border-sky-500/20 hover:bg-sky-500/15", icon: "bg-sky-500/20 text-sky-400 border-sky-500/30", badge: "bg-sky-500/15 text-sky-400", label: "NIVEL 2" },
@@ -208,7 +243,7 @@ export default function DependenciasGestionPage() {
                             size="icon"
                             className="btn-danger btn-icon ml-1 h-6 w-6"
                             onClick={() => {
-                              if (confirm(`¿Eliminar dependencia ${chain[idx - 1].code} → ${item.code}?`))
+                              if (confirm(`¿Eliminar dependencia ${parentCodeForItem} → ${item.code}?`))
                                 deleteMutation.mutate(depId);
                             }}
                           >
