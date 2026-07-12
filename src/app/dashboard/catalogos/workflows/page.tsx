@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   ChevronRight, ChevronDown, Plus, Trash2,
   GitBranch, Workflow, ArrowRight, X, Settings2,
-  Globe, Calendar, Layers, Zap, Shield, Sparkles, Ban,
+  Globe, Calendar, Layers, Zap, Shield, Sparkles, Ban, Pencil,
 } from "lucide-react";
 import {
   getWorkflowConfigs, getWorkflowSteps,
@@ -297,17 +297,30 @@ export default function WorkflowsPage() {
                                               const lExp = expandedNodes.has(`l-${config.id}`);
                                               const isSelected = selectedConfigId === config.id;
                                               const isOnline = config.status === "online";
-                                              const statusBadge = config.status === "online"
+                                              const isSuspended = config.status === "suspended";
+                                              const isDraft = config.status === "draft";
+
+                                              // Icono y estilo segun status
+                                              const statusIcon = isOnline
+                                                ? <Shield className="h-3.5 w-3.5 text-emerald-400" />
+                                                : isSuspended
+                                                ? <Ban className="h-3.5 w-3.5 text-amber-400" />
+                                                : <Pencil className="h-3.5 w-3.5 text-zinc-500" />;
+
+                                              // Opacidad del nodo: online = brillante, draft/suspended = apagado
+                                              const nodeOpacity = isOnline ? "opacity-100" : "opacity-60";
+
+                                              const statusBadge = isOnline
                                                 ? { label: "Online", cls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" }
-                                                : config.status === "suspended"
+                                                : isSuspended
                                                 ? { label: "Suspendido", cls: "bg-amber-500/15 text-amber-400 border-amber-500/30" }
                                                 : { label: "Borrador", cls: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30" };
                                               return (
-                                                <div key={lineId}>
+                                                <div key={lineId} className={nodeOpacity}>
                                                   <GlassTreeNode
                                                     isExpanded={lExp}
                                                     onToggle={() => { toggleNode(`l-${config.id}`); setSelectedConfigId(config.id); }}
-                                                    icon={<Layers className="h-3.5 w-3.5 text-emerald-400/80" />}
+                                                    icon={statusIcon}
                                                     label={getName(lineId)}
                                                     bold
                                                     active={isSelected}
@@ -318,7 +331,7 @@ export default function WorkflowsPage() {
                                                           {statusBadge.label}
                                                         </span>
                                                         {/* Botones de status */}
-                                                        {config.status === "draft" && canEdit("catalogos") && (
+                                                        {isDraft && canEdit("catalogos") && (
                                                           <button
                                                             className="text-emerald-400/70 hover:text-emerald-400 transition-colors"
                                                             title="Poner en línea"
@@ -327,7 +340,7 @@ export default function WorkflowsPage() {
                                                             <Shield className="h-3 w-3" />
                                                           </button>
                                                         )}
-                                                        {config.status === "online" && canEdit("catalogos") && (
+                                                        {isOnline && canEdit("catalogos") && (
                                                           <button
                                                             className="text-amber-400/70 hover:text-amber-400 transition-colors"
                                                             title="Suspender"
@@ -336,7 +349,7 @@ export default function WorkflowsPage() {
                                                             <Ban className="h-3 w-3" />
                                                           </button>
                                                         )}
-                                                        {config.status === "suspended" && canEdit("catalogos") && (
+                                                        {isSuspended && canEdit("catalogos") && (
                                                           <button
                                                             className="text-emerald-400/70 hover:text-emerald-400 transition-colors"
                                                             title="Poner en línea"
