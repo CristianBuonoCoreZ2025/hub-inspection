@@ -138,16 +138,26 @@ export async function isTemplateInWorkflow(templateId: string): Promise<boolean>
 }
 
 // ═══ Cascading: obtener paises/eventos/lineas que tienen gestiones ═══
+// Los templates tienen line_business_id (con country_id) pero NO event_id.
+// El evento es una dimension del workflow, no un filtro de templates.
+// Cascada: Estado > Pais (filtra por templates) > Evento (TODOS) > Linea (filtra por templates)
 
-export async function getAvailableCountriesForStatus(claimStatusId: string): Promise<{ id: string; name: string }[]> {
+async function fetchTemplatesWithLine(claimStatusId: string): Promise<{
+  line_id: string;
+  line_name: string;
+  line_code_letter: string;
+  country_id: string;
+}[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("action_template_claim_status")
     .select(`
       action_template:action_template!inner(
+        id,
         line_business_id,
-        business_lines:business_lines!inner(
-          country:countries!inner(id, name)
+        is_active,
+        business_line:business_lines(
+          id, name, code_letter, country_id
         )
       )
     `)
@@ -157,64 +167,59 @@ export async function getAvailableCountriesForStatus(claimStatusId: string): Pro
 
   if (error) throw new Error(error.message);
 
-  const countries = new Map<string, { id: string; name: string }>();
-  for (const row of (data as any[]) || []) {
-    const country = row.action_template?.business_lines?.country;
-    if (country) countries.set(country.id, country);
+  const rows = (data as any[]) || [];
+  const lines = new Map<string, { line_id: string; line_name: string; line_code_letter: string; country_id: string }>();
+  for (const row of rows) {
+    const bl = row.action_template?.business_line;
+    if (bl?.id && bl?.country_id) {
+      lines.set(bl.id, {
+        line_id: bl.id,
+        line_name: bl.name,
+        line_code_letter: bl.code_letter || "",
+        country_id: bl.country_id,
+      });
+    }
   }
-  return Array.from(countries.values()).sort((a, b) => a.name.localeCompare(b.name));
+  return Array.from(lines.values());
+}
+
+export async function getAvailableCountriesForStatus(claimStatusId: string): Promise<{ id: string; name: string }[]> {
+  const supabase = getSupabaseClient();
+  const templates = await fetchTemplatesWithLine(claimStatusId);
+  const countryIds = new Set(templates.map(t => t.country_id));
+  if (countryIds.size === 0) return [];
+
+  const { data, error } = await supabase
+    .from("countries")
+    .select("id, name")
+    .in("id", Array.from(countryIds));
+
+  if (error) throw new Error(error.message);
+  return ((data as any[]) || []).map(c => ({ id: c.id, name: c.name })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getAvailableEventsForStatusAndCountry(claimStatusId: string, countryId: string): Promise<{ id: string; name: string }[]> {
+  // Los eventos no estan vinculados a templates. Mostrar todos los eventos.
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
-    .from("action_template_claim_status")
-    .select(`
-      action_template:action_template!inner(
-        event_id,
-        event:events!inner(id, name),
-        business_lines:business_lines!inner(country_id)
-      )
-    `)
-    .eq("claim_status_id", claimStatusId)
-    .eq("is_active", true)
-    .eq("action_template.is_active", true)
-    .eq("action_template.business_lines.country_id", countryId);
+    .from("events")
+    .select("id, name");
 
   if (error) throw new Error(error.message);
-
-  const events = new Map<string, { id: string; name: string }>();
-  for (const row of (data as any[]) || []) {
-    const event = row.action_template?.event;
-    if (event) events.set(event.id, event);
-  }
-  return Array.from(events.values()).sort((a, b) => a.name.localeCompare(b.name));
+  return ((data as any[]) || []).map(e => ({ id: e.id, name: e.name })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getAvailableLinesForStatusCountryEvent(claimStatusId: string, countryId: string, eventId: string): Promise<{ id: string; name: string; code_letter: string }[]> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("action_template_claim_status")
-    .select(`
-      action_template:action_template!inner(
-        line_business_id,
-        business_lines:business_lines!inner(id, name, code_letter, country_id)
-      )
-    `)
-    .eq("claim_status_id", claimStatusId)
-    .eq("is_active", true)
-    .eq("action_template.is_active", true)
-    .eq("action_template.business_lines.country_id", countryId)
-    .eq("action_template.event_id", eventId);
+  // Las lineas se filtran por estado + pais (via templates), no por evento
+  const templates = await fetchTemplatesWithLine(claimStatusId);
+  const lines = templates
+    .filter(t => t.country_id === countryId)
+    .map(t => ({ id: t.line_id, name: t.line_name, code_letter: t.line_code_letter }));
 
-  if (error) throw new Error(error.message);
-
-  const lines = new Map<string, { id: string; name: string; code_letter: string }>();
-  for (const row of (data as any[]) || []) {
-    const line = row.action_template?.business_lines;
-    if (line) lines.set(line.id, line);
-  }
-  return Array.from(lines.values()).sort((a, b) => a.name.localeCompare(b.name));
+  // Deduplicar
+  const unique = new Map<string, { id: string; name: string; code_letter: string }>();
+  for (const l of lines) unique.set(l.id, l);
+  return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // ═══ Dependencias intrinsecas conocidas ═══

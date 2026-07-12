@@ -1,17 +1,10 @@
-fix: workflow sin todos, sin nombre, cascading dropdowns filtrados, unique constraint
+fix: cascading dropdowns — eventos muestran todos, paises/lineas filtran por templates
 
-- Migracion 137: country_id, event_id, business_line_id NOT NULL
-  Unique constraint en (estado + pais + evento + linea)
-  Eliminadas columnas name y description
-- Servicio: createWorkflowConfig sin nombre/descripcion
-  Nuevas funciones cascading: getAvailableCountriesForStatus,
-  getAvailableEventsForStatusAndCountry, getAvailableLinesForStatusCountryEvent
-  Solo muestra paises/eventos/lineas que tienen gestiones configuradas
-- UI: modal crear con dropdowns en cascada (estado > pais > evento > linea)
-  Todos especificos, no hay opcion "todos"
-  Validacion: no permite crear workflow duplicado
-  Boton eliminar workflow completo en el nodo linea
-  Fix guardar: el modal ahora funciona correctamente
+Los templates tienen line_business_id (con country_id) pero NO event_id.
+El evento es una dimension del workflow, no un filtro de templates.
+- Pais: filtra por templates que tienen line_business_id con country_id
+- Evento: muestra TODOS los eventos (no filtrado por templates)
+- Linea: filtra por estado + pais (via templates), no por evento
 
 Generated with [Devin](https://devin.ai)
 
