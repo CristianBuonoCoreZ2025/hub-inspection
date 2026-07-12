@@ -180,29 +180,28 @@ export default function DependenciasGestionPage() {
                   const isRoot = item.level === 0;
                   const isLast = idx === chain.length - 1;
                   const depId = item.level > 0 ? depIdFor(chain[idx - 1].code, item.code) : undefined;
+                  const levelStyles = [
+                    { bg: "bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/15", icon: "bg-violet-500/20 text-violet-400 border-violet-500/30", badge: "bg-violet-500/15 text-violet-400", label: "RAÍZ" },
+                    { bg: "bg-sky-500/10 border-sky-500/20 hover:bg-sky-500/15", icon: "bg-sky-500/20 text-sky-400 border-sky-500/30", badge: "bg-sky-500/15 text-sky-400", label: "NIVEL 2" },
+                    { bg: "bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/15", icon: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", badge: "bg-emerald-500/15 text-emerald-400", label: "NIVEL 3" },
+                    { bg: "bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/15", icon: "bg-amber-500/20 text-amber-400 border-amber-500/30", badge: "bg-amber-500/15 text-amber-400", label: `NIVEL ${item.level + 1}` },
+                  ];
+                  const style = levelStyles[Math.min(item.level, 3)];
                   return (
                     <div key={`${item.code}-${idx}`} className="flex items-center gap-2">
                       {/* Nodo */}
                       <div className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2
-                                       border transition-all duration-200
-                                       ${isRoot
-                                         ? "bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/15"
-                                         : "bg-sky-500/10 border-sky-500/20 hover:bg-sky-500/15"}`}>
-                        <div className={`flex h-7 w-7 items-center justify-center rounded-lg font-mono text-[10px] font-bold
-                                         ${isRoot
-                                           ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
-                                           : "bg-sky-500/20 text-sky-400 border border-sky-500/30"}`}>
+                                       border transition-all duration-200 ${style.bg}`}>
+                        <div className={`flex h-7 w-7 items-center justify-center rounded-lg font-mono text-[10px] font-bold ${style.icon}`}>
                           {item.code.slice(0, 2)}
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[12px] font-semibold leading-tight">{item.code}</span>
                           <span className="text-[10px] text-muted-foreground leading-tight">{nameFor(item.code)}</span>
                         </div>
-                        {isRoot && (
-                          <span className="ml-1 rounded-md bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-bold text-violet-400">
-                            RAÍZ
-                          </span>
-                        )}
+                        <span className={`ml-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${style.badge}`}>
+                          {style.label}
+                        </span>
                         {!isRoot && canDelete("catalogos") && depId && (
                           <Button
                             variant="ghost"
@@ -237,8 +236,15 @@ export default function DependenciasGestionPage() {
                 <span>·</span>
                 <div className="flex items-center gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-                  <span>Se crea automáticamente al emitir la padre</span>
+                  <span>Nivel 2</span>
                 </div>
+                <span>·</span>
+                <div className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span>Nivel 3</span>
+                </div>
+                <span>·</span>
+                <span>Se crea automáticamente al emitir la padre</span>
               </div>
             </div>
           ))}
