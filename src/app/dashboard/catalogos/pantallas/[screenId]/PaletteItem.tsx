@@ -31,7 +31,10 @@ export function PaletteItem({ code, label, icon, desc, disabled }: PaletteItemPr
       {...listeners}
       {...attributes}
       disabled={disabled}
-      className="w-full flex items-start gap-2.5 rounded-lg border border-border bg-card p-2.5 text-left transition-all hover:border-primary/40 hover:bg-accent/50 hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed cursor-grab active:cursor-grabbing"
+      className="w-full flex items-start gap-2.5 rounded-lg border border-white/10 dark:border-white/5
+                 bg-card/50 backdrop-blur-md p-2.5 text-left transition-all
+                 hover:border-primary/40 hover:bg-primary/5 hover:shadow-md hover:scale-[1.02]
+                 disabled:opacity-40 disabled:cursor-not-allowed cursor-grab active:cursor-grabbing"
     >
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
         {icon}

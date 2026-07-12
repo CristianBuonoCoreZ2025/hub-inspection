@@ -50,8 +50,8 @@ export function FieldPropertiesPanel({
 
   return (
     <div className="space-y-3.5">
-      {/* Tipo y categoría */}
-      <div className="rounded-lg border bg-card p-2.5 text-[11px]">
+      {/* Tipo y categoría — glass */}
+      <div className="rounded-lg border border-white/10 dark:border-white/5 bg-card/60 backdrop-blur-md p-2.5 text-[11px]">
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Tipo</span>
           <span className="font-mono font-medium uppercase text-primary">{field.type}</span>
@@ -65,7 +65,7 @@ export function FieldPropertiesPanel({
           </span>
         </div>
         {isEntity && (
-          <p className="text-[10px] text-muted-foreground mt-2 pt-2 border-t">
+          <p className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-white/10 dark:border-white/5">
             {isActionEntity
               ? "Solo vista. Datos automáticos de la gestión."
               : "Solo vista. Datos automáticos del siniestro."}
@@ -75,7 +75,7 @@ export function FieldPropertiesPanel({
 
       {/* ─── Sub-campos por cobertura (entidades complejas como reserva/ajuste) ─── */}
       {field.category === "complex_entity" && field.fields && field.fields.length > 0 && (
-        <div className="rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50/30 dark:bg-violet-900/10 p-2.5">
+        <div className="rounded-lg border border-violet-300/40 dark:border-violet-700/30 bg-violet-50/30 dark:bg-violet-900/10 backdrop-blur-md p-2.5">
           <p className="text-[10px] font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-wide mb-1.5">
             Campos por cobertura ({field.fields.length})
           </p>
@@ -111,7 +111,7 @@ export function FieldPropertiesPanel({
 
       {/* ─── Info de entidad compleja sin sub-campos ─── */}
       {field.category === "complex_entity" && (!field.fields || field.fields.length === 0) && (
-        <div className="rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50/30 dark:bg-violet-900/10 p-2.5">
+        <div className="rounded-lg border border-violet-300/40 dark:border-violet-700/30 bg-violet-50/30 dark:bg-violet-900/10 backdrop-blur-md p-2.5">
           <p className="text-[10px] text-muted-foreground">
             {COMPLEX_ENTITIES.find((e) => e.code === field.type)?.desc || "Entidad compleja del sistema."}
           </p>
@@ -149,10 +149,10 @@ export function FieldPropertiesPanel({
                 key={opt.value}
                 type="button"
                 onClick={() => onUpdate({ width: opt.value })}
-                className={`flex flex-col items-center gap-0.5 rounded-md border py-1.5 text-[10px] transition-colors ${
+                className={`flex flex-col items-center gap-0.5 rounded-md border py-1.5 text-[10px] transition-all ${
                   (field.width || "full") === opt.value
-                    ? "border-primary bg-primary/5 text-primary font-medium"
-                    : "border-border text-muted-foreground hover:border-muted-foreground/30"
+                    ? "border-primary bg-primary/10 backdrop-blur-sm text-primary font-medium shadow-sm"
+                    : "border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/5 backdrop-blur-sm text-muted-foreground hover:border-muted-foreground/30 hover:bg-white/10"
                 }`}
               >
                 <span className="font-medium">{opt.label}</span>

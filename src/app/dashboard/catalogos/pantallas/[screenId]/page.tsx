@@ -246,15 +246,17 @@ export default function ScreenBuilderPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="flex h-screen flex-col overflow-hidden bg-background premium-bg-mesh">
       {/* ═══════════════════════════════════════════════════════════
-          Top Bar
+          Top Bar — glassmorphism máximo
           ═══════════════════════════════════════════════════════════ */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b bg-card px-4">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-white/10 dark:border-white/5
+                         bg-card/60 backdrop-blur-2xl saturate-150 px-4
+                         shadow-[0_4px_30px_rgba(0,0,0,0.06)]">
         <div className="flex items-center gap-3">
           <button
             onClick={handleBack}
-            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-white/10 dark:hover:bg-white/5 transition-colors"
             title="Volver"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -270,14 +272,14 @@ export default function ScreenBuilderPage() {
           </div>
           {dirty && (
             <span className="ml-2 flex items-center gap-1 text-[10px] text-amber-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Sin guardar
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" /> Sin guardar
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Toggle vista */}
-          <div className="flex items-center rounded-md border bg-muted/30 p-0.5">
+          {/* Toggle vista — glass */}
+          <div className="flex items-center rounded-lg border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/5 backdrop-blur-md p-0.5">
             {([
               { mode: "design" as ViewMode, icon: LayoutTemplate, label: "Diseño" },
               { mode: "preview" as ViewMode, icon: Eye, label: "Vista" },
@@ -286,10 +288,10 @@ export default function ScreenBuilderPage() {
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all ${
                   viewMode === mode
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-card/80 backdrop-blur-sm text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -348,9 +350,10 @@ export default function ScreenBuilderPage() {
           onDragEnd={onDragEnd}
         >
           <div className="flex flex-1 overflow-hidden">
-            {/* ─── Panel izquierdo: Paleta ─── */}
-            <aside className="flex w-[260px] shrink-0 flex-col border-r bg-muted/20">
-              <div className="border-b px-3 py-2">
+            {/* ─── Panel izquierdo: Paleta — glass ─── */}
+            <aside className="flex w-[260px] shrink-0 flex-col border-r border-white/10 dark:border-white/5
+                               bg-muted/20 backdrop-blur-2xl saturate-150">
+              <div className="border-b border-white/10 dark:border-white/5 px-3 py-2">
                 <p className="text-[11px] font-semibold text-muted-foreground">Componentes</p>
                 <p className="text-[10px] text-muted-foreground/70 mt-0.5">Arrastra al lienzo →</p>
               </div>
@@ -385,10 +388,11 @@ export default function ScreenBuilderPage() {
               </div>
             </aside>
 
-            {/* ─── Panel central: Canvas ─── */}
-            <main className="flex flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950">
-              {/* Toolbar del canvas */}
-              <div className="flex h-9 shrink-0 items-center justify-between border-b bg-card px-4">
+            {/* ─── Panel central: Canvas — glass ─── */}
+            <main className="flex flex-1 flex-col overflow-hidden bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-sm">
+              {/* Toolbar del canvas — glass */}
+              <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/10 dark:border-white/5
+                               bg-card/40 backdrop-blur-xl px-4">
                 <div className="flex items-center gap-3">
                   <p className="text-[11px] font-medium text-muted-foreground">Lienzo</p>
                   <span className="text-[10px] text-muted-foreground">
@@ -397,7 +401,7 @@ export default function ScreenBuilderPage() {
                 </div>
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <kbd className="rounded border bg-muted px-1 py-0.5 text-[9px]">Espacio</kbd>
+                    <kbd className="rounded border border-white/10 bg-white/5 backdrop-blur-sm px-1 py-0.5 text-[9px]">Espacio</kbd>
                     arrastrar
                   </span>
                 </div>
@@ -405,9 +409,11 @@ export default function ScreenBuilderPage() {
 
               {/* Canvas scrollable */}
               <div className="flex-1 overflow-y-auto p-6">
-                {/* "Hoja" del formulario */}
-                <div className="mx-auto max-w-3xl rounded-xl border bg-card shadow-sm">
-                  <div className="border-b px-5 py-3">
+                {/* "Hoja" del formulario — glass máximo */}
+                <div className="mx-auto max-w-3xl rounded-xl border border-white/15 dark:border-white/10
+                                bg-card/70 backdrop-blur-2xl saturate-150
+                                shadow-[0_8px_40px_rgba(0,0,0,0.08)]">
+                  <div className="border-b border-white/10 dark:border-white/5 px-5 py-3">
                     <p className="text-[13px] font-semibold">{screen.name}</p>
                     <p className="text-[10px] text-muted-foreground">{screen.description || "Vista previa del formulario"}</p>
                   </div>
@@ -438,9 +444,10 @@ export default function ScreenBuilderPage() {
               </div>
             </main>
 
-            {/* ─── Panel derecho: Propiedades ─── */}
-            <aside className="flex w-[300px] shrink-0 flex-col border-l bg-muted/20">
-              <div className="border-b px-3 py-2">
+            {/* ─── Panel derecho: Propiedades — glass ─── */}
+            <aside className="flex w-[300px] shrink-0 flex-col border-l border-white/10 dark:border-white/5
+                               bg-muted/20 backdrop-blur-2xl saturate-150">
+              <div className="border-b border-white/10 dark:border-white/5 px-3 py-2">
                 <p className="text-[11px] font-semibold text-muted-foreground">Propiedades</p>
               </div>
               <div className="flex-1 overflow-y-auto p-3">
@@ -468,7 +475,9 @@ export default function ScreenBuilderPage() {
           {/* Drag overlay */}
           <DragOverlay>
             {activeDrag ? (
-              <div className="flex items-center gap-2 rounded-lg border-2 border-primary bg-card px-3 py-2 shadow-lg opacity-90">
+              <div className="flex items-center gap-2 rounded-lg border-2 border-primary/50
+                              bg-card/80 backdrop-blur-2xl saturate-150 px-3 py-2
+                              shadow-[0_8px_30px_rgba(0,0,0,0.12)] opacity-90">
                 <span className="text-[14px]">{activeDrag.icon}</span>
                 <span className="text-[12px] font-medium">{activeDrag.label}</span>
               </div>
@@ -509,7 +518,8 @@ function PaletteSection({
 function DropEmptyZone({ onAdd }: { onAdd: (cat: FieldCategory, type: string, label: string) => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/30">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-white/15 dark:border-white/10
+                      bg-white/5 dark:bg-white/5 backdrop-blur-md">
         <LayoutTemplate className="h-8 w-8 text-muted-foreground/40" />
       </div>
       <div>
@@ -523,7 +533,9 @@ function DropEmptyZone({ onAdd }: { onAdd: (cat: FieldCategory, type: string, la
           <button
             key={t.code}
             onClick={() => onAdd("own", t.code, t.label)}
-            className="flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-[11px] hover:border-primary/40 hover:bg-accent/50 transition-colors"
+            className="flex items-center gap-1.5 rounded-md border border-white/10 dark:border-white/5
+                       bg-card/60 backdrop-blur-md px-2.5 py-1.5 text-[11px]
+                       hover:border-primary/40 hover:bg-primary/5 transition-all"
           >
             <span>{t.icon}</span> {t.label}
           </button>
@@ -555,9 +567,11 @@ function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName
   const complexEntities = fields.filter((f) => f.category === "complex_entity");
 
   return (
-    <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 p-6">
+    <div className="flex-1 overflow-y-auto bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-sm p-6">
       <div className="mx-auto max-w-3xl space-y-4">
-        <div className="rounded-xl border bg-card p-5 shadow-sm">
+        <div className="rounded-xl border border-white/15 dark:border-white/10
+                        bg-card/70 backdrop-blur-2xl saturate-150 p-5
+                        shadow-[0_8px_40px_rgba(0,0,0,0.08)]">
           <h2 className="text-base font-semibold mb-1">{screenName}</h2>
           <p className="text-[12px] text-muted-foreground mb-4">Vista previa del formulario</p>
 

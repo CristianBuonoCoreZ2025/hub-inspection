@@ -48,14 +48,14 @@ export function SortableFieldCard({
       ref={setNodeRef}
       style={style}
       onClick={onSelect}
-      className={`group relative rounded-lg border transition-all ${
+      className={`group relative rounded-lg border transition-all backdrop-blur-md ${
         selected
-          ? "border-primary ring-1 ring-primary/30 bg-primary/5 shadow-sm"
+          ? "border-primary ring-1 ring-primary/30 bg-primary/10 shadow-md"
           : isComplex
-          ? "border-violet-200 bg-violet-50/30 dark:bg-violet-900/5 hover:border-violet-400"
+          ? "border-violet-300/40 dark:border-violet-700/30 bg-violet-50/30 dark:bg-violet-900/10 hover:border-violet-400/60 hover:shadow-md"
           : isEntity
-          ? "border-dashed border-border bg-muted/10 hover:border-muted-foreground/30"
-          : "border-border bg-card hover:border-muted-foreground/30 hover:shadow-sm"
+          ? "border-dashed border-white/15 dark:border-white/10 bg-white/5 dark:bg-white/5 hover:border-muted-foreground/30 hover:shadow-sm"
+          : "border-white/10 dark:border-white/5 bg-card/50 hover:border-muted-foreground/30 hover:shadow-md hover:scale-[1.01]"
       } ${isDragging ? "cursor-grabbing" : "cursor-pointer"}`}
     >
       {/* Drag handle */}
