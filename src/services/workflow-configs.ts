@@ -80,7 +80,8 @@ export async function updateWorkflowConfig(id: string, input: Partial<{
 }
 
 export async function deleteWorkflowConfig(id: string): Promise<void> {
-  await deleteRow("workflow_configs", id);
+  // Soft-delete: desactivar en lugar de eliminar
+  await updateRow("workflow_configs", id, { is_active: false }, WORKFLOW_CONFIG_SELECT);
 }
 
 // ═══ Workflow Steps ═══

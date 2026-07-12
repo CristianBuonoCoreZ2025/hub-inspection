@@ -566,7 +566,8 @@ export async function deleteRelationship(id: string) {
 
 export async function getCountries() {
   return fetchAll<Country>("countries", {
-    select: "id, code, name, phone_prefix, created_at",
+    select: "id, code, name, phone_prefix, is_active, created_at",
+    eq: { is_active: true },
     order: { column: "name", ascending: true },
   });
 }

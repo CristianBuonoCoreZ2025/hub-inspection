@@ -1,4 +1,4 @@
-import { fetchAll, insertRow, updateRow, deleteRow } from "@/lib/supabase/db";
+import { fetchAll, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
 import type { GestionScreen, CharacteristicScreen, ClaimAction } from "@/types";
 
 const SCREEN_FIELDS =
@@ -131,8 +131,14 @@ export async function deactivateGestionScreen(id: string): Promise<GestionScreen
 }
 
 /**
- * Remover una asociación característica-pantalla.
+ * Remover una asociación característica-pantalla (soft-delete).
  */
 export async function removeCharacteristicScreen(id: string): Promise<void> {
-  await deleteRow("characteristic_screens", id);
+  // Soft-delete: desactivar en lugar de eliminar
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from("characteristic_screens")
+    .update({ is_active: false })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
 }

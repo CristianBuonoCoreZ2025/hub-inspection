@@ -1,23 +1,18 @@
-feat: sistema de dependencias entre gestiones (paquetes)
+feat: regla de soft-delete (desactivar vs eliminar) en todo el sistema
 
-Nuevo sistema que reemplaza las dependencias hardcoded (INTRINSIC_DEPENDENCIES)
-por una tabla configurable action_template_dependencies.
+Regla fundamental: NUNCA se elimina un registro utilizado. Se desactiva.
+- Los desactivados no aparecen en dropdowns de creación
+- Los desactivados SÍ aparecen en detalles de datos existentes
+- Documentado en AGENTS.md como regla obligatoria
 
 Cambios:
-- Migration 139: tabla action_template_dependencies + RLS + migracion de datos
-- Migration 140: trigger cascade_workflow_on_issue reescrito para usar la tabla
-- Servicio template-dependencies.ts: CRUD + getChildTemplateIds + getDependencyChain
-- Pagina /dashboard/catalogos/gestiones/dependencias: gestionar dependencias
-- Menu: link "Dependencias" bajo Configuracion de Gestiones
-- Workflow builder: solo muestra templates raiz (oculta dependientes)
-- Workflow builder: createWorkflowStepWithChain agrega hijos automaticamente
-- Eliminado getIntrinsicDependency del workflow builder
-
-Modelo:
-- Las dependencias son globales (no por pais/evento/linea)
-- Al emitir una gestion padre, se crea la hija en estado "todo"
-- La cadena es recursiva (cobertura→reserva→ajuste)
-- El usuario configura las relaciones en la nueva pantalla
+- Migration 141: agregar is_active a countries, characteristic_screens,
+  property_materiality, property_risk, security_measures, third_parties
+- getCountries: filtrar is_active=true
+- deleteWorkflowConfig: soft-delete (is_active=false) en lugar de DELETE
+- deleteCharacteristic: soft-delete en lugar de DELETE
+- removeCharacteristicScreen: soft-delete en lugar de DELETE
+- RLS policy para countries
 
 Generated with [Devin](https://devin.ai)
 

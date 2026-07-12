@@ -1508,6 +1508,60 @@ Los services del cliente solo se usan para QUERIES (lectura).
 
 ---
 
+## Regla de Soft-Delete: Desactivar vs Eliminar
+
+### Principio Fundamental
+**NUNCA se elimina (DELETE) un registro que ha sido utilizado en el sistema.**
+En su lugar, se **desactiva** (`is_active = false`).
+
+### Comportamiento
+1. **Botón "Eliminar" → cambia a "Desactivar"** cuando el registro está referenciado
+   en algún siniestro, workflow, gestión, o cualquier otra entidad.
+2. **Al desactivar**: el registro deja de estar disponible para NUEVAS asignaciones
+   (no aparece en dropdowns, selects, ni formularios de creación).
+3. **Datos existentes**: todo lo relacionado al registro desactivado SIGUE mostrándose
+   normalmente (siniestros, gestiones, workflows, detalles, etc.).
+4. **Reactivación**: el usuario puede reactivar un registro desactivado en cualquier momento.
+
+### Ejemplo
+```
+Eventos: "Normal" y "Terremoto 2026"
+- Hoy se desactiva "Terremoto 2026"
+- NO se puede: crear workflow con ese evento, asignarlo a nuevos siniestros, etc.
+- SÍ se puede: ver siniestros existentes con ese evento, ver gestiones, ver reportes
+- El evento desactivado NO aparece en dropdowns de creación
+- El evento desactivado SÍ aparece en detalles/visualizaciones de datos existentes
+```
+
+### Implementación Técnica
+- **Todas las tablas de catálogo** deben tener columna `is_active BOOLEAN DEFAULT true`.
+- **DELETE en UI** → siempre hace `UPDATE is_active = false` (soft-delete).
+- **Queries para dropdowns/selects** → filtrar `.eq("is_active", true)`.
+- **Queries para detalles/listados de datos existentes** → NO filtrar por `is_active`
+  (mostrar tanto activos como inactivos para no perder información).
+- **Páginas de administración** (gestiones, tipos, características) → muestran
+  activos e inactivos con indicador visual (punto verde/gris) para permitir reactivación.
+
+### Tablas que DEBEN cumplir esta regla
+events, countries, business_lines, insurance_companies, brokers, advisors,
+claim_causes, claim_types, insurance_products, regions, cities, communes,
+property_classifications, damage_classifications, policy_types, housing_destinations,
+building_ages, relationships, action_template, action_features, characteristic,
+gestion_screens, lookup_catalog (action_type, claim_status, action_status, etc.),
+workflow_configs, action_template_dependencies.
+
+### Regla
+```
+1. NUNCA usar DELETE SQL en tablas de catálogo referenciadas.
+2. Siempre usar UPDATE is_active = false.
+3. Los dropdowns SIEMPRE filtran is_active = true.
+4. Los detalles de siniestros/gestiones NUNCA filtran is_active
+   (muestran el nombre aunque esté desactivado).
+5. Las páginas de administración muestran activos e inactivos.
+```
+
+---
+
 ### Cliente — Cómo deshabilitar campos según permisos
 
 En el page.tsx del formulario:

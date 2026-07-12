@@ -253,7 +253,8 @@ export async function updateCharacteristic(id: string, input: Partial<{
 }
 
 export async function deleteCharacteristic(id: string) {
-  await deleteRow("characteristic", id);
+  // Soft-delete: desactivar en lugar de eliminar
+  await updateRow<Characteristic>("characteristic", id, { is_active: false }, "id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order");
 }
 
 // ──────────────────────────────────────────────────────────────
