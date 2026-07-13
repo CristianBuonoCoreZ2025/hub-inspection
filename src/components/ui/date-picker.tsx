@@ -43,57 +43,52 @@ function DatePicker({
   }
 
   const displayValue = date ? format(date, "dd-MM-yyyy") : placeholder
+  const showClear = clearable && date
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <button
-            type="button"
-            disabled={disabled}
-            className={cn(
-              "liquid-date-picker group/date-picker flex w-fit items-center justify-between gap-2",
-              !date && "text-muted-foreground",
-              className
-            )}
-          >
-            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[12px]">{displayValue}</span>
-            {clearable && date && (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onChange("")
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.stopPropagation()
-                    onChange("")
-                  }
-                }}
-                className="ml-1 inline-flex rounded-full p-0.5 hover:bg-white/20 focus-visible:outline-hidden"
-              >
-                <X className="h-3 w-3" />
-              </span>
-            )}
-          </button>
-        }
-      />
-      <PopoverContent
-        align="start"
-        className="w-auto p-0"
-        sideOffset={4}
-      >
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={handleSelect}
-          locale={es}
+    <div className={cn("relative inline-flex", className)}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <button
+              type="button"
+              disabled={disabled}
+              className={cn(
+                "liquid-date-picker group/date-picker flex w-full items-center justify-between gap-2",
+                !date && "text-muted-foreground",
+                showClear && "pr-7"
+              )}
+            >
+              <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-[12px]">{displayValue}</span>
+            </button>
+          }
         />
-      </PopoverContent>
-    </Popover>
+        <PopoverContent
+          align="start"
+          className="w-auto p-0"
+          sideOffset={4}
+        >
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={handleSelect}
+            locale={es}
+          />
+        </PopoverContent>
+      </Popover>
+      {showClear && (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange("")}
+          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground hover:text-foreground hover:bg-white/20 focus-visible:outline-hidden disabled:pointer-events-none"
+          aria-label="Limpiar fecha"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </div>
   )
 }
 
