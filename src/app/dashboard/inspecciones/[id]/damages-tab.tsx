@@ -7,6 +7,13 @@ import { toast } from "sonner";
 import { Plus, Trash2, Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { InspectionDamage } from "@/types";
 
 const severityLabels: Record<string, string> = {
@@ -125,30 +132,45 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* Formulario de nuevo/edición */}
-      {isEditingNew && (
+      {editing !== null && (
         <div className="app-panel space-y-3">
           <h3 className="app-section-title">
-            Nuevo Registro de Daño
+            {editing === "new" ? "Nuevo Registro de Daño" : "Editar Registro de Daño"}
           </h3>
           <div className="modal-grid-3">
             <div>
               <label className="app-field-label text-[11px]">Categoría</label>
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value, damage_type: e.target.value })} className="app-input h-7 w-full text-[13px]">
-                {damageCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
+              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v || "", damage_type: v || "" })}>
+                <SelectTrigger className="app-input h-7 w-full text-[13px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {damageCategories.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="app-field-label text-[11px]">Dependencia / Recinto</label>
-              <select value={form.dependency || ""} onChange={(e) => setForm({ ...form, dependency: e.target.value || null })} className="app-input h-7 w-full text-[13px]">
-                <option value="">Seleccionar...</option>
-                {dependencyOptions.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
+              <Select value={form.dependency || "__none"} onValueChange={(v) => setForm({ ...form, dependency: v === "__none" ? null : v })}>
+                <SelectTrigger className="app-input h-7 w-full text-[13px]">
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Seleccionar...</SelectItem>
+                  {dependencyOptions.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="app-field-label text-[11px]">Severidad</label>
-              <select value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value as InspectionDamage["severity"] })} className="app-input h-7 w-full text-[13px]">
-                {severityOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+              <Select value={form.severity} onValueChange={(v) => setForm({ ...form, severity: (v || "low") as InspectionDamage["severity"] })}>
+                <SelectTrigger className="app-input h-7 w-full text-[13px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {severityOptions.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="col-span-3">
               <label className="app-field-label text-[11px]">Descripción</label>
@@ -182,8 +204,15 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
           <div className="flex justify-end gap-2">
             <button onClick={() => setEditing(null)} className="btn-cancel btn-sm">Cancelar</button>
             <button
-              onClick={() => createMutation.mutate(form)}
-              disabled={!form.description || createMutation.isPending}
+              onClick={() => {
+                if (editing === "new") {
+                  createMutation.mutate(form);
+                } else if (editing) {
+                  const { id, created_at, updated_at, ...updateData } = form as unknown as InspectionDamage;
+                  updateMutation.mutate({ id: editing, data: updateData });
+                }
+              }}
+              disabled={!form.description || createMutation.isPending || updateMutation.isPending}
               className="btn-save btn-sm"
             >
               <Check className="mr-1 h-3.5 w-3.5" /> Guardar

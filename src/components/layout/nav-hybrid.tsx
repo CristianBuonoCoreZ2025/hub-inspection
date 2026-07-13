@@ -74,7 +74,7 @@ function HybridFlyout({
       <div className={cn(
         "sidebar-item cursor-pointer",
         isGroupActive && !open && "sidebar-item-active",
-        open && "rounded-r-none !bg-card text-primary"
+        open && "!bg-card text-primary"
       )}>
         <Icon className="size-[18px] shrink-0" />
         <span className="text-[12px] font-medium truncate flex-1">{group.title}</span>
@@ -86,7 +86,7 @@ function HybridFlyout({
 
       {/* Submenu integrado — superpuesto al contenido, sin mover la pantalla */}
       {open && (
-        <div className="absolute left-full top-0 z-50 w-64 rounded-r-[20px] rounded-l-none bg-card">
+        <div className="absolute left-full top-1/2 -translate-y-1/2 z-50 w-64 rounded-r-[20px] rounded-l-2xl bg-card">
           <div className="relative flex items-center gap-2 border-b border-border/60 px-3 py-2.5">
             <div className={cn(
               "flex size-6 items-center justify-center rounded-lg shrink-0",
