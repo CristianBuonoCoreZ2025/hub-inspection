@@ -1,5 +1,289 @@
 @layer components {
   /* ═══════════════════════════════════════════════════════════════
+   * TOPBAR — Barra superior tipo Windows (liquid glass, always on top)
+   * Solo ocupa el área útil (derecha del sidebar). Sticky en la parte
+   * superior del contenido. Muestra usuario, stats rápidas y acciones.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    width: 100%;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+  }
+
+  .topbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 40px;
+    padding: 0 10px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 60%, transparent) 0%,
+      color-mix(in srgb, var(--card) 35%, transparent) 100%
+    ) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.15) inset !important;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease !important;
+  }
+
+  .topbar-inner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      100% 80% at 0% 0%,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 50%
+    );
+    border-radius: inherit;
+  }
+
+  .dark .topbar-inner {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 55%, transparent) 0%,
+      color-mix(in srgb, var(--card) 30%, transparent) 100%
+    ) !important;
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.3),
+      0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
+  }
+
+  /* ── Izquierda: Usuario ── */
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+
+  .topbar-user-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
+  }
+
+  .topbar-user-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+
+  .topbar-user-role {
+    font-size: 10px;
+    color: var(--muted-foreground);
+    text-transform: capitalize;
+  }
+
+  /* ── Centro: Stat chips ── */
+  .topbar-center {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .topbar-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: color-mix(in srgb, var(--muted) 20%, transparent) !important;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--foreground);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.15s ease !important;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .topbar-chip:hover {
+    background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+    border-color: color-mix(in srgb, var(--primary) 25%, transparent) !important;
+    transform: translateY(-1px);
+  }
+
+  .topbar-chip-icon {
+    width: 13px;
+    height: 13px;
+    color: var(--muted-foreground);
+    flex-shrink: 0;
+  }
+
+  .topbar-chip:hover .topbar-chip-icon {
+    color: var(--primary);
+  }
+
+  .topbar-chip-count {
+    font-weight: 700;
+    color: var(--foreground);
+  }
+
+  .topbar-chip-label {
+    font-weight: 500;
+    color: var(--muted-foreground);
+    font-size: 10px;
+  }
+
+  /* Variantes de chip */
+  .topbar-chip-alert {
+    background: color-mix(in srgb, #f59e0b 12%, transparent) !important;
+    border-color: color-mix(in srgb, #f59e0b 25%, transparent) !important;
+  }
+
+  .topbar-chip-alert .topbar-chip-icon {
+    color: #f59e0b;
+  }
+
+  .topbar-chip-alert .topbar-chip-count {
+    color: #f59e0b;
+  }
+
+  .topbar-chip-alert:hover {
+    background: color-mix(in srgb, #f59e0b 18%, transparent) !important;
+    border-color: color-mix(in srgb, #f59e0b 35%, transparent) !important;
+  }
+
+  .topbar-chip-overdue {
+    background: color-mix(in srgb, #ef4444 12%, transparent) !important;
+    border-color: color-mix(in srgb, #ef4444 25%, transparent) !important;
+  }
+
+  .topbar-chip-overdue .topbar-chip-icon {
+    color: #ef4444;
+  }
+
+  .topbar-chip-overdue .topbar-chip-count {
+    color: #ef4444;
+  }
+
+  .topbar-chip-overdue:hover {
+    background: color-mix(in srgb, #ef4444 18%, transparent) !important;
+    border-color: color-mix(in srgb, #ef4444 35%, transparent) !important;
+  }
+
+  /* ── Derecha: Acciones ── */
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .topbar-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    transition: all 0.15s ease !important;
+  }
+
+  .topbar-action:hover {
+    background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+    color: var(--primary);
+    border-color: color-mix(in srgb, var(--primary) 15%, transparent) !important;
+  }
+
+  .topbar-action-logout:hover {
+    background: color-mix(in srgb, #ef4444 10%, transparent) !important;
+    color: #ef4444;
+    border-color: color-mix(in srgb, #ef4444 15%, transparent) !important;
+  }
+
+  /* ── Responsive ── */
+
+  /* Tablet portrait: chips más compactos */
+  @media (max-width: 1023px) {
+    .topbar-user-name {
+      max-width: 100px;
+    }
+    .topbar-chip-label {
+      display: none;
+    }
+    .topbar-chip {
+      padding: 3px 6px;
+    }
+  }
+
+  /* Mobile: solo iconos + count, ocultar labels y user name */
+  @media (max-width: 767px) {
+    .topbar {
+      padding: 3px 4px;
+    }
+    .topbar-inner {
+      height: 36px;
+      padding: 0 6px;
+      gap: 6px;
+      border-radius: 12px;
+    }
+    .topbar-user-info {
+      display: none;
+    }
+    .topbar-center {
+      gap: 4px;
+      justify-content: flex-start;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .topbar-center::-webkit-scrollbar {
+      display: none;
+    }
+    .topbar-chip {
+      padding: 2px 5px;
+      gap: 3px;
+    }
+    .topbar-chip-label {
+      display: none;
+    }
+    .topbar-action {
+      width: 26px;
+      height: 26px;
+    }
+  }
+
+  /* Mobile pequeño: aún más compacto */
+  @media (max-width: 480px) {
+    .topbar-chip-count {
+      font-size: 10px;
+    }
+    .topbar-chip-icon {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
    * DASHBOARD GLASS — Sistema de paneles tipo Tableau
    * Liquid Glass extremo: blur, gradientes, sombras, bordes luminosos.
    * ═══════════════════════════════════════════════════════════════ */
