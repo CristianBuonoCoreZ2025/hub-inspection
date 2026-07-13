@@ -208,7 +208,7 @@
   }
 
   .app-page {
-    @apply mx-auto flex w-full max-w-[min(120rem,calc(100%-1rem))] flex-col gap-3 px-1;
+    @apply mx-auto flex w-full max-w-[min(120rem,calc(100%-1rem))] flex-col gap-2 px-1;
   }
 
   .app-page-stock-wide {
@@ -216,7 +216,7 @@
   }
 
   .app-page-header {
-    @apply flex flex-col gap-1.5;
+    @apply flex flex-col gap-1;
   }
 
   .app-page-title {
@@ -293,7 +293,7 @@
   }
 
   .app-toolbar {
-    @apply flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between;
+    @apply flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between;
   }
 
   .app-data-table-wrap {

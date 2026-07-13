@@ -534,6 +534,19 @@ ITEMS (SelectItem):
   - Transition: 150ms (suave)
   - Indicador de selección: CheckIcon a la derecha
 
+PATRÓN DE USO (date picker en listados):
+  Usar el componente `DatePicker` de `@/components/ui/date-picker`.
+  Reemplazar los `<input type="date">` nativos. El trigger usa la clase
+  `.liquid-date-picker` (mismo estilo que Select, 28px, Liquid Glass).
+  El calendario despliega en un Popover con fondo glass/blur.
+
+  <DatePicker
+    value={dateFrom}
+    onChange={setDateFrom}
+    placeholder="Desde"
+    className="w-[130px]"
+  />
+
 PATRÓN DE USO (buscador en listados):
   Usar la clase `.liquid-search` para inputs de búsqueda. Es un pill shape
   con Liquid Glass: blur 20px, saturate 180%, gradiente blanco 14% -> 4%,

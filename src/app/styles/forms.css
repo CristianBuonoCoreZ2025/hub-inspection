@@ -198,6 +198,91 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
   }
 
+  /* ═══════════════════════════════════════════════════════════════
+   * CLASE .liquid-date-picker — trigger del date picker con Liquid Glass
+   * Misma altura y estilo que los Select triggers.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  .liquid-date-picker {
+    height: 28px !important;
+    padding: 0 10px !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--input) !important;
+    background: color-mix(in srgb, var(--card) 80%, transparent) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    color: var(--foreground) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04) !important;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
+  }
+
+  .liquid-date-picker:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--card) 90%, transparent) !important;
+    border-color: color-mix(in srgb, var(--input) 80%, var(--foreground) 20%) !important;
+  }
+
+  .liquid-date-picker:focus-visible,
+  .liquid-date-picker[data-popup-open] {
+    border-color: #0095DA !important;
+    box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
+  }
+
+  .dark .liquid-date-picker {
+    background: color-mix(in srgb, var(--card) 70%, transparent) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .dark .liquid-date-picker:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--card) 80%, transparent) !important;
+  }
+
+  /* Calendar inside popover — Liquid Glass refinement */
+  [data-slot="popover-content"] .rdp-root {
+    --rdp-accent-color: var(--primary);
+    --rdp-accent-color-foreground: var(--primary-foreground);
+    --rdp-day-height: 28px;
+    --rdp-day-width: 28px;
+  }
+
+  [data-slot="popover-content"] .rdp-month_caption {
+    padding-bottom: 8px;
+  }
+
+  [data-slot="popover-content"] .rdp-weekday {
+    opacity: 0.7;
+  }
+
+  [data-slot="popover-content"] .rdp-day_button {
+    border-radius: 8px !important;
+  }
+
+  [data-slot="popover-content"] .rdp-selected .rdp-day_button {
+    background: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 40%, transparent) !important;
+  }
+
+  [data-slot="popover-content"] .rdp-today .rdp-day_button {
+    border-color: color-mix(in srgb, var(--primary) 60%, transparent) !important;
+  }
+
+  [data-slot="popover-content"] .rdp-button_previous,
+  [data-slot="popover-content"] .rdp-button_next {
+    background: color-mix(in srgb, var(--card) 60%, transparent) !important;
+    border: 1px solid var(--input) !important;
+    border-radius: 8px !important;
+    height: 24px !important;
+    width: 24px !important;
+    padding: 0 !important;
+  }
+
+  [data-slot="popover-content"] .rdp-button_previous:hover,
+  [data-slot="popover-content"] .rdp-button_next:hover {
+    background: color-mix(in srgb, var(--card) 80%, transparent) !important;
+  }
+
   /* Cuando está dentro de .modal-field, el gap maneja el espaciado */
   .modal-field .app-field-label {
     margin-bottom: 0 !important;

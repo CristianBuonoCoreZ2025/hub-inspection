@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { SelectItem, Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { FormSelect } from "@/components/ui/form-select";
 import { cn } from "@/lib/utils";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
@@ -234,12 +235,14 @@ export default function ClaimsPage() {
   const watchedClaimNumber = useWatch({ control: form.control, name: "claimNumber" });
   const watchedInsuranceCompanyId = useWatch({ control: form.control, name: "insuranceCompanyId" });
 
+  // Reset render-time cuando faltan datos (evita setState sincrónico en effect)
+  if (!watchedClaimNumber || !watchedInsuranceCompanyId) {
+    if (claimNumberWarning !== null) setClaimNumberWarning(null);
+  }
+
   // Verificar duplicado de N° siniestro por compañía de seguros
   useEffect(() => {
-    if (!watchedClaimNumber || !watchedInsuranceCompanyId) {
-      setClaimNumberWarning(null);
-      return;
-    }
+    if (!watchedClaimNumber || !watchedInsuranceCompanyId) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
@@ -262,12 +265,14 @@ export default function ClaimsPage() {
   const watchedBeneficiaryRut = useWatch({ control: form.control, name: "beneficiaryRut" });
   const watchedBeneficiaryCountry = useWatch({ control: form.control, name: "beneficiaryCountry" });
 
+  // Reset render-time para asegurado (evita setState sincrónico en effect)
+  if (!watchedRut || watchedRut.trim().length < 3 || !watchedInsuredCountry) {
+    if (participantSuggestion?.section === "insured") setParticipantSuggestion(null);
+  }
+
   // Buscar participante existente por RUT + país (asegurado)
   useEffect(() => {
-    if (!watchedRut || watchedRut.trim().length < 3 || !watchedInsuredCountry) {
-      setParticipantSuggestion(null);
-      return;
-    }
+    if (!watchedRut || watchedRut.trim().length < 3 || !watchedInsuredCountry) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
@@ -275,23 +280,25 @@ export default function ClaimsPage() {
         if (!cancelled) {
           if (found && (found.first_name || found.full_name)) {
             setParticipantSuggestion({ section: "insured", data: found });
-          } else {
+          } else if (participantSuggestion?.section === "insured") {
             setParticipantSuggestion(null);
           }
         }
       } catch {
-        if (!cancelled) setParticipantSuggestion(null);
+        if (!cancelled && participantSuggestion?.section === "insured") setParticipantSuggestion(null);
       }
     }, 600);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [watchedRut, watchedInsuredCountry]);
+  }, [watchedRut, watchedInsuredCountry, participantSuggestion]);
+
+  // Reset render-time para contratante (evita setState sincrónico en effect)
+  if (!watchedContractorRut || watchedContractorRut.trim().length < 3 || !watchedContractorCountry) {
+    if (participantSuggestion?.section === "contractor") setParticipantSuggestion(null);
+  }
 
   // Buscar participante existente por RUT + país (contratante)
   useEffect(() => {
-    if (!watchedContractorRut || watchedContractorRut.trim().length < 3 || !watchedContractorCountry) {
-      if (participantSuggestion?.section === "contractor") setParticipantSuggestion(null);
-      return;
-    }
+    if (!watchedContractorRut || watchedContractorRut.trim().length < 3 || !watchedContractorCountry) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
@@ -299,8 +306,8 @@ export default function ClaimsPage() {
         if (!cancelled) {
           if (found && (found.first_name || found.full_name)) {
             setParticipantSuggestion({ section: "contractor", data: found });
-          } else {
-            if (participantSuggestion?.section === "contractor") setParticipantSuggestion(null);
+          } else if (participantSuggestion?.section === "contractor") {
+            setParticipantSuggestion(null);
           }
         }
       } catch {
@@ -308,14 +315,16 @@ export default function ClaimsPage() {
       }
     }, 600);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [watchedContractorRut, watchedContractorCountry]);
+  }, [watchedContractorRut, watchedContractorCountry, participantSuggestion]);
+
+  // Reset render-time para beneficiario (evita setState sincrónico en effect)
+  if (!watchedBeneficiaryRut || watchedBeneficiaryRut.trim().length < 3 || !watchedBeneficiaryCountry) {
+    if (participantSuggestion?.section === "beneficiary") setParticipantSuggestion(null);
+  }
 
   // Buscar participante existente por RUT + país (beneficiario)
   useEffect(() => {
-    if (!watchedBeneficiaryRut || watchedBeneficiaryRut.trim().length < 3 || !watchedBeneficiaryCountry) {
-      if (participantSuggestion?.section === "beneficiary") setParticipantSuggestion(null);
-      return;
-    }
+    if (!watchedBeneficiaryRut || watchedBeneficiaryRut.trim().length < 3 || !watchedBeneficiaryCountry) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
@@ -323,8 +332,8 @@ export default function ClaimsPage() {
         if (!cancelled) {
           if (found && (found.first_name || found.full_name)) {
             setParticipantSuggestion({ section: "beneficiary", data: found });
-          } else {
-            if (participantSuggestion?.section === "beneficiary") setParticipantSuggestion(null);
+          } else if (participantSuggestion?.section === "beneficiary") {
+            setParticipantSuggestion(null);
           }
         }
       } catch {
@@ -332,7 +341,7 @@ export default function ClaimsPage() {
       }
     }, 600);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [watchedBeneficiaryRut, watchedBeneficiaryCountry]);
+  }, [watchedBeneficiaryRut, watchedBeneficiaryCountry, participantSuggestion]);
 
   // Función para aplicar la sugerencia a la sección correspondiente
   const applySuggestion = (section: "insured" | "contractor" | "beneficiary") => {
@@ -874,18 +883,8 @@ export default function ClaimsPage() {
               ))}
             </SelectContent>
           </Select>
-          <input            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="h-8 w-[130px] text-[13px]"
-            placeholder="Desde"
-          />
-          <input            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="h-8 w-[130px] text-[13px]"
-            placeholder="Hasta"
-          />
+          <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="w-[130px]" />
+          <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="w-[130px]" />
           {(statusFilter || dateFrom || dateTo) && (
             <button
               onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
