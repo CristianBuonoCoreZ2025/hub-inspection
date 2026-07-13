@@ -334,7 +334,7 @@ export default function InspectionDetailPage() {
           <div className="flex gap-2 flex-wrap">
             <Button
               size="sm"
-              className="btn-create btn-footer"
+              className="btn-save btn-footer"
               onClick={() => updateMutation.mutate({ id: session.id, input: { status: "active" } })}
             >
               <Play className="mr-2 h-3.5 w-3.5" />
@@ -465,7 +465,7 @@ export default function InspectionDetailPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="btn-neutral btn-icon h-7 w-7"
+                className="btn-neutral btn-icon"
                 onClick={() => setVideoCallOpen(false)}
               >
                 <XCircle className="h-4 w-4" />
@@ -741,7 +741,7 @@ export default function InspectionDetailPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="btn-neutral btn-icon h-6 w-6"
+                  className="btn-neutral btn-icon"
                   onClick={() => setChatPanelOpen(false)}
                 >
                   <XCircle className="h-3.5 w-3.5" />
@@ -965,7 +965,7 @@ export default function InspectionDetailPage() {
                   newOptions: { inspectionType: rescheduleType, scheduledAt, inspectorId: rescheduleInspectorId || undefined },
                 });
               }}
-              className="btn-create btn-footer"
+              className="btn-save btn-footer"
             >
               {rescheduleMutation.isPending ? <Clock className="mr-2 h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="mr-2 h-3.5 w-3.5" />}
               Reagendar

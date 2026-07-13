@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getRegions, getCities, getCommunes, createRegion, updateRegion, deleteRegion, createCity, updateCity, deleteCity, createCommune, updateCommune, deleteCommune } from "@/services/catalogs";
 import { getCountries } from "@/services/countries";
-import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag, Plus, Pencil, Trash2, Search } from "lucide-react";
+import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag, MapPin, Plus, Pencil, Trash2, Search } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 
@@ -274,19 +274,34 @@ export default function UbicacionesPage() {
 
   return (
     <div className="app-page">
-      <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Ubicaciones</h1>
-        <div className="app-grid-filters">
-          <div className="relative max-w-[180px]">
+      <div className="app-page-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-teal-500 text-white shadow-sm">
+              <MapPin className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Ubicaciones</h1>
+              <p className="app-page-lead">Paises, regiones, ciudades y comunas.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {level > 0 && canCreate("catalogos") && (
+              <Button onClick={handleCreate} className="liquid-button">
+                <Plus className="h-3.5 w-3.5" /> Nueva
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <div className="relative w-[180px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
           </div>
         </div>
-        {level > 0 && canCreate("catalogos") && (
-          <Button onClick={handleCreate} className="liquid-button ml-auto">
-            <Plus className="h-3.5 w-3.5" /> Nueva
-          </Button>
-        )}
       </div>
 
       {/* Breadcrumbs */}
@@ -322,8 +337,9 @@ export default function UbicacionesPage() {
       </div>
 
       {/* Data table */}
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
-      <div className="app-data-table-wrap">
+      <div className="app-panel">
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        <div className="app-data-table-wrap">
         <table className="app-data-table">
           <thead>
             <tr>
@@ -381,6 +397,7 @@ export default function UbicacionesPage() {
         </table>
       </div>
       <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+      </div>
 
       {/* Modal for create/edit */}
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>

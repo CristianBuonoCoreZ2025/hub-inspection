@@ -1659,7 +1659,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                     className={`h-6 text-[11px] w-[150px] justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
                     onClick={toggleContractorLink}
                   >
-                    {contractorLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
+                    {contractorLinked ? "Desligar" : "Copiar"}
                   </Button>
                 </div>
                 <div className="space-y-3 pt-2">
@@ -1790,7 +1790,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                     className={`h-6 text-[11px] w-[150px] justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
                     onClick={toggleBeneficiaryLink}
                   >
-                    {beneficiaryLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
+                    {beneficiaryLinked ? "Desligar" : "Copiar"}
                   </Button>
                 </div>
                 <div className="space-y-3 pt-2">
@@ -1938,7 +1938,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                     className={`h-6 text-[11px] w-[150px] justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
                     onClick={toggleClaimAddressLink}
                   >
-                    {claimAddressLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
+                    {claimAddressLinked ? "Desligar" : "Copiar"}
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-1 pt-2">

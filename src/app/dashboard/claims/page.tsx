@@ -42,21 +42,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { SelectItem, Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormDatePicker } from "@/components/ui/form-date-picker";
 import { FormSelect } from "@/components/ui/form-select";
 import { cn } from "@/lib/utils";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
-
-const statusColors: Record<string, string> = {
-  created: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  adjustment: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-  dispatchment: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  closed: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-  reopened: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
-};
 
 type Participant = { type: string; full_name?: string | null; first_name?: string | null; last_name?: string | null; rut?: string | null; email?: string | null; phone?: string | null; cell_phone?: string | null; address?: string | null; country?: string | null; region?: string | null; city?: string | null; commune?: string | null };
 
@@ -899,18 +891,18 @@ export default function ClaimsPage() {
       </div>
 
       <div className="app-toolbar">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative max-w-[180px]">
+        <div className="flex items-center gap-2">
+          <div className="relative w-[160px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar siniestro..."
+              placeholder="Buscar..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="liquid-search"
             />
           </div>
           <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={statusOptions}>
-            <SelectTrigger className="app-input h-8 max-w-[160px]">
+            <SelectTrigger className="h-8 w-[140px] shrink-0 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -919,8 +911,8 @@ export default function ClaimsPage() {
               ))}
             </SelectContent>
           </Select>
-          <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="w-[120px]" />
-          <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="w-[120px]" />
+          <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="w-[110px] shrink-0" />
+          <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="w-[110px] shrink-0" />
           {(statusFilter || dateFrom || dateTo) && (
             <button
               onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
@@ -1445,7 +1437,7 @@ export default function ClaimsPage() {
                         className={`h-6 text-[11px] w-[150px] justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
                         onClick={() => toggleContractorLink()}
                       >
-                        {contractorLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
+                        {contractorLinked ? "Desligar" : "Copiar"}
                       </Button>
                     )}
                   </div>
@@ -1605,7 +1597,7 @@ export default function ClaimsPage() {
                         className={`h-6 text-[11px] w-[150px] justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
                         onClick={() => toggleBeneficiaryLink()}
                       >
-                        {beneficiaryLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
+                        {beneficiaryLinked ? "Desligar" : "Copiar"}
                       </Button>
                     )}
                   </div>
@@ -1861,7 +1853,7 @@ export default function ClaimsPage() {
                       className={`h-6 text-[11px] w-[150px] justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
                       onClick={() => toggleClaimAddressLink()}
                     >
-                      {claimAddressLinked ? "Desligar Asegurado" : "Copiar de Asegurado"}
+                      {claimAddressLinked ? "Desligar" : "Copiar"}
                     </Button>
                   </div>
                   <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
@@ -2152,26 +2144,22 @@ export default function ClaimsPage() {
                     <td>{claim.claim_number || "—"}</td>
                     <td>{getParticipant(claim, 'insured')?.full_name || "—"}</td>
                     <td className="truncate">{getParticipant(claim, 'insured')?.address || "—"}, {getParticipant(claim, 'insured')?.city || "—"}</td>
-                    <td><Badge className={statusColors[statusCode(claim.status_id) ?? ""]}>{statusLabel(claim.status_id)}</Badge></td>
+                    <td><StatusBadge status={statusCode(claim.status_id) ?? ""} label={statusLabel(claim.status_id) || "—"} /></td>
                     <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="app-row-actions">
                         {claim.inspection_sessions && claim.inspection_sessions.length > 0 ? (
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs text-emerald-600 hover:bg-emerald-500/10"
+                            className="text-emerald-600 hover:bg-emerald-500/10"
                             title={`Inspección ${claim.inspection_sessions[0].status === "active" ? "en curso" : "agendada"}`}
                             onClick={() => router.push(`/dashboard/inspecciones/${claim.inspection_sessions![0].id}`)}
                           >
                             <ClipboardCheck className="h-3.5 w-3.5 mr-1" />
-                            {claim.inspection_sessions[0].status === "active" ? "En curso" : "Agendada"}
+                            {claim.inspection_sessions[0].status === "active" ? "Activo" : "Programada"}
                           </Button>
                         ) : canCreate("inspecciones") ? (
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs text-[#0095DA] hover:text-[#005BBB] hover:bg-[#0095DA]/10"
+                          className="text-[#0095DA] hover:text-[#005BBB] hover:bg-[#0095DA]/10"
                           title="Crear inspeccion"
                           disabled={inspectMutation.isPending}
                           onClick={() => inspectMutation.mutate(claim.id)}

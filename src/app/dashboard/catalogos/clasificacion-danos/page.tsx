@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getDamageClassifications, createDamageClassification, updateDamageClassification, deleteDamageClassification } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, FileWarning } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, FileWarning, Wrench } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default function DamageClassificationPage() {
   const queryClient = useQueryClient();
@@ -90,66 +91,83 @@ export default function DamageClassificationPage() {
 
   return (
     <div className="app-page">
-      <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Clasificacion Danos</h1>
-        <div className="app-grid-filters">
-          <div className="relative max-w-[180px]">
+      <div className="app-page-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-orange-500 to-red-500 text-white shadow-sm">
+              <Wrench className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Clasificacion Danos</h1>
+              <p className="app-page-lead">Gestión de clasificaciones de daños.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canCreate("catalogos") && (
+              <Button onClick={() => { setEditingId(null); setFormData({"name":"","description":""}); setOpen(true); }} className="liquid-button">
+                <Plus className="h-3.5 w-3.5" /> Nueva
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <div className="relative w-[160px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
           </div>
         </div>
-        {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); setFormData({"name":"","description":""}); setOpen(true); }} className="liquid-button ml-auto">
-            <Plus className="h-3.5 w-3.5" /> Nueva
-          </Button>
-        )}
       </div>
 
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
-      <div className="app-data-table-wrap">
-        <table className="app-data-table">
-          <thead>
-            <tr>
-              <th className="w-10"></th>
-              <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
-              <SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripcion</SortableTh>
-              <th className="w-[80px]"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={4} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
-            ) : filtered?.length === 0 ? (
-              <tr><td colSpan={4} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
-            ) : (
-              paginatedData.map((item) => (
-                <tr key={item.id}>
-                  <td><span className={`app-status-dot ${item.is_active ? "app-status-on" : "app-status-off"}`} /></td>
-                  <td className="font-medium">{item.name}</td>
-                  <td className="font-medium">{item.description}</td>
-                  <td>
-                    <div className="app-row-actions">
-                      {canEdit("catalogos") && (
-                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
-                          setEditingId(item.id);
-                          setFormData({ name: item.name || "", description: item.description || "" });
-                          setOpen(true);
-                        }}><Pencil className="h-4 w-4" /></Button>
-                      )}
-                      {canDelete("catalogos") && (
-                        <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="app-panel">
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        <div className="app-data-table-wrap">
+          <table className="app-data-table">
+            <thead>
+              <tr>
+                <th className="w-10"></th>
+                <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
+                <SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripcion</SortableTh>
+                <th className="w-[80px]"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr><td colSpan={4} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+              ) : filtered?.length === 0 ? (
+                <tr><td colSpan={4} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
+              ) : (
+                paginatedData.map((item) => (
+                  <tr key={item.id}>
+                    <td><StatusBadge status={item.is_active ? "active" : "inactive"} label={item.is_active ? "Activo" : "Inactivo"} /></td>
+                    <td className="font-medium">{item.name}</td>
+                    <td className="font-medium">{item.description}</td>
+                    <td>
+                      <div className="app-row-actions">
+                        {canEdit("catalogos") && (
+                          <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+                            setEditingId(item.id);
+                            setFormData({ name: item.name || "", description: item.description || "" });
+                            setOpen(true);
+                          }}><Pencil className="h-4 w-4" /></Button>
+                        )}
+                        {canDelete("catalogos") && (
+                          <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>

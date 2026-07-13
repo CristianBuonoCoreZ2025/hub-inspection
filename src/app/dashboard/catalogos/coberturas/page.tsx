@@ -236,9 +236,32 @@ export default function CoberturasPage() {
 
   return (
     <div className="app-page">
-      <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Coberturas</h1>
-        <div className="app-grid-filters">
+      <div className="app-page-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-cyan-500 text-white shadow-sm">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Coberturas</h1>
+              <p className="app-page-lead">Catálogo de coberturas y subcoberturas.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canCreateCat && (
+              <Button
+                onClick={() => { setEditingId(null); resetForm(); setOpen(true); }}
+                className="liquid-button"
+              >
+                <Plus className="h-3.5 w-3.5" /> Nueva
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
           <Select
             value={selectedCountryId || "__none"}
@@ -263,7 +286,7 @@ export default function CoberturasPage() {
                 ))}
             </SelectContent>
           </Select>
-          <div className="relative max-w-[180px]">
+          <div className="relative w-[180px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar cobertura..."
@@ -273,14 +296,6 @@ export default function CoberturasPage() {
             />
           </div>
         </div>
-        {canCreateCat && (
-          <Button
-            onClick={() => { setEditingId(null); resetForm(); setOpen(true); }}
-            className="liquid-button ml-auto"
-          >
-            <Plus className="h-3.5 w-3.5" /> Nueva
-          </Button>
-        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-3 items-start">
@@ -326,14 +341,20 @@ export default function CoberturasPage() {
             </div>
           </div>
 
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground text-center py-12">Cargando...</p>
-          ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">
-              {search ? "No se encontraron coberturas." : "No hay coberturas en este tema."}
-            </p>
-          ) : (
-            <table className="app-data-table">
+          {total > 0 && (
+            <div className="border-b border-border px-3 py-2">
+              <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+            </div>
+          )}
+          <div className="app-data-table-wrap">
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground text-center py-12">Cargando...</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-12">
+                {search ? "No se encontraron coberturas." : "No hay coberturas en este tema."}
+              </p>
+            ) : (
+              <table className="app-data-table">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-8"></th>
@@ -390,7 +411,8 @@ export default function CoberturasPage() {
                 ))}
               </tbody>
             </table>
-          )}
+            )}
+          </div>
           {total > 0 && (
             <div className="border-t border-border px-4 py-2 flex items-center justify-between">
               <p className="text-[11px] text-muted-foreground">

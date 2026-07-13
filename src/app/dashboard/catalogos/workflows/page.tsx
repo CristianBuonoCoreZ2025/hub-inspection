@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   closestCenter, type DragStartEvent, type DragEndEvent,
-  type CollisionDetection,
+  type CollisionDetection, type Modifier,
 } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
@@ -84,6 +84,29 @@ function createWorkflowCollisionDetection(steps: WorkflowStep[]): CollisionDetec
     });
   };
 }
+
+// ═══ Modifier: centrar el DragOverlay en el cursor ═══
+// Sin esto, el overlay se posiciona en la esquina superior-izquierda del
+// elemento original, desalineado del puntero durante el drag.
+const snapCenterToCursor: Modifier = ({
+  activatorEvent,
+  draggingNodeRect,
+  transform,
+}) => {
+  if (activatorEvent && draggingNodeRect) {
+    const event = activatorEvent as PointerEvent;
+    // Posicion actual del cursor = posicion inicial + delta del transform
+    const cursorX = event.clientX + transform.x;
+    const cursorY = event.clientY + transform.y;
+    // Mover el overlay para que su centro coincida con el cursor
+    return {
+      ...transform,
+      x: cursorX - draggingNodeRect.left - draggingNodeRect.width / 2,
+      y: cursorY - draggingNodeRect.top - draggingNodeRect.height / 2,
+    };
+  }
+  return transform;
+};
 
 export default function WorkflowsPage() {
   const queryClient = useQueryClient();
@@ -520,6 +543,7 @@ export default function WorkflowsPage() {
                                                       <DndContext
                                                         sensors={dndSensors}
                                                         collisionDetection={workflowCollisionDetection}
+                                                        modifiers={[snapCenterToCursor]}
                                                         onDragStart={onDragStart}
                                                         onDragEnd={onDragEnd}
                                                       >

@@ -34,6 +34,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 import type { Country } from "@/types";
 
@@ -136,19 +137,34 @@ export default function CompaniesPage() {
 
   return (
     <div className="app-page">
-      <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Empresas</h1>
-        <div className="app-grid-filters">
-          <div className="relative max-w-[180px]">
+      <div className="app-page-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-indigo-500 text-white shadow-sm">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Empresas</h1>
+              <p className="app-page-lead">Gestión de empresas del sistema.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canCreate("companies") && (
+              <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="liquid-button">
+                <Plus className="h-3.5 w-3.5" /> Nueva
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <div className="relative w-[160px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
           </div>
         </div>
-        {canCreate("companies") && (
-          <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="liquid-button ml-auto">
-            <Plus className="h-3.5 w-3.5" /> Nueva
-          </Button>
-        )}
       </div>
 
         <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
@@ -459,17 +475,7 @@ export default function CompaniesPage() {
                           </span>
                         </td>
                         <td>
-                          {user.is_active ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600">
-                              <span className="app-status-dot app-status-on" />
-                              Activo
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                              <span className="app-status-dot app-status-off" />
-                              Inactivo
-                            </span>
-                          )}
+                          <StatusBadge status={user.is_active ? "active" : "inactive"} label={user.is_active ? "Activo" : "Inactivo"} />
                         </td>
                       </tr>
                     ))

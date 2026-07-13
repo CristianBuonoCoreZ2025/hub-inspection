@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getInsuranceProducts, createInsuranceProduct, updateInsuranceProduct, deleteInsuranceProduct, getBusinessLines, getCountries } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, Box } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Box, Package } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default function ProductosPage() {
   const queryClient = useQueryClient();
@@ -92,51 +93,68 @@ export default function ProductosPage() {
 
   return (
     <div className="app-page">
-      <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Ramos / Productos</h1>
-        <div className="app-grid-filters">
-          <div className="relative max-w-[180px]">
+      <div className="app-page-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-fuchsia-500 text-white shadow-sm">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Ramos / Productos</h1>
+              <p className="app-page-lead">Gestión de ramos y productos.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canCreate("catalogos") && (
+              <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="liquid-button">
+                <Plus className="h-3.5 w-3.5" /> Nuevo
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <div className="relative w-[160px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
           </div>
         </div>
-        {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="liquid-button ml-auto">
-            <Plus className="h-3.5 w-3.5" /> Nuevo
-          </Button>
-        )}
       </div>
 
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
-      <div className="app-data-table-wrap">
-        <table className="app-data-table">
-          <thead><tr><th className="w-10"></th><th>País</th><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><th>Linea de Negocio</th><SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripcion</SortableTh><th className="w-[80px]"></th></tr></thead>
-          <tbody>
-            {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
-            : filtered?.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
-            : paginatedData.map((p) => (
-              <tr key={p.id}>
-                <td><span className="app-status-dot app-status-on" /></td>
-                <td>{countries?.find((c) => c.id === p.country_id)?.name || "—"}</td>
-                <td className="font-medium">{p.name}</td>
-                <td>{businessLines?.find((l) => l.id === p.business_line_id)?.name || "—"}</td>
-                <td className="max-w-[300px] truncate text-muted-foreground">{p.description || "—"}</td>
-                <td>
-                  <div className="app-row-actions">
-                    {canEdit("catalogos") && (
-                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(p.id); setFormData({ country_id: p.country_id || "", business_line_id: p.business_line_id, name: p.name, description: p.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                    )}
-                    {canDelete("catalogos") && (
-                      <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este producto?")) deleteMutation.mutate(p.id); }}><Trash2 className="h-4 w-4" /></Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="app-panel">
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        <div className="app-data-table-wrap">
+          <table className="app-data-table">
+            <thead><tr><th className="w-10"></th><th>País</th><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><th>Linea de Negocio</th><SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripcion</SortableTh><th className="w-[80px]"></th></tr></thead>
+            <tbody>
+              {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+              : filtered?.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
+              : paginatedData.map((p) => (
+                <tr key={p.id}>
+                  <td><StatusBadge status="active" label="Activo" /></td>
+                  <td>{countries?.find((c) => c.id === p.country_id)?.name || "—"}</td>
+                  <td className="font-medium">{p.name}</td>
+                  <td>{businessLines?.find((l) => l.id === p.business_line_id)?.name || "—"}</td>
+                  <td className="max-w-[300px] truncate text-muted-foreground">{p.description || "—"}</td>
+                  <td>
+                    <div className="app-row-actions">
+                      {canEdit("catalogos") && (
+                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(p.id); setFormData({ country_id: p.country_id || "", business_line_id: p.business_line_id, name: p.name, description: p.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      )}
+                      {canDelete("catalogos") && (
+                        <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este producto?")) deleteMutation.mutate(p.id); }}><Trash2 className="h-4 w-4" /></Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>

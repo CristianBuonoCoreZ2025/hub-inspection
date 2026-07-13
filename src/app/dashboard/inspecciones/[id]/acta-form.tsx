@@ -649,7 +649,7 @@ export default function ActaForm({ session }: ActaFormProps) {
               type="button"
               variant="outline"
               size="sm"
-              className="btn-create btn-sm"
+              className="btn-save btn-sm"
               onClick={() => {
                 const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
                 set("third_parties", [
@@ -659,7 +659,7 @@ export default function ActaForm({ session }: ActaFormProps) {
               }}
             >
               <Users className="mr-2 h-3.5 w-3.5" />
-              Agregar Tercero
+              Agregar
             </Button>
           </div>
         </div>
@@ -671,11 +671,11 @@ export default function ActaForm({ session }: ActaFormProps) {
           {step > 1 && (
             <Button type="button" variant="outline" size="sm" onClick={goPrev} className="btn-cancel btn-sm">
               <ChevronLeft className="mr-1 h-3.5 w-3.5" />
-              Anterior
+              Atrás
             </Button>
           )}
           {step < steps.length && (
-            <Button type="button" size="sm" onClick={goNext} className="btn-create btn-sm">
+            <Button type="button" size="sm" onClick={goNext} className="btn-save btn-sm">
               Siguiente
               <ChevronRight className="ml-1 h-3.5 w-3.5" />
             </Button>

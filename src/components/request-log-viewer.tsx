@@ -115,15 +115,15 @@ export function RequestLogViewer() {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <Button variant="outline" size="sm" onClick={downloadLogs} className="h-7 px-2 text-xs gap-1">
+          <Button onClick={downloadLogs} className="btn-cancel">
             <Download className="h-3 w-3" />
             Descargar
           </Button>
-          <Button variant="outline" size="sm" onClick={() => requestLogger.clear()} className="h-7 px-2 text-xs gap-1">
+          <Button onClick={() => requestLogger.clear()} className="btn-cancel">
             <Trash2 className="h-3 w-3" />
             Eliminar
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)} className="h-7 w-7 p-0">
+          <Button onClick={() => setIsOpen(false)} className="btn-icon">
             <X className="h-4 w-4" />
           </Button>
         </div>

@@ -354,16 +354,32 @@
 
   .app-data-table thead tr {
     @apply text-left;
-    border-bottom: 1px solid var(--border) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent) !important;
   }
 
   .app-data-table th {
-    @apply px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground;
+    @apply px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70;
+    background: color-mix(in srgb, var(--muted) 30%, transparent) !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
 
   .app-data-table td {
-    @apply px-3 py-2 text-[11px];
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent) !important;
+    @apply px-3 py-2.5 text-[11px];
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+    transition: background-color 0.15s ease;
+  }
+
+  .app-data-table tbody tr {
+    transition: background-color 0.15s ease;
+  }
+
+  .app-data-table tbody tr:hover {
+    background: color-mix(in srgb, var(--primary) 6%, transparent) !important;
+  }
+
+  .app-data-table tbody tr:hover td {
+    background: transparent !important;
   }
 
   .app-data-table tbody tr:last-child td {
@@ -624,7 +640,32 @@
 
   /* Contenedor de acciones en fila de tabla */
   .app-row-actions {
-    @apply flex items-center gap-1;
+    @apply flex items-center justify-end gap-1.5;
+  }
+
+  /* Botones dentro de filas de tabla — estilo glass pill */
+  .app-row-actions button,
+  .app-row-actions [data-slot="button"] {
+    height: 26px !important;
+    padding: 0 10px !important;
+    border-radius: 8px !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    backdrop-filter: blur(8px);
+    transition: all 0.15s ease !important;
+  }
+
+  .app-row-actions button:hover,
+  .app-row-actions [data-slot="button"]:hover {
+    background: color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    transform: translateY(-1px);
+  }
+
+  .app-row-actions button:active,
+  .app-row-actions [data-slot="button"]:active {
+    transform: translateY(0) scale(0.97);
   }
 
   /* ═══════════════════════════════════════════════════════════════

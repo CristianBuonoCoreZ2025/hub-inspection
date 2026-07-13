@@ -122,7 +122,7 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
               });
             }}
             disabled={!newItem.area || !newItem.item || createMutation.isPending}
-            className="btn-create btn-sm h-8"
+            className="btn-save btn-sm"
           >
             <Plus className="mr-1 h-3.5 w-3.5" /> Agregar
           </Button>

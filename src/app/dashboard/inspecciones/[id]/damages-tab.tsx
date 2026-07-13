@@ -146,10 +146,10 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
         </div>
         <Button
           onClick={() => { setEditing("new"); setForm({ ...emptyDamage, session_id: sessionId }); }}
-          className="btn-create btn-sm"
+          className="btn-save btn-sm"
           disabled={isEditingNew}
         >
-          <Plus className="mr-1 h-3.5 w-3.5" /> Nuevo Daño
+          <Plus className="mr-1 h-3.5 w-3.5" /> Nuevo
         </Button>
       </div>
 
@@ -285,10 +285,10 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
                   <td className="text-right font-medium">${(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
                   <td>
                     <div className="app-row-actions">
-                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon h-7 w-7" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
+                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="btn-danger btn-icon h-7 w-7" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
+                      <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>

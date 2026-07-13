@@ -122,16 +122,16 @@ export default function AgendaPage() {
       {/* Toolbar */}
       <div className="app-toolbar">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="h-8" onClick={prevWeek}>
+          <Button className="btn-icon" onClick={prevWeek}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm font-medium min-w-[140px] text-center">
             {monthLabel}
           </span>
-          <Button variant="outline" size="sm" className="h-8" onClick={nextWeek}>
+          <Button className="btn-icon" onClick={nextWeek}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 text-[13px]" onClick={todayWeek}>
+          <Button className="btn-cancel" onClick={todayWeek}>
             Hoy
           </Button>
         </div>

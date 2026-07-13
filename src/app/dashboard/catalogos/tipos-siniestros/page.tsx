@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaimTypes, createClaimType, updateClaimType, deleteClaimType } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, FileWarning, Flame, Droplets, Zap, Wind, Home, Car, Wrench, AlertTriangle, Shield, ClipboardCheck, Building, Warehouse, Store, Hotel, Factory, Scale, Gavel, FileText, Badge, Truck, Ship, Plane, Heart, Hospital, HeartPulse, Package2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, FileWarning, Flame, Droplets, Zap, Wind, Home, Car, Wrench, AlertTriangle, Shield, ClipboardCheck, Building, Warehouse, Store, Hotel, Factory, Scale, Gavel, FileText, Badge, Truck, Ship, Plane, Heart, Hospital, HeartPulse, Package2, AlertCircle } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 // Map icon names from lucide-react to actual icon components
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -156,79 +157,96 @@ export default function ClaimTypePage() {
 
   return (
     <div className="app-page">
-      <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Tipos de Siniestro</h1>
-        <div className="app-grid-filters">
-          <div className="relative max-w-[180px]">
+      <div className="app-page-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-red-500 to-rose-500 text-white shadow-sm">
+              <AlertCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Tipos de Siniestro</h1>
+              <p className="app-page-lead">Gestión de tipos de siniestros.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canCreate("catalogos") && (
+              <Button
+                onClick={() => { setEditingId(null); setFormData({ name: "", description: "", icon: "FileWarning" }); setOpen(true); }}
+                className="liquid-button"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Nuevo
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <div className="relative w-[160px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
           </div>
         </div>
-        {canCreate("catalogos") && (
-          <Button
-            onClick={() => { setEditingId(null); setFormData({ name: "", description: "", icon: "FileWarning" }); setOpen(true); }}
-            className="liquid-button ml-auto"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Nuevo
-          </Button>
-        )}
       </div>
 
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
-      <div className="app-data-table-wrap">
-        <table className="app-data-table">
-          <thead>
-            <tr>
-              <th className="w-10"></th>
-              <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
-              <SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripción</SortableTh>
-              <th>Ícono</th>
-              <th className="w-[80px]"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
-            ) : filtered?.length === 0 ? (
-              <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
-            ) : (
-              paginatedData.map((item) => {
-                const IconComponent = ICON_MAP[item.icon || "FileWarning"] || FileWarning;
-                return (
-                  <tr key={item.id}>
-                    <td><span className="app-status-dot app-status-on" /></td>
-                    <td className="font-medium">{item.name}</td>
-                    <td className="text-muted-foreground">{item.description || "—"}</td>
-                    <td>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                        <IconComponent className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </td>
-                    <td>
-                      <div className="app-row-actions">
-                        {canEdit("catalogos") && (
-                          <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
-                            setEditingId(item.id);
-                            setFormData({ name: item.name || "", description: item.description || "", icon: item.icon || "FileWarning" });
-                            setOpen(true);
-                          }}><Pencil className="h-4 w-4" /></Button>
-                        )}
-                        {canDelete("catalogos") && (
-                          <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+      <div className="app-panel">
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        <div className="app-data-table-wrap">
+          <table className="app-data-table">
+            <thead>
+              <tr>
+                <th className="w-10"></th>
+                <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
+                <SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripción</SortableTh>
+                <th>Ícono</th>
+                <th className="w-[80px]"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+              ) : filtered?.length === 0 ? (
+                <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
+              ) : (
+                paginatedData.map((item) => {
+                  const IconComponent = ICON_MAP[item.icon || "FileWarning"] || FileWarning;
+                  return (
+                    <tr key={item.id}>
+                      <td><StatusBadge status="active" label="Activo" /></td>
+                      <td className="font-medium">{item.name}</td>
+                      <td className="text-muted-foreground">{item.description || "—"}</td>
+                      <td>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                          <IconComponent className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </td>
+                      <td>
+                        <div className="app-row-actions">
+                          {canEdit("catalogos") && (
+                            <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+                              setEditingId(item.id);
+                              setFormData({ name: item.name || "", description: item.description || "", icon: item.icon || "FileWarning" });
+                              setOpen(true);
+                            }}><Pencil className="h-4 w-4" /></Button>
+                          )}
+                          {canDelete("catalogos") && (
+                            <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>

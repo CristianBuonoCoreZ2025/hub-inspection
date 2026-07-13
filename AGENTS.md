@@ -540,6 +540,134 @@ PATRÓN DE USO (botones en headers de listados):
   Ambos tienen 28px de alto, borde redondeado 10px y estilo Liquid Glass.
   Texto siempre UNA sola palabra. Icono sin margen (gap del botón lo separa).
 
+PATRÓN OBLIGATORIO de BOTONES (TODO el sistema):
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ 1. TEXTO: Siempre UNA sola palabra. NUNCA dos. NUNCA sin texto. │
+  │    Si se necesita contexto, usar un ícono, nunca texto extra.    │
+  │    Los botones SIEMPRE deben tener texto (no solo ícono).        │
+  └─────────────────────────────────────────────────────────────────┘
+  Textos permitidos (una palabra + ícono opcional):
+    ✅ "Nuevo" (Plus)        ✅ "Editar" (Pencil)
+    ✅ "Guardar" (Save)      ✅ "Crear" (Plus)
+    ✅ "Cancelar" (sin ícono) ✅ "Exportar" (Download)
+    ✅ "Imprimir" (Printer)  ✅ "Eliminar" (Trash2)
+    ✅ "Invitar" (UserPlus)  ✅ "Atrás" (ArrowLeft)
+    ✅ "Siguiente" (ArrowRight) ✅ "Cerrar" (X)
+    ✅ "Ver" (Eye)           ✅ "Desligar" (Unlink)
+    ✅ "Copiar" (Copy)       ✅ "Iniciar" (Play)
+    ✅ "Agendar" (Calendar)  ✅ "Reagendar" (CalendarClock)
+    ✅ "Generar" (FileText)  ✅ "Agregar" (Plus)
+    ✅ "Descargar" (Download) ✅ "Hoy" (Calendar)
+  Textos PROHIBIDOS (dos o más palabras):
+    ❌ "Nuevo Siniestro"     ❌ "Guardar Cambios"
+    ❌ "Exportar CSV"        ❌ "Crear Empresa"
+    ❌ "Desligar Asegurado"  ❌ "Copiar de Asegurado"
+    ❌ "Nuevo Daño"          ❌ "Generar Informe"
+    ❌ "Enviar Invitación"   ❌ "Imprimir / Guardar PDF"
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ 2. COLORES: Solo dos clases para modales/wizards.               │
+  │    .btn-save  → azul  (Guardar, Crear, Siguiente, Agendar, etc.)│
+  │    .btn-cancel→ rosa  (Cancelar, Cerrar, Atrás)                 │
+  │    NUNCA usar btn-create, btn-run, btn-homolog, btn-review,     │
+  │    btn-warn, btn-amber, btn-violet, btn-sky, btn-emerald.       │
+  │    EXCEPCIÓN: .btn-danger permitido SOLO para Eliminar en filas.│
+  └─────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ 3. DIMENSIONES: No overridear con h-6, h-7, h-8, w-6, w-7.     │
+  │    Headers de listados → .liquid-button / .liquid-button-outline│
+  │      (28px alto, definido en la clase CSS)                      │
+  │    Modales/wizards → .btn-save .btn-footer / .btn-cancel .btn-… │
+  │      (29px alto, definido en la clase CSS)                      │
+  │    Filas de tabla → .app-row-actions button (26px, CSS autom.)  │
+  │      NO añadir variant="ghost"/"outline" ni size="sm" ni h-7.   │
+  │    Wizard footer → .btn-save .btn-sm / .btn-cancel .btn-sm      │
+  │      (w-[122px], definido en la clase CSS)                      │
+  └─────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ 4. FILAS DE TABLA: No usar variant ni size. Dejar que           │
+  │    .app-row-actions button controle el estilo (26px, 10px font, │
+  │    8px radio, glass pill). Solo añadir color si es necesario:   │
+  │    - btn-danger para Eliminar                                   │
+  │    - Texto color custom (text-emerald-600, text-[#0095DA])      │
+  └─────────────────────────────────────────────────────────────────┘
+
+PATRÓN OBLIGATORIO de GRILLAS (TODO el sistema):
+  La grilla de siniestros (claims/page.tsx) es el ESTÁNDAR ÚNICO.
+  Todas las grillas de listados deben ser idénticas en estructura.
+
+  ESTRUCTURA HTML obligatoria:
+  <div className="app-page">
+    {/* HEADER con icono + título + lead + botones a la derecha */}
+    <div className="app-page-header">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl
+               bg-linear-to-br from-X to-Y text-white shadow-sm">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="app-page-title">Título</h1>
+            <p className="app-page-lead">Descripción breve.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Botón secundario (opcional): liquid-button-outline */}
+          {/* Botón primario: liquid-button */}
+        </div>
+      </div>
+    </div>
+
+    {/* TOOLBAR con buscador + filtros */}
+    <div className="app-toolbar">
+      <div className="flex items-center gap-2">
+        <div className="relative w-[160px] shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ..." />
+          <Input className="liquid-search" />
+        </div>
+        {/* Selects de filtro con h-8 */}
+        {/* Botón X para limpiar filtros (si hay) */}
+      </div>
+    </div>
+
+    {/* TABLA con Pagination arriba y abajo */}
+    <div className="app-panel">
+      <Pagination ... />
+      <div className="app-data-table-wrap">
+        <table className="app-data-table">
+          <thead>...</thead>
+          <tbody>
+            <tr className="cursor-pointer hover:bg-muted/40" onClick={...}>
+              <td>...</td>
+              <td><StatusBadge ... /></td>
+              <td onClick={(e) => e.stopPropagation()}>
+                <div className="app-row-actions">...</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <Pagination ... />
+    </div>
+  </div>
+
+  REGLAS:
+  1. Header: SIEMPRE app-page-header con icono + título + lead + botones derecha
+  2. Toolbar: SIEMPRE app-toolbar separado con liquid-search
+  3. Tabla: SIEMPRE app-panel > Pagination + app-data-table-wrap > app-data-table + Pagination
+  4. Filas: cursor-pointer hover:bg-muted/40 con onClick a detalle (si aplica)
+  5. Estados: SIEMPRE StatusBadge (NUNCA app-status-dot)
+  6. Acciones: SIEMPRE app-row-actions (sin variant/size en botones)
+  7. Paginación: SIEMPRE arriba y abajo de la tabla
+
+  EXCEPCIONES (no son grillas de listado):
+  - agenda/page.tsx (vista calendario)
+  - permisos/page.tsx (matriz de permisos)
+  - configuracion/page.tsx (formulario)
+  - operaciones/carga-*.tsx (carga masiva)
+
 PATRÓN DE USO (date picker en listados):
   Usar el componente `DatePicker` de `@/components/ui/date-picker`.
   Reemplazar los `<input type="date">` nativos. El trigger usa la clase

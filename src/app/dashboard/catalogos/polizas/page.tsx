@@ -18,6 +18,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Select,
   SelectContent,
@@ -31,13 +32,6 @@ const statusLabels: Record<string, string> = {
   active: "Activa",
   expired: "Vencida",
   cancelled: "Cancelada",
-};
-
-const statusColors: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-  expired: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-  cancelled: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
 };
 
 const typeLabels: Record<string, string> = {
@@ -284,9 +278,7 @@ export default function PolizasPage() {
                     {formatDate(p.start_date)} — {formatDate(p.end_date)}
                   </td>
                   <td>
-                    <Badge className={statusColors[p.status] || ""}>
-                      {statusLabels[p.status] || p.status}
-                    </Badge>
+                    <StatusBadge status={p.status} label={statusLabels[p.status] || p.status} />
                   </td>
                   <td>
                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />

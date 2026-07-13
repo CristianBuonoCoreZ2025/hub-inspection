@@ -36,7 +36,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
@@ -58,13 +58,6 @@ const sessionStatusLabels: Record<string, string> = {
   active: "En progreso",
   completed: "Completada",
   cancelled: "Cancelada",
-};
-
-const sessionStatusColors: Record<string, string> = {
-  scheduled: "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300",
-  active: "bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200",
-  completed: "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300",
-  cancelled: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
 };
 
 function formatDateTime(dateStr: string | null) {
@@ -447,9 +440,11 @@ function InspectionsPageContent() {
                     </div>
                   </td>
                   <td>
-                    <Badge className={sessionStatusColors[session.status]}>
-                      {sessionStatusLabels[session.status] || session.status}
-                    </Badge>
+                    <StatusBadge
+                      tone={session.status === "active" ? "zinc" : undefined}
+                      status={session.status}
+                      label={sessionStatusLabels[session.status] || session.status}
+                    />
                   </td>
                   <td>
                     <div className="flex items-center gap-1 text-[11px]">
@@ -467,9 +462,6 @@ function InspectionsPageContent() {
                     <div className="app-row-actions">
                       {/* Ver detalle */}
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
                         onClick={() => router.push(`/dashboard/inspecciones/${session.id}`)}
                       >
                         <Eye className="h-3.5 w-3.5 mr-1" />
@@ -480,9 +472,6 @@ function InspectionsPageContent() {
                       {canEdit("inspecciones") && session.status === "scheduled" && (
                         <>
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
                             onClick={() =>
                               updateMutation.mutate({
                                 id: session.id,
@@ -494,9 +483,7 @@ function InspectionsPageContent() {
                             Iniciar
                           </Button>
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-xs btn-danger"
+                            className="btn-danger"
                             onClick={() =>
                               updateMutation.mutate({
                                 id: session.id,
@@ -804,7 +791,7 @@ function InspectionsPageContent() {
               size="sm"
               disabled={!selectedClaimId || !selectedTemplateId || !selectedInspectorId || !scheduledDate || !scheduledTime || createMutation.isPending}
               onClick={() => createMutation.mutate(selectedClaimId)}
-              className="btn-create btn-footer"
+              className="btn-save btn-footer"
             >
               {createMutation.isPending ? (
                 <Clock className="mr-2 h-3.5 w-3.5 animate-spin" />

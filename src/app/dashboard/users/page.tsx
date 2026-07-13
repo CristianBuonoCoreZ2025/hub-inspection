@@ -16,7 +16,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, UserX, UserCheck, Users } from "lucide-react";
+import { Plus, Search, Pencil, UserX, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -35,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const roleLabels: Record<UserRole, string> = {
   internal: "Interno",
@@ -44,12 +44,12 @@ const roleLabels: Record<UserRole, string> = {
   client_operator: "Operativo",
 };
 
-const roleColors: Record<UserRole, string> = {
-  internal: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  adjuster: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-  inspector: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-  assistant: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300",
-  client_operator: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+const roleTones: Record<UserRole, "blue" | "emerald" | "amber" | "sky" | "slate"> = {
+  internal: "blue",
+  adjuster: "emerald",
+  inspector: "amber",
+  assistant: "sky",
+  client_operator: "slate",
 };
 
 const roleDescriptions: Record<UserRole, string> = {
@@ -241,19 +241,34 @@ export default function UsersPage() {
 
   return (
     <div className="app-page">
-      <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Usuarios</h1>
-        <div className="app-grid-filters">
-          <div className="relative max-w-[180px]">
+      <div className="app-page-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-purple-500 text-white shadow-sm">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Usuarios</h1>
+              <p className="app-page-lead">Gestión de usuarios del sistema.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canCreate("users") && (
+              <Button onClick={openCreate} className="liquid-button">
+                <Plus className="h-3.5 w-3.5" /> Invitar
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <div className="relative w-[160px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
           </div>
         </div>
-        {canCreate("users") && (
-          <Button onClick={openCreate} className="liquid-button ml-auto">
-            <Plus className="h-3.5 w-3.5" /> Invitar
-          </Button>
-        )}
       </div>
 
       {/* ── MODAL Usuarios ── */}
@@ -491,18 +506,14 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td>{user.email}</td>
-                    <td><Badge className={roleColors[user.role]}>{roleLabels[user.role]}</Badge></td>
+                    <td><StatusBadge tone={roleTones[user.role]} label={roleLabels[user.role]} /></td>
                     <td className="text-muted-foreground">
                       {user.user_clients && user.user_clients.length > 0
                         ? user.user_clients.map((uc: UserClient) => uc.company?.name).filter(Boolean).join(", ")
                         : user.role === "internal" ? "—" : "Sin asignar"}
                     </td>
                     <td>
-                      {user.is_active ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-600"><UserCheck className="h-3 w-3" /> Activo</span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-red-500"><UserX className="h-3 w-3" /> Inactivo</span>
-                      )}
+                      <StatusBadge status={user.is_active ? "active" : "inactive"} label={user.is_active ? "Activo" : "Inactivo"} />
                     </td>
                     <td>
                       <div className="app-row-actions">

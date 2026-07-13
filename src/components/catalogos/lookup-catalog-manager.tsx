@@ -123,7 +123,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
         {canCreate(section) && (
           <Button
             onClick={() => { setEditingId(null); setFormData({ name: "", code: "" }); setOpen(true); }}
-            className="btn-create btn-sm shrink-0"
+            className="liquid-button"
           >
             <Plus className="mr-2 h-4 w-4" />
             Agregar

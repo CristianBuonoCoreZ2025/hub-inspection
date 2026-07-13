@@ -895,7 +895,7 @@ export default function ClaimDetailPage() {
                 {canEdit("claims") && gestionSubTab === "lista" && (
                   <Button
                     size="sm"
-                    className="btn-create btn-footer"
+                    className="btn-save btn-footer"
                     onClick={() => setOpenGestionModal(true)}
                     disabled={!claim?.policy_id}
                     title={!claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined}

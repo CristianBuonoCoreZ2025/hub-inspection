@@ -66,8 +66,8 @@ function DatePicker({
         />
         <PopoverContent
           align="start"
-          className="w-auto p-0"
-          sideOffset={4}
+          className="!border-none !bg-transparent !backdrop-blur-none !shadow-none p-0"
+          sideOffset={6}
         >
           <Calendar
             mode="single"

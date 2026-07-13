@@ -26,6 +26,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default function AsesoresPage() {
   const queryClient = useQueryClient();
@@ -87,51 +88,68 @@ export default function AsesoresPage() {
 
   return (
     <div className="app-page">
-      <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Asesores</h1>
-        <div className="app-grid-filters">
-          <div className="relative max-w-[180px]">
+      <div className="app-page-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-cyan-500 text-white shadow-sm">
+              <UserCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Asesores</h1>
+              <p className="app-page-lead">Gestión de asesores del sistema.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canCreate("catalogos") && (
+              <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="liquid-button">
+                <Plus className="h-3.5 w-3.5" /> Nuevo
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <div className="relative w-[160px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
           </div>
         </div>
-        {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="liquid-button ml-auto">
-            <Plus className="h-3.5 w-3.5" /> Nuevo
-          </Button>
-        )}
       </div>
 
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
-      <div className="app-data-table-wrap">
-        <table className="app-data-table">
-          <thead><tr><th className="w-10"></th><th>País</th><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><SortableTh sortKey="email" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Email</SortableTh><SortableTh sortKey="phone" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Teléfono</SortableTh><th className="w-[80px]"></th></tr></thead>
-          <tbody>
-            {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
-            : filtered?.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
-            : paginatedData.map((a) => (
-              <tr key={a.id}>
-                <td><span className={`app-status-dot ${a.is_active ? "app-status-on" : "app-status-off"}`} /></td>
-                <td>{countries?.find((c) => c.id === a.country_id)?.name || "—"}</td>
-                <td className="font-medium">{a.name}</td>
-                <td>{a.email || "—"}</td>
-                <td>{a.phone || "—"}</td>
-                <td>
-                  <div className="app-row-actions">
-                    {canEdit("catalogos") && (
-                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(a.id); setFormData({ country_id: a.country_id || "", name: a.name, email: a.email || "", phone: a.phone || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                    )}
-                    {canDelete("catalogos") && (
-                      <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este asesor?")) deleteMutation.mutate(a.id); }}><Trash2 className="h-4 w-4" /></Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="app-panel">
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        <div className="app-data-table-wrap">
+          <table className="app-data-table">
+            <thead><tr><th className="w-10"></th><th>País</th><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><SortableTh sortKey="email" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Email</SortableTh><SortableTh sortKey="phone" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Teléfono</SortableTh><th className="w-[80px]"></th></tr></thead>
+            <tbody>
+              {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+              : filtered?.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
+              : paginatedData.map((a) => (
+                <tr key={a.id}>
+                  <td><StatusBadge status={a.is_active ? "active" : "inactive"} label={a.is_active ? "Activo" : "Inactivo"} /></td>
+                  <td>{countries?.find((c) => c.id === a.country_id)?.name || "—"}</td>
+                  <td className="font-medium">{a.name}</td>
+                  <td>{a.email || "—"}</td>
+                  <td>{a.phone || "—"}</td>
+                  <td>
+                    <div className="app-row-actions">
+                      {canEdit("catalogos") && (
+                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(a.id); setFormData({ country_id: a.country_id || "", name: a.name, email: a.email || "", phone: a.phone || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      )}
+                      {canDelete("catalogos") && (
+                        <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este asesor?")) deleteMutation.mutate(a.id); }}><Trash2 className="h-4 w-4" /></Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>

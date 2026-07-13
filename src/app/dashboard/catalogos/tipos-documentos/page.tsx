@@ -26,6 +26,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default function TiposDocumentosPage() {
   const queryClient = useQueryClient();
@@ -100,51 +101,68 @@ export default function TiposDocumentosPage() {
 
   return (
     <div className="app-page">
-      <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Tipos de Documentos</h1>
-        <div className="app-grid-filters">
-          <div className="relative max-w-[180px]">
+      <div className="app-page-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-slate-500 to-gray-500 text-white shadow-sm">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Tipos de Documentos</h1>
+              <p className="app-page-lead">Gestión de tipos de documentos.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canCreate("catalogos") && (
+              <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="liquid-button">
+                <Plus className="h-3.5 w-3.5" /> Nuevo
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="app-toolbar">
+        <div className="flex items-center gap-2">
+          <div className="relative w-[160px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
           </div>
         </div>
-        {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="liquid-button ml-auto">
-            <Plus className="h-3.5 w-3.5" /> Nuevo
-          </Button>
-        )}
       </div>
 
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
-      <div className="app-data-table-wrap">
-        <table className="app-data-table">
-          <thead><tr><th className="w-10"></th><th>Pais</th><SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Código</SortableTh><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripcion</SortableTh><th className="w-[80px]"></th></tr></thead>
-          <tbody>
-            {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
-            : filtered?.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
-            : paginatedData.map((d) => (
-              <tr key={d.id}>
-                <td><span className={`app-status-dot ${d.is_active ? "app-status-on" : "app-status-off"}`} /></td>
-                <td>{countries?.find((c) => c.id === d.country_id)?.name || "—"}</td>
-                <td className="text-muted-foreground">{d.code || "—"}</td>
-                <td className="font-medium">{d.name}</td>
-                <td className="max-w-[300px] truncate text-muted-foreground">{d.description || "—"}</td>
-                <td>
-                  <div className="app-row-actions">
-                    {canEdit("catalogos") && (
-                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(d.id); setFormData({ country_id: d.country_id || "", code: d.code || "", name: d.name, description: d.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                    )}
-                    {canDelete("catalogos") && (
-                      <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este tipo de documento?")) deleteMutation.mutate(d.id); }}><Trash2 className="h-4 w-4" /></Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="app-panel">
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        <div className="app-data-table-wrap">
+          <table className="app-data-table">
+            <thead><tr><th className="w-10"></th><th>Pais</th><SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Código</SortableTh><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripcion</SortableTh><th className="w-[80px]"></th></tr></thead>
+            <tbody>
+              {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+              : filtered?.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
+              : paginatedData.map((d) => (
+                <tr key={d.id}>
+                  <td><StatusBadge status={d.is_active ? "active" : "inactive"} label={d.is_active ? "Activo" : "Inactivo"} /></td>
+                  <td>{countries?.find((c) => c.id === d.country_id)?.name || "—"}</td>
+                  <td className="text-muted-foreground">{d.code || "—"}</td>
+                  <td className="font-medium">{d.name}</td>
+                  <td className="max-w-[300px] truncate text-muted-foreground">{d.description || "—"}</td>
+                  <td>
+                    <div className="app-row-actions">
+                      {canEdit("catalogos") && (
+                        <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(d.id); setFormData({ country_id: d.country_id || "", code: d.code || "", name: d.name, description: d.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      )}
+                      {canDelete("catalogos") && (
+                        <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este tipo de documento?")) deleteMutation.mutate(d.id); }}><Trash2 className="h-4 w-4" /></Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
       </div>
-      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>
