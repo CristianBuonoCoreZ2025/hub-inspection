@@ -1,128 +1,187 @@
 /*
- * PALETA GLOBAL DE BOTONES — Claims Hub (estilo portal-seguros)
+ * PALETA GLOBAL DE BOTONES — Claims Hub
+ * Botones refinados: gradientes suaves, sombras delicadas, bordes sutiles.
  * INMUNE a skins: todas las propiedades de layout usan !important.
  */
 
 @layer components {
-  /* GUARDAR / CONFIRMAR / ACEPTAR — azul portal */
-  .btn-save,
-  .btn-confirm,
-  .btn-accept {
-    @apply inline-flex items-center justify-center text-white
-           cursor-pointer transition-all;
+  /* Base para botones de acción sólidos */
+  .btn-solid {
+    @apply inline-flex items-center justify-center text-white cursor-pointer transition-all;
     height: 29px !important;
     padding: 0 14px !important;
     border-radius: 10px !important;
     border: 1px solid transparent !important;
-    background: linear-gradient(180deg, #0095DA 0%, #005BBB 100%) !important;
-    box-shadow: 0 10px 20px rgba(0, 149, 218, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
     font-weight: 600 !important;
     font-size: 13px !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  .btn-solid:hover:not(:disabled) {
+    transform: translateY(-1px) !important;
+  }
+
+  .btn-solid:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+  }
+
+  /* GUARDAR / CONFIRMAR / ACEPTAR — esmeralda */
+  .btn-save,
+  .btn-confirm,
+  .btn-accept {
+    @apply btn-solid;
+    background: linear-gradient(180deg, #10b981 0%, #059669 100%) !important;
+    box-shadow:
+      0 3px 10px rgba(16, 185, 129, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   }
 
   .btn-save:hover:not(:disabled),
   .btn-confirm:hover:not(:disabled),
   .btn-accept:hover:not(:disabled) {
-    background: linear-gradient(180deg, #005BBB 0%, #003591 100%) !important;
-    transform: translateY(-1px) !important;
+    background: linear-gradient(180deg, #059669 0%, #047857 100%) !important;
+    box-shadow:
+      0 4px 12px rgba(16, 185, 129, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   }
 
-  .btn-save:disabled,
-  .btn-confirm:disabled,
-  .btn-accept:disabled {
-    opacity: 0.5 !important;
-    cursor: not-allowed !important;
-  }
-
-  /* CREAR / NUEVO / ALTA — azul portal (alias de save) */
+  /* CREAR / NUEVO — esmeralda-teal */
   .btn-create,
   .btn-new,
   .btn-emerald {
-    @apply inline-flex items-center justify-center text-white
-           cursor-pointer transition-all;
-    height: 32px !important;
-    padding: 0 14px !important;
-    border-radius: 10px !important;
-    border: 1px solid transparent !important;
-    background: linear-gradient(180deg, #0095DA 0%, #005BBB 100%) !important;
-    box-shadow: 0 10px 20px rgba(0, 149, 218, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
-    font-weight: 600 !important;
-    font-size: 13px !important;
+    @apply btn-solid;
+    background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%) !important;
+    box-shadow:
+      0 3px 10px rgba(20, 184, 166, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   }
 
   .btn-create:hover:not(:disabled),
   .btn-new:hover:not(:disabled),
   .btn-emerald:hover:not(:disabled) {
-    background: linear-gradient(180deg, #005BBB 0%, #003591 100%) !important;
-    transform: translateY(-1px) !important;
+    background: linear-gradient(180deg, #0d9488 0%, #0f766e 100%) !important;
+    box-shadow:
+      0 4px 12px rgba(20, 184, 166, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   }
 
   /* EJECUTAR / PROCESAR — sky-blue */
   .btn-run,
   .btn-execute,
   .btn-sky {
-    @apply bg-linear-to-r from-sky-500 to-blue-600 text-white
-           shadow-md shadow-sky-500/20
-           transition-shadow hover:shadow-lg hover:shadow-sky-500/30
-           disabled:opacity-50 disabled:pointer-events-none;
+    @apply btn-solid;
+    background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%) !important;
+    box-shadow:
+      0 3px 10px rgba(14, 165, 233, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .btn-run:hover:not(:disabled),
+  .btn-execute:hover:not(:disabled),
+  .btn-sky:hover:not(:disabled) {
+    background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%) !important;
+    box-shadow:
+      0 4px 12px rgba(14, 165, 233, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   }
 
   /* HOMOLOGACIÓN / IA / ACCIÓN PRINCIPAL — violeta */
   .btn-homolog,
   .btn-ai,
   .btn-violet {
-    @apply bg-linear-to-r from-primary to-violet-600 text-white
-           shadow-md shadow-primary/20
-           transition-shadow hover:shadow-lg hover:shadow-primary/30
-           disabled:opacity-50 disabled:pointer-events-none;
+    @apply btn-solid;
+    background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%) !important;
+    box-shadow:
+      0 3px 10px rgba(124, 58, 237, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .btn-homolog:hover:not(:disabled),
+  .btn-ai:hover:not(:disabled),
+  .btn-violet:hover:not(:disabled) {
+    background: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%) !important;
+    box-shadow:
+      0 4px 12px rgba(124, 58, 237, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   }
 
   /* REVISAR / CLASIFICAR — violeta-fuchsia */
   .btn-review,
   .btn-violet-alt {
-    @apply bg-linear-to-r from-violet-500 to-fuchsia-600 text-white
-           shadow-md shadow-violet-500/25
-           transition-shadow hover:shadow-lg hover:shadow-violet-500/35
-           disabled:opacity-50 disabled:pointer-events-none;
+    @apply btn-solid;
+    background: linear-gradient(180deg, #a78bfa 0%, #c026d3 100%) !important;
+    box-shadow:
+      0 3px 10px rgba(192, 38, 211, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .btn-review:hover:not(:disabled),
+  .btn-violet-alt:hover:not(:disabled) {
+    background: linear-gradient(180deg, #c026d3 0%, #a21caf 100%) !important;
+    box-shadow:
+      0 4px 12px rgba(192, 38, 211, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   }
 
   /* ADVERTENCIA / FORZAR — ámbar */
   .btn-warn,
   .btn-alert,
   .btn-amber {
-    @apply bg-linear-to-r from-amber-500 to-orange-500 text-white
-           shadow-md shadow-amber-500/20
-           transition-shadow hover:shadow-lg hover:shadow-amber-500/30
-           disabled:opacity-50 disabled:pointer-events-none;
+    @apply btn-solid;
+    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%) !important;
+    box-shadow:
+      0 3px 10px rgba(245, 158, 11, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .btn-warn:hover:not(:disabled),
+  .btn-alert:hover:not(:disabled),
+  .btn-amber:hover:not(:disabled) {
+    background: linear-gradient(180deg, #d97706 0%, #b45309 100%) !important;
+    box-shadow:
+      0 4px 12px rgba(245, 158, 11, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   }
 
   /* ELIMINAR / BORRAR / PELIGRO — rosa-rojo */
   .btn-danger,
   .btn-delete,
   .btn-destructive-grad {
-    @apply bg-linear-to-r from-rose-500 to-red-600 text-white
-           shadow-md shadow-rose-500/25
-           transition-shadow hover:shadow-lg hover:shadow-rose-500/35
-           disabled:opacity-50 disabled:pointer-events-none;
+    @apply btn-solid;
+    background: linear-gradient(180deg, #f43f5e 0%, #e11d48 100%) !important;
+    box-shadow:
+      0 3px 10px rgba(225, 29, 72, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   }
 
-  /* CANCELAR — rosado con gradiente (inmune) */
+  .btn-danger:hover:not(:disabled),
+  .btn-delete:hover:not(:disabled),
+  .btn-destructive-grad:hover:not(:disabled) {
+    background: linear-gradient(180deg, #e11d48 0%, #be123c 100%) !important;
+    box-shadow:
+      0 4px 12px rgba(225, 29, 72, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* CANCELAR — zinc con borde sutil */
   .btn-cancel {
-    @apply inline-flex items-center justify-center text-white
-           cursor-pointer transition-all;
+    @apply inline-flex items-center justify-center text-white cursor-pointer transition-all;
     height: 29px !important;
     padding: 0 14px !important;
     border-radius: 10px !important;
-    border: 1px solid #e11d48 !important;
-    background: linear-gradient(180deg, #fb7185 0%, #f43f5e 100%) !important;
-    box-shadow: 0 2px 4px rgba(244, 63, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(180deg, #71717a 0%, #52525b 100%) !important;
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
     font-weight: 600 !important;
     font-size: 13px !important;
+    letter-spacing: -0.01em !important;
   }
 
   .btn-cancel:hover:not(:disabled) {
-    background: linear-gradient(180deg, #f43f5e 0%, #e11d48 100%) !important;
-    border-color: #be123c !important;
+    background: linear-gradient(180deg, #52525b 0%, #3f3f46 100%) !important;
     transform: translateY(-1px) !important;
   }
 
@@ -133,23 +192,23 @@
 
   /* CERRAR — menos prominente que cancelar */
   .btn-close {
-    @apply border border-border bg-background text-muted-foreground
+    @apply border border-border bg-background/80 text-muted-foreground
            hover:bg-muted hover:text-foreground
            disabled:opacity-50 disabled:pointer-events-none;
   }
 
   /* SALTAR / OMITIR — slate semi-transparente */
   .btn-skip {
-    @apply bg-slate-100 text-slate-700 border border-slate-200
+    @apply bg-slate-100/80 text-slate-700 border border-slate-200
            hover:bg-slate-200
            disabled:opacity-50 disabled:pointer-events-none
-           dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700;
+           dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700;
   }
 
   /* NEUTRAL — acción sin carga emocional */
   .btn-neutral {
-    @apply bg-muted text-muted-foreground border border-border
-           hover:bg-muted/80 hover:text-foreground
+    @apply bg-muted/80 text-muted-foreground border border-border
+           hover:bg-muted hover:text-foreground
            disabled:opacity-50 disabled:pointer-events-none;
   }
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 import { getClaimById, getClaimParticipants, updateClaimStatus } from "@/services/claims";
 import { getClaimActions, getActionTemplatesByClaimStatus, createClaimAction, getClaimActionById, updateClaimAction, issueClaimAction, reviewClaimAction, approveClaimAction, rejectClaimAction } from "@/services/claim-actions";
 import { getActionHistory } from "@/services/claim-action-history";
@@ -866,15 +867,15 @@ export default function ClaimDetailPage() {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 {/* Sub-tabs: Lista / Workflow — glass */}
-                <div className="flex items-center gap-1 bg-white/5 dark:bg-white/5 backdrop-blur-md rounded-md p-0.5 border border-white/10 dark:border-white/5">
+                <div className="app-sub-tab-bar">
                   <button
-                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${gestionSubTab === "lista" ? "bg-card/80 backdrop-blur-sm text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/5"}`}
+                    className={cn("app-sub-tab", gestionSubTab === "lista" && "app-sub-tab-active")}
                     onClick={() => setGestionSubTab("lista")}
                   >
                     Lista
                   </button>
                   <button
-                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${gestionSubTab === "workflow" ? "bg-card/80 backdrop-blur-sm text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/5"}`}
+                    className={cn("app-sub-tab", gestionSubTab === "workflow" && "app-sub-tab-active")}
                     onClick={() => setGestionSubTab("workflow")}
                   >
                     Workflow

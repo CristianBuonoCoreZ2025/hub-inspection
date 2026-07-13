@@ -415,75 +415,120 @@
     @apply text-[12px] text-foreground leading-relaxed;
   }
 
-  /* Barra de tabs — glassmorphism profesional tipo imagen 1 */
+  /* Barra de tabs — glassmorphism delicado y refinado */
   .app-tab-bar {
     @apply p-1;
-    border-radius: 14px !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 35%, transparent) 0%,
-      color-mix(in srgb, var(--card) 15%, transparent) 100%
+      180deg,
+      color-mix(in srgb, var(--card) 22%, transparent) 0%,
+      color-mix(in srgb, var(--card) 10%, transparent) 100%
     ) !important;
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.06),
-      0 1px 0 rgba(255, 255, 255, 0.12) inset,
-      0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+      0 4px 16px rgba(0, 0, 0, 0.04),
+      0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
   }
 
   .dark .app-tab-bar {
-    border-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
     background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 22%, transparent) 0%,
-      color-mix(in srgb, var(--card) 8%, transparent) 100%
+      180deg,
+      color-mix(in srgb, var(--card) 15%, transparent) 0%,
+      color-mix(in srgb, var(--card) 6%, transparent) 100%
     ) !important;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.25),
-      0 1px 0 rgba(255, 255, 255, 0.06) inset,
-      0 0 0 1px rgba(255, 255, 255, 0.03) inset !important;
+      0 4px 16px rgba(0, 0, 0, 0.18),
+      0 1px 0 rgba(255, 255, 255, 0.04) inset !important;
   }
 
   .app-tab-bar-inner {
-    @apply flex gap-1 overflow-x-auto;
+    @apply flex gap-0.5 overflow-x-auto;
   }
 
   /* Tab individual */
   .app-tab {
-    @apply relative flex items-center gap-2 px-4 py-2 text-[13px] font-medium transition-all whitespace-nowrap rounded-xl text-muted-foreground hover:text-foreground;
+    @apply relative flex items-center gap-2 px-3.5 py-1.5 text-[12px] font-medium transition-all duration-200 whitespace-nowrap rounded-lg text-muted-foreground;
     border: 0 !important;
   }
 
+  .app-tab:hover {
+    color: var(--foreground);
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+
   .app-tab-active {
-    @apply text-primary;
+    color: var(--foreground) !important;
     background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--primary) 20%, transparent) 0%,
-      color-mix(in srgb, var(--primary) 8%, transparent) 100%
+      180deg,
+      color-mix(in srgb, var(--primary) 14%, transparent) 0%,
+      color-mix(in srgb, var(--primary) 6%, transparent) 100%
     ) !important;
     box-shadow:
-      0 0 20px color-mix(in srgb, var(--primary) 30%, transparent),
-      0 0 40px color-mix(in srgb, var(--primary) 15%, transparent),
-      0 2px 4px rgba(0, 0, 0, 0.06) !important;
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent) inset !important;
   }
 
   .app-tab-active::before {
     content: "";
     position: absolute;
-    inset: -1px;
-    border-radius: 14px;
-    padding: 1px;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--primary) 60%, transparent) 0%,
-      transparent 60%
-    );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 2px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--primary) 50%, transparent);
+    opacity: 0.7;
     pointer-events: none;
+  }
+
+  /* Sub-tabs pequeños (dentro de paneles) */
+  .app-sub-tab-bar {
+    @apply inline-flex items-center p-0.5 gap-0.5;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--card) 18%, transparent) 0%,
+      color-mix(in srgb, var(--card) 8%, transparent) 100%
+    ) !important;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+  }
+
+  .dark .app-sub-tab-bar {
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--card) 12%, transparent) 0%,
+      color-mix(in srgb, var(--card) 5%, transparent) 100%
+    ) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+  }
+
+  .app-sub-tab {
+    @apply px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-200 text-muted-foreground;
+  }
+
+  .app-sub-tab:hover {
+    color: var(--foreground);
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .app-sub-tab-active {
+    color: var(--foreground) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.04) 100%
+    ) !important;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.03),
+      0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
   }
 
   /* Sidebar premium glass (tipo referencias 2, 5, 6) */
