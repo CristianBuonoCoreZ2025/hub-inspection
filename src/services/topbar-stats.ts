@@ -3,6 +3,8 @@ import type { UserRole } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
 // Servicio para la barra superior — conteos rápidos por usuario
+// SIEMPRE filtra por asignacion directa al usuario que hace login,
+// sin importar el rol (internal, adjuster, inspector, etc.).
 // ═══════════════════════════════════════════════════════════════
 
 export interface TopbarStats {
@@ -34,11 +36,12 @@ const EMPTY: TopbarStats = {
 
 /**
  * Obtiene todos los conteos para la barra superior en una sola pasada.
- * Filtra según el rol del usuario:
- * - internal: ve todo (globales)
+ * Todos los roles ven SOLO lo asignado a ellos directamente:
  * - adjuster: claims donde es assigned_adjuster / adjuster / auditor / dispatcher
  * - inspector: claims donde es inspector
  * - assistant: claims donde es assistant
+ * - internal: claims donde es assigned_adjuster / adjuster / auditor / dispatcher
+ *   (igual que adjuster — ve lo suyo, no el global)
  * - client_operator: claims de su compañía
  */
 export async function getTopbarStats(
@@ -49,28 +52,23 @@ export async function getTopbarStats(
   const supabase = getSupabaseClient();
   const now = new Date().toISOString();
   const pid = profile.id;
+  const useCompanyFilter = profile.role === "client_operator" && profile.company_id;
 
-  // ── Construir filtro de claims según el rol ──
-  let claimFilter: Record<string, string> | null = null;
-  let useCompanyFilter = false;
-
-  if (profile.role === "internal") {
-    // Ve todo — sin filtro
-  } else if (profile.role === "client_operator") {
-    if (!profile.company_id) return EMPTY;
-    useCompanyFilter = true;
-  } else {
-    // adjuster, inspector, assistant — filtrar por asignación
-    claimFilter = {};
-  }
-
-  // ── Helper: obtener claim_ids del usuario ──
+  // ── Helper: obtener claim_ids asignados al usuario ──
   async function getMyClaimIds(): Promise<string[]> {
-    if (profile!.role === "internal") return [];
-    if (useCompanyFilter) return [];
+    if (useCompanyFilter) {
+      // client_operator: claims de su compañía
+      const { data, error } = await supabase
+        .from("claims")
+        .select("id")
+        .eq("insurance_company_id", profile!.company_id!);
+      if (error) return [];
+      return (data ?? []).map((r: { id: string }) => r.id);
+    }
 
+    // adjuster, internal, inspector, assistant — filtrar por asignación directa
     let query = supabase.from("claims").select("id");
-    if (profile!.role === "adjuster") {
+    if (profile!.role === "adjuster" || profile!.role === "internal") {
       query = query.or(
         `assigned_adjuster_id.eq.${pid},adjuster_id.eq.${pid},auditor_id.eq.${pid},dispatcher_id.eq.${pid}`
       );
@@ -78,6 +76,8 @@ export async function getTopbarStats(
       query = query.eq("inspector_id", pid);
     } else if (profile!.role === "assistant") {
       query = query.eq("assistant_id", pid);
+    } else {
+      return [];
     }
     const { data, error } = await query;
     if (error) return [];
@@ -103,15 +103,11 @@ export async function getTopbarStats(
       getStatusId("action_status", "issued"),
     ]);
 
-    // ── 1. Inspecciones activas ──
+    const myClaimIds = await getMyClaimIds();
+
+    // ── 1. Inspecciones activas (solo de los claims asignados al usuario) ──
     let inspectionsActive = 0;
-    if (profile.role === "internal") {
-      const { count } = await supabase
-        .from("inspection_sessions")
-        .select("*", { count: "exact", head: true })
-        .in("status", ["scheduled", "active"]);
-      inspectionsActive = count ?? 0;
-    } else if (profile.role === "inspector") {
+    if (profile.role === "inspector") {
       // Inspector: sessions donde claim.inspector_id = pid
       const { count } = await supabase
         .from("inspection_sessions")
@@ -119,107 +115,62 @@ export async function getTopbarStats(
         .eq("claim.inspector_id", pid)
         .in("status", ["scheduled", "active"]);
       inspectionsActive = count ?? 0;
-    } else if (useCompanyFilter) {
+    } else if (myClaimIds.length > 0) {
       const { count } = await supabase
         .from("inspection_sessions")
-        .select("claim:claims!inner(insurance_company_id)", { count: "exact", head: true })
-        .eq("claim.insurance_company_id", profile.company_id!)
+        .select("*", { count: "exact", head: true })
+        .in("claim_id", myClaimIds)
         .in("status", ["scheduled", "active"]);
       inspectionsActive = count ?? 0;
-    } else {
-      // adjuster, assistant: filtrar por claim_ids
-      const myClaimIds = await getMyClaimIds();
-      if (myClaimIds.length > 0) {
-        const { count } = await supabase
-          .from("inspection_sessions")
-          .select("*", { count: "exact", head: true })
-          .in("claim_id", myClaimIds)
-          .in("status", ["scheduled", "active"]);
-        inspectionsActive = count ?? 0;
-      }
     }
 
-    // ── 2. Liquidaciones activas (claims en status adjustment) ──
+    // ── 2. Liquidaciones activas (claims en status adjustment, asignados al usuario) ──
     let liquidationsActive = 0;
-    if (adjustmentStatusId) {
-      if (profile.role === "internal") {
-        const { count } = await supabase
-          .from("claims")
-          .select("*", { count: "exact", head: true })
-          .eq("status_id", adjustmentStatusId)
-          .eq("disabled", false);
-        liquidationsActive = count ?? 0;
-      } else if (profile.role === "adjuster") {
-        const { count } = await supabase
-          .from("claims")
-          .select("*", { count: "exact", head: true })
-          .eq("status_id", adjustmentStatusId)
-          .eq("disabled", false)
-          .or(`assigned_adjuster_id.eq.${pid},adjuster_id.eq.${pid},auditor_id.eq.${pid}`);
-        liquidationsActive = count ?? 0;
-      } else if (profile.role === "inspector") {
-        const { count } = await supabase
-          .from("claims")
-          .select("*", { count: "exact", head: true })
-          .eq("status_id", adjustmentStatusId)
-          .eq("disabled", false)
-          .eq("inspector_id", pid);
-        liquidationsActive = count ?? 0;
-      } else if (profile.role === "assistant") {
-        const { count } = await supabase
-          .from("claims")
-          .select("*", { count: "exact", head: true })
-          .eq("status_id", adjustmentStatusId)
-          .eq("disabled", false)
-          .eq("assistant_id", pid);
-        liquidationsActive = count ?? 0;
-      } else if (useCompanyFilter) {
-        const { count } = await supabase
-          .from("claims")
-          .select("*", { count: "exact", head: true })
-          .eq("status_id", adjustmentStatusId)
-          .eq("disabled", false)
-          .eq("insurance_company_id", profile.company_id!);
-        liquidationsActive = count ?? 0;
-      }
+    if (adjustmentStatusId && myClaimIds.length > 0) {
+      const { count } = await supabase
+        .from("claims")
+        .select("*", { count: "exact", head: true })
+        .eq("status_id", adjustmentStatusId)
+        .eq("disabled", false)
+        .in("id", myClaimIds);
+      liquidationsActive = count ?? 0;
     }
 
-    // ── 3-7. Gestiones (claim_actions) ──
+    // ── 3-7. Gestiones (claim_actions) asignadas al usuario ──
     let reviewsPending = 0;
     let dispatchesPending = 0;
     let gestionsAssigned = 0;
     let gestionsAlert = 0;
     let gestionsOverdue = 0;
 
-    // Construir query base para claim_actions
-    function buildActionsQuery() {
-      let q = supabase
+    // Construir query base para claim_actions — filtrar por asignación al usuario
+    let actionsQuery = supabase
+      .from("claim_actions")
+      .select(
+        "id, issuer_id, reviewer_id, approver_id, dispatcher_id, expected_date, action_status_id, is_active, action_template:action_template(days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve)"
+      )
+      .eq("is_active", true);
+
+    if (profile.role === "adjuster" || profile.role === "internal") {
+      actionsQuery = actionsQuery.or(
+        `issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`
+      );
+    } else if (profile.role === "inspector") {
+      actionsQuery = actionsQuery.eq("issuer_id", pid);
+    } else if (profile.role === "assistant") {
+      actionsQuery = actionsQuery.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid}`);
+    } else if (useCompanyFilter) {
+      // client_operator: filtrar por company_id del claim
+      actionsQuery = supabase
         .from("claim_actions")
         .select(
-          "id, issuer_id, reviewer_id, approver_id, dispatcher_id, expected_date, action_status_id, is_active, action_template:action_template(days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve)"
-        )
-        .eq("is_active", true);
-
-      if (profile!.role === "internal") {
-        // Sin filtro adicional
-      } else if (profile!.role === "adjuster") {
-        q = q.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
-      } else if (profile!.role === "inspector") {
-        q = q.eq("issuer_id", pid);
-      } else if (profile!.role === "assistant") {
-        q = q.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid}`);
-      } else if (useCompanyFilter) {
-        // client_operator: filtrar por company_id del claim
-        q = q.select(
           "id, issuer_id, reviewer_id, approver_id, dispatcher_id, expected_date, action_status_id, is_active, claim:claims!inner(insurance_company_id), action_template:action_template(days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve)"
         )
-          .eq("is_active", true)
-          .eq("claim.insurance_company_id", profile!.company_id!);
-      }
-      return q;
+        .eq("is_active", true)
+        .eq("claim.insurance_company_id", profile.company_id!);
     }
 
-    const { data: actions, error: actionsError } = await buildActionsQuery();
+    const { data: actions, error: actionsError } = await actionsQuery;
 
     if (!actionsError && actions) {
       const allActions = actions as Array<{
@@ -252,7 +203,7 @@ export async function getTopbarStats(
           reviewsPending++;
         }
 
-        // Despacho pendiente: status = issued (o reviewed/approved) y dispatcher_id = pid
+        // Despacho pendiente: status = issued y dispatcher_id = pid
         if (isIssued && action.dispatcher_id === pid) {
           dispatchesPending++;
         }
