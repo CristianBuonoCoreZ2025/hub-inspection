@@ -175,9 +175,10 @@ function SkinToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label="Color de interfaz">
-            <Palette className="size-4" />
-          </Button>
+          <div className="sidebar-item w-full cursor-pointer" role="button" tabIndex={0}>
+            <Palette className="size-4 shrink-0" />
+            <span className="text-[12px] font-medium flex-1">Color</span>
+          </div>
         }
       />
       <DropdownMenuContent align="end" side="right">
@@ -209,9 +210,10 @@ function SidebarStyleToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label="Estilo del menu">
-            <LayoutPanelLeft className="size-4" />
-          </Button>
+          <div className="sidebar-item w-full cursor-pointer" role="button" tabIndex={0}>
+            <LayoutPanelLeft className="size-4 shrink-0" />
+            <span className="text-[12px] font-medium flex-1">Menu</span>
+          </div>
         }
       />
       <DropdownMenuContent align="end" side="right">
@@ -324,20 +326,9 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
 
             {/* User + theme + skin at bottom */}
             <div className="mt-auto flex flex-col gap-1 w-full pt-2">
-              <div className="sidebar-item">
-                <SkinToggle />
-                <span className="text-[12px] font-medium">Color</span>
-              </div>
-
-              <div className="sidebar-item">
-                <SidebarStyleToggle />
-                <span className="text-[12px] font-medium">Menu</span>
-              </div>
-
-              <div className="sidebar-item">
-                <ThemeToggle />
-                <span className="text-[12px] font-medium">Tema</span>
-              </div>
+              <SkinToggle />
+              <SidebarStyleToggle />
+              <ThemeToggle />
 
               <div ref={userRef} className="relative">
                 <button

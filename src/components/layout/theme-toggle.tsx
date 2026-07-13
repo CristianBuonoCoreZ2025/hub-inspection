@@ -4,7 +4,6 @@ import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
 import { Sun, Moon, Monitor } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,21 +19,22 @@ export function ThemeToggle() {
 
   const currentIcon =
     mounted && resolvedTheme === "dark" ? (
-      <Moon className="size-4" />
+      <Moon className="size-4 shrink-0" />
     ) : (
-      <Sun className="size-4" />
+      <Sun className="size-4 shrink-0" />
     )
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label="Cambiar tema">
+          <div className="sidebar-item w-full cursor-pointer" role="button" tabIndex={0}>
             {currentIcon}
-          </Button>
+            <span className="text-[12px] font-medium flex-1">Tema</span>
+          </div>
         }
       />
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" side="right">
         <DropdownMenuItem onClick={() => setTheme("light")}>
           <Sun className="mr-2 size-4" />
           <span>Claro</span>
