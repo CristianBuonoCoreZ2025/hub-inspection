@@ -100,7 +100,6 @@ export async function getInsuranceCompaniesWithPolicies(companyId?: string): Pro
   const [policies, companies] = await Promise.all([
     fetchAll<{ insurance_company_id: string | null }>("policies", {
       select: "insurance_company_id",
-      is: { insurance_company_id: false },
       ...(companyId ? { eq: { company_id: companyId } } : {}),
     }),
     fetchAll<{ id: string; name: string }>("insurance_companies", {
@@ -109,7 +108,7 @@ export async function getInsuranceCompaniesWithPolicies(companyId?: string): Pro
     }),
   ]);
 
-  // Contar pólizas por compañía
+  // Contar pólizas por compañía (solo las que tienen company_id asignado)
   const counts: Record<string, number> = {};
   policies.forEach((p) => {
     if (p.insurance_company_id) {
@@ -129,7 +128,6 @@ export async function getBrokersWithPolicies(companyId?: string): Promise<{ id: 
   const [policies, brokers] = await Promise.all([
     fetchAll<{ broker_id: string | null }>("policies", {
       select: "broker_id",
-      is: { broker_id: false },
       ...(companyId ? { eq: { company_id: companyId } } : {}),
     }),
     fetchAll<{ id: string; name: string }>("brokers", {
@@ -156,7 +154,6 @@ export async function getBusinessLinesWithPolicies(companyId?: string): Promise<
   const [policies, businessLines] = await Promise.all([
     fetchAll<{ business_line_id: string | null }>("policies", {
       select: "business_line_id",
-      is: { business_line_id: false },
       ...(companyId ? { eq: { company_id: companyId } } : {}),
     }),
     fetchAll<{ id: string; name: string }>("business_lines", {

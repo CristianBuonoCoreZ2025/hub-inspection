@@ -78,7 +78,8 @@ function HybridFlyout({
       <div
         className={cn(
           "sidebar-item cursor-pointer",
-          (isGroupActive || open) && "sidebar-item-active"
+          (isGroupActive || open) && "sidebar-item-active",
+          open && "rounded-r-none !bg-card overflow-hidden"
         )}
       >
         <Icon className="size-[18px] shrink-0" />
@@ -91,66 +92,57 @@ function HybridFlyout({
 
       {/* Flyout panel */}
       {open && (
-        <>
-          {/* Bridge invisible para evitar gap entre icono y panel */}
-          <div className="absolute left-full top-0 h-full w-2 z-40" />
-
-          <div className="hybrid-flyout-panel absolute left-full top-0 ml-2 z-50 w-64 rounded-[20px] border overflow-hidden
-                          backdrop-blur-[24px] saturate-[180%]
-                          shadow-[0_16px_64px_rgba(0,0,0,0.12)]
-                          dark:shadow-[0_16px_64px_rgba(0,0,0,0.5)]"
-               style={{
-                 borderColor: "color-mix(in srgb, var(--foreground) 12%, transparent)",
-                 background: "linear-gradient(135deg, color-mix(in srgb, var(--card) 96%, transparent), color-mix(in srgb, var(--card) 90%, transparent))",
-               }}>
-            {/* Glass shine */}
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--foreground)_8%,transparent)_0%,transparent_40%)]" />
-            {/* Header del flyout */}
-            <div className="relative flex items-center gap-2 border-b border-border/60 px-3 py-2.5">
-              <div className={cn(
-                "flex size-6 items-center justify-center rounded-lg shrink-0",
-                isGroupActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-              )}>
-                <Icon className="size-3.5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-foreground truncate">{group.title}</p>
-                <p className="text-[10px] text-muted-foreground">{group.visibleLinks.length} páginas</p>
-              </div>
+        <div className="hybrid-flyout-panel absolute left-full top-0 z-50 w-64 rounded-r-[20px] rounded-l-none border border-l-0 bg-card overflow-hidden
+                        shadow-[0_16px_64px_rgba(0,0,0,0.12)]
+                        dark:shadow-[0_16px_64px_rgba(0,0,0,0.5)]"
+             style={{
+               borderColor: "color-mix(in srgb, var(--foreground) 12%, transparent)",
+             }}>
+          {/* Header del flyout */}
+          <div className="relative flex items-center gap-2 border-b border-border/60 px-3 py-2.5">
+            <div className={cn(
+              "flex size-6 items-center justify-center rounded-lg shrink-0",
+              isGroupActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+            )}>
+              <Icon className="size-3.5" />
             </div>
-
-            {/* Lista de sub-páginas */}
-            <div className="relative p-1 max-h-[520px] overflow-y-auto">
-              {group.visibleLinks.map((link) => {
-                const isActive = pathname.startsWith(link.href);
-                const LinkIcon = link.icon;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => { onNavigate?.(); setOpen(false); }}
-                    className={cn(
-                      "group/item flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150",
-                      isActive
-                        ? "bg-primary/10 text-primary font-medium shadow-[0_0_12px_rgba(139,92,246,0.15)]"
-                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground font-normal"
-                    )}
-                  >
-                    <LinkIcon className={cn(
-                      "size-3.5 shrink-0 transition-colors",
-                      isActive ? "text-primary" : "text-muted-foreground/60 group-hover/item:text-foreground"
-                    )} />
-                    <span className="flex-1 truncate">{link.label}</span>
-                    {/* Indicador activo: barra lateral */}
-                    {isActive && (
-                      <span className="h-3 w-0.5 rounded-full bg-primary shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
-                    )}
-                  </Link>
-                );
-              })}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-foreground truncate">{group.title}</p>
+              <p className="text-[10px] text-muted-foreground">{group.visibleLinks.length} páginas</p>
             </div>
           </div>
-        </>
+
+          {/* Lista de sub-páginas */}
+          <div className="relative p-1 max-h-[520px] overflow-y-auto">
+            {group.visibleLinks.map((link) => {
+              const isActive = pathname.startsWith(link.href);
+              const LinkIcon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => { onNavigate?.(); setOpen(false); }}
+                  className={cn(
+                    "group/item flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150",
+                    isActive
+                      ? "bg-primary/10 text-primary font-medium shadow-[0_0_12px_rgba(139,92,246,0.15)]"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground font-normal"
+                  )}
+                >
+                  <LinkIcon className={cn(
+                    "size-3.5 shrink-0 transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground/60 group-hover/item:text-foreground"
+                  )} />
+                  <span className="flex-1 truncate">{link.label}</span>
+                  {/* Indicador activo: barra lateral */}
+                  {isActive && (
+                    <span className="h-3 w-0.5 rounded-full bg-primary shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );
