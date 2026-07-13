@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
@@ -31,7 +31,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import { Plus, Search, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload, ChevronDown, Shield } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,8 +88,17 @@ const wizardSteps = [
 ];
 
 export default function ClaimsPage() {
+  return (
+    <Suspense fallback={<div className="app-page"><div className="app-page-header"><h1 className="app-page-title">Siniestros</h1></div></div>}>
+      <ClaimsPageContent />
+    </Suspense>
+  );
+}
+
+function ClaimsPageContent() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { canCreate, canEdit } = usePermissions();
   const { statusCode, statusLabel, codeToId, idToCode } = useClaimStatuses();
   const [search, setSearch] = useState("");
@@ -97,6 +106,14 @@ export default function ClaimsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [open, setOpen] = useState(false);
+
+  // Pre-cargar filtro desde query param (ej: ?status=adjustment)
+  useEffect(() => {
+    const statusFromUrl = searchParams.get("status");
+    if (statusFromUrl) {
+      setStatusFilter(statusFromUrl);
+    }
+  }, [searchParams]);
   const [step, setStep] = useState(1);
   const [documents, setDocuments] = useState<{ id: string; name: string; type: string; file: File }[]>([]);
   const [dragOver, setDragOver] = useState(false);

@@ -104,6 +104,14 @@ function InspectionsPageContent() {
     }
   }, [searchParams]);
 
+  // Pre-cargar filtro de estado desde query param (ej: ?status=active)
+  useEffect(() => {
+    const statusFromUrl = searchParams.get("status");
+    if (statusFromUrl && ["all", "scheduled", "active", "completed", "cancelled"].includes(statusFromUrl)) {
+      setStatusFilter(statusFromUrl);
+    }
+  }, [searchParams]);
+
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
     queryKey: ["inspection-sessions"],
     queryFn: () => getInspectionSessions(),

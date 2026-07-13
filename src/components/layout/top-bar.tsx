@@ -213,44 +213,44 @@ export function TopBar() {
             icon={ClipboardCheck}
             count={s.inspectionsActive}
             label="Inspecciones"
-            href="/dashboard/inspecciones"
+            href="/dashboard/inspecciones?status=active"
           />
           <StatChip
             icon={FileText}
             count={s.liquidationsActive}
             label="Liquidaciones"
-            href="/dashboard/claims"
+            href="/dashboard/claims?status=adjustment"
           />
           <StatChip
             icon={Eye}
             count={s.reviewsPending}
             label="Revisiones"
-            href="/dashboard/gestiones"
+            href="/dashboard/gestiones?filter=reviews"
           />
           <StatChip
             icon={Send}
             count={s.dispatchesPending}
             label="Despachos"
-            href="/dashboard/gestiones"
+            href="/dashboard/gestiones?filter=dispatches"
           />
           <StatChip
             icon={ListTodo}
             count={s.gestionsAssigned}
             label="Gestiones"
-            href="/dashboard/gestiones"
+            href="/dashboard/gestiones?filter=all"
           />
           <StatChip
             icon={AlertTriangle}
             count={s.gestionsAlert}
             label="Alerta"
-            href="/dashboard/gestiones"
+            href="/dashboard/gestiones?filter=alert"
             variant="alert"
           />
           <StatChip
             icon={Clock}
             count={s.gestionsOverdue}
             label="Vencidas"
-            href="/dashboard/gestiones"
+            href="/dashboard/gestiones?filter=overdue"
             variant="overdue"
           />
         </div>

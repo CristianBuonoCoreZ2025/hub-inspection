@@ -1,36 +1,38 @@
-feat: responsive completo para todo el sistema
+feat: chips de topbar navegables + pagina de gestiones
 
-Sistema completo responsive para movil, tablet y desktop.
+Cada chip de la barra superior ahora navega a la vista filtrada
+correspondiente, mostrando solo lo activo en flujo del usuario:
 
-1. MOBILE NAV DRAWER (critico)
-   - Nuevo componente MobileNav con drawer lateral
-   - Botón hamburger en la TopBar (visible < 1024px)
-   - Drawer con overlay, animacion slide-in, bloqueo de scroll
-   - Links principales + grupos acordeon (catalogos, operaciones, admin)
-   - Usuario, theme toggle, skin toggle, logout al pie
-   - Se cierra al navegar o presionar Escape
+- Inspecciones -> /dashboard/inspecciones?status=active
+- Liquidaciones -> /dashboard/claims?status=adjustment
+- Revisiones -> /dashboard/gestiones?filter=reviews
+- Despachos -> /dashboard/gestiones?filter=dispatches
+- Gestiones -> /dashboard/gestiones?filter=all
+- Alerta -> /dashboard/gestiones?filter=alert
+- Vencidas -> /dashboard/gestiones?filter=overdue
 
-2. CSS RESPONSIVE GLOBAL (components.css)
-   - Overrides para .app-page, .app-toolbar, .app-grid-header
-   - En movil: toolbar apila vertical, inputs full width
-   - Tablas: scroll horizontal garantizado, texto mas pequeño
-   - Form fields: 1 columna en movil
-   - Liquid button: full width en movil
-   - Touch targets: min 32px en botones de tabla
+Nueva pagina /dashboard/gestiones:
+- Lista las gestiones asignadas al usuario (en flujo activo)
+- Tabs de filtro rapido: Todas, Pendientes, Revisiones, Despachos,
+  En Alerta, Vencidas
+- Busqueda por nombre, codigo, siniestro, asegurado
+- Tabla con: gestion, siniestro (link), asegurado, estado,
+  vencimiento (con color), boton Abrir
+- Link "Abrir" lleva al detalle de la gestion del siniestro
+- Responsive completo
 
-3. PAGINAS ESPECIFICAS
-   - LookupCatalogManager: input de busqueda w-full sm:max-w-[180px]
-     (arregla ~15 pantallas de catalogos a la vez)
-   - claims/page.tsx: toolbar con flex-wrap, inputs w-full sm:w-[X]
-   - users/page.tsx: busqueda w-full sm:w-[160px]
+Nuevos servicios:
+- src/services/my-gestiones.ts: getMyGestiones(profile, filter)
+  Filtra por asignacion directa al usuario (igual que topbar-stats)
+  Filtros: all, pending, reviews, dispatches, alert, overdue
 
-4. PAGINAS YA RESPONSIVE (verificado)
-   - Login/register/onboarding: auth-shell ya responsive
-   - Dashboard: responsive completo (trabajo anterior)
-   - TopBar: responsive completo (trabajo anterior)
-   - Agenda: ya usa snap-scroll horizontal
-   - Inspecciones: ya usa min-w sm:w pattern
-   - Modals: ya usan min(96vw, Xpx) y grids que apilan
+Cambios en paginas existentes:
+- claims/page.tsx: lee ?status=adjustment del query param,
+  envuelto en Suspense (requerido por useSearchParams en Next.js 16)
+- inspecciones/page.tsx: lee ?status=active del query param
+
+Nav:
+- Anadido "Gestiones" a mainLinks del sidebar y mobile nav
 
 Generated with [Devin](https://devin.ai)
 
