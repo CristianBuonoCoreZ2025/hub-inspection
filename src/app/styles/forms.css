@@ -146,55 +146,56 @@
   .liquid-search {
     width: 100% !important;
     font-size: 12px !important;
-    height: 32px !important;
-    padding: 0 14px 0 36px !important;
+    height: 28px !important;
+    padding: 0 12px 0 32px !important;
     border-radius: 999px !important;
-    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.14) 0%,
-      rgba(255, 255, 255, 0.04) 100%
-    ) !important;
-    backdrop-filter: blur(20px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid var(--input) !important;
+    background: color-mix(in srgb, var(--card) 80%, transparent) !important;
+    backdrop-filter: blur(16px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
     color: var(--foreground) !important;
     box-shadow:
-      0 4px 24px rgba(0, 0, 0, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+      0 2px 12px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
     box-sizing: border-box !important;
     outline: none !important;
-    transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
   }
 
   .liquid-search::placeholder {
     color: var(--muted-foreground) !important;
-    opacity: 0.6 !important;
+    opacity: 0.7 !important;
     font-size: 12px !important;
   }
 
   .dark .liquid-search {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.07) 0%,
-      rgba(255, 255, 255, 0.02) 100%
-    ) !important;
-    border-color: color-mix(in srgb, var(--foreground) 6%, transparent) !important;
+    background: color-mix(in srgb, var(--card) 70%, transparent) !important;
+    border-color: var(--input) !important;
     box-shadow:
-      0 4px 24px rgba(0, 0, 0, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+      0 2px 12px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .liquid-search:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--card) 90%, transparent) !important;
+    border-color: color-mix(in srgb, var(--input) 80%, var(--foreground) 20%) !important;
+  }
+
+  .dark .liquid-search:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--card) 80%, transparent) !important;
   }
 
   .liquid-search:focus-visible {
-    border-color: color-mix(in srgb, var(--primary) 60%, transparent) !important;
+    border-color: #0095DA !important;
     box-shadow:
-      0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+      0 0 0 3px rgba(0, 149, 218, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
   }
 
   .dark .liquid-search:focus-visible {
     box-shadow:
-      0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+      0 0 0 3px rgba(0, 149, 218, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
   }
 
   /* Cuando está dentro de .modal-field, el gap maneja el espaciado */

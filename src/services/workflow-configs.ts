@@ -165,16 +165,37 @@ export async function createWorkflowStepWithChain(input: {
 
   if (!rootCode) throw new Error("Template no tiene codigo");
 
+  // 0. Obtener steps ya existentes para este workflow config (evitar duplicate key)
+  const { data: existingSteps } = await supabase
+    .from("workflow_steps")
+    .select("action_template_id")
+    .eq("workflow_config_id", input.workflow_config_id);
+  const existingTemplateIds = new Set(((existingSteps as any[]) || []).map(s => s.action_template_id));
+
   // 1. Crear el step raíz (o dependiente si se especifica depends_on_template_id)
-  const root = await insertRow<WorkflowStep>("workflow_steps", {
-    workflow_config_id: input.workflow_config_id,
-    action_template_id: input.action_template_id,
-    level: input.level,
-    depends_on_template_id: input.depends_on_template_id || null,
-    sort_order: input.sort_order || 0,
-    is_automatic: true,
-    is_required: true,
-  }, WORKFLOW_STEP_SELECT);
+  //    Solo si no existe ya (puede pasar si se borro un step padre pero sus hijos quedaron huerfanos)
+  let root: WorkflowStep;
+  if (existingTemplateIds.has(input.action_template_id)) {
+    // Ya existe — obtenerlo y actualizar level/depends_on si cambio
+    const { data: existing } = await supabase
+      .from("workflow_steps")
+      .select(WORKFLOW_STEP_SELECT)
+      .eq("workflow_config_id", input.workflow_config_id)
+      .eq("action_template_id", input.action_template_id)
+      .limit(1);
+    root = (existing as any[])?.[0] as WorkflowStep;
+    if (!root) throw new Error("Step existente no encontrado");
+  } else {
+    root = await insertRow<WorkflowStep>("workflow_steps", {
+      workflow_config_id: input.workflow_config_id,
+      action_template_id: input.action_template_id,
+      level: input.level,
+      depends_on_template_id: input.depends_on_template_id || null,
+      sort_order: input.sort_order || 0,
+      is_automatic: true,
+      is_required: true,
+    }, WORKFLOW_STEP_SELECT);
+  }
   created.push(root);
 
   // 2. Recorrer cadena de dependencias por codigo
@@ -212,6 +233,12 @@ export async function createWorkflowStepWithChain(input: {
           .limit(1);
         const fb = (fallback as any[])?.[0];
         if (!fb) continue;
+        // Skip si ya existe
+        if (existingTemplateIds.has(fb.id)) {
+          await addChildren(childCode, fb.id, parentLevel + 1);
+          continue;
+        }
+        existingTemplateIds.add(fb.id);
         const childStep = await insertRow<WorkflowStep>("workflow_steps", {
           workflow_config_id: input.workflow_config_id,
           action_template_id: fb.id,
@@ -226,6 +253,12 @@ export async function createWorkflowStepWithChain(input: {
         continue;
       }
 
+      // Skip si ya existe
+      if (existingTemplateIds.has(childTemplate.id)) {
+        await addChildren(childCode, childTemplate.id, parentLevel + 1);
+        continue;
+      }
+      existingTemplateIds.add(childTemplate.id);
       const childStep = await insertRow<WorkflowStep>("workflow_steps", {
         workflow_config_id: input.workflow_config_id,
         action_template_id: childTemplate.id,
