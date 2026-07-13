@@ -86,20 +86,7 @@ function HybridFlyout({
 
       {/* Submenu integrado — superpuesto al contenido, sin mover la pantalla */}
       {open && (
-        <div className="absolute left-full top-1/2 -translate-y-1/2 z-50 w-64 rounded-r-[20px] rounded-l-2xl bg-card">
-          <div className="relative flex items-center gap-2 border-b border-border/60 px-3 py-2.5">
-            <div className={cn(
-              "flex size-6 items-center justify-center rounded-lg shrink-0",
-              isGroupActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-            )}>
-              <Icon className="size-3.5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">{group.title}</p>
-              <p className="text-[10px] text-muted-foreground">{group.visibleLinks.length} páginas</p>
-            </div>
-          </div>
-
+        <div className="absolute left-full top-0 -ml-1 z-50 w-64 rounded-r-[20px] rounded-l-2xl bg-card">
           <div className="relative p-1 max-h-[520px] overflow-y-auto">
             {group.visibleLinks.map((link) => {
               const isActive = pathname.startsWith(link.href);

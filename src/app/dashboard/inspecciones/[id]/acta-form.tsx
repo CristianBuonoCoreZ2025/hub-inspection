@@ -219,7 +219,7 @@ export default function ActaForm({ session }: ActaFormProps) {
     const items = catalogs[category] || [];
     const current = watch(name) as unknown as string;
     return (
-      <Select value={current || ""} onValueChange={(v) => set(name, v)}>
+      <Select value={current || undefined} onValueChange={(v) => set(name, v ?? "")}>
         <SelectTrigger className="app-input"><SelectValue placeholder={placeholder} /></SelectTrigger>
         <SelectContent>
           {items.map((item) => (
@@ -233,7 +233,7 @@ export default function ActaForm({ session }: ActaFormProps) {
   const tableSelect = (name: string, items: { id: string; name: string }[], placeholder = "Seleccionar...") => {
     const current = watch(name) as unknown as string;
     return (
-      <Select value={current || ""} onValueChange={(v) => set(name, v)}>
+      <Select value={current || undefined} onValueChange={(v) => set(name, v ?? "")}>
         <SelectTrigger className="app-input"><SelectValue placeholder={placeholder} /></SelectTrigger>
         <SelectContent>
           {items.map((item) => (
@@ -247,7 +247,7 @@ export default function ActaForm({ session }: ActaFormProps) {
   const numberSelect = (name: string, max: number, placeholder = "Seleccionar...") => {
     const current = watch(name) as unknown as string;
     return (
-      <Select value={current || ""} onValueChange={(v) => set(name, v)}>
+      <Select value={current || undefined} onValueChange={(v) => set(name, v ?? "")}>
         <SelectTrigger className="app-input"><SelectValue placeholder={placeholder} /></SelectTrigger>
         <SelectContent>
           {Array.from({ length: max }, (_, i) => String(i + 1)).map((n) => (

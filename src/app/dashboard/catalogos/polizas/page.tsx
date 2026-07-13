@@ -174,7 +174,7 @@ export default function PolizasPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Select value={insuranceCompanyFilter} onValueChange={(v) => setInsuranceCompanyFilter(v === "__all" || v === null ? "" : v)}>
+          <Select value={insuranceCompanyFilter || "__all"} onValueChange={(v) => setInsuranceCompanyFilter(v === "__all" || v === null ? "" : v)}>
             <SelectTrigger className="app-input max-w-[200px]">
               <SelectValue placeholder="Todas las compañías" />
             </SelectTrigger>
@@ -185,7 +185,7 @@ export default function PolizasPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={brokerFilter} onValueChange={(v) => setBrokerFilter(v === "__all" || v === null ? "" : v)}>
+          <Select value={brokerFilter || "__all"} onValueChange={(v) => setBrokerFilter(v === "__all" || v === null ? "" : v)}>
             <SelectTrigger className="app-input max-w-[180px]">
               <SelectValue placeholder="Todos los corredores" />
             </SelectTrigger>
@@ -196,7 +196,7 @@ export default function PolizasPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={businessLineFilter} onValueChange={(v) => setBusinessLineFilter(v === "__all" || v === null ? "" : v)}>
+          <Select value={businessLineFilter || "__all"} onValueChange={(v) => setBusinessLineFilter(v === "__all" || v === null ? "" : v)}>
             <SelectTrigger className="app-input max-w-[180px]">
               <SelectValue placeholder="Todas las líneas" />
             </SelectTrigger>
@@ -207,7 +207,7 @@ export default function PolizasPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)}>
+          <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)}>
             <SelectTrigger className="app-input max-w-[140px]">
               <SelectValue placeholder="Todos los estados" />
             </SelectTrigger>

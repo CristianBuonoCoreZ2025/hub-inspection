@@ -698,7 +698,7 @@ function InspectionsPageContent() {
             <div className="modal-grid-3 mb-4">
               <div className="modal-field">
                 <label className="app-field-label">Inspector *</label>
-                <Select value={selectedInspectorId} onValueChange={(v) => setSelectedInspectorId(v ?? "")}>
+                <Select value={selectedInspectorId || undefined} onValueChange={(v) => setSelectedInspectorId(v ?? "")}>
                   <SelectTrigger className="app-input">
                     <SelectValue placeholder="Seleccionar...">
                       {inspectors.find((i) => i.id === selectedInspectorId)?.full_name || inspectors.find((i) => i.id === selectedInspectorId)?.email || "Seleccionar..."}

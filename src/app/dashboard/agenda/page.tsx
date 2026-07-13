@@ -137,7 +137,7 @@ export default function AgendaPage() {
         </div>
         <div className="flex items-center gap-2">
           <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-          <Select value={inspectorFilter} onValueChange={(v) => setInspectorFilter(v ?? "all")}>
+          <Select value={inspectorFilter || "all"} onValueChange={(v) => setInspectorFilter(v ?? "all")}>
             <SelectTrigger className="h-8 w-full sm:w-[200px] text-[13px]">
               <SelectValue placeholder="Todos los inspectores" />
             </SelectTrigger>
