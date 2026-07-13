@@ -29,8 +29,15 @@ import {
   persistUiStyleChoice,
   UI_STYLE_LABELS,
   type UiStyleSkin,
+  getSidebarStyleSnapshot,
+  getSidebarStyleServerSnapshot,
+  subscribeSidebarStyle,
+  persistSidebarStyleChoice,
+  SIDEBAR_STYLE_LABELS,
+  type SidebarStyle,
 } from "@/lib/ui-style-client-store";
 import { useSyncExternalStore } from "react";
+import { LayoutPanelLeft } from "lucide-react";
 import type { NavLink, NavGroup } from "@/components/layout/nav-data";
 
 function getInitials(email?: string | null) {
@@ -94,7 +101,7 @@ function HybridFlyout({
           {/* Bridge invisible para evitar gap entre icono y panel */}
           <div className="absolute left-full top-0 h-full w-2 z-40" />
 
-          <div className="absolute left-full top-0 ml-2 z-50 w-64 rounded-2xl border border-white/15 dark:border-white/8 overflow-hidden
+          <div className="hybrid-flyout-panel absolute left-full top-0 ml-2 z-50 w-64 rounded-2xl border border-white/15 dark:border-white/8 overflow-hidden
                           bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))]
                           backdrop-blur-2xl saturate-150
                           shadow-[0_8px_40px_rgba(0,0,0,0.12)]
@@ -154,7 +161,7 @@ function HybridFlyout({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Selector de skin — cambia entre los 4 estilos visuales sin reload
+// Selector de skin base — colores y tipografia de toda la app
 // ═══════════════════════════════════════════════════════════════
 function SkinToggle() {
   const skin = useSyncExternalStore(subscribeUiStyle, getUiStyleSnapshot, getUiStyleSnapshot);
@@ -168,16 +175,51 @@ function SkinToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label="Estilo de interfaz">
+          <Button variant="ghost" size="icon-sm" aria-label="Color de interfaz">
             <Palette className="size-4" />
           </Button>
         }
       />
       <DropdownMenuContent align="end" side="right">
+        <p className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Color</p>
         {(Object.keys(UI_STYLE_LABELS) as UiStyleSkin[]).map((key) => (
           <DropdownMenuItem key={key} onClick={() => handleSelect(key)}>
             <span className={cn("mr-2 size-2 rounded-full", skin === key ? "bg-primary" : "bg-transparent border border-border")} />
             <span>{UI_STYLE_LABELS[key]}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Selector de estilo del sidebar — estructura y forma
+// NO cambia colores, solo bordes, selecciones, submenu
+// ═══════════════════════════════════════════════════════════════
+function SidebarStyleToggle() {
+  const style = useSyncExternalStore(subscribeSidebarStyle, getSidebarStyleSnapshot, getSidebarStyleServerSnapshot);
+
+  const handleSelect = (value: SidebarStyle) => {
+    persistSidebarStyleChoice(value);
+    document.documentElement.setAttribute("data-sidebar-style", value);
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="ghost" size="icon-sm" aria-label="Estilo del menu">
+            <LayoutPanelLeft className="size-4" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end" side="right">
+        <p className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Menu</p>
+        {(Object.keys(SIDEBAR_STYLE_LABELS) as SidebarStyle[]).map((key) => (
+          <DropdownMenuItem key={key} onClick={() => handleSelect(key)}>
+            <span className={cn("mr-2 size-2 rounded-full", style === key ? "bg-primary" : "bg-transparent border border-border")} />
+            <span>{SIDEBAR_STYLE_LABELS[key]}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -284,7 +326,12 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
             <div className="mt-auto flex flex-col gap-1 w-full pt-2">
               <div className="sidebar-item">
                 <SkinToggle />
-                <span className="text-[12px] font-medium">Estilo</span>
+                <span className="text-[12px] font-medium">Color</span>
+              </div>
+
+              <div className="sidebar-item">
+                <SidebarStyleToggle />
+                <span className="text-[12px] font-medium">Menu</span>
               </div>
 
               <div className="sidebar-item">
@@ -313,7 +360,7 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
                   <>
                     {/* Bridge */}
                     <div className="absolute left-full bottom-0 h-full w-2 z-40" />
-                    <div className="absolute left-full bottom-0 ml-2 z-50 w-56 rounded-2xl border border-white/15 dark:border-white/8 overflow-hidden
+                    <div className="hybrid-flyout-panel absolute left-full bottom-0 ml-2 z-50 w-56 rounded-2xl border border-white/15 dark:border-white/8 overflow-hidden
                                     bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))]
                                     backdrop-blur-2xl saturate-150
                                     shadow-[0_8px_40px_rgba(0,0,0,0.12)]

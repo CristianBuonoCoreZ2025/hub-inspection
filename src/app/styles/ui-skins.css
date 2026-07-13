@@ -1,82 +1,139 @@
 /*
- * UI SKINS — 4 estilos visuales SOLO para el sidebar
- * Liquid Glass | Glassmorphism | Material 3 Expressive | Neumorphism
+ * ESTILOS DEL SIDEBAR — SOLO estructura, NO colores
+ * Usa [data-sidebar-style="..."] independiente del skin base.
  *
- * Estos estilos SOLO afectan el menu izquierdo (.sidebar-glass, .sidebar-item).
- * El resto de la app sigue usando el skin base (nordic-air, pastel-dream, etc.)
- * via [data-ui-style] en ui-style-skins.css.
+ * El skin base (data-ui-style) controla colores y tipografia.
+ * Esto SOLO controla: bordes, radio, sombras, como se marcan
+ * las selecciones, como sale el submenu, etc.
  */
 
 /* ═══════════════════════════════════════════════════════════════
-   LIQUID GLASS — Apple-inspired, muy translucido, refraccion
+   DEFAULT — sin overrides, usa el CSS base de components.css
    ═══════════════════════════════════════════════════════════════ */
-[data-ui-style="liquid-glass"] .sidebar-glass {
-  background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%) !important;
+
+/* ═══════════════════════════════════════════════════════════════
+   LIQUID GLASS — muy translucido, bordes redondeados grandes,
+   selecciones con glow difuso, submenu flotante con blur extremo
+   ═══════════════════════════════════════════════════════════════ */
+[data-sidebar-style="liquid-glass"] .sidebar-glass {
+  border-radius: 28px !important;
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
   backdrop-filter: blur(40px) saturate(200%) !important;
   -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(255,255,255,0.3) inset !important;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.06) !important;
 }
 
-[data-ui-style="liquid-glass"].dark .sidebar-glass {
-  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%) !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255,255,255,0.08) inset !important;
+[data-sidebar-style="liquid-glass"].dark .sidebar-glass {
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3) !important;
 }
 
-[data-ui-style="liquid-glass"] .sidebar-item {
-  border-radius: 12px !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+/* Items: bordes muy redondeados, sin borde visible */
+[data-sidebar-style="liquid-glass"] .sidebar-item {
+  border-radius: 16px !important;
 }
 
-[data-ui-style="liquid-glass"] .sidebar-item:hover {
-  background-color: rgba(255, 255, 255, 0.12) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+/* Hover: suave, translucido */
+[data-sidebar-style="liquid-glass"] .sidebar-item:hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, transparent) !important;
 }
 
-[data-ui-style="liquid-glass"].dark .sidebar-item:hover {
-  background-color: rgba(255, 255, 255, 0.06) !important;
+/* Activo: glow difuso + fondo sutil, SIN borde marcado */
+[data-sidebar-style="liquid-glass"] .sidebar-item-active {
+  background-color: color-mix(in srgb, var(--primary) 6%, transparent) !important;
+  box-shadow: 0 0 32px color-mix(in srgb, var(--primary) 12%, transparent) !important;
 }
 
-[data-ui-style="liquid-glass"] .sidebar-item-active {
-  background-color: color-mix(in srgb, var(--primary) 8%, transparent) !important;
-  backdrop-filter: blur(16px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
-  box-shadow: 0 0 24px color-mix(in srgb, var(--primary) 15%, transparent) !important;
+[data-sidebar-style="liquid-glass"] .sidebar-item-active::before {
+  border: none !important;
+  border-radius: 16px !important;
+  background: color-mix(in srgb, var(--primary) 4%, transparent) !important;
+}
+
+/* Submenu (flyout): flotante, blur extremo, sin borde marcado */
+[data-sidebar-style="liquid-glass"] .hybrid-flyout-panel {
+  border-radius: 20px !important;
+  border: 1px solid color-mix(in srgb, var(--foreground) 6%, transparent) !important;
+  backdrop-filter: blur(40px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-sidebar-style="liquid-glass"].dark .hybrid-flyout-panel {
+  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Divider: muy sutil */
+[data-sidebar-style="liquid-glass"] .sidebar-divider {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--foreground) 6%, transparent) 50%, transparent) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   GLASSMORPHISM — clasico, blur moderado, bordes sutiles
+   GLASSMORPHISM — bordes definidos, radio moderado,
+   selecciones con borde marcado, submenu con borde visible
    ═══════════════════════════════════════════════════════════════ */
-[data-ui-style="glassmorphism"] .sidebar-glass {
-  background: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 100%) !important;
+[data-sidebar-style="glassmorphism"] .sidebar-glass {
+  border-radius: 16px !important;
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent) !important;
+  backdrop-filter: blur(16px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-sidebar-style="glassmorphism"].dark .sidebar-glass {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Items: bordes menos redondeados, mas cuadrados */
+[data-sidebar-style="glassmorphism"] .sidebar-item {
+  border-radius: 10px !important;
+}
+
+/* Hover: con borde sutil */
+[data-sidebar-style="glassmorphism"] .sidebar-item:hover {
+  background-color: color-mix(in srgb, var(--foreground) 5%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+}
+
+/* Activo: borde marcado del color primary, SIN glow */
+[data-sidebar-style="glassmorphism"] .sidebar-item-active {
+  background-color: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+  box-shadow: none !important;
+}
+
+[data-sidebar-style="glassmorphism"] .sidebar-item-active::before {
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent) !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+}
+
+/* Barra lateral izquierda en item activo (estilo "tab") */
+[data-sidebar-style="glassmorphism"] .sidebar-item-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: var(--primary);
+  pointer-events: none;
+}
+
+/* Submenu (flyout): borde definido, blur moderado */
+[data-sidebar-style="glassmorphism"] .hybrid-flyout-panel {
+  border-radius: 14px !important;
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent) !important;
   backdrop-filter: blur(20px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255,255,255,0.15) inset !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
 }
 
-[data-ui-style="glassmorphism"].dark .sidebar-glass {
-  background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 0 1px 0 rgba(255,255,255,0.06) inset !important;
+[data-sidebar-style="glassmorphism"].dark .hybrid-flyout-panel {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
 }
 
-[data-ui-style="glassmorphism"] .sidebar-item {
-  border-radius: 12px !important;
-}
-
-[data-ui-style="glassmorphism"] .sidebar-item:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-[data-ui-style="glassmorphism"].dark .sidebar-item:hover {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-[data-ui-style="glassmorphism"] .sidebar-item-active {
-  background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
-  box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 18%, transparent) !important;
+/* Divider: mas visible */
+[data-sidebar-style="glassmorphism"] .sidebar-divider {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--foreground) 12%, transparent) 50%, transparent) !important;
 }

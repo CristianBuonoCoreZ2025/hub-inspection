@@ -6,6 +6,11 @@ import {
   subscribeUiStyle,
   UI_STYLE_LABELS,
   type UiStyleSkin,
+  getSidebarStyleSnapshot,
+  getSidebarStyleServerSnapshot,
+  subscribeSidebarStyle,
+  SIDEBAR_STYLE_LABELS,
+  type SidebarStyle,
 } from "@/lib/ui-style-client-store";
 import { useSyncExternalStore } from "react";
 
@@ -15,20 +20,19 @@ export function UiStyleInjector() {
     getUiStyleSnapshot,
     getUiStyleSnapshot
   );
+  const sidebarStyle = useSyncExternalStore(
+    subscribeSidebarStyle,
+    getSidebarStyleSnapshot,
+    getSidebarStyleServerSnapshot
+  );
 
   useEffect(() => {
     document.documentElement.setAttribute("data-ui-style", skin);
   }, [skin]);
 
   useEffect(() => {
-    const handler = (e: StorageEvent) => {
-      if (e.key === "claimshub-ui-style" && e.newValue && e.newValue in UI_STYLE_LABELS) {
-        document.documentElement.setAttribute("data-ui-style", e.newValue as UiStyleSkin);
-      }
-    };
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
-  }, []);
+    document.documentElement.setAttribute("data-sidebar-style", sidebarStyle);
+  }, [sidebarStyle]);
 
   return null;
 }
