@@ -9,9 +9,12 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
-  closestCorners, type DragStartEvent, type DragEndEvent,
+  closestCenter, type DragStartEvent, type DragEndEvent,
 } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
+import {
+  useSortable, SortableContext, verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
   ChevronRight, ChevronDown, Plus, Trash2, GripVertical,
@@ -127,7 +130,7 @@ export default function WorkflowsPage() {
 
   // Sensores DnD
   const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
   // Lookup para nombres
@@ -246,6 +249,7 @@ export default function WorkflowsPage() {
         }
       }
       // Drop en el canvas (no sobre un step) → crear como raíz
+      // over.id puede ser "canvas-root" o un step id
       createStepMut.mutate({
         workflow_config_id: selectedConfigId,
         action_template_id: templateId,
@@ -254,11 +258,14 @@ export default function WorkflowsPage() {
       return;
     }
 
-    // Reorder dentro del árbol
-    if (activeData?.source === "node" && overData?.source === "node") {
+    // Reorder dentro del árbol — usar sortable
+    if (activeData?.source === "node") {
       const activeStep = (steps || []).find(s => s.id === active.id);
-      const overStep = (steps || []).find(s => s.id === overData.stepId);
-      if (!activeStep || !overStep) return;
+      if (!activeStep) return;
+
+      // Con useSortable, over.id es directamente el step id
+      const overStep = (steps || []).find(s => s.id === over.id);
+      if (!overStep) return;
       if (activeStep.id === overStep.id) return;
 
       // Solo reordenar si están en el mismo nivel y mismo padre
@@ -485,7 +492,7 @@ export default function WorkflowsPage() {
                                                       )}
                                                       <DndContext
                                                         sensors={dndSensors}
-                                                        collisionDetection={closestCorners}
+                                                        collisionDetection={closestCenter}
                                                         onDragStart={onDragStart}
                                                         onDragEnd={onDragEnd}
                                                       >
@@ -955,7 +962,7 @@ function StepsCanvas({
   }
 
   // Renderizar arbol recursivamente
-  function renderNode(step: WorkflowStep, level: number, isLast: boolean): React.ReactNode {
+  function renderNode(step: WorkflowStep, level: number): React.ReactNode {
     const children = childrenMap.get(step.action_template_id) || [];
     const levelColors = [
       { bg: "from-violet-500/15 to-violet-600/5", border: "border-violet-500/30", text: "text-violet-400", glow: "bg-violet-500/10" },
@@ -967,7 +974,7 @@ function StepsCanvas({
 
     return (
       <div key={step.id} className="relative">
-        <DraggableNode
+        <SortableNode
           step={step}
           lc={lc}
           isSelected={selectedStepId === step.id}
@@ -978,17 +985,19 @@ function StepsCanvas({
           onLeave={() => onHoverStep(null)}
           onAddDependent={() => onAddDependent(step)}
         />
-        {/* Hijos con conector visual */}
+        {/* Hijos con conector visual — SortableContext por grupo de hermanos */}
         {children.length > 0 && (
-          <div className="ml-4 pl-4 border-l-2 border-white/10 dark:border-white/5 space-y-1">
-            {children.map((child, idx) => (
-              <div key={child.id} className="relative">
-                {/* Conector horizontal */}
-                <div className="absolute -left-4 top-5 h-px w-4 bg-white/10 dark:bg-white/5" />
-                {renderNode(child, level + 1, idx === children.length - 1)}
-              </div>
-            ))}
-          </div>
+          <SortableContext items={children.map(c => c.id)} strategy={verticalListSortingStrategy}>
+            <div className="ml-4 pl-4 border-l-2 border-white/10 dark:border-white/5 space-y-1">
+              {children.map((child) => (
+                <div key={child.id} className="relative">
+                  {/* Conector horizontal */}
+                  <div className="absolute -left-4 top-5 h-px w-4 bg-white/10 dark:bg-white/5" />
+                  {renderNode(child, level + 1)}
+                </div>
+              ))}
+            </div>
+          </SortableContext>
         )}
       </div>
     );
@@ -1000,15 +1009,20 @@ function StepsCanvas({
       <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-violet-500/5 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-sky-500/5 blur-3xl" />
 
-      <div className="relative space-y-1">
-        {roots.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground italic text-center py-4">
-            Configuración inválida — no hay gestiones raíz
-          </p>
-        ) : (
-          roots.map((step, idx) => renderNode(step, 0, idx === roots.length - 1))
-        )}
-      </div>
+      {/* Drop zone para el canvas completo (recibe drops de la paleta) */}
+      <DroppableCanvas>
+        <div className="relative space-y-1">
+          {roots.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground italic text-center py-4">
+              Configuración inválida — no hay gestiones raíz
+            </p>
+          ) : (
+            <SortableContext items={roots.map(s => s.id)} strategy={verticalListSortingStrategy}>
+              {roots.map((step) => renderNode(step, 0))}
+            </SortableContext>
+          )}
+        </div>
+      </DroppableCanvas>
 
       {canEdit && (
         <button
@@ -1142,10 +1156,11 @@ function DraggablePaletteItem({ templateId, code, name }: { templateId: string; 
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Componente: DraggableNode — nodo del arbol (draggable + droppable)
+// Componente: SortableNode — nodo del arbol (sortable + droppable)
+// Usa useSortable para reordenar dentro del mismo nivel con pixel-perfect
 // ═══════════════════════════════════════════════════════════════════
 
-function DraggableNode({
+function SortableNode({
   step, lc, isSelected, isHovered, canEdit,
   onSelect, onHover, onLeave, onAddDependent,
 }: {
@@ -1159,42 +1174,46 @@ function DraggableNode({
   onLeave: () => void;
   onAddDependent: () => void;
 }) {
-  // Draggable (para reordenar)
-  const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
+  // useSortable combina draggable + droppable + animacion de reorden
+  const {
+    attributes, listeners, setNodeRef, transform, transition, isDragging, isOver, active,
+  } = useSortable({
     id: step.id,
     data: { source: "node", stepId: step.id },
   });
 
-  // Droppable (para recibir drops de la paleta o de otros nodos)
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: `drop_${step.id}`,
-    data: { source: "node", stepId: step.id },
-  });
-
   const style = {
-    transform: CSS.Translate.toString(transform),
+    transform: CSS.Transform.toString(transform),
+    transition,
     opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : undefined,
   };
+
+  // Detectar si hay un item arrastrandose sobre este (para feedback de drop de paleta)
+  const isDropTarget = isOver && active?.data.current?.source === "palette";
 
   return (
     <div className="flex items-center gap-1.5 mb-0.5">
       <div
-        ref={(node) => { setDragRef(node); setDropRef(node); }}
+        ref={setNodeRef}
         style={style}
         {...listeners}
         {...attributes}
         className={`relative flex items-center gap-1.5 rounded-lg px-2 py-1
                     bg-linear-to-br ${lc.bg} backdrop-blur-sm
                     border ${lc.border}
-                    cursor-grab active:cursor-grabbing transition-all duration-200 active:scale-95
+                    cursor-grab active:cursor-grabbing transition-all duration-150 active:scale-95
                     ${isSelected ? "ring-1 ring-offset-0 ring-violet-500/40 " : "hover:scale-[1.02]"}
-                    ${isOver ? "ring-2 ring-violet-500/50 scale-105 " : ""}`}
+                    ${isDropTarget ? "ring-2 ring-violet-500/60 scale-105 " : ""}`}
         onClick={onSelect}
         onMouseEnter={onHover}
         onMouseLeave={onLeave}
       >
         {/* Glow decorativo */}
         <div className={`pointer-events-none absolute -inset-0.5 rounded-lg ${lc.glow} blur-sm opacity-30 -z-10`} />
+
+        {/* Grip handle */}
+        <GripVertical className="h-2.5 w-2.5 text-muted-foreground/30 hover:text-violet-400 transition-colors shrink-0" />
 
         {/* Icono del codigo */}
         <div className={`flex h-5 w-5 items-center justify-center rounded-md ${lc.glow} border ${lc.border}`}>
@@ -1238,11 +1257,29 @@ function DraggableNode({
           </button>
         )}
 
-        {/* Indicador de drop hover */}
-        {isOver && (
+        {/* Indicador de drop hover (paleta) */}
+        {isDropTarget && (
           <div className="pointer-events-none absolute -inset-1 rounded-lg border-2 border-violet-500/40 bg-violet-500/5 animate-pulse" />
         )}
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Componente: DroppableCanvas — zona de drop del canvas completo
+// Recibe drops de la paleta que no caen sobre un nodo especifico
+// ═══════════════════════════════════════════════════════════════════
+
+function DroppableCanvas({ children }: { children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: "canvas-root",
+    data: { source: "canvas" },
+  });
+
+  return (
+    <div ref={setNodeRef} className={`relative transition-all ${isOver ? "ring-2 ring-violet-500/20 rounded-xl" : ""}`}>
+      {children}
     </div>
   );
 }
