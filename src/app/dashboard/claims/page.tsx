@@ -102,18 +102,10 @@ function ClaimsPageContent() {
   const { canCreate, canEdit } = usePermissions();
   const { statusCode, statusLabel, codeToId, idToCode } = useClaimStatuses();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") || "");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [open, setOpen] = useState(false);
-
-  // Pre-cargar filtro desde query param (ej: ?status=adjustment)
-  useEffect(() => {
-    const statusFromUrl = searchParams.get("status");
-    if (statusFromUrl) {
-      setStatusFilter(statusFromUrl);
-    }
-  }, [searchParams]);
   const [step, setStep] = useState(1);
   const [documents, setDocuments] = useState<{ id: string; name: string; type: string; file: File }[]>([]);
   const [dragOver, setDragOver] = useState(false);

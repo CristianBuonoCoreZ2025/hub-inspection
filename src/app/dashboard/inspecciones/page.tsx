@@ -80,7 +80,10 @@ function InspectionsPageContent() {
   const searchParams = useSearchParams();
   const { canCreate, canEdit } = usePermissions();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const s = searchParams.get("status");
+    return s && ["all", "scheduled", "active", "completed", "cancelled"].includes(s) ? s : "all";
+  });
   const [openCreate, setOpenCreate] = useState(false);
   const [selectedClaimId, setSelectedClaimId] = useState<string>("");
   const [inspectionType, setInspectionType] = useState<"onsite" | "remote">("onsite");
@@ -101,14 +104,6 @@ function InspectionsPageContent() {
     if (claimFromUrl) {
       setSelectedClaimId(claimFromUrl);
       setOpenCreate(true);
-    }
-  }, [searchParams]);
-
-  // Pre-cargar filtro de estado desde query param (ej: ?status=active)
-  useEffect(() => {
-    const statusFromUrl = searchParams.get("status");
-    if (statusFromUrl && ["all", "scheduled", "active", "completed", "cancelled"].includes(statusFromUrl)) {
-      setStatusFilter(statusFromUrl);
     }
   }, [searchParams]);
 
