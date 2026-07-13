@@ -531,22 +531,19 @@
       0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
   }
 
-  /* Sidebar premium glass (tipo referencias 2, 5, 6) */
+  /* Sidebar — Liquid Glass definitivo */
   .sidebar-glass {
-    border-radius: 24px !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 28px !important;
+    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.14) 0%,
-      rgba(255, 255, 255, 0.04) 100%
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.03) 100%
     ) !important;
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.08),
-      0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.06) !important;
     position: relative;
-    /* overflow visible para que los flyouts no queden por detras */
     z-index: 50;
   }
 
@@ -555,7 +552,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    border-radius: 24px;
+    border-radius: 28px;
     overflow: hidden;
     background: linear-gradient(
       180deg,
@@ -565,15 +562,13 @@
   }
 
   .dark .sidebar-glass {
-    border-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: color-mix(in srgb, var(--foreground) 6%, transparent) !important;
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.06) 0%,
-      rgba(255, 255, 255, 0.02) 100%
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.01) 100%
     ) !important;
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.35),
-      0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3) !important;
   }
 
   .dark .sidebar-glass::before {
@@ -584,39 +579,40 @@
     );
   }
 
-  /* Sidebar item */
+  /* Sidebar item — Liquid Glass */
   .sidebar-item {
-    @apply relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200;
+    @apply relative flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-200;
     color: var(--muted-foreground);
   }
 
   .sidebar-item:hover {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: color-mix(in srgb, var(--foreground) 6%, transparent);
     color: var(--foreground);
   }
 
   .sidebar-item-active {
     color: var(--primary) !important;
-    background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
-    box-shadow: 0 0 20px color-mix(in srgb, var(--primary) 22%, transparent) !important;
+    background-color: color-mix(in srgb, var(--primary) 6%, transparent) !important;
+    box-shadow: 0 0 32px color-mix(in srgb, var(--primary) 12%, transparent) !important;
   }
 
   .sidebar-item-active::before {
     content: "";
     position: absolute;
     inset: 0;
-    border-radius: 12px;
-    border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+    border-radius: 16px;
+    border: none;
+    background: color-mix(in srgb, var(--primary) 4%, transparent);
     pointer-events: none;
   }
 
-  /* Sidebar divider */
+  /* Sidebar divider — Liquid Glass */
   .sidebar-divider {
     height: 1px;
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255, 255, 255, 0.2) 50%,
+      color-mix(in srgb, var(--foreground) 6%, transparent) 50%,
       transparent 100%
     );
   }
