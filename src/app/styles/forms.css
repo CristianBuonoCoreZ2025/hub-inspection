@@ -239,15 +239,60 @@
   }
 
   /* Calendar inside popover — Liquid Glass refinement */
+  [data-slot="popover-content"]:has(.rdp-root) {
+    min-width: 280px !important;
+    padding: 0 !important;
+  }
+
   [data-slot="popover-content"] .rdp-root {
     --rdp-accent-color: var(--primary);
     --rdp-accent-color-foreground: var(--primary-foreground);
     --rdp-day-height: 28px;
     --rdp-day-width: 28px;
+    width: 100%;
+  }
+
+  [data-slot="popover-content"] .rdp-month {
+    width: 100%;
   }
 
   [data-slot="popover-content"] .rdp-month_caption {
     padding-bottom: 8px;
+  }
+
+  [data-slot="popover-content"] .rdp-dropdowns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  [data-slot="popover-content"] .rdp-dropdown {
+    appearance: none;
+    background: color-mix(in srgb, var(--card) 70%, transparent) !important;
+    border: 1px solid var(--input) !important;
+    border-radius: 6px !important;
+    padding: 2px 18px 2px 6px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: var(--foreground) !important;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-size: 14px !important;
+    background-position: right 4px center !important;
+    background-repeat: no-repeat !important;
+  }
+
+  [data-slot="popover-content"] .rdp-dropdown:hover {
+    background: color-mix(in srgb, var(--card) 90%, transparent) !important;
+  }
+
+  [data-slot="popover-content"] .rdp-dropdown:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--primary) 30%, transparent);
+    outline-offset: 1px;
+  }
+
+  [data-slot="popover-content"] .rdp-caption_label {
+    display: none;
   }
 
   [data-slot="popover-content"] .rdp-weekday {

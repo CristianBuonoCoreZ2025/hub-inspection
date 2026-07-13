@@ -30,7 +30,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Plus, Search, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload, ChevronDown } from "lucide-react";
+import { Plus, Search, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload, ChevronDown, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -857,22 +857,59 @@ export default function ClaimsPage() {
   return (
     <div className="app-page">
       <header className="app-page-header">
-        <h1 className="app-page-title">Siniestros</h1>
-        <p className="app-page-lead">Gestión de siniestros y seguimiento de casos.</p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-sky-500 text-white shadow-sm">
+              <Shield className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Siniestros</h1>
+              <p className="app-page-lead">Gestión de siniestros y seguimiento de casos.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-[13px]"
+              onClick={() => {
+                const rows = filtered || [];
+                const csv = [
+                  ["N° Liquidación","N° Ref Cliente","N° Siniestro Cía","Asegurado","Dirección","Ciudad","Estado","Fecha"].join(","),
+                  ...rows.map((c) => [
+                    c.liquidation_number || "", c.client_reference || "", c.claim_number || "", getParticipant(c, 'insured')?.full_name || "",
+                    `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", statusCode(c.status_id) || "", c.claim_date || ""
+                  ].join(",")),
+                ].join("\\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `siniestros_${new Date().toISOString().slice(0,10)}.csv`;
+                link.click();
+              }}
+            >
+              <Download className="mr-2 h-3.5 w-3.5" /> Exportar
+            </Button>
+            {canCreate("claims") && (
+              <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="liquid-button">
+                <Plus className="h-3.5 w-3.5" />
+                Nuevo
+              </Button>
+            )}
+          </div>
+        </div>
       </header>
 
       <div className="app-toolbar">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2">
-            <div className="relative max-w-[180px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar siniestro..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="liquid-search"
-              />
-            </div>
+          <div className="relative max-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar siniestro..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="liquid-search"
+            />
           </div>
           <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={statusOptions}>
             <SelectTrigger className="app-input h-8 max-w-[160px]">
@@ -884,45 +921,18 @@ export default function ClaimsPage() {
               ))}
             </SelectContent>
           </Select>
-          <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="w-[130px]" />
-          <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="w-[130px]" />
+          <div className="flex items-center gap-2 shrink-0">
+            <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="w-[120px]" />
+            <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="w-[120px]" />
+          </div>
           {(statusFilter || dateFrom || dateTo) && (
             <button
               onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              className="inline-flex items-center justify-center h-7 w-7 rounded-lg border border-input bg-card/80 text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+              aria-label="Limpiar filtros"
             >
-              <X className="h-3 w-3" /> Limpiar
+              <X className="h-3.5 w-3.5" />
             </button>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-[13px]"
-            onClick={() => {
-              const rows = filtered || [];
-              const csv = [
-                ["N° Liquidación","N° Ref Cliente","N° Siniestro Cía","Asegurado","Dirección","Ciudad","Estado","Fecha"].join(","),
-                ...rows.map((c) => [
-                  c.liquidation_number || "", c.client_reference || "", c.claim_number || "", getParticipant(c, 'insured')?.full_name || "",
-                  `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", statusCode(c.status_id) || "", c.claim_date || ""
-                ].join(",")),
-              ].join("\\n");
-              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-              const link = document.createElement("a");
-              link.href = URL.createObjectURL(blob);
-              link.download = `siniestros_${new Date().toISOString().slice(0,10)}.csv`;
-              link.click();
-            }}
-          >
-            <Download className="mr-2 h-3.5 w-3.5" /> Exportar
-          </Button>
-          {canCreate("claims") && (
-            <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="liquid-button ml-auto">
-              <Plus className="h-3.5 w-3.5" />
-              Nuevo
-            </Button>
           )}
         </div>
       </div>

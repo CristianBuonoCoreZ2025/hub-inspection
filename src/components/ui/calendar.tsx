@@ -18,6 +18,7 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      captionLayout="dropdown"
       className={cn("p-3", className)}
       classNames={{
         root: cn("w-fit"),
