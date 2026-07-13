@@ -18,6 +18,13 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const statusLabels: Record<string, string> = {
   draft: "Borrador",
@@ -167,47 +174,51 @@ export default function PolizasPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <select
-            className="app-input max-w-[200px]"
-            value={insuranceCompanyFilter}
-            onChange={(e) => setInsuranceCompanyFilter(e.target.value)}
-          >
-            <option value="">Todas las compañías</option>
-            {(insuranceCompanies || []).map((c) => (
-              <option key={c.id} value={c.id}>{c.name} ({c.policy_count})</option>
-            ))}
-          </select>
-          <select
-            className="app-input max-w-[180px]"
-            value={brokerFilter}
-            onChange={(e) => setBrokerFilter(e.target.value)}
-          >
-            <option value="">Todos los corredores</option>
-            {(brokers || []).map((b) => (
-              <option key={b.id} value={b.id}>{b.name} ({b.policy_count})</option>
-            ))}
-          </select>
-          <select
-            className="app-input max-w-[180px]"
-            value={businessLineFilter}
-            onChange={(e) => setBusinessLineFilter(e.target.value)}
-          >
-            <option value="">Todas las líneas</option>
-            {(businessLines || []).map((b) => (
-              <option key={b.id} value={b.id}>{b.name} ({b.policy_count})</option>
-            ))}
-          </select>
-          <select
-            className="app-input max-w-[140px]"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">Todos los estados</option>
-            <option value="active">Activas</option>
-            <option value="draft">Borrador</option>
-            <option value="expired">Vencidas</option>
-            <option value="cancelled">Canceladas</option>
-          </select>
+          <Select value={insuranceCompanyFilter} onValueChange={(v) => setInsuranceCompanyFilter(v === "__all" || v === null ? "" : v)}>
+            <SelectTrigger className="app-input max-w-[200px]">
+              <SelectValue placeholder="Todas las compañías" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Todas las compañías</SelectItem>
+              {(insuranceCompanies || []).map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name} ({c.policy_count})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={brokerFilter} onValueChange={(v) => setBrokerFilter(v === "__all" || v === null ? "" : v)}>
+            <SelectTrigger className="app-input max-w-[180px]">
+              <SelectValue placeholder="Todos los corredores" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Todos los corredores</SelectItem>
+              {(brokers || []).map((b) => (
+                <SelectItem key={b.id} value={b.id}>{b.name} ({b.policy_count})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={businessLineFilter} onValueChange={(v) => setBusinessLineFilter(v === "__all" || v === null ? "" : v)}>
+            <SelectTrigger className="app-input max-w-[180px]">
+              <SelectValue placeholder="Todas las líneas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Todas las líneas</SelectItem>
+              {(businessLines || []).map((b) => (
+                <SelectItem key={b.id} value={b.id}>{b.name} ({b.policy_count})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)}>
+            <SelectTrigger className="app-input max-w-[140px]">
+              <SelectValue placeholder="Todos los estados" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Todos los estados</SelectItem>
+              <SelectItem value="active">Activas</SelectItem>
+              <SelectItem value="draft">Borrador</SelectItem>
+              <SelectItem value="expired">Vencidas</SelectItem>
+              <SelectItem value="cancelled">Canceladas</SelectItem>
+            </SelectContent>
+          </Select>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
