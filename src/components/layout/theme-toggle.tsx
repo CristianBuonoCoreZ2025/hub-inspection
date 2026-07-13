@@ -28,10 +28,10 @@ export function ThemeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <div className="sidebar-item w-full cursor-pointer" role="button" tabIndex={0}>
+          <button type="button" className="sidebar-item w-full cursor-pointer">
             {currentIcon}
-            <span className="text-[12px] font-medium flex-1">Tema</span>
-          </div>
+            <span className="text-[12px] font-medium flex-1 text-left">Tema</span>
+          </button>
         }
       />
       <DropdownMenuContent align="end" side="right">

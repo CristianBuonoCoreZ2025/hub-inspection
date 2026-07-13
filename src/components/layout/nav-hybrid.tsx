@@ -175,10 +175,10 @@ function SkinToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <div className="sidebar-item w-full cursor-pointer" role="button" tabIndex={0}>
+          <button type="button" className="sidebar-item w-full cursor-pointer">
             <Palette className="size-4 shrink-0" />
-            <span className="text-[12px] font-medium flex-1">Color</span>
-          </div>
+            <span className="text-[12px] font-medium flex-1 text-left">Color</span>
+          </button>
         }
       />
       <DropdownMenuContent align="end" side="right">
@@ -210,10 +210,10 @@ function SidebarStyleToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <div className="sidebar-item w-full cursor-pointer" role="button" tabIndex={0}>
+          <button type="button" className="sidebar-item w-full cursor-pointer">
             <LayoutPanelLeft className="size-4 shrink-0" />
-            <span className="text-[12px] font-medium flex-1">Menu</span>
-          </div>
+            <span className="text-[12px] font-medium flex-1 text-left">Menu</span>
+          </button>
         }
       />
       <DropdownMenuContent align="end" side="right">
