@@ -551,7 +551,7 @@ export default function ClaimDetailPage() {
 
       {/* Banner: Sin póliza asignada */}
       {!isEditing && !claim?.policy_id && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40 p-4 flex items-start gap-3">
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 backdrop-blur-xl p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-[13px] font-semibold text-amber-900 dark:text-amber-200">
@@ -865,16 +865,16 @@ export default function ClaimDetailPage() {
           <div className="app-panel">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
-                {/* Sub-tabs: Lista / Workflow */}
-                <div className="flex items-center gap-1 bg-muted/40 rounded-md p-0.5">
+                {/* Sub-tabs: Lista / Workflow — glass */}
+                <div className="flex items-center gap-1 bg-white/5 dark:bg-white/5 backdrop-blur-md rounded-md p-0.5 border border-white/10 dark:border-white/5">
                   <button
-                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${gestionSubTab === "lista" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${gestionSubTab === "lista" ? "bg-card/80 backdrop-blur-sm text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/5"}`}
                     onClick={() => setGestionSubTab("lista")}
                   >
                     Lista
                   </button>
                   <button
-                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${gestionSubTab === "workflow" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${gestionSubTab === "workflow" ? "bg-card/80 backdrop-blur-sm text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/5"}`}
                     onClick={() => setGestionSubTab("workflow")}
                   >
                     Workflow
@@ -1426,7 +1426,7 @@ function ActionHistoryView({ actionId }: { actionId: string }) {
         {showHistory ? "Ocultar historial" : "Ver historial"}
       </button>
       {showHistory && (
-        <div className="mt-2 rounded-lg border border-border bg-muted/20 p-3 max-h-[200px] overflow-y-auto">
+        <div className="mt-2 rounded-lg border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/5 backdrop-blur-md p-3 max-h-[200px] overflow-y-auto">
           {isLoading ? (
             <p className="text-[11px] text-muted-foreground text-center py-2">Cargando historial...</p>
           ) : !history || history.length === 0 ? (

@@ -12,12 +12,12 @@ interface WorkflowViewProps {
 type NodeState = "done" | "pending" | "late" | "alert" | "rejected" | "none";
 
 const stateConfig: Record<NodeState, { color: string; bg: string; border: string; icon: typeof CheckCircle; label: string }> = {
-  done:     { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", icon: CheckCircle, label: "Completada" },
-  pending:  { color: "text-slate-500 dark:text-slate-400",     bg: "bg-slate-50 dark:bg-slate-900/30",    border: "border-slate-200 dark:border-slate-700",    icon: Clock,        label: "Pendiente" },
-  late:     { color: "text-red-600 dark:text-red-400",          bg: "bg-red-50 dark:bg-red-950/30",       border: "border-red-200 dark:border-red-800",       icon: AlertTriangle, label: "Atrasada" },
-  alert:    { color: "text-amber-600 dark:text-amber-400",     bg: "bg-amber-50 dark:bg-amber-950/30",   border: "border-amber-200 dark:border-amber-800",  icon: AlertTriangle, label: "En alerta" },
-  rejected: { color: "text-rose-600 dark:text-rose-400",       bg: "bg-rose-50 dark:bg-rose-950/30",     border: "border-rose-200 dark:border-rose-800",     icon: XCircle,       label: "Rechazada" },
-  none:     { color: "text-muted-foreground/40",               bg: "bg-transparent",                     border: "border-dashed border-slate-200 dark:border-slate-700", icon: Circle, label: "N/A" },
+  done:     { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-500/15", border: "border-emerald-500/20 dark:border-emerald-500/30", icon: CheckCircle, label: "Completada" },
+  pending:  { color: "text-slate-500 dark:text-slate-400",     bg: "bg-slate-500/10 dark:bg-slate-500/15",    border: "border-slate-500/20 dark:border-slate-500/30",    icon: Clock,        label: "Pendiente" },
+  late:     { color: "text-red-600 dark:text-red-400",          bg: "bg-red-500/10 dark:bg-red-500/15",       border: "border-red-500/20 dark:border-red-500/30",       icon: AlertTriangle, label: "Atrasada" },
+  alert:    { color: "text-amber-600 dark:text-amber-400",     bg: "bg-amber-500/10 dark:bg-amber-500/15",   border: "border-amber-500/20 dark:border-amber-500/30",  icon: AlertTriangle, label: "En alerta" },
+  rejected: { color: "text-rose-600 dark:text-rose-400",       bg: "bg-rose-500/10 dark:bg-rose-500/15",     border: "border-rose-500/20 dark:border-rose-500/30",     icon: XCircle,       label: "Rechazada" },
+  none:     { color: "text-muted-foreground/40",               bg: "bg-transparent",                         border: "border-dashed border-white/10 dark:border-white/5", icon: Circle, label: "N/A" },
 };
 
 // Dependencias conocidas entre templates
@@ -124,8 +124,10 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
 
   return (
     <div className="space-y-3">
-      {/* Leyenda */}
-      <div className="flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground">
+      {/* Leyenda — glass */}
+      <div className="flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground
+                      rounded-lg border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/5
+                      backdrop-blur-md px-3 py-2">
         {(["done", "pending", "alert", "late", "rejected"] as NodeState[]).map(s => {
           const cfg = stateConfig[s];
           const Icon = cfg.icon;
@@ -138,14 +140,14 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
         })}
       </div>
 
-      {/* Grupos de gestiones por tipo */}
+      {/* Grupos de gestiones por tipo — glass */}
       <div className="space-y-2">
         {grouped.map(([templateCode, groupActions]) => {
           const dep = isDependencyMet(templateCode);
           return (
-            <div key={templateCode} className={`rounded-lg border ${dep.met ? "border-border" : "border-amber-300 dark:border-amber-700"} bg-card overflow-hidden`}>
-              {/* Header del grupo */}
-              <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border">
+            <div key={templateCode} className={`rounded-xl border ${dep.met ? "border-white/10 dark:border-white/5" : "border-amber-500/30 dark:border-amber-500/20"} bg-card/50 backdrop-blur-xl overflow-hidden shadow-sm`}>
+              {/* Header del grupo — glass */}
+              <div className="flex items-center justify-between px-3 py-2 bg-white/5 dark:bg-white/5 backdrop-blur-sm border-b border-white/10 dark:border-white/5">
                 <div className="flex items-center gap-2">
                   <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-[11px] font-semibold">{templateCode}</span>
@@ -160,7 +162,7 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
               </div>
 
               {/* Gestiones del grupo */}
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-white/5 dark:divide-white/5">
                 {groupActions.map(action => {
                   const state = getActionState(action);
                   const cfg = stateConfig[state];
@@ -177,7 +179,7 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
                   return (
                     <div
                       key={action.id}
-                      className={`flex items-center gap-3 px-3 py-2 ${onOpenAction ? "cursor-pointer hover:bg-muted/30" : ""} transition-colors`}
+                      className={`flex items-center gap-3 px-3 py-2 ${onOpenAction ? "cursor-pointer hover:bg-white/5 dark:hover:bg-white/5" : ""} transition-colors`}
                       onClick={() => onOpenAction?.(action.id)}
                     >
                       {/* Estado general */}
@@ -193,7 +195,7 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
                       {/* Nombre */}
                       <span className="text-[11px] font-medium flex-1 truncate">{action.name}</span>
 
-                      {/* Niveles E/R/A */}
+                      {/* Niveles E/R/A — glass circles */}
                       <div className="flex items-center gap-1 shrink-0">
                         {levels.map((lvl, i) => {
                           if (lvl.state === "none") return null;
@@ -201,7 +203,7 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
                           return (
                             <div key={i} className="flex items-center gap-0.5" title={`${lvl.title}: ${lcfg.label}`}>
                               {i > 0 && <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/40" />}
-                              <div className={`flex items-center justify-center rounded-full ${lcfg.bg} ${lcfg.border} border w-5 h-5`}>
+                              <div className={`flex items-center justify-center rounded-full ${lcfg.bg} ${lcfg.border} border backdrop-blur-sm w-5 h-5`}>
                                 <span className={`text-[9px] font-bold ${lcfg.color}`}>{lvl.label}</span>
                               </div>
                             </div>
@@ -209,8 +211,8 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
                         })}
                       </div>
 
-                      {/* Badge estado */}
-                      <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.border} border ${cfg.color} shrink-0`}>
+                      {/* Badge estado — glass */}
+                      <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.border} border backdrop-blur-sm ${cfg.color} shrink-0`}>
                         {cfg.label}
                       </span>
                     </div>

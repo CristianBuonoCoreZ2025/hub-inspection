@@ -239,9 +239,12 @@
     @apply text-[12px] text-foreground leading-relaxed;
   }
 
-  /* Barra de tabs */
+  /* Barra de tabs — glass */
   .app-tab-bar {
-    @apply border-b;
+    @apply border-b border-white/10 dark:border-white/5;
+    background: color-mix(in srgb, var(--card) 40%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 
   .app-tab-bar-inner {
