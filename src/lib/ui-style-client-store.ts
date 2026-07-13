@@ -9,9 +9,7 @@ export type UiStyleSkin =
   | "kinetic-pop"
   | "neo-playful"
   | "liquid-glass"
-  | "glassmorphism"
-  | "material-3-expressive"
-  | "neumorphism";
+  | "glassmorphism";
 
 export const UI_STYLE_LABELS: Record<UiStyleSkin, string> = {
   "nordic-air": "Aire Nórdico",
@@ -21,8 +19,6 @@ export const UI_STYLE_LABELS: Record<UiStyleSkin, string> = {
   "neo-playful": "Neo Playful",
   "liquid-glass": "Liquid Glass (sidebar)",
   "glassmorphism": "Glassmorphism (sidebar)",
-  "material-3-expressive": "Material 3 (sidebar)",
-  "neumorphism": "Neumorphism (sidebar)",
 };
 
 export function getUiStyleSnapshot(): UiStyleSkin {
