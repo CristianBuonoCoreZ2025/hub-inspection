@@ -6,6 +6,8 @@ import Link from "next/link";
 import {
   ClipboardCheck,
   FileText,
+  Eye,
+  Send,
   ListTodo,
   AlertTriangle,
   Clock,
@@ -213,6 +215,20 @@ export function TopBar() {
             count={s.liquidationsActive}
             label="Liquidaciones"
             href="/dashboard/claims?status=adjustment"
+            alwaysVisible
+          />
+          <StatChip
+            icon={Eye}
+            count={s.reviewsPending}
+            label="Revisiones"
+            href="/dashboard/gestiones?filter=reviews"
+            alwaysVisible
+          />
+          <StatChip
+            icon={Send}
+            count={s.dispatchesPending}
+            label="Despachos"
+            href="/dashboard/gestiones?filter=dispatches"
             alwaysVisible
           />
           <StatChip
