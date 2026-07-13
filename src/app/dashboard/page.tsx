@@ -28,7 +28,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
-import type { Claim, InspectionSession, AuditLog, UserRole } from "@/types";
+import type { Claim, InspectionSession, AuditLog, UserRole, Profile } from "@/types";
 import { DonutChart } from "@/components/dashboard/donut-chart";
 import { BarChartGlass } from "@/components/dashboard/bar-chart";
 import { AreaChartGlass } from "@/components/dashboard/area-chart";
@@ -136,7 +136,7 @@ function filterClaimsForUser(
 
 export default function DashboardPage() {
   const { profile } = useAuth();
-  const { statusCode, statusLabel } = useClaimStatuses();
+  const { statusCode } = useClaimStatuses();
 
   const isInternal = profile?.role === "internal";
   const roleLabel = profile ? ROLE_LABELS[profile.role] : "";
@@ -334,7 +334,7 @@ export default function DashboardPage() {
       claimsByDay,
       totalCompanies: companies?.length ?? 0,
       totalUsers: users?.length ?? 0,
-      activeUsers: users?.filter((u: any) => u.is_active)?.length ?? 0,
+      activeUsers: users?.filter((u: Profile) => u.is_active)?.length ?? 0,
     };
   }, [myClaims, mySessions, companies, users, statusCode]);
 
@@ -733,7 +733,7 @@ export default function DashboardPage() {
                 </p>
               ) : (
                 <div>
-                  {recentActivity.map((item, index) => {
+                  {recentActivity.map((item) => {
                     const Icon = item.icon;
                     return (
                       <div key={item.id} className="activity-item">
