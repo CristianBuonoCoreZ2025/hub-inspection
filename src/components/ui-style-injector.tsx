@@ -1,12 +1,35 @@
 "use client";
 
 import { useEffect } from "react";
-import { getUiStyleSnapshot } from "@/lib/ui-style-client-store";
+import {
+  getUiStyleSnapshot,
+  subscribeUiStyle,
+  persistUiStyleChoice,
+  UI_STYLE_LABELS,
+  type UiStyleSkin,
+} from "@/lib/ui-style-client-store";
+import { useSyncExternalStore } from "react";
 
 export function UiStyleInjector() {
+  const skin = useSyncExternalStore(
+    subscribeUiStyle,
+    getUiStyleSnapshot,
+    getUiStyleSnapshot
+  );
+
   useEffect(() => {
-    const skin = getUiStyleSnapshot();
     document.documentElement.setAttribute("data-ui-style", skin);
+  }, [skin]);
+
+  // Escuchar cambios cross-tab
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key === "claimshub-ui-style" && e.newValue && e.newValue in UI_STYLE_LABELS) {
+        document.documentElement.setAttribute("data-ui-style", e.newValue as UiStyleSkin);
+      }
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
   }, []);
 
   return null;

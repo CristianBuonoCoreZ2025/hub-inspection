@@ -1,0 +1,380 @@
+/*
+ * UI SKINS — 4 estilos visuales intercambiables
+ * Liquid Glass | Glassmorphism | Material 3 Expressive | Neumorphism
+ *
+ * Cada estilo sobreescribe las variables y clases base usando
+ * [data-ui-style="..."] en el <html>.
+ * Se aplica SIN recargar la pagina via el UiStyleInjector.
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+   LIQUID GLASS — Apple-inspired, muy translucido, refraccion
+   ═══════════════════════════════════════════════════════════════ */
+[data-ui-style="liquid-glass"] {
+  --glass-blur: 40px;
+  --glass-saturate: 180%;
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-bg-dark: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-border-dark: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  --glass-shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --glass-radius: 20px;
+  --glass-inset: 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+}
+
+[data-ui-style="liquid-glass"] .app-panel,
+[data-ui-style="liquid-glass"] .glass-panel {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  box-shadow: var(--glass-shadow), var(--glass-inset) !important;
+}
+
+[data-ui-style="liquid-glass"].dark .app-panel,
+[data-ui-style="liquid-glass"].dark .glass-panel {
+  background: var(--glass-bg-dark) !important;
+  border-color: var(--glass-border-dark) !important;
+  box-shadow: var(--glass-shadow-dark), var(--glass-inset) !important;
+}
+
+[data-ui-style="liquid-glass"] .sidebar-glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%) !important;
+  backdrop-filter: blur(40px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(255,255,255,0.3) inset !important;
+}
+
+[data-ui-style="liquid-glass"].dark .sidebar-glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255,255,255,0.08) inset !important;
+}
+
+/* Refraccion effect en hover */
+[data-ui-style="liquid-glass"] .app-panel:hover,
+[data-ui-style="liquid-glass"] .glass-panel:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-ui-style="liquid-glass"].dark .app-panel:hover,
+[data-ui-style="liquid-glass"].dark .glass-panel:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLASSMORPHISM — clasico, blur moderado, bordes sutiles
+   ═══════════════════════════════════════════════════════════════ */
+[data-ui-style="glassmorphism"] {
+  --glass-blur: 16px;
+  --glass-saturate: 150%;
+  --glass-bg: rgba(255, 255, 255, 0.12);
+  --glass-bg-dark: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-border-dark: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --glass-shadow-dark: 0 4px 24px rgba(0, 0, 0, 0.25);
+  --glass-radius: 16px;
+  --glass-inset: 0 1px 0 rgba(255, 255, 255, 0.15) inset;
+}
+
+[data-ui-style="glassmorphism"] .app-panel,
+[data-ui-style="glassmorphism"] .glass-panel {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  box-shadow: var(--glass-shadow), var(--glass-inset) !important;
+}
+
+[data-ui-style="glassmorphism"].dark .app-panel,
+[data-ui-style="glassmorphism"].dark .glass-panel {
+  background: var(--glass-bg-dark) !important;
+  border-color: var(--glass-border-dark) !important;
+  box-shadow: var(--glass-shadow-dark), var(--glass-inset) !important;
+}
+
+[data-ui-style="glassmorphism"] .sidebar-glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 100%) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255,255,255,0.15) inset !important;
+}
+
+[data-ui-style="glassmorphism"].dark .sidebar-glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 0 1px 0 rgba(255,255,255,0.06) inset !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MATERIAL 3 EXPRESSIVE — colores solidos, esquinas grandes, elevation
+   ═══════════════════════════════════════════════════════════════ */
+[data-ui-style="material-3-expressive"] {
+  --glass-blur: 0px;
+  --glass-saturate: 100%;
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-bg-dark: rgba(28, 28, 32, 0.92);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-border-dark: rgba(255, 255, 255, 0.06);
+  --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --glass-shadow-dark: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --glass-radius: 28px;
+  --glass-inset: none;
+}
+
+[data-ui-style="material-3-expressive"] .app-panel,
+[data-ui-style="material-3-expressive"] .glass-panel {
+  background: var(--glass-bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  box-shadow: var(--glass-shadow) !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease !important;
+}
+
+[data-ui-style="material-3-expressive"].dark .app-panel,
+[data-ui-style="material-3-expressive"].dark .glass-panel {
+  background: var(--glass-bg-dark) !important;
+  border-color: var(--glass-border-dark) !important;
+  box-shadow: var(--glass-shadow-dark) !important;
+}
+
+/* Elevation en hover (Material 3 state layer) */
+[data-ui-style="material-3-expressive"] .app-panel:hover,
+[data-ui-style="material-3-expressive"] .glass-panel:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px);
+}
+
+[data-ui-style="material-3-expressive"].dark .app-panel:hover,
+[data-ui-style="material-3-expressive"].dark .glass-panel:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+[data-ui-style="material-3-expressive"] .sidebar-glass {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-ui-style="material-3-expressive"].dark .sidebar-glass {
+  background: rgba(28, 28, 32, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Sidebar items con ripple-like effect */
+[data-ui-style="material-3-expressive"] .sidebar-item {
+  border-radius: 16px !important;
+}
+
+[data-ui-style="material-3-expressive"] .sidebar-item:hover {
+  background-color: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+}
+
+[data-ui-style="material-3-expressive"] .sidebar-item-active {
+  background-color: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  box-shadow: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NEUMORPHISM — sombras suaves, extrusion, monocromatico
+   ═══════════════════════════════════════════════════════════════ */
+[data-ui-style="neumorphism"] {
+  --glass-blur: 0px;
+  --glass-saturate: 100%;
+  --glass-bg: #e8e8ec;
+  --glass-bg-dark: #1e1e24;
+  --glass-border: transparent;
+  --glass-border-dark: transparent;
+  --glass-radius: 20px;
+  --neu-shadow-light: 6px 6px 14px rgba(0, 0, 0, 0.08), -6px -6px 14px rgba(255, 255, 255, 0.9);
+  --neu-shadow-dark: 6px 6px 14px rgba(0, 0, 0, 0.4), -6px -6px 14px rgba(255, 255, 255, 0.03);
+  --neu-shadow-inset-light: inset 4px 4px 10px rgba(0, 0, 0, 0.06), inset -4px -4px 10px rgba(255, 255, 255, 0.8);
+  --neu-shadow-inset-dark: inset 4px 4px 10px rgba(0, 0, 0, 0.3), inset -4px -4px 10px rgba(255, 255, 255, 0.02);
+  --glass-inset: none;
+}
+
+[data-ui-style="neumorphism"] .app-panel,
+[data-ui-style="neumorphism"] .glass-panel {
+  background: var(--glass-bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--glass-radius) !important;
+  box-shadow: var(--neu-shadow-light) !important;
+  transition: box-shadow 0.2s ease !important;
+}
+
+[data-ui-style="neumorphism"].dark .app-panel,
+[data-ui-style="neumorphism"].dark .glass-panel {
+  background: var(--glass-bg-dark) !important;
+  box-shadow: var(--neu-shadow-dark) !important;
+}
+
+/* Neumorphic pressed effect en hover */
+[data-ui-style="neumorphism"] .app-panel:hover,
+[data-ui-style="neumorphism"] .glass-panel:hover {
+  box-shadow: var(--neu-shadow-inset-light) !important;
+}
+
+[data-ui-style="neumorphism"].dark .app-panel:hover,
+[data-ui-style="neumorphism"].dark .glass-panel:hover {
+  box-shadow: var(--neu-shadow-inset-dark) !important;
+}
+
+[data-ui-style="neumorphism"] .sidebar-glass {
+  background: var(--glass-bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid transparent !important;
+  border-radius: 24px !important;
+  box-shadow: var(--neu-shadow-light) !important;
+}
+
+[data-ui-style="neumorphism"].dark .sidebar-glass {
+  background: var(--glass-bg-dark) !important;
+  box-shadow: var(--neu-shadow-dark) !important;
+}
+
+/* Sidebar items neumorficos */
+[data-ui-style="neumorphism"] .sidebar-item {
+  border-radius: 14px !important;
+  box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.06), -4px -4px 10px rgba(255, 255, 255, 0.8) !important;
+  background: var(--glass-bg) !important;
+}
+
+[data-ui-style="neumorphism"].dark .sidebar-item {
+  box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.3), -4px -4px 10px rgba(255, 255, 255, 0.02) !important;
+  background: var(--glass-bg-dark) !important;
+}
+
+[data-ui-style="neumorphism"] .sidebar-item:hover {
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.06), inset -3px -3px 8px rgba(255, 255, 255, 0.7) !important;
+  color: var(--primary) !important;
+}
+
+[data-ui-style="neumorphism"].dark .sidebar-item:hover {
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.3), inset -3px -3px 8px rgba(255, 255, 255, 0.02) !important;
+}
+
+[data-ui-style="neumorphism"] .sidebar-item-active {
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.08), inset -3px -3px 8px rgba(255, 255, 255, 0.7) !important;
+  color: var(--primary) !important;
+}
+
+[data-ui-style="neumorphism"].dark .sidebar-item-active {
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.3), inset -3px -3px 8px rgba(255, 255, 255, 0.02) !important;
+}
+
+[data-ui-style="neumorphism"] .sidebar-item-active::before {
+  display: none !important;
+}
+
+/* Neumorphic buttons */
+[data-ui-style="neumorphism"] .btn-save,
+[data-ui-style="neumorphism"] .btn-confirm,
+[data-ui-style="neumorphism"] .btn-accept,
+[data-ui-style="neumorphism"] .btn-create,
+[data-ui-style="neumorphism"] .btn-new,
+[data-ui-style="neumorphism"] .btn-emerald,
+[data-ui-style="neumorphism"] .btn-run,
+[data-ui-style="neumorphism"] .btn-execute,
+[data-ui-style="neumorphism"] .btn-sky,
+[data-ui-style="neumorphism"] .btn-homolog,
+[data-ui-style="neumorphism"] .btn-ai,
+[data-ui-style="neumorphism"] .btn-violet,
+[data-ui-style="neumorphism"] .btn-review,
+[data-ui-style="neumorphism"] .btn-violet-alt,
+[data-ui-style="neumorphism"] .btn-warn,
+[data-ui-style="neumorphism"] .btn-alert,
+[data-ui-style="neumorphism"] .btn-amber,
+[data-ui-style="neumorphism"] .btn-danger,
+[data-ui-style="neumorphism"] .btn-delete,
+[data-ui-style="neumorphism"] .btn-destructive-grad {
+  box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.1), -4px -4px 10px rgba(255, 255, 255, 0.15) !important;
+  border: none !important;
+}
+
+[data-ui-style="neumorphism"] .btn-cancel {
+  box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.08), -4px -4px 10px rgba(255, 255, 255, 0.12) !important;
+  border: none !important;
+}
+
+/* Tab bars neumorficas */
+[data-ui-style="neumorphism"] .app-tab-bar {
+  background: var(--glass-bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.06), inset -3px -3px 8px rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-ui-style="neumorphism"].dark .app-tab-bar {
+  background: var(--glass-bg-dark) !important;
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.3), inset -3px -3px 8px rgba(255, 255, 255, 0.02) !important;
+}
+
+[data-ui-style="neumorphism"] .app-tab-active {
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.08), -3px -3px 8px rgba(255, 255, 255, 0.8) !important;
+  background: var(--glass-bg) !important;
+}
+
+[data-ui-style="neumorphism"].dark .app-tab-active {
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3), -3px -3px 8px rgba(255, 255, 255, 0.02) !important;
+  background: var(--glass-bg-dark) !important;
+}
+
+[data-ui-style="neumorphism"] .app-tab-active::before {
+  display: none !important;
+}
+
+/* Background mesh: neumorphism no usa mesh, usa fondo solido */
+[data-ui-style="neumorphism"] .premium-bg-mesh {
+  background: var(--glass-bg) !important;
+}
+
+[data-ui-style="neumorphism"] .premium-orbs {
+  display: none !important;
+}
+
+[data-ui-style="neumorphism"].dark .premium-bg-mesh {
+  background: var(--glass-bg-dark) !important;
+}
+
+/* Material 3: orbs mas sutiles */
+[data-ui-style="material-3-expressive"] .premium-orbs {
+  opacity: 0.3 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FONDO BASE por estilo
+   ═══════════════════════════════════════════════════════════════ */
+[data-ui-style="liquid-glass"] .premium-bg-mesh {
+  background:
+    radial-gradient(at 20% 20%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(59, 130, 246, 0.06) 0px, transparent 50%),
+    radial-gradient(at 0% 80%, rgba(236, 72, 153, 0.05) 0px, transparent 50%) !important;
+}
+
+[data-ui-style="glassmorphism"] .premium-bg-mesh {
+  background:
+    radial-gradient(at 20% 20%, rgba(139, 92, 246, 0.06) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%) !important;
+}
+
+[data-ui-style="material-3-expressive"] .premium-bg-mesh {
+  background:
+    radial-gradient(at 20% 20%, rgba(103, 80, 164, 0.04) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(3, 218, 198, 0.04) 0px, transparent 50%) !important;
+}

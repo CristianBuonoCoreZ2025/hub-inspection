@@ -2,8 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Pieles de interfaz (5 skins dinámicos) */
+/* Pieles de interfaz (4 estilos visuales intercambiables) */
 @import "./ui-style-skins.css";
+@import "./styles/ui-skins.css";
 
 /* Estilos organizados por dominio (de hub-stock-ai) */
 @import "./styles/buttons.css";

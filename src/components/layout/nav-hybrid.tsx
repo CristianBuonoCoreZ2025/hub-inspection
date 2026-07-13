@@ -154,14 +154,14 @@ function HybridFlyout({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Selector de skin — simple como el ThemeToggle
+// Selector de skin — cambia entre los 4 estilos visuales sin reload
 // ═══════════════════════════════════════════════════════════════
 function SkinToggle() {
   const skin = useSyncExternalStore(subscribeUiStyle, getUiStyleSnapshot, getUiStyleSnapshot);
 
   const handleSelect = (value: UiStyleSkin) => {
     persistUiStyleChoice(value);
-    window.location.reload();
+    document.documentElement.setAttribute("data-ui-style", value);
   };
 
   return (
