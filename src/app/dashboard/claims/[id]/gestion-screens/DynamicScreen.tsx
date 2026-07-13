@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { getClaimCoveragesByAction, getClaimCoveragesFromIngreso, createClaimCoverage, updateClaimCoverage, deactivateClaimCoverage } from "@/services/claim-coverages";
 import { getClaimReserves, getClaimReserveByAction, createClaimReserve, updateClaimReserve, upsertReserveCoverage } from "@/services/claim-reserves";
@@ -573,29 +574,33 @@ function LevelCard({
       </div>
       <div className="flex items-center gap-1.5">
         {canReassign ? (
-          <select
-            className="text-[10px] rounded border border-border bg-background px-1.5 py-0.5 text-foreground max-w-[160px] truncate focus:outline-none focus:ring-1 focus:ring-primary"
-            value={level.currentId || ""}
-            disabled={updateMut.isPending || isLoading}
-            onChange={(e) => {
-              const newId = e.target.value || null;
+          <Select
+            value={level.currentId || "__none"}
+            onValueChange={(v) => {
+              const newId = v === "__none" ? null : v;
               if (newId !== level.currentId) {
                 updateMut.mutate(newId);
               }
             }}
+            disabled={updateMut.isPending || isLoading}
           >
-            <option value="" disabled>
-              {isLoading ? "Cargando..." : "Por asignar"}
-            </option>
-            {(candidates || []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.full_name}
-              </option>
-            ))}
-            {level.currentId && !(candidates || []).some(c => c.id === level.currentId) && (
-              <option value={level.currentId}>{level.personName}</option>
-            )}
-          </select>
+            <SelectTrigger className="app-input h-7 text-[10px] max-w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none" disabled>
+                {isLoading ? "Cargando..." : "Por asignar"}
+              </SelectItem>
+              {(candidates || []).map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.full_name}
+                </SelectItem>
+              ))}
+              {level.currentId && !(candidates || []).some(c => c.id === level.currentId) && (
+                <SelectItem value={level.currentId}>{level.personName}</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         ) : (
           <span className="text-[10px] opacity-80">{level.personName}</span>
         )}
@@ -1161,17 +1166,21 @@ function OwnField({
           <Label className="app-field-label text-[11px]">
             {field.label} {field.required && <span className="text-red-500">*</span>}
           </Label>
-          <select
-            className="app-input h-8 text-[12px] w-full"
-            value={String(value || "")}
-            onChange={(e) => onChange(field.id, e.target.value)}
+          <Select
+            value={String(value || "__none")}
+            onValueChange={(v) => onChange(field.id, v === "__none" ? "" : v)}
             disabled={readOnly}
           >
-            <option value="">{field.placeholder || "Seleccionar..."}</option>
-            {field.options?.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="app-input h-7 text-[12px] w-full">
+              <SelectValue placeholder={field.placeholder || "Seleccionar..."} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">{field.placeholder || "Seleccionar..."}</SelectItem>
+              {field.options?.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       );
 
@@ -2494,16 +2503,20 @@ function InspectionCoordinationView({ claimId, readOnly, action }: { claimId?: s
         </div>
         <div>
           <Label className="text-[11px]">Inspector</Label>
-          <select
-            className="app-input h-7 text-[12px] mt-1"
-            value={inspectorId}
-            onChange={(e) => setInspectorId(e.target.value)}
+          <Select
+            value={inspectorId || "__none"}
+            onValueChange={(v) => setInspectorId(v && v !== "__none" ? v : "")}
           >
-            <option value="">Sin asignar</option>
-            {inspectors?.map((insp) => (
-              <option key={insp.id} value={insp.id}>{insp.full_name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="app-input h-7 text-[12px] mt-1">
+              <SelectValue placeholder="Sin asignar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">Sin asignar</SelectItem>
+              {inspectors?.map((insp) => (
+                <SelectItem key={insp.id} value={insp.id}>{insp.full_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

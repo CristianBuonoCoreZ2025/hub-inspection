@@ -5,6 +5,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
@@ -765,15 +768,26 @@ function CreateWorkflowModal({
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-violet-500/20 text-violet-400 text-[9px] font-bold">1</span>
                 Estado
               </Label>
-              <select
-                className="app-input w-full"
-                value={statusId}
-                onChange={(e) => { setStatusId(e.target.value); setCountryId(""); setEventId(""); setLineId(""); }}
+              <Select
+                value={statusId || "__none"}
+                onValueChange={(v) => {
+                  const val = !v || v === "__none" ? "" : v;
+                  setStatusId(val); setCountryId(""); setEventId(""); setLineId("");
+                }}
+                items={[
+                  { value: "__none", label: "Seleccionar estado..." },
+                  ...claimStatuses.map(s => ({ value: s.id, label: s.name })),
+                ]}
                 required
               >
-                <option value="">Seleccionar estado...</option>
-                {claimStatuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+                <SelectTrigger className="app-input h-7">
+                  <SelectValue placeholder="Seleccionar estado..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Seleccionar estado...</SelectItem>
+                  {claimStatuses.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Paso 2: Pais */}
@@ -782,16 +796,27 @@ function CreateWorkflowModal({
                 <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${countryId ? "bg-violet-500/20 text-violet-400" : "bg-muted text-muted-foreground"}`}>2</span>
                 País
               </Label>
-              <select
-                className="app-input w-full disabled:opacity-40"
-                value={countryId}
-                onChange={(e) => { setCountryId(e.target.value); setEventId(""); setLineId(""); }}
+              <Select
+                value={countryId || "__none"}
+                onValueChange={(v) => {
+                  const val = !v || v === "__none" ? "" : v;
+                  setCountryId(val); setEventId(""); setLineId("");
+                }}
+                items={[
+                  { value: "__none", label: !statusId ? "Primero selecciona estado..." : !countries ? "Cargando..." : "Seleccionar país..." },
+                  ...(countries?.map(c => ({ value: c.id, label: c.name })) || []),
+                ]}
                 disabled={!statusId || !countries}
                 required
               >
-                <option value="">{!statusId ? "Primero selecciona estado..." : !countries ? "Cargando..." : "Seleccionar país..."}</option>
-                {countries?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+                <SelectTrigger className="app-input h-7">
+                  <SelectValue placeholder={!statusId ? "Primero selecciona estado..." : !countries ? "Cargando..." : "Seleccionar país..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">{!statusId ? "Primero selecciona estado..." : !countries ? "Cargando..." : "Seleccionar país..."}</SelectItem>
+                  {countries?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Paso 3: Evento */}
@@ -800,16 +825,27 @@ function CreateWorkflowModal({
                 <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${eventId ? "bg-violet-500/20 text-violet-400" : "bg-muted text-muted-foreground"}`}>3</span>
                 Evento
               </Label>
-              <select
-                className="app-input w-full disabled:opacity-40"
-                value={eventId}
-                onChange={(e) => { setEventId(e.target.value); setLineId(""); }}
+              <Select
+                value={eventId || "__none"}
+                onValueChange={(v) => {
+                  const val = !v || v === "__none" ? "" : v;
+                  setEventId(val); setLineId("");
+                }}
+                items={[
+                  { value: "__none", label: !countryId ? "Primero selecciona país..." : !events ? "Cargando..." : "Seleccionar evento..." },
+                  ...(events?.map(e => ({ value: e.id, label: e.name })) || []),
+                ]}
                 disabled={!countryId || !events}
                 required
               >
-                <option value="">{!countryId ? "Primero selecciona país..." : !events ? "Cargando..." : "Seleccionar evento..."}</option>
-                {events?.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-              </select>
+                <SelectTrigger className="app-input h-7">
+                  <SelectValue placeholder={!countryId ? "Primero selecciona país..." : !events ? "Cargando..." : "Seleccionar evento..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">{!countryId ? "Primero selecciona país..." : !events ? "Cargando..." : "Seleccionar evento..."}</SelectItem>
+                  {events?.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Paso 4: Linea */}
@@ -818,16 +854,27 @@ function CreateWorkflowModal({
                 <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${lineId ? "bg-violet-500/20 text-violet-400" : "bg-muted text-muted-foreground"}`}>4</span>
                 Línea de Negocio
               </Label>
-              <select
-                className="app-input w-full disabled:opacity-40"
-                value={lineId}
-                onChange={(e) => setLineId(e.target.value)}
+              <Select
+                value={lineId || "__none"}
+                onValueChange={(v) => {
+                  const val = !v || v === "__none" ? "" : v;
+                  setLineId(val);
+                }}
+                items={[
+                  { value: "__none", label: !eventId ? "Primero selecciona evento..." : !lines ? "Cargando..." : "Seleccionar línea..." },
+                  ...(lines?.map(l => ({ value: l.id, label: l.name })) || []),
+                ]}
                 disabled={!eventId || !lines}
                 required
               >
-                <option value="">{!eventId ? "Primero selecciona evento..." : !lines ? "Cargando..." : "Seleccionar línea..."}</option>
-                {lines?.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
+                <SelectTrigger className="app-input h-7">
+                  <SelectValue placeholder={!eventId ? "Primero selecciona evento..." : !lines ? "Cargando..." : "Seleccionar línea..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">{!eventId ? "Primero selecciona evento..." : !lines ? "Cargando..." : "Seleccionar línea..."}</SelectItem>
+                  {lines?.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Warning: ya existe */}

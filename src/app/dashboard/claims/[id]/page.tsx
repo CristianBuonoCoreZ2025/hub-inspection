@@ -43,6 +43,7 @@ import { Button } from "@/components/ui/button";
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -1237,23 +1238,28 @@ export default function ClaimDetailPage() {
               <>
                 <div>
                   <label className="app-field-label text-[11px]">Tipo de Gestión *</label>
-                  <select
-                    className="app-input h-8 text-[12px] w-full"
-                    value={selectedTemplate?.id || ""}
-                    onChange={(e) => {
-                      const tpl = chainFilteredTemplates.find((t) => t.id === e.target.value) || null;
+                  <Select
+                    value={selectedTemplate?.id || "__none"}
+                    onValueChange={(v) => {
+                      const id = v === "__none" ? "" : (v ?? "");
+                      const tpl = chainFilteredTemplates.find((t) => t.id === id) || null;
                       setSelectedTemplate(tpl);
                     }}
                   >
-                    <option value="">Seleccionar...</option>
-                    {[...chainFilteredTemplates]
-                      .sort((a, b) => a.name.localeCompare(b.name))
-                      .map((tpl) => (
-                        <option key={tpl.id} value={tpl.id}>
-                          {tpl.name}
-                        </option>
-                      ))}
-                  </select>
+                    <SelectTrigger className="app-input h-7 w-full">
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">Seleccionar...</SelectItem>
+                      {[...chainFilteredTemplates]
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((tpl) => (
+                          <SelectItem key={tpl.id} value={tpl.id}>
+                            {tpl.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>

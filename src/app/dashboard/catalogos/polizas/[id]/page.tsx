@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   getPolicyById,
   getPolicyCoveragesByPolicyIdDirect,
@@ -599,29 +600,37 @@ export default function PolicyDetailPage() {
             </div>
             <div className="lg:col-span-3">
               <Label className="app-field-label">Compañía de Seguros</Label>
-              <select
-                className="app-input w-full"
-                value={form.insurance_company_id}
-                onChange={(e) => setForm({ ...form, insurance_company_id: e.target.value })}
+              <Select
+                value={form.insurance_company_id || "__none"}
+                onValueChange={(v) => setForm({ ...form, insurance_company_id: !v || v === "__none" ? "" : v })}
               >
-                <option value="">Seleccionar...</option>
-                {insuranceCompanies?.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="app-input h-7">
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Seleccionar...</SelectItem>
+                  {insuranceCompanies?.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="lg:col-span-2">
               <Label className="app-field-label">Corredor</Label>
-              <select
-                className="app-input w-full"
-                value={form.broker_id}
-                onChange={(e) => setForm({ ...form, broker_id: e.target.value })}
+              <Select
+                value={form.broker_id || "__none"}
+                onValueChange={(v) => setForm({ ...form, broker_id: !v || v === "__none" ? "" : v })}
               >
-                <option value="">Seleccionar...</option>
-                {brokers?.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="app-input h-7">
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Seleccionar...</SelectItem>
+                  {brokers?.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="app-field-label">Moneda <span className="text-red-500">*</span></Label>
@@ -765,11 +774,11 @@ export default function PolicyDetailPage() {
               {/* Tema (filtro opcional) */}
               <div className="lg:col-span-2">
                 <Label className="app-field-label text-[10px]">Tema (opcional)</Label>
-                <select
-                  className="app-input h-8 text-[12px] w-full"
-                  value={selectedTheme}
-                  onChange={(e) => {
-                    setSelectedTheme(e.target.value);
+                <Select
+                  value={selectedTheme || "__none"}
+                  onValueChange={(v) => {
+                    const val = !v || v === "__none" ? "" : v;
+                    setSelectedTheme(val);
                     setNewCov({ ...newCov, coverage_catalog_id: "" });
                     setSelectedCoverageCatalogId("");
                     setSelectedSubcoverages(new Set());
@@ -779,11 +788,16 @@ export default function PolicyDetailPage() {
                     setCovSearch("");
                   }}
                 >
-                  <option value="">Todos los temas</option>
-                  {(coverageThemes || []).map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="app-input h-7">
+                    <SelectValue placeholder="Todos los temas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Todos los temas</SelectItem>
+                    {(coverageThemes || []).map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Cobertura (POL nivel 1) — siempre visible */}

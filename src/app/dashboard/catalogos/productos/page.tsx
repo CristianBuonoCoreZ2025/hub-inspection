@@ -150,15 +150,15 @@ export default function ProductosPage() {
                 <div className="modal-field">
                   <Label className="app-field-label">País</Label>
                   <Select
-                    value={formData.country_id}
-                    onValueChange={(v) => setFormData({ ...formData, country_id: v || "" })}
+                    value={formData.country_id || "__none"}
+                    onValueChange={(v) => setFormData({ ...formData, country_id: v === "__none" ? "" : (v ?? "") })}
                     items={countries?.map((c) => ({ value: c.id, label: c.name })) || []}
                   >
                     <SelectTrigger className="app-input h-7">
                       <SelectValue placeholder="Seleccionar país..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin selección</SelectItem>
+                      <SelectItem value="__none">Sin selección</SelectItem>
                       {countries?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                     </SelectContent>
                   </Select>

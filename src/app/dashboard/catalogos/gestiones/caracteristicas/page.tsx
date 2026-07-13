@@ -20,6 +20,7 @@ import { useTableSort } from "@/hooks/use-table-sort";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -267,24 +268,28 @@ export default function CaracteristicasPage() {
               {formData.has_specific_screen && (
                 <div className="flex flex-col gap-1.5">
                   <Label className="app-field-label">Pantalla asociada</Label>
-                  <select
-                    className="app-input w-full"
-                    value={formData.screen_id}
-                    onChange={(e) => setFormData({ ...formData, screen_id: e.target.value })}
+                  <Select
+                    value={formData.screen_id || "__none"}
+                    onValueChange={(v) => setFormData({ ...formData, screen_id: v === "__none" ? "" : (v ?? "") })}
                   >
-                    <option value="">Pantalla genérica</option>
-                    {screens?.map((s) => {
-                      const fields = Array.isArray(s.form_schema?.fields) ? s.form_schema.fields as string[] : [];
-                      const label = s.is_dynamic === false
-                        ? `${s.name} (fija)`
-                        : `${s.name} ${fields.length ? `(${fields.length} campos)` : ""}`;
-                      return (
-                        <option key={s.id} value={s.id}>
-                          {label}
-                        </option>
-                      );
-                    })}
-                  </select>
+                    <SelectTrigger className="app-input h-7 w-full">
+                      <SelectValue placeholder="Pantalla genérica" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">Pantalla genérica</SelectItem>
+                      {screens?.map((s) => {
+                        const fields = Array.isArray(s.form_schema?.fields) ? s.form_schema.fields as string[] : [];
+                        const label = s.is_dynamic === false
+                          ? `${s.name} (fija)`
+                          : `${s.name} ${fields.length ? `(${fields.length} campos)` : ""}`;
+                        return (
+                          <SelectItem key={s.id} value={s.id}>
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                   <ScreenHelpPanel screen={screens?.find(s => s.id === formData.screen_id)} />
                 </div>
               )}

@@ -10,6 +10,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -306,32 +307,40 @@ export default function DependenciasGestionPage() {
               </div>
               <div>
                 <Label className="app-field-label">Gestión Padre <span className="text-red-500">*</span></Label>
-                <select
-                  className="app-input w-full"
-                  value={parentCode}
-                  onChange={(e) => { setParentCode(e.target.value); setChildCode(""); }}
+                <Select
+                  value={parentCode || "__none"}
+                  onValueChange={(v) => { setParentCode(v === "__none" ? "" : (v ?? "")); setChildCode(""); }}
                   required
                 >
-                  <option value="">Seleccionar...</option>
-                  {codeMap.map(c => (
-                    <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="app-input h-7 w-full">
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Seleccionar...</SelectItem>
+                    {codeMap.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label className="app-field-label">Gestión Hija (dependiente) <span className="text-red-500">*</span></Label>
-                <select
-                  className="app-input w-full"
-                  value={childCode}
-                  onChange={(e) => setChildCode(e.target.value)}
+                <Select
+                  value={childCode || "__none"}
+                  onValueChange={(v) => setChildCode(v === "__none" ? "" : (v ?? ""))}
                   disabled={!parentCode}
                   required
                 >
-                  <option value="">{!parentCode ? "Primero selecciona padre..." : "Seleccionar..."}</option>
-                  {availableChildren.map(c => (
-                    <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="app-input h-7 w-full">
+                    <SelectValue placeholder={!parentCode ? "Primero selecciona padre..." : "Seleccionar..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">{!parentCode ? "Primero selecciona padre..." : "Seleccionar..."}</SelectItem>
+                    {availableChildren.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="modal-footer">

@@ -3,6 +3,8 @@
 import { Controller, type Control, type FieldValues, type FieldPath } from "react-hook-form";
 import { Select, SelectContent, SelectTrigger, SelectValue, SelectItem } from "@/components/ui/select";
 
+const CLEAR_VALUE = "__none";
+
 interface FormSelectProps<TFieldValues extends FieldValues = any> {
   control: Control<TFieldValues>;
   name: string;
@@ -25,9 +27,9 @@ export function FormSelect<TFieldValues extends FieldValues = any>({ control, na
       name={name as FieldPath<TFieldValues>}
       render={({ field }) => (
         <Select
-          value={field.value || ""}
+          value={field.value || CLEAR_VALUE}
           onValueChange={(v: any) => {
-            const value = v || "";
+            const value = v === CLEAR_VALUE || v === null ? "" : v;
             field.onChange(value);
             onValueChange?.(value);
           }}
@@ -39,7 +41,7 @@ export function FormSelect<TFieldValues extends FieldValues = any>({ control, na
           </SelectTrigger>
           <SelectContent>
             {clearable && (
-              <SelectItem value="">{clearLabel}</SelectItem>
+              <SelectItem value={CLEAR_VALUE}>{clearLabel}</SelectItem>
             )}
             {children}
           </SelectContent>

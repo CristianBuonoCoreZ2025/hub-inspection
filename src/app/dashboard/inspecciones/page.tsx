@@ -335,12 +335,12 @@ function InspectionsPageContent() {
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 w-full max-w-sm"
           />
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "all")}>
+          <Select value={statusFilter || "__none"} onValueChange={(v) => setStatusFilter(v === "__none" ? "" : v ?? "all")}>
             <SelectTrigger className="h-7 w-full sm:w-[160px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Sin selección</SelectItem>
+              <SelectItem value="__none">Sin selección</SelectItem>
               <SelectItem value="all">Todos los estados</SelectItem>
               <SelectItem value="scheduled">Agendada</SelectItem>
               <SelectItem value="active">En progreso</SelectItem>

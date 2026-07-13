@@ -24,6 +24,7 @@ import { getCountries } from "@/services/countries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -239,23 +240,28 @@ export default function CoberturasPage() {
         <h1 className="app-page-title shrink-0">Coberturas</h1>
         <div className="app-grid-filters">
           <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-          <select
-            className="app-input h-8 max-w-[160px]"
-            value={selectedCountryId}
-            onChange={(e) => {
-              setSelectedCountryId(e.target.value);
+          <Select
+            value={selectedCountryId || "__none"}
+            onValueChange={(v) => {
+              const id = v === "__none" ? "" : (v ?? "");
+              setSelectedCountryId(id);
               setSelectedTheme("");
               setSearch("");
               setExpandedCovs(new Set());
             }}
           >
-            <option value="">Chile (CL)</option>
-            {(countries || [])
-              .filter((c) => c.code !== CHILE_CODE)
-              .map((c) => (
-                <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
-              ))}
-          </select>
+            <SelectTrigger className="app-input h-7 max-w-[160px]">
+              <SelectValue placeholder="Chile (CL)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">Chile (CL)</SelectItem>
+              {(countries || [])
+                .filter((c) => c.code !== CHILE_CODE)
+                .map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <Input
             placeholder="Buscar cobertura..."

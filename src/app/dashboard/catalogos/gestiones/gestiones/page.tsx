@@ -638,13 +638,13 @@ export default function GestionesPage() {
                     {editingId && <span className="text-amber-600 ml-1">(inmutable)</span>}
                   </Label>
                   <Select
-                    value={form.line_business_id}
-                    onValueChange={(v) => setForm({ ...form, line_business_id: v || "" })}
+                    value={form.line_business_id || "__none"}
+                    onValueChange={(v) => setForm({ ...form, line_business_id: v === "__none" || v === null ? "" : v })}
                     items={businessLines?.map(b => ({ value: b.id, label: b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name })) || []}
                     disabled={!!editingId}
                   >
                     <SelectTrigger className="app-input h-7"><SelectValue placeholder="Sin selección" /></SelectTrigger>
-                    <SelectContent><SelectItem value="">Sin selección</SelectItem>{businessLines?.map(b => <SelectItem key={b.id} value={b.id}>{b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name}</SelectItem>)}</SelectContent>
+                    <SelectContent><SelectItem value="__none">Sin selección</SelectItem>{businessLines?.map(b => <SelectItem key={b.id} value={b.id}>{b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 {/* Despacho: solo visible si la característica tiene templates */}
@@ -915,17 +915,17 @@ export default function GestionesPage() {
         <div className="flex items-center gap-2 flex-1 min-w-[300px]">
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="app-input h-8 max-w-[180px]" />
-          <Select value={filterFeature} onValueChange={(v) => { setFilterFeature(v || ""); setPage(1); }} items={features?.map(f => ({ value: f.id, label: f.code ? `${f.name} (${f.code})` : f.name })) || []}>
+          <Select value={filterFeature || "__all"} onValueChange={(v) => { setFilterFeature(v === "__all" || v === null ? "" : v); setPage(1); }} items={features?.map(f => ({ value: f.id, label: f.code ? `${f.name} (${f.code})` : f.name })) || []}>
             <SelectTrigger className="app-input h-8 max-w-[180px]"><SelectValue placeholder="Característica..." /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas</SelectItem>
+              <SelectItem value="__all">Todas</SelectItem>
               {features?.map(f => <SelectItem key={f.id} value={f.id}>{f.code ? `${f.name} (${f.code})` : f.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={filterLine} onValueChange={(v) => { setFilterLine(v || ""); setPage(1); }} items={businessLines?.map(b => ({ value: b.id, label: b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name })) || []}>
+          <Select value={filterLine || "__all"} onValueChange={(v) => { setFilterLine(v === "__all" || v === null ? "" : v); setPage(1); }} items={businessLines?.map(b => ({ value: b.id, label: b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name })) || []}>
             <SelectTrigger className="app-input h-8 max-w-[160px]"><SelectValue placeholder="Línea..." /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas</SelectItem>
+              <SelectItem value="__all">Todas</SelectItem>
               {businessLines?.map(b => <SelectItem key={b.id} value={b.id}>{b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name}</SelectItem>)}
             </SelectContent>
           </Select>

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Trash2,
   ChevronUp,
@@ -495,11 +496,10 @@ function PropertiesPanel({
           <div>
             <Label className="app-field-label text-[10px]">Validación de fecha</Label>
             <p className="text-[9px] text-muted-foreground mb-1">Opcional. Valida contra otra fecha o la actual.</p>
-            <select
-              className="app-input h-8 text-[11px] w-full"
-              value={field.dateValidation?.type || ""}
-              onChange={(e) => {
-                const type = e.target.value as DateValidation["type"];
+            <Select
+              value={field.dateValidation?.type || "__none"}
+              onValueChange={(v) => {
+                const type = (v === "__none" ? "" : (v ?? "")) as DateValidation["type"];
                 if (!type) {
                   onUpdate(index, { dateValidation: undefined });
                 } else {
@@ -509,11 +509,16 @@ function PropertiesPanel({
                 }
               }}
             >
-              <option value="">Sin validación</option>
-              {DATE_VALIDATION_TYPES.map((v) => (
-                <option key={v.code} value={v.code}>{v.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="app-input h-7 w-full">
+                <SelectValue placeholder="Sin validación" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Sin validación</SelectItem>
+                {DATE_VALIDATION_TYPES.map((v) => (
+                  <SelectItem key={v.code} value={v.code}>{v.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Campo de comparación */}
@@ -521,18 +526,22 @@ function PropertiesPanel({
            !field.dateValidation.type.includes("today") && (
             <div>
               <Label className="app-field-label text-[10px]">Comparar con</Label>
-              <select
-                className="app-input h-8 text-[11px] w-full"
-                value={field.dateValidation.compareField || ""}
-                onChange={(e) => onUpdate(index, {
-                  dateValidation: { ...field.dateValidation!, compareField: e.target.value || undefined },
+              <Select
+                value={field.dateValidation.compareField || "__none"}
+                onValueChange={(v) => onUpdate(index, {
+                  dateValidation: { ...field.dateValidation!, compareField: (v === "__none" ? "" : (v ?? "")) || undefined },
                 })}
               >
-                <option value="">Seleccionar campo...</option>
-                {dateFields.map((f) => (
-                  <option key={f.id} value={f.id}>{f.label}</option>
-                ))}
-              </select>
+                <SelectTrigger className="app-input h-7 w-full">
+                  <SelectValue placeholder="Seleccionar campo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Seleccionar campo...</SelectItem>
+                  {dateFields.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-[9px] text-muted-foreground mt-0.5">
                 Solo campos de fecha del formulario
               </p>

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Copy } from "lucide-react";
 
 import type { ScreenField, FieldWidth, DateValidation } from "./types";
@@ -244,11 +245,10 @@ export function FieldPropertiesPanel({
           </div>
           <div>
             <Label className="app-field-label text-[10px]">Validación de fecha</Label>
-            <select
-              className="app-input h-8 text-[11px] w-full"
-              value={field.dateValidation?.type || ""}
-              onChange={(e) => {
-                const type = e.target.value as DateValidation["type"];
+            <Select
+              value={field.dateValidation?.type || "__none"}
+              onValueChange={(v) => {
+                const type = (v === "__none" ? "" : (v ?? "")) as DateValidation["type"];
                 if (!type) {
                   onUpdate({ dateValidation: undefined });
                 } else {
@@ -256,38 +256,47 @@ export function FieldPropertiesPanel({
                 }
               }}
             >
-              <option value="">Sin validación</option>
-              {DATE_VALIDATION_TYPES.map((v) => (
-                <option key={v.code} value={v.code}>
-                  {v.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="app-input h-7 w-full">
+                <SelectValue placeholder="Sin validación" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Sin validación</SelectItem>
+                {DATE_VALIDATION_TYPES.map((v) => (
+                  <SelectItem key={v.code} value={v.code}>
+                    {v.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {field.dateValidation?.type &&
             field.dateValidation.type.includes("than") &&
             !field.dateValidation.type.includes("today") && (
               <div>
                 <Label className="app-field-label text-[10px]">Comparar con</Label>
-                <select
-                  className="app-input h-8 text-[11px] w-full"
-                  value={field.dateValidation.compareField || ""}
-                  onChange={(e) =>
+                <Select
+                  value={field.dateValidation.compareField || "__none"}
+                  onValueChange={(v) =>
                     onUpdate({
                       dateValidation: {
                         ...field.dateValidation!,
-                        compareField: e.target.value || undefined,
+                        compareField: (v === "__none" ? "" : (v ?? "")) || undefined,
                       },
                     })
                   }
                 >
-                  <option value="">Seleccionar campo...</option>
-                  {dateFields.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="app-input h-7 w-full">
+                    <SelectValue placeholder="Seleccionar campo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Seleccionar campo...</SelectItem>
+                    {dateFields.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
         </>

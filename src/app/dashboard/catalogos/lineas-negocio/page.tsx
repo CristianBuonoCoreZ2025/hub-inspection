@@ -152,15 +152,15 @@ export default function LineasNegocioPage() {
                 <div className="modal-field">
                   <Label className="app-field-label">País</Label>
                   <Select
-                    value={formData.country_id}
-                    onValueChange={(v) => setFormData({ ...formData, country_id: v || "" })}
+                    value={formData.country_id || "__none"}
+                    onValueChange={(v) => setFormData({ ...formData, country_id: v === "__none" ? "" : (v ?? "") })}
                     items={countries?.map((c) => ({ value: c.id, label: c.name })) || []}
                   >
                     <SelectTrigger className="app-input h-7">
                       <SelectValue placeholder="Seleccionar país..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin selección</SelectItem>
+                      <SelectItem value="__none">Sin selección</SelectItem>
                       {countries?.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
@@ -168,13 +168,13 @@ export default function LineasNegocioPage() {
                 <div className="modal-field">
                   <Label className="app-field-label">Tipo Siniestro</Label>
                   <Select
-                    value={formData.claim_type_id}
-                    onValueChange={(v) => setFormData({ ...formData, claim_type_id: v ?? "" })}
+                    value={formData.claim_type_id || "__none"}
+                    onValueChange={(v) => setFormData({ ...formData, claim_type_id: v === "__none" ? "" : (v ?? "") })}
                     items={claimTypes?.map((ct) => ({ value: ct.id, label: ct.name })) || []}
                   >
                     <SelectTrigger className="app-input h-7"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin selección</SelectItem>
+                      <SelectItem value="__none">Sin selección</SelectItem>
                       {claimTypes?.map((ct) => (<SelectItem key={ct.id} value={ct.id}>{ct.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
