@@ -449,6 +449,90 @@ Los FormSelect SIEMPRE deben llevar className="app-input h-7".
 NO usar h-8, h-9, h-10, ni text-sm en inputs o combos.
 ```
 
+### Regla OBLIGATORIA de Comboboxes (Select) — Estilo Visual
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ ESTA ES LA ÚNICA REGLA DE COMBOBOXES. TODOS los Select de la     │
+│ app DEBEN usar el componente Select de shadcn/ui (Base UI)       │
+│ definido en src/components/ui/select.tsx.                        │
+│ NUNCA usar <select> nativo de HTML. NUNCA crear selects custom.  │
+└─────────────────────────────────────────────────────────────────┘
+
+PROHIBIDO:
+  ❌ <select> nativo de HTML (el dropdown usa estilo del OS)
+  ❌ Crear componentes Select custom
+  ❌ Modificar el estilo del SelectContent/SelectItem por página
+
+PERMITIDO:
+  ✅ Importar Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+     de "@/components/ui/select"
+  ✅ Pasar className="app-input" al SelectTrigger para heredar el estilo
+     compacto (28px, 12px, border 10px)
+
+ESTILO DEFINITIVO del Select (definido en src/components/ui/select.tsx):
+
+TRIGGER (SelectTrigger):
+  - Altura: 28px (h-7) con className="app-input"
+  - Fuente: 12px (text-xs)
+  - Border-radius: 10px (rounded-lg)
+  - Border: 1px solid var(--input)
+  - Fondo: color-mix(var(--card) 75%, transparent) con blur(8px)
+  - Al abrir: rounded-b-none + border-b-transparent (se fusiona con popup)
+  - Chevron: rota 180° al abrir (feedback visual de despliegue)
+
+POPUP (SelectContent):
+  - Border-radius: 10px (mismo que trigger)
+  - data-[side=bottom]: rounded-t-none (sin border-top, conecta con trigger)
+  - sideOffset: 0 (sin gap, pegado al trigger)
+  - align: start (alinea con borde izquierdo del trigger)
+  - Border: 1px solid var(--input) (mismo que trigger)
+  - Fondo: bg-card/85 backdrop-blur-xl saturate-150
+  - Sombra: 0 8px 32px rgba(0,0,0,0.12) / dark: 0.4
+  - Animación: fade-in + zoom-in-100 (sutil, no exagerado)
+
+ITEMS (SelectItem):
+  - Fuente: 12px (text-xs)
+  - Border-radius: rounded-lg
+  - Padding: py-1.5 pr-8 pl-2
+  - Cursor: pointer (no default)
+  - Hover: bg-primary/10 text-foreground (highlight azul sutil)
+  - Focus (teclado): bg-primary/15 text-foreground
+  - Dark hover: bg-white/8
+  - Transition: 150ms (suave)
+  - Indicador de selección: CheckIcon a la derecha
+
+PATRÓN DE USO (filtros en listados):
+  <Select value={filter} onValueChange={(v) => setFilter(v === "__all" || v === null ? "" : v)}>
+    <SelectTrigger className="app-input max-w-[200px]">
+      <SelectValue placeholder="Todas las compañías" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="__all">Todas las compañías</SelectItem>
+      {items.map((c) => (
+        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+
+  Nota: Usar "__all" como valor para representar "sin filtro" (empty string).
+  El onValueChange convierte "__all" o null a "".
+
+PATRÓN DE USO (formularios con react-hook-form):
+  Usar FormSelect (wrapper de Select con react-hook-form):
+  <FormSelect
+    control={form.control}
+    name="brokerId"
+    placeholder="Seleccionar corredor..."
+    className="app-input h-7"
+    clearable  // solo si NO es obligatorio
+    items={brokers?.map((b) => ({ value: b.id, label: b.name })) || []}
+  >
+    {brokers?.map((b) => (
+      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+    ))}
+  </FormSelect>
+```
+
 ### Tablas
 ```
 .app-data-table-wrap → overflow-x-auto rounded-xl border bg-card
@@ -1917,4 +2001,30 @@ El inspection_number DEBE ser el code del claim_action (estándar de gestiones).
 El correlativo del code es POR TEMPLATE_CODE dentro de cada claim, no global.
 El status de la inspección y del claim_action se sincronizan automáticamente via trigger.
 NUNCA calcular el inspection_number client-side. Siempre viene del claim_action.code.
+```
+
+---
+
+## 21. Comboboxes (Select) — Estilo Visual Definitivo
+
+### Problema
+Los `<select>` nativos de HTML no se pueden estilar con CSS. El dropdown con las opciones usa el estilo del sistema operativo (Windows antiguo), rompiendo el diseño Liquid Glass de la app.
+
+### Solución Definitiva
+- **PROHIBIDO** usar `<select>` nativo de HTML en cualquier parte de la app.
+- **OBLIGATORIO** usar el componente `Select` de shadcn/ui (Base UI) definido en `src/components/ui/select.tsx`.
+- El estilo del Select (trigger, popup, items) está centralizado en el componente — NO se modifica por página.
+- Para formularios con react-hook-form, usar `FormSelect` (wrapper de Select).
+- Los triggers SIEMPRE llevan `className="app-input"` para heredar el estilo compacto (28px, 12px, border 10px).
+- El popup aparece pegado al trigger (`sideOffset: 0`), con el mismo border-radius y borde, fusionándose visualmente como una extensión del combobox.
+- Los items tienen hover (`bg-primary/10`) y cursor pointer.
+- El chevron rota 180° al abrir el popup.
+- Para filtros en listados, usar `"__all"` como valor para representar "sin filtro" (empty string).
+
+### Regla
+```
+NUNCA usar <select> nativo de HTML. SIEMPRE usar Select de shadcn/ui.
+El estilo está centralizado en src/components/ui/select.tsx — NO modificarlo por página.
+Los triggers SIEMPRE llevan className="app-input".
+Para filtros: usar "__all" como valor vacío, convertir a "" en onValueChange.
 ```
