@@ -166,9 +166,9 @@ export default function PolizasPage() {
       <div className="app-toolbar">
         <div className="flex gap-2 flex-1 flex-wrap">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              className="app-input pl-9"
+              className="liquid-search"
               placeholder="Buscar por número, nombre..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}

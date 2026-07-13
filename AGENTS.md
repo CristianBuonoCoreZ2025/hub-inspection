@@ -501,6 +501,16 @@ ITEMS (SelectItem):
   - Transition: 150ms (suave)
   - Indicador de selección: CheckIcon a la derecha
 
+PATRÓN DE USO (buscador en listados):
+  Usar la clase `.liquid-search` para inputs de búsqueda. Es un pill shape
+  con Liquid Glass: blur 20px, saturate 180%, gradiente blanco 14% -> 4%,
+  sombra suave, highlight interno, border-radius 999px.
+
+  <div className="relative flex-1 min-w-[200px] max-w-sm">
+    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <Input className="liquid-search" placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
+  </div>
+
 PATRÓN DE USO (filtros en listados):
   SIEMPRE pasar la prop `items` con `{ value, label }` para que el trigger
   muestre el label correcto (Base UI muestra el raw value por defecto).

@@ -272,7 +272,41 @@ export async function reorderWorkflowSteps(items: { id: string; sort_order: numb
 }
 
 export async function deleteWorkflowStep(id: string): Promise<void> {
-  await deleteRow("workflow_steps", id);
+  // Cascade delete: borrar el step Y todos sus descendientes
+  // Los hijos son los steps cuyo depends_on_template_id == action_template_id del step a borrar
+  const supabase = getSupabaseClient();
+
+  // 1. Obtener el action_template_id del step a borrar
+  const { data: step } = await supabase
+    .from("workflow_steps")
+    .select("action_template_id, workflow_config_id")
+    .eq("id", id)
+    .limit(1);
+  const stepRow = (step as any[])?.[0];
+  if (!stepRow) {
+    await deleteRow("workflow_steps", id);
+    return;
+  }
+
+  // 2. Recursivamente encontrar todos los descendientes
+  const toDelete: string[] = [id];
+  async function findChildren(parentTemplateId: string) {
+    const { data: children } = await supabase
+      .from("workflow_steps")
+      .select("id, action_template_id")
+      .eq("workflow_config_id", stepRow.workflow_config_id)
+      .eq("depends_on_template_id", parentTemplateId);
+    for (const child of (children as any[]) || []) {
+      toDelete.push(child.id);
+      await findChildren(child.action_template_id);
+    }
+  }
+  await findChildren(stepRow.action_template_id);
+
+  // 3. Borrar todos
+  for (const stepId of toDelete) {
+    await deleteRow("workflow_steps", stepId);
+  }
 }
 
 // ═══ Validacion: template en uso en workflow ═══

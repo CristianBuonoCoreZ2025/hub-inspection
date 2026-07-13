@@ -137,6 +137,66 @@
     font-size: 12px !important;
   }
 
+  /* ═══════════════════════════════════════════════════════════════
+   * CLASE .liquid-search — input de búsqueda con Liquid Glass
+   * Pill shape, blur fuerte, sombra suave, highlight interno.
+   * Coherente con el estilo de los Selects desplegables.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  .liquid-search {
+    width: 100% !important;
+    font-size: 12px !important;
+    height: 32px !important;
+    padding: 0 14px 0 36px !important;
+    border-radius: 999px !important;
+    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(255, 255, 255, 0.04) 100%
+    ) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    color: var(--foreground) !important;
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+    box-sizing: border-box !important;
+    outline: none !important;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+  }
+
+  .liquid-search::placeholder {
+    color: var(--muted-foreground) !important;
+    opacity: 0.6 !important;
+    font-size: 12px !important;
+  }
+
+  .dark .liquid-search {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) !important;
+    border-color: color-mix(in srgb, var(--foreground) 6%, transparent) !important;
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .liquid-search:focus-visible {
+    border-color: color-mix(in srgb, var(--primary) 60%, transparent) !important;
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  }
+
+  .dark .liquid-search:focus-visible {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  }
+
   /* Cuando está dentro de .modal-field, el gap maneja el espaciado */
   .modal-field .app-field-label {
     margin-bottom: 0 !important;
