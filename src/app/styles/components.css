@@ -21,12 +21,12 @@
 
   .dark .premium-bg-mesh {
     background-image:
-      radial-gradient(ellipse 80% 70% at 10% 15%, rgb(139 92 246 / 0.30), transparent 55%),
-      radial-gradient(ellipse 70% 60% at 90% 10%, rgb(14 165 233 / 0.25), transparent 50%),
-      radial-gradient(ellipse 80% 70% at 50% 95%, rgb(236 72 153 / 0.22), transparent 55%),
-      radial-gradient(ellipse 60% 50% at 95% 85%, rgb(34 197 94 / 0.14), transparent 45%),
-      radial-gradient(ellipse 60% 50% at 25% 65%, rgb(251 146 60 / 0.12), transparent 45%),
-      radial-gradient(ellipse 50% 40% at 70% 40%, rgb(59 130 246 / 0.12), transparent 40%);
+      radial-gradient(ellipse 80% 70% at 10% 15%, rgb(139 92 246 / 0.12), transparent 55%),
+      radial-gradient(ellipse 70% 60% at 90% 10%, rgb(14 165 233 / 0.10), transparent 50%),
+      radial-gradient(ellipse 80% 70% at 50% 95%, rgb(236 72 153 / 0.08), transparent 55%),
+      radial-gradient(ellipse 60% 50% at 95% 85%, rgb(34 197 94 / 0.06), transparent 45%),
+      radial-gradient(ellipse 60% 50% at 25% 65%, rgb(251 146 60 / 0.05), transparent 45%),
+      radial-gradient(ellipse 50% 40% at 70% 40%, rgb(59 130 246 / 0.06), transparent 40%);
   }
 
   /* Animated floating orbs background */
@@ -50,10 +50,10 @@
 
   .dark .premium-orbs::before {
     background-image:
-      radial-gradient(circle 180px at 15% 25%, rgb(139 92 246 / 0.45), transparent 70%),
-      radial-gradient(circle 220px at 80% 20%, rgb(14 165 233 / 0.40), transparent 70%),
-      radial-gradient(circle 200px at 60% 80%, rgb(236 72 153 / 0.35), transparent 70%),
-      radial-gradient(circle 160px at 30% 70%, rgb(34 197 94 / 0.22), transparent 70%);
+      radial-gradient(circle 180px at 15% 25%, rgb(139 92 246 / 0.18), transparent 70%),
+      radial-gradient(circle 220px at 80% 20%, rgb(14 165 233 / 0.15), transparent 70%),
+      radial-gradient(circle 200px at 60% 80%, rgb(236 72 153 / 0.12), transparent 70%),
+      radial-gradient(circle 160px at 30% 70%, rgb(34 197 94 / 0.08), transparent 70%);
   }
 
   @keyframes orbs-drift {
@@ -122,15 +122,15 @@
   }
 
   .dark .glass-panel {
-    border-color: rgba(255, 255, 255, 0.12) !important;
+    border-color: oklch(0.30 0.02 250 / 40%) !important;
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--surface-elevated) 30%, transparent) 0%,
-      color-mix(in srgb, var(--surface-elevated) 12%, transparent) 100%
+      color-mix(in srgb, var(--surface-elevated) 50%, transparent) 0%,
+      color-mix(in srgb, var(--surface-elevated) 25%, transparent) 100%
     ) !important;
     box-shadow:
-      0 8px 40px rgba(0, 0, 0, 0.35),
-      0 1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 8px 40px rgba(0, 0, 0, 0.4),
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
       0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
   }
 
@@ -259,16 +259,16 @@
   }
 
   .dark .app-panel {
-    border-color: rgba(255, 255, 255, 0.09) !important;
+    border-color: oklch(0.30 0.02 250 / 40%) !important;
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--card) 32%, transparent) 0%,
-      color-mix(in srgb, var(--card) 14%, transparent) 100%
+      color-mix(in srgb, var(--card) 55%, transparent) 0%,
+      color-mix(in srgb, var(--card) 30%, transparent) 100%
     ) !important;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.28),
+      0 8px 32px rgba(0, 0, 0, 0.4),
       0 1px 0 rgba(255, 255, 255, 0.06) inset,
-      0 0 0 1px rgba(255, 255, 255, 0.03) inset !important;
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
   }
 
   .dark .app-panel::before {
@@ -328,16 +328,16 @@
   }
 
   .dark .app-data-table-wrap {
-    border-color: rgba(255, 255, 255, 0.09) !important;
+    border-color: oklch(0.30 0.02 250 / 40%) !important;
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--card) 32%, transparent) 0%,
-      color-mix(in srgb, var(--card) 14%, transparent) 100%
+      color-mix(in srgb, var(--card) 55%, transparent) 0%,
+      color-mix(in srgb, var(--card) 30%, transparent) 100%
     ) !important;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.28),
+      0 8px 32px rgba(0, 0, 0, 0.4),
       0 1px 0 rgba(255, 255, 255, 0.06) inset,
-      0 0 0 1px rgba(255, 255, 255, 0.03) inset !important;
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
   }
 
   .dark .app-data-table-wrap::before {
@@ -433,15 +433,15 @@
   }
 
   .dark .app-tab-bar {
-    border-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: oklch(0.30 0.02 250 / 30%) !important;
     background: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--card) 15%, transparent) 0%,
-      color-mix(in srgb, var(--card) 6%, transparent) 100%
+      color-mix(in srgb, var(--card) 35%, transparent) 0%,
+      color-mix(in srgb, var(--card) 15%, transparent) 100%
     ) !important;
     box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.18),
-      0 1px 0 rgba(255, 255, 255, 0.04) inset !important;
+      0 4px 16px rgba(0, 0, 0, 0.25),
+      0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
   }
 
   .app-tab-bar-inner {
@@ -562,13 +562,13 @@
   }
 
   .dark .sidebar-glass {
-    border-color: color-mix(in srgb, var(--foreground) 6%, transparent) !important;
+    border-color: color-mix(in srgb, var(--foreground) 8%, transparent) !important;
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0.01) 100%
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.02) 100%
     ) !important;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4) !important;
   }
 
   .dark .sidebar-glass::before {

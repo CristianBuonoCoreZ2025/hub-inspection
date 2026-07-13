@@ -8,7 +8,6 @@ import {
   LogOut,
   Loader2,
   Palette,
-  type LucideIcon,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -20,7 +19,8 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -28,6 +28,7 @@ import {
   subscribeUiStyle,
   persistUiStyleChoice,
   UI_STYLE_LABELS,
+  UI_STYLE_SWATCHES,
   type UiStyleSkin,
 } from "@/lib/ui-style-client-store";
 import { useSyncExternalStore } from "react";
@@ -95,26 +96,26 @@ function HybridFlyout({
           <div className="absolute left-full top-0 h-full w-2 z-40" />
 
           <div className="hybrid-flyout-panel absolute left-full top-0 ml-2 z-50 w-64 rounded-[20px] border overflow-hidden
-                          backdrop-blur-[40px] saturate-[200%]
-                          shadow-[0_16px_64px_rgba(0,0,0,0.08)]
-                          dark:shadow-[0_16px_64px_rgba(0,0,0,0.4)]"
+                          backdrop-blur-[24px] saturate-[180%]
+                          shadow-[0_16px_64px_rgba(0,0,0,0.12)]
+                          dark:shadow-[0_16px_64px_rgba(0,0,0,0.5)]"
                style={{
-                 borderColor: "color-mix(in srgb, var(--foreground) 6%, transparent)",
-                 background: "linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03))",
+                 borderColor: "color-mix(in srgb, var(--foreground) 12%, transparent)",
+                 background: "linear-gradient(135deg, color-mix(in srgb, var(--card) 96%, transparent), color-mix(in srgb, var(--card) 90%, transparent))",
                }}>
             {/* Glass shine */}
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.15)_0%,transparent_40%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--foreground)_8%,transparent)_0%,transparent_40%)]" />
             {/* Header del flyout */}
-            <div className="relative flex items-center gap-2 border-b border-white/10 dark:border-white/5 px-3 py-2.5">
+            <div className="relative flex items-center gap-2 border-b border-border/60 px-3 py-2.5">
               <div className={cn(
                 "flex size-6 items-center justify-center rounded-lg shrink-0",
-                isGroupActive ? "bg-primary/20 text-primary" : "bg-white/8 text-muted-foreground"
+                isGroupActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
               )}>
                 <Icon className="size-3.5" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-foreground truncate">{group.title}</p>
-                <p className="text-[9px] text-muted-foreground">{group.visibleLinks.length} páginas</p>
+                <p className="text-[10px] text-muted-foreground">{group.visibleLinks.length} páginas</p>
               </div>
             </div>
 
@@ -129,10 +130,10 @@ function HybridFlyout({
                     href={link.href}
                     onClick={() => { onNavigate?.(); setOpen(false); }}
                     className={cn(
-                      "group/item flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] transition-all duration-150",
+                      "group/item flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150",
                       isActive
                         ? "bg-primary/10 text-primary font-medium shadow-[0_0_12px_rgba(139,92,246,0.15)]"
-                        : "text-muted-foreground hover:bg-white/8 hover:text-foreground font-normal"
+                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground font-normal"
                     )}
                   >
                     <LinkIcon className={cn(
@@ -176,14 +177,18 @@ function SkinToggle() {
           </button>
         }
       />
-      <DropdownMenuContent align="end" side="right">
-        <p className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Color</p>
-        {(Object.keys(UI_STYLE_LABELS) as UiStyleSkin[]).map((key) => (
-          <DropdownMenuItem key={key} onClick={() => handleSelect(key)}>
-            <span className={cn("mr-2 size-2 rounded-full", skin === key ? "bg-primary" : "bg-transparent border border-border")} />
-            <span>{UI_STYLE_LABELS[key]}</span>
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent align="end" side="right" className="w-48">
+        <DropdownMenuRadioGroup value={skin} onValueChange={(value) => handleSelect(value as UiStyleSkin)}>
+          {(Object.keys(UI_STYLE_LABELS) as UiStyleSkin[]).map((key) => (
+            <DropdownMenuRadioItem key={key} value={key} className="text-xs">
+              <span
+                className="mr-2 size-2.5 rounded-full border border-white/20 shadow-sm"
+                style={{ backgroundColor: UI_STYLE_SWATCHES[key] }}
+              />
+              <span>{UI_STYLE_LABELS[key]}</span>
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

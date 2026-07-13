@@ -17,6 +17,14 @@ export const UI_STYLE_LABELS: Record<UiStyleSkin, string> = {
   "neo-playful": "Neo Playful",
 };
 
+export const UI_STYLE_SWATCHES: Record<UiStyleSkin, string> = {
+  "nordic-air": "#7aaec7",
+  "pastel-dream": "#c4b5fd",
+  "bubble-play": "#f472b6",
+  "kinetic-pop": "#34d399",
+  "neo-playful": "#fb923c",
+};
+
 export function getUiStyleSnapshot(): UiStyleSkin {
   if (typeof window === "undefined") return "nordic-air";
   try {

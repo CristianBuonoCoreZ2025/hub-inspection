@@ -48,15 +48,24 @@ html[data-ui-style='nordic-air'] {
 
 .dark [data-ui-style-skin='nordic-air'],
 html.dark[data-ui-style='nordic-air'] {
-  --background: oklch(0.17 0.03 240);
-  --foreground: oklch(0.96 0.02 230);
-  --card: oklch(0.21 0.035 240);
-  --primary: oklch(0.7 0.1 225);
-  --muted: oklch(0.26 0.03 240);
-  --border: oklch(0.94 0.02 230 / 14%);
-  --sidebar: oklch(0.19 0.035 240);
-  --ui-modal-shadow: 0 36px 70px -24px oklch(0.05 0.02 260 / 0.65);
-  --ui-modal-overlay-bg: oklch(0.08 0.03 260 / 0.72);
+  --background: oklch(0.14 0.015 250);
+  --foreground: oklch(0.97 0.01 240);
+  --card: oklch(0.18 0.02 250);
+  --card-foreground: oklch(0.97 0.01 240);
+  --primary: oklch(0.72 0.12 250);
+  --primary-foreground: oklch(0.14 0.02 250);
+  --secondary: oklch(0.22 0.02 250);
+  --muted: oklch(0.20 0.02 250);
+  --muted-foreground: oklch(0.62 0.03 245);
+  --accent: oklch(0.24 0.03 250);
+  --accent-foreground: oklch(0.97 0.01 240);
+  --border: oklch(0.30 0.02 250 / 50%);
+  --input: oklch(0.22 0.02 250);
+  --ring: oklch(0.72 0.12 250);
+  --sidebar: oklch(0.16 0.02 250);
+  --sidebar-foreground: oklch(0.97 0.01 240);
+  --ui-modal-shadow: 0 36px 70px -24px oklch(0.02 0.01 260 / 0.7);
+  --ui-modal-overlay-bg: oklch(0.06 0.015 260 / 0.75);
 }
 
 /* --- Pastel dream: cuerpo suave, rejilla muy separada, modal etéreo --- */
