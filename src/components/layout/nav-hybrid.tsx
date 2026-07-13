@@ -106,12 +106,15 @@ function HybridFlyout({
       {/* Icono del grupo — sin tooltip (el flyout ya muestra el título) */}
       <div
         className={cn(
-          "relative flex items-center justify-center rounded-lg py-2.5 transition-colors cursor-pointer",
+          "relative flex items-center justify-center rounded-xl py-2.5 transition-all duration-200 cursor-pointer",
           isGroupActive || open
-            ? "bg-accent text-accent-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            ? "text-primary bg-primary/10 shadow-[0_0_16px_rgba(139,92,246,0.25)]"
+            : "text-muted-foreground hover:bg-white/8 hover:text-foreground"
         )}
       >
+        {(isGroupActive || open) && (
+          <span className="absolute inset-0 rounded-xl border border-primary/20 pointer-events-none" />
+        )}
         <Icon className="size-5 shrink-0" />
         {/* Indicador de sub-niveles: punto en la esquina */}
         <span className={cn(
@@ -126,12 +129,19 @@ function HybridFlyout({
           {/* Bridge invisible para evitar gap entre icono y panel */}
           <div className="absolute left-full top-0 h-full w-2 z-40" />
 
-          <div className="absolute left-full top-0 ml-2 z-50 w-64 rounded-xl border border-border bg-popover shadow-2xl overflow-hidden backdrop-blur-xl">
+          <div className="absolute left-full top-0 ml-2 z-50 w-64 rounded-2xl border border-white/15 dark:border-white/8 overflow-hidden
+                          bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))]
+                          backdrop-blur-2xl saturate-150
+                          shadow-[0_8px_40px_rgba(0,0,0,0.12)]
+                          dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))]
+                          dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
+            {/* Glass shine */}
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.15)_0%,transparent_40%)]" />
             {/* Header del flyout */}
-            <div className="flex items-center gap-2 border-b border-border px-3 py-2 bg-muted/40">
+            <div className="relative flex items-center gap-2 border-b border-white/10 dark:border-white/5 px-3 py-2.5">
               <div className={cn(
-                "flex size-6 items-center justify-center rounded-md shrink-0",
-                isGroupActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                "flex size-6 items-center justify-center rounded-lg shrink-0",
+                isGroupActive ? "bg-primary/20 text-primary" : "bg-white/8 text-muted-foreground"
               )}>
                 <Icon className="size-3.5" />
               </div>
@@ -142,7 +152,7 @@ function HybridFlyout({
             </div>
 
             {/* Lista de sub-páginas */}
-            <div className="p-1 max-h-[520px] overflow-y-auto">
+            <div className="relative p-1 max-h-[520px] overflow-y-auto">
               {group.visibleLinks.map((link) => {
                 const isActive = pathname.startsWith(link.href);
                 const LinkIcon = link.icon;
@@ -152,10 +162,10 @@ function HybridFlyout({
                     href={link.href}
                     onClick={() => { onNavigate?.(); setOpen(false); }}
                     className={cn(
-                      "group/item flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[11px] transition-all",
+                      "group/item flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] transition-all duration-150",
                       isActive
-                        ? "bg-accent text-accent-foreground font-medium"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground font-normal"
+                        ? "bg-primary/10 text-primary font-medium shadow-[0_0_12px_rgba(139,92,246,0.15)]"
+                        : "text-muted-foreground hover:bg-white/8 hover:text-foreground font-normal"
                     )}
                   >
                     <LinkIcon className={cn(
@@ -165,7 +175,7 @@ function HybridFlyout({
                     <span className="flex-1 truncate">{link.label}</span>
                     {/* Indicador activo: barra lateral */}
                     {isActive && (
-                      <span className="h-3 w-0.5 rounded-full bg-primary" />
+                      <span className="h-3 w-0.5 rounded-full bg-primary shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
                     )}
                   </Link>
                 );
@@ -231,10 +241,15 @@ function MainLinkIcon({
         href={link.href}
         onClick={onNavigate}
         className={cn(
-          "flex items-center justify-center rounded-lg py-2.5 transition-colors",
-          isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          "relative flex items-center justify-center rounded-xl py-2.5 transition-all duration-200",
+          isActive
+            ? "text-primary bg-primary/10 shadow-[0_0_16px_rgba(139,92,246,0.25)]"
+            : "text-muted-foreground hover:bg-white/8 hover:text-foreground"
         )}
       >
+        {isActive && (
+          <span className="absolute inset-0 rounded-xl border border-primary/20 pointer-events-none" />
+        )}
         <Icon className="size-5 shrink-0" />
       </Link>
     </IconTooltip>
@@ -261,9 +276,15 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       {/* Icon rail (left) — premium glass + gradient */}
-      <aside className="hidden lg:flex lg:w-[56px] lg:flex-col lg:border-r lg:border-sidebar-border lg:bg-sidebar/80 lg:backdrop-blur-xl items-center py-3 gap-1 relative">
-        {/* Gradient overlay sutil */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-primary/[0.02]" />
+      <aside className="hidden lg:flex lg:w-[56px] lg:flex-col items-center py-3 gap-1 relative
+                         lg:border-r lg:border-white/10 dark:lg:border-white/5
+                         lg:bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]
+                         lg:backdrop-blur-2xl lg:saturate-150
+                         lg:shadow-[4px_0_24px_rgba(0,0,0,0.06)]
+                         dark:lg:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))]
+                         dark:lg:shadow-[4px_0_24px_rgba(0,0,0,0.25)]">
+        {/* Glass shine overlay */}
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.12)_0%,transparent_40%)]" />
         {/* Contenido */}
         <div className="relative z-10 flex flex-col items-center w-full h-full gap-1">
         {/* Logo */}
