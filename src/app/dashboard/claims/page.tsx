@@ -34,6 +34,7 @@ import { Plus, Search, Trash2, FileText, ClipboardCheck, Download, X, Check, Upl
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -853,12 +854,15 @@ export default function ClaimsPage() {
       <div className="app-toolbar">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <input              placeholder="Buscar siniestro..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 w-full max-w-[200px] text-[13px]"
-            />
+            <div className="relative max-w-[180px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar siniestro..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="liquid-search"
+              />
+            </div>
           </div>
           <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={statusOptions}>
             <SelectTrigger className="app-input h-8 max-w-[160px]">

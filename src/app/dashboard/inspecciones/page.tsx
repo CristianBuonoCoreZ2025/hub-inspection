@@ -328,13 +328,15 @@ function InspectionsPageContent() {
 
       <div className="app-toolbar">
         <div className="flex items-center gap-3">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar inspeccion..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-full max-w-sm"
-          />
+          <div className="relative max-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar inspeccion..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="liquid-search"
+            />
+          </div>
           <Select value={statusFilter || "__none"} onValueChange={(v) => setStatusFilter(v === "__none" ? "" : v ?? "all")} items={[{ value: "__none", label: "Sin selección" }, { value: "all", label: "Todos los estados" }, { value: "scheduled", label: "Agendada" }, { value: "active", label: "En progreso" }, { value: "completed", label: "Completada" }, { value: "cancelled", label: "Cancelada" }]}>
             <SelectTrigger className="h-7 w-full sm:w-[160px]">
               <SelectValue placeholder="Estado" />

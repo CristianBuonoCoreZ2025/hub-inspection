@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   closestCenter, type DragStartEvent, type DragEndEvent,
+  type CollisionDetection,
 } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
@@ -46,6 +47,43 @@ const STATUS_ICONS: Record<string, { icon: typeof Zap; color: string; bg: string
   closed:      { icon: Shield,     color: "text-emerald-400",bg: "from-emerald-500/20 to-emerald-600/5" },
   reopened:    { icon: GitBranch,  color: "text-rose-400",   bg: "from-rose-500/20 to-rose-600/5" },
 };
+
+// ═══ Collision detection custom ═══
+// Cuando arrastramos un nodo del arbol, solo considerar hermanos (mismo nivel + mismo padre)
+// como drop targets para reordenar. Para palette, usar closestCenter normal.
+function createWorkflowCollisionDetection(steps: WorkflowStep[]): CollisionDetection {
+  return (args) => {
+    const activeId = args.active.id as string;
+    const activeData = args.active.data.current;
+
+    // Si es un item de paleta, usar closestCenter normal (considera canvas + nodos)
+    if (activeData?.source === "palette") {
+      return closestCenter(args);
+    }
+
+    // Si es un nodo del arbol, filtrar droppables a solo hermanos + canvas-root
+    const activeStep = steps.find(s => s.id === activeId);
+    if (!activeStep) return closestCenter(args);
+
+    const siblingIds = new Set(
+      steps
+        .filter(s =>
+          s.level === activeStep.level &&
+          (s.depends_on_template_id || null) === (activeStep.depends_on_template_id || null)
+        )
+        .map(s => s.id)
+    );
+
+    const filteredContainers = args.droppableContainers.filter(
+      c => siblingIds.has(c.id as string) || c.id === "canvas-root"
+    );
+
+    return closestCenter({
+      ...args,
+      droppableContainers: filteredContainers,
+    });
+  };
+}
 
 export default function WorkflowsPage() {
   const queryClient = useQueryClient();
@@ -134,6 +172,12 @@ export default function WorkflowsPage() {
   // Sensores DnD
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
+
+  // Collision detection: solo hermanos para reorder, closestCenter para palette
+  const workflowCollisionDetection = useMemo(
+    () => createWorkflowCollisionDetection(steps || []),
+    [steps],
   );
 
   // Lookup para nombres
@@ -495,7 +539,7 @@ export default function WorkflowsPage() {
                                                       )}
                                                       <DndContext
                                                         sensors={dndSensors}
-                                                        collisionDetection={closestCenter}
+                                                        collisionDetection={workflowCollisionDetection}
                                                         onDragStart={onDragStart}
                                                         onDragEnd={onDragEnd}
                                                       >
@@ -510,6 +554,8 @@ export default function WorkflowsPage() {
                                                         onAddDependent={(parent) => { setAddDependentParent(parent); setShowAddStep(config.id); }}
                                                         isLoading={!steps}
                                                         steps={steps || []}
+                                                        isPaletteDrag={activeDrag?.type === "palette"}
+                                                        businessLineName={config.business_line?.name}
                                                       />
                                                       {/* Paleta de gestiones disponibles — DRAGGABLE (solo si no esta online) */}
                                                       {!isOnline && canEdit("catalogos") && (
@@ -953,6 +999,7 @@ function GlassTreeNode({
 function StepsCanvas({
   stepsByLevel, selectedStepId, hoveredStep,
   onSelectStep, onHoverStep, canEdit, onAddStep, onAddDependent, isLoading, steps,
+  isPaletteDrag, businessLineName,
 }: {
   stepsByLevel: Map<number, WorkflowStep[]>;
   selectedStepId: string | null;
@@ -964,6 +1011,8 @@ function StepsCanvas({
   onAddDependent: (parentStep: WorkflowStep) => void;
   isLoading: boolean;
   steps: WorkflowStep[];
+  isPaletteDrag?: boolean;
+  businessLineName?: string;
 }) {
   if (isLoading) {
     return (
@@ -1057,7 +1106,7 @@ function StepsCanvas({
       <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-sky-500/5 blur-3xl" />
 
       {/* Drop zone para el canvas completo (recibe drops de la paleta) */}
-      <DroppableCanvas>
+      <DroppableCanvas isPaletteDrag={isPaletteDrag} businessLineName={businessLineName}>
         <div className="relative space-y-1">
           {roots.length === 0 ? (
             <p className="text-[11px] text-muted-foreground italic text-center py-4">
@@ -1167,13 +1216,13 @@ function EmptyState({ onCreate, canCreate }: { onCreate: () => void; canCreate: 
 // ═══════════════════════════════════════════════════════════════════
 
 function DraggablePaletteItem({ templateId, code, name }: { templateId: string; code: string; name: string }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette_${templateId}`,
     data: { source: "palette", templateId, code, label: code },
   });
 
+  // Con DragOverlay, NO aplicar transform al original — el overlay sigue el cursor
   const style = {
-    transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.3 : 1,
   };
 
@@ -1318,15 +1367,42 @@ function SortableNode({
 // Recibe drops de la paleta que no caen sobre un nodo especifico
 // ═══════════════════════════════════════════════════════════════════
 
-function DroppableCanvas({ children }: { children: React.ReactNode }) {
+function DroppableCanvas({ children, isPaletteDrag, businessLineName }: {
+  children: React.ReactNode;
+  isPaletteDrag?: boolean;
+  businessLineName?: string;
+}) {
   const { setNodeRef, isOver } = useDroppable({
     id: "canvas-root",
     data: { source: "canvas" },
   });
 
+  const showDropIndicator = isPaletteDrag && isOver;
+
   return (
-    <div ref={setNodeRef} className={`relative transition-all ${isOver ? "ring-2 ring-violet-500/20 rounded-xl" : ""}`}>
+    <div
+      ref={setNodeRef}
+      className={`relative transition-all duration-200 rounded-xl
+        ${showDropIndicator
+          ? "ring-2 ring-violet-500/50 bg-violet-500/5 border border-violet-500/30"
+          : isPaletteDrag
+          ? "ring-1 ring-violet-500/20 border border-violet-500/15 border-dashed"
+          : ""
+        }`}
+    >
       {children}
+      {/* Indicador de drop para gestión raíz */}
+      {showDropIndicator && (
+        <div className="absolute inset-x-0 -bottom-8 flex items-center justify-center pointer-events-none">
+          <div className="flex items-center gap-1.5 rounded-lg px-3 py-1
+                          bg-violet-500/20 border border-violet-500/40 backdrop-blur-sm
+                          text-violet-300 text-[10px] font-medium animate-pulse">
+            <Plus className="h-2.5 w-2.5" />
+            Soltar para gestión raíz (nivel 1)
+            {businessLineName && <span className="text-violet-400/70">· {businessLineName}</span>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

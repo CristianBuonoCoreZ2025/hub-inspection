@@ -913,8 +913,10 @@ export default function GestionesPage() {
       <div className="flex items-center gap-3 flex-wrap mb-3">
         <h1 className="app-page-title shrink-0">Gestiones</h1>
         <div className="flex items-center gap-2 flex-1 min-w-[300px]">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="app-input h-8 max-w-[180px]" />
+          <div className="relative max-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
+          </div>
           <Select value={filterFeature || "__all"} onValueChange={(v) => { setFilterFeature(v === "__all" || v === null ? "" : v); setPage(1); }} items={features?.map(f => ({ value: f.id, label: f.code ? `${f.name} (${f.code})` : f.name })) || []}>
             <SelectTrigger className="app-input h-8 max-w-[180px]"><SelectValue placeholder="Característica..." /></SelectTrigger>
             <SelectContent>

@@ -103,8 +103,10 @@ export default function EventosPage() {
       <div className="app-grid-header">
         <h1 className="app-page-title shrink-0">Eventos</h1>
         <div className="app-grid-filters">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="app-input h-8 max-w-[180px]" />
+          <div className="relative max-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
+          </div>
         </div>
         {canCreate("catalogos") && (
           <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="btn-create btn-sm shrink-0">
