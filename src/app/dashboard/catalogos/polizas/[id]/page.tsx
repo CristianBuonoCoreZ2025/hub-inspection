@@ -9,6 +9,7 @@ import { ArrowLeft, Plus, Trash2, Save, FileCheck, Search, ChevronDown, ShieldCh
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -719,20 +720,18 @@ export default function PolicyDetailPage() {
             </div>
             <div className="lg:col-span-2">
               <Label className="app-field-label">Fecha Inicio <span className="text-red-500">*</span></Label>
-              <Input
-                type="date"
-                className="app-input"
+              <DatePicker
                 value={form.start_date}
-                onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                onChange={(value) => setForm({ ...form, start_date: value })}
+                className="w-[130px]"
               />
             </div>
             <div className="lg:col-span-3">
               <Label className="app-field-label">Fecha Término <span className="text-red-500">*</span></Label>
-              <Input
-                type="date"
-                className="app-input"
+              <DatePicker
                 value={form.end_date}
-                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                onChange={(value) => setForm({ ...form, end_date: value })}
+                className="w-[130px]"
               />
             </div>
             <div className="lg:col-span-3">

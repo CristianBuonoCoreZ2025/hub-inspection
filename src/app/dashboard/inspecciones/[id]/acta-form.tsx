@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormDatePicker } from "@/components/ui/form-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
@@ -297,7 +298,7 @@ export default function ActaForm({ session }: ActaFormProps) {
             <div className="modal-grid-3">
               <div className="modal-field">
                 <Label className="app-field-label">Fecha Inspeccion</Label>
-                <Input {...field("inspection_date")} type="date" className="app-input" />
+                <FormDatePicker control={form.control} name="inspection_date" className="w-[130px]" />
               </div>
               <div className="modal-field">
                 <Label className="app-field-label">Hora Inspeccion</Label>

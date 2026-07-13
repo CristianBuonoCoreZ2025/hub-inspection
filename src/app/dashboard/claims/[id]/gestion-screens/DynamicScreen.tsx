@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { getClaimCoveragesByAction, getClaimCoveragesFromIngreso, createClaimCoverage, updateClaimCoverage, deactivateClaimCoverage } from "@/services/claim-coverages";
@@ -2538,11 +2539,10 @@ function InspectionCoordinationView({ claimId, readOnly, action }: { claimId?: s
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-[11px]">Fecha <span className="text-red-500">*</span></Label>
-          <Input
-            type="date"
-            className="app-input h-7 text-[12px] mt-1"
+          <DatePicker
             value={scheduledDate}
-            onChange={(e) => setScheduledDate(e.target.value)}
+            onChange={(value) => setScheduledDate(value)}
+            className="w-[130px]"
           />
         </div>
         <div>

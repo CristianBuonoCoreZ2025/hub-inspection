@@ -48,7 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import type { InspectionSession } from "@/types";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
@@ -863,7 +863,11 @@ export default function InspectionDetailPage() {
               </div>
               <div className="modal-field">
                 <Label className="app-field-label">Fecha *</Label>
-                <Input type="date" min={new Date().toISOString().split("T")[0]} value={rescheduleDate} onChange={(e) => { setRescheduleDate(e.target.value); setRescheduleTime(""); }} className="app-input" />
+                <DatePicker
+                  value={rescheduleDate}
+                  onChange={(value) => { setRescheduleDate(value); setRescheduleTime(""); }}
+                  className="w-[130px]"
+                />
               </div>
             </div>
 

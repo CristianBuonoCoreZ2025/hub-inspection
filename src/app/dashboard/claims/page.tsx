@@ -45,6 +45,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { SelectItem, Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { FormDatePicker } from "@/components/ui/form-date-picker";
 import { FormSelect } from "@/components/ui/form-select";
 import { cn } from "@/lib/utils";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
@@ -1091,18 +1092,18 @@ export default function ClaimsPage() {
                       <Label className="text-[10px] text-muted-foreground">
                         Fecha Siniestro <span className="text-red-500">*</span>
                       </Label>
-                      <input {...form.register("claimDate")} type="date" className="app-input h-7 px-2 text-xs" />
+                      <FormDatePicker control={form.control} name="claimDate" className="w-[130px]" />
                       <FieldError message={form.formState.errors.claimDate?.message} />
                     </div>
 
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] text-muted-foreground">Fecha Denuncio</Label>
-                      <input {...form.register("reportDate")} type="date" className="app-input h-7 px-2 text-xs" />
+                      <FormDatePicker control={form.control} name="reportDate" className="w-[130px]" />
                     </div>
 
                     <div className="flex flex-col gap-1">
                       <Label className="text-[10px] text-muted-foreground">Fecha Asignación</Label>
-                      <input {...form.register("assignmentDate")} type="date" className="app-input h-7 px-2 text-xs" />
+                      <FormDatePicker control={form.control} name="assignmentDate" className="w-[130px]" />
                     </div>
                   </div>
                 </div>

@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import type { InspectionDamage } from "@/types";
 
 const severityLabels: Record<string, string> = {
@@ -217,7 +218,11 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
                 </div>
                 <div>
                   <label className="app-field-label text-[11px]">Fecha Compra</label>
-                  <input type="date" value={form.purchase_date || ""} onChange={(e) => setForm({ ...form, purchase_date: e.target.value || null })} className="app-input h-7 w-full text-[13px]" />
+                  <DatePicker
+                    value={form.purchase_date || ""}
+                    onChange={(value) => setForm({ ...form, purchase_date: value || null })}
+                    className="w-[130px]"
+                  />
                 </div>
               </>
             )}

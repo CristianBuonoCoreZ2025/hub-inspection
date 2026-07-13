@@ -42,7 +42,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -1280,12 +1280,10 @@ export default function ClaimDetailPage() {
 
                 <div>
                   <label className="app-field-label text-[11px]">Fecha *</label>
-                  <Input
-                    type="date"
-                    className="app-input h-8 text-[12px]"
+                  <DatePicker
                     value={expectedDate}
-                    min={new Date().toISOString().split("T")[0]}
-                    onChange={(e) => setExpectedDate(e.target.value)}
+                    onChange={(value) => setExpectedDate(value)}
+                    className="w-[130px]"
                   />
                 </div>
               </>

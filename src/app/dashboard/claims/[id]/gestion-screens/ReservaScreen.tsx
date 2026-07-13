@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import type { GestionScreenProps } from "./types";
 
 export default function ReservaScreen({ action, onChange, readOnly }: GestionScreenProps) {
@@ -57,12 +58,11 @@ export default function ReservaScreen({ action, onChange, readOnly }: GestionScr
       </div>
       <div>
         <Label className="app-field-label text-[11px]">Fecha Pago</Label>
-        <Input
-          type="date"
-          className="app-input h-8 text-[12px]"
+        <DatePicker
           value={form.fechaPago}
-          onChange={(e) => setForm({ ...form, fechaPago: e.target.value })}
+          onChange={(value) => setForm({ ...form, fechaPago: value })}
           disabled={readOnly}
+          className="w-[130px]"
         />
       </div>
       <div className="col-span-2">

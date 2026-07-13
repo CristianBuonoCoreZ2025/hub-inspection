@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import type { GestionScreenProps } from "./types";
 
 export default function SolicitudDocumentosScreen({ action, onChange, readOnly }: GestionScreenProps) {
@@ -65,16 +66,15 @@ export default function SolicitudDocumentosScreen({ action, onChange, readOnly }
           </div>
           <div>
             <Label className="app-field-label text-[10px]">Fecha Recibido</Label>
-            <Input
-              type="date"
-              className="app-input h-7 text-[11px]"
+            <DatePicker
               value={doc.fechaRecibido}
-              onChange={(e) => {
+              onChange={(value) => {
                 const next = [...docs];
-                next[idx].fechaRecibido = e.target.value;
+                next[idx].fechaRecibido = value;
                 setDocs(next);
               }}
               disabled={readOnly}
+              className="w-[130px]"
             />
           </div>
         </div>

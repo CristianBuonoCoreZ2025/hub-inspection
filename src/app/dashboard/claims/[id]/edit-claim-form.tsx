@@ -20,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
+import { FormDatePicker } from "@/components/ui/form-date-picker";
 import {
   Dialog,
   DialogContent,
@@ -1379,9 +1381,18 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                   <EditSelect label="Compañía de Seguros" control={control} name="insuranceCompanyId" placeholder="Seleccionar..." clearable items={insuranceCompanyItems} />
                   <EditInput label="N° Ref. Cliente" {...register("clientReference")} />
                   <EditInput label="N° Siniestro (Cía)" required {...register("claimNumber")} />
-                  <EditInput label="Fecha Siniestro" required type="date" {...register("claimDate")} />
-                  <EditInput label="Fecha Denuncio" type="date" {...register("reportDate")} />
-                  <EditInput label="Fecha Asignación" type="date" {...register("assignmentDate")} />
+                  <div className="space-y-1">
+                    <FieldLabel label="Fecha Siniestro" required />
+                    <FormDatePicker control={control} name="claimDate" className="w-[130px]" />
+                  </div>
+                  <div className="space-y-1">
+                    <FieldLabel label="Fecha Denuncio" />
+                    <FormDatePicker control={control} name="reportDate" className="w-[130px]" />
+                  </div>
+                  <div className="space-y-1">
+                    <FieldLabel label="Fecha Asignación" />
+                    <FormDatePicker control={control} name="assignmentDate" className="w-[130px]" />
+                  </div>
                 </div>
               </div>
 
@@ -1478,8 +1489,14 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                   <EditSelect label="Moneda" control={control} name="currencyId" placeholder="Seleccionar..." clearable items={currencyItems} />
                   <EditInput label="Monto Asegurado" type="number" step="0.01" {...register("policyAmount")} />
                   <EditInput label="Prima" type="number" step="0.01" {...register("policyPremium")} />
-                  <EditInput label="Inicio Vigencia" type="date" {...register("policyStartDate")} />
-                  <EditInput label="Término Vigencia" type="date" {...register("policyEndDate")} />
+                  <div className="space-y-1">
+                    <FieldLabel label="Inicio Vigencia" />
+                    <FormDatePicker control={control} name="policyStartDate" className="w-[130px]" />
+                  </div>
+                  <div className="space-y-1">
+                    <FieldLabel label="Término Vigencia" />
+                    <FormDatePicker control={control} name="policyEndDate" className="w-[130px]" />
+                  </div>
                 </div>
               </div>
 
@@ -2170,20 +2187,18 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
               </div>
               <div>
                 <FieldLabel label="Inicio Vigencia" />
-                <Input
-                  type="date"
-                  className="app-input h-7 text-[12px]"
+                <DatePicker
                   value={newPolicy.start_date}
-                  onChange={(e) => setNewPolicy({ ...newPolicy, start_date: e.target.value })}
+                  onChange={(value) => setNewPolicy({ ...newPolicy, start_date: value })}
+                  className="w-[130px]"
                 />
               </div>
               <div>
                 <FieldLabel label="Término Vigencia" />
-                <Input
-                  type="date"
-                  className="app-input h-7 text-[12px]"
+                <DatePicker
                   value={newPolicy.end_date}
-                  onChange={(e) => setNewPolicy({ ...newPolicy, end_date: e.target.value })}
+                  onChange={(value) => setNewPolicy({ ...newPolicy, end_date: value })}
+                  className="w-[130px]"
                 />
               </div>
             </div>
