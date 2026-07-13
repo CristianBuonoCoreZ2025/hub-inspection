@@ -5,8 +5,28 @@
  */
 
 @layer components {
-  /* Base para botones de acción sólidos */
-  .btn-solid {
+  /* Base compartida para botones de acción sólidos */
+  .btn-solid,
+  .btn-save,
+  .btn-confirm,
+  .btn-accept,
+  .btn-create,
+  .btn-new,
+  .btn-emerald,
+  .btn-run,
+  .btn-execute,
+  .btn-sky,
+  .btn-homolog,
+  .btn-ai,
+  .btn-violet,
+  .btn-review,
+  .btn-violet-alt,
+  .btn-warn,
+  .btn-alert,
+  .btn-amber,
+  .btn-danger,
+  .btn-delete,
+  .btn-destructive-grad {
     @apply inline-flex items-center justify-center text-white cursor-pointer transition-all;
     height: 29px !important;
     padding: 0 14px !important;
@@ -17,11 +37,51 @@
     letter-spacing: -0.01em !important;
   }
 
-  .btn-solid:hover:not(:disabled) {
+  .btn-solid:hover:not(:disabled),
+  .btn-save:hover:not(:disabled),
+  .btn-confirm:hover:not(:disabled),
+  .btn-accept:hover:not(:disabled),
+  .btn-create:hover:not(:disabled),
+  .btn-new:hover:not(:disabled),
+  .btn-emerald:hover:not(:disabled),
+  .btn-run:hover:not(:disabled),
+  .btn-execute:hover:not(:disabled),
+  .btn-sky:hover:not(:disabled),
+  .btn-homolog:hover:not(:disabled),
+  .btn-ai:hover:not(:disabled),
+  .btn-violet:hover:not(:disabled),
+  .btn-review:hover:not(:disabled),
+  .btn-violet-alt:hover:not(:disabled),
+  .btn-warn:hover:not(:disabled),
+  .btn-alert:hover:not(:disabled),
+  .btn-amber:hover:not(:disabled),
+  .btn-danger:hover:not(:disabled),
+  .btn-delete:hover:not(:disabled),
+  .btn-destructive-grad:hover:not(:disabled) {
     transform: translateY(-1px) !important;
   }
 
-  .btn-solid:disabled {
+  .btn-solid:disabled,
+  .btn-save:disabled,
+  .btn-confirm:disabled,
+  .btn-accept:disabled,
+  .btn-create:disabled,
+  .btn-new:disabled,
+  .btn-emerald:disabled,
+  .btn-run:disabled,
+  .btn-execute:disabled,
+  .btn-sky:disabled,
+  .btn-homolog:disabled,
+  .btn-ai:disabled,
+  .btn-violet:disabled,
+  .btn-review:disabled,
+  .btn-violet-alt:disabled,
+  .btn-warn:disabled,
+  .btn-alert:disabled,
+  .btn-amber:disabled,
+  .btn-danger:disabled,
+  .btn-delete:disabled,
+  .btn-destructive-grad:disabled {
     opacity: 0.5 !important;
     cursor: not-allowed !important;
   }
@@ -30,7 +90,6 @@
   .btn-save,
   .btn-confirm,
   .btn-accept {
-    @apply btn-solid;
     background: linear-gradient(180deg, #10b981 0%, #059669 100%) !important;
     box-shadow:
       0 3px 10px rgba(16, 185, 129, 0.18),
@@ -50,7 +109,6 @@
   .btn-create,
   .btn-new,
   .btn-emerald {
-    @apply btn-solid;
     background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%) !important;
     box-shadow:
       0 3px 10px rgba(20, 184, 166, 0.18),
@@ -70,7 +128,6 @@
   .btn-run,
   .btn-execute,
   .btn-sky {
-    @apply btn-solid;
     background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%) !important;
     box-shadow:
       0 3px 10px rgba(14, 165, 233, 0.18),
@@ -90,7 +147,6 @@
   .btn-homolog,
   .btn-ai,
   .btn-violet {
-    @apply btn-solid;
     background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%) !important;
     box-shadow:
       0 3px 10px rgba(124, 58, 237, 0.18),
@@ -109,7 +165,6 @@
   /* REVISAR / CLASIFICAR — violeta-fuchsia */
   .btn-review,
   .btn-violet-alt {
-    @apply btn-solid;
     background: linear-gradient(180deg, #a78bfa 0%, #c026d3 100%) !important;
     box-shadow:
       0 3px 10px rgba(192, 38, 211, 0.18),
@@ -128,7 +183,6 @@
   .btn-warn,
   .btn-alert,
   .btn-amber {
-    @apply btn-solid;
     background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%) !important;
     box-shadow:
       0 3px 10px rgba(245, 158, 11, 0.18),
@@ -148,7 +202,6 @@
   .btn-danger,
   .btn-delete,
   .btn-destructive-grad {
-    @apply btn-solid;
     background: linear-gradient(180deg, #f43f5e 0%, #e11d48 100%) !important;
     box-shadow:
       0 3px 10px rgba(225, 29, 72, 0.18),
