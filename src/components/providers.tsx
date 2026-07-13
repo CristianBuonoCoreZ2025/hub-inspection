@@ -5,6 +5,17 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { useState } from "react";
 
+// next-themes renders an inline <script> to prevent theme flicker (FOUC).
+// React 19 / Next.js 16 warns about script tags inside components.
+// The warning is a false positive — the script runs correctly during SSR.
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  const origConsoleError = console.error;
+  console.error = (...args: unknown[]) => {
+    if (typeof args[0] === "string" && args[0].includes("Encountered a script tag")) return;
+    origConsoleError.apply(console, args);
+  };
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
