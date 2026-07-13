@@ -3,38 +3,41 @@
 const UI_STYLE_KEY = "claimshub-ui-style";
 
 export type UiStyleSkin =
+  | "nordic-air"
+  | "pastel-dream"
+  | "bubble-play"
+  | "kinetic-pop"
+  | "neo-playful"
   | "liquid-glass"
   | "glassmorphism"
   | "material-3-expressive"
   | "neumorphism";
 
 export const UI_STYLE_LABELS: Record<UiStyleSkin, string> = {
-  "liquid-glass": "Liquid Glass",
-  "glassmorphism": "Glassmorphism",
-  "material-3-expressive": "Material 3 Expressive",
-  "neumorphism": "Neumorphism",
-};
-
-export const UI_STYLE_ICONS: Record<UiStyleSkin, string> = {
-  "liquid-glass": "💧",
-  "glassmorphism": "🪟",
-  "material-3-expressive": "🎨",
-  "neumorphism": "⬜",
+  "nordic-air": "Aire Nórdico",
+  "pastel-dream": "Pastel Dream",
+  "bubble-play": "Bubble Play",
+  "kinetic-pop": "Kinetic Pop",
+  "neo-playful": "Neo Playful",
+  "liquid-glass": "Liquid Glass (sidebar)",
+  "glassmorphism": "Glassmorphism (sidebar)",
+  "material-3-expressive": "Material 3 (sidebar)",
+  "neumorphism": "Neumorphism (sidebar)",
 };
 
 export function getUiStyleSnapshot(): UiStyleSkin {
-  if (typeof window === "undefined") return "liquid-glass";
+  if (typeof window === "undefined") return "nordic-air";
   try {
     const stored = localStorage.getItem(UI_STYLE_KEY) as UiStyleSkin | null;
     if (stored && UI_STYLE_LABELS[stored]) return stored;
   } catch {
     // ignore
   }
-  return "liquid-glass";
+  return "nordic-air";
 }
 
 export function getUiStyleServerSnapshot(): UiStyleSkin {
-  return "liquid-glass";
+  return "nordic-air";
 }
 
 export function subscribeUiStyle(callback: () => void): () => void {
@@ -43,7 +46,6 @@ export function subscribeUiStyle(callback: () => void): () => void {
   };
   window.addEventListener("storage", handler);
 
-  // Custom event para cambios dentro de la misma pestaña
   const customHandler = () => callback();
   window.addEventListener("ui-style-change", customHandler);
 
@@ -57,7 +59,6 @@ export function persistUiStyleChoice(skin: UiStyleSkin) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(UI_STYLE_KEY, skin);
-    // Disparar evento custom para que los suscriptores en la misma pestaña reaccionen
     window.dispatchEvent(new Event("ui-style-change"));
   } catch {
     // ignore
