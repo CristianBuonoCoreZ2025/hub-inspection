@@ -215,7 +215,7 @@ export default function PermisosPage() {
           return (
             <div
               key={userType}
-              className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)]"
+              className="rounded-xl border border-border bg-card p-4 shadow-(--shadow-card)"
             >
               {/* Header del tipo de usuario */}
               <div className="flex items-center justify-between mb-3">

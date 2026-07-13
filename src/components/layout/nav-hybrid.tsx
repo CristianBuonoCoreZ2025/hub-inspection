@@ -79,7 +79,7 @@ function HybridFlyout({
         className={cn(
           "sidebar-item cursor-pointer",
           (isGroupActive || open) && "sidebar-item-active",
-          open && "rounded-r-none !bg-card overflow-hidden"
+          open && "rounded-r-none bg-card! overflow-hidden"
         )}
       >
         <Icon className="size-[18px] shrink-0" />
@@ -308,7 +308,7 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
                     {/* Bridge */}
                     <div className="absolute left-full bottom-0 h-full w-2 z-40" />
                     <div className="hybrid-flyout-panel absolute left-full bottom-0 ml-2 z-50 w-56 rounded-[20px] border overflow-hidden
-                                    backdrop-blur-[40px] saturate-[200%]
+                                    backdrop-blur-2xl saturate-200
                                     shadow-[0_16px_64px_rgba(0,0,0,0.08)]
                                     dark:shadow-[0_16px_64px_rgba(0,0,0,0.4)]"
                          style={{
