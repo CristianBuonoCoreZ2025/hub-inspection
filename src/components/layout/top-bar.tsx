@@ -6,8 +6,6 @@ import Link from "next/link";
 import {
   ClipboardCheck,
   FileText,
-  Eye,
-  Send,
   ListTodo,
   AlertTriangle,
   Clock,
@@ -56,10 +54,11 @@ interface StatChipProps {
   label: string;
   href: string;
   variant?: "default" | "alert" | "overdue";
+  alwaysVisible?: boolean;
 }
 
-function StatChip({ icon: Icon, count, label, href, variant = "default" }: StatChipProps) {
-  if (count === 0) return null;
+function StatChip({ icon: Icon, count, label, href, variant = "default", alwaysVisible = false }: StatChipProps) {
+  if (count === 0 && !alwaysVisible) return null;
 
   return (
     <Link
@@ -207,51 +206,44 @@ export function TopBar() {
           </div>
         </div>
 
-        {/* ── Centro: Stats chips ── */}
+        {/* ── Centro: Stats chips (fijos, siempre visibles) ── */}
         <div className="topbar-center">
-          <StatChip
-            icon={ClipboardCheck}
-            count={s.inspectionsActive}
-            label="Inspecciones"
-            href="/dashboard/inspecciones?status=active"
-          />
           <StatChip
             icon={FileText}
             count={s.liquidationsActive}
             label="Liquidaciones"
             href="/dashboard/claims?status=adjustment"
+            alwaysVisible
           />
           <StatChip
-            icon={Eye}
-            count={s.reviewsPending}
-            label="Revisiones"
-            href="/dashboard/gestiones?filter=reviews"
-          />
-          <StatChip
-            icon={Send}
-            count={s.dispatchesPending}
-            label="Despachos"
-            href="/dashboard/gestiones?filter=dispatches"
+            icon={ClipboardCheck}
+            count={s.inspectionsActive}
+            label="Inspecciones"
+            href="/dashboard/inspecciones?status=active"
+            alwaysVisible
           />
           <StatChip
             icon={ListTodo}
             count={s.gestionsAssigned}
-            label="Gestiones"
+            label="En curso"
             href="/dashboard/gestiones?filter=all"
+            alwaysVisible
           />
           <StatChip
             icon={AlertTriangle}
             count={s.gestionsAlert}
-            label="Alerta"
+            label="En alarma"
             href="/dashboard/gestiones?filter=alert"
             variant="alert"
+            alwaysVisible
           />
           <StatChip
             icon={Clock}
             count={s.gestionsOverdue}
-            label="Vencidas"
+            label="Atrasadas"
             href="/dashboard/gestiones?filter=overdue"
             variant="overdue"
+            alwaysVisible
           />
         </div>
 
