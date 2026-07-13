@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -42,112 +42,94 @@ function getInitials(email?: string | null) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Item de grupo con extensión de fondo hacia el panel derecho
+// Grupo con submenu integrado como extension del sidebar
+// El submenu se superpone al contenido sin mover la pantalla
 // ═══════════════════════════════════════════════════════════════
-function GroupNavItem({
-  group,
-  pathname,
-  isOpen,
-  onMouseEnter,
-  onMouseLeave,
-}: {
-  group: NavGroup & { visibleLinks: NavLink[] };
-  pathname: string;
-  isOpen: boolean;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-}) {
-  const isGroupActive = group.visibleLinks.some(l => pathname.startsWith(l.href));
-  const Icon = group.icon;
-
-  const item = (
-    <div className={cn(
-      "sidebar-item cursor-pointer",
-      isGroupActive && !isOpen && "sidebar-item-active",
-      isOpen && "rounded-r-none !bg-card text-primary"
-    )}>
-      <Icon className="size-[18px] shrink-0" />
-      <span className="text-[12px] font-medium truncate flex-1">{group.title}</span>
-      <span className={cn(
-        "size-1.5 rounded-full shrink-0 transition-colors",
-        isGroupActive ? "bg-primary" : "bg-muted-foreground/40"
-      )} />
-    </div>
-  );
-
-  return (
-    <div className="relative" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-      {isOpen ? (
-        <div className="-mr-3">
-          {item}
-        </div>
-      ) : (
-        item
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Panel derecho con las sub-páginas del grupo activo
-// ═══════════════════════════════════════════════════════════════
-function FlyoutPanel({
+function HybridFlyout({
   group,
   pathname,
   onNavigate,
-  onClose,
 }: {
   group: NavGroup & { visibleLinks: NavLink[] };
   pathname: string;
   onNavigate?: () => void;
-  onClose?: () => void;
 }) {
-  const Icon = group.icon;
+  const [open, setOpen] = useState(false);
   const isGroupActive = group.visibleLinks.some(l => pathname.startsWith(l.href));
+  const Icon = group.icon;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleEnter = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setOpen(true), 200);
+  };
+  const handleLeave = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setOpen(false), 150);
+  };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="relative flex items-center gap-2 border-b border-border/60 px-3 py-2.5">
-        <div className={cn(
-          "flex size-6 items-center justify-center rounded-lg shrink-0",
-          isGroupActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-        )}>
-          <Icon className="size-3.5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-foreground truncate">{group.title}</p>
-          <p className="text-[10px] text-muted-foreground">{group.visibleLinks.length} páginas</p>
-        </div>
+    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+      {/* Item del grupo — fondo card cuando esta expandido para fundirse con el panel */}
+      <div className={cn(
+        "sidebar-item cursor-pointer",
+        isGroupActive && !open && "sidebar-item-active",
+        open && "rounded-r-none !bg-card text-primary"
+      )}>
+        <Icon className="size-[18px] shrink-0" />
+        <span className="text-[12px] font-medium truncate flex-1">{group.title}</span>
+        <span className={cn(
+          "size-1.5 rounded-full shrink-0 transition-colors",
+          isGroupActive ? "bg-primary" : "bg-muted-foreground/40"
+        )} />
       </div>
 
-      <div className="relative p-1 flex-1 overflow-y-auto">
-        {group.visibleLinks.map((link) => {
-          const isActive = pathname.startsWith(link.href);
-          const LinkIcon = link.icon;
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => { onNavigate?.(); onClose?.(); }}
-              className={cn(
-                "group/item flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150",
-                isActive
-                  ? "bg-primary/10 text-primary font-medium shadow-[0_0_12px_rgba(139,92,246,0.15)]"
-                  : "text-muted-foreground hover:bg-muted/70 hover:text-foreground font-normal"
-              )}
-            >
-              <LinkIcon className={cn(
-                "size-3.5 shrink-0 transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground/60 group-hover/item:text-foreground"
-              )} />
-              <span className="flex-1 truncate">{link.label}</span>
-              {isActive && (
-                <span className="h-3 w-0.5 rounded-full bg-primary shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
-              )}
-            </Link>
-          );
-        })}
-      </div>
+      {/* Submenu integrado — superpuesto al contenido, sin mover la pantalla */}
+      {open && (
+        <div className="absolute left-full top-0 z-50 w-64 rounded-r-[20px] rounded-l-none bg-card">
+          <div className="relative flex items-center gap-2 border-b border-border/60 px-3 py-2.5">
+            <div className={cn(
+              "flex size-6 items-center justify-center rounded-lg shrink-0",
+              isGroupActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+            )}>
+              <Icon className="size-3.5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-foreground truncate">{group.title}</p>
+              <p className="text-[10px] text-muted-foreground">{group.visibleLinks.length} páginas</p>
+            </div>
+          </div>
+
+          <div className="relative p-1 max-h-[520px] overflow-y-auto">
+            {group.visibleLinks.map((link) => {
+              const isActive = pathname.startsWith(link.href);
+              const LinkIcon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => { onNavigate?.(); setOpen(false); }}
+                  className={cn(
+                    "group/item flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150",
+                    isActive
+                      ? "bg-primary/10 text-primary font-medium shadow-[0_0_12px_rgba(139,92,246,0.15)]"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground font-normal"
+                  )}
+                >
+                  <LinkIcon className={cn(
+                    "size-3.5 shrink-0 transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground/60 group-hover/item:text-foreground"
+                  )} />
+                  <span className="flex-1 truncate">{link.label}</span>
+                  {isActive && (
+                    <span className="h-3 w-0.5 rounded-full bg-primary shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -223,9 +205,6 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
   const { visibleMainLinks, visibleGroups } = useNavLinks();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userRef = useRef<HTMLDivElement>(null);
-  const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
-  const groupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -237,46 +216,13 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const handleGroupEnter = useCallback((title: string) => {
-    if (groupTimerRef.current) clearTimeout(groupTimerRef.current);
-    setHoveredGroup(title);
-    groupTimerRef.current = setTimeout(() => setOpenGroup(title), 200);
-  }, []);
-
-  const handleGroupLeave = useCallback(() => {
-    if (groupTimerRef.current) clearTimeout(groupTimerRef.current);
-    groupTimerRef.current = setTimeout(() => {
-      setOpenGroup(null);
-      setHoveredGroup(null);
-    }, 150);
-  }, []);
-
-  const handlePaneEnter = useCallback(() => {
-    if (groupTimerRef.current) clearTimeout(groupTimerRef.current);
-    if (hoveredGroup) setOpenGroup(hoveredGroup);
-  }, [hoveredGroup]);
-
-  const handlePaneLeave = useCallback(() => {
-    if (groupTimerRef.current) clearTimeout(groupTimerRef.current);
-    groupTimerRef.current = setTimeout(() => {
-      setOpenGroup(null);
-      setHoveredGroup(null);
-    }, 150);
-  }, []);
-
-  const openGroupData = useMemo(() => visibleGroups.find(g => g.title === openGroup), [visibleGroups, openGroup]);
-  const isExpanded = Boolean(openGroupData);
-
   return (
     <>
-      {/* Sidebar extendido — dos columnas cuando hay submenu abierto */}
-      <div className="hidden lg:flex lg:flex-col lg:items-center lg:justify-center lg:w-auto lg:shrink-0 lg:py-4">
-        <aside className={cn(
-          "sidebar-glass flex flex-row gap-0 transition-all duration-200",
-          isExpanded ? "w-[456px]" : "w-[200px]"
-        )}>
-          {/* Columna izquierda: navegación principal */}
-          <div className="w-[200px] flex flex-col shrink-0 gap-3 px-3 py-4">
+      {/* Sidebar (left) — premium floating labeled glass panel */}
+      <div className="hidden lg:flex lg:flex-col lg:items-center lg:justify-center lg:w-[220px] lg:shrink-0 lg:py-4">
+        <aside className="sidebar-glass flex flex-col w-[200px] py-4 gap-3">
+          {/* Contenido */}
+          <div className="relative z-10 flex flex-col w-full h-full gap-3 px-3">
             {/* Logo */}
             <Link
               href="/dashboard"
@@ -309,16 +255,14 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
 
             <div className="sidebar-divider" />
 
-            {/* Group links */}
+            {/* Group links with flyout */}
             <div className="flex flex-col gap-1 w-full">
               {visibleGroups.map((group) => (
-                <GroupNavItem
+                <HybridFlyout
                   key={group.title}
                   group={group}
                   pathname={pathname}
-                  isOpen={openGroup === group.title}
-                  onMouseEnter={() => handleGroupEnter(group.title)}
-                  onMouseLeave={handleGroupLeave}
+                  onNavigate={onNavigate}
                 />
               ))}
             </div>
@@ -386,22 +330,6 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
               </div>
             </div>
           </div>
-
-          {/* Columna derecha: submenu integrado del grupo activo */}
-          {openGroupData && (
-            <div
-              className="w-64 flex flex-col bg-card rounded-r-[28px]"
-              onMouseEnter={handlePaneEnter}
-              onMouseLeave={handlePaneLeave}
-            >
-              <FlyoutPanel
-                group={openGroupData}
-                pathname={pathname}
-                onNavigate={onNavigate}
-                onClose={() => setOpenGroup(null)}
-              />
-            </div>
-          )}
         </aside>
       </div>
     </>
