@@ -1,0 +1,371 @@
+@layer components {
+  /* ═══════════════════════════════════════════════════════════════
+   * DASHBOARD GLASS — Sistema de paneles tipo Tableau
+   * Liquid Glass extremo: blur, gradientes, sombras, bordes luminosos.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  /* Contenedor principal del dashboard */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+    width: 100%;
+  }
+
+  /* Panel glass base — cada card del dashboard */
+  .glass-panel {
+    position: relative;
+    border-radius: 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 55%, transparent) 0%,
+      color-mix(in srgb, var(--card) 30%, transparent) 100%
+    ) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      0 1px 0 rgba(255, 255, 255, 0.15) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
+    overflow: hidden;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .glass-panel:hover {
+    transform: translateY(-2px) !important;
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.12),
+      0 1px 0 rgba(255, 255, 255, 0.2) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+  }
+
+  /* Brillo superior — simula luz reflejando en el glass */
+  .glass-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      120% 80% at 0% 0%,
+      rgba(255, 255, 255, 0.12) 0%,
+      transparent 50%
+    );
+    border-radius: inherit;
+  }
+
+  /* Brillo inferior — halo de color sutil */
+  .glass-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      100% 60% at 100% 100%,
+      var(--glass-glow, rgba(0, 149, 218, 0.06)) 0%,
+      transparent 60%
+    );
+    border-radius: inherit;
+  }
+
+  .dark .glass-panel {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 50%, transparent) 0%,
+      color-mix(in srgb, var(--card) 25%, transparent) 100%
+    ) !important;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.35),
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+  }
+
+  .dark .glass-panel:hover {
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.45),
+      0 1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
+  }
+
+  /* Header del panel glass */
+  .glass-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 10px !important;
+    position: relative;
+    z-index: 1;
+  }
+
+  .glass-panel-title {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+    letter-spacing: -0.01em !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .glass-panel-title svg {
+    color: var(--muted-foreground) !important;
+  }
+
+  .glass-panel-body {
+    padding: 0 18px 18px !important;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * KPI CARDS — Tarjetas de métricas con glass extremo
+   * ═══════════════════════════════════════════════════════════════ */
+  .kpi-card {
+    position: relative;
+    border-radius: 18px !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--card) 60%, transparent) 0%,
+      color-mix(in srgb, var(--card) 35%, transparent) 100%
+    ) !important;
+    backdrop-filter: blur(24px) saturate(170%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(170%) !important;
+    box-shadow:
+      0 6px 24px rgba(0, 0, 0, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
+    padding: 16px 18px !important;
+    overflow: hidden;
+    transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-2px) scale(1.01) !important;
+    box-shadow:
+      0 10px 32px rgba(0, 0, 0, 0.1),
+      0 1px 0 rgba(255, 255, 255, 0.18) inset !important;
+  }
+
+  .kpi-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60%;
+    pointer-events: none;
+    background: radial-gradient(
+      80% 100% at 50% 0%,
+      var(--kpi-glow, rgba(0, 149, 218, 0.08)) 0%,
+      transparent 70%
+    );
+    border-radius: inherit;
+  }
+
+  .dark .kpi-card {
+    border-color: rgba(255, 255, 255, 0.06) !important;
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--card) 55%, transparent) 0%,
+      color-mix(in srgb, var(--card) 30%, transparent) 100%
+    ) !important;
+    box-shadow:
+      0 6px 24px rgba(0, 0, 0, 0.3),
+      0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
+  }
+
+  .kpi-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    backdrop-filter: blur(8px) !important;
+    flex-shrink: 0;
+  }
+
+  .kpi-value {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    line-height: 1 !important;
+    color: var(--foreground) !important;
+  }
+
+  .kpi-label {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: var(--muted-foreground) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  .kpi-trend {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    backdrop-filter: blur(6px) !important;
+  }
+
+  .kpi-trend-up {
+    background: rgba(16, 185, 129, 0.12) !important;
+    color: rgb(16, 185, 129) !important;
+    border: 1px solid rgba(16, 185, 129, 0.2) !important;
+  }
+
+  .kpi-trend-down {
+    background: rgba(239, 68, 68, 0.12) !important;
+    color: rgb(239, 68, 68) !important;
+    border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  }
+
+  .kpi-trend-neutral {
+    background: rgba(115, 115, 115, 0.12) !important;
+    color: var(--muted-foreground) !important;
+    border: 1px solid rgba(115, 115, 115, 0.15) !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * GAUGE — Reloj/medidor circular tipo temperatura
+   * ═══════════════════════════════════════════════════════════════ */
+  .gauge-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gauge-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .gauge-value {
+    font-size: 32px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    line-height: 1 !important;
+    color: var(--foreground) !important;
+  }
+
+  .gauge-label {
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    color: var(--muted-foreground) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    margin-top: 4px !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * SPAN HELPERS para grid del dashboard
+   * ═══════════════════════════════════════════════════════════════ */
+  .dash-col-3 { grid-column: span 3; }
+  .dash-col-4 { grid-column: span 4; }
+  .dash-col-6 { grid-column: span 6; }
+  .dash-col-8 { grid-column: span 8; }
+  .dash-col-12 { grid-column: span 12; }
+
+  @media (max-width: 1280px) {
+    .dash-col-3 { grid-column: span 4; }
+    .dash-col-4 { grid-column: span 6; }
+  }
+
+  @media (max-width: 768px) {
+    .dash-col-3,
+    .dash-col-4,
+    .dash-col-6,
+    .dash-col-8 { grid-column: span 12; }
+    .dash-grid { gap: 12px; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * ACTIVITY FEED — Lista de actividad con glass
+   * ═══════════════════════════════════════════════════════════════ */
+  .activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 30%, transparent) !important;
+    transition: background 0.15s ease !important;
+  }
+
+  .activity-item:last-child {
+    border-bottom: none !important;
+  }
+
+  .activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(8px) !important;
+    flex-shrink: 0;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * RECHARTS OVERRIDES — integrar con glass
+   * ═══════════════════════════════════════════════════════════════ */
+  .recharts-default-tooltip {
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: color-mix(in srgb, var(--card) 85%, transparent) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+    padding: 8px 12px !important;
+  }
+
+  .recharts-tooltip-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+  }
+
+  .recharts-tooltip-item {
+    font-size: 11px !important;
+  }
+
+  .recharts-cartesian-axis-tick text {
+    font-size: 10px !important;
+    fill: var(--muted-foreground) !important;
+  }
+
+  .recharts-legend-item-text {
+    font-size: 11px !important;
+    color: var(--muted-foreground) !important;
+  }
+
+  .recharts-polar-angle-axis-tick text,
+  .recharts-polar-radius-axis-tick text {
+    font-size: 10px !important;
+    fill: var(--muted-foreground) !important;
+  }
+
+  /* Grid lines sutiles */
+  .recharts-cartesian-grid line {
+    stroke: color-mix(in srgb, var(--border) 40%, transparent) !important;
+  }
+
+  /* Animación de entrada para charts */
+  .recharts-surface {
+    overflow: visible;
+  }
+}
