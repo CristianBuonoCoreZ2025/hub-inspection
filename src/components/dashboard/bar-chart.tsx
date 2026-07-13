@@ -21,17 +21,18 @@ interface BarChartGlassProps {
 
 export function BarChartGlass({
   data,
-  height = 220,
+  height,
   color = "#0095DA",
   horizontal = false,
 }: BarChartGlassProps) {
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart
-        data={data}
-        layout={horizontal ? "vertical" : "horizontal"}
-        margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
-      >
+    <div className="dash-chart-wrap" style={height ? { height } : undefined}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={data}
+          layout={horizontal ? "vertical" : "horizontal"}
+          margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+        >
         <defs>
           <linearGradient id="bar-grad" x1="0" y1="0" x2={horizontal ? "1" : "0"} y2={horizontal ? "0" : "1"}>
             <stop offset="0%" stopColor={color} stopOpacity={0.9} />
@@ -95,6 +96,7 @@ export function BarChartGlass({
           ))}
         </Bar>
       </BarChart>
-    </ResponsiveContainer>
+      </ResponsiveContainer>
+    </div>
   )
 }

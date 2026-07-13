@@ -51,8 +51,31 @@
 - Diseño premium inspirado en Vercel, Stripe, Linear, Notion, Clerk, Nhost.
 - Dark Mode y Light Mode obligatorios.
 - Mobile First, totalmente responsive.
-- Sidebar profesional con navegación clara.
 - Sistema de white-label preparado para logos y colores por empresa.
+
+### Breakpoints Responsive (OBLIGATORIO)
+
+```
+┌──────────────────┬──────────────┬──────────────────────────────────┐
+│ Breakpoint       │ Ancho        │ Dispositivos                      │
+├──────────────────┼──────────────┼──────────────────────────────────┤
+│ Mobile (sm-)     │ < 640px      │ iPhone SE (375), Galaxy S23 (360)│
+│ Mobile large     │ 640-767px    │ iPhone 14 (390), Pro Max (430)   │
+│ Tablet portrait  │ 768-1023px   │ iPad mini (768), iPad Air (820)  │
+│ Tablet landscape │ 1024-1279px  │ iPad Pro 12.9" (1024)            │
+│ Desktop          │ ≥ 1280px     │ Laptops, monitores               │
+└──────────────────┴──────────────┴──────────────────────────────────┘
+```
+
+Reglas:
+- Todo panel, card, grid o layout DEBE funcionar en los 5 breakpoints.
+- En móvil (<640px): todo apilado vertical (1 columna), KPIs en 2 columnas.
+- En tablet portrait (768-1023px): paneles en pares (2 columnas), KPIs en 3.
+- En desktop (≥1280px): grid de 12 columnas completo.
+- Charts: usar clase `.dash-chart-wrap` (altura responsiva via CSS, no hardcodear).
+- Gauges: usar clase `.dash-gauge` (tamaño responsivo via CSS).
+- Reducir `backdrop-filter` en móvil para performance.
+- Desactivar `hover` effects en móvil (no hay hover en touch).
 
 ## Módulos de Desarrollo (Orden de Prioridad)
 1. **Base SaaS:** Landing, Auth, Dashboard, Navegación, Multi-tenant, Usuarios, Empresas.

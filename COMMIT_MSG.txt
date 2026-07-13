@@ -1,22 +1,21 @@
-fix: dependencias por codigo (no template ID) + glassmorphism
+feat: dashboard responsive para mobile y tablet
 
-Problema: la migracion 139 hizo CROSS JOIN creando 16 dependencias
-duplicadas (4 COB x 4 RES = 16 pares COB->RES).
-
-Solucion: cambiar el modelo a dependencias por CODIGO, no por template ID.
-Los paquetes son globales (COB->RES->PCA) pero al crear la gestion,
-el trigger busca el template hijo por codigo + business_line del claim.
+Breakpoints implementados:
+- Mobile (<640px): 1 columna, KPIs 2 cols, charts 160px, gauge 140px
+- Mobile large (640-767px): 1 columna paneles, KPIs 3, charts 180px
+- Tablet portrait (768-1023px): 2 columnas, charts 200px, gauge 180px
+- Tablet landscape (1024-1279px): 4-6 columnas, charts 220px
+- Desktop (>=1280px): 12 columnas (actual)
 
 Cambios:
-- Migration 142: tabla action_template_dependencies usa parent_code/child_code
-- Migration 143: trigger cascade reescrito para buscar por code + business_line
-- Servicio template-dependencies.ts: usa codes en lugar de IDs
-- Servicio workflow-configs.ts: createWorkflowStepWithChain busca por code + line
-- Pagina dependencias: rediseñada con glassmorphism, cadenas visuales
-- AGENTS.md: glassmorphism documentado como regla de app
-
-Antes: 16 dependencias duplicadas (4x4 por linea de negocio)
-Ahora: 4 dependencias limpias (COB->RES, RES->PCA, NSA->RTA, COI->INS)
+- Charts usan .dash-chart-wrap con altura responsiva via CSS
+- Gauges usan .dash-gauge con tamaño responsivo
+- KPIs: grid-cols-2 sm:grid-cols-3 lg:grid-cols-6/4
+- Header: flex-col en mobile, flex-row en sm+
+- Reducido backdrop-filter en movil para performance
+- Desactivado hover effects en movil (no touch)
+- Padding, border-radius y fonts escalan por breakpoint
+- Breakpoints documentados en AGENTS.md
 
 Generated with [Devin](https://devin.ai)
 

@@ -322,17 +322,141 @@
   .dash-col-8 { grid-column: span 8; }
   .dash-col-12 { grid-column: span 12; }
 
-  @media (max-width: 1280px) {
-    .dash-col-3 { grid-column: span 4; }
-    .dash-col-4 { grid-column: span 6; }
+  /* ═══════════════════════════════════════════════════════════════
+   * RESPONSIVE — Breakpoints estándar
+   *
+   * Desktop (≥1280px):     12 columnas — layout actual
+   * Tablet landscape (1024-1279px): 6 columnas — paneles en pares
+   * Tablet portrait (768-1023px):   4 columnas — paneles más anchos
+   * Mobile large (640-767px):       2 columnas — KPIs en pares, paneles full
+   * Mobile (<640px):     1 columna — todo apilado vertical
+   *
+   * Dispositivos objetivo:
+   *   Mobile:  iPhone SE (375), iPhone 14 (390), Galaxy S23 (360), iPhone 14 Pro Max (430)
+   *   Tablet:  iPad mini (768), iPad Air (820), iPad Pro 11" (834), iPad Pro 12.9" (1024)
+   * ═══════════════════════════════════════════════════════════════ */
+
+  /* Contenedor de charts — altura responsiva por defecto */
+  .dash-chart-wrap {
+    width: 100%;
+    height: 240px;
   }
 
-  @media (max-width: 768px) {
+  /* ── Tablet landscape (1024-1279px) ── */
+  @media (max-width: 1279px) {
+    .dash-col-3 { grid-column: span 4; }
+    .dash-col-4 { grid-column: span 6; }
+    .dash-col-6 { grid-column: span 6; }
+    .dash-col-8 { grid-column: span 12; }
+    .dash-chart-wrap { height: 220px; }
+  }
+
+  /* ── Tablet portrait (768-1023px) ── */
+  @media (max-width: 1023px) {
+    .dash-grid { gap: 14px; }
+    .dash-col-3 { grid-column: span 6; }
+    .dash-col-4 { grid-column: span 6; }
+    .dash-col-6 { grid-column: span 12; }
+    .dash-col-8 { grid-column: span 12; }
+    .dash-chart-wrap { height: 200px; }
+
+    .dash-gauge { width: 180px !important; height: 180px !important; }
+
+    .glass-panel-header { padding: 12px 14px 8px !important; }
+    .glass-panel-body { padding: 0 14px 14px !important; }
+    .glass-panel { border-radius: 16px !important; }
+
+    .kpi-card { padding: 14px 14px !important; }
+    .kpi-value { font-size: 24px !important; }
+    .kpi-icon { width: 32px; height: 32px; }
+
+    .gauge-value { font-size: 26px !important; }
+
+    .dash-section-title { font-size: 14px !important; }
+  }
+
+  /* ── Mobile large (640-767px) ── */
+  @media (max-width: 767px) {
+    .dash-grid { gap: 12px; }
     .dash-col-3,
     .dash-col-4,
     .dash-col-6,
     .dash-col-8 { grid-column: span 12; }
-    .dash-grid { gap: 12px; }
+    .dash-chart-wrap { height: 180px; }
+
+    .dash-gauge { width: 160px !important; height: 160px !important; }
+
+    .glass-panel { border-radius: 14px !important; }
+    .glass-panel-header { padding: 10px 12px 6px !important; }
+    .glass-panel-body { padding: 0 12px 12px !important; }
+
+    .kpi-card {
+      padding: 12px 12px !important;
+      border-radius: 14px !important;
+    }
+    .kpi-value { font-size: 22px !important; }
+    .kpi-label { font-size: 10px !important; }
+    .kpi-icon { width: 30px; height: 30px; border-radius: 8px; }
+    .kpi-trend { font-size: 10px !important; padding: 1px 6px; }
+
+    .gauge-value { font-size: 22px !important; }
+    .gauge-label { font-size: 9px !important; }
+
+    .dash-section-header { gap: 8px; margin-top: 6px; }
+    .dash-section-title { font-size: 13px !important; }
+    .dash-section-count { font-size: 10px !important; padding: 2px 8px; }
+    .dash-section-header svg { width: 16px; height: 16px; }
+
+    /* Reducir blur en móvil para performance */
+    .glass-panel {
+      backdrop-filter: blur(16px) saturate(150%) !important;
+      -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
+    }
+    .kpi-card {
+      backdrop-filter: blur(12px) saturate(140%) !important;
+      -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+    }
+  }
+
+  /* ── Mobile pequeño (<640px) ── */
+  @media (max-width: 639px) {
+    .dash-grid { gap: 10px; }
+    .dash-chart-wrap { height: 160px; }
+
+    .dash-gauge { width: 140px !important; height: 140px !important; }
+
+    .glass-panel { border-radius: 12px !important; }
+    .glass-panel-header { padding: 10px 10px 4px !important; }
+    .glass-panel-body { padding: 0 10px 10px !important; }
+    .glass-panel-title { font-size: 12px !important; gap: 6px; }
+    .glass-panel-title svg { width: 14px; height: 14px; }
+
+    .kpi-card {
+      padding: 10px 10px !important;
+      border-radius: 12px !important;
+    }
+    .kpi-value { font-size: 20px !important; }
+    .kpi-label { font-size: 9px !important; letter-spacing: 0.02em !important; }
+    .kpi-icon { width: 28px; height: 28px; }
+    .kpi-icon svg { width: 14px; height: 14px; }
+    .kpi-trend { font-size: 9px !important; padding: 1px 5px; }
+
+    .gauge-value { font-size: 20px !important; }
+
+    .dash-section-header { gap: 6px; margin-top: 4px; margin-bottom: 0; }
+    .dash-section-title { font-size: 12px !important; }
+    .dash-section-count { display: none; }
+    .dash-section-header svg { width: 14px; height: 14px; }
+
+    /* Ocultar hover effects en móvil (no hay hover en touch) */
+    .glass-panel:hover,
+    .kpi-card:hover {
+      transform: none !important;
+    }
+
+    /* Activity items más compactos */
+    .activity-item { padding: 8px 0; gap: 10px; }
+    .activity-icon { width: 28px; height: 28px; }
   }
 
   /* ═══════════════════════════════════════════════════════════════

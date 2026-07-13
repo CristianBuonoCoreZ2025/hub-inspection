@@ -28,7 +28,7 @@ export function GaugeChart({
   const pct = Math.min(Math.max((value / max) * 100, 0), 100)
 
   return (
-    <div className="gauge-container" style={{ width: size, height: size }}>
+    <div className="gauge-container dash-gauge" style={{ width: size, height: size }}>
       <ResponsiveContainer width="100%" height="100%">
         <RadialBarChart
           data={[{ name: "gauge", value: pct, fill: color }]}

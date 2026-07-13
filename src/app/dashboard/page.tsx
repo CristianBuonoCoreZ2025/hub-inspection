@@ -453,14 +453,14 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
             {isInternal ? "Dashboard" : "Mi Panel"}
           </h1>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">{subtitle}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {!isInternal && profile && (
             <div className="glass-panel px-3 py-2 flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-primary" />
@@ -470,7 +470,7 @@ export default function DashboardPage() {
               </span>
             </div>
           )}
-          <div className="glass-panel px-4 py-2 flex items-center gap-2">
+          <div className="glass-panel px-3 py-2 flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-500" />
             <span className="text-xs font-medium text-muted-foreground">En vivo</span>
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -479,7 +479,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards — resumen rápido */}
-      <div className={`grid grid-cols-2 gap-3 ${isInternal ? "md:grid-cols-3 lg:grid-cols-6" : "md:grid-cols-4"}`}>
+      <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${isInternal ? "lg:grid-cols-6" : "lg:grid-cols-4"}`}>
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
@@ -545,7 +545,7 @@ export default function DashboardPage() {
               </div>
               <div className="glass-panel-body">
                 {stats.claimsByStatus.length > 0 ? (
-                  <DonutChart data={stats.claimsByStatus} height={240} />
+                  <DonutChart data={stats.claimsByStatus} />
                 ) : (
                   <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">
                     Sin datos
@@ -592,7 +592,7 @@ export default function DashboardPage() {
               <div className="glass-panel-body">
                 <AreaChartGlass
                   data={stats.monthsData}
-                  height={240}
+                  
                   label="Siniestros"
                   label2="Inspecciones"
                 />
@@ -612,7 +612,7 @@ export default function DashboardPage() {
               <div className="glass-panel-body">
                 <BarChartGlass
                   data={stats.claimsByDay}
-                  height={240}
+                  
                   color="#ec4899"
                 />
               </div>
@@ -747,7 +747,7 @@ export default function DashboardPage() {
               <div className="glass-panel-body">
                 <BarChartGlass
                   data={stats.inspectionsByStatus}
-                  height={240}
+                  
                   color="#8b5cf6"
                 />
               </div>
@@ -814,7 +814,7 @@ export default function DashboardPage() {
                 {stats.topCompanies.length > 0 ? (
                   <BarChartGlass
                     data={stats.topCompanies}
-                    height={240}
+                    
                     color="#0095DA"
                     horizontal
                   />

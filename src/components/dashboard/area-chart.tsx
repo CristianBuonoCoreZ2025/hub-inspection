@@ -22,15 +22,16 @@ interface AreaChartGlassProps {
 
 export function AreaChartGlass({
   data,
-  height = 220,
+  height,
   color = "#0095DA",
   color2 = "#8b5cf6",
   label = "Siniestros",
   label2,
 }: AreaChartGlassProps) {
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+    <div className="dash-chart-wrap" style={height ? { height } : undefined}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="area-grad-1" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.4} />
@@ -85,6 +86,7 @@ export function AreaChartGlass({
           />
         )}
       </AreaChart>
-    </ResponsiveContainer>
+      </ResponsiveContainer>
+    </div>
   )
 }
