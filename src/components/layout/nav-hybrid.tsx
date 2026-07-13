@@ -1,45 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ShieldCheck,
-  LogOut,
-  Loader2,
-  Palette,
-} from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
 import { useNavLinks } from "@/hooks/use-nav-links";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  getUiStyleSnapshot,
-  subscribeUiStyle,
-  persistUiStyleChoice,
-  UI_STYLE_LABELS,
-  UI_STYLE_SWATCHES,
-  type UiStyleSkin,
-} from "@/lib/ui-style-client-store";
-import { useSyncExternalStore } from "react";
 import type { NavLink, NavGroup } from "@/components/layout/nav-data";
-
-function getInitials(email?: string | null) {
-  if (!email) return "U";
-  const parts = email.split("@")[0].split(/[._-]/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Grupo con submenu integrado como extension del sidebar
@@ -122,44 +90,6 @@ function HybridFlyout({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Selector de skin base — colores y tipografia de toda la app
-// ═══════════════════════════════════════════════════════════════
-function SkinToggle() {
-  const skin = useSyncExternalStore(subscribeUiStyle, getUiStyleSnapshot, getUiStyleSnapshot);
-
-  const handleSelect = (value: UiStyleSkin) => {
-    persistUiStyleChoice(value);
-    document.documentElement.setAttribute("data-ui-style", value);
-  };
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button type="button" className="sidebar-item w-full cursor-pointer">
-            <Palette className="size-4 shrink-0" />
-            <span className="text-[12px] font-medium flex-1 text-left">Color</span>
-          </button>
-        }
-      />
-      <DropdownMenuContent align="end" side="right" className="w-48">
-        <DropdownMenuRadioGroup value={skin} onValueChange={(value) => handleSelect(value as UiStyleSkin)}>
-          {(Object.keys(UI_STYLE_LABELS) as UiStyleSkin[]).map((key) => (
-            <DropdownMenuRadioItem key={key} value={key} className="text-xs">
-              <span
-                className="mr-2 size-2.5 rounded-full border border-white/20 shadow-sm"
-                style={{ backgroundColor: UI_STYLE_SWATCHES[key] }}
-              />
-              <span>{UI_STYLE_LABELS[key]}</span>
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
 // Icono de link principal con tooltip
 // ═══════════════════════════════════════════════════════════════
 function MainLinkIcon({
@@ -188,20 +118,7 @@ function MainLinkIcon({
 
 export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { user, isLoading, signOut } = useAuth();
   const { visibleMainLinks, visibleGroups } = useNavLinks();
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (userRef.current && !userRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
 
   return (
     <>
@@ -254,68 +171,7 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
               ))}
             </div>
 
-            {/* User + theme + skin at bottom */}
-            <div className="mt-auto flex flex-col gap-1 w-full pt-2">
-              <SkinToggle />
-              <ThemeToggle />
-
-              <div ref={userRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="sidebar-item w-full"
-                >
-                  <Avatar size="sm">
-                    <AvatarFallback className="bg-primary/20 text-primary text-xs border border-primary/20">
-                      {isLoading ? "..." : getInitials(user?.email)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col min-w-0 text-left">
-                    <span className="text-[12px] font-medium truncate">{isLoading ? "Cargando..." : user?.email ?? "Usuario"}</span>
-                    <span className="text-[10px] text-muted-foreground">Mi cuenta</span>
-                  </div>
-                </button>
-
-                {userMenuOpen && (
-                  <>
-                    {/* Bridge */}
-                    <div className="absolute left-full bottom-0 h-full w-2 z-40" />
-                    <div className="hybrid-flyout-panel absolute left-full bottom-0 ml-2 z-50 w-56 rounded-[20px] border overflow-hidden
-                                    backdrop-blur-2xl saturate-200
-                                    shadow-[0_16px_64px_rgba(0,0,0,0.08)]
-                                    dark:shadow-[0_16px_64px_rgba(0,0,0,0.4)]"
-                         style={{
-                           borderColor: "color-mix(in srgb, var(--foreground) 6%, transparent)",
-                           background: "linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03))",
-                         }}>
-                      <div className="pointer-events-none absolute inset-0 rounded-[20px] bg-[linear-gradient(180deg,rgba(255,255,255,0.15)_0%,transparent_40%)]" />
-                      <div className="relative flex items-center gap-2.5 border-b border-white/10 dark:border-white/5 px-4 py-3">
-                        <Avatar size="sm">
-                          <AvatarFallback className="bg-primary/20 text-primary text-xs border border-primary/20">
-                            {isLoading ? "..." : getInitials(user?.email)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{isLoading ? "Cargando..." : user?.email ?? "Usuario"}</p>
-                        </div>
-                      </div>
-                      <div className="relative p-1.5">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-white/10"
-                          onClick={() => signOut()}
-                          disabled={isLoading}
-                        >
-                          {isLoading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <LogOut className="mr-2 size-4" />}
-                          Cerrar Sesión
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+            {/* User, theme, skin y logout están en la TopBar superior */}
           </div>
         </aside>
       </div>
