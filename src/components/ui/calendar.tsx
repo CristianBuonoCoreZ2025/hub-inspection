@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -23,23 +22,23 @@ function Calendar({
       classNames={{
         root: cn("w-fit"),
         months: cn("relative flex flex-col gap-4"),
-        month: cn("flex flex-col gap-4"),
-        month_caption: cn("relative flex items-center justify-center pt-1"),
+        month: cn("flex flex-col gap-3"),
+        month_caption: cn("relative flex items-center justify-center pt-1 pb-1"),
         caption_label: cn("text-sm font-medium text-foreground"),
         weeks: cn(""),
-        nav: cn("flex items-center justify-between gap-1"),
+        nav: cn("flex items-center justify-between gap-1 absolute top-3 left-0 right-0 px-1"),
         button_previous: cn(
-          buttonVariants({ variant: "outline" }),
-          "size-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          "inline-flex size-7 items-center justify-center rounded-lg bg-transparent p-0",
+          "text-muted-foreground opacity-60 hover:opacity-100 hover:bg-muted/50 transition-opacity"
         ),
         button_next: cn(
-          buttonVariants({ variant: "outline" }),
-          "size-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          "inline-flex size-7 items-center justify-center rounded-lg bg-transparent p-0",
+          "text-muted-foreground opacity-60 hover:opacity-100 hover:bg-muted/50 transition-opacity"
         ),
         month_grid: cn("w-full border-collapse"),
         weekdays: cn("flex"),
         weekday: cn(
-          "flex-1 text-[11px] font-medium text-muted-foreground"
+          "flex-1 text-[11px] font-medium text-muted-foreground text-center"
         ),
         week: cn("mt-1 flex w-full"),
         day: cn(

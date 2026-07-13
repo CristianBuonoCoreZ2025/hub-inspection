@@ -509,24 +509,6 @@ function InspectionsPageContent() {
                           </Button>
                         </>
                       )}
-
-                      {canEdit("inspecciones") && session.status === "active" && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-xs btn-save"
-                            onClick={() => {
-                              // Validar desde la lista: redirigir al detalle para validar
-                              router.push(`/dashboard/inspecciones/${session.id}`);
-                              toast.info("Revise los datos de la inspección antes de finalizar.");
-                            }}
-                          >
-                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                            Finalizar
-                          </Button>
-                        </>
-                      )}
                     </div>
                   </td>
                 </tr>

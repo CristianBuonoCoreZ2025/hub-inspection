@@ -856,7 +856,7 @@ export default function ClaimsPage() {
 
   return (
     <div className="app-page">
-      <header className="app-page-header">
+      <div className="app-page-header">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-sky-500 text-white shadow-sm">
@@ -896,7 +896,7 @@ export default function ClaimsPage() {
             )}
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="app-toolbar">
         <div className="flex flex-wrap items-center gap-2">
@@ -919,10 +919,8 @@ export default function ClaimsPage() {
               ))}
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-2 shrink-0">
-            <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="w-[120px]" />
-            <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="w-[120px]" />
-          </div>
+          <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="w-[120px]" />
+          <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="w-[120px]" />
           {(statusFilter || dateFrom || dateTo) && (
             <button
               onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
