@@ -445,7 +445,7 @@
   }
 
   .app-tab-bar-inner {
-    @apply flex gap-0.5 overflow-x-auto;
+    @apply flex flex-wrap gap-0.5;
   }
 
   /* Tab individual */
