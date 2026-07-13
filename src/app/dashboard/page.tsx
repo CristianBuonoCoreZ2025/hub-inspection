@@ -258,9 +258,6 @@ export default function DashboardPage() {
     });
 
     // Claims por compañía (top 5, para barras horizontales)
-    // Solo relevante para internal (distribución entre compañías)
-    // Para adjuster: distribución entre las compañías de seguros de sus casos
-    // Para client_operator: no se muestra (solo tienen una)
     const claimsByCompany: Record<string, number> = {};
     allClaims.forEach((c: Claim) => {
       const name = c.insurance_company?.name || "Sin compañía";
@@ -450,6 +447,9 @@ export default function DashboardPage() {
       ? `Casos de tu compañía — vista operativa`
       : `Tus casos asignados — ${roleLabel.toLowerCase()}`;
 
+  // ¿Mostrar sección de sistema (top compañías + actividad)?
+  const showSystemSection = isInternal || profile?.role === "adjuster";
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -478,7 +478,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards — resumen rápido */}
       <div className={`grid grid-cols-2 gap-3 ${isInternal ? "md:grid-cols-3 lg:grid-cols-6" : "md:grid-cols-4"}`}>
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
@@ -521,126 +521,289 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Row 1: Donut (claims por estado) + Gauges (tasa de cierre + completitud inspecciones) */}
+      {/* ═══════════════════════════════════════════════════════════════
+          SECCIÓN: SINIESTROS
+          Donut + Gauge cierre + Evolución mensual + Por día + Tiempo + En creación + En liquidación
+          ═══════════════════════════════════════════════════════════════ */}
       {stats.totalClaims > 0 && (
-        <div className="dash-grid">
-          {/* Donut: Claims por estado */}
-          <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(59, 130, 246, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <FileText className="h-4 w-4" />
-                {isInternal ? "Siniestros por Estado" : "Mis Casos por Estado"}
-              </div>
-            </div>
-            <div className="glass-panel-body">
-              {stats.claimsByStatus.length > 0 ? (
-                <DonutChart data={stats.claimsByStatus} height={240} />
-              ) : (
-                <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">
-                  Sin datos
+        <>
+          <div className="dash-section-header">
+            <FileText className="h-[18px] w-[18px]" />
+            <span className="dash-section-title">Siniestros</span>
+            <div className="dash-section-line" />
+            <span className="dash-section-count">{stats.totalClaims} casos</span>
+          </div>
+
+          {/* Row 1: Donut (estado) + Gauge (tasa cierre) + Area (evolución) */}
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(59, 130, 246, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <FileText className="h-4 w-4" />
+                  {isInternal ? "Por Estado" : "Mis Casos por Estado"}
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Gauge: Tasa de cierre */}
-          <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(16, 185, 129, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <CheckCircle className="h-4 w-4" />
-                Tasa de Cierre
+              </div>
+              <div className="glass-panel-body">
+                {stats.claimsByStatus.length > 0 ? (
+                  <DonutChart data={stats.claimsByStatus} height={240} />
+                ) : (
+                  <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">
+                    Sin datos
+                  </div>
+                )}
               </div>
             </div>
-            <div className="glass-panel-body flex items-center justify-center pt-2">
-              <GaugeChart
-                value={stats.closeRate}
-                max={100}
-                label="Siniestros cerrados"
-                color="#10b981"
-                size={210}
-              />
-            </div>
-          </div>
 
-          {/* Gauge: Completitud inspecciones */}
-          <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(139, 92, 246, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <ClipboardCheck className="h-4 w-4" />
-                Inspecciones Completadas
+            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(16, 185, 129, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <CheckCircle className="h-4 w-4" />
+                  Tasa de Cierre
+                </div>
+              </div>
+              <div className="glass-panel-body flex items-center justify-center pt-2">
+                <GaugeChart
+                  value={stats.closeRate}
+                  max={100}
+                  label="Siniestros cerrados"
+                  color="#10b981"
+                  size={210}
+                />
               </div>
             </div>
-            <div className="glass-panel-body flex items-center justify-center pt-2">
-              <GaugeChart
-                value={stats.inspectionCompletionRate}
-                max={100}
-                label="Tasa de completitud"
-                color="#8b5cf6"
-                size={210}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Row 2: Area chart (evolución mensual) + Bar chart (inspecciones por estado) */}
-      {stats.totalClaims > 0 && (
-        <div className="dash-grid">
-          {/* Area: Evolución mensual claims vs inspecciones */}
-          <div className="glass-panel dash-col-8" style={{ ["--glass-glow" as string]: "rgba(0, 149, 218, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <Activity className="h-4 w-4" />
-                {isInternal ? "Evolución Mensual" : "Mi Evolución Mensual"}
-              </div>
-              <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#0095DA]" />
-                  Siniestros
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#8b5cf6]" />
-                  Inspecciones
-                </span>
-              </div>
-            </div>
-            <div className="glass-panel-body">
-              <AreaChartGlass
-                data={stats.monthsData}
-                height={240}
-                label="Siniestros"
-                label2="Inspecciones"
-              />
-            </div>
-          </div>
-
-          {/* Bar: Inspecciones por estado */}
-          <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(245, 158, 11, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <ClipboardCheck className="h-4 w-4" />
-                Inspecciones por Estado
-              </div>
-            </div>
-            <div className="glass-panel-body">
-              <BarChartGlass
-                data={stats.inspectionsByStatus}
-                height={240}
-                color="#8b5cf6"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Row 3: Bar horizontal (top compañías) + Bar (claims por día) + Activity feed */}
-      {stats.totalClaims > 0 && (
-        <div className="dash-grid">
-          {/* Bar horizontal: Top 5 compañías
-              Solo para internal y adjuster (que trabaja con múltiples compañías)
-              Para client_operator no se muestra — se reemplaza con claims por día */}
-          {isInternal || profile?.role === "adjuster" ? (
             <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(0, 149, 218, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Activity className="h-4 w-4" />
+                  Evolución Mensual
+                </div>
+                <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#0095DA]" />
+                    Siniestros
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#8b5cf6]" />
+                    Inspecciones
+                  </span>
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                <AreaChartGlass
+                  data={stats.monthsData}
+                  height={240}
+                  label="Siniestros"
+                  label2="Inspecciones"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Bar (por día) + Tiempo Resolución + En Creación + En Liquidación */}
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(236, 72, 153, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Calendar className="h-4 w-4" />
+                  Por Día de la Semana
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                <BarChartGlass
+                  data={stats.claimsByDay}
+                  height={240}
+                  color="#ec4899"
+                />
+              </div>
+            </div>
+
+            <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(245, 158, 11, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Timer className="h-4 w-4" />
+                  Tiempo Resolución
+                </div>
+              </div>
+              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-bold tracking-tight">
+                    {stats.avgResolutionDays > 0 ? stats.avgResolutionDays.toFixed(1) : "—"}
+                  </span>
+                  {stats.avgResolutionDays > 0 && (
+                    <span className="text-sm text-muted-foreground font-medium">días</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                  {isInternal ? "Promedio de cierre" : "Promedio de cierre de tus casos"}
+                </p>
+                <div className="mt-3 w-full flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(stats.avgResolutionDays * 10, 100)}%`,
+                        background: "linear-gradient(90deg, #f59e0b, #d97706)",
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {stats.avgResolutionDays > 30 ? "Lento" : stats.avgResolutionDays > 14 ? "Normal" : "Rápido"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(59, 130, 246, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Clock className="h-4 w-4" />
+                  En Creación
+                </div>
+              </div>
+              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
+                <span className="text-4xl font-bold tracking-tight">{stats.createdClaims}</span>
+                <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                  {isInternal ? "Recién ingresados" : "Casos recién ingresados"}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20">
+                    <span className="text-[10px] font-semibold text-blue-500">
+                      {stats.totalClaims > 0 ? ((stats.createdClaims / stats.totalClaims) * 100).toFixed(0) : 0}%
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">del total</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(245, 158, 11, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <AlertCircle className="h-4 w-4" />
+                  En Liquidación
+                </div>
+              </div>
+              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
+                <span className="text-4xl font-bold tracking-tight">{stats.adjustmentClaims}</span>
+                <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                  {isInternal ? "En proceso de ajuste" : "Casos en proceso de ajuste"}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20">
+                    <span className="text-[10px] font-semibold text-amber-500">
+                      {stats.totalClaims > 0 ? ((stats.adjustmentClaims / stats.totalClaims) * 100).toFixed(0) : 0}%
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">del total</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SECCIÓN: INSPECCIONES
+          Gauge completitud + Bar por estado + Inspecciones OK
+          ═══════════════════════════════════════════════════════════════ */}
+      {stats.totalClaims > 0 && (
+        <>
+          <div className="dash-section-header">
+            <ClipboardCheck className="h-[18px] w-[18px]" />
+            <span className="dash-section-title">Inspecciones</span>
+            <div className="dash-section-line" />
+            <span className="dash-section-count">{stats.totalSessions} sesiones</span>
+          </div>
+
+          <div className="dash-grid">
+            {/* Gauge: Completitud inspecciones */}
+            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(139, 92, 246, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <ClipboardCheck className="h-4 w-4" />
+                  Tasa de Completitud
+                </div>
+              </div>
+              <div className="glass-panel-body flex items-center justify-center pt-2">
+                <GaugeChart
+                  value={stats.inspectionCompletionRate}
+                  max={100}
+                  label="Inspecciones completadas"
+                  color="#8b5cf6"
+                  size={210}
+                />
+              </div>
+            </div>
+
+            {/* Bar: Inspecciones por estado */}
+            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(245, 158, 11, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Activity className="h-4 w-4" />
+                  Por Estado
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                <BarChartGlass
+                  data={stats.inspectionsByStatus}
+                  height={240}
+                  color="#8b5cf6"
+                />
+              </div>
+            </div>
+
+            {/* Inspecciones OK + desglose agendadas/activas */}
+            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(16, 185, 129, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <CheckCircle className="h-4 w-4" />
+                  Inspecciones OK
+                </div>
+              </div>
+              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
+                <span className="text-4xl font-bold tracking-tight">{stats.completedSessions}</span>
+                <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                  Inspecciones completadas
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                    <span className="text-[10px] font-semibold text-emerald-500">
+                      {stats.totalSessions > 0 ? ((stats.completedSessions / stats.totalSessions) * 100).toFixed(0) : 0}%
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">del total</span>
+                </div>
+                <div className="mt-4 w-full grid grid-cols-2 gap-2">
+                  <div className="flex flex-col items-center rounded-lg bg-blue-500/5 border border-blue-500/10 py-2">
+                    <span className="text-lg font-bold text-blue-500">{stats.scheduledSessions}</span>
+                    <span className="text-[10px] text-muted-foreground">Agendadas</span>
+                  </div>
+                  <div className="flex flex-col items-center rounded-lg bg-amber-500/5 border border-amber-500/10 py-2">
+                    <span className="text-lg font-bold text-amber-500">{stats.activeSessions}</span>
+                    <span className="text-[10px] text-muted-foreground">En curso</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SECCIÓN: SISTEMA / ACTIVIDAD (internal + adjuster)
+          Top compañías + Actividad reciente
+          ═══════════════════════════════════════════════════════════════ */}
+      {stats.totalClaims > 0 && showSystemSection && (
+        <>
+          <div className="dash-section-header">
+            <Building2 className="h-[18px] w-[18px]" />
+            <span className="dash-section-title">{isInternal ? "Sistema" : "Mis Compañías"}</span>
+            <div className="dash-section-line" />
+          </div>
+
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-6" style={{ ["--glass-glow" as string]: "rgba(0, 149, 218, 0.06)" }}>
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Building2 className="h-4 w-4" />
@@ -662,27 +825,81 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
-          ) : (
-            /* Para client_operator/inspector/assistant: mostrar distribución por estado detallada */
-            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(99, 102, 241, 0.06)" }}>
+
+            <div className="glass-panel dash-col-6" style={{ ["--glass-glow" as string]: "rgba(99, 102, 241, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Activity className="h-4 w-4" />
+                  Actividad Reciente
+                </div>
+              </div>
+              <div className="glass-panel-body" style={{ maxHeight: 240, overflow: "auto" }}>
+                {recentActivity.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">
+                    No hay actividad reciente.
+                  </p>
+                ) : (
+                  <div>
+                    {recentActivity.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={item.id} className="activity-item">
+                          <div
+                            className="activity-icon"
+                            style={{
+                              background: "linear-gradient(135deg, color-mix(in srgb, var(--primary) 15%, transparent), color-mix(in srgb, var(--primary) 5%, transparent))",
+                            }}
+                          >
+                            <Icon className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-medium truncate">{item.text}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{item.time}</p>
+                          </div>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-1" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SECCIÓN: RESUMEN (client_operator / inspector / assistant)
+          Distribución por estado + Actividad reciente
+          ═══════════════════════════════════════════════════════════════ */}
+      {stats.totalClaims > 0 && !showSystemSection && (
+        <>
+          <div className="dash-section-header">
+            <Shield className="h-[18px] w-[18px]" />
+            <span className="dash-section-title">Resumen</span>
+            <div className="dash-section-line" />
+          </div>
+
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-6" style={{ ["--glass-glow" as string]: "rgba(99, 102, 241, 0.06)" }}>
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Shield className="h-4 w-4" />
-                  Resumen de Estados
+                  Distribución por Estado
                 </div>
               </div>
               <div className="glass-panel-body">
                 {stats.claimsByStatus.length > 0 ? (
-                  <div className="space-y-3 pt-2">
+                  <div className="space-y-4 pt-2">
                     {stats.claimsByStatus.map((s) => {
                       const pct = stats.totalClaims > 0 ? (s.value / stats.totalClaims) * 100 : 0;
                       return (
                         <div key={s.name}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium">{s.name}</span>
-                            <span className="text-xs text-muted-foreground">{s.value} ({pct.toFixed(0)}%)</span>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-sm font-medium">{s.name}</span>
+                            <span className="text-sm text-muted-foreground">{s.value} ({pct.toFixed(0)}%)</span>
                           </div>
-                          <div className="h-2 rounded-full bg-muted/30 overflow-hidden">
+                          <div className="h-2.5 rounded-full bg-muted/30 overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all"
                               style={{ width: `${pct}%`, background: s.color }}
@@ -693,185 +910,53 @@ export default function DashboardPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">
+                  <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
                     Sin datos
                   </div>
                 )}
               </div>
             </div>
-          )}
 
-          {/* Bar: Claims por día de la semana */}
-          <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(236, 72, 153, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <Calendar className="h-4 w-4" />
-                Siniestros por Día
-              </div>
-            </div>
-            <div className="glass-panel-body">
-              <BarChartGlass
-                data={stats.claimsByDay}
-                height={240}
-                color="#ec4899"
-              />
-            </div>
-          </div>
-
-          {/* Activity feed */}
-          <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(99, 102, 241, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <Activity className="h-4 w-4" />
-                Actividad Reciente
-              </div>
-            </div>
-            <div className="glass-panel-body" style={{ maxHeight: 240, overflow: "auto" }}>
-              {recentActivity.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-8 text-center">
-                  No hay actividad reciente.
-                </p>
-              ) : (
-                <div>
-                  {recentActivity.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <div key={item.id} className="activity-item">
-                        <div
-                          className="activity-icon"
-                          style={{
-                            background: "linear-gradient(135deg, color-mix(in srgb, var(--primary) 15%, transparent), color-mix(in srgb, var(--primary) 5%, transparent))",
-                          }}
-                        >
-                          <Icon className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-medium truncate">{item.text}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">{item.time}</p>
-                        </div>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-1" />
-                      </div>
-                    );
-                  })}
+            <div className="glass-panel dash-col-6" style={{ ["--glass-glow" as string]: "rgba(99, 102, 241, 0.06)" }}>
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Activity className="h-4 w-4" />
+                  Actividad Reciente
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Row 4: Resumen rápido de tiempo + KPIs secundarios */}
-      {stats.totalClaims > 0 && (
-        <div className="dash-grid">
-          {/* Tiempo promedio de resolución */}
-          <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(245, 158, 11, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <Timer className="h-4 w-4" />
-                Tiempo Resolución
               </div>
-            </div>
-            <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight">
-                  {stats.avgResolutionDays > 0 ? stats.avgResolutionDays.toFixed(1) : "—"}
-                </span>
-                {stats.avgResolutionDays > 0 && (
-                  <span className="text-sm text-muted-foreground font-medium">días</span>
+              <div className="glass-panel-body" style={{ maxHeight: 240, overflow: "auto" }}>
+                {recentActivity.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">
+                    No hay actividad reciente.
+                  </p>
+                ) : (
+                  <div>
+                    {recentActivity.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={item.id} className="activity-item">
+                          <div
+                            className="activity-icon"
+                            style={{
+                              background: "linear-gradient(135deg, color-mix(in srgb, var(--primary) 15%, transparent), color-mix(in srgb, var(--primary) 5%, transparent))",
+                            }}
+                          >
+                            <Icon className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-medium truncate">{item.text}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{item.time}</p>
+                          </div>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-1" />
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
-              <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                {isInternal ? "Promedio de cierre de siniestros" : "Promedio de cierre de tus casos"}
-              </p>
-              <div className="mt-3 w-full flex items-center gap-2">
-                <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${Math.min(stats.avgResolutionDays * 10, 100)}%`,
-                      background: "linear-gradient(90deg, #f59e0b, #d97706)",
-                    }}
-                  />
-                </div>
-                <span className="text-[10px] text-muted-foreground font-medium">
-                  {stats.avgResolutionDays > 30 ? "Lento" : stats.avgResolutionDays > 14 ? "Normal" : "Rápido"}
-                </span>
-              </div>
             </div>
           </div>
-
-          {/* Siniestros en creación */}
-          <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(59, 130, 246, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <Clock className="h-4 w-4" />
-                En Creación
-              </div>
-            </div>
-            <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
-              <span className="text-4xl font-bold tracking-tight">{stats.createdClaims}</span>
-              <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                {isInternal ? "Siniestros recién ingresados" : "Casos recién ingresados"}
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <div className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20">
-                  <span className="text-[10px] font-semibold text-blue-500">
-                    {stats.totalClaims > 0 ? ((stats.createdClaims / stats.totalClaims) * 100).toFixed(0) : 0}%
-                  </span>
-                </div>
-                <span className="text-[10px] text-muted-foreground">del total</span>
-              </div>
-            </div>
-          </div>
-
-          {/* En liquidación */}
-          <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(245, 158, 11, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <AlertCircle className="h-4 w-4" />
-                En Liquidación
-              </div>
-            </div>
-            <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
-              <span className="text-4xl font-bold tracking-tight">{stats.adjustmentClaims}</span>
-              <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                {isInternal ? "Siniestros en proceso de ajuste" : "Casos en proceso de ajuste"}
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <div className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20">
-                  <span className="text-[10px] font-semibold text-amber-500">
-                    {stats.totalClaims > 0 ? ((stats.adjustmentClaims / stats.totalClaims) * 100).toFixed(0) : 0}%
-                  </span>
-                </div>
-                <span className="text-[10px] text-muted-foreground">del total</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Inspecciones completadas */}
-          <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(16, 185, 129, 0.06)" }}>
-            <div className="glass-panel-header">
-              <div className="glass-panel-title">
-                <CheckCircle className="h-4 w-4" />
-                Inspecciones OK
-              </div>
-            </div>
-            <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
-              <span className="text-4xl font-bold tracking-tight">{stats.completedSessions}</span>
-              <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                Inspecciones completadas
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <div className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
-                  <span className="text-[10px] font-semibold text-emerald-500">
-                    {stats.totalSessions > 0 ? ((stats.completedSessions / stats.totalSessions) * 100).toFixed(0) : 0}%
-                  </span>
-                </div>
-                <span className="text-[10px] text-muted-foreground">del total</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
