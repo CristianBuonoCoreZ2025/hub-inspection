@@ -358,6 +358,39 @@ Excepción ÚNICA: Botón "Desligar Asegurado" (esmeralda, w-[150px], h-6)
 es el único botón especial permitido. No crear más botones especiales.
 ```
 
+### Nuevo Estándar: Botón Primario Liquid Glass (para headers de listados)
+```
+A partir de ahora, la acción principal en headers de listados/catálogos
+usa .liquid-button en lugar de .btn-create / .btn-save.
+
+Características:
+- Altura 28px (alineado con buscadores y combos)
+- Border-radius 10px
+- Gradient primary: rgba(0,149,218,0.85) -> rgba(0,91,187,0.9)
+- Backdrop-filter: blur(8px)
+- Borde blanco 25% opacidad
+- Sombra suave primary 0 2px 12px
+- Hover: translateY(-1px), glow más intenso
+- Icono + texto (una palabra)
+
+Ejemplo:
+<div className="flex items-center justify-between gap-3">
+  <div className="flex items-center gap-3">
+    <div className="icono-seccion">...</div>
+    <div>
+      <h1 className="app-page-title">Pólizas</h1>
+      <p className="app-page-lead">...</p>
+    </div>
+  </div>
+  <Button size="sm" className="liquid-button" onClick={...}>
+    <Plus className="h-3.5 w-3.5" /> Nueva
+  </Button>
+</div>
+
+REGLA DE POSICIÓN: El botón primario SIEMPRE va al lado derecho del header,
+nunca debajo del título ni en medio del toolbar.
+```
+
 ### Regla OBLIGATORIA de Combos (FormSelect) No Obligatorios
 ```
 Todos los FormSelect que NO sean obligatorios (sin asterisco rojo *)

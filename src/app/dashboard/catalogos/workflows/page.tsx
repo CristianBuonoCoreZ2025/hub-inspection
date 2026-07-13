@@ -23,7 +23,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   ChevronRight, ChevronDown, Plus, Trash2, GripVertical,
   GitBranch, Workflow, ArrowRight, X, Settings2,
-  Globe, Calendar, Layers, Zap, Shield, Sparkles, Ban, Pencil,
+  Globe, Calendar, Zap, Shield, Sparkles, Ban, Pencil,
 } from "lucide-react";
 import {
   getWorkflowConfigs, getWorkflowSteps,
@@ -93,7 +93,6 @@ export default function WorkflowsPage() {
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [openCreateModal, setOpenCreateModal] = useState(false);
-  const [showAddStep, setShowAddStep] = useState<string | null>(null);
   const [addDependentParent, setAddDependentParent] = useState<WorkflowStep | null>(null);
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
   const [activeDrag, setActiveDrag] = useState<{ id: string; type: "palette" | "node"; label: string; code: string } | null>(null);
@@ -145,7 +144,6 @@ export default function WorkflowsPage() {
     onSuccess: (steps) => {
       toast.success(steps.length > 1 ? `Gestión agregada con ${steps.length - 1} dependientes` : "Gestión agregada");
       queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] });
-      setShowAddStep(null);
       setAddDependentParent(null);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -219,18 +217,6 @@ export default function WorkflowsPage() {
       return next;
     });
   }, []);
-
-  // Steps agrupados por nivel
-  const stepsByLevel = useMemo(() => {
-    if (!steps) return new Map<number, WorkflowStep[]>();
-    const map = new Map<number, WorkflowStep[]>();
-    for (const s of steps) {
-      if (!map.has(s.level)) map.set(s.level, []);
-      map.get(s.level)!.push(s);
-    }
-    for (const [, arr] of map) arr.sort((a, b) => a.sort_order - b.sort_order);
-    return map;
-  }, [steps]);
 
   const usedTemplateIds = useMemo(() => new Set((steps || []).map(s => s.action_template_id)), [steps]);
   const selectedStep = (steps || []).find(s => s.id === selectedStepId);
@@ -544,14 +530,12 @@ export default function WorkflowsPage() {
                                                         onDragEnd={onDragEnd}
                                                       >
                                                       <StepsCanvas
-                                                        stepsByLevel={stepsByLevel}
                                                         selectedStepId={selectedStepId}
                                                         hoveredStep={hoveredStep}
                                                         onSelectStep={setSelectedStepId}
                                                         onHoverStep={setHoveredStep}
                                                         canEdit={canEdit("catalogos") && !isOnline}
-                                                        onAddStep={() => !isOnline && setShowAddStep(config.id)}
-                                                        onAddDependent={(parent) => { setAddDependentParent(parent); setShowAddStep(config.id); }}
+                                                        onAddDependent={(parent) => { setAddDependentParent(parent); }}
                                                         isLoading={!steps}
                                                         steps={steps || []}
                                                         isPaletteDrag={activeDrag?.type === "palette"}
@@ -997,17 +981,15 @@ function GlassTreeNode({
 // ═══════════════════════════════════════════════════════════════════
 
 function StepsCanvas({
-  stepsByLevel, selectedStepId, hoveredStep,
-  onSelectStep, onHoverStep, canEdit, onAddStep, onAddDependent, isLoading, steps,
+  selectedStepId, hoveredStep,
+  onSelectStep, onHoverStep, canEdit, onAddDependent, isLoading, steps,
   isPaletteDrag, businessLineName,
 }: {
-  stepsByLevel: Map<number, WorkflowStep[]>;
   selectedStepId: string | null;
   hoveredStep: string | null;
   onSelectStep: (id: string) => void;
   onHoverStep: (id: string | null) => void;
   canEdit: boolean;
-  onAddStep: () => void;
   onAddDependent: (parentStep: WorkflowStep) => void;
   isLoading: boolean;
   steps: WorkflowStep[];
@@ -1028,18 +1010,7 @@ function StepsCanvas({
                       bg-white/2 backdrop-blur-sm p-6 text-center">
         <div className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-violet-500/5 blur-2xl" />
         <Workflow className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
-        <p className="text-[11px] text-muted-foreground italic mb-3">Sin gestiones configuradas</p>
-        {canEdit && (
-          <button
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 h-7
-                       bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20
-                       text-violet-400 text-[11px] font-medium transition-all active:scale-95"
-            onClick={onAddStep}
-          >
-            <Plus className="h-3 w-3" />
-            Agregar
-          </button>
-        )}
+        <p className="text-[11px] text-muted-foreground italic">Sin gestiones — arrastra desde la paleta</p>
       </div>
     );
   }
@@ -1074,7 +1045,6 @@ function StepsCanvas({
           step={step}
           lc={lc}
           isSelected={selectedStepId === step.id}
-          isHovered={hoveredStep === step.id}
           canEdit={canEdit}
           onSelect={() => onSelectStep(step.id)}
           onHover={() => onHoverStep(step.id)}
@@ -1119,19 +1089,6 @@ function StepsCanvas({
           )}
         </div>
       </DroppableCanvas>
-
-      {canEdit && (
-        <button
-          className="mt-3 flex items-center gap-1.5 rounded-lg px-3 h-7
-                     bg-transparent hover:bg-violet-500/10 border border-dashed border-white/10 hover:border-violet-500/30
-                     text-muted-foreground hover:text-violet-400 text-[11px] font-medium
-                     transition-all active:scale-95"
-          onClick={onAddStep}
-        >
-          <Plus className="h-3 w-3" />
-          Agregar gestión raíz
-        </button>
-      )}
     </div>
   );
 }
@@ -1257,13 +1214,12 @@ function DraggablePaletteItem({ templateId, code, name }: { templateId: string; 
 // ═══════════════════════════════════════════════════════════════════
 
 function SortableNode({
-  step, lc, isSelected, isHovered, canEdit,
+  step, lc, isSelected, canEdit,
   onSelect, onHover, onLeave, onAddDependent,
 }: {
   step: WorkflowStep;
   lc: { bg: string; border: string; text: string; glow: string };
   isSelected: boolean;
-  isHovered: boolean;
   canEdit: boolean;
   onSelect: () => void;
   onHover: () => void;

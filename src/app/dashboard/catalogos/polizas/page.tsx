@@ -142,25 +142,27 @@ export default function PolizasPage() {
   return (
     <div className="app-page">
       <div className="app-page-header">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
-            <FileCheck className="h-5 w-5" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+              <FileCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="app-page-title">Pólizas</h1>
+              <p className="app-page-lead">Gestión de pólizas por compañía de seguros</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h1 className="app-page-title">Pólizas</h1>
-            <p className="app-page-lead">Gestión de pólizas por compañía de seguros</p>
-          </div>
+          {canCreate("claims") && (
+            <Button
+              size="sm"
+              className="liquid-button"
+              onClick={() => router.push("/dashboard/catalogos/polizas/nueva")}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Nueva
+            </Button>
+          )}
         </div>
-        {canCreate("claims") && (
-          <Button
-            size="sm"
-            className="btn-save btn-sm"
-            onClick={() => router.push("/dashboard/catalogos/polizas/nueva")}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Nueva
-          </Button>
-        )}
       </div>
 
       <div className="app-toolbar">
