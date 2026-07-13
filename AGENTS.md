@@ -534,6 +534,12 @@ ITEMS (SelectItem):
   - Transition: 150ms (suave)
   - Indicador de selección: CheckIcon a la derecha
 
+PATRÓN DE USO (botones en headers de listados):
+  Botón primario (Nuevo, Nueva, Agregar, Crear): usar la clase `.liquid-button`.
+  Botón secundario (Exportar, Imprimir, etc.): usar la clase `.liquid-button-outline`.
+  Ambos tienen 28px de alto, borde redondeado 10px y estilo Liquid Glass.
+  Texto siempre UNA sola palabra. Icono sin margen (gap del botón lo separa).
+
 PATRÓN DE USO (date picker en listados):
   Usar el componente `DatePicker` de `@/components/ui/date-picker`.
   Reemplazar los `<input type="date">` nativos. El trigger usa la clase

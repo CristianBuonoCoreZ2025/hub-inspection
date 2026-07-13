@@ -111,6 +111,48 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
   }
 
+  /* ═══════════════════════════════════════════════════════════════
+   * LIQUID BUTTON OUTLINE — Botón secundario con estilo Liquid Glass
+   * Usar para acciones secundarias (Exportar, Imprimir, etc.)
+   * al lado de un .liquid-button primario.
+   * ═══════════════════════════════════════════════════════════════ */
+  .liquid-button-outline {
+    @apply inline-flex items-center justify-center cursor-pointer transition-all;
+    height: 28px !important;
+    padding: 0 12px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    gap: 6px !important;
+    border: 1px solid var(--input) !important;
+    background: color-mix(in srgb, var(--card) 75%, transparent) !important;
+    color: var(--foreground) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .liquid-button-outline:hover:not(:disabled) {
+    transform: translateY(-1px) !important;
+    background: color-mix(in srgb, var(--card) 90%, transparent) !important;
+    border-color: color-mix(in srgb, var(--input) 80%, var(--foreground) 20%) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .liquid-button-outline:active:not(:disabled) {
+    transform: translateY(0) !important;
+  }
+
+  .dark .liquid-button-outline {
+    background: color-mix(in srgb, var(--card) 60%, transparent) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .dark .liquid-button-outline:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--card) 75%, transparent) !important;
+  }
+
   .btn-solid:disabled,
   .btn-save:disabled,
   .btn-confirm:disabled,

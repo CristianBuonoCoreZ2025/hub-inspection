@@ -869,9 +869,7 @@ export default function ClaimsPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-[13px]"
+              className="liquid-button-outline"
               onClick={() => {
                 const rows = filtered || [];
                 const csv = [
@@ -888,7 +886,7 @@ export default function ClaimsPage() {
                 link.click();
               }}
             >
-              <Download className="mr-2 h-3.5 w-3.5" /> Exportar
+              <Download className="h-3.5 w-3.5" /> Exportar
             </Button>
             {canCreate("claims") && (
               <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="liquid-button">
