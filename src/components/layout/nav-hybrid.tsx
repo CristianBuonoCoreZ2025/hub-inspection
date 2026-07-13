@@ -74,7 +74,7 @@ function HybridFlyout({
       <div className={cn(
         "sidebar-item cursor-pointer",
         isGroupActive && !open && "sidebar-item-active",
-        open && "!bg-card text-primary"
+        open && "rounded-r-none !bg-card text-primary"
       )}>
         <Icon className="size-[18px] shrink-0" />
         <span className="text-[12px] font-medium truncate flex-1">{group.title}</span>
@@ -86,7 +86,7 @@ function HybridFlyout({
 
       {/* Submenu integrado — superpuesto al contenido, sin mover la pantalla */}
       {open && (
-        <div className="absolute left-full top-0 -ml-1 z-50 w-64 rounded-r-[20px] rounded-l-2xl bg-card">
+        <div className="absolute left-full top-1/2 -translate-y-1/2 z-50 w-64 rounded-[20px] bg-card">
           <div className="relative p-1 max-h-[520px] overflow-y-auto">
             {group.visibleLinks.map((link) => {
               const isActive = pathname.startsWith(link.href);

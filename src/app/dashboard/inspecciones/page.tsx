@@ -335,7 +335,7 @@ function InspectionsPageContent() {
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 w-full max-w-sm"
           />
-          <Select value={statusFilter || "__none"} onValueChange={(v) => setStatusFilter(v === "__none" ? "" : v ?? "all")}>
+          <Select value={statusFilter || "__none"} onValueChange={(v) => setStatusFilter(v === "__none" ? "" : v ?? "all")} items={[{ value: "__none", label: "Sin selección" }, { value: "all", label: "Todos los estados" }, { value: "scheduled", label: "Agendada" }, { value: "active", label: "En progreso" }, { value: "completed", label: "Completada" }, { value: "cancelled", label: "Cancelada" }]}>
             <SelectTrigger className="h-7 w-full sm:w-[160px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
@@ -698,7 +698,7 @@ function InspectionsPageContent() {
             <div className="modal-grid-3 mb-4">
               <div className="modal-field">
                 <label className="app-field-label">Inspector *</label>
-                <Select value={selectedInspectorId || undefined} onValueChange={(v) => setSelectedInspectorId(v ?? "")}>
+                <Select value={selectedInspectorId || undefined} onValueChange={(v) => setSelectedInspectorId(v ?? "")} items={inspectors.map((i) => ({ value: i.id, label: i.full_name || i.email }))}>
                   <SelectTrigger className="app-input">
                     <SelectValue placeholder="Seleccionar...">
                       {inspectors.find((i) => i.id === selectedInspectorId)?.full_name || inspectors.find((i) => i.id === selectedInspectorId)?.email || "Seleccionar..."}
@@ -713,7 +713,7 @@ function InspectionsPageContent() {
               </div>
               <div className="modal-field">
                 <label className="app-field-label">Tipo *</label>
-                <Select value={inspectionType} onValueChange={(v) => setInspectionType(v as "onsite" | "remote")}>
+                <Select value={inspectionType} onValueChange={(v) => setInspectionType(v as "onsite" | "remote")} items={[{ value: "onsite", label: "Presencial (2h)" }, { value: "remote", label: "Remota (30min)" }]}>
                   <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="onsite">Presencial (2h)</SelectItem>

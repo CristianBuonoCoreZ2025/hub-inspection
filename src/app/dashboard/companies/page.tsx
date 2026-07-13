@@ -242,6 +242,10 @@ export default function CompaniesPage() {
                       <Select
                         value={field.value || "__none"}
                         onValueChange={(v) => field.onChange(v === "__none" ? "" : v)}
+                        items={[
+                          { value: "__none", label: "Selecciona un país" },
+                          ...(countries?.map((c: Country) => ({ value: c.id, label: c.name })) || []),
+                        ]}
                       >
                         <SelectTrigger className="app-input h-[40px]">
                           <SelectValue placeholder="Selecciona un país" />

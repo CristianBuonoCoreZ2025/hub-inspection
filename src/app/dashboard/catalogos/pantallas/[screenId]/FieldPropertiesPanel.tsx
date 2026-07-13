@@ -255,6 +255,7 @@ export function FieldPropertiesPanel({
                   onUpdate({ dateValidation: { type, compareField: field.dateValidation?.compareField } });
                 }
               }}
+              items={[{ value: "__none", label: "Sin validación" }, ...DATE_VALIDATION_TYPES.map((v) => ({ value: v.code, label: v.label }))]}
             >
               <SelectTrigger className="app-input h-7 w-full">
                 <SelectValue placeholder="Sin validación" />
@@ -284,6 +285,7 @@ export function FieldPropertiesPanel({
                       },
                     })
                   }
+                  items={[{ value: "__none", label: "Seleccionar campo..." }, ...dateFields.map((f) => ({ value: f.id, label: f.label }))]}
                 >
                   <SelectTrigger className="app-input h-7 w-full">
                     <SelectValue placeholder="Seleccionar campo..." />

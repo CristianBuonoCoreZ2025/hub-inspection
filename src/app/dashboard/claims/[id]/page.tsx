@@ -1245,6 +1245,12 @@ export default function ClaimDetailPage() {
                       const tpl = chainFilteredTemplates.find((t) => t.id === id) || null;
                       setSelectedTemplate(tpl);
                     }}
+                    items={[
+                      { value: "__none", label: "Seleccionar..." },
+                      ...[...chainFilteredTemplates]
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((tpl) => ({ value: tpl.id, label: tpl.name })),
+                    ]}
                   >
                     <SelectTrigger className="app-input h-7 w-full">
                       <SelectValue placeholder="Seleccionar..." />

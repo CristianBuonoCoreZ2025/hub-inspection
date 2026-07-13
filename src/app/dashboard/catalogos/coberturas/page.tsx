@@ -249,6 +249,7 @@ export default function CoberturasPage() {
               setSearch("");
               setExpandedCovs(new Set());
             }}
+            items={[{ value: "__none", label: "Chile (CL)" }, ...(countries || []).filter((c) => c.code !== CHILE_CODE).map((c) => ({ value: c.id, label: `${c.name} (${c.code})` }))]}
           >
             <SelectTrigger className="app-input h-7 max-w-[160px]">
               <SelectValue placeholder="Chile (CL)" />

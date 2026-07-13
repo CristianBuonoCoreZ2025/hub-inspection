@@ -860,7 +860,7 @@ export default function ClaimsPage() {
               className="h-8 w-full max-w-[200px] text-[13px]"
             />
           </div>
-          <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)}>
+          <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={statusOptions}>
             <SelectTrigger className="app-input h-8 max-w-[160px]">
               <SelectValue />
             </SelectTrigger>

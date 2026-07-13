@@ -308,7 +308,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
                           <Select
                             value={tpl.company_id || "__all"}
                             onValueChange={(v) => handleAssociationChange(tpl.id, "company_id", v === "__all" ? "" : v)}
-                            items={clients.map((c) => ({ value: c.id, label: c.name }))}
+                            items={[{ value: "__all", label: "Todos" }, ...clients.map((c) => ({ value: c.id, label: c.name }))]}
                           >
                             <SelectTrigger className="app-input h-7">
                               <SelectValue placeholder="Todos" />
@@ -327,7 +327,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
                           <Select
                             value={tpl.insurance_company_id || "__all"}
                             onValueChange={(v) => handleAssociationChange(tpl.id, "insurance_company_id", v === "__all" ? "" : v)}
-                            items={insuranceCompanies.map((c) => ({ value: c.id, label: c.name }))}
+                            items={[{ value: "__all", label: "Todas" }, ...insuranceCompanies.map((c) => ({ value: c.id, label: c.name }))]}
                           >
                             <SelectTrigger className="app-input h-7">
                               <SelectValue placeholder="Todas" />
@@ -346,7 +346,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
                           <Select
                             value={tpl.country_id || "__all"}
                             onValueChange={(v) => handleAssociationChange(tpl.id, "country_id", v === "__all" ? "" : v)}
-                            items={countries.map((c) => ({ value: c.id, label: c.name }))}
+                            items={[{ value: "__all", label: "Todos" }, ...countries.map((c) => ({ value: c.id, label: c.name }))]}
                           >
                             <SelectTrigger className="app-input h-7">
                               <SelectValue placeholder="Todos" />
@@ -365,7 +365,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
                           <Select
                             value={tpl.event_id || "__all"}
                             onValueChange={(v) => handleAssociationChange(tpl.id, "event_id", v === "__all" ? "" : v)}
-                            items={events.map((ev) => ({ value: ev.id, label: ev.name }))}
+                            items={[{ value: "__all", label: "Todos" }, ...events.map((ev) => ({ value: ev.id, label: ev.name }))]}
                           >
                             <SelectTrigger className="app-input h-7">
                               <SelectValue placeholder="Todos" />
@@ -410,7 +410,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
                                 <Select
                                   value={resolved || "__none"}
                                   onValueChange={(v) => handleMappingChange(tpl.id, ph, v === "__none" ? null : v)}
-                                  items={DOCUMENT_FIELDS.map((f) => ({ value: f.key, label: `${f.label} (${f.group})` }))}
+                                  items={[{ value: "__none", label: "— Sin mapeo —" }, ...DOCUMENT_FIELDS.map((f) => ({ value: f.key, label: f.label }))]}
                                 >
                                   <SelectTrigger className="app-input h-6 text-[11px] flex-1">
                                     <SelectValue placeholder="Sin mapeo (vacío)" />

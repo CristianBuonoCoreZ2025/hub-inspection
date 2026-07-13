@@ -583,6 +583,13 @@ function LevelCard({
               }
             }}
             disabled={updateMut.isPending || isLoading}
+            items={[
+              { value: "__none", label: isLoading ? "Cargando..." : "Por asignar" },
+              ...(candidates || []).map((c) => ({ value: c.id, label: c.full_name })),
+              ...(level.currentId && !(candidates || []).some((c) => c.id === level.currentId)
+                ? [{ value: level.currentId, label: level.personName }]
+                : []),
+            ]}
           >
             <SelectTrigger className="app-input h-7 text-[10px] max-w-[160px]">
               <SelectValue />
@@ -1170,6 +1177,10 @@ function OwnField({
             value={String(value || "__none")}
             onValueChange={(v) => onChange(field.id, v === "__none" ? "" : v)}
             disabled={readOnly}
+            items={[
+              { value: "__none", label: field.placeholder || "Seleccionar..." },
+              ...(field.options || []).map((opt) => ({ value: opt.value, label: opt.label })),
+            ]}
           >
             <SelectTrigger className="app-input h-7 text-[12px] w-full">
               <SelectValue placeholder={field.placeholder || "Seleccionar..."} />
@@ -2506,6 +2517,10 @@ function InspectionCoordinationView({ claimId, readOnly, action }: { claimId?: s
           <Select
             value={inspectorId || "__none"}
             onValueChange={(v) => setInspectorId(v && v !== "__none" ? v : "")}
+            items={[
+              { value: "__none", label: "Sin asignar" },
+              ...(inspectors?.map((insp) => ({ value: insp.id, label: insp.full_name })) || []),
+            ]}
           >
             <SelectTrigger className="app-input h-7 text-[12px] mt-1">
               <SelectValue placeholder="Sin asignar" />

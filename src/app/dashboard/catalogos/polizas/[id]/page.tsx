@@ -603,6 +603,10 @@ export default function PolicyDetailPage() {
               <Select
                 value={form.insurance_company_id || "__none"}
                 onValueChange={(v) => setForm({ ...form, insurance_company_id: !v || v === "__none" ? "" : v })}
+                items={[
+                  { value: "__none", label: "Seleccionar..." },
+                  ...(insuranceCompanies?.map((c) => ({ value: c.id, label: c.name })) || []),
+                ]}
               >
                 <SelectTrigger className="app-input h-7">
                   <SelectValue placeholder="Seleccionar..." />
@@ -620,6 +624,10 @@ export default function PolicyDetailPage() {
               <Select
                 value={form.broker_id || "__none"}
                 onValueChange={(v) => setForm({ ...form, broker_id: !v || v === "__none" ? "" : v })}
+                items={[
+                  { value: "__none", label: "Seleccionar..." },
+                  ...(brokers?.map((b) => ({ value: b.id, label: b.name })) || []),
+                ]}
               >
                 <SelectTrigger className="app-input h-7">
                   <SelectValue placeholder="Seleccionar..." />
@@ -787,6 +795,10 @@ export default function PolicyDetailPage() {
                     setCovDropdownOpen(false);
                     setCovSearch("");
                   }}
+                  items={[
+                    { value: "__none", label: "Todos los temas" },
+                    ...(coverageThemes || []).map((t) => ({ value: t, label: t })),
+                  ]}
                 >
                   <SelectTrigger className="app-input h-7">
                     <SelectValue placeholder="Todos los temas" />

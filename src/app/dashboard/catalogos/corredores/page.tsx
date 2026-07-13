@@ -148,7 +148,7 @@ export default function CorredoresPage() {
                   <Select
                     value={formData.country_id || "__none"}
                     onValueChange={(v) => setFormData({ ...formData, country_id: v === "__none" ? "" : (v ?? "") })}
-                    items={countries?.map((c) => ({ value: c.id, label: c.name })) || []}
+                    items={[{ value: "__none", label: "Sin selección" }, ...(countries || []).map((c) => ({ value: c.id, label: c.name }))]}
                   >
                     <SelectTrigger className="app-input h-7">
                       <SelectValue placeholder="Seleccionar país..." />

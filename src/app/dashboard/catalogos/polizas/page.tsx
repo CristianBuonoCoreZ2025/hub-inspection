@@ -174,7 +174,7 @@ export default function PolizasPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Select value={insuranceCompanyFilter || "__all"} onValueChange={(v) => setInsuranceCompanyFilter(v === "__all" || v === null ? "" : v)}>
+          <Select value={insuranceCompanyFilter || "__all"} onValueChange={(v) => setInsuranceCompanyFilter(v === "__all" || v === null ? "" : v)} items={[{ value: "__all", label: "Todas las compañías" }, ...(insuranceCompanies || []).map(c => ({ value: c.id, label: `${c.name} (${c.policy_count})` }))]}>
             <SelectTrigger className="app-input max-w-[200px]">
               <SelectValue placeholder="Todas las compañías" />
             </SelectTrigger>
@@ -185,7 +185,7 @@ export default function PolizasPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={brokerFilter || "__all"} onValueChange={(v) => setBrokerFilter(v === "__all" || v === null ? "" : v)}>
+          <Select value={brokerFilter || "__all"} onValueChange={(v) => setBrokerFilter(v === "__all" || v === null ? "" : v)} items={[{ value: "__all", label: "Todos los corredores" }, ...(brokers || []).map(b => ({ value: b.id, label: `${b.name} (${b.policy_count})` }))]}>
             <SelectTrigger className="app-input max-w-[180px]">
               <SelectValue placeholder="Todos los corredores" />
             </SelectTrigger>
@@ -196,7 +196,7 @@ export default function PolizasPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={businessLineFilter || "__all"} onValueChange={(v) => setBusinessLineFilter(v === "__all" || v === null ? "" : v)}>
+          <Select value={businessLineFilter || "__all"} onValueChange={(v) => setBusinessLineFilter(v === "__all" || v === null ? "" : v)} items={[{ value: "__all", label: "Todas las líneas" }, ...(businessLines || []).map(b => ({ value: b.id, label: `${b.name} (${b.policy_count})` }))]}>
             <SelectTrigger className="app-input max-w-[180px]">
               <SelectValue placeholder="Todas las líneas" />
             </SelectTrigger>
@@ -207,7 +207,7 @@ export default function PolizasPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)}>
+          <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={[{ value: "__all", label: "Todos los estados" }, { value: "active", label: "Activas" }, { value: "draft", label: "Borrador" }, { value: "expired", label: "Vencidas" }, { value: "cancelled", label: "Canceladas" }]}>
             <SelectTrigger className="app-input max-w-[140px]">
               <SelectValue placeholder="Todos los estados" />
             </SelectTrigger>

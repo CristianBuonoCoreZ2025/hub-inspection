@@ -311,6 +311,7 @@ export default function DependenciasGestionPage() {
                   value={parentCode || "__none"}
                   onValueChange={(v) => { setParentCode(v === "__none" ? "" : (v ?? "")); setChildCode(""); }}
                   required
+                  items={[{ value: "__none", label: "Seleccionar..." }, ...codeMap.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))]}
                 >
                   <SelectTrigger className="app-input h-7 w-full">
                     <SelectValue placeholder="Seleccionar..." />
@@ -330,6 +331,7 @@ export default function DependenciasGestionPage() {
                   onValueChange={(v) => setChildCode(v === "__none" ? "" : (v ?? ""))}
                   disabled={!parentCode}
                   required
+                  items={[{ value: "__none", label: !parentCode ? "Primero selecciona padre..." : "Seleccionar..." }, ...availableChildren.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))]}
                 >
                   <SelectTrigger className="app-input h-7 w-full">
                     <SelectValue placeholder={!parentCode ? "Primero selecciona padre..." : "Seleccionar..."} />

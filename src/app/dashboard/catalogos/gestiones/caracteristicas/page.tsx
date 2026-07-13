@@ -271,6 +271,16 @@ export default function CaracteristicasPage() {
                   <Select
                     value={formData.screen_id || "__none"}
                     onValueChange={(v) => setFormData({ ...formData, screen_id: v === "__none" ? "" : (v ?? "") })}
+                    items={[
+                      { value: "__none", label: "Pantalla genérica" },
+                      ...(screens?.map((s) => {
+                        const fields = Array.isArray(s.form_schema?.fields) ? s.form_schema.fields as string[] : [];
+                        const label = s.is_dynamic === false
+                          ? `${s.name} (fija)`
+                          : `${s.name} ${fields.length ? `(${fields.length} campos)` : ""}`;
+                        return { value: s.id, label };
+                      }) || []),
+                    ]}
                   >
                     <SelectTrigger className="app-input h-7 w-full">
                       <SelectValue placeholder="Pantalla genérica" />

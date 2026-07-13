@@ -161,7 +161,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
           <div className="modal-grid-3">
             <div>
               <label className="app-field-label text-[11px]">Categoría</label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v || "", damage_type: v || "" })}>
+              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v || "", damage_type: v || "" })} items={damageCategories}>
                 <SelectTrigger className="app-input h-7 w-full text-[13px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -172,7 +172,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
             </div>
             <div>
               <label className="app-field-label text-[11px]">Dependencia / Recinto</label>
-              <Select value={form.dependency || "__none"} onValueChange={(v) => setForm({ ...form, dependency: v === "__none" ? null : v })}>
+              <Select value={form.dependency || "__none"} onValueChange={(v) => setForm({ ...form, dependency: v === "__none" ? null : v })} items={[{ value: "__none", label: "Seleccionar..." }, ...dependencyOptions.map((d) => ({ value: d, label: d }))]}>
                 <SelectTrigger className="app-input h-7 w-full text-[13px]">
                   <SelectValue placeholder="Seleccionar..." />
                 </SelectTrigger>
@@ -184,7 +184,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
             </div>
             <div>
               <label className="app-field-label text-[11px]">Severidad</label>
-              <Select value={form.severity} onValueChange={(v) => setForm({ ...form, severity: (v || "low") as InspectionDamage["severity"] })}>
+              <Select value={form.severity} onValueChange={(v) => setForm({ ...form, severity: (v || "low") as InspectionDamage["severity"] })} items={severityOptions}>
                 <SelectTrigger className="app-input h-7 w-full text-[13px]">
                   <SelectValue />
                 </SelectTrigger>

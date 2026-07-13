@@ -502,7 +502,12 @@ ITEMS (SelectItem):
   - Indicador de selección: CheckIcon a la derecha
 
 PATRÓN DE USO (filtros en listados):
-  <Select value={filter} onValueChange={(v) => setFilter(v === "__all" || v === null ? "" : v)}>
+  SIEMPRE pasar la prop `items` con `{ value, label }` para que el trigger
+  muestre el label correcto (Base UI muestra el raw value por defecto).
+
+  const filterItems = [{ value: "__all", label: "Todas las compañías" }, ...(companies || []).map(c => ({ value: c.id, label: c.name }))];
+
+  <Select value={filter || "__all"} onValueChange={(v) => setFilter(v === "__all" || v === null ? "" : v)} items={filterItems}>
     <SelectTrigger className="app-input max-w-[200px]">
       <SelectValue placeholder="Todas las compañías" />
     </SelectTrigger>
@@ -516,9 +521,10 @@ PATRÓN DE USO (filtros en listados):
 
   Nota: Usar "__all" como valor para representar "sin filtro" (empty string).
   El onValueChange convierte "__all" o null a "".
+  La prop `items` DEBE incluir el SelectItem de "__all"/__none" con su label.
 
 PATRÓN DE USO (formularios con react-hook-form):
-  Usar FormSelect (wrapper de Select con react-hook-form):
+  Usar FormSelect (wrapper de Select con react-hook-form), que ya pasa `items` automáticamente:
   <FormSelect
     control={form.control}
     name="brokerId"

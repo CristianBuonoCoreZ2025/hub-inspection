@@ -154,7 +154,7 @@ export default function LineasNegocioPage() {
                   <Select
                     value={formData.country_id || "__none"}
                     onValueChange={(v) => setFormData({ ...formData, country_id: v === "__none" ? "" : (v ?? "") })}
-                    items={countries?.map((c) => ({ value: c.id, label: c.name })) || []}
+                    items={[{ value: "__none", label: "Sin selección" }, ...(countries || []).map((c) => ({ value: c.id, label: c.name }))]}
                   >
                     <SelectTrigger className="app-input h-7">
                       <SelectValue placeholder="Seleccionar país..." />
@@ -170,7 +170,7 @@ export default function LineasNegocioPage() {
                   <Select
                     value={formData.claim_type_id || "__none"}
                     onValueChange={(v) => setFormData({ ...formData, claim_type_id: v === "__none" ? "" : (v ?? "") })}
-                    items={claimTypes?.map((ct) => ({ value: ct.id, label: ct.name })) || []}
+                    items={[{ value: "__none", label: "Sin selección" }, ...(claimTypes || []).map((ct) => ({ value: ct.id, label: ct.name }))]}
                   >
                     <SelectTrigger className="app-input h-7"><SelectValue placeholder="Seleccionar tipo..." /></SelectTrigger>
                     <SelectContent>
