@@ -126,7 +126,7 @@ export default function AuditLogSection({ claimId, users }: AuditLogSectionProps
                     </div>
                   </td>
                   <td><Badge className={color}>{label}</Badge></td>
-                  <td className="text-muted-foreground text-[12px] max-w-md truncate" title={summarizeChange(log)}>
+                  <td className="text-muted-foreground max-w-md truncate" title={summarizeChange(log)}>
                     {summarizeChange(log)}
                   </td>
                   <td className="font-medium">{performerName}</td>

@@ -148,7 +148,7 @@ export default function CaracteristicasPage() {
             : sortedFeatures.length === 0 ? <tr><td colSpan={8} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
             : sortedFeatures.map((f) => (
               <tr key={f.id}>
-                <td className="font-mono text-[12px] font-semibold text-primary">{f.code || "—"}</td>
+                <td className="font-mono font-semibold text-primary">{f.code || "—"}</td>
                 <td className="font-medium">{f.name}</td>
                 <td>
                   <span className={`inline-flex rounded px-2 py-0.5 text-[10px] font-medium ${tipoColor[getTipo(f)]}`}>
@@ -157,8 +157,8 @@ export default function CaracteristicasPage() {
                 </td>
                 <td className="text-center">{f.has_specific_screen ? "✓" : "—"}</td>
                 <td className="text-center">{f.has_template ? "✓" : "—"}</td>
-                <td className="text-[12px] text-muted-foreground">{f.screen?.name || "Genérica"}</td>
-                <td className="text-center font-mono text-[12px]">{f.max_review_levels}</td>
+                <td className="text-muted-foreground">{f.screen?.name || "Genérica"}</td>
+                <td className="text-center font-mono">{f.max_review_levels}</td>
                 <td>
                   <div className="app-row-actions">
                     {canEdit("catalogos") && (

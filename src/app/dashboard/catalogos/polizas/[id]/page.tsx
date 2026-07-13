@@ -1014,7 +1014,7 @@ export default function PolicyDetailPage() {
           {/* Tabla de coberturas de la póliza (árbol) */}
           {groupedPolicyCoverages.length > 0 ? (
             <div className="rounded-lg border border-border overflow-hidden">
-              <table className="w-full text-[12px]">
+              <table className="app-data-table">
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium" style={{ width: "45%" }}>Cobertura / Subcobertura</th>
@@ -1072,7 +1072,7 @@ export default function PolicyDetailPage() {
             </div>
             {onlineDocuments.length > 0 ? (
               <div className="rounded-lg border border-border overflow-hidden">
-                <table className="w-full text-[12px]">
+                <table className="app-data-table">
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="px-3 py-2 text-left font-medium">Tipo</th>
@@ -1155,7 +1155,7 @@ export default function PolicyDetailPage() {
             </div>
             {policyDocuments && policyDocuments.length > 0 ? (
               <div className="rounded-lg border border-border overflow-hidden">
-                <table className="w-full text-[12px]">
+                <table className="app-data-table">
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="px-3 py-2 text-left font-medium">Documento</th>

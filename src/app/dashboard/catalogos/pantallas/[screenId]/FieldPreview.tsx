@@ -67,7 +67,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
               Campos por cobertura ({field.fields!.length})
             </p>
             <div className="rounded-md border border-border overflow-hidden">
-              <table className="w-full text-[9px]">
+              <table className="app-data-table">
                 <thead className="bg-muted/40">
                   <tr>
                     {field.fields!.filter(f => f.column).map((sf) => (
@@ -207,7 +207,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
       <div>
         {label}
         <div className="rounded-md border border-border overflow-hidden">
-          <table className="w-full text-[10px]">
+          <table className="app-data-table">
             <thead className="bg-muted/50">
               <tr>
                 {field.columns?.map((c) => (

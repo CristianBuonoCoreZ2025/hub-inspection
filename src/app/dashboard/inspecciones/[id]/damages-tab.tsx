@@ -228,7 +228,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
                       {severityLabels[d.severity] || d.severity}
                     </span>
                   </td>
-                  <td className="text-right text-[13px] font-medium">${(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
+                  <td className="text-right font-medium">${(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
                   <td>
                     <div className="app-row-actions">
                       <Button variant="ghost" size="icon" className="btn-neutral btn-icon h-7 w-7" onClick={() => { setEditing(d.id); setForm({ ...d, session_id: sessionId }); }}>

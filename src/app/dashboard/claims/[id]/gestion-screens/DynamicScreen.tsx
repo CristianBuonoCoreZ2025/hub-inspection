@@ -897,7 +897,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
         </div>
       ) : (
         <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-[11px]">
+          <table className="app-data-table">
             <thead className="bg-muted/50">
               <tr>
                 <th className="px-2 py-1.5 text-left font-medium">Cobertura</th>
@@ -1025,7 +1025,7 @@ function ClaimReservesView({ claimId }: { claimId: string }) {
           </div>
           {r.reserve_coverages.length > 0 && (
             <div className="rounded-md border border-border overflow-hidden">
-              <table className="w-full text-[10px]">
+              <table className="app-data-table">
                 <thead className="bg-muted/40">
                   <tr>
                     <th className="px-2 py-1 text-left font-medium">Cobertura</th>
@@ -1309,7 +1309,7 @@ function TableField({
       </Label>
       {rows.length > 0 && (
         <div className="rounded-lg border border-border overflow-x-auto">
-          <table className="w-full text-[11px]">
+          <table className="app-data-table">
             <thead className="bg-muted/50">
               <tr>
                 {columns.map((c) => (
@@ -1508,7 +1508,7 @@ function ReserveEditorForm({
     <div className="space-y-3">
       {/* Tabla de coberturas con reserva por fila */}
       <div className="rounded-lg border border-border overflow-x-auto">
-        <table className="w-full text-[11px]">
+        <table className="app-data-table">
           <thead className="bg-muted/50">
             <tr>
               <th className="px-2 py-1.5 text-left font-medium">Cobertura</th>
@@ -1786,7 +1786,7 @@ function AdjustmentEditorForm({
 
       {/* Tabla de ajuste por cobertura */}
       <div className="rounded-lg border border-border overflow-x-auto">
-        <table className="w-full text-[11px]">
+        <table className="app-data-table">
           <thead className="bg-muted/50">
             <tr>
               <th className="px-2 py-1.5 text-left font-medium">Cobertura</th>
@@ -2027,7 +2027,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
           </Badge>
         </div>
         <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-[11px]">
+          <table className="app-data-table">
             <thead className="bg-muted/50">
               <tr>
                 <th className="px-2 py-1.5 text-left font-medium">Documento</th>
@@ -2085,7 +2085,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
         Selecciona los documentos a solicitar. Solo se muestran los que no han sido solicitados o recibidos.
       </p>
       <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-[11px]">
+        <table className="app-data-table">
           <thead className="bg-muted/50">
             <tr>
               <th className="px-2 py-1.5 w-8"></th>
@@ -2273,7 +2273,7 @@ function DocumentReceiptView({ claimId, readOnly }: { claimId?: string; actionId
 
       {/* Tabla de items */}
       <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-[11px]">
+        <table className="app-data-table">
           <thead className="bg-muted/50">
             <tr>
               <th className="px-2 py-1.5 text-left font-medium">Documento</th>

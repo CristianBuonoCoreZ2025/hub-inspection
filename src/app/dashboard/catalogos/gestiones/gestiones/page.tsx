@@ -962,7 +962,7 @@ export default function GestionesPage() {
             : paginatedData.map((t) => (
               <tr key={t.id}>
                 <td><span className={`inline-block h-2 w-2 rounded-full ${t.is_active ? "bg-emerald-500" : "bg-zinc-400"}`} /></td>
-                <td className="text-muted-foreground font-mono text-[12px]">
+                <td className="text-muted-foreground font-mono">
                   {(() => {
                     const prefix = t.line_business?.code_prefix || "";
                     const featCode = t.action_feature?.code || "";
@@ -970,10 +970,10 @@ export default function GestionesPage() {
                   })()}
                 </td>
                 <td className="font-medium">{t.name}</td>
-                <td className="text-muted-foreground text-[12px]">{t.action_type?.name || "—"}</td>
-                <td className="text-muted-foreground text-[12px]">{t.action_feature?.code ? `${t.action_feature.name} (${t.action_feature.code})` : t.action_feature?.name || "—"}</td>
-                <td className="text-muted-foreground text-[12px]">{t.line_business?.code_prefix ? `${t.line_business.name} (${t.line_business.code_prefix})` : t.line_business?.name || "—"}</td>
-                <td className="text-center text-[12px]">{t.days_to_issue}d</td>
+                <td className="text-muted-foreground">{t.action_type?.name || "—"}</td>
+                <td className="text-muted-foreground">{t.action_feature?.code ? `${t.action_feature.name} (${t.action_feature.code})` : t.action_feature?.name || "—"}</td>
+                <td className="text-muted-foreground">{t.line_business?.code_prefix ? `${t.line_business.name} (${t.line_business.code_prefix})` : t.line_business?.name || "—"}</td>
+                <td className="text-center">{t.days_to_issue}d</td>
                 <td>
                   <div className="app-row-actions">
                     {canEdit("catalogos") && (

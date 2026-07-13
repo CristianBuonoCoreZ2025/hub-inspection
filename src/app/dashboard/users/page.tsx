@@ -488,18 +488,18 @@ export default function UsersPage() {
                         {user.full_name || "Sin nombre"}
                       </div>
                     </td>
-                    <td className="text-xs">{user.email}</td>
+                    <td>{user.email}</td>
                     <td><Badge className={roleColors[user.role]}>{roleLabels[user.role]}</Badge></td>
-                    <td className="text-xs text-muted-foreground">
+                    <td className="text-muted-foreground">
                       {user.user_clients && user.user_clients.length > 0
                         ? user.user_clients.map((uc: UserClient) => uc.company?.name).filter(Boolean).join(", ")
                         : user.role === "internal" ? "—" : "Sin asignar"}
                     </td>
                     <td>
                       {user.is_active ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-emerald-600"><UserCheck className="h-3 w-3" /> Activo</span>
+                        <span className="inline-flex items-center gap-1 text-emerald-600"><UserCheck className="h-3 w-3" /> Activo</span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs text-red-500"><UserX className="h-3 w-3" /> Inactivo</span>
+                        <span className="inline-flex items-center gap-1 text-red-500"><UserX className="h-3 w-3" /> Inactivo</span>
                       )}
                     </td>
                     <td>

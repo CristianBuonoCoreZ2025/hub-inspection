@@ -267,7 +267,7 @@ export default function PermisosPage() {
 
               {/* Tabla de permisos */}
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="app-data-table">
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left py-2 px-2 font-medium text-muted-foreground">Sección</th>

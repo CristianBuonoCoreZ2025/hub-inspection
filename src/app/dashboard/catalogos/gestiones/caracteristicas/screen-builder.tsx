@@ -809,7 +809,7 @@ function CanvasFieldPreview({ field, allFields }: { field: ScreenField; allField
       <div>
         {label}
         <div className="rounded-md border border-border overflow-hidden">
-          <table className="w-full text-[10px]">
+          <table className="app-data-table">
             <thead className="bg-muted/50">
               <tr>
                 {field.columns?.map((c) => <th key={c} className="px-2 py-1 text-left font-medium">{c}</th>)}

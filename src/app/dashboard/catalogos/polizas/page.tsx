@@ -227,55 +227,55 @@ export default function PolizasPage() {
             {hasActiveFilters ? "No se encontraron pólizas con los filtros seleccionados." : "No hay pólizas registradas."}
           </p>
         ) : (
-          <table className="w-full text-[13px]">
-            <thead className="bg-muted/50 border-b border-border">
+          <table className="app-data-table">
+            <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">N° Póliza</th>
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Nombre</th>
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Compañía</th>
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Corredor</th>
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Tipo</th>
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Línea</th>
-                <th className="px-4 py-2.5 text-right font-medium text-muted-foreground">Asegurado</th>
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Vigencia</th>
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Estado</th>
-                <th className="px-4 py-2.5 w-10"></th>
+                <th>N° Póliza</th>
+                <th>Nombre</th>
+                <th>Compañía</th>
+                <th>Corredor</th>
+                <th>Tipo</th>
+                <th>Línea</th>
+                <th className="text-right">Asegurado</th>
+                <th>Vigencia</th>
+                <th>Estado</th>
+                <th className="w-10"></th>
               </tr>
             </thead>
             <tbody>
               {paginatedData.map((p) => (
                 <tr
                   key={p.id}
-                  className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors"
+                  className="hover:bg-muted/30 cursor-pointer transition-colors"
                   onClick={() => router.push(`/dashboard/catalogos/polizas/${p.id}`)}
                 >
-                  <td className="px-4 py-2.5 font-mono font-medium">
+                  <td className="font-mono font-medium">
                     {p.policy_number || <span className="text-muted-foreground italic">Sin número</span>}
                   </td>
-                  <td className="px-4 py-2.5">{p.policy_name}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{p.insurance_company?.name || "—"}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{p.broker?.name || "—"}</td>
-                  <td className="px-4 py-2.5">
+                  <td>{p.policy_name}</td>
+                  <td className="text-muted-foreground">{p.insurance_company?.name || "—"}</td>
+                  <td className="text-muted-foreground">{p.broker?.name || "—"}</td>
+                  <td>
                     <Badge variant="outline" className="text-[10px]">
                       {typeLabels[p.policy_type] || p.policy_type}
                     </Badge>
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{p.business_line?.name || "—"}</td>
-                  <td className="px-4 py-2.5 text-right font-mono">
+                  <td className="text-muted-foreground">{p.business_line?.name || "—"}</td>
+                  <td className="text-right font-mono">
                     {formatMoney(p.insured_amount)}
                     {p.currency && p.insured_amount != null && (
                       <span className="text-[10px] text-muted-foreground ml-1">{p.currency}</span>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground text-[11px]">
+                  <td className="text-muted-foreground">
                     {formatDate(p.start_date)} — {formatDate(p.end_date)}
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td>
                     <Badge className={statusColors[p.status] || ""}>
                       {statusLabels[p.status] || p.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td>
                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                   </td>
                 </tr>

@@ -116,22 +116,22 @@ export default function PantallasPage() {
             : sortedScreens.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron pantallas.</td></tr>
             : sortedScreens.map((s) => (
               <tr key={s.id}>
-                <td className="font-mono text-[12px] font-semibold text-primary">
+                <td className="font-mono font-semibold text-primary">
                   {s.code}
                   {!s.is_dynamic && (
                     <span className="ml-2 text-[10px] text-amber-600 font-normal">(fija)</span>
                   )}
                 </td>
                 <td className="font-medium">{s.name}</td>
-                <td className="text-[12px] text-muted-foreground max-w-[280px] truncate">{s.description || "—"}</td>
-                <td className="text-[11px] text-muted-foreground">
+                <td className="text-muted-foreground max-w-[280px] truncate">{s.description || "—"}</td>
+                <td className="text-muted-foreground">
                   {s.is_dynamic ? (
                     <>{getFieldCount(s)} campos{getFieldCount(s) > 0 && <span className="block truncate max-w-[220px]">{getFieldsPreview(s)}</span>}</>
                   ) : (
                     <span className="text-amber-600">Componente fijo</span>
                   )}
                 </td>
-                <td className="text-center font-mono text-[12px]">{s.sort_order}</td>
+                <td className="text-center font-mono">{s.sort_order}</td>
                 <td>
                   <div className="app-row-actions">
                     {s.is_dynamic && canEdit("catalogos") && (

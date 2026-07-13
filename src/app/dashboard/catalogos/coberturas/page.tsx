@@ -324,7 +324,7 @@ export default function CoberturasPage() {
               {search ? "No se encontraron coberturas." : "No hay coberturas en este tema."}
             </p>
           ) : (
-            <table className="w-full text-[12px]">
+            <table className="app-data-table">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium text-muted-foreground w-8"></th>

@@ -108,7 +108,7 @@ export default function TiposGestionPage() {
             : paginatedData.map((t) => (
               <tr key={t.id}>
                 <td><span className={`inline-block h-2 w-2 rounded-full ${t.is_active ? "bg-emerald-500" : "bg-zinc-400"}`} /></td>
-                <td className="text-muted-foreground font-mono text-[12px]">{t.code || "—"}</td>
+                <td className="text-muted-foreground font-mono">{t.code || "—"}</td>
                 <td className="font-medium">{t.name}</td>
                 <td className="max-w-[400px] truncate text-muted-foreground">{t.description || "—"}</td>
                 <td>
