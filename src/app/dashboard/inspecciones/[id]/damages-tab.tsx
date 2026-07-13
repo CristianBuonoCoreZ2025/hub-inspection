@@ -71,6 +71,27 @@ const emptyDamage: Omit<InspectionDamage, "id" | "created_at" | "updated_at"> = 
   estimated_amount: null,
 };
 
+function damageToForm(damage: InspectionDamage): typeof emptyDamage {
+  return {
+    session_id: damage.session_id,
+    category: damage.category,
+    subcategory: damage.subcategory,
+    description: damage.description,
+    observations: damage.observations,
+    severity: damage.severity,
+    dependency: damage.dependency,
+    sector: damage.sector,
+    materiality_type: damage.materiality_type,
+    unit: damage.unit,
+    quantity: damage.quantity,
+    damage_type: damage.damage_type,
+    product: damage.product,
+    brand_model: damage.brand_model,
+    purchase_date: damage.purchase_date,
+    estimated_amount: damage.estimated_amount,
+  };
+}
+
 export default function DamagesTab({ sessionId }: { sessionId: string }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<string | null>(null);
@@ -208,8 +229,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
                 if (editing === "new") {
                   createMutation.mutate(form);
                 } else if (editing) {
-                  const { id, created_at, updated_at, ...updateData } = form as unknown as InspectionDamage;
-                  updateMutation.mutate({ id: editing, data: updateData });
+                  updateMutation.mutate({ id: editing, data: form });
                 }
               }}
               disabled={!form.description || createMutation.isPending || updateMutation.isPending}
@@ -260,7 +280,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
                   <td className="text-right font-medium">${(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
                   <td>
                     <div className="app-row-actions">
-                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon h-7 w-7" onClick={() => { setEditing(d.id); setForm({ ...d, session_id: sessionId }); }}>
+                      <Button variant="ghost" size="icon" className="btn-neutral btn-icon h-7 w-7" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button variant="ghost" size="icon" className="btn-danger btn-icon h-7 w-7" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>

@@ -77,7 +77,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 const statusOptions = [
-  { value: "", label: "Todos los estados" },
+  { value: "__all", label: "Todos los estados" },
   { value: "created", label: "Creación" },
   { value: "adjustment", label: "Liquidación" },
   { value: "dispatchment", label: "Despacho" },
@@ -862,7 +862,7 @@ export default function ClaimsPage() {
           </div>
           <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)}>
             <SelectTrigger className="app-input h-8 max-w-[160px]">
-              <SelectValue placeholder="Todos los estados" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {statusOptions.map((s) => (
