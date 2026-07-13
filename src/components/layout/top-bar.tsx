@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
@@ -16,6 +17,7 @@ import {
   Moon,
   Monitor,
   Palette,
+  Menu,
 } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
@@ -39,6 +41,7 @@ import {
   UI_STYLE_SWATCHES,
   type UiStyleSkin,
 } from "@/lib/ui-style-client-store";
+import { MobileNav } from "@/components/layout/mobile-nav";
 
 function getInitials(email?: string | null) {
   if (!email) return "U";
@@ -149,6 +152,7 @@ function SkinToggleCompact() {
 
 export function TopBar() {
   const { user, profile, isLoading, signOut } = useAuth();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const { data: stats } = useQuery({
     queryKey: ["topbar-stats", profile?.id],
@@ -170,9 +174,20 @@ export function TopBar() {
 
   return (
     <div className="topbar">
+      {/* Mobile nav drawer — solo visible < 1024px */}
+      <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+
       <div className="topbar-inner">
-        {/* ── Izquierda: Usuario ── */}
+        {/* ── Izquierda: Hamburger (movil) + Usuario ── */}
         <div className="topbar-left">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            className="topbar-hamburger"
+            aria-label="Abrir menú"
+          >
+            <Menu className="size-4" />
+          </button>
           <Avatar size="sm">
             <AvatarFallback className="bg-primary/20 text-primary text-[10px] border border-primary/20">
               {isLoading ? "..." : getInitials(user?.email)}

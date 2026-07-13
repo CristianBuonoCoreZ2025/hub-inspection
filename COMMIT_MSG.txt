@@ -1,21 +1,36 @@
-feat: dashboard responsive para mobile y tablet
+feat: responsive completo para todo el sistema
 
-Breakpoints implementados:
-- Mobile (<640px): 1 columna, KPIs 2 cols, charts 160px, gauge 140px
-- Mobile large (640-767px): 1 columna paneles, KPIs 3, charts 180px
-- Tablet portrait (768-1023px): 2 columnas, charts 200px, gauge 180px
-- Tablet landscape (1024-1279px): 4-6 columnas, charts 220px
-- Desktop (>=1280px): 12 columnas (actual)
+Sistema completo responsive para movil, tablet y desktop.
 
-Cambios:
-- Charts usan .dash-chart-wrap con altura responsiva via CSS
-- Gauges usan .dash-gauge con tamaño responsivo
-- KPIs: grid-cols-2 sm:grid-cols-3 lg:grid-cols-6/4
-- Header: flex-col en mobile, flex-row en sm+
-- Reducido backdrop-filter en movil para performance
-- Desactivado hover effects en movil (no touch)
-- Padding, border-radius y fonts escalan por breakpoint
-- Breakpoints documentados en AGENTS.md
+1. MOBILE NAV DRAWER (critico)
+   - Nuevo componente MobileNav con drawer lateral
+   - Botón hamburger en la TopBar (visible < 1024px)
+   - Drawer con overlay, animacion slide-in, bloqueo de scroll
+   - Links principales + grupos acordeon (catalogos, operaciones, admin)
+   - Usuario, theme toggle, skin toggle, logout al pie
+   - Se cierra al navegar o presionar Escape
+
+2. CSS RESPONSIVE GLOBAL (components.css)
+   - Overrides para .app-page, .app-toolbar, .app-grid-header
+   - En movil: toolbar apila vertical, inputs full width
+   - Tablas: scroll horizontal garantizado, texto mas pequeño
+   - Form fields: 1 columna en movil
+   - Liquid button: full width en movil
+   - Touch targets: min 32px en botones de tabla
+
+3. PAGINAS ESPECIFICAS
+   - LookupCatalogManager: input de busqueda w-full sm:max-w-[180px]
+     (arregla ~15 pantallas de catalogos a la vez)
+   - claims/page.tsx: toolbar con flex-wrap, inputs w-full sm:w-[X]
+   - users/page.tsx: busqueda w-full sm:w-[160px]
+
+4. PAGINAS YA RESPONSIVE (verificado)
+   - Login/register/onboarding: auth-shell ya responsive
+   - Dashboard: responsive completo (trabajo anterior)
+   - TopBar: responsive completo (trabajo anterior)
+   - Agenda: ya usa snap-scroll horizontal
+   - Inspecciones: ya usa min-w sm:w pattern
+   - Modals: ya usan min(96vw, Xpx) y grids que apilan
 
 Generated with [Devin](https://devin.ai)
 

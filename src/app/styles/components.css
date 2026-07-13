@@ -746,4 +746,160 @@
   .app-status-off {
     @apply bg-zinc-400;
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * RESPONSIVE GLOBAL — Overrides para todas las pantallas
+   * Asegura que todas las páginas sean usables en movil y tablet.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  /* ── Tablet (≤1023px) ── */
+  @media (max-width: 1023px) {
+    /* Header de grilla: permitir wrap */
+    .app-grid-header {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Filtros de grilla: reducir min-width */
+    .app-grid-filters {
+      min-width: 200px;
+    }
+
+    /* Inputs en toolbar: hacer flex-1 en vez de fixed */
+    .app-toolbar .shrink-0[class*="w-["] {
+      width: auto !important;
+      min-width: 120px;
+      flex: 1 1 120px;
+    }
+  }
+
+  /* ── Mobile (≤767px) ── */
+  @media (max-width: 767px) {
+    /* Página: reducir padding */
+    .app-page {
+      max-width: 100% !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      gap: 8px;
+    }
+
+    /* Header de página: apilar vertical */
+    .app-page-header > .flex.items-center.justify-between {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    /* Título: más pequeño */
+    .app-page-title {
+      font-size: 16px !important;
+    }
+
+    /* Toolbar: siempre vertical en movil */
+    .app-toolbar {
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Toolbar items: full width */
+    .app-toolbar > * {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      flex: 1 1 100% !important;
+    }
+
+    /* Inputs: full width en toolbar */
+    .app-toolbar .app-input,
+    .app-toolbar input,
+    .app-toolbar select {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    /* Grid header: apilar */
+    .app-grid-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+
+    /* Grid filters: full width */
+    .app-grid-filters {
+      min-width: 0 !important;
+      width: 100%;
+    }
+
+    /* Grid filters inputs: full width */
+    .app-grid-filters .app-input,
+    .app-grid-filters input {
+      max-width: 100% !important;
+      width: 100% !important;
+      flex: 1;
+    }
+
+    /* Tabla: scroll horizontal garantizado */
+    .app-data-table-wrap {
+      border-radius: 12px !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Tabla: texto más pequeño */
+    .app-data-table {
+      font-size: 10px !important;
+    }
+
+    /* Header cells: no wrap */
+    .app-data-table th {
+      white-space: nowrap;
+    }
+
+    /* Row actions: siempre visible, no shrink */
+    .app-row-actions {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Form fields: 1 columna en movil */
+    .app-form-fields {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Form grid: 1 columna */
+    .app-form-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Header row: apilar */
+    .app-header-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+
+    /* Liquid button: full width en movil */
+    .liquid-button {
+      width: 100% !important;
+      justify-content: center;
+    }
+  }
+
+  /* ── Mobile pequeño (≤480px) ── */
+  @media (max-width: 480px) {
+    .app-page-title {
+      font-size: 15px !important;
+    }
+
+    /* Tabla: aún más compacta */
+    .app-data-table {
+      font-size: 9px !important;
+    }
+
+    /* Row action buttons: más grandes para touch */
+    .app-row-actions button,
+    .app-row-actions a {
+      min-width: 32px;
+      min-height: 32px;
+    }
+  }
 }

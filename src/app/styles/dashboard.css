@@ -223,8 +223,32 @@
 
   /* ── Responsive ── */
 
-  /* Tablet portrait: chips más compactos */
+  /* Botón hamburger — oculto en desktop, visible en tablet/movil */
+  .topbar-hamburger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--muted) 20%, transparent);
+    color: var(--foreground);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .topbar-hamburger:hover {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+  }
+
+  /* Tablet: mostrar hamburger, ocultar labels de chips */
   @media (max-width: 1023px) {
+    .topbar-hamburger {
+      display: flex;
+    }
     .topbar-user-name {
       max-width: 100px;
     }
@@ -281,6 +305,236 @@
       width: 12px;
       height: 12px;
     }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * MOBILE NAV DRAWER — Navegación para tablet/movil
+   * Drawer lateral izquierdo con overlay, animación slide-in
+   * ═══════════════════════════════════════════════════════════════ */
+
+  .mobile-nav-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: mobile-nav-fade-in 0.2s ease;
+  }
+
+  @keyframes mobile-nav-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .mobile-nav-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+    width: min(320px, 85vw);
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+  }
+
+  .mobile-nav-drawer-open {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .mobile-nav-drawer-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 12px;
+    border-radius: 0 24px 24px 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-left: none;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--card) 85%, transparent) 0%,
+      color-mix(in srgb, var(--card) 70%, transparent) 100%
+    );
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    box-shadow:
+      0 16px 64px rgba(0, 0, 0, 0.15),
+      0 1px 0 rgba(255, 255, 255, 0.1) inset;
+    overflow: hidden;
+    overflow-y: auto;
+  }
+
+  .dark .mobile-nav-drawer-inner {
+    border-color: rgba(255, 255, 255, 0.06);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--card) 80%, transparent) 0%,
+      color-mix(in srgb, var(--card) 65%, transparent) 100%
+    );
+    box-shadow:
+      0 16px 64px rgba(0, 0, 0, 0.5),
+      0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  }
+
+  /* Header del drawer */
+  .mobile-nav-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .mobile-nav-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--muted) 20%, transparent);
+    color: var(--foreground);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  }
+
+  .mobile-nav-close:hover {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+  }
+
+  /* Usuario */
+  .mobile-nav-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--muted) 15%, transparent);
+    margin-bottom: 12px;
+  }
+
+  /* Secciones */
+  .mobile-nav-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .mobile-nav-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+    padding: 0 12px;
+    margin-bottom: 2px;
+  }
+
+  /* Links */
+  .mobile-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    color: var(--muted-foreground);
+    text-decoration: none;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+
+  .mobile-nav-link:hover {
+    background: color-mix(in srgb, var(--foreground) 6%, transparent);
+    color: var(--foreground);
+  }
+
+  .mobile-nav-link-active {
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+
+  /* Grupos acordeón */
+  .mobile-nav-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-nav-group-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+    background: transparent;
+    border: none;
+  }
+
+  .mobile-nav-group-header:hover {
+    background: color-mix(in srgb, var(--foreground) 6%, transparent);
+    color: var(--foreground);
+  }
+
+  .mobile-nav-group-active {
+    color: var(--primary);
+  }
+
+  .mobile-nav-group-links {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: 20px;
+    padding-top: 2px;
+    padding-bottom: 4px;
+  }
+
+  .mobile-nav-group-links .mobile-nav-link {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  /* Footer */
+  .mobile-nav-footer {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 12px;
+    border-top: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  }
+
+  .mobile-nav-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+    background: transparent;
+    border: none;
+  }
+
+  .mobile-nav-action:hover {
+    background: color-mix(in srgb, var(--foreground) 6%, transparent);
+    color: var(--foreground);
+  }
+
+  .mobile-nav-action-logout:hover {
+    background: color-mix(in srgb, #ef4444 8%, transparent);
+    color: #ef4444;
   }
 
   /* ═══════════════════════════════════════════════════════════════

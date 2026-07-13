@@ -891,8 +891,8 @@ export default function ClaimsPage() {
       </div>
 
       <div className="app-toolbar">
-        <div className="flex items-center gap-2">
-          <div className="relative w-[160px] shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-[160px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar..."
@@ -902,7 +902,7 @@ export default function ClaimsPage() {
             />
           </div>
           <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={statusOptions}>
-            <SelectTrigger className="h-8 w-[140px] shrink-0 text-xs">
+            <SelectTrigger className="h-8 w-full sm:w-[140px] shrink-0 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -911,8 +911,8 @@ export default function ClaimsPage() {
               ))}
             </SelectContent>
           </Select>
-          <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="w-[110px] shrink-0" />
-          <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="w-[110px] shrink-0" />
+          <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="w-full sm:w-[110px] shrink-0" />
+          <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="w-full sm:w-[110px] shrink-0" />
           {(statusFilter || dateFrom || dateTo) && (
             <button
               onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}

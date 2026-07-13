@@ -117,7 +117,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
             placeholder="Buscar..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="app-input h-8 max-w-[180px]"
+            className="app-input h-8 w-full sm:max-w-[180px]"
           />
         </div>
         {canCreate(section) && (

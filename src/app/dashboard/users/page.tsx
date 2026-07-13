@@ -264,7 +264,7 @@ export default function UsersPage() {
 
       <div className="app-toolbar">
         <div className="flex items-center gap-2">
-          <div className="relative w-[160px] shrink-0">
+          <div className="relative w-full sm:w-[160px] shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
           </div>
