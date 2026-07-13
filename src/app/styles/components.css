@@ -486,6 +486,94 @@
     pointer-events: none;
   }
 
+  /* Sidebar premium glass (tipo referencias 2, 5, 6) */
+  .sidebar-glass {
+    border-radius: 24px !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(255, 255, 255, 0.04) 100%
+    ) !important;
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sidebar-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: 24px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      transparent 45%
+    );
+  }
+
+  .dark .sidebar-glass {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) !important;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.35),
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+  }
+
+  .dark .sidebar-glass::before {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      transparent 45%
+    );
+  }
+
+  /* Sidebar item */
+  .sidebar-item {
+    @apply relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200;
+    color: var(--muted-foreground);
+  }
+
+  .sidebar-item:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--foreground);
+  }
+
+  .sidebar-item-active {
+    color: var(--primary) !important;
+    background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--primary) 22%, transparent) !important;
+  }
+
+  .sidebar-item-active::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+    pointer-events: none;
+  }
+
+  /* Sidebar divider */
+  .sidebar-divider {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%
+    );
+  }
+
   /* Espaciado vertical estándar entre paneles */
   .app-stack {
     @apply space-y-2;

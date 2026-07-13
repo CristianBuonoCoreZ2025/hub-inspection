@@ -41,36 +41,6 @@ function getInitials(email?: string | null) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Tooltip custom (reemplaza el title nativo)
-// Aparece al hover con un delay corto y animación suave
-// ═══════════════════════════════════════════════════════════════
-function IconTooltip({ label, children }: { label: string; children: React.ReactNode }) {
-  const [show, setShow] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleEnter = () => {
-    timerRef.current = setTimeout(() => setShow(true), 300);
-  };
-  const handleLeave = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setShow(false);
-  };
-
-  return (
-    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-      {children}
-      {show && (
-        <div className="pointer-events-none absolute left-full top-1/2 z-[60] ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1 text-xs font-medium text-background shadow-lg backdrop-blur-sm">
-          {label}
-          {/* Flecha */}
-          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-foreground" />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
 // Flyout mejorado para grupos con sub-niveles
 // Panel más amplio, header con icono, indicador activo
 // ═══════════════════════════════════════════════════════════════
@@ -103,22 +73,17 @@ function HybridFlyout({
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
-      {/* Icono del grupo — sin tooltip (el flyout ya muestra el título) */}
+      {/* Grupo del sidebar con icono + label */}
       <div
         className={cn(
-          "relative flex items-center justify-center rounded-xl py-2.5 transition-all duration-200 cursor-pointer",
-          isGroupActive || open
-            ? "text-primary bg-primary/10 shadow-[0_0_16px_rgba(139,92,246,0.25)]"
-            : "text-muted-foreground hover:bg-white/8 hover:text-foreground"
+          "sidebar-item cursor-pointer",
+          (isGroupActive || open) && "sidebar-item-active"
         )}
       >
-        {(isGroupActive || open) && (
-          <span className="absolute inset-0 rounded-xl border border-primary/20 pointer-events-none" />
-        )}
-        <Icon className="size-5 shrink-0" />
-        {/* Indicador de sub-niveles: punto en la esquina */}
+        <Icon className="size-[18px] shrink-0" />
+        <span className="text-[12px] font-medium truncate flex-1">{group.title}</span>
         <span className={cn(
-          "absolute right-1.5 top-1.5 size-1.5 rounded-full transition-colors",
+          "size-1.5 rounded-full shrink-0 transition-colors",
           isGroupActive ? "bg-primary" : "bg-muted-foreground/40"
         )} />
       </div>
@@ -236,23 +201,14 @@ function MainLinkIcon({
   const Icon = link.icon;
 
   return (
-    <IconTooltip label={link.label}>
-      <Link
-        href={link.href}
-        onClick={onNavigate}
-        className={cn(
-          "relative flex items-center justify-center rounded-xl py-2.5 transition-all duration-200",
-          isActive
-            ? "text-primary bg-primary/10 shadow-[0_0_16px_rgba(139,92,246,0.25)]"
-            : "text-muted-foreground hover:bg-white/8 hover:text-foreground"
-        )}
-      >
-        {isActive && (
-          <span className="absolute inset-0 rounded-xl border border-primary/20 pointer-events-none" />
-        )}
-        <Icon className="size-5 shrink-0" />
-      </Link>
-    </IconTooltip>
+    <Link
+      href={link.href}
+      onClick={onNavigate}
+      className={cn("sidebar-item", isActive && "sidebar-item-active")}
+    >
+      <Icon className="size-[18px] shrink-0" />
+      <span className="text-[12px] font-medium truncate">{link.label}</span>
+    </Link>
   );
 }
 
@@ -275,115 +231,125 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      {/* Icon rail (left) — premium glass + gradient */}
-      <aside className="hidden lg:flex lg:w-[56px] lg:flex-col items-center py-3 gap-1 relative
-                         lg:border-r lg:border-white/10 dark:lg:border-white/5
-                         lg:bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]
-                         lg:backdrop-blur-2xl lg:saturate-150
-                         lg:shadow-[4px_0_24px_rgba(0,0,0,0.06)]
-                         dark:lg:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))]
-                         dark:lg:shadow-[4px_0_24px_rgba(0,0,0,0.25)]">
-        {/* Glass shine overlay */}
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.12)_0%,transparent_40%)]" />
-        {/* Contenido */}
-        <div className="relative z-10 flex flex-col items-center w-full h-full gap-1">
-        {/* Logo */}
-        <IconTooltip label="Dashboard">
-          <Link
-            href="/dashboard"
-            className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0 mb-3 transition-transform hover:scale-105"
-          >
-            <ShieldCheck className="size-5" />
-          </Link>
-        </IconTooltip>
+      {/* Sidebar (left) — premium floating labeled glass panel */}
+      <div className="hidden lg:flex lg:flex-col lg:items-center lg:justify-center lg:w-[220px] lg:shrink-0 lg:py-4">
+        <aside className="sidebar-glass flex flex-col w-[200px] py-4 gap-3">
+          {/* Contenido */}
+          <div className="relative z-10 flex flex-col w-full h-full gap-3 px-3">
+            {/* Logo */}
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-3 px-3 py-2 rounded-[14px] bg-primary/10 text-primary shrink-0 transition-all duration-200 hover:bg-primary/15"
+            >
+              <div className="flex size-10 items-center justify-center rounded-[12px] bg-primary text-primary-foreground shrink-0 transition-all duration-200 hover:scale-105 shadow-[0_0_20px_rgba(139,92,246,0.35)]">
+                <ShieldCheck className="size-5" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[13px] font-semibold leading-tight">Claims Hub</span>
+                <span className="text-[10px] text-primary/70 leading-tight">Dashboard</span>
+              </div>
+            </Link>
 
-        {/* Main links as icons */}
-        <div className="flex flex-col gap-1 w-full px-1.5">
-          {visibleMainLinks
-            .filter(l => l.href !== "/dashboard") // dashboard ya está en el logo
-            .map((link) => (
-              <MainLinkIcon
-                key={link.href}
-                link={link}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            ))}
-        </div>
+            <div className="sidebar-divider" />
 
-        <div className="my-2 w-8 border-t border-border" />
+            {/* Main links */}
+            <div className="flex flex-col gap-1 w-full">
+              {visibleMainLinks
+                .filter(l => l.href !== "/dashboard") // dashboard ya está en el logo
+                .map((link) => (
+                  <MainLinkIcon
+                    key={link.href}
+                    link={link}
+                    pathname={pathname}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+            </div>
 
-        {/* Group icons with flyout */}
-        <div className="flex flex-col gap-1 w-full px-1.5">
-          {visibleGroups.map((group) => (
-            <HybridFlyout
-              key={group.title}
-              group={group}
-              pathname={pathname}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
+            <div className="sidebar-divider" />
 
-        {/* User + theme + skin at bottom */}
-        <div className="mt-auto flex flex-col items-center gap-1 w-full px-1.5">
-          <div className="flex items-center justify-center rounded-lg py-1.5 transition-colors hover:bg-muted">
-            <SkinToggle />
-          </div>
+            {/* Group links with flyout */}
+            <div className="flex flex-col gap-1 w-full">
+              {visibleGroups.map((group) => (
+                <HybridFlyout
+                  key={group.title}
+                  group={group}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
 
-          <div className="flex items-center justify-center rounded-lg py-1.5 transition-colors hover:bg-muted">
-            <ThemeToggle />
-          </div>
+            {/* User + theme + skin at bottom */}
+            <div className="mt-auto flex flex-col gap-1 w-full pt-2">
+              <div className="sidebar-item">
+                <SkinToggle />
+                <span className="text-[12px] font-medium">Estilo</span>
+              </div>
 
-          <IconTooltip label={isLoading ? "Cargando..." : (user?.email ?? "Usuario")}>
-            <div ref={userRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center justify-center rounded-lg p-1.5 transition-colors hover:bg-muted"
-              >
-                <Avatar size="sm">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                    {isLoading ? "..." : getInitials(user?.email)}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
+              <div className="sidebar-item">
+                <ThemeToggle />
+                <span className="text-[12px] font-medium">Tema</span>
+              </div>
 
-              {userMenuOpen && (
-                <>
-                  {/* Bridge */}
-                  <div className="absolute left-full bottom-0 h-full w-2 z-40" />
-                  <div className="absolute left-full bottom-0 ml-2 z-50 w-56 rounded-xl border border-border bg-popover shadow-2xl overflow-hidden backdrop-blur-xl">
-                    <div className="flex items-center gap-2.5 border-b border-border px-4 py-3 bg-muted/40">
-                      <Avatar size="sm">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {isLoading ? "..." : getInitials(user?.email)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{isLoading ? "Cargando..." : user?.email ?? "Usuario"}</p>
+              <div ref={userRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="sidebar-item w-full"
+                >
+                  <Avatar size="sm">
+                    <AvatarFallback className="bg-primary/20 text-primary text-xs border border-primary/20">
+                      {isLoading ? "..." : getInitials(user?.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col min-w-0 text-left">
+                    <span className="text-[12px] font-medium truncate">{isLoading ? "Cargando..." : user?.email ?? "Usuario"}</span>
+                    <span className="text-[10px] text-muted-foreground">Mi cuenta</span>
+                  </div>
+                </button>
+
+                {userMenuOpen && (
+                  <>
+                    {/* Bridge */}
+                    <div className="absolute left-full bottom-0 h-full w-2 z-40" />
+                    <div className="absolute left-full bottom-0 ml-2 z-50 w-56 rounded-2xl border border-white/15 dark:border-white/8 overflow-hidden
+                                    bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))]
+                                    backdrop-blur-2xl saturate-150
+                                    shadow-[0_8px_40px_rgba(0,0,0,0.12)]
+                                    dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))]
+                                    dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
+                      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.15)_0%,transparent_40%)]" />
+                      <div className="relative flex items-center gap-2.5 border-b border-white/10 dark:border-white/5 px-4 py-3">
+                        <Avatar size="sm">
+                          <AvatarFallback className="bg-primary/20 text-primary text-xs border border-primary/20">
+                            {isLoading ? "..." : getInitials(user?.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{isLoading ? "Cargando..." : user?.email ?? "Usuario"}</p>
+                        </div>
+                      </div>
+                      <div className="relative p-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-white/10"
+                          onClick={() => signOut()}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <LogOut className="mr-2 size-4" />}
+                          Cerrar Sesión
+                        </Button>
                       </div>
                     </div>
-                    <div className="p-1.5">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start text-muted-foreground hover:text-foreground"
-                        onClick={() => signOut()}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <LogOut className="mr-2 size-4" />}
-                        Cerrar Sesión
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
-          </IconTooltip>
-        </div>
-        </div>
-      </aside>
+          </div>
+        </aside>
+      </div>
     </>
   );
 }
