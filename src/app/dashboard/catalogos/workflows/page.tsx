@@ -8,7 +8,13 @@ import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
-  ChevronRight, ChevronDown, Plus, Trash2,
+  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+  closestCorners, type DragStartEvent, type DragEndEvent,
+} from "@dnd-kit/core";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  ChevronRight, ChevronDown, Plus, Trash2, GripVertical,
   GitBranch, Workflow, ArrowRight, X, Settings2,
   Globe, Calendar, Layers, Zap, Shield, Sparkles, Ban, Pencil,
 } from "lucide-react";
@@ -16,6 +22,7 @@ import {
   getWorkflowConfigs, getWorkflowSteps,
   createWorkflowConfig, deleteWorkflowConfig, setWorkflowStatus,
   createWorkflowStepWithChain, updateWorkflowStep, deleteWorkflowStep,
+  reorderWorkflowSteps,
   getAvailableCountriesForStatus,
   getAvailableEventsForStatusAndCountry,
   getAvailableLinesForStatusCountryEvent,
@@ -45,6 +52,7 @@ export default function WorkflowsPage() {
   const [showAddStep, setShowAddStep] = useState<string | null>(null);
   const [addDependentParent, setAddDependentParent] = useState<WorkflowStep | null>(null);
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
+  const [activeDrag, setActiveDrag] = useState<{ id: string; type: "palette" | "node"; label: string; code: string } | null>(null);
 
   // Queries
   const { data: configs } = useQuery({ queryKey: ["workflow-configs"], queryFn: getWorkflowConfigs, staleTime: 30000 });
@@ -110,6 +118,17 @@ export default function WorkflowsPage() {
     onSuccess: () => { toast.success("Gestión quitada"); queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] }); setSelectedStepId(null); },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const reorderMut = useMutation({
+    mutationFn: reorderWorkflowSteps,
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] }); },
+    onError: (e: Error) => { toast.error(e.message); queryClient.invalidateQueries({ queryKey: ["workflow-steps", selectedConfigId] }); },
+  });
+
+  // Sensores DnD
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   // Lookup para nombres
   const lookupMap = useMemo(() => {
@@ -188,6 +207,82 @@ export default function WorkflowsPage() {
       .filter(t => !childCodes.has(t.code || "")) // Ocultar templates que son dependientes
       .sort((a, b) => (a.code || "").localeCompare(b.code || ""));
   }, [availableTemplates, usedTemplateIds, childTemplateCodes]);
+
+  // ═══ DnD Handlers ═══
+  const onDragStart = (e: DragStartEvent) => {
+    const data = e.active.data.current;
+    if (data?.source === "palette") {
+      setActiveDrag({ id: e.active.id as string, type: "palette", label: data.label, code: data.code });
+    } else if (data?.source === "node") {
+      const step = (steps || []).find(s => s.id === e.active.id);
+      if (step) setActiveDrag({ id: e.active.id as string, type: "node", label: step.action_template?.code || "", code: step.action_template?.code || "" });
+    }
+  };
+
+  const onDragEnd = (e: DragEndEvent) => {
+    setActiveDrag(null);
+    const { active, over } = e;
+    if (!over || !selectedConfigId) return;
+
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    // Drop desde paleta → agregar al workflow
+    if (activeData?.source === "palette") {
+      const templateId = activeData.templateId as string;
+      const overStepId = overData?.stepId as string | undefined;
+
+      if (overStepId) {
+        // Drop sobre un step existente → crear como dependiente
+        const parentStep = (steps || []).find(s => s.id === overStepId);
+        if (parentStep) {
+          createStepMut.mutate({
+            workflow_config_id: selectedConfigId,
+            action_template_id: templateId,
+            level: parentStep.level + 1,
+            depends_on_template_id: parentStep.action_template_id,
+          });
+          return;
+        }
+      }
+      // Drop en el canvas (no sobre un step) → crear como raíz
+      createStepMut.mutate({
+        workflow_config_id: selectedConfigId,
+        action_template_id: templateId,
+        level: 1,
+      });
+      return;
+    }
+
+    // Reorder dentro del árbol
+    if (activeData?.source === "node" && overData?.source === "node") {
+      const activeStep = (steps || []).find(s => s.id === active.id);
+      const overStep = (steps || []).find(s => s.id === overData.stepId);
+      if (!activeStep || !overStep) return;
+      if (activeStep.id === overStep.id) return;
+
+      // Solo reordenar si están en el mismo nivel y mismo padre
+      const sameLevel = activeStep.level === overStep.level;
+      const sameParent = (activeStep.depends_on_template_id || null) === (overStep.depends_on_template_id || null);
+      if (!sameLevel || !sameParent) return;
+
+      // Reordenar por sort_order
+      const siblings = (steps || [])
+        .filter(s => s.level === activeStep.level && (s.depends_on_template_id || null) === (activeStep.depends_on_template_id || null))
+        .sort((a, b) => a.sort_order - b.sort_order);
+
+      const oldIdx = siblings.findIndex(s => s.id === activeStep.id);
+      const newIdx = siblings.findIndex(s => s.id === overStep.id);
+      if (oldIdx === -1 || newIdx === -1 || oldIdx === newIdx) return;
+
+      // Recalcular sort_order
+      const reordered = [...siblings];
+      const [moved] = reordered.splice(oldIdx, 1);
+      reordered.splice(newIdx, 0, moved);
+
+      reorderMut.mutate(reordered.map((s, i) => ({ id: s.id, sort_order: i })));
+    }
+  };
 
   // Auto-expandir primer estado
   useEffect(() => {
@@ -385,9 +480,15 @@ export default function WorkflowsPage() {
                                                       ) : (
                                                         <div className="mb-2 rounded-lg bg-amber-500/5 border border-amber-500/20 px-3 py-1.5 text-[11px] text-amber-400 flex items-center gap-1.5 animate-pulse">
                                                           <Settings2 className="h-3 w-3" />
-                                                          Modo edición — arrastrar gestiones disponibles al flujo
+                                                          Modo edición — arrastra las gestiones de abajo al flujo
                                                         </div>
                                                       )}
+                                                      <DndContext
+                                                        sensors={dndSensors}
+                                                        collisionDetection={closestCorners}
+                                                        onDragStart={onDragStart}
+                                                        onDragEnd={onDragEnd}
+                                                      >
                                                       <StepsCanvas
                                                         stepsByLevel={stepsByLevel}
                                                         selectedStepId={selectedStepId}
@@ -400,17 +501,17 @@ export default function WorkflowsPage() {
                                                         isLoading={!steps}
                                                         steps={steps || []}
                                                       />
-                                                      {/* Paleta inline de gestiones disponibles (solo si no esta online) */}
+                                                      {/* Paleta de gestiones disponibles — DRAGGABLE (solo si no esta online) */}
                                                       {!isOnline && canEdit("catalogos") && (
                                                         <div className="mt-2 rounded-xl border border-dashed border-white/10 dark:border-white/5
                                                                         bg-white/[0.02] backdrop-blur-sm p-2">
                                                           <div className="flex items-center gap-1.5 mb-1.5 px-1">
-                                                            <Plus className="h-3 w-3 text-violet-400" />
+                                                            <GripVertical className="h-3 w-3 text-violet-400" />
                                                             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                                                               Gestiones disponibles
                                                             </span>
                                                             <span className="text-[9px] text-muted-foreground/50">
-                                                              click para agregar
+                                                              arrastrar al flujo
                                                             </span>
                                                           </div>
                                                           {availableToAdd.length === 0 ? (
@@ -420,41 +521,12 @@ export default function WorkflowsPage() {
                                                           ) : (
                                                             <div className="flex flex-wrap gap-1.5">
                                                               {availableToAdd.map(t => (
-                                                                <button
+                                                                <DraggablePaletteItem
                                                                   key={t.id}
-                                                                  className="flex items-center gap-1.5 rounded-lg px-2 py-1
-                                                                             bg-white/5 hover:bg-violet-500/15
-                                                                             border border-white/10 hover:border-violet-500/30
-                                                                             transition-all duration-200 active:scale-95 group"
-                                                                  onClick={() => {
-                                                                    if (addDependentParent) {
-                                                                      createStepMut.mutate({
-                                                                        workflow_config_id: config.id,
-                                                                        action_template_id: t.id,
-                                                                        level: addDependentParent.level + 1,
-                                                                        depends_on_template_id: addDependentParent.action_template_id,
-                                                                      });
-                                                                    } else {
-                                                                      createStepMut.mutate({
-                                                                        workflow_config_id: config.id,
-                                                                        action_template_id: t.id,
-                                                                        level: 1,
-                                                                      });
-                                                                    }
-                                                                  }}
-                                                                >
-                                                                  <div className="flex h-5 w-5 items-center justify-center rounded-md bg-violet-500/10 border border-violet-500/20
-                                                                                  group-hover:scale-110 transition-transform">
-                                                                    <span className="font-mono text-[8px] font-bold text-violet-400">{(t.code || "?").slice(0, 2)}</span>
-                                                                  </div>
-                                                                  <div className="flex flex-col">
-                                                                    <span className="font-mono text-[10px] font-semibold leading-tight">{t.code}</span>
-                                                                    <span className="text-[8px] text-muted-foreground leading-tight max-w-[100px] truncate">{t.name}</span>
-                                                                  </div>
-                                                                  {addDependentParent && (
-                                                                    <span className="text-[8px] text-sky-400/60 ml-1">→ N{addDependentParent.level + 1}</span>
-                                                                  )}
-                                                                </button>
+                                                                  templateId={t.id}
+                                                                  code={t.code || "?"}
+                                                                  name={t.name}
+                                                                />
                                                               ))}
                                                             </div>
                                                           )}
@@ -473,6 +545,22 @@ export default function WorkflowsPage() {
                                                           )}
                                                         </div>
                                                       )}
+                                                      {/* Drag overlay */}
+                                                      <DragOverlay>
+                                                        {activeDrag ? (
+                                                          <div className="flex items-center gap-2 rounded-lg border border-violet-500/40
+                                                                          bg-card/80 backdrop-blur-xl px-3 py-1.5
+                                                                          shadow-[0_8px_30px_rgba(139,92,246,0.2)]">
+                                                            <div className="flex h-5 w-5 items-center justify-center rounded-md bg-violet-500/20 border border-violet-500/30">
+                                                              <span className="font-mono text-[8px] font-bold text-violet-400">
+                                                                {activeDrag.code.slice(0, 2)}
+                                                              </span>
+                                                            </div>
+                                                            <span className="font-mono text-[10px] font-semibold">{activeDrag.label}</span>
+                                                          </div>
+                                                        ) : null}
+                                                      </DragOverlay>
+                                                      </DndContext>
                                                     </div>
                                                   )}
                                                 </div>
@@ -869,8 +957,6 @@ function StepsCanvas({
   // Renderizar arbol recursivamente
   function renderNode(step: WorkflowStep, level: number, isLast: boolean): React.ReactNode {
     const children = childrenMap.get(step.action_template_id) || [];
-    const isSelected = selectedStepId === step.id;
-    const isHovered = hoveredStep === step.id;
     const levelColors = [
       { bg: "from-violet-500/15 to-violet-600/5", border: "border-violet-500/30", text: "text-violet-400", glow: "bg-violet-500/10" },
       { bg: "from-sky-500/15 to-sky-600/5", border: "border-sky-500/30", text: "text-sky-400", glow: "bg-sky-500/10" },
@@ -881,65 +967,17 @@ function StepsCanvas({
 
     return (
       <div key={step.id} className="relative">
-        {/* Nodo */}
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <div
-            className={`relative flex items-center gap-1.5 rounded-lg px-2 py-1
-                        bg-linear-to-br ${lc.bg} backdrop-blur-sm
-                        border ${lc.border}
-                        cursor-pointer transition-all duration-200 active:scale-95
-                        ${isSelected ? "ring-1 ring-offset-0 ring-violet-500/40 " : "hover:scale-[1.02]"}`}
-            onClick={() => onSelectStep(step.id)}
-            onMouseEnter={() => onHoverStep(step.id)}
-            onMouseLeave={() => onHoverStep(null)}
-          >
-            {/* Glow decorativo */}
-            <div className={`pointer-events-none absolute -inset-0.5 rounded-lg ${lc.glow} blur-sm opacity-30 -z-10`} />
-
-            {/* Icono del codigo */}
-            <div className={`flex h-5 w-5 items-center justify-center rounded-md ${lc.glow} border ${lc.border}`}>
-              <span className={`font-mono text-[8px] font-bold ${lc.text}`}>
-                {(step.action_template?.code || "?").slice(0, 2)}
-              </span>
-            </div>
-
-            {/* Info */}
-            <div className="flex flex-col">
-              <span className="text-[10px] font-semibold leading-tight">{step.action_template?.code}</span>
-              <span className="text-[8px] text-muted-foreground leading-tight max-w-[120px] truncate">
-                {step.action_template?.name}
-              </span>
-            </div>
-
-            {/* Badges */}
-            <div className="flex items-center gap-0.5">
-              {step.is_automatic && (
-                <span className="flex items-center rounded px-0.5 py-0.5 bg-emerald-500/10 text-emerald-400">
-                  <Zap className="h-1.5 w-1.5" />
-                </span>
-              )}
-              {step.is_required && (
-                <span className="flex items-center rounded px-0.5 py-0.5 bg-rose-500/10 text-rose-400">
-                  <Shield className="h-1.5 w-1.5" />
-                </span>
-              )}
-            </div>
-
-            {/* Boton agregar dependiente */}
-            {canEdit && (
-              <button
-                className="ml-0.5 flex h-4 w-4 items-center justify-center rounded
-                           bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/30
-                           text-muted-foreground hover:text-violet-400 transition-all active:scale-90"
-                title="Agregar gestión dependiente"
-                onClick={(e) => { e.stopPropagation(); onAddDependent(step); }}
-              >
-                <Plus className="h-2.5 w-2.5" />
-              </button>
-            )}
-          </div>
-        </div>
-
+        <DraggableNode
+          step={step}
+          lc={lc}
+          isSelected={selectedStepId === step.id}
+          isHovered={hoveredStep === step.id}
+          canEdit={canEdit}
+          onSelect={() => onSelectStep(step.id)}
+          onHover={() => onHoverStep(step.id)}
+          onLeave={() => onHoverStep(null)}
+          onAddDependent={() => onAddDependent(step)}
+        />
         {/* Hijos con conector visual */}
         {children.length > 0 && (
           <div className="ml-4 pl-4 border-l-2 border-white/10 dark:border-white/5 space-y-1">
@@ -1059,6 +1097,152 @@ function EmptyState({ onCreate, canCreate }: { onCreate: () => void; canCreate: 
           Crear primer workflow
         </button>
       )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Componente: DraggablePaletteItem — item arrastrable de la paleta
+// ═══════════════════════════════════════════════════════════════════
+
+function DraggablePaletteItem({ templateId, code, name }: { templateId: string; code: string; name: string }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `palette_${templateId}`,
+    data: { source: "palette", templateId, code, label: code },
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.3 : 1,
+  };
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className="flex items-center gap-1.5 rounded-lg px-2 py-1
+                 bg-white/5 hover:bg-violet-500/15
+                 border border-white/10 hover:border-violet-500/30
+                 transition-all duration-200 active:scale-95 group
+                 cursor-grab active:cursor-grabbing"
+    >
+      <GripVertical className="h-2.5 w-2.5 text-muted-foreground/40 group-hover:text-violet-400 transition-colors" />
+      <div className="flex h-5 w-5 items-center justify-center rounded-md bg-violet-500/10 border border-violet-500/20
+                      group-hover:scale-110 transition-transform">
+        <span className="font-mono text-[8px] font-bold text-violet-400">{code.slice(0, 2)}</span>
+      </div>
+      <div className="flex flex-col">
+        <span className="font-mono text-[10px] font-semibold leading-tight">{code}</span>
+        <span className="text-[8px] text-muted-foreground leading-tight max-w-[100px] truncate">{name}</span>
+      </div>
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Componente: DraggableNode — nodo del arbol (draggable + droppable)
+// ═══════════════════════════════════════════════════════════════════
+
+function DraggableNode({
+  step, lc, isSelected, isHovered, canEdit,
+  onSelect, onHover, onLeave, onAddDependent,
+}: {
+  step: WorkflowStep;
+  lc: { bg: string; border: string; text: string; glow: string };
+  isSelected: boolean;
+  isHovered: boolean;
+  canEdit: boolean;
+  onSelect: () => void;
+  onHover: () => void;
+  onLeave: () => void;
+  onAddDependent: () => void;
+}) {
+  // Draggable (para reordenar)
+  const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
+    id: step.id,
+    data: { source: "node", stepId: step.id },
+  });
+
+  // Droppable (para recibir drops de la paleta o de otros nodos)
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: `drop_${step.id}`,
+    data: { source: "node", stepId: step.id },
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 mb-0.5">
+      <div
+        ref={(node) => { setDragRef(node); setDropRef(node); }}
+        style={style}
+        {...listeners}
+        {...attributes}
+        className={`relative flex items-center gap-1.5 rounded-lg px-2 py-1
+                    bg-linear-to-br ${lc.bg} backdrop-blur-sm
+                    border ${lc.border}
+                    cursor-grab active:cursor-grabbing transition-all duration-200 active:scale-95
+                    ${isSelected ? "ring-1 ring-offset-0 ring-violet-500/40 " : "hover:scale-[1.02]"}
+                    ${isOver ? "ring-2 ring-violet-500/50 scale-105 " : ""}`}
+        onClick={onSelect}
+        onMouseEnter={onHover}
+        onMouseLeave={onLeave}
+      >
+        {/* Glow decorativo */}
+        <div className={`pointer-events-none absolute -inset-0.5 rounded-lg ${lc.glow} blur-sm opacity-30 -z-10`} />
+
+        {/* Icono del codigo */}
+        <div className={`flex h-5 w-5 items-center justify-center rounded-md ${lc.glow} border ${lc.border}`}>
+          <span className={`font-mono text-[8px] font-bold ${lc.text}`}>
+            {(step.action_template?.code || "?").slice(0, 2)}
+          </span>
+        </div>
+
+        {/* Info */}
+        <div className="flex flex-col">
+          <span className="text-[10px] font-semibold leading-tight">{step.action_template?.code}</span>
+          <span className="text-[8px] text-muted-foreground leading-tight max-w-[120px] truncate">
+            {step.action_template?.name}
+          </span>
+        </div>
+
+        {/* Badges */}
+        <div className="flex items-center gap-0.5">
+          {step.is_automatic && (
+            <span className="flex items-center rounded px-0.5 py-0.5 bg-emerald-500/10 text-emerald-400">
+              <Zap className="h-1.5 w-1.5" />
+            </span>
+          )}
+          {step.is_required && (
+            <span className="flex items-center rounded px-0.5 py-0.5 bg-rose-500/10 text-rose-400">
+              <Shield className="h-1.5 w-1.5" />
+            </span>
+          )}
+        </div>
+
+        {/* Boton agregar dependiente */}
+        {canEdit && (
+          <button
+            className="ml-0.5 flex h-4 w-4 items-center justify-center rounded
+                       bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/30
+                       text-muted-foreground hover:text-violet-400 transition-all active:scale-90"
+            title="Agregar gestión dependiente"
+            onClick={(e) => { e.stopPropagation(); onAddDependent(); }}
+          >
+            <Plus className="h-2.5 w-2.5" />
+          </button>
+        )}
+
+        {/* Indicador de drop hover */}
+        {isOver && (
+          <div className="pointer-events-none absolute -inset-1 rounded-lg border-2 border-violet-500/40 bg-violet-500/5 animate-pulse" />
+        )}
+      </div>
     </div>
   );
 }
