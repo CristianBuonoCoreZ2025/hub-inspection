@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -94,7 +94,6 @@ export default function WorkflowsPage() {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [addDependentParent, setAddDependentParent] = useState<WorkflowStep | null>(null);
-  const [hoveredStep, setHoveredStep] = useState<string | null>(null);
   const [activeDrag, setActiveDrag] = useState<{ id: string; type: "palette" | "node"; label: string; code: string } | null>(null);
 
   // Queries
@@ -324,13 +323,10 @@ export default function WorkflowsPage() {
     }
   };
 
-  // Auto-expandir primer estado
-  useEffect(() => {
-    if (configs && configs.length > 0 && expandedNodes.size === 0) {
-      const firstStatus = configs[0].claim_status_id;
-      setExpandedNodes(new Set([`s-${firstStatus}`]));
-    }
-  }, [configs, expandedNodes.size]);
+  // Auto-expandir primer estado — ajustar state durante render (patron React)
+  if (configs && configs.length > 0 && expandedNodes.size === 0) {
+    setExpandedNodes(new Set([`s-${configs[0].claim_status_id}`]));
+  }
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -354,16 +350,14 @@ export default function WorkflowsPage() {
           </div>
           <div className="flex-1" />
           {canCreate("catalogos") && (
-            <button
+            <Button
+              size="sm"
               onClick={() => setOpenCreateModal(true)}
-              className="group flex items-center gap-2 rounded-lg px-3 h-8
-                         bg-linear-to-r from-violet-500/80 to-sky-500/80 hover:from-violet-500 hover:to-sky-500
-                         text-white text-[12px] font-medium shadow-lg shadow-violet-500/20
-                         transition-all duration-200 active:scale-95"
+              className="liquid-button ml-auto"
             >
-              <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90 duration-200" />
+              <Plus className="h-3.5 w-3.5" />
               Nuevo
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -531,9 +525,7 @@ export default function WorkflowsPage() {
                                                       >
                                                       <StepsCanvas
                                                         selectedStepId={selectedStepId}
-                                                        hoveredStep={hoveredStep}
                                                         onSelectStep={setSelectedStepId}
-                                                        onHoverStep={setHoveredStep}
                                                         canEdit={canEdit("catalogos") && !isOnline}
                                                         onAddDependent={(parent) => { setAddDependentParent(parent); }}
                                                         isLoading={!steps}
@@ -733,14 +725,17 @@ function CreateWorkflowModal({
   const [eventId, setEventId] = useState("");
   const [lineId, setLineId] = useState("");
 
-  useEffect(() => {
+  // Reset form cuando se abre el modal — ajustar state durante render (patron React)
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setStatusId("");
       setCountryId("");
       setEventId("");
       setLineId("");
     }
-  }, [open]);
+  }
 
   // Cascading queries
   const { data: countries } = useQuery({
@@ -981,14 +976,12 @@ function GlassTreeNode({
 // ═══════════════════════════════════════════════════════════════════
 
 function StepsCanvas({
-  selectedStepId, hoveredStep,
-  onSelectStep, onHoverStep, canEdit, onAddDependent, isLoading, steps,
+  selectedStepId,
+  onSelectStep, canEdit, onAddDependent, isLoading, steps,
   isPaletteDrag, businessLineName,
 }: {
   selectedStepId: string | null;
-  hoveredStep: string | null;
   onSelectStep: (id: string) => void;
-  onHoverStep: (id: string | null) => void;
   canEdit: boolean;
   onAddDependent: (parentStep: WorkflowStep) => void;
   isLoading: boolean;
@@ -1047,8 +1040,6 @@ function StepsCanvas({
           isSelected={selectedStepId === step.id}
           canEdit={canEdit}
           onSelect={() => onSelectStep(step.id)}
-          onHover={() => onHoverStep(step.id)}
-          onLeave={() => onHoverStep(null)}
           onAddDependent={() => onAddDependent(step)}
         />
         {/* Hijos con conector visual — SortableContext por grupo de hermanos */}
@@ -1215,15 +1206,13 @@ function DraggablePaletteItem({ templateId, code, name }: { templateId: string; 
 
 function SortableNode({
   step, lc, isSelected, canEdit,
-  onSelect, onHover, onLeave, onAddDependent,
+  onSelect, onAddDependent,
 }: {
   step: WorkflowStep;
   lc: { bg: string; border: string; text: string; glow: string };
   isSelected: boolean;
   canEdit: boolean;
   onSelect: () => void;
-  onHover: () => void;
-  onLeave: () => void;
   onAddDependent: () => void;
 }) {
   // useSortable combina draggable + droppable + animacion de reorden
@@ -1258,8 +1247,6 @@ function SortableNode({
                     ${isSelected ? "ring-1 ring-offset-0 ring-violet-500/40 " : "hover:scale-[1.02]"}
                     ${isDropTarget ? "ring-2 ring-violet-500/60 scale-105 " : ""}`}
         onClick={onSelect}
-        onMouseEnter={onHover}
-        onMouseLeave={onLeave}
       >
         {/* Glow decorativo */}
         <div className={`pointer-events-none absolute -inset-0.5 rounded-lg ${lc.glow} blur-sm opacity-30 -z-10`} />

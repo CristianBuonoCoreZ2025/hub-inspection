@@ -357,9 +357,9 @@ function InspectionsPageContent() {
               setOpenCreate(true);
               setSelectedClaimId("");
             }}
-            className="btn-create btn-sm"
+            className="liquid-button ml-auto"
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             Nueva
           </Button>
         )}

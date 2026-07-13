@@ -92,8 +92,8 @@ export default function TiposGestionPage() {
           <Input placeholder="Buscar tipo..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-full max-w-sm" />
         </div>
         {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="btn-create btn-sm">
-            <Plus className="mr-2 h-4 w-4" /> Agregar
+          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="liquid-button ml-auto">
+            <Plus className="h-3.5 w-3.5" /> Nuevo
           </Button>
         )}
       </div>

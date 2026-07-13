@@ -938,8 +938,8 @@ export default function GestionesPage() {
           )}
         </div>
         {canCreate("catalogos") && (
-          <Button onClick={startNew} className="btn-create btn-sm shrink-0">
-            <Plus className="mr-2 h-4 w-4" /> Agregar
+          <Button onClick={startNew} className="liquid-button">
+            <Plus className="h-3.5 w-3.5" /> Nueva
           </Button>
         )}
       </div>

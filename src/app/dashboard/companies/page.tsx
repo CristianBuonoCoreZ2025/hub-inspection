@@ -145,8 +145,8 @@ export default function CompaniesPage() {
           </div>
         </div>
         {canCreate("companies") && (
-          <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="btn-create btn-sm shrink-0">
-            <Plus className="mr-2 h-4 w-4" /> Nueva
+          <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="liquid-button ml-auto">
+            <Plus className="h-3.5 w-3.5" /> Nueva
           </Button>
         )}
       </div>

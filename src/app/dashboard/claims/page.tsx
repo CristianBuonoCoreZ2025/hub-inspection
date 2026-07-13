@@ -919,8 +919,8 @@ export default function ClaimsPage() {
             <Download className="mr-2 h-3.5 w-3.5" /> Exportar
           </Button>
           {canCreate("claims") && (
-            <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="btn-create btn-sm">
-              <Plus className="mr-2 h-4 w-4" />
+            <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="liquid-button ml-auto">
+              <Plus className="h-3.5 w-3.5" />
               Nuevo
             </Button>
           )}

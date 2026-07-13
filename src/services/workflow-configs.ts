@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Supabase responses are not fully typed */
 import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -153,7 +154,6 @@ export async function createWorkflowStepWithChain(input: {
     .eq("id", input.action_template_id)
     .limit(1);
   const rootCode = (rootTemplate as any[])?.[0]?.code;
-  const rootLineId = (rootTemplate as any[])?.[0]?.line_business_id;
 
   // Obtener business_line del workflow config
   const { data: config } = await supabase
@@ -425,6 +425,7 @@ export async function getAvailableCountriesForStatus(claimStatusId: string): Pro
 
 export async function getAvailableEventsForStatusAndCountry(claimStatusId: string, countryId: string): Promise<{ id: string; name: string }[]> {
   // Los eventos no estan vinculados a templates. Mostrar todos los eventos activos.
+  void claimStatusId; void countryId; // params requeridos por la API cascading
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("events")
@@ -437,6 +438,7 @@ export async function getAvailableEventsForStatusAndCountry(claimStatusId: strin
 
 export async function getAvailableLinesForStatusCountryEvent(claimStatusId: string, countryId: string, eventId: string): Promise<{ id: string; name: string; code_letter: string }[]> {
   // Las lineas se filtran por estado + pais (via templates), no por evento
+  void eventId; // param requerido por la API cascading
   const templates = await fetchTemplatesWithLine(claimStatusId);
   const lines = templates
     .filter(t => t.country_id === countryId)

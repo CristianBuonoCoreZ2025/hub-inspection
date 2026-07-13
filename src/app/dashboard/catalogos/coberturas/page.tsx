@@ -276,9 +276,9 @@ export default function CoberturasPage() {
         {canCreateCat && (
           <Button
             onClick={() => { setEditingId(null); resetForm(); setOpen(true); }}
-            className="btn-save btn-sm shrink-0"
+            className="liquid-button ml-auto"
           >
-            <Plus className="mr-2 h-4 w-4" /> Agregar
+            <Plus className="h-3.5 w-3.5" /> Nueva
           </Button>
         )}
       </div>

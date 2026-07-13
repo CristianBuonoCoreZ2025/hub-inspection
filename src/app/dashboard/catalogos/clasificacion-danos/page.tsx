@@ -99,8 +99,8 @@ export default function DamageClassificationPage() {
           </div>
         </div>
         {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); setFormData({"name":"","description":""}); setOpen(true); }} className="btn-create btn-sm shrink-0">
-            <Plus className="mr-2 h-4 w-4" /> Agregar
+          <Button onClick={() => { setEditingId(null); setFormData({"name":"","description":""}); setOpen(true); }} className="liquid-button ml-auto">
+            <Plus className="h-3.5 w-3.5" /> Nueva
           </Button>
         )}
       </div>

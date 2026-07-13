@@ -250,8 +250,8 @@ export default function UsersPage() {
           </div>
         </div>
         {canCreate("users") && (
-          <Button onClick={openCreate} className="btn-create btn-sm shrink-0">
-            <Plus className="mr-2 h-4 w-4" /> Invitar
+          <Button onClick={openCreate} className="liquid-button ml-auto">
+            <Plus className="h-3.5 w-3.5" /> Invitar
           </Button>
         )}
       </div>
