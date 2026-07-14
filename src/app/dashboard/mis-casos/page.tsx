@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  NotebookPen,
+  FilePen,
   FileSearch,
   Navigation,
   ScrollText,
@@ -25,8 +25,8 @@ import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { usePagination } from "@/hooks/use-pagination";
 
-const ROLE_ICONS: Record<ClaimRole, typeof NotebookPen> = {
-  liquidador: NotebookPen,
+const ROLE_ICONS: Record<ClaimRole, typeof FilePen> = {
+  liquidador: FilePen,
   inspector: FileSearch,
   despachador: Navigation,
   auditor: ScrollText,
@@ -149,7 +149,7 @@ function MisCasosContent() {
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(14, 165, 233, 0.08)" }}>
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(37, 99, 235, 1))" }}>
-              <NotebookPen className="h-4 w-4 text-white" />
+              <FilePen className="h-4 w-4 text-white" />
             </div>
           </div>
           <div className="kpi-value">{kpis.inAdjustment}</div>
