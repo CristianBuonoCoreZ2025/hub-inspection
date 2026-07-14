@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   FilePen,
-  Search,
+  FileSearch,
   Navigation,
   ScrollText,
   LogOut,
