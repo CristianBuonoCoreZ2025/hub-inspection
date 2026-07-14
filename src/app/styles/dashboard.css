@@ -10,56 +10,86 @@
     top: 0;
     z-index: 50;
     width: 100%;
-    padding: 4px 8px;
-    margin-bottom: 4px;
+    padding: 6px 12px;
+    margin-bottom: 6px;
   }
 
   .topbar-inner {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    height: 40px;
-    padding: 0 10px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--card) 60%, transparent) 0%,
-      color-mix(in srgb, var(--card) 35%, transparent) 100%
+      color-mix(in srgb, var(--card) 70%, transparent) 0%,
+      color-mix(in srgb, var(--card) 40%, transparent) 100%
     ) !important;
-    backdrop-filter: blur(24px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    backdrop-filter: blur(30px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
     box-shadow:
-      0 4px 20px rgba(0, 0, 0, 0.06),
-      0 1px 0 rgba(255, 255, 255, 0.15) inset !important;
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      0 1px 0 rgba(255, 255, 255, 0.25) inset !important;
     overflow: hidden;
-    transition: box-shadow 0.2s ease !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
+  /* Top sheen / light reflection */
   .topbar-inner::before {
     content: "";
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
     pointer-events: none;
     background: radial-gradient(
-      100% 80% at 0% 0%,
-      rgba(255, 255, 255, 0.1) 0%,
+      120% 80% at 20% 0%,
+      rgba(255, 255, 255, 0.16) 0%,
       transparent 50%
     );
-    border-radius: inherit;
+    border-radius: 16px 16px 0 0;
+  }
+
+  /* Bottom colored glow */
+  .topbar-inner::after {
+    content: "";
+    position: absolute;
+    bottom: -40%;
+    left: 20%;
+    right: 20%;
+    height: 80%;
+    pointer-events: none;
+    background: radial-gradient(
+      100% 60% at 50% 100%,
+      rgba(0, 149, 218, 0.08) 0%,
+      transparent 70%
+    );
+    border-radius: 999px;
   }
 
   .dark .topbar-inner {
-    border-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
     background: linear-gradient(
       135deg,
       color-mix(in srgb, var(--card) 55%, transparent) 0%,
-      color-mix(in srgb, var(--card) 30%, transparent) 100%
+      color-mix(in srgb, var(--card) 25%, transparent) 100%
     ) !important;
     box-shadow:
-      0 4px 20px rgba(0, 0, 0, 0.3),
-      0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
+      0 8px 32px rgba(0, 0, 0, 0.35),
+      0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+  }
+
+  .dark .topbar-inner::before {
+    background: radial-gradient(
+      120% 80% at 20% 0%,
+      rgba(255, 255, 255, 0.08) 0%,
+      transparent 50%
+    );
   }
 
   /* ── Izquierda: Usuario ── */
@@ -151,24 +181,24 @@
     gap: 3px;
   }
 
-  /* ── Chip: burbuja de vidrio ovalada ── */
+  /* ── Chip: burbuja de vidrio premium ── */
   .topbar-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px 6px 6px;
+    padding: 5px 12px 5px 5px;
     border-radius: 999px !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--card) 55%, transparent) 0%,
-      color-mix(in srgb, var(--card) 25%, transparent) 100%
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.04) 100%
     ) !important;
-    backdrop-filter: blur(16px) saturate(170%) !important;
-    -webkit-backdrop-filter: blur(16px) saturate(170%) !important;
+    backdrop-filter: blur(12px) saturate(220%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(220%) !important;
     box-shadow:
-      0 2px 12px rgba(0, 0, 0, 0.06),
-      0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
+      0 2px 8px rgba(0, 0, 0, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.2) inset !important;
     font-size: 11px;
     font-weight: 700;
     color: var(--foreground);
@@ -192,58 +222,59 @@
     pointer-events: none;
     background: radial-gradient(
       120% 80% at 20% 0%,
-      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.18) 0%,
       transparent 60%
     );
     border-radius: 999px 999px 0 0;
   }
 
   .dark .topbar-chip {
-    border-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--card) 40%, transparent) 0%,
-      color-mix(in srgb, var(--card) 15%, transparent) 100%
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.02) 100%
     ) !important;
     box-shadow:
-      0 2px 12px rgba(0, 0, 0, 0.15),
-      0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
-  }
-
-  .topbar-chip:hover {
-    transform: translateY(-2px) scale(1.04) !important;
-    border-color: rgba(255, 255, 255, 0.22) !important;
-    box-shadow:
-      0 8px 24px rgba(0, 0, 0, 0.1),
-      0 1px 0 rgba(255, 255, 255, 0.18) inset,
-      0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
-  }
-
-  .dark .topbar-chip:hover {
-    border-color: rgba(255, 255, 255, 0.12) !important;
-    box-shadow:
-      0 8px 24px rgba(0, 0, 0, 0.25),
+      0 2px 8px rgba(0, 0, 0, 0.15),
       0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
   }
 
-  /* Icono dentro de circulo de vidrio — sutil, liquid glass */
+  .topbar-chip:hover {
+    transform: translateY(-3px) scale(1.06) !important;
+    border-color: rgba(255, 255, 255, 0.32) !important;
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.12),
+      0 1px 0 rgba(255, 255, 255, 0.25) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+  }
+
+  .dark .topbar-chip:hover {
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.3),
+      0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
+  }
+
+  /* Icono dentro de circulo de vidrio — premium */
   .topbar-chip-icon {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    color: color-mix(in srgb, var(--foreground) 65%, transparent);
+    color: var(--foreground);
     flex-shrink: 0;
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--card) 60%, transparent) 0%,
-      color-mix(in srgb, var(--card) 30%, transparent) 100%
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.08) 100%
     );
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     transition: all 0.2s ease;
   }
 
@@ -253,13 +284,12 @@
   }
 
   .topbar-chip:hover .topbar-chip-icon {
-    color: var(--foreground);
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--card) 70%, transparent) 0%,
-      color-mix(in srgb, var(--card) 40%, transparent) 100%
+      rgba(255, 255, 255, 0.28) 0%,
+      rgba(255, 255, 255, 0.12) 100%
     );
-    border-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.28);
   }
 
   .topbar-chip-count {
@@ -856,28 +886,28 @@
    * ═══════════════════════════════════════════════════════════════ */
   .kpi-card {
     position: relative;
-    border-radius: 18px !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
     background: linear-gradient(
       145deg,
-      color-mix(in srgb, var(--card) 60%, transparent) 0%,
-      color-mix(in srgb, var(--card) 35%, transparent) 100%
+      color-mix(in srgb, var(--card) 70%, transparent) 0%,
+      color-mix(in srgb, var(--card) 40%, transparent) 100%
     ) !important;
-    backdrop-filter: blur(24px) saturate(170%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(170%) !important;
+    backdrop-filter: blur(30px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
     box-shadow:
-      0 6px 24px rgba(0, 0, 0, 0.06),
-      0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
-    padding: 16px 18px !important;
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      0 1px 0 rgba(255, 255, 255, 0.18) inset !important;
+    padding: 18px 20px !important;
     overflow: hidden;
-    transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
   .kpi-card:hover {
-    transform: translateY(-2px) scale(1.01) !important;
+    transform: translateY(-3px) scale(1.02) !important;
     box-shadow:
-      0 10px 32px rgba(0, 0, 0, 0.1),
-      0 1px 0 rgba(255, 255, 255, 0.18) inset !important;
+      0 12px 40px rgba(0, 0, 0, 0.12),
+      0 1px 0 rgba(255, 255, 255, 0.25) inset !important;
   }
 
   .kpi-card::before {
@@ -889,35 +919,59 @@
     height: 60%;
     pointer-events: none;
     background: radial-gradient(
-      80% 100% at 50% 0%,
-      var(--kpi-glow, rgba(0, 149, 218, 0.08)) 0%,
-      transparent 70%
+      100% 80% at 50% 0%,
+      rgba(255, 255, 255, 0.12) 0%,
+      transparent 60%
+    );
+    border-radius: inherit;
+  }
+
+  .kpi-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      80% 80% at 100% 100%,
+      var(--kpi-glow, rgba(0, 149, 218, 0.1)) 0%,
+      transparent 60%
     );
     border-radius: inherit;
   }
 
   .dark .kpi-card {
-    border-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
     background: linear-gradient(
       145deg,
-      color-mix(in srgb, var(--card) 55%, transparent) 0%,
+      color-mix(in srgb, var(--card) 60%, transparent) 0%,
       color-mix(in srgb, var(--card) 30%, transparent) 100%
     ) !important;
     box-shadow:
-      0 6px 24px rgba(0, 0, 0, 0.3),
-      0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
+      0 8px 32px rgba(0, 0, 0, 0.35),
+      0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
   }
 
   .kpi-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.08) 100%
+    );
+    color: var(--foreground) !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset;
     flex-shrink: 0;
+  }
+
+  .kpi-icon svg {
+    color: var(--foreground) !important;
   }
 
   .kpi-value {
@@ -1230,30 +1284,32 @@
    * Liquid Glass premium: tabs, card grid, KPIs
    * ═══════════════════════════════════════════════════════════════ */
 
-  /* ── Tabs de filtro/rol — Liquid Glass pills ── */
+  /* ── Tabs de filtro/rol — Liquid Glass pills premium ── */
   .my-casos-tabs {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    padding: 4px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--card) 25%, transparent) 0%,
-      color-mix(in srgb, var(--card) 10%, transparent) 100%
+      color-mix(in srgb, var(--card) 40%, transparent) 0%,
+      color-mix(in srgb, var(--card) 18%, transparent) 100%
     );
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    backdrop-filter: blur(24px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
   }
 
   .dark .my-casos-tabs {
-    border-color: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08) !important;
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--card) 20%, transparent) 0%,
-      color-mix(in srgb, var(--card) 8%, transparent) 100%
+      color-mix(in srgb, var(--card) 30%, transparent) 0%,
+      color-mix(in srgb, var(--card) 12%, transparent) 100%
     );
   }
 
@@ -1262,7 +1318,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 14px;
+    padding: 8px 16px;
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
@@ -1274,14 +1330,20 @@
   }
 
   .my-casos-tab:hover {
-    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    background: rgba(255, 255, 255, 0.08);
     color: var(--foreground);
   }
 
   .my-casos-tab-active {
     color: var(--foreground) !important;
-    background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.08) 100%
+    ) !important;
+    box-shadow:
+      0 2px 12px rgba(0, 0, 0, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.15) inset !important;
   }
 
   .my-casos-tab-icon {
@@ -1293,13 +1355,17 @@
     border-radius: 8px;
     color: var(--muted-foreground);
     transition: all 0.2s ease;
-    background: color-mix(in srgb, var(--muted) 30%, transparent);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .my-casos-tab-active .my-casos-tab-icon {
     color: white !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
@@ -1309,7 +1375,7 @@
     pointer-events: none;
     background: radial-gradient(
       80% 60% at 50% 100%,
-      var(--tab-glow, rgba(0, 149, 218, 0.06)) 0%,
+      var(--tab-glow, rgba(0, 149, 218, 0.08)) 0%,
       transparent 70%
     );
   }

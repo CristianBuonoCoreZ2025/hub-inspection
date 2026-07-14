@@ -137,8 +137,8 @@ function MisCasosContent() {
       <div className="dash-grid" style={{ marginTop: 12 }}>
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: glow }}>
           <div className="flex items-start justify-between mb-3">
-            <div className="kpi-icon" style={{ background: `linear-gradient(135deg, ${glow.replace("0.08", "0.9")}, ${glow.replace("0.08", "1")})` }}>
-              <Activity className="h-4 w-4 text-white" />
+            <div className="kpi-icon">
+              <Activity className="h-4 w-4" />
             </div>
           </div>
           <div className="kpi-value">{kpis.total}</div>
@@ -147,8 +147,8 @@ function MisCasosContent() {
 
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(14, 165, 233, 0.08)" }}>
           <div className="flex items-start justify-between mb-3">
-            <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(37, 99, 235, 1))" }}>
-              <FilePen className="h-4 w-4 text-white" />
+            <div className="kpi-icon">
+              <FilePen className="h-4 w-4" />
             </div>
           </div>
           <div className="kpi-value">{kpis.inAdjustment}</div>
@@ -157,8 +157,8 @@ function MisCasosContent() {
 
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(139, 92, 246, 0.08)" }}>
           <div className="flex items-start justify-between mb-3">
-            <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(124, 58, 237, 1))" }}>
-              <Search className="h-4 w-4 text-white" />
+            <div className="kpi-icon">
+              <Search className="h-4 w-4" />
             </div>
           </div>
           <div className="kpi-value">{kpis.withInspections}</div>
@@ -167,8 +167,8 @@ function MisCasosContent() {
 
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(16, 185, 129, 0.08)" }}>
           <div className="flex items-start justify-between mb-3">
-            <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(13, 148, 136, 1))" }}>
-              <Navigation className="h-4 w-4 text-white" />
+            <div className="kpi-icon">
+              <Navigation className="h-4 w-4" />
             </div>
           </div>
           <div className="kpi-value">{kpis.inDispatch}</div>
