@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
-  ClipboardCheck,
-  FileText,
-  Send,
-  ShieldCheck,
+  Calculator,
+  ScanLine,
+  Truck,
+  Gauge,
   LogOut,
   Loader2,
   Sun,
@@ -206,25 +206,25 @@ export function TopBar() {
         {/* ── Centro: Siniestros (solo iconos + tooltip) ── */}
         <div className="topbar-center">
           <StatChip
-            icon={FileText}
+            icon={Calculator}
             count={s.liquidations}
             label="Liquidaciones"
             href="/dashboard/mis-casos?role=liquidador"
           />
           <StatChip
-            icon={ClipboardCheck}
+            icon={ScanLine}
             count={s.inspections}
             label="Inspecciones"
             href="/dashboard/mis-casos?role=inspector"
           />
           <StatChip
-            icon={Send}
+            icon={Truck}
             count={s.dispatches}
             label="Despachos"
             href="/dashboard/mis-casos?role=despachador"
           />
           <StatChip
-            icon={ShieldCheck}
+            icon={Gauge}
             count={s.audits}
             label="Auditoría"
             href="/dashboard/mis-casos?role=auditor"
