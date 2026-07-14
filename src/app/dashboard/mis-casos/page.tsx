@@ -9,12 +9,11 @@ import {
   FileSearch,
   Navigation,
   ScrollText,
+  Search,
   ArrowRight,
   MapPin,
   Building2,
   Calendar,
-  AlertTriangle,
-  Clock,
   Activity,
 } from "lucide-react";
 
