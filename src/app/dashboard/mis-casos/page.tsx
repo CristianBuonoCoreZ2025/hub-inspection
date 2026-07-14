@@ -6,10 +6,9 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   FilePen,
-  FileSearch,
+  Search,
   Navigation,
   ScrollText,
-  Search,
   ArrowRight,
   MapPin,
   Building2,
@@ -27,7 +26,7 @@ import { usePagination } from "@/hooks/use-pagination";
 
 const ROLE_ICONS: Record<ClaimRole, typeof FilePen> = {
   liquidador: FilePen,
-  inspector: FileSearch,
+  inspector: Search,
   despachador: Navigation,
   auditor: ScrollText,
 };
@@ -159,7 +158,7 @@ function MisCasosContent() {
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(139, 92, 246, 0.08)" }}>
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(124, 58, 237, 1))" }}>
-              <FileSearch className="h-4 w-4 text-white" />
+              <Search className="h-4 w-4 text-white" />
             </div>
           </div>
           <div className="kpi-value">{kpis.withInspections}</div>
@@ -297,7 +296,7 @@ function ClaimCard({ claim: c }: { claim: MyClaim }) {
           )}
           {c.inspection_active_count > 0 && (
             <span className="flex items-center gap-1 text-[10px] text-violet-400 font-medium">
-              <FileSearch className="h-3 w-3" />
+              <Search className="h-3 w-3" />
               {c.inspection_active_count}
             </span>
           )}

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   FilePen,
-  FileSearch,
+  Search,
   Navigation,
   ScrollText,
   LogOut,
@@ -215,7 +215,7 @@ export function TopBar() {
             href="/dashboard/mis-casos?role=liquidador"
           />
           <StatChip
-            icon={FileSearch}
+            icon={Search}
             count={s.inspections}
             label="Inspecciones"
             href="/dashboard/mis-casos?role=inspector"
