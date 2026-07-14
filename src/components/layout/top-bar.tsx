@@ -53,16 +53,19 @@ interface StatChipProps {
   label: string;
   href: string;
   variant?: "default";
+  iconClassName?: string;
 }
 
-function StatChip({ icon: Icon, count, label, href, variant = "default" }: StatChipProps) {
+function StatChip({ icon: Icon, count, label, href, variant = "default", iconClassName }: StatChipProps) {
   return (
     <Link
       href={href}
       className={`topbar-chip topbar-chip-${variant}`}
       title={`${label}: ${count}`}
     >
-      <Icon className="topbar-chip-icon" />
+      <span className="topbar-chip-icon">
+        <Icon className={iconClassName} />
+      </span>
       <span className="topbar-chip-count">{count}</span>
     </Link>
   );
@@ -216,6 +219,7 @@ export function TopBar() {
             count={s.inspections}
             label="Inspecciones"
             href="/dashboard/mis-casos?role=inspector"
+            iconClassName="rotate-90"
           />
           <StatChip
             icon={Navigation}

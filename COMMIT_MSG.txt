@@ -1,35 +1,13 @@
-feat: rediseño premium Liquid Glass de mis-casos y gestiones
+fix: HardHat rotado 90deg + iconos liquid glass sutiles
 
-Rediseña completamente las paginas de listados personales con
-Liquid Glass de primer nivel, dejando atras el look basico de
-tablas.
-
-mis-casos/page.tsx:
-- Header premium con icono gradiente, dash-section-header
-- KPI cards Liquid Glass (total, en liquidacion, con inspecciones,
-  en despacho) con --kpi-glow personalizado por rol
-- Tabs de rol en pill container Liquid Glass con iconos gradiente
-- Glass panel principal con buscador
-- Cards grid (auto-fill minmax(280px, 1fr)) en vez de tabla:
-  cada siniestro es una card con liquidacion, status badge,
-  asegurado, direccion, compania, fecha, inspecciones activas,
-  arrow hover effect
-- Hover: translateY(-3px) scale(1.01) + glow shadow
-
-gestiones/page.tsx:
-- Mismo nivel premium: header gradiente, KPI cards, tabs
-- Cards con gestion, status badge (color segun estado), siniestro
-  link, asegurado, fecha con indicador vencida/alerta
-- Hover effect identico
-
-CSS nuevo (dashboard.css):
-- .my-casos-tabs: container Liquid Glass con blur
-- .my-casos-tab: pill con icono gradiente cuando activo
-- .my-casos-tab-glow: radial gradient glow personalizable
-- .my-casos-grid: auto-fill responsive
-- .my-casos-card: glass card con top light reflection (::before),
-  hover con translateY + scale + glow
-- Responsive: tablet 240px min, mobile 1 columna + tabs scroll
+- HardHat (inspecciones) rotado 90deg para que se vea como casco
+  de lado y no como timbre
+- Iconos del topbar ahora con color sutil (65% foreground) en vez
+  de primary fuerte
+- Circulo del icono con gradient var(--card) + blur(6px) = vidrio
+  sutil, no color fuerte
+- Hover: solo sube opacidad del foreground, sin cambiar a primary
+- Agrega prop iconClassName a StatChip para rotaciones personalizadas
 
 Generated with [Devin](https://devin.ai)
 

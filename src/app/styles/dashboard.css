@@ -226,7 +226,7 @@
       0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
   }
 
-  /* Icono dentro de circulo de vidrio */
+  /* Icono dentro de circulo de vidrio — sutil, liquid glass */
   .topbar-chip-icon {
     width: 26px;
     height: 26px;
@@ -234,25 +234,32 @@
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    color: var(--foreground);
+    color: color-mix(in srgb, var(--foreground) 65%, transparent);
     flex-shrink: 0;
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--primary) 15%, transparent) 0%,
-      color-mix(in srgb, var(--primary) 5%, transparent) 100%
+      color-mix(in srgb, var(--card) 60%, transparent) 0%,
+      color-mix(in srgb, var(--card) 30%, transparent) 100%
     );
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     transition: all 0.2s ease;
   }
 
+  .topbar-chip-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
   .topbar-chip:hover .topbar-chip-icon {
-    color: var(--primary) !important;
+    color: var(--foreground);
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--primary) 25%, transparent) 0%,
-      color-mix(in srgb, var(--primary) 10%, transparent) 100%
+      color-mix(in srgb, var(--card) 70%, transparent) 0%,
+      color-mix(in srgb, var(--card) 40%, transparent) 100%
     );
-    border-color: color-mix(in srgb, var(--primary) 25%, transparent);
+    border-color: rgba(255, 255, 255, 0.18);
   }
 
   .topbar-chip-count {

@@ -159,7 +159,7 @@ function MisCasosContent() {
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(139, 92, 246, 0.08)" }}>
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(124, 58, 237, 1))" }}>
-              <HardHat className="h-4 w-4 text-white" />
+              <HardHat className="h-4 w-4 text-white rotate-90" />
             </div>
           </div>
           <div className="kpi-value">{kpis.withInspections}</div>
@@ -297,7 +297,7 @@ function ClaimCard({ claim: c }: { claim: MyClaim }) {
           )}
           {c.inspection_active_count > 0 && (
             <span className="flex items-center gap-1 text-[10px] text-violet-400 font-medium">
-              <HardHat className="h-3 w-3" />
+              <HardHat className="h-3 w-3 rotate-90" />
               {c.inspection_active_count}
             </span>
           )}
