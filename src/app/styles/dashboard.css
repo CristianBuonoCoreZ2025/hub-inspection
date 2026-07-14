@@ -151,44 +151,115 @@
     gap: 3px;
   }
 
+  /* ── Chip: burbuja de vidrio ovalada ── */
   .topbar-chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    background: color-mix(in srgb, var(--muted) 20%, transparent) !important;
+    gap: 6px;
+    padding: 6px 12px 6px 6px;
+    border-radius: 999px !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 55%, transparent) 0%,
+      color-mix(in srgb, var(--card) 25%, transparent) 100%
+    ) !important;
+    backdrop-filter: blur(16px) saturate(170%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(170%) !important;
+    box-shadow:
+      0 2px 12px rgba(0, 0, 0, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--foreground);
     text-decoration: none;
     white-space: nowrap;
-    transition: all 0.15s ease !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     cursor: pointer;
     flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Light reflection top */
+  .topbar-chip::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    pointer-events: none;
+    background: radial-gradient(
+      120% 80% at 20% 0%,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 60%
+    );
+    border-radius: 999px 999px 0 0;
+  }
+
+  .dark .topbar-chip {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 40%, transparent) 0%,
+      color-mix(in srgb, var(--card) 15%, transparent) 100%
+    ) !important;
+    box-shadow:
+      0 2px 12px rgba(0, 0, 0, 0.15),
+      0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
   }
 
   .topbar-chip:hover {
-    background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
-    border-color: color-mix(in srgb, var(--primary) 25%, transparent) !important;
-    transform: translateY(-1px);
+    transform: translateY(-2px) scale(1.04) !important;
+    border-color: rgba(255, 255, 255, 0.22) !important;
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.1),
+      0 1px 0 rgba(255, 255, 255, 0.18) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
   }
 
+  .dark .topbar-chip:hover {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.25),
+      0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+  }
+
+  /* Icono dentro de circulo de vidrio */
   .topbar-chip-icon {
-    width: 13px;
-    height: 13px;
-    color: var(--muted-foreground);
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: var(--foreground);
     flex-shrink: 0;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--primary) 15%, transparent) 0%,
+      color-mix(in srgb, var(--primary) 5%, transparent) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
   }
 
   .topbar-chip:hover .topbar-chip-icon {
-    color: var(--primary);
+    color: var(--primary) !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--primary) 25%, transparent) 0%,
+      color-mix(in srgb, var(--primary) 10%, transparent) 100%
+    );
+    border-color: color-mix(in srgb, var(--primary) 25%, transparent);
   }
 
   .topbar-chip-count {
     font-weight: 700;
     color: var(--foreground);
+    font-size: 12px;
+    padding-right: 2px;
   }
 
   .topbar-chip-label {
@@ -303,7 +374,11 @@
       display: none;
     }
     .topbar-chip {
-      padding: 3px 6px;
+      padding: 4px 8px 4px 4px;
+    }
+    .topbar-chip-icon {
+      width: 22px;
+      height: 22px;
     }
   }
 
@@ -349,8 +424,12 @@
       gap: 3px;
     }
     .topbar-chip {
-      padding: 2px 5px;
+      padding: 3px 6px 3px 3px;
       gap: 3px;
+    }
+    .topbar-chip-icon {
+      width: 20px;
+      height: 20px;
     }
     .topbar-chip-label {
       display: none;
