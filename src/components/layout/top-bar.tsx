@@ -228,25 +228,25 @@ export function TopBar() {
               icon={FileText}
               count={s.liquidations}
               label="Liquidaciones"
-              href="/dashboard/claims?status=adjustment"
+              href="/dashboard/mis-casos?role=liquidador"
             />
             <StatChip
               icon={ClipboardCheck}
               count={s.inspections}
               label="Inspecciones"
-              href="/dashboard/inspecciones?status=active"
+              href="/dashboard/mis-casos?role=inspector"
             />
             <StatChip
               icon={Send}
               count={s.dispatches}
               label="Despachos"
-              href="/dashboard/claims?status=dispatchment"
+              href="/dashboard/mis-casos?role=despachador"
             />
             <StatChip
               icon={ShieldCheck}
               count={s.audits}
               label="Auditoría"
-              href="/dashboard/claims?status=adjustment&role=auditor"
+              href="/dashboard/mis-casos?role=auditor"
             />
           </StatGroup>
 
