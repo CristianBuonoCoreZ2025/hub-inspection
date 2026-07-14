@@ -8,11 +8,6 @@ import {
   FileText,
   Send,
   ShieldCheck,
-  ListTodo,
-  Eye,
-  CheckCircle,
-  AlertTriangle,
-  Clock,
   LogOut,
   Loader2,
   Sun,
@@ -57,7 +52,7 @@ interface StatChipProps {
   count: number;
   label: string;
   href: string;
-  variant?: "default" | "alert" | "overdue";
+  variant?: "default";
 }
 
 function StatChip({ icon: Icon, count, label, href, variant = "default" }: StatChipProps) {
@@ -65,23 +60,11 @@ function StatChip({ icon: Icon, count, label, href, variant = "default" }: StatC
     <Link
       href={href}
       className={`topbar-chip topbar-chip-${variant}`}
-      title={label}
+      title={`${label}: ${count}`}
     >
       <Icon className="topbar-chip-icon" />
       <span className="topbar-chip-count">{count}</span>
-      <span className="topbar-chip-label">{label}</span>
     </Link>
-  );
-}
-
-function StatGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="topbar-group">
-      <span className="topbar-group-label">{label}</span>
-      <div className="topbar-group-chips">
-        {children}
-      </div>
-    </div>
   );
 }
 
@@ -220,69 +203,32 @@ export function TopBar() {
           </div>
         </div>
 
-        {/* ── Centro: 2 grupos Liquid Glass ── */}
+        {/* ── Centro: Siniestros (solo iconos + tooltip) ── */}
         <div className="topbar-center">
-          <StatGroup label="Siniestros">
-            <StatChip
-              icon={FileText}
-              count={s.liquidations}
-              label="Liquidaciones"
-              href="/dashboard/mis-casos?role=liquidador"
-            />
-            <StatChip
-              icon={ClipboardCheck}
-              count={s.inspections}
-              label="Inspecciones"
-              href="/dashboard/mis-casos?role=inspector"
-            />
-            <StatChip
-              icon={Send}
-              count={s.dispatches}
-              label="Despachos"
-              href="/dashboard/mis-casos?role=despachador"
-            />
-            <StatChip
-              icon={ShieldCheck}
-              count={s.audits}
-              label="Auditoría"
-              href="/dashboard/mis-casos?role=auditor"
-            />
-          </StatGroup>
-
-          <StatGroup label="Gestiones">
-            <StatChip
-              icon={ListTodo}
-              count={s.inProgress}
-              label="En curso"
-              href="/dashboard/gestiones?filter=in-progress"
-            />
-            <StatChip
-              icon={Eye}
-              count={s.reviews}
-              label="Revisiones"
-              href="/dashboard/gestiones?filter=reviews"
-            />
-            <StatChip
-              icon={CheckCircle}
-              count={s.approvals}
-              label="Aprobación"
-              href="/dashboard/gestiones?filter=approvals"
-            />
-            <StatChip
-              icon={AlertTriangle}
-              count={s.alert}
-              label="En alarma"
-              href="/dashboard/gestiones?filter=alert"
-              variant="alert"
-            />
-            <StatChip
-              icon={Clock}
-              count={s.overdue}
-              label="Atrasadas"
-              href="/dashboard/gestiones?filter=overdue"
-              variant="overdue"
-            />
-          </StatGroup>
+          <StatChip
+            icon={FileText}
+            count={s.liquidations}
+            label="Liquidaciones"
+            href="/dashboard/mis-casos?role=liquidador"
+          />
+          <StatChip
+            icon={ClipboardCheck}
+            count={s.inspections}
+            label="Inspecciones"
+            href="/dashboard/mis-casos?role=inspector"
+          />
+          <StatChip
+            icon={Send}
+            count={s.dispatches}
+            label="Despachos"
+            href="/dashboard/mis-casos?role=despachador"
+          />
+          <StatChip
+            icon={ShieldCheck}
+            count={s.audits}
+            label="Auditoría"
+            href="/dashboard/mis-casos?role=auditor"
+          />
         </div>
 
         {/* ── Derecha: Acciones ── */}
