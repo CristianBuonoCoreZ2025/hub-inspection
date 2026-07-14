@@ -10,6 +10,13 @@ import {
   Send,
   ShieldCheck,
   Search,
+  ArrowRight,
+  MapPin,
+  Building2,
+  Calendar,
+  AlertTriangle,
+  Clock,
+  Activity,
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -25,9 +32,23 @@ const ROLE_ICONS: Record<ClaimRole, typeof FileText> = {
   auditor: ShieldCheck,
 };
 
+const ROLE_GRADIENTS: Record<ClaimRole, string> = {
+  liquidador: "from-sky-500 to-blue-600",
+  inspector: "from-violet-500 to-purple-600",
+  despachador: "from-emerald-500 to-teal-600",
+  auditor: "from-amber-500 to-orange-600",
+};
+
+const ROLE_GLOWS: Record<ClaimRole, string> = {
+  liquidador: "rgba(14, 165, 233, 0.08)",
+  inspector: "rgba(139, 92, 246, 0.08)",
+  despachador: "rgba(16, 185, 129, 0.08)",
+  auditor: "rgba(245, 158, 11, 0.08)",
+};
+
 const VALID_ROLES: ClaimRole[] = ["liquidador", "inspector", "despachador", "auditor"];
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 12;
 
 function MisCasosContent() {
   const { profile } = useAuth();
@@ -44,17 +65,18 @@ function MisCasosContent() {
     staleTime: 30000,
   });
 
+  const allClaims = useMemo(() => (Array.isArray(claims) ? claims : []), [claims]);
+
   const filtered = useMemo(() => {
-    const arr = Array.isArray(claims) ? claims : [];
-    if (!search) return arr;
+    if (!search) return allClaims;
     const q = search.toLowerCase();
-    return arr.filter((c) =>
+    return allClaims.filter((c) =>
       [c.claim_number, c.liquidation_number, c.client_reference, c.internal_number, c.insured_name, c.insured_address, c.insurance_company_name]
         .join(" ")
         .toLowerCase()
         .includes(q)
     );
-  }, [claims, search]);
+  }, [allClaims, search]);
 
   const { page, totalPages, paginatedData, total, pageSize, setPage, setPageSize } = usePagination(
     filtered as MyClaim[],
@@ -63,149 +85,226 @@ function MisCasosContent() {
 
   const title = ROLE_TITLE[validRole];
   const Icon = ROLE_ICONS[validRole];
+  const gradient = ROLE_GRADIENTS[validRole];
+  const glow = ROLE_GLOWS[validRole];
+
+  // KPIs
+  const kpis = useMemo(() => {
+    const inAdjustment = allClaims.filter((c) => c.status_code === "adjustment").length;
+    const inDispatch = allClaims.filter((c) => c.status_code === "dispatchment").length;
+    const created = allClaims.filter((c) => c.status_code === "created").length;
+    const withInspections = allClaims.filter((c) => c.inspection_active_count > 0).length;
+    return { total: allClaims.length, inAdjustment, inDispatch, created, withInspections };
+  }, [allClaims]);
 
   return (
     <div className="app-page">
-      <div className="app-page-header">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-sky-500 text-white shadow-sm">
-              <Icon className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="app-page-title">{title}</h1>
-              <p className="app-page-lead">Siniestros asignados a ti, en flujo activo (no cerrados).</p>
-            </div>
-          </div>
+      {/* ── Header premium ── */}
+      <div className="dash-section-header" style={{ marginTop: 0 }}>
+        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br ${gradient} text-white shadow-lg shrink-0`}>
+          <Icon className="h-5 w-5" />
         </div>
+        <div className="flex flex-col min-w-0">
+          <h1 className="app-page-title">{title}</h1>
+          <p className="app-page-lead">Siniestros asignados a ti, en flujo activo.</p>
+        </div>
+        <div className="dash-section-line" />
+        <div className="dash-section-count">{kpis.total} casos</div>
       </div>
 
-      {/* Tabs de rol */}
-      <div className="flex flex-wrap items-center gap-1.5">
+      {/* ── Tabs de rol — Liquid Glass ── */}
+      <div className="my-casos-tabs">
         {VALID_ROLES.map((r) => {
           const TabIcon = ROLE_ICONS[r];
           const isActive = validRole === r;
+          const rGradient = ROLE_GRADIENTS[r];
           return (
             <Link
               key={r}
               href={`/dashboard/mis-casos?role=${r}`}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all ${
-                isActive
-                  ? "bg-primary/15 text-primary border border-primary/30"
-                  : "bg-muted/30 text-muted-foreground border border-transparent hover:bg-muted/50"
-              }`}
+              className={`my-casos-tab ${isActive ? "my-casos-tab-active" : ""}`}
             >
-              <TabIcon className="size-3.5" />
-              {ROLE_TITLE[r].replace("Mis ", "").replace("Mi ", "")}
+              <div className={`my-casos-tab-icon ${isActive ? `bg-linear-to-br ${rGradient}` : ""}`}>
+                <TabIcon className="h-4 w-4" />
+              </div>
+              <span>{ROLE_TITLE[r].replace("Mis ", "").replace("Mi ", "")}</span>
+              {isActive && <div className="my-casos-tab-glow" style={{ ["--tab-glow" as string]: ROLE_GLOWS[r] }} />}
             </Link>
           );
         })}
       </div>
 
-      <div className="app-toolbar">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full sm:w-[240px] shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar siniestro, asegurado, compañía..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="liquid-search"
-            />
+      {/* ── KPI Cards — Liquid Glass ── */}
+      <div className="dash-grid" style={{ marginTop: 12 }}>
+        <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: glow }}>
+          <div className="flex items-start justify-between mb-3">
+            <div className="kpi-icon" style={{ background: `linear-gradient(135deg, ${glow.replace("0.08", "0.9")}, ${glow.replace("0.08", "1")})` }}>
+              <Activity className="h-4 w-4 text-white" />
+            </div>
           </div>
+          <div className="kpi-value">{kpis.total}</div>
+          <div className="kpi-label mt-1">Total casos</div>
+        </div>
+
+        <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(14, 165, 233, 0.08)" }}>
+          <div className="flex items-start justify-between mb-3">
+            <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(37, 99, 235, 1))" }}>
+              <FileText className="h-4 w-4 text-white" />
+            </div>
+          </div>
+          <div className="kpi-value">{kpis.inAdjustment}</div>
+          <div className="kpi-label mt-1">En liquidación</div>
+        </div>
+
+        <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(139, 92, 246, 0.08)" }}>
+          <div className="flex items-start justify-between mb-3">
+            <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(124, 58, 237, 1))" }}>
+              <ClipboardCheck className="h-4 w-4 text-white" />
+            </div>
+          </div>
+          <div className="kpi-value">{kpis.withInspections}</div>
+          <div className="kpi-label mt-1">Con inspecciones activas</div>
+        </div>
+
+        <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(16, 185, 129, 0.08)" }}>
+          <div className="flex items-start justify-between mb-3">
+            <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(13, 148, 136, 1))" }}>
+              <Send className="h-4 w-4 text-white" />
+            </div>
+          </div>
+          <div className="kpi-value">{kpis.inDispatch}</div>
+          <div className="kpi-label mt-1">En despacho</div>
         </div>
       </div>
 
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        total={total}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-      />
+      {/* ── Buscador + Tabla — Glass Panel ── */}
+      <div className="glass-panel dash-col-12" style={{ marginTop: 16, ["--glass-glow" as string]: glow }}>
+        <div className="glass-panel-header">
+          <div className="glass-panel-title">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <span>Buscar en mis casos</span>
+          </div>
+        </div>
+        <div className="glass-panel-body">
+          <div className="relative w-full mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por siniestro, asegurado, compañía, dirección..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="liquid-search h-9"
+            />
+          </div>
 
-      <div className="app-data-table-wrap">
-        <table className="app-data-table">
-          <thead>
-            <tr>
-              <th className="min-w-[100px] sm:w-[120px]">Liquidación</th>
-              <th className="min-w-[100px] sm:w-[120px]">Siniestro</th>
-              <th className="min-w-[120px] sm:w-[180px]">Asegurado</th>
-              <th className="min-w-[100px] sm:w-[140px]">Dirección</th>
-              <th className="min-w-[80px] sm:w-[120px]">Compañía</th>
-              <th className="min-w-[80px] sm:w-[100px]">Estado</th>
-              <th className="min-w-[80px] sm:w-[100px]">Fecha</th>
-              <th className="min-w-[80px] sm:w-[100px] text-right">Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={8} className="text-center text-muted-foreground py-8">
-                  Cargando...
-                </td>
-              </tr>
-            ) : paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="text-center text-muted-foreground py-8">
-                  No hay siniestros asignados como {ROLE_TITLE[validRole].replace("Mis ", "").replace("Mi ", "").toLowerCase()}.
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((c) => <ClaimRow key={c.id} claim={c} />)
-            )}
-          </tbody>
-        </table>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+
+          {/* Cards grid en vez de tabla — mas premium */}
+          {isLoading ? (
+            <div className="text-center text-muted-foreground py-12">
+              <div className="inline-flex items-center gap-2">
+                <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                Cargando...
+              </div>
+            </div>
+          ) : paginatedData.length === 0 ? (
+            <div className="text-center text-muted-foreground py-12">
+              No hay siniestros asignados como {ROLE_TITLE[validRole].replace("Mis ", "").replace("Mi ", "").toLowerCase()}.
+            </div>
+          ) : (
+            <div className="my-casos-grid">
+              {paginatedData.map((c) => (
+                <ClaimCard key={c.id} claim={c} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function ClaimRow({ claim: c }: { claim: MyClaim }) {
+function ClaimCard({ claim: c }: { claim: MyClaim }) {
   const statusColor =
     c.status_code === "adjustment"
-      ? "text-sky-500"
+      ? "text-sky-400"
       : c.status_code === "dispatchment"
-        ? "text-violet-500"
+        ? "text-violet-400"
         : c.status_code === "created"
-          ? "text-amber-500"
+          ? "text-amber-400"
           : "text-muted-foreground";
 
+  const statusBg =
+    c.status_code === "adjustment"
+      ? "bg-sky-500/10 border-sky-500/20"
+      : c.status_code === "dispatchment"
+        ? "bg-violet-500/10 border-violet-500/20"
+        : c.status_code === "created"
+          ? "bg-amber-500/10 border-amber-500/20"
+          : "bg-muted/30 border-border";
+
   return (
-    <tr>
-      <td className="font-medium">{c.liquidation_number || "—"}</td>
-      <td>
-        <Link
-          href={`/dashboard/claims/${c.id}`}
-          className="text-primary hover:underline font-medium"
-        >
-          {c.claim_number || c.client_reference || c.internal_number || "Ver"}
-        </Link>
-      </td>
-      <td className="truncate max-w-[180px]">{c.insured_name || "—"}</td>
-      <td className="text-muted-foreground truncate max-w-[140px]">
-        {c.insured_address ? `${c.insured_address}${c.insured_city ? ", " + c.insured_city : ""}` : "—"}
-      </td>
-      <td className="text-muted-foreground truncate max-w-[120px]">{c.insurance_company_name || "—"}</td>
-      <td>
-        <span className={`font-medium ${statusColor}`}>{c.status_name || "—"}</span>
-      </td>
-      <td className="text-muted-foreground">
-        {c.claim_date
-          ? new Date(c.claim_date).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" })
-          : "—"}
-      </td>
-      <td className="text-right">
-        <Link
-          href={`/dashboard/claims/${c.id}`}
-          className="liquid-button-outline inline-flex items-center justify-center h-7 px-3 text-[10px]"
-        >
-          <FileText className="size-3 mr-1" />
-          Abrir
-        </Link>
-      </td>
-    </tr>
+    <Link href={`/dashboard/claims/${c.id}`} className="my-casos-card">
+      {/* Top: liquidation + status */}
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Liquidación</span>
+          <span className="text-sm font-bold truncate">{c.liquidation_number || "—"}</span>
+        </div>
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusBg} ${statusColor} whitespace-nowrap`}>
+          {c.status_name || "—"}
+        </span>
+      </div>
+
+      {/* Insured */}
+      <div className="flex items-center gap-2 mb-1.5">
+        <div className="flex flex-col min-w-0 flex-1">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Asegurado</span>
+          <span className="text-[13px] font-medium truncate">{c.insured_name || "—"}</span>
+        </div>
+      </div>
+
+      {/* Address */}
+      {c.insured_address && (
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+          <span className="text-[11px] text-muted-foreground truncate">
+            {c.insured_address}{c.insured_city ? `, ${c.insured_city}` : ""}
+          </span>
+        </div>
+      )}
+
+      {/* Bottom: company + date + arrow */}
+      <div className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-white/5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
+          <span className="text-[11px] text-muted-foreground truncate">{c.insurance_company_name || "—"}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {c.claim_date && (
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground">
+                {new Date(c.claim_date).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" })}
+              </span>
+            </div>
+          )}
+          {c.inspection_active_count > 0 && (
+            <span className="flex items-center gap-1 text-[10px] text-violet-400 font-medium">
+              <ClipboardCheck className="h-3 w-3" />
+              {c.inspection_active_count}
+            </span>
+          )}
+          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+        </div>
+      </div>
+    </Link>
   );
 }
 

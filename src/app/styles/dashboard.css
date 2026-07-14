@@ -1138,4 +1138,214 @@
   .recharts-surface {
     overflow: visible;
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * MIS CASOS & GESTIONES — Páginas de listados personales
+   * Liquid Glass premium: tabs, card grid, KPIs
+   * ═══════════════════════════════════════════════════════════════ */
+
+  /* ── Tabs de filtro/rol — Liquid Glass pills ── */
+  .my-casos-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 25%, transparent) 0%,
+      color-mix(in srgb, var(--card) 10%, transparent) 100%
+    );
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  }
+
+  .dark .my-casos-tabs {
+    border-color: rgba(255, 255, 255, 0.04);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 20%, transparent) 0%,
+      color-mix(in srgb, var(--card) 8%, transparent) 100%
+    );
+  }
+
+  .my-casos-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .my-casos-tab:hover {
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    color: var(--foreground);
+  }
+
+  .my-casos-tab-active {
+    color: var(--foreground) !important;
+    background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+  }
+
+  .my-casos-tab-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: var(--muted-foreground);
+    transition: all 0.2s ease;
+    background: color-mix(in srgb, var(--muted) 30%, transparent);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .my-casos-tab-active .my-casos-tab-icon {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .my-casos-tab-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      80% 60% at 50% 100%,
+      var(--tab-glow, rgba(0, 149, 218, 0.06)) 0%,
+      transparent 70%
+    );
+  }
+
+  /* ── Card grid — responsive auto-fill ── */
+  .my-casos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  /* ── Card — Liquid Glass premium ── */
+  .my-casos-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 50%, transparent) 0%,
+      color-mix(in srgb, var(--card) 25%, transparent) 100%
+    );
+    backdrop-filter: blur(20px) saturate(170%);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.1) inset;
+    text-decoration: none;
+    color: var(--foreground);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    overflow: hidden;
+    min-height: 140px;
+  }
+
+  .dark .my-casos-card {
+    border-color: rgba(255, 255, 255, 0.05);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 40%, transparent) 0%,
+      color-mix(in srgb, var(--card) 18%, transparent) 100%
+    );
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.15),
+      0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  }
+
+  /* Top light reflection */
+  .my-casos-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    pointer-events: none;
+    background: radial-gradient(
+      120% 80% at 0% 0%,
+      rgba(255, 255, 255, 0.08) 0%,
+      transparent 50%
+    );
+    border-radius: 16px 16px 0 0;
+  }
+
+  .my-casos-card:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow:
+      0 12px 36px rgba(0, 0, 0, 0.1),
+      0 1px 0 rgba(255, 255, 255, 0.15) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .dark .my-casos-card:hover {
+    box-shadow:
+      0 12px 36px rgba(0, 0, 0, 0.25),
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 1023px) {
+    .my-casos-grid {
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 10px;
+    }
+    .my-casos-tab {
+      padding: 6px 10px;
+      font-size: 11px;
+    }
+    .my-casos-tab-icon {
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .my-casos-grid {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .my-casos-tabs {
+      overflow-x: auto;
+      scrollbar-width: none;
+      flex-wrap: nowrap;
+    }
+    .my-casos-tabs::-webkit-scrollbar {
+      display: none;
+    }
+    .my-casos-tab {
+      flex-shrink: 0;
+      padding: 6px 10px;
+    }
+    .my-casos-tab span {
+      display: none;
+    }
+    .my-casos-tab-icon {
+      width: 28px;
+      height: 28px;
+    }
+  }
 }
