@@ -215,7 +215,7 @@ export function TopBar() {
             href="/dashboard/mis-casos?role=liquidador"
           />
           <StatChip
-            icon={Search}
+            icon={FileSearch}
             count={s.inspections}
             label="Inspecciones"
             href="/dashboard/mis-casos?role=inspector"
