@@ -2,87 +2,55 @@ import { getSupabaseClient } from "@/lib/supabase/db";
 import type { UserRole } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
-// Servicio para la barra superior — conteos rápidos por usuario
-// SIEMPRE filtra por asignacion directa al usuario que hace login,
-// sin importar el rol (internal, adjuster, inspector, etc.).
+// Servicio para la barra superior — 2 agrupaciones:
+//
+// 1. SINIESTROS: claims no cerrados por rol del usuario
+//    - Liquidaciones: soy liquidador (adjuster)
+//    - Inspecciones:  soy inspector
+//    - Despachos:     soy despachador (dispatcher)
+//    - Auditoría:     soy auditor
+//
+// 2. GESTIONES: claim_actions por rol + estado actual
+//    - En curso:   soy emisor, status=todo, no alerta/atraso
+//    - Revisiones: soy revisor, status=issued, no alerta/atraso
+//    - Aprobación: soy aprobador, status=reviewed, no alerta/atraso
+//    - En alarma:  soy responsable actual, en alerta (≤3 dias)
+//    - Atrasadas:  soy responsable actual, vencida
 // ═══════════════════════════════════════════════════════════════
 
 export interface TopbarStats {
-  /** Inspecciones asignadas y activas (scheduled + active) */
-  inspectionsActive: number;
-  /** Liquidaciones asignadas y activas (claims en adjustment) */
-  liquidationsActive: number;
-  /** Gestiones pendientes de revisión */
-  reviewsPending: number;
-  /** Gestiones pendientes de despacho */
-  dispatchesPending: number;
-  /** Total de gestiones asignadas al usuario */
-  gestionsAssigned: number;
-  /** Gestiones en alerta (dentro del período de alerta pero no vencidas) */
-  gestionsAlert: number;
-  /** Gestiones vencidas (past expected_date, no completadas) */
-  gestionsOverdue: number;
+  // Siniestros (claims no cerrados)
+  liquidations: number;
+  inspections: number;
+  dispatches: number;
+  audits: number;
+  // Gestiones (claim_actions en flujo)
+  inProgress: number;
+  reviews: number;
+  approvals: number;
+  alert: number;
+  overdue: number;
 }
 
 const EMPTY: TopbarStats = {
-  inspectionsActive: 0,
-  liquidationsActive: 0,
-  reviewsPending: 0,
-  dispatchesPending: 0,
-  gestionsAssigned: 0,
-  gestionsAlert: 0,
-  gestionsOverdue: 0,
+  liquidations: 0,
+  inspections: 0,
+  dispatches: 0,
+  audits: 0,
+  inProgress: 0,
+  reviews: 0,
+  approvals: 0,
+  alert: 0,
+  overdue: 0,
 };
 
-/**
- * Obtiene todos los conteos para la barra superior en una sola pasada.
- * Todos los roles ven SOLO lo asignado a ellos directamente:
- * - adjuster: claims donde es assigned_adjuster / adjuster / auditor / dispatcher
- * - inspector: claims donde es inspector
- * - assistant: claims donde es assistant
- * - internal: claims donde es assigned_adjuster / adjuster / auditor / dispatcher
- *   (igual que adjuster — ve lo suyo, no el global)
- * - client_operator: claims de su compañía
- */
 export async function getTopbarStats(
   profile: { id: string; role: UserRole; company_id: string | null } | null | undefined
 ): Promise<TopbarStats> {
   if (!profile) return EMPTY;
 
   const supabase = getSupabaseClient();
-  const now = new Date().toISOString();
   const pid = profile.id;
-  const useCompanyFilter = profile.role === "client_operator" && profile.company_id;
-
-  // ── Helper: obtener claim_ids asignados al usuario ──
-  async function getMyClaimIds(): Promise<string[]> {
-    if (useCompanyFilter) {
-      // client_operator: claims de su compañía
-      const { data, error } = await supabase
-        .from("claims")
-        .select("id")
-        .eq("insurance_company_id", profile!.company_id!);
-      if (error) return [];
-      return (data ?? []).map((r: { id: string }) => r.id);
-    }
-
-    // adjuster, internal, inspector, assistant — filtrar por asignación directa
-    let query = supabase.from("claims").select("id");
-    if (profile!.role === "adjuster" || profile!.role === "internal") {
-      query = query.or(
-        `assigned_adjuster_id.eq.${pid},adjuster_id.eq.${pid},auditor_id.eq.${pid},dispatcher_id.eq.${pid}`
-      );
-    } else if (profile!.role === "inspector") {
-      query = query.eq("inspector_id", pid);
-    } else if (profile!.role === "assistant") {
-      query = query.eq("assistant_id", pid);
-    } else {
-      return [];
-    }
-    const { data, error } = await query;
-    if (error) return [];
-    return (data ?? []).map((r: { id: string }) => r.id);
-  }
 
   // ── Helper: obtener status_id por código ──
   async function getStatusId(category: string, code: string): Promise<string | null> {
@@ -97,83 +65,104 @@ export async function getTopbarStats(
   }
 
   try {
-    const [adjustmentStatusId, todoStatusId, issuedStatusId] = await Promise.all([
-      getStatusId("claim_status", "adjustment"),
+    const [closedStatusId, todoStatusId, issuedStatusId, reviewedStatusId] = await Promise.all([
+      getStatusId("claim_status", "closed"),
       getStatusId("action_status", "todo"),
       getStatusId("action_status", "issued"),
+      getStatusId("action_status", "reviewed"),
     ]);
 
-    const myClaimIds = await getMyClaimIds();
+    // ════════════════════════════════════════════════════════════
+    // 1. SINIESTROS — claims no cerrados por rol
+    // ════════════════════════════════════════════════════════════
+    let liquidations = 0;
+    let inspections = 0;
+    let dispatches = 0;
+    let audits = 0;
 
-    // ── 1. Inspecciones activas (solo de los claims asignados al usuario) ──
-    let inspectionsActive = 0;
-    if (profile.role === "inspector") {
-      // Inspector: sessions donde claim.inspector_id = pid
-      const { count } = await supabase
-        .from("inspection_sessions")
-        .select("claim:claims!inner(inspector_id)", { count: "exact", head: true })
-        .eq("claim.inspector_id", pid)
-        .in("status", ["scheduled", "active"]);
-      inspectionsActive = count ?? 0;
-    } else if (myClaimIds.length > 0) {
-      const { count } = await supabase
-        .from("inspection_sessions")
-        .select("*", { count: "exact", head: true })
-        .in("claim_id", myClaimIds)
-        .in("status", ["scheduled", "active"]);
-      inspectionsActive = count ?? 0;
-    }
-
-    // ── 2. Liquidaciones activas (claims en status adjustment, asignados al usuario) ──
-    let liquidationsActive = 0;
-    if (adjustmentStatusId && myClaimIds.length > 0) {
-      const { count } = await supabase
+    // Base query: claims no cerrados, no disabled
+    function buildClaimsQuery() {
+      let q = supabase
         .from("claims")
-        .select("*", { count: "exact", head: true })
-        .eq("status_id", adjustmentStatusId)
-        .eq("disabled", false)
-        .in("id", myClaimIds);
-      liquidationsActive = count ?? 0;
+        .select("id, assigned_adjuster_id, adjuster_id, inspector_id, dispatcher_id, auditor_id, assistant_id, status_id, disabled, insurance_company_id")
+        .eq("disabled", false);
+      if (closedStatusId) {
+        q = q.neq("status_id", closedStatusId);
+      }
+      return q;
     }
 
-    // ── 3-7. Gestiones (claim_actions) asignadas al usuario ──
-    let reviewsPending = 0;
-    let dispatchesPending = 0;
-    let gestionsAssigned = 0;
-    let gestionsAlert = 0;
-    let gestionsOverdue = 0;
+    if (profile.role === "client_operator" && profile.company_id) {
+      // client_operator: claims de su compañía no cerrados
+      const { count } = await buildClaimsQuery().eq("insurance_company_id", profile.company_id!);
+      // Para client_operator mostramos total en liquidations
+      liquidations = count ?? 0;
+    } else {
+      // Todos los demás roles (incluido internal): filtrar por asignación directa
+      const { data: myClaims, error: claimsError } = await buildClaimsQuery()
+        .or(`assigned_adjuster_id.eq.${pid},adjuster_id.eq.${pid},inspector_id.eq.${pid},dispatcher_id.eq.${pid},auditor_id.eq.${pid},assistant_id.eq.${pid}`);
 
-    // Construir query base para claim_actions — filtrar por asignación al usuario
+      if (!claimsError && myClaims) {
+        for (const c of myClaims as Array<{
+          id: string;
+          assigned_adjuster_id: string | null;
+          adjuster_id: string | null;
+          inspector_id: string | null;
+          dispatcher_id: string | null;
+          auditor_id: string | null;
+          assistant_id: string | null;
+        }>) {
+          if (c.assigned_adjuster_id === pid || c.adjuster_id === pid) liquidations++;
+          if (c.inspector_id === pid) inspections++;
+          if (c.dispatcher_id === pid) dispatches++;
+          if (c.auditor_id === pid) audits++;
+        }
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // 2. GESTIONES — claim_actions por rol + estado
+    // ════════════════════════════════════════════════════════════
+    let inProgress = 0;
+    let reviews = 0;
+    let approvals = 0;
+    let alert = 0;
+    let overdue = 0;
+
+    // Query base: claim_actions activas
     let actionsQuery = supabase
       .from("claim_actions")
       .select(
-        "id, issuer_id, reviewer_id, approver_id, dispatcher_id, expected_date, action_status_id, is_active, action_template:action_template(days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve)"
+        "id, issuer_id, reviewer_id, approver_id, dispatcher_id, expected_date, action_status_id, is_active, action_status:lookup_catalog!claim_actions_action_status_id_fkey(id, code)"
       )
       .eq("is_active", true);
 
-    if (profile.role === "adjuster" || profile.role === "internal") {
-      actionsQuery = actionsQuery.or(
-        `issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`
-      );
-    } else if (profile.role === "inspector") {
-      actionsQuery = actionsQuery.eq("issuer_id", pid);
-    } else if (profile.role === "assistant") {
-      actionsQuery = actionsQuery.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid}`);
-    } else if (useCompanyFilter) {
-      // client_operator: filtrar por company_id del claim
+    // Filtro por rol (igual que antes)
+    if (profile.role === "client_operator" && profile.company_id) {
       actionsQuery = supabase
         .from("claim_actions")
         .select(
-          "id, issuer_id, reviewer_id, approver_id, dispatcher_id, expected_date, action_status_id, is_active, claim:claims!inner(insurance_company_id), action_template:action_template(days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve)"
+          "id, issuer_id, reviewer_id, approver_id, dispatcher_id, expected_date, action_status_id, is_active, action_status:lookup_catalog!claim_actions_action_status_id_fkey(id, code), claim:claims!inner(insurance_company_id)"
         )
         .eq("is_active", true)
         .eq("claim.insurance_company_id", profile.company_id!);
+    } else {
+      // adjuster, internal, inspector, assistant — filtrar por asignación
+      if (profile.role === "adjuster" || profile.role === "internal") {
+        actionsQuery = actionsQuery.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
+      } else if (profile.role === "inspector") {
+        actionsQuery = actionsQuery.eq("issuer_id", pid);
+      } else if (profile.role === "assistant") {
+        actionsQuery = actionsQuery.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid}`);
+      }
     }
 
     const { data: actions, error: actionsError } = await actionsQuery;
 
     if (!actionsError && actions) {
-      const allActions = actions as Array<{
+      const nowMs = Date.now();
+
+      for (const action of actions as Array<{
         id: string;
         issuer_id: string | null;
         reviewer_id: string | null;
@@ -181,57 +170,58 @@ export async function getTopbarStats(
         dispatcher_id: string | null;
         expected_date: string | null;
         action_status_id: string | null;
-        action_template: Array<{
-          days_to_issue: number | null;
-          days_to_review: number | null;
-          days_to_approve: number | null;
-          days_to_alert_to_issue: number | null;
-          days_to_alert_to_review: number | null;
-          days_to_alert_to_approve: number | null;
-        }> | { days_to_issue: number | null; days_to_review: number | null; days_to_approve: number | null; days_to_alert_to_issue: number | null; days_to_alert_to_review: number | null; days_to_alert_to_approve: number | null } | null;
-      }>;
+        action_status: { id: string; code: string } | null;
+      }>) {
+        const statusCode = action.action_status?.code ?? null;
+        const expectedMs = action.expected_date ? new Date(action.expected_date).getTime() : null;
+        const daysUntilDue = expectedMs !== null ? (expectedMs - nowMs) / 86400000 : null;
+        const isAlert = daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 3;
+        const isOverdue = daysUntilDue !== null && daysUntilDue < 0;
 
-      gestionsAssigned = allActions.length;
+        // Determinar si el usuario es el responsable actual
+        // status=todo → issuer, status=issued → reviewer, status=reviewed → approver
+        const isCurrentResponsible =
+          (statusCode === "todo" && action.issuer_id === pid) ||
+          (statusCode === "issued" && action.reviewer_id === pid) ||
+          (statusCode === "reviewed" && action.approver_id === pid);
 
-      for (const action of allActions) {
-        const statusId = action.action_status_id;
-        const isPending = statusId === todoStatusId;
-        const isIssued = statusId === issuedStatusId;
-
-        // Revisión pendiente: status = issued y reviewer_id = pid
-        if (isIssued && action.reviewer_id === pid) {
-          reviewsPending++;
+        // En alarma / Atrasadas: soy el responsable actual
+        if (isCurrentResponsible && isOverdue) {
+          overdue++;
+          continue; // no contar también en otro grupo
+        }
+        if (isCurrentResponsible && isAlert) {
+          alert++;
+          continue;
         }
 
-        // Despacho pendiente: status = issued y dispatcher_id = pid
-        if (isIssued && action.dispatcher_id === pid) {
-          dispatchesPending++;
+        // En curso: soy emisor, status=todo, no alerta/atraso
+        if (statusCode === "todo" && action.issuer_id === pid && !isAlert && !isOverdue) {
+          inProgress++;
         }
 
-        // Alerta y vencimiento basado en expected_date
-        if (action.expected_date && isPending) {
-          const expected = new Date(action.expected_date);
-          const expectedMs = expected.getTime();
-          const nowMs = new Date(now).getTime();
-          const daysUntilDue = (expectedMs - nowMs) / 86400000;
+        // Revisiones: soy revisor, status=issued, no alerta/atraso
+        if (statusCode === "issued" && action.reviewer_id === pid && !isAlert && !isOverdue) {
+          reviews++;
+        }
 
-          if (daysUntilDue < 0) {
-            gestionsOverdue++;
-          } else if (daysUntilDue <= 3) {
-            gestionsAlert++;
-          }
+        // Aprobación: soy aprobador, status=reviewed, no alerta/atraso
+        if (statusCode === "reviewed" && action.approver_id === pid && !isAlert && !isOverdue) {
+          approvals++;
         }
       }
     }
 
     return {
-      inspectionsActive,
-      liquidationsActive,
-      reviewsPending,
-      dispatchesPending,
-      gestionsAssigned,
-      gestionsAlert,
-      gestionsOverdue,
+      liquidations,
+      inspections,
+      dispatches,
+      audits,
+      inProgress,
+      reviews,
+      approvals,
+      alert,
+      overdue,
     };
   } catch {
     return EMPTY;

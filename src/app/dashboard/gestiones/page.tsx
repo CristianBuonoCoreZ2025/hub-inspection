@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   ListTodo,
   Eye,
-  Send,
+  CheckCircle,
   AlertTriangle,
   Clock,
   FileText,
@@ -25,11 +25,11 @@ const FILTER_CONFIG: Record<
   { label: string; icon: typeof ListTodo; title: string }
 > = {
   all: { label: "Todas", icon: ListTodo, title: "Mis Gestiones" },
-  pending: { label: "Pendientes", icon: ListTodo, title: "Gestiones Pendientes" },
+  "in-progress": { label: "En curso", icon: ListTodo, title: "Gestiones en Curso" },
   reviews: { label: "Revisiones", icon: Eye, title: "Gestiones en Revisión" },
-  dispatches: { label: "Despachos", icon: Send, title: "Gestiones por Despachar" },
-  alert: { label: "En Alerta", icon: AlertTriangle, title: "Gestiones en Alerta" },
-  overdue: { label: "Vencidas", icon: Clock, title: "Gestiones Vencidas" },
+  approvals: { label: "Aprobación", icon: CheckCircle, title: "Gestiones por Aprobar" },
+  alert: { label: "En alarma", icon: AlertTriangle, title: "Gestiones en Alarma" },
+  overdue: { label: "Atrasadas", icon: Clock, title: "Gestiones Atrasadas" },
 };
 
 const PAGE_SIZE = 20;
@@ -41,7 +41,7 @@ function GestionesContent() {
 
   // Leer filtro desde query param
   const filterParam = (searchParams.get("filter") as GestionFilter) || "all";
-  const validFilter: GestionFilter = ["all", "pending", "reviews", "dispatches", "alert", "overdue"].includes(filterParam)
+  const validFilter: GestionFilter = ["all", "in-progress", "reviews", "approvals", "alert", "overdue"].includes(filterParam)
     ? filterParam
     : "all";
 
@@ -60,10 +60,10 @@ function GestionesContent() {
     return text.includes(search.toLowerCase());
   });
 
-  const { page, totalPages, paginatedData, total, pageSize, setPage, setPageSize } = usePagination({
-    data: filtered,
-    pageSize: PAGE_SIZE,
-  });
+  const { page, totalPages, paginatedData, total, pageSize, setPage, setPageSize } = usePagination(
+    filtered as MyGestion[],
+    PAGE_SIZE
+  );
 
   const config = FILTER_CONFIG[validFilter];
   const Icon = config.icon;

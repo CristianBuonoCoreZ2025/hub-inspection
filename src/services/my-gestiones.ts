@@ -3,7 +3,7 @@ import type { UserRole } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
 // Servicio para listar gestiones (claim_actions) asignadas al usuario
-// SIEMPRE filtra por asignacion directa, igual que topbar-stats.
+// Filtra por rol + estado actual de la acción.
 // ═══════════════════════════════════════════════════════════════
 
 export interface MyGestion {
@@ -26,16 +26,23 @@ export interface MyGestion {
   created_on: string | null;
 }
 
-export type GestionFilter = "all" | "pending" | "reviews" | "dispatches" | "alert" | "overdue";
+export type GestionFilter =
+  | "all"
+  | "in-progress"
+  | "reviews"
+  | "approvals"
+  | "alert"
+  | "overdue";
 
 /**
  * Obtiene las gestiones asignadas al usuario, opcionalmente filtradas.
- * - all: todas las asignadas (activas, no completadas)
- * - pending: status = todo
- * - reviews: status = issued y reviewer_id = pid
- * - dispatches: status = issued y dispatcher_id = pid
- * - alert: expected_date dentro de 3 días, no vencida, status = todo
- * - overdue: expected_date vencida, status = todo
+ *
+ * - all: todas las asignadas en flujo activo
+ * - in-progress: soy emisor, status=todo, no alerta/atraso
+ * - reviews: soy revisor, status=issued, no alerta/atraso
+ * - approvals: soy aprobador, status=reviewed, no alerta/atraso
+ * - alert: soy responsable actual, en alerta (≤3 dias)
+ * - overdue: soy responsable actual, vencida
  */
 export async function getMyGestiones(
   profile: { id: string; role: UserRole; company_id: string | null } | null | undefined,
@@ -45,10 +52,8 @@ export async function getMyGestiones(
 
   const supabase = getSupabaseClient();
   const pid = profile.id;
-  const now = new Date().toISOString();
-  const useCompanyFilter = profile.role === "client_operator" && profile.company_id;
+  const nowMs = Date.now();
 
-  // Construir query base
   const select = `
     id, claim_id, name, code, expected_date, action_status_id, is_active, created_on,
     issuer_id, reviewer_id, approver_id, dispatcher_id,
@@ -64,24 +69,28 @@ export async function getMyGestiones(
     .select(select)
     .eq("is_active", true);
 
-  // Filtro por rol — igual que topbar-stats
-  if (profile.role === "adjuster" || profile.role === "internal") {
+  // Filtro por rol
+  if (profile.role === "client_operator" && profile.company_id) {
+    query = supabase
+      .from("claim_actions")
+      .select(
+        `${select.replace("claim:claims!claim_actions_claim_id_fkey(", "claim:claims!claim_actions_claim_id_fkey(insurance_company_id, ")}, claim:claims!claim_actions_claim_id_fkey(insurance_company_id)`
+      )
+      .eq("is_active", true)
+      .eq("claim.insurance_company_id", profile.company_id!);
+  } else if (profile.role === "adjuster" || profile.role === "internal") {
     query = query.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
   } else if (profile.role === "inspector") {
     query = query.eq("issuer_id", pid);
   } else if (profile.role === "assistant") {
     query = query.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid}`);
-  } else if (useCompanyFilter) {
-    query = query.eq("claim.insurance_company_id", profile.company_id!);
   } else {
     return [];
   }
 
   const { data, error } = await query.order("created_on", { ascending: false });
-
   if (error || !data) return [];
 
-  // Mapear y aplanar
   const rows = data as Array<{
     id: string;
     claim_id: string;
@@ -105,6 +114,7 @@ export async function getMyGestiones(
     } | null;
   }>;
 
+  // Mapear
   let gestiones: MyGestion[] = rows.map((r) => ({
     id: r.id,
     claim_id: r.claim_id,
@@ -125,41 +135,72 @@ export async function getMyGestiones(
     created_on: r.created_on,
   }));
 
-  // Aplicar filtro
-  const nowMs = new Date(now).getTime();
+  // Helper: determinar si el usuario es el responsable actual
+  function isCurrentResponsible(g: MyGestion): boolean {
+    const sc = g.action_status_code;
+    if (sc === "todo" && g.issuer_id === pid) return true;
+    if (sc === "issued" && g.reviewer_id === pid) return true;
+    if (sc === "reviewed" && g.approver_id === pid) return true;
+    return false;
+  }
 
+  // Helper: calcular alerta/atraso
+  function getDaysUntilDue(g: MyGestion): number | null {
+    if (!g.expected_date) return null;
+    return (new Date(g.expected_date).getTime() - nowMs) / 86400000;
+  }
+
+  // Aplicar filtro
   switch (filter) {
-    case "pending":
-      gestiones = gestiones.filter((g) => g.action_status_code === "todo");
+    case "in-progress":
+      gestiones = gestiones.filter((g) => {
+        if (g.action_status_code !== "todo" || g.issuer_id !== pid) return false;
+        const d = getDaysUntilDue(g);
+        return d === null || (d >= 0 && d > 3);
+      });
       break;
+
     case "reviews":
-      gestiones = gestiones.filter(
-        (g) => g.action_status_code === "issued" && g.reviewer_id === pid
-      );
+      gestiones = gestiones.filter((g) => {
+        if (g.action_status_code !== "issued" || g.reviewer_id !== pid) return false;
+        const d = getDaysUntilDue(g);
+        return d === null || (d >= 0 && d > 3);
+      });
       break;
-    case "dispatches":
-      gestiones = gestiones.filter(
-        (g) => g.action_status_code === "issued" && g.dispatcher_id === pid
-      );
+
+    case "approvals":
+      gestiones = gestiones.filter((g) => {
+        if (g.action_status_code !== "reviewed" || g.approver_id !== pid) return false;
+        const d = getDaysUntilDue(g);
+        return d === null || (d >= 0 && d > 3);
+      });
       break;
+
     case "alert":
       gestiones = gestiones.filter((g) => {
-        if (g.action_status_code !== "todo" || !g.expected_date) return false;
-        const daysUntilDue = (new Date(g.expected_date).getTime() - nowMs) / 86400000;
-        return daysUntilDue >= 0 && daysUntilDue <= 3;
+        if (!isCurrentResponsible(g)) return false;
+        const d = getDaysUntilDue(g);
+        return d !== null && d >= 0 && d <= 3;
       });
       break;
+
     case "overdue":
       gestiones = gestiones.filter((g) => {
-        if (g.action_status_code !== "todo" || !g.expected_date) return false;
-        return new Date(g.expected_date).getTime() < nowMs;
+        if (!isCurrentResponsible(g)) return false;
+        const d = getDaysUntilDue(g);
+        return d !== null && d < 0;
       });
       break;
+
     case "all":
     default:
-      // Excluir completadas/despachadas (solo lo en flujo)
+      // Excluir completadas/despachadas/rechazadas (solo en flujo)
       gestiones = gestiones.filter(
-        (g) => g.action_status_code !== "completed" && g.action_status_code !== "dispatched"
+        (g) =>
+          g.action_status_code !== "completed" &&
+          g.action_status_code !== "dispatched" &&
+          g.action_status_code !== "rejected" &&
+          g.action_status_code !== "cancelled"
       );
       break;
   }

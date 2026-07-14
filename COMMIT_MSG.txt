@@ -1,38 +1,40 @@
-feat: chips de topbar navegables + pagina de gestiones
+feat: topbar con 2 grupos (siniestros + gestiones) y logica correcta
 
-Cada chip de la barra superior ahora navega a la vista filtrada
-correspondiente, mostrando solo lo activo en flujo del usuario:
+Reescribe completamente la barra superior con dos agrupaciones
+visuales Liquid Glass y la logica correcta de conteo.
 
-- Inspecciones -> /dashboard/inspecciones?status=active
-- Liquidaciones -> /dashboard/claims?status=adjustment
-- Revisiones -> /dashboard/gestiones?filter=reviews
-- Despachos -> /dashboard/gestiones?filter=dispatches
-- Gestiones -> /dashboard/gestiones?filter=all
-- Alerta -> /dashboard/gestiones?filter=alert
-- Vencidas -> /dashboard/gestiones?filter=overdue
+GRUPO 1: SINIESTROS (claims no cerrados por rol del usuario)
+- Liquidaciones: claims donde soy liquidador (adjuster), no cerrado
+- Inspecciones: claims donde soy inspector, no cerrado
+- Despachos: claims donde soy despachador (dispatcher), no cerrado
+- Auditoria: claims donde soy auditor, no cerrado
 
-Nueva pagina /dashboard/gestiones:
-- Lista las gestiones asignadas al usuario (en flujo activo)
-- Tabs de filtro rapido: Todas, Pendientes, Revisiones, Despachos,
-  En Alerta, Vencidas
-- Busqueda por nombre, codigo, siniestro, asegurado
-- Tabla con: gestion, siniestro (link), asegurado, estado,
-  vencimiento (con color), boton Abrir
-- Link "Abrir" lleva al detalle de la gestion del siniestro
-- Responsive completo
+GRUPO 2: GESTIONES (claim_actions por rol + estado actual)
+- En curso: soy emisor, status=todo, no alerta/atraso
+- Revisiones: soy revisor, status=issued, no alerta/atraso
+- Aprobacion: soy aprobador, status=reviewed, no alerta/atraso
+- En alarma: soy responsable actual (emisor si todo, revisor si
+  issued, aprobador si reviewed), expected_date <= 3 dias
+- Atrasadas: soy responsable actual, expected_date vencida
 
-Nuevos servicios:
-- src/services/my-gestiones.ts: getMyGestiones(profile, filter)
-  Filtra por asignacion directa al usuario (igual que topbar-stats)
-  Filtros: all, pending, reviews, dispatches, alert, overdue
+Logica clave:
+- "Responsable actual" depende del estado de la accion:
+  todo -> emisor, issued -> revisor, reviewed -> aprobador
+- Alerta/atraso solo cuenta si el usuario es el responsable actual
+- Una gestion en alerta o atraso NO se cuenta tambien en en curso,
+  revisiones o aprobacion (continue despues de contar alert/overdue)
 
-Cambios en paginas existentes:
-- claims/page.tsx: lee ?status=adjustment del query param,
-  envuelto en Suspense (requerido por useSearchParams en Next.js 16)
-- inspecciones/page.tsx: lee ?status=active del query param
-
-Nav:
-- Anadido "Gestiones" a mainLinks del sidebar y mobile nav
+Cambios:
+- topbar-stats.ts: nueva interfaz con 9 campos (4 siniestros + 5
+  gestiones), logica de responsable actual
+- top-bar.tsx: 2 grupos visuales con StatGroup (Liquid Glass),
+  nuevos iconos (ShieldCheck para auditoria, CheckCircle para
+  aprobacion)
+- my-gestiones.ts: nuevos filtros (in-progress, reviews, approvals,
+  alert, overdue) con logica de responsable actual
+- gestiones/page.tsx: tabs actualizadas, usePagination con args
+  posicionales
+- dashboard.css: estilos .topbar-group con Liquid Glass, responsive
 
 Generated with [Devin](https://devin.ai)
 

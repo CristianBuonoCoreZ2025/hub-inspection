@@ -6,9 +6,11 @@ import Link from "next/link";
 import {
   ClipboardCheck,
   FileText,
-  Eye,
   Send,
+  ShieldCheck,
   ListTodo,
+  Eye,
+  CheckCircle,
   AlertTriangle,
   Clock,
   LogOut,
@@ -59,9 +61,7 @@ interface StatChipProps {
   alwaysVisible?: boolean;
 }
 
-function StatChip({ icon: Icon, count, label, href, variant = "default", alwaysVisible = false }: StatChipProps) {
-  if (count === 0 && !alwaysVisible) return null;
-
+function StatChip({ icon: Icon, count, label, href, variant = "default", alwaysVisible = true }: StatChipProps) {
   return (
     <Link
       href={href}
@@ -72,6 +72,17 @@ function StatChip({ icon: Icon, count, label, href, variant = "default", alwaysV
       <span className="topbar-chip-count">{count}</span>
       <span className="topbar-chip-label">{label}</span>
     </Link>
+  );
+}
+
+function StatGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="topbar-group">
+      <span className="topbar-group-label">{label}</span>
+      <div className="topbar-group-chips">
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -164,13 +175,15 @@ export function TopBar() {
   });
 
   const s = stats ?? {
-    inspectionsActive: 0,
-    liquidationsActive: 0,
-    reviewsPending: 0,
-    dispatchesPending: 0,
-    gestionsAssigned: 0,
-    gestionsAlert: 0,
-    gestionsOverdue: 0,
+    liquidations: 0,
+    inspections: 0,
+    dispatches: 0,
+    audits: 0,
+    inProgress: 0,
+    reviews: 0,
+    approvals: 0,
+    alert: 0,
+    overdue: 0,
   };
 
   return (
@@ -208,59 +221,69 @@ export function TopBar() {
           </div>
         </div>
 
-        {/* ── Centro: Stats chips (fijos, siempre visibles) ── */}
+        {/* ── Centro: 2 grupos Liquid Glass ── */}
         <div className="topbar-center">
-          <StatChip
-            icon={FileText}
-            count={s.liquidationsActive}
-            label="Liquidaciones"
-            href="/dashboard/claims?status=adjustment"
-            alwaysVisible
-          />
-          <StatChip
-            icon={Eye}
-            count={s.reviewsPending}
-            label="Revisiones"
-            href="/dashboard/gestiones?filter=reviews"
-            alwaysVisible
-          />
-          <StatChip
-            icon={Send}
-            count={s.dispatchesPending}
-            label="Despachos"
-            href="/dashboard/gestiones?filter=dispatches"
-            alwaysVisible
-          />
-          <StatChip
-            icon={ClipboardCheck}
-            count={s.inspectionsActive}
-            label="Inspecciones"
-            href="/dashboard/inspecciones?status=active"
-            alwaysVisible
-          />
-          <StatChip
-            icon={ListTodo}
-            count={s.gestionsAssigned}
-            label="En curso"
-            href="/dashboard/gestiones?filter=all"
-            alwaysVisible
-          />
-          <StatChip
-            icon={AlertTriangle}
-            count={s.gestionsAlert}
-            label="En alarma"
-            href="/dashboard/gestiones?filter=alert"
-            variant="alert"
-            alwaysVisible
-          />
-          <StatChip
-            icon={Clock}
-            count={s.gestionsOverdue}
-            label="Atrasadas"
-            href="/dashboard/gestiones?filter=overdue"
-            variant="overdue"
-            alwaysVisible
-          />
+          <StatGroup label="Siniestros">
+            <StatChip
+              icon={FileText}
+              count={s.liquidations}
+              label="Liquidaciones"
+              href="/dashboard/claims?status=adjustment"
+            />
+            <StatChip
+              icon={ClipboardCheck}
+              count={s.inspections}
+              label="Inspecciones"
+              href="/dashboard/inspecciones?status=active"
+            />
+            <StatChip
+              icon={Send}
+              count={s.dispatches}
+              label="Despachos"
+              href="/dashboard/claims?status=dispatchment"
+            />
+            <StatChip
+              icon={ShieldCheck}
+              count={s.audits}
+              label="Auditoría"
+              href="/dashboard/claims?status=adjustment&role=auditor"
+            />
+          </StatGroup>
+
+          <StatGroup label="Gestiones">
+            <StatChip
+              icon={ListTodo}
+              count={s.inProgress}
+              label="En curso"
+              href="/dashboard/gestiones?filter=in-progress"
+            />
+            <StatChip
+              icon={Eye}
+              count={s.reviews}
+              label="Revisiones"
+              href="/dashboard/gestiones?filter=reviews"
+            />
+            <StatChip
+              icon={CheckCircle}
+              count={s.approvals}
+              label="Aprobación"
+              href="/dashboard/gestiones?filter=approvals"
+            />
+            <StatChip
+              icon={AlertTriangle}
+              count={s.alert}
+              label="En alarma"
+              href="/dashboard/gestiones?filter=alert"
+              variant="alert"
+            />
+            <StatChip
+              icon={Clock}
+              count={s.overdue}
+              label="Atrasadas"
+              href="/dashboard/gestiones?filter=overdue"
+              variant="overdue"
+            />
+          </StatGroup>
         </div>
 
         {/* ── Derecha: Acciones ── */}
