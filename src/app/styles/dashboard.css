@@ -10,85 +10,115 @@
     top: 0;
     z-index: 50;
     width: 100%;
-    padding: 6px 12px;
-    margin-bottom: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
   }
 
+  /* ═══ REAL LIQUID GLASS ═══
+     Casi transparente — se ve el fondo borroso detrás.
+     Borde luminoso especular arriba, sombra interna abajo.
+     NO es una tarjeta con blur, ES cristal de verdad. */
   .topbar-inner {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    height: 44px;
-    padding: 0 12px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 70%, transparent) 0%,
-      color-mix(in srgb, var(--card) 40%, transparent) 100%
-    ) !important;
-    backdrop-filter: blur(30px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
+    height: 48px;
+    padding: 0 14px;
+    border-radius: 18px;
+    /* Borde: brillante arriba (luz especular), mas tenue abajo */
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0.08) 50%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(40px) saturate(180%) brightness(1.08) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.08) !important;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.1),
-      0 1px 0 rgba(255, 255, 255, 0.25) inset !important;
+      /* Sombra exterior — flota */
+      0 12px 40px rgba(0, 0, 0, 0.12),
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      /* Highlight especular superior — el brillo del borde de vidrio */
+      0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
+      /* Sombra interna inferior — profundidad de lente */
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset,
+      0 8px 16px rgba(0, 0, 0, 0.04) inset !important;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
-  /* Top sheen / light reflection */
+  /* Destello especular superior — la línea de luz que recorre el borde */
   .topbar-inner::before {
     content: "";
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
+    left: 10%;
+    right: 10%;
+    height: 1px;
     pointer-events: none;
-    background: radial-gradient(
-      120% 80% at 20% 0%,
-      rgba(255, 255, 255, 0.16) 0%,
-      transparent 50%
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.8) 50%,
+      transparent 100%
     );
-    border-radius: 16px 16px 0 0;
+    border-radius: 999px;
   }
 
-  /* Bottom colored glow */
+  /* Halo de color muy sutil en la base — profundidad */
   .topbar-inner::after {
     content: "";
     position: absolute;
-    bottom: -40%;
-    left: 20%;
-    right: 20%;
-    height: 80%;
+    bottom: -60%;
+    left: 25%;
+    right: 25%;
+    height: 120%;
     pointer-events: none;
     background: radial-gradient(
-      100% 60% at 50% 100%,
-      rgba(0, 149, 218, 0.08) 0%,
+      100% 50% at 50% 100%,
+      rgba(0, 122, 255, 0.06) 0%,
       transparent 70%
     );
     border-radius: 999px;
   }
 
+  /* ── DARK MODE: cristal oscuro pero translúcido ── */
   .dark .topbar-inner {
-    border-color: rgba(255, 255, 255, 0.12) !important;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 55%, transparent) 0%,
-      color-mix(in srgb, var(--card) 25%, transparent) 100%
-    ) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.04) 50%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.35),
-      0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+      0 12px 40px rgba(0, 0, 0, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.2),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.25) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset,
+      0 8px 16px rgba(0, 0, 0, 0.15) inset !important;
   }
 
   .dark .topbar-inner::before {
-    background: radial-gradient(
-      120% 80% at 20% 0%,
-      rgba(255, 255, 255, 0.08) 0%,
-      transparent 50%
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
     );
   }
 
@@ -134,33 +164,50 @@
     overflow: hidden;
   }
 
-  /* Grupo Liquid Glass */
+  /* Grupo Liquid Glass — translúcido real */
   .topbar-group {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 8px 2px 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 30%, transparent) 0%,
-      color-mix(in srgb, var(--card) 15%, transparent) 100%
-    );
-    backdrop-filter: blur(12px) saturate(160%);
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+    padding: 3px 8px 3px 10px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.25) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box;
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    box-shadow:
+      0 2px 12px rgba(0, 0, 0, 0.05),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.3) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.02) inset;
     flex-shrink: 0;
   }
 
   .dark .topbar-group {
-    border-color: rgba(255, 255, 255, 0.06);
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 25%, transparent) 0%,
-      color-mix(in srgb, var(--card) 12%, transparent) 100%
-    );
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 255, 255, 0.005) 100%
+      ) padding-box;
+    box-shadow:
+      0 2px 12px rgba(0, 0, 0, 0.2),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.12) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.1) inset;
   }
 
   .topbar-group-label {
@@ -181,82 +228,126 @@
     gap: 3px;
   }
 
-  /* ── Chip: burbuja de vidrio premium ── */
+  /* ── Chip: burbuja de cristal real — translúcida ── */
   .topbar-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 12px 5px 5px;
+    padding: 5px 14px 5px 5px;
     border-radius: 999px !important;
-    border: 1px solid rgba(255, 255, 255, 0.22) !important;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.12) 0%,
-      rgba(255, 255, 255, 0.04) 100%
-    ) !important;
-    backdrop-filter: blur(12px) saturate(220%) !important;
-    -webkit-backdrop-filter: blur(12px) saturate(220%) !important;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.35) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(20px) saturate(180%) brightness(1.05) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.05) !important;
     box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.06),
-      0 1px 0 rgba(255, 255, 255, 0.2) inset !important;
+      0 4px 16px rgba(0, 0, 0, 0.08),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
     font-size: 11px;
     font-weight: 700;
     color: var(--foreground);
     text-decoration: none;
     white-space: nowrap;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     cursor: pointer;
     flex-shrink: 0;
     position: relative;
     overflow: hidden;
   }
 
-  /* Light reflection top */
+  /* Línea especular superior en el chip */
   .topbar-chip::before {
     content: "";
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
+    left: 15%;
+    right: 15%;
+    height: 1px;
     pointer-events: none;
-    background: radial-gradient(
-      120% 80% at 20% 0%,
-      rgba(255, 255, 255, 0.18) 0%,
-      transparent 60%
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      transparent 100%
     );
-    border-radius: 999px 999px 0 0;
+    border-radius: 999px;
   }
 
   .dark .topbar-chip {
-    border-color: rgba(255, 255, 255, 0.1) !important;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.08) 0%,
-      rgba(255, 255, 255, 0.02) 100%
-    ) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
     box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.15),
-      0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+      0 4px 16px rgba(0, 0, 0, 0.25),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .dark .topbar-chip::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
   }
 
   .topbar-chip:hover {
-    transform: translateY(-3px) scale(1.06) !important;
-    border-color: rgba(255, 255, 255, 0.32) !important;
+    transform: translateY(-2px) scale(1.05) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.45) 0%,
+        rgba(255, 255, 255, 0.08) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) padding-box !important;
     box-shadow:
-      0 10px 28px rgba(0, 0, 0, 0.12),
-      0 1px 0 rgba(255, 255, 255, 0.25) inset,
-      0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+      0 12px 32px rgba(0, 0, 0, 0.15),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.7) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
   }
 
   .dark .topbar-chip:hover {
-    border-color: rgba(255, 255, 255, 0.18) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.18) 0%,
+        rgba(255, 255, 255, 0.04) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
     box-shadow:
-      0 10px 28px rgba(0, 0, 0, 0.3),
-      0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
+      0 12px 32px rgba(0, 0, 0, 0.4),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.3) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
   }
 
-  /* Icono dentro de circulo de vidrio — premium */
+  /* Icono dentro de circulo de cristal — translúcido */
   .topbar-chip-icon {
     width: 28px;
     height: 28px;
@@ -267,14 +358,28 @@
     color: var(--foreground);
     flex-shrink: 0;
     background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.18) 0%,
-      rgba(255, 255, 255, 0.08) 100%
+      180deg,
+      rgba(255, 255, 255, 0.3) 0%,
+      rgba(255, 255, 255, 0.05) 100%
     );
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid transparent;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.4) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset;
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
     transition: all 0.2s ease;
   }
 
@@ -284,12 +389,17 @@
   }
 
   .topbar-chip:hover .topbar-chip-icon {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.28) 0%,
-      rgba(255, 255, 255, 0.12) 100%
-    );
-    border-color: rgba(255, 255, 255, 0.28);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0.08) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) padding-box;
   }
 
   .topbar-chip-count {
@@ -774,81 +884,115 @@
     border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent) !important;
   }
 
-  /* Panel glass base — cada card del dashboard */
+  /* Panel glass base — cristal translúcido real */
   .glass-panel {
     position: relative;
     border-radius: 20px !important;
-    border: 1px solid rgba(255, 255, 255, 0.18) !important;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 55%, transparent) 0%,
-      color-mix(in srgb, var(--card) 30%, transparent) 100%
-    ) !important;
-    backdrop-filter: blur(28px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.4) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(40px) saturate(180%) brightness(1.05) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.05) !important;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.08),
-      0 1px 0 rgba(255, 255, 255, 0.15) inset,
-      0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
+      0 12px 40px rgba(0, 0, 0, 0.1),
+      0 4px 12px rgba(0, 0, 0, 0.05),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset,
+      0 8px 16px rgba(0, 0, 0, 0.03) inset !important;
     overflow: hidden;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
   .glass-panel:hover {
-    transform: translateY(-2px) !important;
+    transform: translateY(-3px) !important;
     box-shadow:
-      0 12px 40px rgba(0, 0, 0, 0.12),
-      0 1px 0 rgba(255, 255, 255, 0.2) inset,
-      0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+      0 16px 48px rgba(0, 0, 0, 0.15),
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
   }
 
-  /* Brillo superior — simula luz reflejando en el glass */
+  /* Línea especular superior — destello de luz en el borde del cristal */
   .glass-panel::before {
     content: "";
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
     pointer-events: none;
-    background: radial-gradient(
-      120% 80% at 0% 0%,
-      rgba(255, 255, 255, 0.12) 0%,
-      transparent 50%
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      transparent 100%
     );
-    border-radius: inherit;
+    border-radius: 999px;
+    z-index: 2;
   }
 
-  /* Brillo inferior — halo de color sutil */
+  /* Halo de color inferior — profundidad */
   .glass-panel::after {
     content: "";
     position: absolute;
-    inset: 0;
+    bottom: -50%;
+    left: 20%;
+    right: 20%;
+    height: 100%;
     pointer-events: none;
     background: radial-gradient(
-      100% 60% at 100% 100%,
-      var(--glass-glow, rgba(0, 149, 218, 0.06)) 0%,
-      transparent 60%
+      100% 50% at 50% 100%,
+      var(--glass-glow, rgba(0, 149, 218, 0.08)) 0%,
+      transparent 70%
     );
-    border-radius: inherit;
+    border-radius: 999px;
   }
 
   .dark .glass-panel {
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 50%, transparent) 0%,
-      color-mix(in srgb, var(--card) 25%, transparent) 100%
-    ) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.35),
-      0 1px 0 rgba(255, 255, 255, 0.06) inset,
-      0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+      0 12px 40px rgba(0, 0, 0, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.2),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset,
+      0 8px 16px rgba(0, 0, 0, 0.1) inset !important;
+  }
+
+  .dark .glass-panel::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
   }
 
   .dark .glass-panel:hover {
     box-shadow:
-      0 12px 40px rgba(0, 0, 0, 0.45),
-      0 1px 0 rgba(255, 255, 255, 0.08) inset,
-      0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
+      0 16px 48px rgba(0, 0, 0, 0.5),
+      0 4px 12px rgba(0, 0, 0, 0.25),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.25) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
   }
 
   /* Header del panel glass */
@@ -887,17 +1031,25 @@
   .kpi-card {
     position: relative;
     border-radius: 20px !important;
-    border: 1px solid rgba(255, 255, 255, 0.22) !important;
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--card) 70%, transparent) 0%,
-      color-mix(in srgb, var(--card) 40%, transparent) 100%
-    ) !important;
-    backdrop-filter: blur(30px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.4) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(40px) saturate(180%) brightness(1.05) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.05) !important;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.08),
-      0 1px 0 rgba(255, 255, 255, 0.18) inset !important;
+      0 12px 40px rgba(0, 0, 0, 0.1),
+      0 4px 12px rgba(0, 0, 0, 0.05),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
     padding: 18px 20px !important;
     overflow: hidden;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -906,49 +1058,74 @@
   .kpi-card:hover {
     transform: translateY(-3px) scale(1.02) !important;
     box-shadow:
-      0 12px 40px rgba(0, 0, 0, 0.12),
-      0 1px 0 rgba(255, 255, 255, 0.25) inset !important;
+      0 16px 48px rgba(0, 0, 0, 0.15),
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
   }
 
+  /* Línea especular superior */
   .kpi-card::before {
     content: "";
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    height: 60%;
+    left: 10%;
+    right: 10%;
+    height: 1px;
     pointer-events: none;
-    background: radial-gradient(
-      100% 80% at 50% 0%,
-      rgba(255, 255, 255, 0.12) 0%,
-      transparent 60%
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      transparent 100%
     );
-    border-radius: inherit;
+    border-radius: 999px;
+    z-index: 2;
   }
 
+  /* Halo de color inferior */
   .kpi-card::after {
     content: "";
     position: absolute;
-    inset: 0;
+    bottom: -50%;
+    left: 20%;
+    right: 20%;
+    height: 100%;
     pointer-events: none;
     background: radial-gradient(
-      80% 80% at 100% 100%,
+      100% 50% at 50% 100%,
       var(--kpi-glow, rgba(0, 149, 218, 0.1)) 0%,
-      transparent 60%
+      transparent 70%
     );
-    border-radius: inherit;
+    border-radius: 999px;
   }
 
   .dark .kpi-card {
-    border-color: rgba(255, 255, 255, 0.1) !important;
-    background: linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--card) 60%, transparent) 0%,
-      color-mix(in srgb, var(--card) 30%, transparent) 100%
-    ) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) border-box,
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.35),
-      0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+      0 12px 40px rgba(0, 0, 0, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.2),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .dark .kpi-card::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
   }
 
   .kpi-icon {
@@ -958,15 +1135,25 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.18) 0%,
-      rgba(255, 255, 255, 0.08) 100%
-    );
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.4) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box !important;
     color: var(--foreground) !important;
-    backdrop-filter: blur(12px) !important;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset;
+    backdrop-filter: blur(16px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
     flex-shrink: 0;
   }
 
@@ -1284,33 +1471,49 @@
    * Liquid Glass premium: tabs, card grid, KPIs
    * ═══════════════════════════════════════════════════════════════ */
 
-  /* ── Tabs de filtro/rol — Liquid Glass pills premium ── */
+  /* ── Tabs de filtro/rol — cristal translúcido real ── */
   .my-casos-tabs {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
     padding: 6px;
     border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 40%, transparent) 0%,
-      color-mix(in srgb, var(--card) 18%, transparent) 100%
-    );
-    backdrop-filter: blur(24px) saturate(190%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.3) 0%,
+        rgba(255, 255, 255, 0.04) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(32px) saturate(180%) brightness(1.05) !important;
+    -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(1.05) !important;
     box-shadow:
-      0 4px 20px rgba(0, 0, 0, 0.06),
-      0 1px 0 rgba(255, 255, 255, 0.12) inset !important;
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.4) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
   }
 
   .dark .my-casos-tabs {
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 30%, transparent) 0%,
-      color-mix(in srgb, var(--card) 12%, transparent) 100%
-    );
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 255, 255, 0.005) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.15) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.1) inset !important;
   }
 
   .my-casos-tab {
@@ -1330,20 +1533,27 @@
   }
 
   .my-casos-tab:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.1);
     color: var(--foreground);
   }
 
   .my-casos-tab-active {
     color: var(--foreground) !important;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.18) 0%,
-      rgba(255, 255, 255, 0.08) 100%
-    ) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.35) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box !important;
     box-shadow:
-      0 2px 12px rgba(0, 0, 0, 0.06),
-      0 1px 0 rgba(255, 255, 255, 0.15) inset !important;
+      0 4px 16px rgba(0, 0, 0, 0.08),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
   }
 
   .my-casos-tab-icon {
@@ -1388,24 +1598,31 @@
     margin-top: 12px;
   }
 
-  /* ── Card — Liquid Glass premium ── */
+  /* ── Card — cristal translúcido real ── */
   .my-casos-card {
     position: relative;
     display: flex;
     flex-direction: column;
     padding: 14px;
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 50%, transparent) 0%,
-      color-mix(in srgb, var(--card) 25%, transparent) 100%
-    );
-    backdrop-filter: blur(20px) saturate(170%);
-    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    border: 1px solid transparent;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.3) 0%,
+        rgba(255, 255, 255, 0.04) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box;
+    backdrop-filter: blur(28px) saturate(180%) brightness(1.05);
+    -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.05);
     box-shadow:
-      0 4px 20px rgba(0, 0, 0, 0.06),
-      0 1px 0 rgba(255, 255, 255, 0.1) inset;
+      0 8px 28px rgba(0, 0, 0, 0.08),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.4) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset;
     text-decoration: none;
     color: var(--foreground);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1415,38 +1632,48 @@
   }
 
   .dark .my-casos-card {
-    border-color: rgba(255, 255, 255, 0.05);
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 40%, transparent) 0%,
-      color-mix(in srgb, var(--card) 18%, transparent) 100%
-    );
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 255, 255, 0.005) 100%
+      ) padding-box;
     box-shadow:
-      0 4px 20px rgba(0, 0, 0, 0.15),
-      0 1px 0 rgba(255, 255, 255, 0.04) inset;
+      0 8px 28px rgba(0, 0, 0, 0.25),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.15) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.1) inset;
   }
 
-  /* Top light reflection */
+  /* Línea especular superior */
   .my-casos-card::before {
     content: "";
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
+    left: 10%;
+    right: 10%;
+    height: 1px;
     pointer-events: none;
-    background: radial-gradient(
-      120% 80% at 0% 0%,
-      rgba(255, 255, 255, 0.08) 0%,
-      transparent 50%
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 50%,
+      transparent 100%
     );
-    border-radius: 16px 16px 0 0;
+    border-radius: 999px;
+    z-index: 2;
   }
 
   .my-casos-card:hover {
     transform: translateY(-3px) scale(1.01);
     box-shadow:
-      0 12px 36px rgba(0, 0, 0, 0.1),
+      0 16px 44px rgba(0, 0, 0, 0.12),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset;
       0 1px 0 rgba(255, 255, 255, 0.15) inset,
       0 0 0 1px rgba(255, 255, 255, 0.08) inset;
     border-color: rgba(255, 255, 255, 0.15);

@@ -147,6 +147,19 @@
     font-size: 0.875rem;
     line-height: 1.5;
     letter-spacing: -0.01em;
+    /* Mesh gradient sutil — para que el Liquid Glass se vea de verdad */
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(0, 122, 255, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(175, 82, 222, 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse 70% 60% at 50% 100%, rgba(255, 159, 10, 0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+  .dark body {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(0, 122, 255, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(175, 82, 222, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse 70% 60% at 50% 100%, rgba(255, 159, 10, 0.06) 0%, transparent 50%);
   }
   html {
     @apply font-sans;
