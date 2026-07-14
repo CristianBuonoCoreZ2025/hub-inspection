@@ -52,7 +52,7 @@ function GestionesContent() {
     staleTime: 30000,
   });
 
-  const filtered = (gestiones ?? []).filter((g) => {
+  const filtered = (Array.isArray(gestiones) ? gestiones : []).filter((g) => {
     if (!search) return true;
     const text = [g.name, g.code, g.claim_number, g.liquidation_number, g.client_reference, g.insured_name]
       .join(" ")

@@ -16,7 +16,7 @@ export function usePagination<T>(data: T[] | undefined | null, pageSize?: number
   }, [page, totalPages]);
 
   const paginatedData = useMemo(() => {
-    if (!data) return [];
+    if (!data || !Array.isArray(data)) return [];
     const start = (page - 1) * currentPageSize;
     return data.slice(start, start + currentPageSize);
   }, [data, page, currentPageSize]);
