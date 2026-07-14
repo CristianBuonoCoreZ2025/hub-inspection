@@ -58,10 +58,9 @@ interface StatChipProps {
   label: string;
   href: string;
   variant?: "default" | "alert" | "overdue";
-  alwaysVisible?: boolean;
 }
 
-function StatChip({ icon: Icon, count, label, href, variant = "default", alwaysVisible = true }: StatChipProps) {
+function StatChip({ icon: Icon, count, label, href, variant = "default" }: StatChipProps) {
   return (
     <Link
       href={href}
