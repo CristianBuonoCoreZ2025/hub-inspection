@@ -5,10 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  Receipt,
-  ScanSearch,
-  PackageCheck,
-  BadgeCheck,
+  Scale,
+  HardHat,
+  Navigation,
+  ScrollText,
   Search,
   ArrowRight,
   MapPin,
@@ -25,11 +25,11 @@ import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { usePagination } from "@/hooks/use-pagination";
 
-const ROLE_ICONS: Record<ClaimRole, typeof Receipt> = {
-  liquidador: Receipt,
-  inspector: ScanSearch,
-  despachador: PackageCheck,
-  auditor: BadgeCheck,
+const ROLE_ICONS: Record<ClaimRole, typeof Scale> = {
+  liquidador: Scale,
+  inspector: HardHat,
+  despachador: Navigation,
+  auditor: ScrollText,
 };
 
 const ROLE_GRADIENTS: Record<ClaimRole, string> = {
@@ -149,7 +149,7 @@ function MisCasosContent() {
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(14, 165, 233, 0.08)" }}>
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(37, 99, 235, 1))" }}>
-              <Receipt className="h-4 w-4 text-white" />
+              <Scale className="h-4 w-4 text-white" />
             </div>
           </div>
           <div className="kpi-value">{kpis.inAdjustment}</div>
@@ -159,7 +159,7 @@ function MisCasosContent() {
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(139, 92, 246, 0.08)" }}>
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(124, 58, 237, 1))" }}>
-              <ScanSearch className="h-4 w-4 text-white" />
+              <HardHat className="h-4 w-4 text-white" />
             </div>
           </div>
           <div className="kpi-value">{kpis.withInspections}</div>
@@ -169,7 +169,7 @@ function MisCasosContent() {
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(16, 185, 129, 0.08)" }}>
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(13, 148, 136, 1))" }}>
-              <PackageCheck className="h-4 w-4 text-white" />
+              <Navigation className="h-4 w-4 text-white" />
             </div>
           </div>
           <div className="kpi-value">{kpis.inDispatch}</div>
@@ -297,7 +297,7 @@ function ClaimCard({ claim: c }: { claim: MyClaim }) {
           )}
           {c.inspection_active_count > 0 && (
             <span className="flex items-center gap-1 text-[10px] text-violet-400 font-medium">
-              <ScanSearch className="h-3 w-3" />
+              <HardHat className="h-3 w-3" />
               {c.inspection_active_count}
             </span>
           )}
