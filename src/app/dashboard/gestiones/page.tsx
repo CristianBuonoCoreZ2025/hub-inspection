@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -168,16 +168,16 @@ function GestionesContent() {
 }
 
 function GestionRow({ gestion: g }: { gestion: MyGestion }) {
-  const nowMs = Date.now();
-  const isOverdue =
-    g.action_status_code === "todo" &&
-    g.expected_date &&
-    new Date(g.expected_date).getTime() < nowMs;
-  const isAlert =
-    g.action_status_code === "todo" &&
-    g.expected_date &&
-    !isOverdue &&
-    (new Date(g.expected_date).getTime() - nowMs) / 86400000 <= 3;
+  const { isOverdue, isAlert } = useMemo(() => {
+    if (!g.expected_date) return { isOverdue: false, isAlert: false };
+    const now = new Date().getTime();
+    const expected = new Date(g.expected_date).getTime();
+    const daysUntilDue = (expected - now) / 86400000;
+    return {
+      isOverdue: daysUntilDue < 0,
+      isAlert: daysUntilDue >= 0 && daysUntilDue <= 3,
+    };
+  }, [g.expected_date]);
 
   const statusColor =
     g.action_status_code === "todo"
