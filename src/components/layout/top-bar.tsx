@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
-  FilePen,
-  HardHat,
+  NotebookPen,
+  FileSearch,
   Navigation,
   ScrollText,
   LogOut,
@@ -209,17 +209,16 @@ export function TopBar() {
         {/* ── Centro: Siniestros (solo iconos + tooltip) ── */}
         <div className="topbar-center">
           <StatChip
-            icon={FilePen}
+            icon={NotebookPen}
             count={s.liquidations}
             label="Liquidaciones"
             href="/dashboard/mis-casos?role=liquidador"
           />
           <StatChip
-            icon={HardHat}
+            icon={FileSearch}
             count={s.inspections}
             label="Inspecciones"
             href="/dashboard/mis-casos?role=inspector"
-            iconClassName="rotate-90"
           />
           <StatChip
             icon={Navigation}
