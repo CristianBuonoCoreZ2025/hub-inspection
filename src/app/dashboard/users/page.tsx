@@ -164,8 +164,9 @@ export default function UsersPage() {
   const addSecRoleMut = useMutation({
     mutationFn: ({ profileId, role, companyId }: { profileId: string; role: SecondaryRole; companyId?: string }) =>
       addSecondaryRole(profileId, role, companyId),
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Rol secundario agregado");
+      setSecondaryRoles((prev) => [...prev, data]);
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setNewSecRole("");
       setNewSecCompany("");
@@ -175,8 +176,9 @@ export default function UsersPage() {
 
   const removeSecRoleMut = useMutation({
     mutationFn: (id: string) => removeSecondaryRole(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       toast.success("Rol secundario eliminado");
+      setSecondaryRoles((prev) => prev.filter((sr) => sr.id !== deletedId));
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (err: Error) => toast.error(err.message),

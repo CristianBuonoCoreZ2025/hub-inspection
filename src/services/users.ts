@@ -51,7 +51,7 @@ export async function addSecondaryRole(profileId: string, role: SecondaryRole, c
     profile_id: profileId,
     role,
     company_id: companyId || null,
-  }, "id, profile_id, role, company_id, created_at, updated_at");
+  }, "id, profile_id, role, company_id, created_at, updated_at, company:companies!user_secondary_roles_company_id_fkey(id, name)");
 }
 
 export async function removeSecondaryRole(id: string): Promise<void> {
