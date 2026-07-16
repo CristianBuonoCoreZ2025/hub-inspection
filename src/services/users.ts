@@ -24,25 +24,25 @@ export async function getUserById(id: string) {
 export async function getUsersByRoleForCompany(
   role: string,
   companyId?: string
-): Promise<{ id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" }[]> {
+): Promise<{ id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" | "internal" }[]> {
   const { data, error } = await getSupabaseClient().rpc("get_users_by_role_for_company", {
     p_role: role,
     p_company_id: companyId || null,
   });
   if (error) throw new Error(`get_users_by_role_for_company: ${error.message}`);
-  return (data || []) as { id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" }[];
+  return (data || []) as { id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" | "internal" }[];
 }
 
 export async function getUsersByRolesForCompany(
   roles: string[],
   companyId?: string
-): Promise<{ id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" }[]> {
+): Promise<{ id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" | "internal" }[]> {
   const { data, error } = await getSupabaseClient().rpc("get_users_by_roles_for_company", {
     p_roles: roles,
     p_company_id: companyId || null,
   });
   if (error) throw new Error(`get_users_by_roles_for_company: ${error.message}`);
-  return (data || []) as { id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" }[];
+  return (data || []) as { id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" | "internal" }[];
 }
 
 // ═══ Gestionar perfiles secundarios ═══

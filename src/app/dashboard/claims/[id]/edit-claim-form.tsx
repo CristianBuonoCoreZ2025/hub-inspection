@@ -295,7 +295,7 @@ function EditSelect<T extends FieldValues = FieldValues>({
   name: string;
   placeholder: string;
   clearable?: boolean;
-  items: { value: string; label: string }[];
+  items: { value: string; label: string; isInternal?: boolean }[];
   disabled?: boolean;
   onValueChange?: (value: string) => void;
 }) {
@@ -313,8 +313,13 @@ function EditSelect<T extends FieldValues = FieldValues>({
         items={items}
       >
         {items.map((item) => (
-          <SelectItem key={item.value} value={item.value}>
+          <SelectItem
+            key={item.value}
+            value={item.value}
+            className={item.isInternal ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+          >
             {item.label}
+            {item.isInternal && <span className="text-[9px] text-amber-600 ml-1">· Interno</span>}
           </SelectItem>
         ))}
       </FormSelect>
@@ -763,8 +768,8 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
     queryFn: () => getUsersByRoleForCompany("dispatcher", claimCompanyId),
   });
 
-  const toItems = (users?: { id: string; full_name: string; email: string }[]) =>
-    (users || []).map((u) => ({ value: u.id, label: u.full_name || u.email || "—" }));
+  const toItems = (users?: { id: string; full_name: string; email: string; source?: string }[]) =>
+    (users || []).map((u) => ({ value: u.id, label: u.full_name || u.email || "—", isInternal: u.source === "internal" }));
 
   // ──────────────────────────────────────────────────────────────
   // Watched values

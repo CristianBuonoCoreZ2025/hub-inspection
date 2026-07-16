@@ -24,6 +24,7 @@ import {
 import { getPolicyCoveragesByPolicyId } from "@/services/policies";
 import { getClaimById, getClaimParticipants } from "@/services/claims";
 import { getUsersByRoles, updateClaimAction } from "@/services/claim-actions";
+import { getUsersByRoleForCompany } from "@/services/users";
 import { getInspectionSessions, createInspectionSession } from "@/services/inspections";
 import { getCoverageCatalog } from "@/services/coverage-catalog";
 import { useAuth } from "@/hooks/use-auth";
@@ -591,8 +592,14 @@ function LevelCard({
   const [showRejectBox, setShowRejectBox] = useState(false);
   const [rejectComment, setRejectComment] = useState("");
   const { data: candidates } = useQuery({
-    queryKey: ["users-by-roles", level.roles],
-    queryFn: () => getUsersByRoles(level.roles),
+    queryKey: ["users-by-roles", level.roles, claimId],
+    queryFn: async () => {
+      const { getClaimById } = await import("@/services/claims");
+      const claim = await getClaimById(claimId);
+      const companyId = claim?.company_id;
+      const { getUsersByRolesForCompany } = await import("@/services/users");
+      return getUsersByRolesForCompany(level.roles, companyId);
+    },
     enabled: level.roles.length > 0,
   });
 
@@ -647,14 +654,14 @@ function LevelCard({
 
   // Lista fusionada: usuarios por rol + holders del claim + responsable actual (sin duplicados)
   const allCandidates = useMemo(() => {
-    const map = new Map<string, { id: string; full_name: string; email: string; role: string }>();
+    const map = new Map<string, { id: string; full_name: string; email: string; role: string; source?: string }>();
     for (const c of (candidates || [])) map.set(c.id, c);
     for (const h of (claimRoleHolders || [])) {
-      if (!map.has(h.id)) map.set(h.id, h);
+      if (!map.has(h.id)) map.set(h.id, { ...h, source: undefined });
     }
     // Incluir siempre al responsable actual aunque no cumpla el rol
     if (level.currentId && !map.has(level.currentId)) {
-      map.set(level.currentId, { id: level.currentId, full_name: level.personName, email: "", role: "" });
+      map.set(level.currentId, { id: level.currentId, full_name: level.personName, email: "", role: "", source: undefined });
     }
     return Array.from(map.values());
   }, [candidates, claimRoleHolders, level.currentId, level.personName]);
@@ -722,7 +729,9 @@ function LevelCard({
           >
             <option value="" disabled>Seleccionar persona...</option>
             {(allCandidates || []).map((c) => (
-              <option key={c.id} value={c.id}>{c.full_name || c.email || c.id.slice(0, 8)}</option>
+              <option key={c.id} value={c.id}>
+                {c.source === "internal" ? "★ " : ""}{c.full_name || c.email || c.id.slice(0, 8)}{c.source === "internal" ? " (Interno)" : ""}
+              </option>
             ))}
           </select>
         </div>
@@ -1543,15 +1552,17 @@ function InspectorSelectField({
   readOnly?: boolean;
   claimId?: string;
 }) {
-  const { data: inspectors } = useQuery({
-    queryKey: ["users-by-roles", ["inspector", "adjuster"]],
-    queryFn: () => getUsersByRoles(["inspector", "adjuster"]),
-  });
-
-  // Cargar el claim para tener el inspector_id y marcarlo como sugerido
+  // Cargar el claim para tener el inspector_id y el company_id
   const { data: claim } = useQuery({
     queryKey: ["claim", claimId],
     queryFn: () => getClaimById(claimId!),
+    enabled: !!claimId,
+  });
+
+  const claimCompanyId = claim?.company_id;
+  const { data: inspectors } = useQuery({
+    queryKey: ["users-by-role", "inspector", claimCompanyId],
+    queryFn: () => getUsersByRoleForCompany("inspector", claimCompanyId),
     enabled: !!claimId,
   });
 
@@ -1589,9 +1600,21 @@ function InspectorSelectField({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="__none">Seleccionar inspector...</SelectItem>
-          {(inspectors || []).map((p) => (
-            <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>
-          ))}
+          {(inspectors || []).map((p) => {
+            const isInternal = p.source === "internal";
+            const isClaimInspector = p.id === claimInspectorId;
+            return (
+              <SelectItem
+                key={p.id}
+                value={p.id}
+                className={isInternal ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+              >
+                {p.full_name || p.email}
+                {isClaimInspector && claimInspectorName && " (Inspector del siniestro)"}
+                {isInternal && <span className="text-[9px] text-amber-600 ml-1">· Interno</span>}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
     </div>
