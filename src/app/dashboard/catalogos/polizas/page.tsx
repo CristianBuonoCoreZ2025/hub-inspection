@@ -13,7 +13,7 @@ import {
   getBusinessLinesWithPolicies,
 } from "@/services/policies";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Search, FileCheck, Pencil } from "lucide-react";
+import { Search, FileCheck, Pencil } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,10 +149,9 @@ export default function PolizasPage() {
           {canCreate("claims") && (
             <Button
               size="sm"
-              className="liquid-button"
+              className="pg-btn-platinum"
               onClick={() => router.push("/dashboard/catalogos/polizas/nueva")}
             >
-              <Plus className="h-3.5 w-3.5" />
               Nueva
             </Button>
           )}

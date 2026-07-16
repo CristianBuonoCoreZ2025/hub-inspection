@@ -19,6 +19,7 @@ export default function LiquidacionScreen({ action, onChange, readOnly }: Gestio
 
   useEffect(() => {
     onChange?.(form);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   return (

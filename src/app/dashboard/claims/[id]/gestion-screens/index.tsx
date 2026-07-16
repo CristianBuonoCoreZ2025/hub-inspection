@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 import type { GestionScreen as GestionScreenType, ClaimAction } from "@/types";
-import type { GestionScreenProps } from "./types";
 import DynamicScreen from "./DynamicScreen";
 import type { ScreenField } from "./DynamicScreen";
+import { getInspectionSessions, createInspectionSession } from "@/services/inspections";
 
 interface GestionScreenSwitcherProps {
   screens: GestionScreenType[];
@@ -18,7 +19,48 @@ interface GestionScreenSwitcherProps {
 }
 
 export default function GestionScreenSwitcher({ screens, action, onChange, readOnly, onAdvance, onReject }: GestionScreenSwitcherProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [creating, setCreating] = useState(false);
+
+  // Cargar sesiones de inspección del claim
+  const { data: sessions, isLoading: sessionsLoading } = useQuery({
+    queryKey: ["inspection-sessions", action.claim_id],
+    queryFn: () => getInspectionSessions(action.claim_id),
+    enabled: screens?.some((s) => s.code === "inspeccion") ?? false,
+  });
+
+  // Buscar sesión vinculada a esta acción
+  const linkedSession = sessions?.find((s) => s.claim_action_id === action.id);
+
+  // Crear sesión de inspección
+  const createSessionMut = useMutation({
+    mutationFn: async () => {
+      const coordData = (action.action_data || {}) as Record<string, unknown>;
+      const parentData = (coordData.parent_action_data || {}) as Record<string, unknown>;
+      const inspectionType = ((coordData.coord_inspection_type as string) || (parentData.coord_inspection_type as string) || "onsite") as "onsite" | "remote";
+      const scheduledAt = (coordData.coord_fecha as string) || (parentData.coord_fecha as string) || new Date().toISOString();
+      const contactName = (coordData.coord_contacto as string) || (parentData.coord_contacto as string) || undefined;
+      const inspectionLocation = (coordData.coord_ubicacion as string) || (parentData.coord_ubicacion as string) || undefined;
+      const inspectorId = (coordData.coord_inspector as string) || (parentData.coord_inspector as string) || action.issuer_id || undefined;
+      return createInspectionSession(action.claim_id, {
+        inspectionType,
+        scheduledAt,
+        contactName,
+        inspectionLocation,
+        inspectorId,
+        actionTemplateId: action.action_template_id || undefined,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Inspección creada");
+      queryClient.invalidateQueries({ queryKey: ["inspection-sessions", action.claim_id] });
+      setCreating(false);
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
+      setCreating(false);
+    },
+  });
 
   if (!screens || screens.length === 0) {
     return (
@@ -30,33 +72,60 @@ export default function GestionScreenSwitcher({ screens, action, onChange, readO
 
   const screen = screens[0];
 
-  // Pantallas fijas (no dinamicas) — mostrar link al componente especializado
-  if (!screen.is_dynamic) {
-    if (screen.code === "inspeccion") {
-      // Buscar la inspection_session vinculada a este claim_action
+  // Pantalla fija de inspección — crear sesión o ir a ella
+  if (!screen.is_dynamic && screen.code === "inspeccion") {
+    if (sessionsLoading) {
+      return <p className="text-sm text-muted-foreground text-center py-8">Cargando inspección...</p>;
+    }
+
+    if (linkedSession) {
       return (
         <div className="text-center py-8 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Esta gestión usa la pantalla fija de <strong>Inspección</strong>.
+            Inspección <strong>{linkedSession.inspection_number || linkedSession.id.slice(0, 8)}</strong>
+            {" — "}
+            {linkedSession.inspection_type === "onsite" ? "Presencial" : "Remota"}
           </p>
           <p className="text-[12px] text-muted-foreground">
-            La inspección se gestiona desde su propia sección con tabs, wizard de acta, evidencias, daños, croquis, firmas e informe.
+            Estado: {linkedSession.status}
+            {linkedSession.scheduled_at && ` · Programada: ${new Date(linkedSession.scheduled_at).toLocaleString("es-CL")}`}
           </p>
           <Button
-            className="btn-save btn-sm"
+            className="pg-btn-platinum"
             onClick={() => {
-              // El claim_action_id está en action.id, buscar la sesión vinculada
-              // Por ahora usamos el query de React Query para obtener el href
-              const event = new CustomEvent("navigate-to-inspection", { detail: action.id });
-              window.dispatchEvent(event);
+              window.location.href = `/dashboard/claims/${action.claim_id}/inspeccion/${linkedSession.id}`;
             }}
           >
-            <ExternalLink className="h-3.5 w-3.5" />
             Ir a Inspección
           </Button>
         </div>
       );
     }
+
+    // No hay sesión vinculada — ofrecer crearla
+    return (
+      <div className="text-center py-8 space-y-3">
+        <p className="text-sm text-muted-foreground">
+          No hay inspección creada para esta gestión.
+        </p>
+        <p className="text-[12px] text-muted-foreground">
+          Al crear la inspección se generará una sesión con los datos de la coordinación.
+        </p>
+        <Button
+          className="pg-btn-platinum"
+          onClick={() => {
+            setCreating(true);
+            createSessionMut.mutate();
+          }}
+          disabled={creating || createSessionMut.isPending}
+        >
+          {creating || createSessionMut.isPending ? "Creando..." : "Crear Inspección"}
+        </Button>
+      </div>
+    );
+  }
+
+  if (!screen.is_dynamic) {
     return (
       <p className="text-sm text-muted-foreground text-center py-8">
         La pantalla <strong>{screen.name}</strong> es un componente fijo no configurable.

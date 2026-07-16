@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 async function fetchEvidences(sessionId: string) {
   const res = await fetch(`/api/inspection/evidences/${sessionId}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Error al cargar evidencias");
-  const data = (await res.json()) as { evidences: any[] };
+  const data = (await res.json()) as { evidences: Array<{ id: string; type: string; url: string; description: string | null }> };
   return data.evidences;
 }
 
@@ -94,7 +94,10 @@ export default function EvidencesTab({ sessionId }: { sessionId: string }) {
           {items?.map((ev) => (
             <div key={ev.id} className="group relative rounded-lg border overflow-hidden bg-muted/20">
               {ev.type === "photo" ? (
-                <img src={ev.url} alt={ev.description || ""} className="aspect-square w-full object-cover" />
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from Supabase Storage with dynamic URL */}
+                  <img src={ev.url} alt={ev.description || ""} className="aspect-square w-full object-cover" />
+                </>
               ) : ev.type === "video" ? (
                 <video src={ev.url} className="aspect-square w-full object-cover" controls />
               ) : (

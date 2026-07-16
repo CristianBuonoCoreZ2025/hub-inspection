@@ -25,10 +25,10 @@ import { getInsuranceCompanies, getCountries, getEvents } from "@/services/catal
 import { getCompanies } from "@/services/companies";
 import { toast } from "sonner";
 import {
-  Plus, Search, Pencil, Trash2, FileSpreadsheet, Check,
-  Clock, ArrowLeft, Save, X,
+  Search, Pencil, Trash2, FileSpreadsheet, Check,
+  Clock, ArrowLeft, X,
   ChevronRight, FileText, Send, CheckCircle2, Settings2,
-  Code2, AlertTriangle, Shield,
+  AlertTriangle, Shield,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { userTypeLabels } from "@/services/permissions";
@@ -539,10 +539,10 @@ export default function GestionesPage() {
               <button
                 type="button"
                 onClick={() => setCamposModalOpen(true)}
-                className="btn-cancel"
+                className="pg-btn-platinum"
                 title="Ver campos disponibles para plantillas Word"
               >
-                <Code2 className="h-3.5 w-3.5" /> Campos
+                Campos
               </button>
             );
           })()}
@@ -889,11 +889,11 @@ export default function GestionesPage() {
 
           {/* ═══ Footer con botones ═══ */}
           <div className="flex items-center justify-end gap-2 pt-2">
-            <button type="button" className="btn-cancel" onClick={cancelEdit}>
-              <X className="h-3.5 w-3.5" /> Cancelar
+            <button type="button" className="pg-btn-platinum" onClick={cancelEdit}>
+              Cancelar
             </button>
-            <button type="submit" form="gestion-form" disabled={saving} className="btn-save">
-              <Save className="h-3.5 w-3.5" /> {saving ? "Guardando..." : editingId ? "Guardar" : "Crear"}
+            <button type="submit" form="gestion-form" disabled={saving} className="pg-btn-platinum">
+              {saving ? "Guardando..." : editingId ? "Guardar" : "Crear"}
             </button>
           </div>
         </form>
@@ -938,8 +938,8 @@ export default function GestionesPage() {
           )}
         </div>
         {canCreate("catalogos") && (
-          <Button onClick={startNew} className="liquid-button">
-            <Plus className="h-3.5 w-3.5" /> Nueva
+          <Button onClick={startNew} className="pg-btn-platinum">
+            Nueva
           </Button>
         )}
       </div>

@@ -10,7 +10,7 @@ import type { GestionScreenProps } from "./types";
 export default function SolicitudDocumentosScreen({ action, onChange, readOnly }: GestionScreenProps) {
   const data = (action.action_data || {}) as Record<string, unknown>;
   const initialDocs = Array.isArray(data.documentos)
-    ? (data.documentos as any[])
+    ? (data.documentos as Array<{ nombre: string; solicitado: boolean; recibido: boolean; fechaSolicitado: string; fechaRecibido: string }>)
     : [
         { nombre: "Identificación", solicitado: false, recibido: false, fechaSolicitado: "", fechaRecibido: "" },
         { nombre: "Póliza", solicitado: false, recibido: false, fechaSolicitado: "", fechaRecibido: "" },
@@ -20,6 +20,7 @@ export default function SolicitudDocumentosScreen({ action, onChange, readOnly }
 
   useEffect(() => {
     onChange?.({ documentos: docs });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docs]);
 
   return (

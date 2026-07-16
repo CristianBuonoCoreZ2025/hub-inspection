@@ -1,4 +1,4 @@
-import { fetchAll, insertRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
+import { fetchAll, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
 import type { UserRole } from "@/types";
 
 export interface FieldPermission {

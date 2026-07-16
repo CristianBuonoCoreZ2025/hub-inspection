@@ -109,8 +109,8 @@ export default function CamposPlantillaPage() {
             className="h-9 w-full max-w-sm"
           />
         </div>
-        <button type="button" onClick={handleCopyAll} className="btn-save">
-          <Copy className="h-3.5 w-3.5" /> Copiar
+        <button type="button" onClick={handleCopyAll} className="pg-btn-platinum">
+          Copiar
         </button>
       </div>
 

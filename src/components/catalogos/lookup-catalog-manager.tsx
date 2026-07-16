@@ -9,7 +9,7 @@ import { SortableTh } from "@/components/ui/sortable-th";
 import { getLookupCatalog, createLookupCatalogItem, updateLookupCatalogItem, deleteLookupCatalogItem } from "@/services/catalogs";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Search, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,9 +123,8 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
         {canCreate(section) && (
           <Button
             onClick={() => { setEditingId(null); setFormData({ name: "", code: "" }); setOpen(true); }}
-            className="liquid-button"
+            className="pg-btn-platinum"
           >
-            <Plus className="mr-2 h-4 w-4" />
             Agregar
           </Button>
         )}
@@ -199,8 +198,8 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
               </div>
             </div>
             <div className="modal-footer">
-              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
-              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="btn-save btn-footer">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="pg-btn-platinum">
                 {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}
               </Button>
             </div>

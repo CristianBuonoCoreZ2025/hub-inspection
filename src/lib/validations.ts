@@ -132,7 +132,7 @@ export const claimCreateMinimalSchema = z.object({
   habitabilityId: z.string().optional().or(z.literal("")),
   destinationHousingId: z.string().optional().or(z.literal("")),
   propertyClassificationId: z.string().optional().or(z.literal("")),
-  ownerSameAsInsured: z.boolean().optional().default(false),
+  ownerSameAsInsured: z.boolean().optional(),
   ownerType: z.string().optional().or(z.literal("")),
   damageClassificationId: z.string().optional().or(z.literal("")),
   // Asegurado
@@ -206,7 +206,7 @@ export const claimCreateMinimalSchema = z.object({
     { message: "RUT inválido", path: ["beneficiaryRut"] }
   );
 
-export type ClaimCreateMinimalInput = z.infer<typeof claimCreateMinimalSchema>;
+export type ClaimCreateMinimalInput = z.input<typeof claimCreateMinimalSchema>;
 
 export const companySchema = z
   .object({
@@ -258,7 +258,7 @@ export const actaSchema = z.object({
   police_report_name: z.string().optional(),
   police_report_rut: z.string().optional(),
   firefighters_company: z.string().optional(),
-  other_insurances: z.boolean().optional().default(false),
+  other_insurances: z.boolean().default(false),
   other_insurance_company: z.string().optional(),
   inspector_observations: z.string().optional(),
   property_risk: z.object({
@@ -273,7 +273,7 @@ export const actaSchema = z.object({
     bathroom_count: z.string().optional(),
     office_count: z.string().optional(),
     warehouse_count: z.string().optional(),
-    is_habitable: z.boolean().optional().default(false),
+    is_habitable: z.boolean().default(false),
     owner_name: z.string().optional(),
     branch_count: z.string().optional(),
     worker_resident_count: z.string().optional(),
@@ -290,12 +290,12 @@ export const actaSchema = z.object({
     others: z.string().optional(),
   }).optional(),
   security_measures: z.object({
-    protections: z.object({ has_it: z.boolean().optional().default(false), detail: z.string().optional() }).optional(),
-    security_locks: z.object({ has_it: z.boolean().optional().default(false), detail: z.string().optional() }).optional(),
-    security_guards: z.object({ has_it: z.boolean().optional().default(false), detail: z.string().optional() }).optional(),
-    alarms: z.object({ has_it: z.boolean().optional().default(false), detail: z.string().optional() }).optional(),
-    cameras: z.object({ has_it: z.boolean().optional().default(false), detail: z.string().optional() }).optional(),
-    other_measures: z.object({ has_it: z.boolean().optional().default(false), detail: z.string().optional() }).optional(),
+    protections: z.object({ has_it: z.boolean().default(false), detail: z.string().optional() }).optional(),
+    security_locks: z.object({ has_it: z.boolean().default(false), detail: z.string().optional() }).optional(),
+    security_guards: z.object({ has_it: z.boolean().default(false), detail: z.string().optional() }).optional(),
+    alarms: z.object({ has_it: z.boolean().default(false), detail: z.string().optional() }).optional(),
+    cameras: z.object({ has_it: z.boolean().default(false), detail: z.string().optional() }).optional(),
+    other_measures: z.object({ has_it: z.boolean().default(false), detail: z.string().optional() }).optional(),
   }).optional(),
   insured_statement: z.object({
     statement: z.string().optional(),
@@ -313,7 +313,7 @@ export const actaSchema = z.object({
     commune: z.string().optional(),
     phone: z.string().optional(),
     email: z.string().optional(),
-  })).optional().default([]),
+  })).default([]),
 });
 
-export type ActaInput = z.infer<typeof actaSchema>;
+export type ActaInput = z.input<typeof actaSchema>;

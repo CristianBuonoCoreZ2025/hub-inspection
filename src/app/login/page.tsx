@@ -119,14 +119,17 @@ export default function LoginPage() {
           </div>
           <div className="flex items-center">
             <ToggleChip
-              active={Boolean(watch("remember"))}
+              active={
+                // eslint-disable-next-line react-hooks/incompatible-library -- react-hook-form watch() is incompatible with React Compiler memoization
+                Boolean(watch("remember"))
+              }
               onClick={(v) => setValue("remember", v)}
             >
               Recordar sesión
             </ToggleChip>
           </div>
           <div className="flex flex-col gap-4 pt-2">
-            <Button type="submit" className="w-full btn-save btn-lg-block" disabled={isLoading}>
+            <Button type="submit" className="w-full pg-btn-platinum" disabled={isLoading}>
               {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
             </Button>
             <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">

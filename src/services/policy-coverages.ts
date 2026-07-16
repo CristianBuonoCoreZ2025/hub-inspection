@@ -49,7 +49,7 @@ export async function createPolicyCoverage(input: {
 
 // Actualizar cobertura de póliza
 export async function updatePolicyCoverage(id: string, input: Partial<PolicyCoverage>): Promise<PolicyCoverage> {
-  const { id: _id, created_at: _ca, updated_at: _ua, ...set } = input;
+  const { ...set } = input;
   return updateRow<PolicyCoverage>("policy_coverages", id, set as Record<string, unknown>, COVERAGE_SELECT);
 }
 

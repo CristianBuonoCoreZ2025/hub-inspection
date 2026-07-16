@@ -36,7 +36,7 @@
   }
 
   .modal-lg {
-    @apply flex max-h-[90vh] w-[min(98vw,860px)] flex-col gap-0
+    @apply flex max-h-[90vh] w-[min(98vw,910px)] flex-col gap-0
            overflow-hidden border-0 p-0;
     border-radius: 18px !important;
     background: color-mix(in srgb, var(--card) 85%, transparent) !important;

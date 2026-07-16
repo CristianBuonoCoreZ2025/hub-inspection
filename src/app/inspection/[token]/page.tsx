@@ -729,6 +729,7 @@ function EvidencesTab({ evidences }: { evidences: LiveEvidence[] }) {
         {evidences.map((ev) => (
           <div key={ev.id} className="rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
             {ev.url && ev.type === "photo" ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={ev.url} alt={ev.description || ""} className="w-full h-32 object-cover" />
             ) : ev.url && ev.type === "video" ? (
               <video src={ev.url} className="w-full h-32 object-cover" controls />
@@ -759,6 +760,7 @@ function SketchesTab({ sketches }: { sketches: LiveSketch[] }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {sketches.map((sk) => (
           <div key={sk.id} className="rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={sk.sketch_url} alt={sk.label || "Croquis"} className="w-full h-48 object-contain bg-white" />
             {sk.label && <p className="text-[11px] text-slate-400 p-2">{sk.label}</p>}
           </div>
@@ -902,6 +904,7 @@ function SignaturesTab({ session }: { session: LiveSession }) {
                   <User className="h-4 w-4 text-sky-400" />
                   <span className="text-[13px] font-medium">Asegurado</span>
                 </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={insuredSig.signature_url} alt="Firma asegurado" className="w-full h-[100px] object-contain bg-white rounded border border-slate-800" />
                 <p className="text-[11px] text-slate-500 mt-1">{fmtDate(insuredSig.signed_at)}</p>
               </div>
@@ -912,6 +915,7 @@ function SignaturesTab({ session }: { session: LiveSession }) {
                   <ShieldCheck className="h-4 w-4 text-violet-400" />
                   <span className="text-[13px] font-medium">Ajustador</span>
                 </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={adjusterSig.signature_url} alt="Firma ajustador" className="w-full h-[100px] object-contain bg-white rounded border border-slate-800" />
                 <p className="text-[11px] text-slate-500 mt-1">{fmtDate(adjusterSig.signed_at)}</p>
               </div>

@@ -193,7 +193,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
               />
               <Button
                 onClick={() => fileInputRef.current?.click()}
-                className="btn-save btn-sm"
+                className="pg-btn-platinum-icon"
                 disabled={uploadMut.isPending}
               >
                 <Upload className="mr-2 h-4 w-4" />

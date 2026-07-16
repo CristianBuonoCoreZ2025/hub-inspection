@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getChecklists, createChecklistItem, updateChecklistItem, deleteChecklistItem } from "@/services/inspections";
 import { toast } from "sonner";
-import { Plus, Trash2, CheckCircle, Circle, MinusCircle } from "lucide-react";
+import { Trash2, CheckCircle, Circle, MinusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const defaultAreas = [
@@ -122,9 +122,9 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
               });
             }}
             disabled={!newItem.area || !newItem.item || createMutation.isPending}
-            className="btn-save btn-sm"
+            className="pg-btn-platinum"
           >
-            <Plus className="mr-1 h-3.5 w-3.5" /> Agregar
+            Agregar
           </Button>
         </div>
       </div>

@@ -96,12 +96,12 @@ export default function ReportTab({
     <div className="app-stack">
       {/* Acciones */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Button onClick={handleGenerate} disabled={createMutation.isPending || updateMutation.isPending} className={isCancellation ? "btn-cancel btn-sm" : "btn-save btn-sm"}>
+        <Button onClick={handleGenerate} disabled={createMutation.isPending || updateMutation.isPending} className="pg-btn-platinum-icon">
           <FileText className="mr-2 h-4 w-4" />
           {report ? "Regenerar" : isCancellation ? "Generar" : "Generar"}
         </Button>
         {report?.status && (
-          <Button variant="outline" onClick={handlePrint} className="btn-neutral btn-sm">
+          <Button variant="outline" onClick={handlePrint} className="pg-btn-platinum-icon">
             <Printer className="mr-2 h-4 w-4" /> Imprimir
           </Button>
         )}

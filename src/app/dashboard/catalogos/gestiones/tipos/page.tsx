@@ -6,7 +6,7 @@ import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
 import { getActionTypes, createActionType, updateActionType, deleteActionType } from "@/services/actions";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, ListChecks } from "lucide-react";
+import { Search, Pencil, Trash2, ListChecks } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -92,8 +92,8 @@ export default function TiposGestionPage() {
           <Input placeholder="Buscar tipo..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-full max-w-sm" />
         </div>
         {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="liquid-button ml-auto">
-            <Plus className="h-3.5 w-3.5" /> Nuevo
+          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="pg-btn-platinum ml-auto">
+            Nuevo
           </Button>
         )}
       </div>
@@ -154,8 +154,8 @@ export default function TiposGestionPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
-              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="btn-save btn-footer">{createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="pg-btn-platinum">{createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}</Button>
             </div>
           </form>
         </DialogContent>

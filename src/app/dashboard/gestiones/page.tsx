@@ -10,7 +10,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Clock,
-  FileText,
   Search,
   ArrowRight,
   Calendar,

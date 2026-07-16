@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getRegions, getCities, getCommunes, createRegion, updateRegion, deleteRegion, createCity, updateCity, deleteCity, createCommune, updateCommune, deleteCommune } from "@/services/catalogs";
 import { getCountries } from "@/services/countries";
-import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag, MapPin, Plus, Pencil, Trash2, Search } from "lucide-react";
+import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag, MapPin, Pencil, Trash2, Search } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 
@@ -287,8 +287,8 @@ export default function UbicacionesPage() {
           </div>
           <div className="flex items-center gap-2">
             {level > 0 && canCreate("catalogos") && (
-              <Button onClick={handleCreate} className="liquid-button">
-                <Plus className="h-3.5 w-3.5" /> Nueva
+              <Button onClick={handleCreate} className="pg-btn-platinum">
+                Nueva
               </Button>
             )}
           </div>
@@ -323,7 +323,7 @@ export default function UbicacionesPage() {
       {/* Level header */}
       <div className="flex items-center gap-2.5 mb-4">
         {level > 0 && (
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleBreadcrumb(level - 1)}>
+          <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => handleBreadcrumb(level - 1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
@@ -370,8 +370,8 @@ export default function UbicacionesPage() {
                   <td>
                     <div className="app-row-actions">
                       {level < 3 && (
-                        <Button variant="ghost" size="sm" className="btn-neutral" onClick={(e) => { e.stopPropagation(); handleRowClick(item); }}>
-                          {getNextLevelLabel()} <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                        <Button variant="ghost" size="sm" className="pg-btn-platinum" onClick={(e) => { e.stopPropagation(); handleRowClick(item); }}>
+                          {getNextLevelLabel()}
                         </Button>
                       )}
                       {level > 0 && (
@@ -424,8 +424,8 @@ export default function UbicacionesPage() {
               )}
             </div>
             <div className="modal-footer">
-              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
-              <Button type="submit" size="sm" disabled={createRegionMutation.isPending || updateRegionMutation.isPending || createCityMutation.isPending || updateCityMutation.isPending || createCommuneMutation.isPending || updateCommuneMutation.isPending} className="btn-save btn-footer">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createRegionMutation.isPending || updateRegionMutation.isPending || createCityMutation.isPending || updateCityMutation.isPending || createCommuneMutation.isPending || updateCommuneMutation.isPending} className="pg-btn-platinum">
                 {createRegionMutation.isPending || updateRegionMutation.isPending || createCityMutation.isPending || updateCityMutation.isPending || createCommuneMutation.isPending || updateCommuneMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}
               </Button>
             </div>

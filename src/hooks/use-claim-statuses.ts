@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getLookupCatalog } from "@/services/catalogs";
-import type { LookupCatalog } from "@/types";
 
 /**
  * Hook que carga el catálogo de claim_status y expone mapas

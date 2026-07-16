@@ -251,9 +251,9 @@ export default function CoberturasPage() {
             {canCreateCat && (
               <Button
                 onClick={() => { setEditingId(null); resetForm(); setOpen(true); }}
-                className="liquid-button"
+                className="pg-btn-platinum"
               >
-                <Plus className="h-3.5 w-3.5" /> Nueva
+                Nueva
               </Button>
             )}
           </div>
@@ -481,8 +481,8 @@ export default function CoberturasPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <Button type="button" className="btn-cancel btn-sm" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit" className="btn-save btn-sm" disabled={createMut.isPending || updateMut.isPending}>
+              <Button type="button" className="pg-btn-platinum" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" className="pg-btn-platinum" disabled={createMut.isPending || updateMut.isPending}>
                 {createMut.isPending || updateMut.isPending ? "Guardando..." : "Guardar"}
               </Button>
             </div>
@@ -534,8 +534,8 @@ export default function CoberturasPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <Button type="button" className="btn-cancel btn-sm" onClick={() => setSubOpen(false)}>Cancelar</Button>
-              <Button type="submit" className="btn-save btn-sm" disabled={createSubMut.isPending || updateSubMut.isPending}>
+              <Button type="button" className="pg-btn-platinum" onClick={() => setSubOpen(false)}>Cancelar</Button>
+              <Button type="submit" className="pg-btn-platinum" disabled={createSubMut.isPending || updateSubMut.isPending}>
                 {createSubMut.isPending || updateSubMut.isPending ? "Guardando..." : "Guardar"}
               </Button>
             </div>
@@ -681,7 +681,7 @@ function CoberturaRow({
                         {canEdit && (
                           <button
                             onClick={() => onEditSub(s)}
-                            className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted"
+                            className="btn-icon-xs"
                             title="Editar"
                           >
                             <Pencil className="h-3 w-3" />
@@ -690,7 +690,7 @@ function CoberturaRow({
                         {canDelete && (
                           <button
                             onClick={() => onDeleteSub(s.id)}
-                            className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-rose-600 hover:bg-muted"
+                            className="btn-icon-xs btn-danger-hover"
                             title="Desactivar"
                           >
                             <Trash2 className="h-3 w-3" />

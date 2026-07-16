@@ -123,8 +123,8 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       {/* Sidebar (left) — premium floating labeled glass panel */}
-      <div className="hidden lg:flex lg:flex-col lg:items-center lg:justify-start lg:w-[220px] lg:shrink-0 lg:py-3">
-        <aside className="sidebar-glass flex flex-col w-[200px] py-4 gap-3">
+      <div className="hidden lg:flex lg:flex-col lg:items-center lg:justify-start lg:w-[220px] lg:shrink-0 lg:pt-2 lg:pb-2">
+        <aside className="sidebar-glass flex flex-col w-[200px] flex-1 py-4 gap-3">
           {/* Contenido */}
           <div className="relative z-10 flex flex-col w-full h-full gap-3 px-3">
             {/* Logo */}

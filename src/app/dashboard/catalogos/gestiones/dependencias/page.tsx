@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDependencies, createDependency, deleteDependency } from "@/services/template-dependencies";
 import { getActionTemplates } from "@/services/actions";
 import { toast } from "sonner";
-import { Plus, Trash2, Link2, ArrowRight, ChevronRight } from "lucide-react";
+import { Trash2, Link2, ChevronRight } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -102,16 +102,6 @@ export default function DependenciasGestionPage() {
   // Codigos hijos ya usados (una gestion solo puede tener un padre)
   const usedChildCodes = useMemo(() => new Set((dependencies || []).map(d => d.child_code)), [dependencies]);
 
-  // Construir mapa padre->hijos para deteccion de ciclos
-  const parentToChildren = useMemo(() => {
-    const m = new Map<string, string[]>();
-    for (const dep of dependencies || []) {
-      if (!m.has(dep.parent_code)) m.set(dep.parent_code, []);
-      m.get(dep.parent_code)!.push(dep.child_code);
-    }
-    return m;
-  }, [dependencies]);
-
   // Detectar si agregar child bajo parent crearia un ciclo
   function wouldCreateCycle(parent: string, child: string): boolean {
     // Si child es ancestro de parent, hay ciclo
@@ -141,6 +131,7 @@ export default function DependenciasGestionPage() {
       !usedChildCodes.has(c.code) && // ya tiene otro padre
       !wouldCreateCycle(parentCode, c.code) // no crear ciclo
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [codeMap, dependencies, parentCode, usedChildCodes]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -177,8 +168,8 @@ export default function DependenciasGestionPage() {
             </p>
           </div>
           {canCreate("catalogos") && (
-            <Button onClick={() => { setParentCode(""); setChildCode(""); setOpen(true); }} className="liquid-button">
-              <Plus className="h-3.5 w-3.5" /> Nueva
+            <Button onClick={() => { setParentCode(""); setChildCode(""); setOpen(true); }} className="pg-btn-platinum">
+              Nueva
             </Button>
           )}
         </div>
@@ -346,8 +337,8 @@ export default function DependenciasGestionPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
-              <Button type="submit" size="sm" disabled={createMutation.isPending} className="btn-save btn-footer">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createMutation.isPending} className="pg-btn-platinum">
                 {createMutation.isPending ? "Guardando..." : "Crear"}
               </Button>
             </div>

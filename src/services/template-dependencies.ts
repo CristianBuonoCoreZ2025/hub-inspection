@@ -38,7 +38,7 @@ export async function getChildTemplateCodes(): Promise<Set<string>> {
     .from("action_template_dependencies")
     .select("child_code");
   if (error) throw new Error(error.message);
-  return new Set(((data as any[]) || []).map(r => r.child_code));
+  return new Set(((data as { child_code: string }[]) || []).map(r => r.child_code));
 }
 
 /**
@@ -55,7 +55,7 @@ export async function getDependencyChainByCode(rootCode: string): Promise<{ code
       .select("child_code")
       .eq("parent_code", parentCode);
     if (error) throw new Error(error.message);
-    for (const row of (data as any[]) || []) {
+    for (const row of (data as { child_code: string }[]) || []) {
       result.push({ code: row.child_code, parent_code: parentCode, level });
       await traverse(row.child_code, level + 1);
     }

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Copy } from "lucide-react";
+
 
 import type { ScreenField, FieldWidth, DateValidation } from "./types";
 import { ACTION_ENTITIES, COMPLEX_ENTITIES } from "./types";
@@ -40,7 +40,6 @@ interface FieldPropertiesPanelProps {
 
 export function FieldPropertiesPanel({
   field,
-  allFields: _allFields,
   dateFields,
   onUpdate,
   onRemove,
@@ -350,19 +349,19 @@ export function FieldPropertiesPanel({
           type="button"
           size="sm"
           variant="outline"
-          className="btn-neutral btn-sm w-full"
+          className="pg-btn-platinum w-full"
           onClick={onDuplicate}
         >
-          <Copy className="h-3.5 w-3.5 mr-1" /> Duplicar
+          Duplicar
         </Button>
         <Button
           type="button"
           size="sm"
           variant="outline"
-          className="btn-danger btn-sm w-full"
+          className="pg-btn-platinum w-full"
           onClick={onRemove}
         >
-          <Trash2 className="h-3.5 w-3.5 mr-1" /> Eliminar
+          Eliminar
         </Button>
       </div>
     </div>

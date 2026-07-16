@@ -12,7 +12,6 @@ import {
   FileText,
   Mail,
   CheckCircle,
-  XCircle,
   Send,
   Shield,
   Eye,
@@ -290,7 +289,7 @@ export default function GestionDetailPage() {
                 <div className="mt-2 flex justify-end">
                   <Button
                     size="sm"
-                    className="btn-save btn-footer"
+                    className="pg-btn-platinum"
                     disabled={saveDataMut.isPending}
                     onClick={() => {
                       try {
@@ -301,7 +300,6 @@ export default function GestionDetailPage() {
                       }
                     }}
                   >
-                    <CheckCircle className="h-3.5 w-3.5" />
                     Guardar
                   </Button>
                 </div>
@@ -454,57 +452,52 @@ export default function GestionDetailPage() {
                 {canIssue && (
                   <Button
                     size="sm"
-                    className="btn-save btn-sm w-full"
+                    className="pg-btn-platinum w-full"
                     disabled={issueMut.isPending}
                     onClick={() => issueMut.mutate()}
                   >
-                    <Send className="h-3.5 w-3.5" />
                     {issueMut.isPending ? "Emitiendo..." : "Emitir"}
                   </Button>
                 )}
                 {canReview && (
                   <Button
                     size="sm"
-                    className="btn-save btn-sm w-full"
+                    className="pg-btn-platinum w-full"
                     disabled={reviewMut.isPending}
                     onClick={() => reviewMut.mutate()}
                   >
-                    <CheckCircle className="h-3.5 w-3.5" />
                     {reviewMut.isPending ? "Revisando..." : "Revisar"}
                   </Button>
                 )}
                 {canApprove && (
                   <Button
                     size="sm"
-                    className="btn-save btn-sm w-full"
+                    className="pg-btn-platinum w-full"
                     disabled={approveMut.isPending}
                     onClick={() => approveMut.mutate()}
                   >
-                    <Shield className="h-3.5 w-3.5" />
                     {approveMut.isPending ? "Aprobando..." : "Aprobar"}
                   </Button>
                 )}
                 {canDispatch && (
                   <Button
                     size="sm"
-                    className="btn-save btn-sm w-full"
+                    className="pg-btn-platinum w-full"
                     disabled={dispatchMut.isPending}
                     onClick={() => dispatchMut.mutate()}
                   >
-                    <Truck className="h-3.5 w-3.5" />
                     {dispatchMut.isPending ? "Despachando..." : "Despachar"}
                   </Button>
                 )}
                 {canReject && (
                   <Button
                     size="sm"
-                    className="btn-danger btn-sm w-full"
+                    className="pg-btn-platinum w-full"
                     onClick={() => {
                       setRejectStage(canReview ? "review" : canApprove ? "approve" : "dispatch");
                       setRejectModalOpen(true);
                     }}
                   >
-                    <XCircle className="h-3.5 w-3.5" />
                     Rechazar
                   </Button>
                 )}
@@ -536,14 +529,14 @@ export default function GestionDetailPage() {
             <div className="flex justify-end gap-2">
               <Button
                 size="sm"
-                className="btn-cancel btn-footer"
+                className="pg-btn-platinum"
                 onClick={() => { setRejectModalOpen(false); setRejectComment(""); }}
               >
                 Cancelar
               </Button>
               <Button
                 size="sm"
-                className="btn-danger btn-footer"
+                className="pg-btn-platinum"
                 disabled={rejectMut.isPending}
                 onClick={() => rejectMut.mutate()}
               >

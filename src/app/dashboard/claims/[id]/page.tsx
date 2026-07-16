@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import type { ClaimsParticipant, ActionTemplate } from "@/types";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/hooks/use-auth";
+import { useRecentClaims } from "@/hooks/use-recent-claims";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -24,7 +25,6 @@ import {
   User,
   Shield,
   FileText,
-  Lock,
   Users,
   Briefcase,
   FolderOpen,
@@ -290,16 +290,63 @@ export default function ClaimDetailPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const [autoSaveState, setAutoSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDataRef = useRef<Record<string, unknown>>({});
+  const editingActionIdRef = useRef<string | null>(null);
+  const savedActionDataRef = useRef<Record<string, unknown> | null>(null);
+
   const updateGestionDataMutation = useMutation({
-    mutationFn: ({ actionId, data }: { actionId: string; data: Record<string, unknown> }) =>
-      updateClaimAction(actionId, { action_data: { ...editingAction?.action_data, ...data } }),
-    onSuccess: () => {
-      toast.success("Gestión actualizada");
-      queryClient.invalidateQueries({ queryKey: ["claim-actions", id] });
-      queryClient.invalidateQueries({ queryKey: ["claim-action", editingActionId] });
+    mutationFn: ({ actionId, data }: { actionId: string; data: Record<string, unknown> }) => {
+      // Usar el action_data del cache actual, no del closure stale
+      const cached = queryClient.getQueryData<{ action_data?: Record<string, unknown> }>(["claim-action", actionId]);
+      const baseData = cached?.action_data || savedActionDataRef.current || {};
+      const merged = { ...baseData, ...data };
+      savedActionDataRef.current = merged;
+      return updateClaimAction(actionId, { action_data: merged });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onSuccess: (_data, vars) => {
+      setAutoSaveState("saved");
+      // Actualizar cache sin refetch para evitar flicker
+      queryClient.setQueryData(["claim-action", vars.actionId], (old: unknown) => {
+        if (!old) return old;
+        return { ...(old as Record<string, unknown>), action_data: savedActionDataRef.current };
+      });
+      queryClient.invalidateQueries({ queryKey: ["claim-actions", id] });
+      setTimeout(() => setAutoSaveState("idle"), 2000);
+    },
+    onError: (err: Error) => {
+      setAutoSaveState("idle");
+      toast.error(err.message);
+    },
   });
+
+  // Autoguardado tipo Excel: guarda 500ms después de la última pulsación
+  const triggerAutoSave = useCallback((data: Record<string, unknown>, actionId: string) => {
+    if (Object.keys(data).length === 0) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    setAutoSaveState("saving");
+    pendingDataRef.current = data;
+    editingActionIdRef.current = actionId;
+    autoSaveTimerRef.current = setTimeout(() => {
+      updateGestionDataMutation.mutate({ actionId, data });
+      pendingDataRef.current = {};
+    }, 500);
+  }, [updateGestionDataMutation]);
+
+  // Al desmontar o cerrar el modal, guardar cambios pendientes
+  const flushPendingSave = useCallback(() => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    const actionId = editingActionIdRef.current;
+    const data = pendingDataRef.current;
+    if (actionId && Object.keys(data).length > 0) {
+      updateGestionDataMutation.mutate({ actionId, data });
+      pendingDataRef.current = {};
+    }
+  }, [updateGestionDataMutation]);
 
   // Mutaciones para avanzar el workflow
   const { profile } = useAuth();
@@ -454,7 +501,7 @@ export default function ClaimDetailPage() {
   });
 
   const closeMutation = useMutation({
-    mutationFn: () => updateClaimStatus(id, codeToId["closed"]!),
+    mutationFn: () => updateClaimStatus(id, codeToId["closed"]!, profile?.id),
     onSuccess: () => {
       toast.success("Caso cerrado");
       queryClient.invalidateQueries({ queryKey: ["claim", id] });
@@ -478,6 +525,26 @@ export default function ClaimDetailPage() {
   const contractor = claim ? getParticipant(claim, "contractor") : undefined;
   const beneficiary = claim ? getParticipant(claim, "beneficiary") : undefined;
   const contact = claim ? getParticipant(claim, "contact") : undefined;
+
+  // ── Registrar visita en recientes (topbar) ──
+  const { record } = useRecentClaims();
+  useEffect(() => {
+    if (!claim?.id) return;
+    const bl = businessLinesCatalog?.find((b) => b.id === claim.business_line_id);
+    const country = countriesCatalog?.find((c) => c.id === claim.country_id);
+    const claimType = claimTypesCatalog?.find((ct) => ct.id === claim.claim_type_id);
+    record({
+      id: claim.id,
+      liquidationNumber: claim.liquidation_number ?? null,
+      clientReference: claim.client_reference ?? null,
+      insuredName: insured?.full_name ?? null,
+      businessLineName: bl?.name ?? null,
+      claimTypeIcon: claimType?.icon ?? null,
+      countryCode: country?.code ?? null,
+    });
+    // Solo registrar cuando cambia el id del claim (no en cada render)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claim?.id]);
 
   if (isLoading) {
     return (
@@ -524,10 +591,9 @@ export default function ClaimDetailPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="btn-save btn-sm"
+                  className="pg-btn-platinum"
                   onClick={() => setIsEditing(true)}
                 >
-                  <Pencil className="mr-2 h-4 w-4" />
                   Editar
                 </Button>
               )}
@@ -535,14 +601,13 @@ export default function ClaimDetailPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="btn-neutral btn-sm"
+                  className="pg-btn-platinum"
                   onClick={() => {
                     if (confirm("¿Cerrar este caso? No se podrá revertir.")) closeMutation.mutate();
                   }}
                   disabled={closeMutation.isPending || !claim?.policy_id}
                   title={!claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined}
                 >
-                  <Lock className="mr-2 h-4 w-4" />
                   Cerrar caso
                 </Button>
               )}
@@ -895,12 +960,11 @@ export default function ClaimDetailPage() {
                 {canEdit("claims") && gestionSubTab === "lista" && (
                   <Button
                     size="sm"
-                    className="btn-save btn-footer"
+                    className="pg-btn-platinum"
                     onClick={() => setOpenGestionModal(true)}
                     disabled={!claim?.policy_id}
                     title={!claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined}
                   >
-                    <Plus className="h-3.5 w-3.5" />
                     Nuevo
                   </Button>
                 )}
@@ -1170,14 +1234,14 @@ export default function ClaimDetailPage() {
                             <td>
                               <div className="flex items-center gap-1">
                                 {g.href && (
-                                  <Button size="sm" className="btn-icon w-6 h-6" onClick={() => router.push(g.href!)}>
+                                  <Button size="sm" className="btn-icon-sm" onClick={() => router.push(g.href!)}>
                                     <Eye className="h-3 w-3" />
                                   </Button>
                                 )}
                                 {g.esAccion && g.screenType && g.screenType !== "inspeccion" && (
                                   <Button
                                     size="sm"
-                                    className="btn-icon w-6 h-6"
+                                    className="btn-icon-sm"
                                     onClick={() => {
                                       setEditingGestion(g);
                                       setOpenEditGestionModal(true);
@@ -1201,7 +1265,28 @@ export default function ClaimDetailPage() {
 
         {/* ═══ TAB: LOG ═══ */}
         {activeTab === "log" && (
-          <AuditLogSection claimId={claim.id} users={users} />
+          <AuditLogSection
+            claimId={claim.id}
+            users={users}
+            catalogs={{
+              companies: companiesCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              claimTypes: claimTypesCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              claimCauses: claimCausesCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              insuranceCompanies: insuranceCompaniesCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              businessLines: businessLinesCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              insuranceProducts: insuranceProductsCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              brokers: brokersCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              advisors: advisorsCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              events: eventsCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              housingDestinations: housingDestinationsCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              propertyClassifications: propertyClassificationsCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              damageClassifications: damageClassificationsCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              constructionTypes: constructionTypesCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              habitability: habitabilityCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              currencies: currencyCatalog?.map((c) => ({ id: c.id, name: c.name })),
+              countries: countriesCatalog?.map((c) => ({ id: c.id, name: c.name })),
+            }}
+          />
         )}
 
       </div>
@@ -1253,7 +1338,13 @@ export default function ClaimDetailPage() {
                     ]}
                   >
                     <SelectTrigger className="app-input h-7 w-full">
-                      <SelectValue placeholder="Seleccionar..." />
+                      <SelectValue placeholder="Seleccionar...">
+                        {(val: string) => {
+                          if (!val || val === "__none") return "Seleccionar...";
+                          const tpl = chainFilteredTemplates.find((t) => t.id === val);
+                          return tpl ? tpl.name : "Seleccionar...";
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none">Seleccionar...</SelectItem>
@@ -1293,7 +1384,7 @@ export default function ClaimDetailPage() {
           <div className="modal-footer">
             <Button
               size="sm"
-              className="btn-cancel btn-footer"
+              className="pg-btn-platinum"
               onClick={() => {
                 setOpenGestionModal(false);
                 setSelectedTemplate(null);
@@ -1305,7 +1396,7 @@ export default function ClaimDetailPage() {
             </Button>
             <Button
               size="sm"
-              className="btn-save btn-footer"
+              className="pg-btn-platinum"
               disabled={!selectedTemplate || createGestionMutation.isPending}
               onClick={() => selectedTemplate && createGestionMutation.mutate(selectedTemplate)}
             >
@@ -1337,11 +1428,20 @@ export default function ClaimDetailPage() {
               <>
                 <GestionScreenSwitcher
                   screens={editingScreens}
-                  action={editingAction}
-                  onChange={(data) => setEditingActionData((prev) => ({ ...prev, ...data }))}
-                  readOnly={["approved", "dispatched", "closed", "rejected"].includes(editingAction.action_status?.code || "todo")}
+                  action={{ ...editingAction, action_data: { ...editingAction.action_data, ...editingActionData } }}
+                  onChange={(data) => {
+                    const merged = { ...editingActionData, ...data };
+                    setEditingActionData(merged);
+                    if (editingActionId) triggerAutoSave(merged, editingActionId);
+                  }}
+                  readOnly={["issued", "reviewed", "approved", "dispatched", "closed", "rejected"].includes(editingAction.action_status?.code || "todo")}
                   onAdvance={(level) => {
                     const mut = level === "issuer" ? issueMut : level === "reviewer" ? reviewMut : approveMut;
+                    // Flush autoguardado pendiente antes de emitir
+                    if (autoSaveTimerRef.current) {
+                      clearTimeout(autoSaveTimerRef.current);
+                      autoSaveTimerRef.current = null;
+                    }
                     if (Object.keys(editingActionData).length > 0) {
                       updateGestionDataMutation.mutate(
                         { actionId: editingAction.id, data: editingActionData },
@@ -1367,27 +1467,33 @@ export default function ClaimDetailPage() {
 
             return (
               <div className="modal-footer">
+                {!isClosed && autoSaveState !== "idle" && (
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-1.5 mr-auto">
+                    {autoSaveState === "saving" ? (
+                      <>
+                        <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-3 w-3 text-emerald-500" />
+                        Guardado
+                      </>
+                    )}
+                  </span>
+                )}
                 <Button
                   size="sm"
-                  className="btn-cancel btn-footer"
-                  onClick={() => { setOpenEditGestionModal(false); setEditingGestion(null); setEditingActionData({}); }}
+                  className="pg-btn-platinum"
+                  onClick={() => {
+                    flushPendingSave();
+                    setOpenEditGestionModal(false);
+                    setEditingGestion(null);
+                    setEditingActionData({});
+                  }}
                 >
                   Cerrar
                 </Button>
-                {!isClosed && (
-                  <Button
-                    size="sm"
-                    className="btn-save btn-footer"
-                    disabled={updateGestionDataMutation.isPending || Object.keys(editingActionData).length === 0}
-                    onClick={() => {
-                      if (Object.keys(editingActionData).length > 0) {
-                        updateGestionDataMutation.mutate({ actionId: editingAction.id, data: editingActionData });
-                      }
-                    }}
-                  >
-                    {updateGestionDataMutation.isPending ? "Guardando..." : "Guardar"}
-                  </Button>
-                )}
               </div>
             );
           })()}

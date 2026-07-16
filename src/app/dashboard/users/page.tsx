@@ -16,7 +16,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, UserX, Users } from "lucide-react";
+import { Search, Pencil, UserX, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -254,8 +254,8 @@ export default function UsersPage() {
           </div>
           <div className="flex items-center gap-2">
             {canCreate("users") && (
-              <Button onClick={openCreate} className="liquid-button">
-                <Plus className="h-3.5 w-3.5" /> Invitar
+              <Button onClick={openCreate} className="pg-btn-platinum">
+                Invitar
               </Button>
             )}
           </div>
@@ -462,12 +462,12 @@ export default function UsersPage() {
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn-cancel" onClick={() => setOpen(false)}>
+              <button type="button" className="pg-btn-platinum" onClick={() => setOpen(false)}>
                 Cancelar
               </button>
               <button
                 type="button"
-                className="btn-save"
+                className="pg-btn-platinum"
                 disabled={inviteMutation.isPending || updateMutation.isPending}
                 onClick={form.handleSubmit(onSubmit)}
               >

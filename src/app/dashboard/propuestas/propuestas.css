@@ -1,0 +1,1268 @@
+@reference "../../globals.css";
+
+/* ═══════════════════════════════════════════════════════════════
+ * PROPUESTAS GRÁFICAS — REAL Liquid Glass Showcase
+ * 5 botones · 5 inputs · 5 combos · 5 grid buttons
+ * Cristal de verdad: translúcido especular con mesh gradient.
+ * ═══════════════════════════════════════════════════════════════ */
+
+@layer components {
+
+  /* ── Layout del showcase ── */
+  .showcase-page {
+    @apply p-6 max-w-6xl mx-auto;
+  }
+
+  .showcase-section {
+    @apply mb-10;
+  }
+
+  .showcase-section-title {
+    @apply text-lg font-semibold mb-1;
+    color: var(--foreground);
+  }
+
+  .showcase-section-desc {
+    @apply text-xs text-muted-foreground mb-4;
+  }
+
+  .showcase-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  /* ═══ REAL LIQUID GLASS — Showcase Card ═══
+     Cristal translúcido con borde especular y halo de profundidad. */
+  .showcase-card {
+    @apply flex flex-col gap-3;
+    position: relative;
+    padding: 20px;
+    border-radius: 20px;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.45) 0%,
+        rgba(255, 255, 255, 0.08) 50%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(40px) saturate(180%) brightness(1.06) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.06) !important;
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.1),
+      0 4px 12px rgba(0, 0, 0, 0.05),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset,
+      0 8px 16px rgba(0, 0, 0, 0.03) inset !important;
+    overflow: hidden;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .showcase-card:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 16px 48px rgba(0, 0, 0, 0.14),
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset,
+      0 8px 16px rgba(0, 0, 0, 0.04) inset !important;
+  }
+
+  /* Línea especular superior — destello de luz en el borde del cristal */
+  .showcase-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      transparent 100%
+    );
+    border-radius: 999px;
+    z-index: 2;
+  }
+
+  /* Halo de color inferior — profundidad */
+  .showcase-card::after {
+    content: "";
+    position: absolute;
+    bottom: -50%;
+    left: 20%;
+    right: 20%;
+    height: 100%;
+    pointer-events: none;
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(0, 149, 218, 0.06) 0%,
+      transparent 70%
+    );
+    border-radius: 999px;
+  }
+
+  .dark .showcase-card {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.2),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset,
+      0 8px 16px rgba(0, 0, 0, 0.1) inset !important;
+  }
+
+  .dark .showcase-card::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
+  }
+
+  .showcase-card-label {
+    @apply text-[10px] font-semibold uppercase tracking-wider;
+    color: var(--muted-foreground);
+  }
+
+  .showcase-card-name {
+    @apply text-sm font-medium;
+    color: var(--foreground);
+  }
+
+  .showcase-demo {
+    @apply flex items-center gap-2 flex-wrap py-2;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * 4 TIPOS DE BOTONES — Liquid Glass (sistema completo)
+   *   · Común:        teal glass, sin icono, 125px
+   *   · Común icono:  teal glass, con icono, 125px
+   *   · Platino:      slate glass, sin icono, 125px
+   *   · Platino icono: slate glass, con icono, 125px
+   * Sin color sólido. Cristal translúcido. Bordes redondeados (10px).
+   * Tamaño fijo. NUNCA parece deshabilitado.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  /* ═══════════════════════════════════════════════════════════════
+   * BASE COMPARTIDA — todos los botones glass
+   * ═══════════════════════════════════════════════════════════════ */
+  .pg-btn-common,
+  .pg-btn-common-icon,
+  .pg-btn-platinum,
+  .pg-btn-platinum-icon {
+    @apply inline-flex items-center justify-center cursor-pointer;
+    position: relative;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border: 1px solid transparent !important;
+    backdrop-filter: blur(20px) saturate(160%) brightness(1.08) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) brightness(1.08) !important;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  /* Tamaño único: 125px para todos */
+  .pg-btn-common,
+  .pg-btn-common-icon,
+  .pg-btn-platinum,
+  .pg-btn-platinum-icon {
+    width: 125px;
+  }
+
+  .pg-btn-common-icon,
+  .pg-btn-platinum-icon {
+    @apply gap-1.5;
+  }
+
+  /* Línea especular superior — destello blanco (compartida) */
+  .pg-btn-common::before,
+  .pg-btn-common-icon::before,
+  .pg-btn-platinum::before,
+  .pg-btn-platinum-icon::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 15%;
+    right: 15%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      transparent 100%
+    );
+    border-radius: 999px;
+  }
+
+  /* Hover/active (compartido) */
+  .pg-btn-common:hover,
+  .pg-btn-common-icon:hover,
+  .pg-btn-platinum:hover,
+  .pg-btn-platinum-icon:hover {
+    transform: translateY(-1px);
+  }
+
+  .pg-btn-common:active,
+  .pg-btn-common-icon:active,
+  .pg-btn-platinum:active,
+  .pg-btn-platinum-icon:active {
+    transform: translateY(0);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * COMÚN + COMÚN ICONO — Liquid Glass Teal (celeste-verde)
+   * ═══════════════════════════════════════════════════════════════ */
+  .pg-btn-common,
+  .pg-btn-common-icon {
+    color: rgb(15, 118, 110);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(20, 184, 166, 0.14) 0%,
+        rgba(13, 148, 136, 0.1) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 4px 16px rgba(20, 184, 166, 0.14),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.55) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
+  }
+
+  .pg-btn-common::after,
+  .pg-btn-common-icon::after {
+    content: "";
+    position: absolute;
+    bottom: -80%;
+    left: 10%;
+    right: 10%;
+    height: 160%;
+    pointer-events: none;
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(20, 184, 166, 0.16) 0%,
+      transparent 70%
+    );
+    border-radius: 999px;
+  }
+
+  .pg-btn-common:hover,
+  .pg-btn-common-icon:hover {
+    box-shadow:
+      0 8px 24px rgba(20, 184, 166, 0.2),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.65) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.05) inset !important;
+  }
+
+  .pg-btn-common:hover::after,
+  .pg-btn-common-icon:hover::after {
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(20, 184, 166, 0.26) 0%,
+      transparent 70%
+    );
+  }
+
+  .dark .pg-btn-common,
+  .dark .pg-btn-common-icon {
+    color: rgb(94, 234, 212);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(20, 184, 166, 0.1) 0%,
+        rgba(13, 148, 136, 0.06) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 4px 20px rgba(20, 184, 166, 0.16),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .dark .pg-btn-common::before,
+  .dark .pg-btn-common-icon::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
+  }
+
+  .dark .pg-btn-common::after,
+  .dark .pg-btn-common-icon::after {
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(20, 184, 166, 0.2) 0%,
+      transparent 70%
+    );
+  }
+
+  .dark .pg-btn-common:hover,
+  .dark .pg-btn-common-icon:hover {
+    box-shadow:
+      0 8px 28px rgba(20, 184, 166, 0.22),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.28) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * PLATINO + PLATINO ICONO — Liquid Glass Platino (slate)
+   * ═══════════════════════════════════════════════════════════════ */
+  .pg-btn-platinum,
+  .pg-btn-platinum-icon {
+    color: rgb(71, 85, 105);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(203, 213, 225, 0.14) 0%,
+        rgba(148, 163, 184, 0.1) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 4px 16px rgba(148, 163, 184, 0.14),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.55) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
+  }
+
+  .pg-btn-platinum::after,
+  .pg-btn-platinum-icon::after {
+    content: "";
+    position: absolute;
+    bottom: -80%;
+    left: 10%;
+    right: 10%;
+    height: 160%;
+    pointer-events: none;
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(203, 213, 225, 0.16) 0%,
+      transparent 70%
+    );
+    border-radius: 999px;
+  }
+
+  .pg-btn-platinum:hover,
+  .pg-btn-platinum-icon:hover {
+    box-shadow:
+      0 8px 24px rgba(148, 163, 184, 0.2),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.65) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.05) inset !important;
+  }
+
+  .pg-btn-platinum:hover::after,
+  .pg-btn-platinum-icon:hover::after {
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(203, 213, 225, 0.26) 0%,
+      transparent 70%
+    );
+  }
+
+  .dark .pg-btn-platinum,
+  .dark .pg-btn-platinum-icon {
+    color: rgb(203, 213, 225);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(203, 213, 225, 0.1) 0%,
+        rgba(148, 163, 184, 0.06) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 4px 20px rgba(148, 163, 184, 0.16),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .dark .pg-btn-platinum::before,
+  .dark .pg-btn-platinum-icon::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
+  }
+
+  .dark .pg-btn-platinum::after,
+  .dark .pg-btn-platinum-icon::after {
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(203, 213, 225, 0.2) 0%,
+      transparent 70%
+    );
+  }
+
+  .dark .pg-btn-platinum:hover,
+  .dark .pg-btn-platinum-icon:hover {
+    box-shadow:
+      0 8px 28px rgba(148, 163, 184, 0.22),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.28) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * 5 PROPUESTAS DE INPUTS — REAL Liquid Glass
+   * Blur, bordes sutiles, focus con glow azul.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  /* Bases compartidas */
+  .pg-input-1,
+  .pg-input-2,
+  .pg-input-3,
+  .pg-input-4,
+  .pg-input-5 {
+    @apply w-full outline-none;
+    position: relative;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--foreground);
+    background-clip: padding-box;
+    backdrop-filter: blur(20px) saturate(180%) brightness(1.05);
+    -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.05);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .pg-input-1::placeholder,
+  .pg-input-2::placeholder,
+  .pg-input-3::placeholder,
+  .pg-input-4::placeholder,
+  .pg-input-5::placeholder {
+    color: var(--muted-foreground);
+    opacity: 0.55;
+  }
+
+  .pg-input-1:focus,
+  .pg-input-2:focus,
+  .pg-input-3:focus,
+  .pg-input-4:focus,
+  .pg-input-5:focus {
+    border-color: rgba(0, 149, 218, 0.55);
+    box-shadow:
+      0 0 0 3px rgba(0, 149, 218, 0.12),
+      0 4px 12px rgba(0, 149, 218, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .dark .pg-input-1,
+  .dark .pg-input-2,
+  .dark .pg-input-3,
+  .dark .pg-input-4,
+  .dark .pg-input-5 {
+    background: color-mix(in srgb, var(--card) 55%, transparent);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .pg-input-1:focus,
+  .dark .pg-input-2:focus,
+  .dark .pg-input-3:focus,
+  .dark .pg-input-4:focus,
+  .dark .pg-input-5:focus {
+    border-color: rgba(0, 149, 218, 0.6);
+    box-shadow:
+      0 0 0 3px rgba(0, 149, 218, 0.18),
+      0 4px 12px rgba(0, 149, 218, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  /* I1 · Glass Standard */
+  .pg-input-1 {
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--card) 70%, transparent);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  /* I2 · Glass Pill */
+  .pg-input-2 {
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--card) 72%, transparent);
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .pg-input-2:focus {
+    box-shadow:
+      0 0 0 3px rgba(0, 149, 218, 0.12),
+      0 6px 18px rgba(0, 149, 218, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  /* I3 · Glass Pozo */
+  .pg-input-3 {
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--muted) 65%, transparent);
+    backdrop-filter: blur(16px) saturate(140%) brightness(0.98);
+    -webkit-backdrop-filter: blur(16px) saturate(140%) brightness(0.98);
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(0, 0, 0, 0.04),
+      0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .pg-input-3:focus {
+    border-color: rgba(0, 149, 218, 0.5);
+    box-shadow:
+      0 0 0 3px rgba(0, 149, 218, 0.12),
+      inset 0 2px 4px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(0, 0, 0, 0.04),
+      0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .dark .pg-input-3 {
+    background: color-mix(in srgb, var(--muted) 45%, transparent);
+    border-color: rgba(0, 0, 0, 0.25);
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(0, 0, 0, 0.25),
+      0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  /* I4 · Glass + Icono */
+  .pg-input-wrap-4 {
+    @apply relative w-full;
+  }
+
+  .pg-input-4 {
+    height: 34px;
+    padding: 0 12px 0 36px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--card) 70%, transparent);
+    box-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .pg-input-icon-4 {
+    @apply absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none;
+    color: var(--muted-foreground);
+    opacity: 0.6;
+    z-index: 1;
+  }
+
+  /* I5 · Glass Premium */
+  .pg-input-5 {
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--card) 74%, transparent);
+    backdrop-filter: blur(26px) saturate(200%) brightness(1.08);
+    -webkit-backdrop-filter: blur(26px) saturate(200%) brightness(1.08);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .pg-input-5:focus {
+    box-shadow:
+      0 10px 30px rgba(0, 149, 218, 0.12),
+      0 0 0 3px rgba(0, 149, 218, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * 5 PROPUESTAS DE COMBO BOX — REAL Liquid Glass
+   * Selects con Liquid Glass: blur, bordes sutiles, focus con glow azul.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  .pg-combo-1,
+  .pg-combo-2,
+  .pg-combo-3,
+  .pg-combo-4,
+  .pg-combo-5 {
+    @apply w-full outline-none cursor-pointer flex items-center justify-between;
+    position: relative;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--foreground);
+    background-clip: padding-box;
+    backdrop-filter: blur(20px) saturate(180%) brightness(1.05);
+    -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.05);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: left;
+    appearance: none;
+  }
+
+  .pg-combo-1:hover,
+  .pg-combo-2:hover,
+  .pg-combo-3:hover,
+  .pg-combo-4:hover,
+  .pg-combo-5:hover {
+    border-color: rgba(0, 149, 218, 0.35);
+  }
+
+  .pg-combo-1:focus-visible,
+  .pg-combo-2:focus-visible,
+  .pg-combo-3:focus-visible,
+  .pg-combo-4:focus-visible,
+  .pg-combo-5:focus-visible {
+    border-color: rgba(0, 149, 218, 0.55);
+    box-shadow:
+      0 0 0 3px rgba(0, 149, 218, 0.12),
+      0 4px 12px rgba(0, 149, 218, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .dark .pg-combo-1,
+  .dark .pg-combo-2,
+  .dark .pg-combo-3,
+  .dark .pg-combo-4,
+  .dark .pg-combo-5 {
+    background: color-mix(in srgb, var(--card) 55%, transparent);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .pg-combo-1:hover,
+  .dark .pg-combo-2:hover,
+  .dark .pg-combo-3:hover,
+  .dark .pg-combo-4:hover,
+  .dark .pg-combo-5:hover {
+    border-color: rgba(0, 149, 218, 0.45);
+  }
+
+  .dark .pg-combo-1:focus-visible,
+  .dark .pg-combo-2:focus-visible,
+  .dark .pg-combo-3:focus-visible,
+  .dark .pg-combo-4:focus-visible,
+  .dark .pg-combo-5:focus-visible {
+    border-color: rgba(0, 149, 218, 0.6);
+    box-shadow:
+      0 0 0 3px rgba(0, 149, 218, 0.18),
+      0 4px 12px rgba(0, 149, 218, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  /* C1 · Glass Standard */
+  .pg-combo-1 {
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--card) 70%, transparent);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .pg-combo-1:hover {
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  /* C2 · Glass Pill */
+  .pg-combo-2 {
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--card) 72%, transparent);
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .pg-combo-2:hover {
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  /* C3 · Glass Pozo */
+  .pg-combo-3 {
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--muted) 65%, transparent);
+    backdrop-filter: blur(16px) saturate(140%) brightness(0.98);
+    -webkit-backdrop-filter: blur(16px) saturate(140%) brightness(0.98);
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(0, 0, 0, 0.04),
+      0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .pg-combo-3:hover {
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .pg-combo-3:focus-visible {
+    border-color: rgba(0, 149, 218, 0.5);
+    box-shadow:
+      0 0 0 3px rgba(0, 149, 218, 0.12),
+      inset 0 2px 4px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(0, 0, 0, 0.04),
+      0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .dark .pg-combo-3 {
+    background: color-mix(in srgb, var(--muted) 45%, transparent);
+    border-color: rgba(0, 0, 0, 0.25);
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(0, 0, 0, 0.25),
+      0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .dark .pg-combo-3:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  /* C4 · Glass Premium */
+  .pg-combo-4 {
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--card) 74%, transparent);
+    backdrop-filter: blur(26px) saturate(200%) brightness(1.08);
+    -webkit-backdrop-filter: blur(26px) saturate(200%) brightness(1.08);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .pg-combo-4:hover {
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .pg-combo-4:focus-visible {
+    box-shadow:
+      0 10px 30px rgba(0, 149, 218, 0.12),
+      0 0 0 3px rgba(0, 149, 218, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  /* C5 · Glass + Indicador */
+  .pg-combo-5 {
+    @apply w-full outline-none cursor-pointer flex items-center justify-start gap-2;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--card) 70%, transparent);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .pg-combo-5:hover {
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .pg-combo-5-dot {
+    @apply size-2.5 rounded-full shrink-0;
+    background: rgba(0, 149, 218, 0.85);
+    box-shadow: 0 0 8px rgba(0, 149, 218, 0.55);
+  }
+
+  .pg-combo-5-arrow {
+    @apply ml-auto shrink-0;
+    color: var(--muted-foreground);
+    opacity: 0.6;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * 5 PROPUESTAS DE BOTONES DE GRILLA — REAL Liquid Glass
+   * ═══════════════════════════════════════════════════════════════ */
+
+  /* ── G1: Glass Icon — ícono cristalino cuadrado (revela glass al hover) ── */
+  .pg-grid-1 {
+    @apply inline-flex items-center justify-center cursor-pointer shrink-0;
+    position: relative;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: var(--muted-foreground);
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .pg-grid-1:hover {
+    color: var(--foreground);
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.35) 0%,
+        rgba(255, 255, 255, 0.08) 50%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(16px) saturate(180%) brightness(1.08) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) brightness(1.08) !important;
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
+  }
+
+  .pg-grid-1:hover::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      transparent 100%
+    );
+    border-radius: 999px;
+  }
+
+  .dark .pg-grid-1:hover {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 255, 255, 0.005) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .dark .pg-grid-1:hover::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
+  }
+
+  /* ── G2: Glass Icon Pill — ícono redondeado (revela glass al hover) ── */
+  .pg-grid-2 {
+    @apply inline-flex items-center justify-center cursor-pointer shrink-0;
+    position: relative;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    color: var(--muted-foreground);
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .pg-grid-2:hover {
+    color: var(--foreground);
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.38) 0%,
+        rgba(255, 255, 255, 0.09) 50%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(18px) saturate(200%) brightness(1.1) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(200%) brightness(1.1) !important;
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.07),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.55) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
+  }
+
+  .pg-grid-2:hover::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 25%;
+    right: 25%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.75) 50%,
+      transparent 100%
+    );
+    border-radius: 999px;
+  }
+
+  .dark .pg-grid-2:hover {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.11) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.035) 0%,
+        rgba(255, 255, 255, 0.005) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.3),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.22) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .dark .pg-grid-2:hover::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.38) 50%,
+      transparent 100%
+    );
+  }
+
+  /* ── G3: Glass Icon Solid — ícono con fondo glass siempre visible ── */
+  .pg-grid-3 {
+    @apply inline-flex items-center justify-center cursor-pointer shrink-0;
+    position: relative;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: var(--foreground);
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.22) 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 255, 255, 0.005) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(14px) saturate(160%) brightness(1.05) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(160%) brightness(1.05) !important;
+    box-shadow:
+      0 1px 0 0.5px rgba(255, 255, 255, 0.3) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .pg-grid-3::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.5) 50%,
+      transparent 100%
+    );
+    border-radius: 999px;
+  }
+
+  .pg-grid-3:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.08),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
+  }
+
+  .dark .pg-grid-3 {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.07) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.018) 0%,
+        rgba(255, 255, 255, 0.004) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 1px 0 0.5px rgba(255, 255, 255, 0.12) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .dark .pg-grid-3::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.25) 50%,
+      transparent 100%
+    );
+  }
+
+  /* ── G4: Glass Icon Danger — ícono de eliminar con glass rojo ── */
+  .pg-grid-4 {
+    @apply inline-flex items-center justify-center cursor-pointer shrink-0;
+    position: relative;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: var(--muted-foreground);
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .pg-grid-4:hover {
+    color: rgb(244, 63, 94);
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(244, 63, 94, 0.2) 0%,
+        rgba(244, 63, 94, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(244, 63, 94, 0.08) 0%,
+        rgba(244, 63, 94, 0.02) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(16px) saturate(180%) brightness(1.08) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) brightness(1.08) !important;
+    box-shadow:
+      0 4px 14px rgba(244, 63, 94, 0.18),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.4) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.06) inset !important;
+  }
+
+  .pg-grid-4:hover::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 50%,
+      transparent 100%
+    );
+    border-radius: 999px;
+  }
+
+  .dark .pg-grid-4:hover {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(244, 63, 94, 0.22) 0%,
+        rgba(244, 63, 94, 0.06) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(244, 63, 94, 0.1) 0%,
+        rgba(244, 63, 94, 0.025) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 4px 18px rgba(244, 63, 94, 0.28),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.15) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
+  }
+
+  .dark .pg-grid-4:hover::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+  }
+
+  /* ── G5: Glass Chip Action — botón de grilla con texto corto ── */
+  .pg-grid-5 {
+    @apply inline-flex items-center justify-center gap-1 cursor-pointer shrink-0;
+    position: relative;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.18) 0%,
+        rgba(255, 255, 255, 0.04) 50%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.025) 0%,
+        rgba(255, 255, 255, 0.005) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(12px) saturate(160%) brightness(1.04) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(160%) brightness(1.04) !important;
+    box-shadow:
+      0 1px 0 0.5px rgba(255, 255, 255, 0.25) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .pg-grid-5::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    border-radius: 999px;
+  }
+
+  .pg-grid-5:hover {
+    color: var(--foreground);
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.45) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
+  }
+
+  .dark .pg-grid-5 {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.015) 0%,
+        rgba(255, 255, 255, 0.003) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 1px 0 0.5px rgba(255, 255, 255, 0.1) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .dark .pg-grid-5::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%
+    );
+  }
+
+  .dark .pg-grid-5:hover {
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.18) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+}

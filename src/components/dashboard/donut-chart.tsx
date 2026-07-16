@@ -65,7 +65,7 @@ export function DonutChart({
               boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
               fontSize: "11px",
             }}
-            formatter={(value: number | string) => [
+            formatter={(value) => [
               `${value} (${total > 0 ? ((Number(value) / total) * 100).toFixed(1) : 0}%)`,
               "",
             ]}

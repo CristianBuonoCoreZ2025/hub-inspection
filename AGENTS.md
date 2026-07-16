@@ -90,6 +90,15 @@ Reglas:
 - `pnpm typecheck` — verificación de tipos (si está configurado)
 - `pnpm db:push` — ejecutar migraciones SQL en PostgreSQL (scripts/db-push.ts)
 
+## Regla de Cero Errores y Cero Warnings (OBLIGATORIO)
+- `npx tsc --noEmit` **DEBE** retornar 0 errores SIEMPRE.
+- `npx eslint` **DEBE** retornar 0 errores Y 0 warnings SIEMPRE.
+- NUNCA dejar errores ni warnings de TypeScript/ESLint sin resolver al terminar una tarea.
+- Si un error o warning parece "preexistente", igual debe arreglarse — no se acumulan.
+- Excepción única: warnings de librerías externas incompatibles (ej: React Compiler +
+  react-hook-form `watch()`) se silencian con `// eslint-disable-next-line` con comentario
+  explicando por qué.
+
 ## Notas Importantes
 - No comenzar con videollamadas, IA o PDF hasta que la base SaaS esté 100% funcional.
 - Todo debe ser escalable, seguro y listo para producción.
@@ -100,6 +109,295 @@ Reglas:
 # Decisiones Técnicas y Soluciones Definitivas (Lecciones Aprendidas)
 
 > Cada problema encontrado durante el desarrollo debe resolverse con una solución definitiva de producto final (no workarounds temporales). Esta sección documenta esas decisiones.
+
+---
+
+## 0. Identificación de Siniestros
+
+### Regla
+```
+Cuando el usuario se refiere a un siniestro por un número (ej: "141", "290"),
+SIEMPRE se refiere al `liquidation_number` (formato: L-000000141, L-000000290).
+NUNCA al `claim_number` ni al `id` (UUID).
+
+Para buscar un siniestro por su número de liquidación en Supabase:
+  claims?liquidation_number=eq.L-000000141
+```
+
+### Cadena de Gestiones (orden obligatorio)
+
+Las gestiones siguen una cadena de dependencias: cada gestión requiere que la gestión
+anterior esté **cerrada** (estado `issued`, `reviewed`, `approved` o `dispatched`)
+antes de poder crearse. No basta con que exista — debe estar cerrada.
+
+```
+COB (Ingreso de Coberturas)
+  ↓ requiere COB cerrada
+RES (Reserva)
+  ↓ requiere RES cerrada
+PCA (Planilla Cuadro de Ajuste)
+
+NSA (Notificación y Solicitud de Antecedentes)
+  ↓ requiere NSA cerrada
+RTA (Recepción Total de Antecedentes)
+```
+
+**Regla:** "Cualquier gestión del tipo X que esté cerrada" — basta con que
+**al menos una** gestión del tipo prerequisito esté cerrada. Si hay 3 COB
+rechazadas y 1 COB emitida, la validación pasa porque existe una cerrada.
+
+**Estados cerrados válidos:** `issued`, `reviewed`, `approved`, `dispatched`
+**Estados NO cerrados:** `todo` (pendiente), `rejected` (rechazada)
+
+**Implementación:** `src/services/claim-actions.ts`
+- `CHAIN_DEPENDENCIES` — mapa de código → prerequisito
+- `checkPrerequisiteGestion()` — verifica si existe al menos una gestión
+  del prerequisito en estado cerrado (trae TODAS las gestiones, no solo una)
+- `checkGestionExists()` — verifica si existe al menos una gestión del
+  prerequisito (sin importar estado) — actualmente no se usa porque todas
+  las dependencias requieren cerrada
+
+**Templates duplicados:** Puede haber múltiples `action_template` con el mismo
+código (ej: 2 COB, 2 RES) — uno por línea de negocio. La validación busca
+en TODOS los template_ids con ese código usando `.in("action_template_id", templateIds)`.
+
+---
+
+## 0b. Sistema de Workflows Automáticos
+
+### Concepto
+Cada combinación de **país + línea de negocio + evento + estado del siniestro**
+tiene un `workflow_config` que define qué gestiones deben crearse automáticamente
+y en qué orden. El workflow tiene `status` que puede ser:
+- `draft` — editable, no crea gestiones
+- `online` — no editable, **crea gestiones automáticamente**
+- `suspended` — editable, no crea gestiones
+
+### Estructura
+```
+workflow_configs (país + línea + evento + estado → config)
+  └── workflow_steps (cada step = una gestión del template)
+        · level: 1 = raíz (se crea al entrar al estado)
+        · level: 2+ = dependiente (se crea al cerrar su padre)
+        · depends_on_template_id: template del cual depende
+        · is_automatic: si el workflow lo crea solo
+        · is_required: si se rechaza, se recrea automáticamente
+```
+
+### Triggers SQL (migración 147)
+
+### Regla SIMPLE del workflow (la única que importa)
+
+El workflow actúa en **3 instantes** y solo en esos instantes:
+
+**1. Cuando el siniestro cambia de estado** → crear TODAS las gestiones de nivel 1
+del workflow que coincida con: país + línea + evento + **nuevo estado**.
+
+**2. Cuando una gestión se EMITE** (pasa a issued/reviewed/approved/dispatched) →
+ir al workflow del estado actual del siniestro, buscar qué gestiones dependen
+de la que se acaba de emitir, y crearlas en estado `todo`.
+
+**3. Cuando una gestión se RECHAZA** → ir al workflow del estado actual del
+siniestro, buscar si esa gestión es `is_required` en el workflow, y si lo es,
+**recrearla** en estado `todo`.
+
+**Lo que NO importa:**
+- ❌ No importa si la gestión es manual o automática
+- ❌ No importa el historial pasado del siniestro
+- ❌ No importa cuántas veces se rechazó antes
+- ❌ No importa el origen (`origin=M` o `origin=W`)
+
+**Lo que SÍ importa:**
+- ✅ El workflow debe estar `status='online'`
+- ✅ El workflow debe coincidir con: país + línea + evento + estado actual del claim
+- ✅ "No duplicar" = no crear si ya existe una gestión activa **NO rechazada**
+  (las rechazadas no cuentan como duplicadas)
+- ✅ **No crear padre retroactivo:** si el hijo ya existe en proceso (no rechazado),
+  no crear el padre. El hijo se quedó sin padre pero crear el padre después
+  no tiene sentido. (migración 148)
+
+---
+
+## 0c. Regla de Inspecciones
+
+### Concepto
+Las inspecciones **SOLO se crean mediante el workflow de gestiones del siniestro**.
+El flujo es: COI (Coordinación de Inspección) se emite → el trigger cascade
+crea INS (Inspección) → esa gestión INS genera la `inspection_session`.
+
+### Lo que NO se debe hacer
+- ❌ NO crear inspecciones desde el módulo de Inspecciones
+- ❌ NO tener botón "Inspección" en la lista de siniestros (topbar)
+- ❌ NO tener botón "Ver inspección" en la lista de siniestros
+- ❌ NO crear inspecciones directamente sin gestión del siniestro
+
+### Lo que SÍ se hace
+- ✅ El módulo de Inspecciones SOLO muestra inspecciones ya existentes
+  (creadas desde gestiones). Sirve para listar, filtrar, resolver, pero no crear.
+- ✅ Para acceder a una inspección desde fuera del siniestro, usar el
+  módulo de Inspecciones (lista general).
+- ✅ Para crear una inspección: emitir la gestión COI en el siniestro →
+  el workflow crea automáticamente la gestión INS → esa gestión genera
+  la sesión de inspección.
+
+### Regla
+```
+Inspección = siempre nace de una gestión del siniestro (workflow).
+El módulo de Inspecciones = solo lectura/resolución, nunca creación.
+```
+
+---
+
+## 0d. Auto-asignación de Responsables (migración 149)
+
+### Concepto
+Cuando el workflow crea una gestión, asigna automáticamente al responsable
+según el rol definido en el `action_template`:
+
+- `default_issuer_role` → busca `claim.<rol>_id` y lo asigna como `issuer_id`
+- `default_reviewer_role` → busca `claim.<rol>_id` y lo asigna como `reviewer_id`
+- `default_approver_role` → busca `claim.<rol>_id` y lo asigna como `approver_id`
+
+### Roles disponibles en el claim
+- `adjuster` → `claim.adjuster_id` (liquidador)
+- `assigned_adjuster` → `claim.assigned_adjuster_id` (liquidador asignado)
+- `assistant` → `claim.assistant_id` (asistente)
+- `inspector` → `claim.inspector_id` (inspector)
+- `auditor` → `claim.auditor_id` (auditor)
+- `dispatcher` → `claim.dispatcher_id` (despachador)
+
+### Diferencia entre `issuer_id` y `issued_by`
+- **`issuer_id`** = el encargado asignado a la tarea (quién DEBE hacerla).
+  Se asigna al crear la gestión.
+- **`issued_by`** = quien REALMENTE la emitió (quién la hizo).
+  Se asigna al emitir. Puede ser el adjuster o la assistant —
+  quien la resuelva queda como `issued_by`.
+
+### Regla
+```
+issuer_id    = responsable asignado (automático al crear)
+issued_by    = quien realmente emitió (al emitir)
+reviewer_id  = revisor asignado (automático al crear)
+reviewed_by  = quien realmente revisó (al revisar)
+approver_id  = aprobador asignado (automático al crear)
+approved_by  = quien realmente aprobó (al aprobar)
+```
+
+---
+
+## 0e. Autoguardado en todas las pantallas de gestión
+
+### Concepto
+Ninguna pantalla de gestión tiene botón "Guardar". Todo se guarda
+automáticamente con debounce tipo Excel (500ms después de la última edición).
+
+### Implementación
+1. **Campos propios** (text, textarea, date, select, number) — el `onChange`
+   del `DynamicScreen` actualiza `editingActionData` y dispara `triggerAutoSave`
+   en `page.tsx` (debounce 500ms → `updateClaimAction`).
+
+2. **Entidades complejas** (Reserva, Ajuste, Solicitud de Documentos) — usan
+   el hook `useAutoSave(saveFn, deps, enabled, delay)` que dispara el guardado
+   500ms después de que cambian las dependencias (filas, notas, selección).
+
+3. **Acciones individuales** (agregar/quitar cobertura, cambiar estado de item) —
+   se guardan inmediatamente al hacer clic (no necesitan debounce).
+
+### Indicador visual
+El footer del modal muestra un indicador sutil:
+- Punto ámbar pulsante + "Guardando..." mientras guarda
+- Check verde + "Guardado" durante 2s después de guardar
+
+### Regla
+```
+NUNCA botones "Guardar" en pantallas de gestión.
+Autoguardado siempre con debounce 500ms.
+```
+
+---
+
+## 0f. Pólizas Especiales y Cadena de Coberturas
+
+### Tipos de póliza en el combo
+El combo de pólizas del siniestro siempre muestra 2 opciones especiales
++ las pólizas reales de la compañía:
+
+1. **Sin Póliza** (`__no_policy`) — `policy_id = null`
+   - No permite cargar coberturas en el COB
+   - Muestra mensaje: "Debe asociar el siniestro a una póliza con coberturas"
+   - No aparece en el listado de pólizas
+
+2. **En Emisión de Número** (`__emision`) — póliza `status=draft`, sin número
+   - Permite cargar CUALQUIER cobertura del catálogo (coverage_catalog)
+   - No filtra por póliza — el catálogo completo del país está disponible
+   - Cuando se obtiene el número real, se crea la póliza desde el registro
+   - No aparece en el listado de pólizas
+
+3. **Póliza Normal** — póliza con número, `status=active`
+   - Solo permite cargar coberturas de `policy_coverages` de esa póliza
+
+### Cadena COB → RES → PCA
+```
+COB (Ingreso de Coberturas)
+  → selecciona coberturas (de póliza o del catálogo si es emisión)
+  → crea claim_coverages
+  → VALIDACIÓN: debe tener ≥1 cobertura para emitir
+
+RES (Reserva)
+  → carga claim_coverages del COB
+  → edita montos reservados/deducibles
+  → crea claim_reserves + reserve_coverages
+
+PCA (Ajuste)
+  → carga reserve_coverages del RES
+  → ajusta montos
+  → actualiza reserve_coverages
+```
+
+### Regla
+```
+Sin Póliza → bloquea COB, no permite coberturas
+En Emisión → COB abierto con catálogo completo del país
+Póliza Normal → COB solo con coberturas de esa póliza
+COB requiere ≥1 cobertura para emitir
+Cada eslabón usa los datos del anterior (cadena)
+```
+1. **`execute_workflow_on_status_change`** — cuando el claim cambia de estado,
+   crea las gestiones de nivel 1 (raíz) del workflow `online` que coincida.
+
+2. **`cascade_workflow_on_issue`** — cuando una gestión se emite
+   (`issued_on` cambia de NULL a valor), busca los templates hijos en
+   `action_template_dependencies` y los crea automáticamente.
+
+3. **`auto_recreate_rejected_workflow_action`** — cuando una gestión se rechaza
+   (`action_status_id` cambia a `rejected`), si es `is_required` en un workflow
+   `online` que coincide con el contexto del claim, **la recrea en estado `todo`**.
+
+4. **`sync_workflow_for_claim(p_claim_id)`** — función reutilizable que sincroniza
+   un claim con su workflow. Crea las gestiones de nivel 1 que falten.
+   Se llama desde `POST /api/workflows/sync-claim`.
+
+### Regla CRÍTICA de "no duplicar"
+Todos los triggers verifican si ya existe una gestión activa **NO rechazada**
+antes de crear. Las gestiones rechazadas **NO cuentan como duplicadas** —
+si todas las gestiones existentes están rechazadas, se crea una nueva.
+
+```sql
+-- CORRECTO: excluye rechazadas del count
+SELECT count(*) FROM claim_actions ca
+JOIN lookup_catalog lc ON lc.id = ca.action_status_id
+WHERE ca.is_active = true AND lc.code != 'rejected';
+```
+
+### Bug corregido (migración 147)
+- **Ambigüedad de columnas:** los triggers usaban `action_template_id` sin
+  calificar, pero al usar RECORD variables con campos del mismo nombre,
+  PostgreSQL lanzaba `column reference is ambiguous`. Fix: calificar como
+  `ca.action_template_id`.
+- **`is_active` vs `status='online'`:** el trigger de recreate verificaba
+  `is_active=true` en lugar de `status='online'`. Fix: unificado a `status='online'`.
+- **Count incluía rechazadas:** el "no duplicar" contaba gestiones rechazadas
+  como duplicadas, impidiendo la recreación. Fix: excluir `lc.code != 'rejected'`.
 
 ---
 
@@ -412,6 +710,47 @@ Ejemplo:
 
 REGLA DE POSICIÓN: El botón primario SIEMPRE va al lado derecho del header,
 nunca debajo del título ni en medio del toolbar.
+```
+
+### Regla OBLIGATORIA: Centralización de Estilos de Botones
+```
+TODOS los estilos de botones DEBEN estar centralizados en
+`src/app/styles/buttons.css`. NUNCA escribir estilos de botones inline
+en las páginas (.tsx).
+
+CLASES PERMITIDAS (definidas en buttons.css):
+  .liquid-button        → acción primaria header listado (Liquid Glass)
+  .liquid-button-outline → acción secundaria junto a liquid-button
+  .btn-save / .btn-confirm / .btn-accept → guardar/confirmar
+  .btn-create / .btn-new / .btn-emerald → crear/nuevo
+  .btn-cancel           → cancelar/cerrar
+  .btn-danger / .btn-delete → eliminar/peligro
+  .btn-run / .btn-execute / .btn-sky → ejecutar/procesar
+  .btn-homolog / .btn-ai / .btn-violet → IA/homologación
+  .btn-warn / .btn-alert / .btn-amber → advertencia
+  .btn-close            → cerrar (menos prominente)
+  .btn-skip             → saltar/omitir
+  .btn-neutral          → acción sin carga emocional
+  .btn-link-sm          → botón tipo enlace inline ("Usar datos", etc.)
+  Tamaños: .btn-lg, .btn-lg-block, .btn-sm, .btn-footer, .btn-icon,
+           .btn-icon-sm (24px), .btn-icon-xs (20px), .btn-wizard (122px)
+
+PROHIBIDO en .tsx:
+  ❌ className="bg-blue-500 text-white h-8 px-4 rounded"
+  ❌ className="inline-flex h-6 w-6 ... hover:bg-rose-50 hover:text-rose-600"
+  ❌ style={{ width: "122px", background: "..." }}
+  ❌ Cualquier Tailwind color class (bg-*, text-*) en botones
+  ❌ Cualquier height/width hardcoded en botones (h-6, h-7, h-8, w-6...)
+
+PERMITIDO en .tsx:
+  ✅ className="btn-save btn-sm"
+  ✅ className="btn-cancel btn-wizard"
+  ✅ className="btn-icon-sm btn-danger-hover"
+  ✅ className="liquid-button"
+  ✅ className="btn-link-sm"
+
+PRINCIPIO: Un cambio en buttons.css debe afectar a TODAS las páginas.
+Si necesitas un estilo nuevo, agrégalo a buttons.css, no a la página.
 ```
 
 ### Regla OBLIGATORIA de Combos (FormSelect) No Obligatorios
@@ -1853,6 +2192,355 @@ building_ages, relationships, action_template, action_features, characteristic,
 gestion_screens, lookup_catalog (action_type, claim_status, action_status, etc.),
 workflow_configs, action_template_dependencies.
 
+---
+
+# Flujos de Funcionamiento (Manual de la Aplicación)
+
+> Esta sección documenta los flujos completos del sistema para el manual
+> de funcionamiento. Cada flujo describe el recorrido paso a paso,
+> las reglas de negocio, y las validaciones que aplican.
+
+---
+
+## Flujo 1: Asignación de Póliza al Siniestro
+
+### Contexto
+Cuando se crea o edita un siniestro, debe asociarse a una póliza. El combo
+de pólizas muestra siempre 2 opciones especiales + las pólizas reales.
+
+### Opciones del combo de pólizas
+
+| Opción | Valor interno | Significado |
+|--------|---------------|-------------|
+| **Sin Póliza** | `__no_policy` | El siniestro no tiene póliza. `policy_id = null` |
+| **En Emisión de Número** | `__emision` | Póliza pendiente (draft, sin número). Se crea automáticamente |
+| **Póliza real** | ID de la póliza | Póliza existente con número y coberturas |
+
+### Reglas
+
+1. **Sin Póliza** (`policy_id = null`):
+   - No permite cargar coberturas en el Ingreso de Coberturas (COB)
+   - Muestra mensaje: "Debe asociar el siniestro a una póliza con coberturas"
+   - No aparece en el listado de pólizas del catálogo
+   - Permite crear la inspección, pero todo lo relacionado con coberturas queda bloqueado
+
+2. **En Emisión de Número** (póliza `status=draft`, sin `policy_number`):
+   - Permite cargar CUALQUIER cobertura del catálogo (`coverage_catalog`)
+   - No filtra por póliza — el catálogo completo del país está disponible
+   - Cuando se obtiene el número real, se crea la póliza desde el registro de coberturas
+   - No aparece en el listado de pólizas del catálogo
+   - Es una póliza válida: se le pueden cargar coberturas y seguir el flujo completo
+
+3. **Póliza Normal** (póliza con `policy_number`, `status=active`):
+   - Solo permite cargar coberturas de `policy_coverages` de esa póliza
+   - Aparece en el listado de pólizas del catálogo
+
+### Detección del tipo de póliza (frontend)
+```typescript
+const policyType: "none" | "emision" | "normal" = !policyId
+  ? "none"
+  : claim?.policy?.status === "draft" || (!claim?.policy?.policy_number && claim?.policy?.policy_name?.includes("PENDIENTE"))
+  ? "emision"
+  : "normal";
+```
+
+---
+
+## Flujo 2: Ingreso de Coberturas (COB)
+
+### Contexto
+El Ingreso de Coberturas es la primera gestión del flujo de liquidación.
+Selecciona las coberturas aplicables al siniestro desde la póliza o el catálogo.
+
+### Paso a paso
+
+1. **Apertura**: El usuario abre la gestión COB desde el tab "Gestiones"
+2. **Carga de coberturas disponibles**:
+   - Si la póliza es **normal**: carga `policy_coverages` de la póliza
+   - Si la póliza es **en emisión**: carga `coverage_catalog` completo del país
+   - Si **sin póliza**: muestra mensaje de bloqueo, no permite agregar
+3. **Selección**: El usuario busca y agrega coberturas desde el combo
+4. **Edición**: Por cada cobertura agregada, el usuario puede editar:
+   - `insured_amount` (monto asegurado)
+   - `claimed_amount` (monto reclamado)
+   - `deductible_amount` (deducible)
+   - `currency` (moneda)
+5. **Autoguardado**: Los cambios se guardan automáticamente (debounce 500ms)
+6. **Emisión**: Al emitir, se valida que haya **≥1 cobertura seleccionada**
+   - Si no hay coberturas → error: "Debe seleccionar al menos una cobertura"
+   - Si hay coberturas → se emite y se crea automáticamente la gestión RES
+
+### Validaciones
+- COB requiere **al menos 1 cobertura** para emitir
+- Sin póliza → bloqueado, no permite agregar coberturas
+- En emisión → permite cualquier cobertura del catálogo del país
+
+### Datos creados
+- `claim_coverages` (una fila por cobertura seleccionada)
+  - `claim_action_id` → ID de la acción COB
+  - `policy_coverage_id` → si viene de póliza normal
+  - `coverage_catalog_id` → si viene de catálogo (emisión)
+  - `coverage_name`, `subcoverage_name`, montos, moneda
+
+### Snapshot al emitir
+Al emitir el COB, el trigger `cascade_workflow_on_issue`:
+1. Copia todas las `claim_coverages` activas como JSON en `action_data.parent_snapshot`
+2. Crea la acción RES con ese snapshot en su `action_data`
+3. La acción RES tiene todo lo necesario para funcionar sin re-query
+
+---
+
+## Flujo 3: Reserva por Cobertura (RES)
+
+### Contexto
+La reserva toma las coberturas del COB y define los montos reservados
+por cada cobertura. Es una **copia inmutable** de los datos del COB.
+
+### Arquitectura: Snapshot del Padre
+La acción RES recibe en `action_data.parent_snapshot` una copia completa
+de las coberturas del COB al momento de su emisión. **No re-query la DB**.
+
+```
+action_data = {
+  parent_snapshot: [...coberturas del COB...],
+  parent_action_data: {...own fields del COB...},
+  parent_action_id: "uuid-del-COB",
+  parent_code: "COB"
+}
+```
+
+### Paso a paso
+
+1. **Apertura**: El usuario abre la gestión RES
+2. **Carga de datos**: Lee las coberturas del `parent_snapshot` (no de la DB)
+   - Fallback a DB query solo si no hay snapshot (acciones antiguas)
+3. **Edición**: Por cada cobertura, el usuario edita:
+   - `reserved_amount` (monto reservado)
+   - `deductible_amount` (deducible)
+   - La columna "Neta" se calcula: `reservado - deducible`
+4. **Autoguardado**: Los cambios se guardan automáticamente (debounce 500ms)
+5. **Emisión**: Al emitir, se crea la gestión PCA con el snapshot de la reserva
+
+### Datos creados
+- `claim_reserves` (una fila por reserva)
+  - `claim_action_id` → ID de la acción RES
+  - `reserve_number`, `currency`, `payment_date`, `notes`
+  - Totales: `claimed_amount`, `reserve_amount`, `deductible_amount`, `final_amount`
+- `reserve_coverages` (una fila por cobertura reservada)
+  - `claim_reserve_id` → ID de la reserva
+  - `claim_coverage_id` → ID de la claim_coverage del COB
+  - `reserved_amount`, `deductible_amount`, `net_reserve`
+
+### Inmutabilidad
+- Las coberturas del COB **no se pueden modificar** después de creada la reserva
+- Si se necesita agregar/modificar coberturas, se debe:
+  - Crear una **nueva cobertura** en un nuevo COB
+  - Se genera una **nueva reserva** con las nuevas coberturas
+  - Si la reserva anterior está **pendiente de emisión** → se auto-rechaza
+  - Si la reserva anterior está **emitida** → se queda y se crea una nueva
+
+### Snapshot al emitir
+Al emitir el RES, el trigger copia:
+- La reserva completa (`claim_reserves`)
+- Todas las `reserve_coverages` con sus montos
+- Todo se guarda en `action_data.parent_snapshot` de la acción PCA
+
+---
+
+## Flujo 4: Ajuste de Reserva (PCA)
+
+### Contexto
+El ajuste toma los datos de la reserva (RES) y permite ajustar los montos.
+Es una **copia inmutable** de los datos del RES.
+
+### Arquitectura: Snapshot del Padre
+La acción PCA recibe en `action_data.parent_snapshot` una copia completa
+de la reserva y sus `reserve_coverages` al momento de la emisión del RES.
+
+```
+action_data = {
+  parent_snapshot: [{
+    id, reserve_number, currency, payment_date, notes,
+    claimed_amount, reserve_amount, deductible_amount, final_amount,
+    coverages: [...reserve_coverages con montos...]
+  }],
+  parent_action_data: {...own fields del RES...},
+  parent_action_id: "uuid-del-RES",
+  parent_code: "RES"
+}
+```
+
+### Paso a paso
+
+1. **Apertura**: El usuario abre la gestión PCA
+2. **Carga de datos**: Lee la reserva del `parent_snapshot` (no de la DB)
+   - Fallback a DB query solo si no hay snapshot (acciones antiguas)
+3. **Edición**: Por cada cobertura, el usuario edita:
+   - `adjusted_amount` (monto ajustado)
+   - `adjusted_deductible` (deducible ajustado)
+   - `adjustment_notes` (notas del ajuste)
+   - La columna "Final" se calcula: `ajustado - ded. ajuste`
+4. **Autoguardado**: Los cambios se guardan automáticamente (debounce 500ms)
+5. **Emisión**: Al emitir, se actualiza la reserva con `status=adjusted`
+
+### Totales (alineados con columnas de la tabla)
+- Fila "Totales": Reservado | Deducible | Ajustado | Ded. Ajuste | **Final**
+- Fila "Diferencia": Reserva Neta vs Ajuste Final
+  - Verde si diferencia > 0 (subió)
+  - Rojo si diferencia < 0 (bajó)
+
+### Datos actualizados
+- `claim_reserves`:
+  - `adjusted_amount`, `adjusted_deductible`, `adjusted_final_amount`
+  - `adjusted_at`, `adjustment_notes`, `status=adjusted`
+- `reserve_coverages`:
+  - `adjusted_amount`, `adjusted_deductible`, `adjusted_net`
+  - `adjustment_notes`, `adjusted_at`
+
+### Inmutabilidad
+- La reserva del RES **no se puede modificar** después de creado el ajuste
+- Si se necesita ajustar nuevamente:
+  - Si el ajuste está **pendiente de emisión** → se auto-rechaza y se crea uno nuevo
+  - Si el ajuste está **emitido** → se queda y se crea uno nuevo con nuevo correlativo
+
+---
+
+## Flujo 5: Cadena Completa COB → RES → PCA
+
+### Diagrama
+```
+┌─────────┐     snapshot      ┌─────────┐     snapshot      ┌─────────┐
+│   COB   │ ───────────────→ │   RES   │ ───────────────→ │   PCA   │
+│ (Ingreso│   coberturas     │(Reserva)│   reserva +      │(Ajuste) │
+│  Cobert)│   como JSON      │         │   coverages      │         │
+└─────────┘                  └─────────┘   como JSON      └─────────┘
+     │                            │                            │
+     ▼                            ▼                            ▼
+claim_coverages              claim_reserves              claim_reserves
+                            reserve_coverages           (status=adjusted)
+                                                        reserve_coverages
+                                                        (campos adjusted_*)
+```
+
+### Reglas de la cadena
+
+1. **Snapshot inmutable**: Cada acción hija recibe una copia frozen de los
+   datos del padre en `action_data.parent_snapshot`. No re-query la DB.
+
+2. **No se modifica el padre**: Después de crear el hijo, el padre queda
+   inmutable. Si se necesita modificar, se crea un nuevo ciclo.
+
+3. **Auto-rechazo de pendientes**: Si se crea una nueva cobertura después
+   de una reserva pendiente:
+   - La reserva pendiente se auto-rechaza
+   - Se genera una nueva reserva con las nuevas coberturas
+   - Si la reserva estaba emitida, se queda y se genera una nueva
+
+4. **Correlativos**: Cada nueva reserva/ajuste tiene su propio correlativo
+   (`reserve_number`, etc.) que se genera automáticamente.
+
+5. **Validación de emisión COB**: El COB no se puede emitir sin coberturas.
+
+6. **Creación automática**: Al emitir una acción, el trigger
+   `cascade_workflow_on_issue` crea automáticamente la siguiente acción
+   del flujo (definida en `action_template_dependencies`).
+
+### Estructura del snapshot (JSON)
+
+**COB → RES** (`parent_snapshot` en RES):
+```json
+[{
+  "id": "uuid-claim-coverage",
+  "coverage_name": "Daños Materiales",
+  "subcoverage_name": "Incendio",
+  "policy_coverage_id": "uuid-policy-coverage",
+  "coverage_catalog_id": null,
+  "insured_amount": 50000000,
+  "claimed_amount": 12000000,
+  "reserved_amount": 0,
+  "deductible_amount": 500000,
+  "currency": "CLP"
+}]
+```
+
+**RES → PCA** (`parent_snapshot` en PCA):
+```json
+[{
+  "id": "uuid-claim-reserve",
+  "reserve_number": "RES-00001",
+  "currency": "CLP",
+  "payment_date": "2025-01-15",
+  "notes": "Reserva inicial",
+  "claimed_amount": 12000000,
+  "reserve_amount": 10000000,
+  "deductible_amount": 500000,
+  "final_amount": 9500000,
+  "coverages": [{
+    "claim_coverage_id": "uuid-claim-coverage",
+    "coverage_name": "Daños Materiales",
+    "reserved_amount": 10000000,
+    "deductible_amount": 500000,
+    "net_reserve": 9500000,
+    "adjusted_amount": null,
+    "adjusted_deductible": null
+  }]
+}]
+```
+
+---
+
+## Flujo 6: Autoguardado Inteligente
+
+### Regla
+**NUNCA botones "Guardar" en pantallas de gestión.** El autoguardado
+se ejecuta automáticamente con debounce de 500ms.
+
+### Implementación
+- **Hook `useAutoSave`**: recibe una función de guardado, dependencias,
+  y un flag `enabled`. Ejecuta el guardado 500ms después del último cambio.
+- **Own fields** (primer nivel): se guardan en `action_data` via
+  `updateClaimActionData`.
+- **Entidades complejas** (Reserva, Ajuste, Documentos): cada una tiene
+  su propia mutación que se ejecuta via `useAutoSave`.
+
+### Campos que se autoguardan
+- **COB**: coberturas (agregar/eliminar/editar montos)
+- **RES**: `reserve_currency`, `reserve_payment_date`, `reserve_notes`,
+  montos por cobertura (`reserved_amount`, `deductible_amount`)
+- **PCA**: `adjustment_notes`, montos por cobertura (`adjusted_amount`,
+  `adjusted_deductible`, `adjustment_notes` por fila)
+- **Documentos**: solicitudes y recibos
+
+### Flush antes de emitir
+Antes de emitir/revisar/aprobar una gestión, se hace un **flush** del
+autoguardado pendiente para asegurar que todos los cambios estén guardados.
+
+---
+
+## Flujo 7: Auto-asignación de Responsables
+
+### Regla
+Al crear una acción, se auto-asignan `issuer_id`, `reviewer_id`, `approver_id`
+según el `default_issuer_role` del template de acción.
+
+### Roles soportados
+| `default_issuer_role` | Campo del claim usado |
+|------------------------|----------------------|
+| `adjuster` | `claim.adjuster_id` |
+| `assistant` | `claim.assistant_id` |
+| `inspector` | `claim.inspector_id` |
+| `dispatcher` | `claim.dispatcher_id` |
+| `assigned_adjuster` | `claim.assigned_adjuster_id` |
+
+### `issued_by` vs `issuer_id`
+- `issuer_id` → **asignado automáticamente** al crear la acción (quién debe emitir)
+- `issued_by` → **NULL hasta que se emite** (quién realmente emitió)
+
+### Implementación
+- Migración `149_auto_assign_responsibles.sql`
+- Función `auto_assign_responsibles()` en PostgreSQL
+- Se ejecuta al insertar una nueva `claim_action`
+
 ### Regla
 ```
 1. NUNCA usar DELETE SQL en tablas de catálogo referenciadas.
@@ -2246,4 +2934,43 @@ NUNCA usar <select> nativo de HTML. SIEMPRE usar Select de shadcn/ui.
 El estilo está centralizado en src/components/ui/select.tsx — NO modificarlo por página.
 Los triggers SIEMPRE llevan className="app-input".
 Para filtros: usar "__all" como valor vacío, convertir a "" en onValueChange.
+```
+
+---
+
+## 22. Criterio de Diseño: Filas Expandibles vs Modal
+
+### Principio
+No usar modales por defecto para mostrar detalle de ítems de listados. Preferir filas expandibles dentro de la tabla cuando el detalle sea corto y el usuario necesite comparar o recorrer varios registros rápidamente. Usar modal solo cuando el detalle requiera foco exclusivo, formularios de edición, acciones destructivas o contenido que no cabe visualmente en una fila.
+
+### Cuándo usar filas expandibles
+
+- El detalle es breve: 1 a 5 campos, diff de cambios, metadatos pequeños.
+- El usuario necesita comparar secuencialmente varios registros (logs, historial, actividad, timeline).
+- El listado es principalmente de solo lectura y no requiere acciones dentro del detalle.
+- El flujo natural es "ver → seguir bajando → ver otro", sin perder el contexto de la lista.
+- Ejemplos: log de auditoría, historial de estados, actividad reciente, listado de cambios.
+
+### Cuándo usar modal
+
+- Se requiere editar el ítem (formulario, selección de opciones, upload de archivos).
+- Se va a realizar una acción destructiva o irreversible (eliminar, rechazar, cancelar).
+- El contenido del detalle es extenso o requiere componentes especiales (wizard, tabs, canvas, videollamada, preview de documentos).
+- El detalle es tan largo que distorsionaría la altura de la tabla o rompería el layout responsive.
+- Es crítico que el usuario cierre el modal para continuar (foco forzado).
+
+### Reglas de implementación para filas expandibles
+
+1. **Cada fila cerrada debe ser informativa por sí sola.** El resumen visible sin expandir debe responder: ¿qué cambió?, ¿de qué a qué?, ¿quién?, ¿cuándo?.
+2. **Evitar repetir el mismo texto en todas las filas.** Si el 90% dice "Actualización general", el resumen no sirve.
+3. **Usar tooltip (`title`) para mostrar el texto completo cuando la celda se trunque.**
+4. **El área expandida muestra el diff completo:** campo + valor anterior → valor nuevo.
+5. **Un solo click expande/contrae.** El botón de expansión debe ser claro (chevron).
+6. **No mezclar conceptos:** si una fila expandible requiere editar, es una señal de que debería ser modal.
+
+### Regla
+```
+Las tablas de historial, auditoría y actividad SIEMPRE usan filas expandibles.
+Cada fila CERRADA debe mostrar un resumen concreto del cambio, nunca un texto genérico.
+Los modales se reservan para edición, acciones destructivas o contenido que no cabe en una fila.
 ```

@@ -165,7 +165,7 @@ export default function ForgotPasswordPage() {
                 )}
               </div>
               <div className="flex flex-col gap-4 pt-2">
-                <Button type="submit" className="w-full btn-run btn-lg-block" disabled={isLoading}>
+                <Button type="submit" className="w-full pg-btn-platinum" disabled={isLoading}>
                   {isLoading ? "Enviando..." : "Enviar código"}
                 </Button>
                 <Link
@@ -241,7 +241,7 @@ export default function ForgotPasswordPage() {
                 )}
               </div>
               <div className="flex flex-col gap-4 pt-2">
-                <Button type="submit" className="w-full btn-save btn-lg-block" disabled={isLoading}>
+                <Button type="submit" className="w-full pg-btn-platinum" disabled={isLoading}>
                   {isLoading ? "Verificando..." : "Verificar y restablecer"}
                 </Button>
                 <button
@@ -266,7 +266,7 @@ export default function ForgotPasswordPage() {
               </p>
             </div>
             <div className="mt-6 flex flex-col gap-4">
-              <Button onClick={() => router.push("/login")} className="w-full btn-save btn-lg-block">
+              <Button onClick={() => router.push("/login")} className="w-full pg-btn-platinum">
                 Ir al login
               </Button>
             </div>

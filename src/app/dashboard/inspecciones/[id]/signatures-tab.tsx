@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSignatures, createSignature } from "@/services/inspections";
 import { uploadFileToStorage } from "@/lib/supabase/storage-upload";
 import { toast } from "sonner";
-import { CheckCircle, User, ShieldCheck } from "lucide-react";
+import { User, ShieldCheck } from "lucide-react";
 
 function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => void; label: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -130,8 +130,8 @@ function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => void;
         />
       </div>
       <div className="flex gap-2">
-        <button onClick={clear} className="btn-cancel btn-sm">Limpiar</button>
-        <button onClick={save} className="btn-save btn-sm"><CheckCircle className="mr-1 h-3.5 w-3.5" /> Guardar</button>
+        <button onClick={clear} className="pg-btn-platinum">Limpiar</button>
+        <button onClick={save} className="pg-btn-platinum">Guardar</button>
       </div>
     </div>
   );
@@ -191,6 +191,7 @@ export default function SignaturesTab({ sessionId }: { sessionId: string }) {
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="text-[13px] font-medium">Asegurado</span>
                     </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={insuredSig.signature_url} alt="Firma asegurado" className="w-full h-[100px] object-contain bg-white rounded border" />
                     <p className="text-[11px] text-muted-foreground mt-1">{new Date(insuredSig.signed_at).toLocaleString("es-CL")}</p>
                   </div>
@@ -201,6 +202,7 @@ export default function SignaturesTab({ sessionId }: { sessionId: string }) {
                       <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                       <span className="text-[13px] font-medium">Ajustador</span>
                     </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={adjusterSig.signature_url} alt="Firma ajustador" className="w-full h-[100px] object-contain bg-white rounded border" />
                     <p className="text-[11px] text-muted-foreground mt-1">{new Date(adjusterSig.signed_at).toLocaleString("es-CL")}</p>
                   </div>

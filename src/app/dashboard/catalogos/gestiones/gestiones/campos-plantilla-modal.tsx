@@ -114,8 +114,8 @@ export function CamposPlantillaModal({ open, onOpenChange }: Props) {
                 autoFocus
               />
             </div>
-            <button type="button" onClick={handleCopyAll} className="btn-save shrink-0">
-              <Copy className="h-3.5 w-3.5" /> Copiar
+            <button type="button" onClick={handleCopyAll} className="pg-btn-platinum shrink-0">
+              Copiar
             </button>
           </div>
 

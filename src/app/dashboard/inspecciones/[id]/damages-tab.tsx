@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDamages, createDamage, updateDamage, deleteDamage } from "@/services/inspections";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Check } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -146,10 +146,10 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
         </div>
         <Button
           onClick={() => { setEditing("new"); setForm({ ...emptyDamage, session_id: sessionId }); }}
-          className="btn-save btn-sm"
+          className="pg-btn-platinum"
           disabled={isEditingNew}
         >
-          <Plus className="mr-1 h-3.5 w-3.5" /> Nuevo
+          Nuevo
         </Button>
       </div>
 
@@ -228,7 +228,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
             )}
           </div>
           <div className="flex justify-end gap-2">
-            <button onClick={() => setEditing(null)} className="btn-cancel btn-sm">Cancelar</button>
+            <button onClick={() => setEditing(null)} className="pg-btn-platinum">Cancelar</button>
             <button
               onClick={() => {
                 if (editing === "new") {
@@ -238,9 +238,9 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
                 }
               }}
               disabled={!form.description || createMutation.isPending || updateMutation.isPending}
-              className="btn-save btn-sm"
+              className="pg-btn-platinum"
             >
-              <Check className="mr-1 h-3.5 w-3.5" /> Guardar
+              Guardar
             </button>
           </div>
         </div>

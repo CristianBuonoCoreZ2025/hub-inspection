@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Save, FileCheck, Search, ChevronDown, ShieldCheck, Check, FileText, Upload, ExternalLink, File } from "lucide-react";
+import { ArrowLeft, Trash2, FileCheck, Search, ChevronDown, ShieldCheck, Check, FileText, Upload, ExternalLink, File, GripVertical, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +28,6 @@ import {
   createPolicyDocument,
   deactivatePolicyDocument,
   type PolicyCoverage,
-  type PolicyDocument,
 } from "@/services/policies";
 import {
   getCoverageCatalog,
@@ -468,9 +467,11 @@ export default function PolicyDetailPage() {
     );
   }, [subcoverages, subSearch]);
 
-  // Líneas de negocio seleccionadas (multi-select)
+  // Líneas de negocio seleccionadas (multi-select, ordenadas por drag-and-drop)
   const [selectedBusinessLines, setSelectedBusinessLines] = useState<string[]>([]);
   const [primaryBusinessLine, setPrimaryBusinessLine] = useState<string>("");
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Inicializar líneas de negocio cuando se cargan
   const [blInitialized, setBlInitialized] = useState(false);
@@ -656,10 +657,11 @@ export default function PolicyDetailPage() {
             </div>
             <div className="lg:col-span-6">
               <Label className="app-field-label">Líneas de Negocio <span className="text-red-500">*</span></Label>
-              <div className="mt-1 flex flex-wrap gap-2">
+
+              {/* Zona de selección — chips limpios */}
+              <div className="mt-1 flex flex-wrap gap-1.5">
                 {(businessLines || []).map((b) => {
                   const selected = selectedBusinessLines.includes(b.id);
-                  const isPrimary = primaryBusinessLine === b.id;
                   return (
                     <button
                       key={b.id}
@@ -669,34 +671,120 @@ export default function PolicyDetailPage() {
                           if (selectedBusinessLines.length === 1) return;
                           const next = selectedBusinessLines.filter((id) => id !== b.id);
                           setSelectedBusinessLines(next);
-                          if (isPrimary) setPrimaryBusinessLine(next[0] || "");
+                          if (primaryBusinessLine === b.id) setPrimaryBusinessLine(next[0] || "");
                         } else {
                           const next = [...selectedBusinessLines, b.id];
                           setSelectedBusinessLines(next);
                           if (selectedBusinessLines.length === 0) setPrimaryBusinessLine(b.id);
                         }
                       }}
-                      onDoubleClick={() => {
-                        if (selected) setPrimaryBusinessLine(b.id);
-                      }}
-                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] transition-colors ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all ${
                         selected
-                          ? isPrimary
-                            ? "border-primary bg-primary/10 text-primary font-medium ring-1 ring-primary/30"
-                            : "border-primary/50 bg-primary/5 text-primary"
-                          : "border-border text-muted-foreground hover:border-muted-foreground/30"
+                          ? "bg-teal-500/10 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 ring-1 ring-inset ring-teal-500/25"
+                          : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground ring-1 ring-inset ring-border"
                       }`}
-                      title={selected ? (isPrimary ? "Línea principal (doble-click para cambiar)" : "Doble-click para hacer principal") : "Click para seleccionar"}
+                      title={selected ? "Click para quitar" : "Click para seleccionar"}
                     >
+                      {selected && <Check className="size-3" />}
                       {b.name}
-                      {isPrimary && <span className="text-[9px] opacity-70">(principal)</span>}
                     </button>
                   );
                 })}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Click para seleccionar · Doble-click para marcar como principal
-              </p>
+
+              {/* Zona ordenable — panel limpio con drag-and-drop */}
+              {selectedBusinessLines.length > 0 && (
+                <div className="mt-3 rounded-lg border border-border bg-card/40 overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30">
+                    <span className="text-[11px] font-semibold text-foreground">Orden de prioridad</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Arrastra para reordenar · La primera es la principal
+                    </span>
+                  </div>
+
+                  {/* Items arrastrables */}
+                  <div>
+                    {selectedBusinessLines.map((blId, idx) => {
+                      const bl = businessLines?.find((b) => b.id === blId);
+                      if (!bl) return null;
+                      const isPrimary = idx === 0;
+                      const isDragging = dragIndex === idx;
+                      const isDragOver = dragOverIndex === idx && dragIndex !== idx;
+                      return (
+                        <div
+                          key={blId}
+                          draggable
+                          onDragStart={() => setDragIndex(idx)}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            if (dragOverIndex !== idx) setDragOverIndex(idx);
+                          }}
+                          onDragLeave={() => {
+                            if (dragOverIndex === idx) setDragOverIndex(null);
+                          }}
+                          onDrop={() => {
+                            if (dragIndex !== null && dragIndex !== idx) {
+                              const next = [...selectedBusinessLines];
+                              const [moved] = next.splice(dragIndex, 1);
+                              next.splice(idx, 0, moved);
+                              setSelectedBusinessLines(next);
+                              setPrimaryBusinessLine(next[0]);
+                            }
+                            setDragIndex(null);
+                            setDragOverIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDragIndex(null);
+                            setDragOverIndex(null);
+                          }}
+                          className={`group flex items-center gap-3 px-3 py-2.5 text-[12px] transition-colors cursor-grab active:cursor-grabbing border-b border-border/50 last:border-b-0 ${
+                            isDragging ? "opacity-40" : ""
+                          } ${isDragOver ? "bg-teal-500/5" : "hover:bg-muted/40"}`}
+                        >
+                          {/* Número de posición */}
+                          <span className={`flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold shrink-0 ${
+                            isPrimary
+                              ? "bg-teal-500/15 text-teal-700 dark:text-teal-300"
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            {idx + 1}
+                          </span>
+
+                          {/* Handle drag */}
+                          <GripVertical className="size-3.5 text-muted-foreground/30 shrink-0 group-hover:text-muted-foreground transition-colors" />
+
+                          {/* Nombre */}
+                          <span className={`flex-1 truncate ${isPrimary ? "font-semibold" : ""}`}>{bl.name}</span>
+
+                          {/* Badge Principal */}
+                          {isPrimary && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-700 dark:text-teal-300 shrink-0">
+                              Principal
+                            </span>
+                          )}
+
+                          {/* Quitar */}
+                          {selectedBusinessLines.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = selectedBusinessLines.filter((id) => id !== blId);
+                                setSelectedBusinessLines(next);
+                                if (isPrimary) setPrimaryBusinessLine(next[0] || "");
+                              }}
+                              className="text-muted-foreground/40 hover:text-rose-600 dark:hover:text-rose-400 transition-colors shrink-0"
+                              title="Quitar"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="lg:col-span-2">
               <Label className="app-field-label">Prima</Label>
@@ -760,11 +848,10 @@ export default function PolicyDetailPage() {
           <div className="mt-4 flex justify-end">
             <Button
               size="sm"
-              className="btn-save btn-sm"
+              className="pg-btn-platinum"
               disabled={saveMut.isPending || !form.policy_name}
               onClick={() => saveMut.mutate()}
             >
-              <Save className="h-3.5 w-3.5" />
               {saveMut.isPending ? "Guardando..." : "Guardar"}
             </Button>
           </div>
@@ -1008,7 +1095,7 @@ export default function PolicyDetailPage() {
                 <div className="lg:col-span-2 flex items-end">
                   <Button
                     size="sm"
-                    className="btn-save btn-sm w-full"
+                    className="pg-btn-platinum w-full"
                     disabled={!newCov.coverage_catalog_id || addCovMut.isPending}
                     onClick={() => {
                       const subs = subcoverages
@@ -1028,7 +1115,6 @@ export default function PolicyDetailPage() {
                       });
                     }}
                   >
-                    <Plus className="h-3.5 w-3.5" />
                     {addCovMut.isPending ? "Agregando..." : "Agregar"}
                   </Button>
                 </div>
@@ -1172,7 +1258,7 @@ export default function PolicyDetailPage() {
                     e.target.value = "";
                   }}
                 />
-                <span className="btn-save btn-sm inline-flex items-center gap-1.5">
+                <span className="pg-btn-platinum-icon inline-flex items-center gap-1.5">
                   <Upload className="h-3.5 w-3.5" />
                   Subir
                 </span>
@@ -1219,7 +1305,7 @@ export default function PolicyDetailPage() {
                           <button
                             type="button"
                             onClick={() => removeDocMut.mutate(doc.id)}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                            className="btn-icon-sm btn-danger-hover"
                             title="Eliminar"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -1232,7 +1318,7 @@ export default function PolicyDetailPage() {
               </div>
             ) : (
               <p className="text-[12px] text-muted-foreground py-4 text-center">
-                No hay documentos subidos. Haga clic en "Subir" para agregar documentos.
+                No hay documentos subidos. Haga clic en &quot;Subir&quot; para agregar documentos.
               </p>
             )}
             {uploadDocMut.isPending && (
@@ -1299,7 +1385,7 @@ function PolicyCoverageGroup({
           <button
             type="button"
             onClick={() => onRemove(parent)}
-            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors"
+            className="btn-icon-sm btn-danger-hover"
             title={subcoverages.length > 0 ? `Quitar cobertura y ${subcoverages.length} subcoberturas` : "Quitar cobertura"}
           >
             <Trash2 className="h-3 w-3" />
@@ -1341,7 +1427,7 @@ function PolicyCoverageGroup({
             <button
               type="button"
               onClick={() => onRemove(s)}
-              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors"
+              className="btn-icon-sm btn-danger-hover"
               title="Quitar subcobertura"
             >
               <Trash2 className="h-3 w-3" />

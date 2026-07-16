@@ -65,12 +65,7 @@ export async function getTopbarStats(
   }
 
   try {
-    const [closedStatusId, todoStatusId, issuedStatusId, reviewedStatusId] = await Promise.all([
-      getStatusId("claim_status", "closed"),
-      getStatusId("action_status", "todo"),
-      getStatusId("action_status", "issued"),
-      getStatusId("action_status", "reviewed"),
-    ]);
+    const closedStatusId = await getStatusId("claim_status", "closed");
 
     // ════════════════════════════════════════════════════════════
     // 1. SINIESTROS — claims no cerrados por rol

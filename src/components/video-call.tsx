@@ -145,7 +145,7 @@ export default function VideoCall({ sessionId, displayName, compact = false, onH
           setVideoOff(false);
           onHangup?.();
         });
-      } catch (err) {
+      } catch {
         setError("Error al iniciar la videollamada.");
         setLoading(false);
         setJoined(false);

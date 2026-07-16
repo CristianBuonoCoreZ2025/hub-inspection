@@ -16,7 +16,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, Controller } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, Upload, X, ImageIcon, Building2, Globe, Mail, Phone, Users } from "lucide-react";
+import { Search, Pencil, Trash2, Upload, X, ImageIcon, Building2, Globe, Mail, Phone, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +80,7 @@ export default function CompaniesPage() {
     enabled: !!usersModalCompany?.id,
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const selectedCountryId = form.watch("countryId");
   const selectedCountry = countries?.find((c: Country) => c.id === selectedCountryId);
   const isChile = selectedCountry?.code === "CL";
@@ -150,8 +151,8 @@ export default function CompaniesPage() {
           </div>
           <div className="flex items-center gap-2">
             {canCreate("companies") && (
-              <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="liquid-button">
-                <Plus className="h-3.5 w-3.5" /> Nueva
+              <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="pg-btn-platinum">
+                Nueva
               </Button>
             )}
           </div>
@@ -313,12 +314,12 @@ export default function CompaniesPage() {
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn-cancel" onClick={() => setOpen(false)}>
+              <button type="button" className="pg-btn-platinum" onClick={() => setOpen(false)}>
                 Cancelar
               </button>
               <button
                 type="button"
-                className="btn-save"
+                className="pg-btn-platinum"
                 disabled={createMutation.isPending || updateMutation.isPending}
                 onClick={form.handleSubmit(onSubmit)}
               >
@@ -485,7 +486,7 @@ export default function CompaniesPage() {
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn-cancel" onClick={() => setUsersModalCompany(null)}>
+            <button type="button" className="pg-btn-platinum" onClick={() => setUsersModalCompany(null)}>
               Cerrar
             </button>
           </div>

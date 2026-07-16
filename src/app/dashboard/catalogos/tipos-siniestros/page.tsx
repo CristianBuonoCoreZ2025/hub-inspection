@@ -8,8 +8,9 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaimTypes, createClaimType, updateClaimType, deleteClaimType } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, FileWarning, Flame, Droplets, Zap, Wind, Home, Car, Wrench, AlertTriangle, Shield, ClipboardCheck, Building, Warehouse, Store, Hotel, Factory, Scale, Gavel, FileText, Badge, Truck, Ship, Plane, Heart, Hospital, HeartPulse, Package2, AlertCircle } from "lucide-react";
+import { Search, Pencil, Trash2, FileWarning, AlertCircle } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { ICON_MAP, ICON_OPTIONS } from "@/lib/claim-type-icons";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,70 +23,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 
 // Map icon names from lucide-react to actual icon components
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  FileWarning,
-  AlertTriangle,
-  Shield,
-  ClipboardCheck,
-  Flame,
-  Droplets,
-  Zap,
-  Wind,
-  Wrench,
-  Home,
-  Building,
-  Warehouse,
-  Store,
-  Hotel,
-  Factory,
-  Car,
-  Truck,
-  Ship,
-  Plane,
-  Package: Package2,
-  Heart,
-  Hospital,
-  HeartPulse,
-  Scale,
-  Gavel,
-  FileText,
-  Badge,
-};
-
-const ICON_OPTIONS = Object.keys(ICON_MAP);
-
-function getIconForClaimType(name: string): React.ComponentType<{ className?: string }> {
-  const lowerName = name.toLowerCase();
-  if (lowerName.includes("propiedad") || lowerName.includes("property") || lowerName.includes("inmueble")) return Building;
-  if (lowerName.includes("bodega") || lowerName.includes("almacén") || lowerName.includes("almacen")) return Warehouse;
-  if (lowerName.includes("tienda") || lowerName.includes("comercio") || lowerName.includes("local")) return Store;
-  if (lowerName.includes("hotel") || lowerName.includes("hostal")) return Hotel;
-  if (lowerName.includes("fábrica") || lowerName.includes("fabrica") || lowerName.includes("industrial")) return Factory;
-  if (lowerName.includes("oficina") || lowerName.includes("empresa")) return Building;
-  if (lowerName.includes("hogar") || lowerName.includes("vivienda") || lowerName.includes("casa")) return Home;
-  if (lowerName.includes("transporte") || lowerName.includes("transport")) return Truck;
-  if (lowerName.includes("auto") || lowerName.includes("vehículo") || lowerName.includes("vehiculo") || lowerName.includes("robo")) return Car;
-  if (lowerName.includes("camión") || lowerName.includes("camion") || lowerName.includes("carga")) return Truck;
-  if (lowerName.includes("barco") || lowerName.includes("nave") || lowerName.includes("marítimo") || lowerName.includes("maritimo")) return Ship;
-  if (lowerName.includes("avión") || lowerName.includes("aereo") || lowerName.includes("aéreo")) return Plane;
-  if (lowerName.includes("paquete") || lowerName.includes("mercancía")) return Package2;
-  if (lowerName.includes("vida") || lowerName.includes("life")) return Heart;
-  if (lowerName.includes("salud") || lowerName.includes("hospital") || lowerName.includes("médico") || lowerName.includes("medico")) return Hospital;
-  if (lowerName.includes("accidente") || lowerName.includes("lesión") || lowerName.includes("lesion")) return HeartPulse;
-  if (lowerName.includes("corazón") || lowerName.includes("cardíaco") || lowerName.includes("cardiaco")) return HeartPulse;
-  if (lowerName.includes("responsabilidad") || lowerName.includes("civil") || lowerName.includes("rc")) return Scale;
-  if (lowerName.includes("legal") || lowerName.includes("juicio") || lowerName.includes("litigio")) return Gavel;
-  if (lowerName.includes("contrato") || lowerName.includes("póliza") || lowerName.includes("poliza")) return FileText;
-  if (lowerName.includes("certificado") || lowerName.includes("garantía") || lowerName.includes("garantia")) return Badge;
-  if (lowerName.includes("fuego") || lowerName.includes("incendio")) return Flame;
-  if (lowerName.includes("agua") || lowerName.includes("inundación") || lowerName.includes("inundacion")) return Droplets;
-  if (lowerName.includes("electrico") || lowerName.includes("rayo")) return Zap;
-  if (lowerName.includes("viento") || lowerName.includes("tormenta")) return Wind;
-  if (lowerName.includes("mecánico") || lowerName.includes("maquinaria")) return Wrench;
-  if (lowerName.includes("seguro") || lowerName.includes("protección")) return Shield;
-  if (lowerName.includes("check") || lowerName.includes("aprobado")) return ClipboardCheck;
-  return FileWarning;
-}
+// (ICON_MAP e ICON_OPTIONS importados desde @/lib/claim-type-icons)
 
 export default function ClaimTypePage() {
   const queryClient = useQueryClient();
@@ -172,9 +110,8 @@ export default function ClaimTypePage() {
             {canCreate("catalogos") && (
               <Button
                 onClick={() => { setEditingId(null); setFormData({ name: "", description: "", icon: "FileWarning" }); setOpen(true); }}
-                className="liquid-button"
+                className="pg-btn-platinum"
               >
-                <Plus className="h-3.5 w-3.5" />
                 Nuevo
               </Button>
             )}
@@ -293,8 +230,8 @@ export default function ClaimTypePage() {
               </div>
             </div>
             <div className="modal-footer">
-              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
-              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="btn-save btn-footer">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="pg-btn-platinum">
                 {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}
               </Button>
             </div>

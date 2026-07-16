@@ -1,6 +1,7 @@
 import { fetchAll, fetchById, insertRow, updateRow, getSupabaseClient } from "@/lib/supabase/db";
 import type { ClaimAction, ActionTemplate, ActionFeature } from "@/types";
 import { logActionHistory } from "@/services/claim-action-history";
+import { getClaimCoveragesByAction } from "@/services/claim-coverages";
 
 // ═══════════════════════════════════════════════════════════════════
 // Servicios para el Sistema de Acciones (Claim Actions)
@@ -41,7 +42,7 @@ export async function getActionTemplatesByClaimStatus(claimStatusId: string, bus
     .eq("is_active", true);
 
   if (atcsError) throw new Error(atcsError.message);
-  const templateIds = ((atcsRows as any[]) || []).map(r => r.action_template_id).filter(Boolean);
+  const templateIds = ((atcsRows as { action_template_id: string }[]) || []).map(r => r.action_template_id).filter(Boolean);
   if (templateIds.length === 0) return [];
 
   // 2. Obtener templates activos con toda su info
@@ -128,30 +129,28 @@ export async function getClaimActions(claimId: string, includeRejected = false):
 async function checkPrerequisiteGestion(claimId: string, templateCode: string): Promise<boolean> {
   const supabase = getSupabaseClient();
 
-  // 1. Obtener el template_id por codigo
-  const { data: templateRow, error: templateError } = await supabase
+  // 1. Obtener TODOS los template_ids con ese codigo (puede haber duplicados)
+  const { data: templateRows, error: templateError } = await supabase
     .from("action_template")
     .select("id")
-    .eq("code", templateCode)
-    .limit(1);
+    .eq("code", templateCode);
   if (templateError) throw new Error(templateError.message);
-  const templateId = (templateRow as any[])?.[0]?.id;
-  if (!templateId) return false;
+  const templateIds = ((templateRows as { id: string }[]) || []).map(r => r.id);
+  if (templateIds.length === 0) return false;
 
-  // 2. Buscar claim_actions de ese template con status cerrado
+  // 2. Buscar claim_actions de esos templates (todas, para verificar si alguna está cerrada)
   const { data, error } = await supabase
     .from("claim_actions")
     .select("id, action_status:lookup_catalog!claim_actions_action_status_id_fkey(code)")
     .eq("claim_id", claimId)
     .eq("is_active", true)
-    .eq("action_template_id", templateId)
-    .limit(1);
+    .in("action_template_id", templateIds);
   if (error) throw new Error(error.message);
 
-  const rows = (data as any[]) || [];
+  const rows = (data as { action_status?: { code: string } }[]) || [];
   return rows.some(r => {
     const statusCode = r.action_status?.code;
-    return ["issued", "reviewed", "approved", "dispatched"].includes(statusCode);
+    return ["issued", "reviewed", "approved", "dispatched"].includes(statusCode ?? "");
   });
 }
 
@@ -159,23 +158,22 @@ async function checkPrerequisiteGestion(claimId: string, templateCode: string): 
 async function checkGestionExists(claimId: string, templateCode: string): Promise<boolean> {
   const supabase = getSupabaseClient();
 
-  // 1. Obtener el template_id por codigo
-  const { data: templateRow, error: templateError } = await supabase
+  // 1. Obtener TODOS los template_ids con ese codigo (puede haber duplicados)
+  const { data: templateRows, error: templateError } = await supabase
     .from("action_template")
     .select("id")
-    .eq("code", templateCode)
-    .limit(1);
+    .eq("code", templateCode);
   if (templateError) throw new Error(templateError.message);
-  const templateId = (templateRow as any[])?.[0]?.id;
-  if (!templateId) return false;
+  const templateIds = ((templateRows as { id: string }[]) || []).map(r => r.id);
+  if (templateIds.length === 0) return false;
 
-  // 2. Buscar claim_actions de ese template
+  // 2. Buscar claim_actions de esos templates
   const { data, error } = await supabase
     .from("claim_actions")
     .select("id")
     .eq("claim_id", claimId)
     .eq("is_active", true)
-    .eq("action_template_id", templateId)
+    .in("action_template_id", templateIds)
     .limit(1);
   if (error) throw new Error(error.message);
   return (data?.length ?? 0) > 0;
@@ -186,7 +184,7 @@ async function checkGestionExists(claimId: string, templateCode: string): Promis
 const CHAIN_DEPENDENCIES: Record<string, { prereqCode: string; requireClosed: boolean; message: string }> = {
   "RES": { prereqCode: "COB", requireClosed: true, message: "No se puede crear una Reserva sin un Ingreso de Coberturas cerrado." },
   "PCA": { prereqCode: "RES", requireClosed: true, message: "No se puede crear un Ajuste sin una Reserva cerrada." },
-  "RTA": { prereqCode: "NSA", requireClosed: false, message: "No se puede crear una Recepción Total de Antecedentes sin una Solicitud de Antecedentes previa." },
+  "RTA": { prereqCode: "NSA", requireClosed: true, message: "No se puede crear una Recepción Total de Antecedentes sin una Solicitud de Antecedentes cerrada." },
 };
 
 // ═══ Crear una acción en un siniestro ═══
@@ -424,6 +422,15 @@ async function autoAssignResponsibles(
 export async function issueClaimAction(actionId: string, userId?: string, actionData?: Record<string, unknown>): Promise<ClaimAction> {
   // ── Validar que el usuario sea el responsable de emisión ──
   await validateResponsible(actionId, "issuer", userId);
+
+  // ── Validar que el COB tenga al menos 1 cobertura ──
+  const action = await fetchById<ClaimAction>("claim_actions", actionId, "id, action_template_id, claim_id, action_template:action_template!claim_actions_action_template_id_fkey(code)");
+  if (action?.action_template?.code === "COB") {
+    const coverages = await getClaimCoveragesByAction(action.claim_id!, actionId);
+    if (!coverages || coverages.length === 0) {
+      throw new Error("Debe seleccionar al menos una cobertura antes de emitir el Ingreso de Coberturas.");
+    }
+  }
 
   const statusRows = await fetchAll<{ id: string }>("lookup_catalog", {
     select: "id",

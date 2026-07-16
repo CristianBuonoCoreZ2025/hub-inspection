@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
-import { getClaims, getClaimsParticipants, createClaimMinimal, deleteClaim, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
+import { getClaims, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
 import {
@@ -30,8 +30,17 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Plus, Search, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload, ChevronDown, Shield } from "lucide-react";
+import { Search, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload, ChevronDown, Shield } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import { getClaimTypeIcon } from "@/lib/claim-type-icons";
+
+function flagImgUrl(code: string | null): string | null {
+  if (!code || code.length !== 2) return null;
+  const lower = code.toLowerCase();
+  if (!/^[a-z]{2}$/.test(lower)) return null;
+  return `https://flagcdn.com/h20/${lower}.png`;
+}
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,8 +108,8 @@ function ClaimsPageContent() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { canCreate, canEdit } = usePermissions();
-  const { statusCode, statusLabel, codeToId, idToCode } = useClaimStatuses();
+  const { canCreate } = usePermissions();
+  const { statusCode, statusLabel, codeToId } = useClaimStatuses();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") || "");
   const [dateFrom, setDateFrom] = useState("");
@@ -747,25 +756,6 @@ function ClaimsPageContent() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteClaim,
-    onSuccess: () => {
-      toast.success("Siniestro eliminado");
-      queryClient.invalidateQueries({ queryKey: ["claims"] });
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const inspectMutation = useMutation({
-    mutationFn: async (claimId: string) => {
-      router.push(`/dashboard/inspecciones?claim=${claimId}`);
-      return null;
-    },
-    onSuccess: () => {
-      toast.info("Agenda la inspección: selecciona inspector, fecha y hora");
-    },
-  });
-
   const onSubmit = (values: ClaimCreateMinimalInput) => {
     createMutation.mutate(values);
   };
@@ -870,7 +860,7 @@ function ClaimsPageContent() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              className="liquid-button-outline"
+              className="pg-btn-platinum-icon"
               onClick={() => {
                 const rows = filtered || [];
                 const csv = [
@@ -890,8 +880,7 @@ function ClaimsPageContent() {
               <Download className="h-3.5 w-3.5" /> Exportar
             </Button>
             {canCreate("claims") && (
-              <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="liquid-button">
-                <Plus className="h-3.5 w-3.5" />
+              <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="pg-btn-platinum">
                 Nuevo
               </Button>
             )}
@@ -925,7 +914,7 @@ function ClaimsPageContent() {
           {(statusFilter || dateFrom || dateTo) && (
             <button
               onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
-              className="inline-flex items-center justify-center h-7 w-7 rounded-lg border border-input bg-card/80 text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+              className="btn-icon-sm"
               aria-label="Limpiar filtros"
             >
               <X className="h-3.5 w-3.5" />
@@ -1300,7 +1289,7 @@ function ClaimsPageContent() {
                       </div>
                       <button
                         type="button"
-                        className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                        className="btn-link-sm"
                         onClick={() => applySuggestion("insured")}
                       >
                         Usar datos
@@ -1463,7 +1452,7 @@ function ClaimsPageContent() {
                           </div>
                           <button
                             type="button"
-                            className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                            className="btn-link-sm"
                             onClick={() => applySuggestion("contractor")}
                           >
                             Usar datos
@@ -1623,7 +1612,7 @@ function ClaimsPageContent() {
                           </div>
                           <button
                             type="button"
-                            className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                            className="btn-link-sm"
                             onClick={() => applySuggestion("beneficiary")}
                           >
                             Usar datos
@@ -2063,8 +2052,7 @@ function ClaimsPageContent() {
           <div className="modal-footer">
             <button
               type="button"
-              className="btn-cancel"
-              style={{ width: "122px" }}
+              className="pg-btn-platinum"
               onClick={() => {
                 setOpen(false);
                 form.reset();
@@ -2084,8 +2072,7 @@ function ClaimsPageContent() {
             {step > 1 && (
               <button
                 type="button"
-                className="btn-save"
-                style={{ width: "122px" }}
+                className="pg-btn-platinum"
                 onClick={() => setStep(step - 1)}
               >
                 Atrás
@@ -2094,8 +2081,7 @@ function ClaimsPageContent() {
             {step < 4 ? (
               <button
                 type="button"
-                className="btn-save"
-                style={{ width: "122px" }}
+                className="pg-btn-platinum"
                 onClick={() => setStep(step + 1)}
               >
                 Siguiente
@@ -2104,8 +2090,7 @@ function ClaimsPageContent() {
               <button
                 type="submit"
                 form="claim-wizard-form"
-                className="btn-save"
-                style={{ width: "122px" }}
+                className="pg-btn-platinum"
                 disabled={createMutation.isPending}
               >
                 {createMutation.isPending ? "Creando..." : "Crear"}
@@ -2127,17 +2112,24 @@ function ClaimsPageContent() {
                 <th className="min-w-[200px]">Asegurado</th>
                 <th className="min-w-[250px]">Dirección</th>
                 <th className="w-[110px]">Estado</th>
-                <th className="w-[100px]">Fecha</th>
-                <th className="w-[160px] text-right">Acciones</th>
+                <th className="w-[100px]">Siniestro</th>
+                <th className="w-[100px]">Denuncio</th>
+                <th className="w-[100px]">Creación</th>
+                <th className="w-[70px] text-center">Tipo/País</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={8} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+                <tr><td colSpan={10} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
               ) : filtered?.length === 0 ? (
-                <tr><td colSpan={8} className="text-center text-muted-foreground py-4">No se encontraron siniestros.</td></tr>
+                <tr><td colSpan={10} className="text-center text-muted-foreground py-4">No se encontraron siniestros.</td></tr>
               ) : (
-                paginatedData.map((claim) => (
+                paginatedData.map((claim) => {
+                  const claimType = claimTypes?.find((ct) => ct.id === claim.claim_type_id);
+                  const country = countriesCatalog?.find((c) => c.id === claim.country_id);
+                  const flagUrl = flagImgUrl(country?.code ?? null);
+                  const BlIcon = getClaimTypeIcon(claimType?.icon ?? null);
+                  return (
                   <tr
                     key={claim.id}
                     className="cursor-pointer hover:bg-muted/40"
@@ -2155,32 +2147,29 @@ function ClaimsPageContent() {
                     <td className="truncate">{getParticipant(claim, 'insured')?.address || "—"}, {getParticipant(claim, 'insured')?.city || "—"}</td>
                     <td><StatusBadge status={statusCode(claim.status_id) ?? ""} label={statusLabel(claim.status_id) || "—"} /></td>
                     <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="app-row-actions">
-                        {claim.inspection_sessions && claim.inspection_sessions.length > 0 ? (
-                          <Button
-                            className="text-emerald-600 hover:bg-emerald-500/10"
-                            title={`Inspección ${claim.inspection_sessions[0].status === "active" ? "en curso" : "agendada"}`}
-                            onClick={() => router.push(`/dashboard/inspecciones/${claim.inspection_sessions![0].id}`)}
-                          >
-                            <ClipboardCheck className="h-3.5 w-3.5 mr-1" />
-                            {claim.inspection_sessions[0].status === "active" ? "Activo" : "Programada"}
-                          </Button>
-                        ) : canCreate("inspecciones") ? (
-                        <Button
-                          className="text-[#0095DA] hover:text-[#005BBB] hover:bg-[#0095DA]/10"
-                          title="Crear inspeccion"
-                          disabled={inspectMutation.isPending}
-                          onClick={() => inspectMutation.mutate(claim.id)}
-                        >
-                          <ClipboardCheck className="h-3.5 w-3.5 mr-1" />
-                          Inspeccionar
-                        </Button>
+                    <td>{claim.report_date ? new Date(claim.report_date).toLocaleDateString("es-CL") : "—"}</td>
+                    <td>{new Date(claim.created_at).toLocaleDateString("es-CL")}</td>
+                    <td className="text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span title={claimType?.name ?? "Tipo de Siniestro"}>
+                          <BlIcon className="size-3.5 text-muted-foreground" />
+                        </span>
+                        {flagUrl ? (
+                          <Image
+                            src={flagUrl}
+                            alt={country?.code ?? ""}
+                            className="recent-claim-flag-img"
+                            title={country?.name ?? ""}
+                            width={18}
+                            height={13}
+                            unoptimized
+                          />
                         ) : null}
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

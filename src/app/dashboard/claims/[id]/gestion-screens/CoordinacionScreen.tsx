@@ -20,6 +20,7 @@ export default function CoordinacionScreen({ action, onChange, readOnly }: Gesti
 
   useEffect(() => {
     onChange?.(form);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   return (

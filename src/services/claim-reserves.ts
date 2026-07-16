@@ -20,6 +20,11 @@ export interface ReserveCoverage {
     id: string;
     coverage_name: string | null;
     subcoverage_name: string | null;
+    policy_coverage?: {
+      coverage_catalog?: { code: string | null; name: string | null } | null;
+      subcoverage_catalog?: { code: string | null; name: string | null } | null;
+    } | null;
+    coverage_catalog?: { code: string | null; name: string | null } | null;
   };
 }
 
@@ -50,11 +55,13 @@ export interface ClaimReserve {
   reserve_coverages: ReserveCoverage[];
 }
 
+const COVERAGE_REL = "claim_coverage:claim_coverages!reserve_coverages_claim_coverage_id_fkey(id, coverage_name, subcoverage_name, policy_coverage:policy_coverages!claim_coverages_policy_coverage_id_fkey(id, coverage_catalog:coverage_catalog!policy_coverages_coverage_catalog_id_fkey(code, name), subcoverage_catalog:subcoverage_catalog!policy_coverages_subcoverage_catalog_id_fkey(code, name)), coverage_catalog:coverage_catalog!claim_coverages_coverage_catalog_id_fkey(code, name))";
+
 const RESERVE_SELECT =
-  "id, claim_id, claim_action_id, reserve_number, currency, exchange_rate, capital_amount, claimed_amount, deductible_amount, reserve_amount, final_amount, status, notes, payment_date, adjusted_amount, adjusted_deductible, adjusted_final_amount, adjusted_at, adjustment_notes, is_active, created_at, updated_at, reserve_coverages:reserve_coverages(id, claim_reserve_id, claim_coverage_id, insured_amount, claimed_amount, reserved_amount, recovered_amount, deductible_amount, net_reserve, adjusted_amount, adjusted_deductible, adjusted_net, adjustment_notes, adjusted_at, claim_coverage:claim_coverages!reserve_coverages_claim_coverage_id_fkey(id, coverage_name, subcoverage_name))";
+  `id, claim_id, claim_action_id, reserve_number, currency, exchange_rate, capital_amount, claimed_amount, deductible_amount, reserve_amount, final_amount, status, notes, payment_date, adjusted_amount, adjusted_deductible, adjusted_final_amount, adjusted_at, adjustment_notes, is_active, created_at, updated_at, reserve_coverages:reserve_coverages(id, claim_reserve_id, claim_coverage_id, insured_amount, claimed_amount, reserved_amount, recovered_amount, deductible_amount, net_reserve, adjusted_amount, adjusted_deductible, adjusted_net, adjustment_notes, adjusted_at, ${COVERAGE_REL})`;
 
 const RESERVE_COVERAGE_SELECT =
-  "id, claim_reserve_id, claim_coverage_id, insured_amount, claimed_amount, reserved_amount, recovered_amount, deductible_amount, net_reserve, adjusted_amount, adjusted_deductible, adjusted_net, adjustment_notes, adjusted_at, claim_coverage:claim_coverages!reserve_coverages_claim_coverage_id_fkey(id, coverage_name, subcoverage_name)";
+  `id, claim_reserve_id, claim_coverage_id, insured_amount, claimed_amount, reserved_amount, recovered_amount, deductible_amount, net_reserve, adjusted_amount, adjusted_deductible, adjusted_net, adjustment_notes, adjusted_at, ${COVERAGE_REL}`;
 
 export async function getClaimReserves(claimId: string): Promise<ClaimReserve[]> {
   return fetchAll<ClaimReserve>("claim_reserves", {

@@ -107,7 +107,7 @@ export default function OnboardingPage() {
             )}
           </div>
           <div className="flex flex-col gap-4 pt-2">
-            <Button type="submit" className="w-full btn-create btn-lg-block" disabled={isLoading}>
+            <Button type="submit" className="w-full pg-btn-platinum" disabled={isLoading}>
               {isLoading ? "Creando..." : "Continuar al Dashboard"}
             </Button>
           </div>

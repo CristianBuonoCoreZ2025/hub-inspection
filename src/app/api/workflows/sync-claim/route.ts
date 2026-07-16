@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const created = (data as any[]) || [];
+    const created = (data as Record<string, unknown>[]) || [];
     const newActions = created.filter(r => r.created);
 
     return NextResponse.json({

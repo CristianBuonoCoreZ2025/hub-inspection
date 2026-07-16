@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, LayoutTemplate, Monitor } from "lucide-react";
+import { Pencil, Trash2, LayoutTemplate, Monitor } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -80,7 +80,7 @@ export default function PantallasPage() {
   };
 
   const getFieldsPreview = (s: GestionScreen) => {
-    const fields = Array.isArray(s.form_schema?.fields) ? s.form_schema.fields as any[] : [];
+    const fields = Array.isArray(s.form_schema?.fields) ? s.form_schema.fields as { label: string }[] : [];
     return fields.slice(0, 4).map((f) => f.label).join(", ");
   };
 
@@ -93,8 +93,8 @@ export default function PantallasPage() {
         </h1>
         <div className="flex-1" />
         {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="liquid-button">
-            <Plus className="h-3.5 w-3.5" /> Nueva
+          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="pg-btn-platinum">
+            Nueva
           </Button>
         )}
       </div>
@@ -214,8 +214,8 @@ export default function PantallasPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
-              <Button type="submit" size="sm" disabled={createMut.isPending || updateMut.isPending} className="btn-save btn-footer">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createMut.isPending || updateMut.isPending} className="pg-btn-platinum">
                 {createMut.isPending || updateMut.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}
               </Button>
             </div>

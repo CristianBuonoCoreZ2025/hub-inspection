@@ -9,7 +9,7 @@ import type { GestionScreenProps } from "./types";
 export default function CoberturasScreen({ action, onChange, readOnly }: GestionScreenProps) {
   const data = (action.action_data || {}) as Record<string, unknown>;
   const initialRows = Array.isArray(data.coberturas)
-    ? (data.coberturas as any[])
+    ? (data.coberturas as Array<{ cobertura: string; subcobertura: string; montoAsegurado: string; montoAfectado: string; aplica: boolean }>)
     : [
         { cobertura: "", subcobertura: "", montoAsegurado: "", montoAfectado: "", aplica: false },
       ];
@@ -18,6 +18,7 @@ export default function CoberturasScreen({ action, onChange, readOnly }: Gestion
 
   useEffect(() => {
     onChange?.({ coberturas: rows });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]);
 
   return (

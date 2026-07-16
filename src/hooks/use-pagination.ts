@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { APP_CONFIG } from "@/lib/config";
 
 export function usePagination<T>(data: T[] | undefined | null, pageSize?: number) {
@@ -10,10 +10,7 @@ export function usePagination<T>(data: T[] | undefined | null, pageSize?: number
   const total = data?.length ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / currentPageSize));
 
-  // Reset a página 1 si los datos cambian o si la página actual excede el total
-  useEffect(() => {
-    if (page > totalPages) setPage(1);
-  }, [page, totalPages]);
+  if (page > totalPages) setPage(1);
 
   const paginatedData = useMemo(() => {
     if (!data || !Array.isArray(data)) return [];

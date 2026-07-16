@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,8 +23,9 @@ import {
 } from "@/services/claim-documents";
 import { getPolicyCoveragesByPolicyId } from "@/services/policies";
 import { getClaimById, getClaimParticipants } from "@/services/claims";
-import { getUsersByRoles, updateActionResponsible } from "@/services/claim-actions";
+import { getUsersByRoles, updateClaimAction } from "@/services/claim-actions";
 import { getInspectionSessions, createInspectionSession } from "@/services/inspections";
+import { getCoverageCatalog } from "@/services/coverage-catalog";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Plus, Trash2, ChevronDown, Check, CheckCircle, X } from "lucide-react";
@@ -80,6 +82,34 @@ export function widthClass(width: FieldWidth = "full"): string {
 
 export interface DynamicScreenProps extends GestionScreenProps {
   fields: ScreenField[];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Hook: useAutoSave — autoguardado con debounce tipo Excel
+// ═══════════════════════════════════════════════════════════════
+function useAutoSave(
+  saveFn: () => void,
+  deps: unknown[],
+  enabled: boolean,
+  delay = 500
+) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRef = useRef(true);
+
+  useEffect(() => {
+    if (!enabled) return;
+    // Saltar el primer render (carga inicial)
+    if (isFirstRef.current) {
+      isFirstRef.current = false;
+      return;
+    }
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => saveFn(), delay);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -187,6 +217,37 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
   const complexEntities = fields.filter((f) => f.category === "complex_entity" && f.type !== "review_levels");
   const ownFields = fields.filter((f) => f.category === "own");
 
+  // Si la pantalla tiene reserva o ajuste, los campos de moneda/fecha/reserva van arriba del form
+  // → quitarlos de claimEntities para no duplicarlos abajo
+  // → también quitar toda la sección "Datos del Siniestro" porque ya están arriba
+  const hasReserveForm = complexEntities.some((f) => f.type === "claim_reserve_form");
+  const hasAdjustmentForm = complexEntities.some((f) => f.type === "claim_adjustment_form");
+  const hideClaimSection = hasReserveForm || hasAdjustmentForm;
+  const hiddenEntityTypes = new Set<string>();
+  if (hasReserveForm) {
+    hiddenEntityTypes.add("reserve_currency");
+    hiddenEntityTypes.add("reserve_payment_date");
+  }
+  if (hasAdjustmentForm) {
+    hiddenEntityTypes.add("reserve_number");
+    hiddenEntityTypes.add("reserve_currency");
+    hiddenEntityTypes.add("reserve_payment_date");
+  }
+  const filteredClaimEntities = hideClaimSection ? [] : claimEntities;
+
+  // Own fields: quitar los que ya están en los forms superiores de reserva/ajuste
+  const hiddenOwnFields = new Set<string>();
+  if (hasReserveForm) {
+    hiddenOwnFields.add("reserve_currency");
+    hiddenOwnFields.add("reserve_payment_date");
+    hiddenOwnFields.add("reserve_notes");
+  }
+  if (hasAdjustmentForm) {
+    hiddenOwnFields.add("adjustment_date");
+    hiddenOwnFields.add("adjustment_notes");
+  }
+  const filteredOwnFields = ownFields.filter((f) => !hiddenOwnFields.has(f.id));
+
   // Ordenar entidades complejas:
   // 1. claim_coverages primero
   // 2. resto de entidades complejas
@@ -199,11 +260,11 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
   return (
     <div className="space-y-4">
       {/* ─── Datos del siniestro (PRIMERO) ─── */}
-      {claimEntities.length > 0 && (
+      {filteredClaimEntities.length > 0 && (
         <section className="app-panel p-3">
           <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">Datos del Siniestro</h4>
           <div className="grid grid-cols-12 gap-3">
-            {claimEntities.map((field) => (
+            {filteredClaimEntities.map((field) => (
               <div key={field.id} className={widthClass(field.width)}>
                 <EntityField field={field} value={values[field.id]} action={action} reserveData={reserveData} claim={claim ?? undefined} claimParticipants={claimParticipants} />
               </div>
@@ -218,7 +279,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
           {sortedComplexEntities.map((field) => (
             <section key={field.id} className="app-panel p-3">
               <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">{field.label}</h4>
-              <ComplexEntityView type={field.type} action={action} readOnly={readOnly} values={values} onAdvance={onAdvance} onReject={onReject} />
+              <ComplexEntityView type={field.type} action={action} readOnly={readOnly} values={values} onAdvance={onAdvance} onReject={onReject} onChange={onChange} />
             </section>
           ))}
         </div>
@@ -252,10 +313,10 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
       )}
 
       {/* ─── Formulario (campos propios) ─── */}
-      {ownFields.length > 0 && (
+      {filteredOwnFields.length > 0 && (
         <section className="app-panel p-3">
           <div className="grid grid-cols-12 gap-3">
-            {ownFields.map((field) => (
+            {filteredOwnFields.map((field) => (
               <div key={field.id} className={widthClass(field.width)}>
                 <OwnField
                   field={field}
@@ -394,7 +455,6 @@ function getActionEntityValue(type: string, action: ActionWithRelations | null, 
 
 function ReviewLevelsView({ action, onAdvance, onReject }: { action: ActionWithRelations; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void }) {
   const feature = action.action_feature;
-  const queryClient = useQueryClient();
   const { profile } = useAuth();
   if (!feature) return null;
 
@@ -412,6 +472,11 @@ function ReviewLevelsView({ action, onAdvance, onReject }: { action: ActionWithR
     active: boolean;
   }[] = [];
 
+  // Niveles: usar is_review_applicable/is_approval_applicable del template (por línea de negocio)
+  // con fallback a has_review/has_approve del feature
+  const hasReview = tpl?.is_review_applicable ?? feature.has_review;
+  const hasApprove = tpl?.is_approval_applicable ?? feature.has_approve;
+
   if (feature.has_issue) {
     levels.push({
       key: "issuer",
@@ -424,7 +489,7 @@ function ReviewLevelsView({ action, onAdvance, onReject }: { action: ActionWithR
     });
   }
 
-  if (feature.has_review) {
+  if (hasReview) {
     levels.push({
       key: "reviewer",
       label: "Revisión",
@@ -436,7 +501,7 @@ function ReviewLevelsView({ action, onAdvance, onReject }: { action: ActionWithR
     });
   }
 
-  if (feature.has_approve) {
+  if (hasApprove) {
     levels.push({
       key: "approver",
       label: "Aprobación",
@@ -451,7 +516,7 @@ function ReviewLevelsView({ action, onAdvance, onReject }: { action: ActionWithR
   if (levels.length === 0) return null;
 
   const allDone = levels.every((l) => l.done);
-  const isClosed = statusCode === "issued" && !feature.has_review && !feature.has_approve;
+  const isClosed = statusCode === "issued" && !hasReview && !hasApprove;
 
   return (
     <div className="rounded-lg border border-border bg-muted/20 p-3">
@@ -480,11 +545,6 @@ function ReviewLevelsView({ action, onAdvance, onReject }: { action: ActionWithR
               currentUserId={profile?.id || null}
               onAdvance={onAdvance}
               onReject={onReject}
-              onUpdated={() => {
-                queryClient.invalidateQueries({ queryKey: ["claim-actions", action.claim_id] });
-                queryClient.invalidateQueries({ queryKey: ["claim-action", action.id] });
-                toast.success("Responsable actualizado");
-              }}
             />
           </div>
         ))}
@@ -499,7 +559,6 @@ function LevelCard({
   currentUserId,
   onAdvance,
   onReject,
-  onUpdated,
 }: {
   level: {
     key: "issuer" | "reviewer" | "approver";
@@ -514,22 +573,28 @@ function LevelCard({
   currentUserId: string | null;
   onAdvance?: (level: "issuer" | "reviewer" | "approver") => void;
   onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void;
-  onUpdated: () => void;
 }) {
+  const queryClient = useQueryClient();
   const [showRejectBox, setShowRejectBox] = useState(false);
   const [rejectComment, setRejectComment] = useState("");
-  const { data: candidates, isLoading } = useQuery({
+  const { data: candidates } = useQuery({
     queryKey: ["users-by-roles", level.roles],
     queryFn: () => getUsersByRoles(level.roles),
     enabled: level.roles.length > 0,
   });
 
-  const updateMut = useMutation({
-    mutationFn: (userId: string | null) => updateActionResponsible(actionId, level.key, userId),
-    onSuccess: () => {
-      onUpdated();
+  // Mutación para asignar responsable
+  const assignMut = useMutation({
+    mutationFn: (profileId: string) => {
+      const field = level.key === "issuer" ? "issuer_id" : level.key === "reviewer" ? "reviewer_id" : "approver_id";
+      return updateClaimAction(actionId, { [field]: profileId });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onSuccess: () => {
+      toast.success("Responsable asignado");
+      queryClient.invalidateQueries({ queryKey: ["claim-action", actionId] });
+      queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const sty = level.done
@@ -540,9 +605,8 @@ function LevelCard({
 
   const isCurrentUser = level.currentId && currentUserId === level.currentId;
   const isCandidate = !!currentUserId && (candidates || []).some(c => c.id === currentUserId);
-  const canReassign = level.active && !level.done && (isCandidate || isCurrentUser);
-  // Puede avanzar/rechazar solo si la etapa está activa, no está done, es el responsable actual, y hay callbacks
-  const canAct = level.active && !level.done && isCurrentUser && (onAdvance || onReject);
+  // Puede avanzar/rechazar si la etapa está activa, no está done, y tiene el rol permitido
+  const canAct = level.active && !level.done && (isCandidate || isCurrentUser) && (onAdvance || onReject);
 
   const advanceLabel = level.key === "issuer" ? "Emitir" : level.key === "reviewer" ? "Revisar" : "Aprobar";
 
@@ -574,45 +638,30 @@ function LevelCard({
         )}
       </div>
       <div className="flex items-center gap-1.5">
-        {canReassign ? (
-          <Select
-            value={level.currentId || "__none"}
-            onValueChange={(v) => {
-              const newId = v === "__none" ? null : v;
-              if (newId !== level.currentId) {
-                updateMut.mutate(newId);
-              }
-            }}
-            disabled={updateMut.isPending || isLoading}
-            items={[
-              { value: "__none", label: isLoading ? "Cargando..." : "Por asignar" },
-              ...(candidates || []).map((c) => ({ value: c.id, label: c.full_name })),
-              ...(level.currentId && !(candidates || []).some((c) => c.id === level.currentId)
-                ? [{ value: level.currentId, label: level.personName }]
-                : []),
-            ]}
-          >
-            <SelectTrigger className="app-input h-7 text-[10px] max-w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none" disabled>
-                {isLoading ? "Cargando..." : "Por asignar"}
-              </SelectItem>
-              {(candidates || []).map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.full_name}
-                </SelectItem>
-              ))}
-              {level.currentId && !(candidates || []).some(c => c.id === level.currentId) && (
-                <SelectItem value={level.currentId}>{level.personName}</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        ) : (
+        {level.currentId ? (
           <span className="text-[10px] opacity-80">{level.personName}</span>
+        ) : (
+          <span className="text-[10px] opacity-50 italic">Por asignar</span>
         )}
       </div>
+      {/* Panel de asignación cuando no hay responsable y la etapa está activa */}
+      {!level.currentId && level.active && !level.done && (
+        <div className="flex flex-col gap-1 pt-0.5">
+          <select
+            className="text-[10px] rounded border border-border bg-background px-1.5 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
+            value=""
+            onChange={(e) => {
+              if (e.target.value) assignMut.mutate(e.target.value);
+            }}
+            disabled={assignMut.isPending}
+          >
+            <option value="" disabled>Seleccionar persona...</option>
+            {(candidates || []).map((c) => (
+              <option key={c.id} value={c.id}>{c.full_name || c.email}</option>
+            ))}
+          </select>
+        </div>
+      )}
       {/* Botones de acción: ✓ avanzar / ✗ rechazar — solo para el responsable activo */}
       {canAct && !showRejectBox && (
         <div className="flex gap-1 pt-0.5">
@@ -671,7 +720,7 @@ function LevelCard({
 // Entidades complejas (solo vista, datos reales)
 // ═══════════════════════════════════════════════════════════════
 
-function ComplexEntityView({ type, action, readOnly, values, onAdvance, onReject }: { type: string; action: ActionWithRelations; readOnly?: boolean; values: Record<string, unknown>; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void }) {
+function ComplexEntityView({ type, action, readOnly, values, onAdvance, onReject, onChange }: { type: string; action: ActionWithRelations; readOnly?: boolean; values: Record<string, unknown>; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void; onChange?: (data: Record<string, unknown>) => void }) {
   switch (type) {
     case "review_levels":
       return <ReviewLevelsView action={action} onAdvance={onAdvance} onReject={onReject} />;
@@ -680,9 +729,9 @@ function ComplexEntityView({ type, action, readOnly, values, onAdvance, onReject
     case "claim_reserve":
       return <ClaimReservesView claimId={action?.claim_id} />;
     case "claim_reserve_form":
-      return <ReserveEditorView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} generalValues={values} />;
+      return <ReserveEditorView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} generalValues={values} action={action} onChange={onChange} />;
     case "claim_adjustment_form":
-      return <AdjustmentEditorView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} generalValues={values} />;
+      return <AdjustmentEditorView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} generalValues={values} action={action} onChange={onChange} />;
     case "claim_documents":
       return <DocumentRequestView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} />;
     case "claim_document_receipt":
@@ -705,11 +754,82 @@ function formatMoney(value: number | null | undefined): string {
   return value.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatDateDisplay(value: string | null | undefined): string {
+  if (!value) return "—";
+  const [y, m, d] = value.split("-");
+  if (y && m && d) return `${d}-${m}-${y}`;
+  return value;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CoverageCell — celda unificada para mostrar coberturas en tablas
+// Formato: COD_PADRE / COD_SUB Nombre subcobertura
+// Si no hay subcobertura: COD_PADRE Nombre cobertura
+// ═══════════════════════════════════════════════════════════════
+function CoverageCell({
+  coverageCode,
+  coverageName,
+  subcoverageCode,
+  subcoverageName,
+}: {
+  coverageCode?: string | null | undefined;
+  coverageName?: string | null | undefined;
+  subcoverageCode?: string | null | undefined;
+  subcoverageName?: string | null | undefined;
+}) {
+  const hasSub = !!subcoverageName || !!subcoverageCode;
+  return (
+    <div>
+      <div className="font-medium text-[11px]">
+        {coverageCode && <span className="text-muted-foreground font-mono text-[10px] mr-1">{coverageCode}</span>}
+        {hasSub && subcoverageCode && <span className="text-muted-foreground font-mono text-[10px]">/ {subcoverageCode}</span>}
+        {!hasSub && <span>{coverageName || "—"}</span>}
+      </div>
+      {hasSub && (
+        <div className="text-[10px] text-muted-foreground leading-tight">
+          {subcoverageName || ""}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: string; actionId?: string; readOnly?: boolean; action?: ActionWithRelations }) {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
   const [comboOpen, setComboOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const comboBtnRef = useRef<HTMLButtonElement>(null);
+  const [comboPos, setComboPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+
+  // Recalcular posición del dropdown cuando el modal hace scroll o resize
+  const updateComboPos = useCallback(() => {
+    if (comboBtnRef.current) {
+      const rect = comboBtnRef.current.getBoundingClientRect();
+      setComboPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!comboOpen) return;
+    updateComboPos();
+    // Escuchar scroll en todos los contenedores scrollables del modal
+    const handleScroll = () => updateComboPos();
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleScroll);
+    // Buscar el modal-body y escuchar su scroll
+    const modalBody = comboBtnRef.current?.closest(".modal-body");
+    if (modalBody) {
+      modalBody.addEventListener("scroll", handleScroll);
+    }
+    return () => {
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll);
+      if (modalBody) {
+        modalBody.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [comboOpen, updateComboPos]);
 
   // Determinar quién puede editar según la etapa del workflow:
   // - "todo" → emisor (issuer_id)
@@ -745,11 +865,28 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
 
   const policyId = claim?.policy_id || "";
 
-  // Cargar coberturas de la póliza
+  // Determinar el tipo de póliza:
+  // - "none" → sin póliza (bloquear coberturas)
+  // - "emision" → póliza pendiente/draft sin número (permitir cualquier cobertura del catálogo)
+  // - "normal" → póliza con número (cargar policy_coverages)
+  const policyType: "none" | "emision" | "normal" = !policyId
+    ? "none"
+    : claim?.policy?.status === "draft" || (!claim?.policy?.policy_number && claim?.policy?.policy_name?.includes("PENDIENTE"))
+    ? "emision"
+    : "normal";
+
+  // Cargar coberturas de la póliza (solo póliza normal)
   const { data: policyCoverages, isLoading: loadingPolicy } = useQuery({
     queryKey: ["policy-coverages-by-id", policyId],
     queryFn: () => getPolicyCoveragesByPolicyId(policyId),
-    enabled: !!policyId,
+    enabled: !!policyId && policyType === "normal",
+  });
+
+  // Cargar catálogo de coberturas (solo en emisión)
+  const { data: coverageCatalog, isLoading: loadingCatalog } = useQuery({
+    queryKey: ["coverage-catalog", claim?.country_id],
+    queryFn: () => getCoverageCatalog(claim?.country_id || undefined),
+    enabled: policyType === "emision",
   });
 
   // Cargar coberturas del siniestro vinculadas a ESTA gestión
@@ -761,8 +898,23 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
 
   // Mutations
   const addCoverageMut = useMutation({
-    mutationFn: (policyCoverageId: string) => {
-      const pc = policyCoverages?.find((p) => p.id === policyCoverageId);
+    mutationFn: (coverageId: string) => {
+      if (policyType === "emision") {
+        // En emisión: buscar en el catálogo de coberturas
+        const cc = coverageCatalog?.find((c) => c.id === coverageId);
+        if (!cc) throw new Error("Cobertura no encontrada en el catálogo");
+        return createClaimCoverage({
+          claim_id: claimId,
+          claim_action_id: actionId,
+          coverage_catalog_id: cc.id,
+          coverage_name: cc.name,
+          insured_amount: 0,
+          deductible_amount: 0,
+          currency: "CLP",
+        });
+      }
+      // Póliza normal: buscar en policy_coverages
+      const pc = policyCoverages?.find((p) => p.id === coverageId);
       if (!pc) throw new Error("Cobertura no encontrada");
       return createClaimCoverage({
         claim_id: claimId,
@@ -802,26 +954,51 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
   });
 
   // IDs de coberturas ya vinculadas a esta gestión
-  const addedPolicyIds = new Set(
+  const addedIds = new Set(
     (claimCoverages || [])
-      .filter((c) => c.policy_coverage_id)
-      .map((c) => c.policy_coverage_id)
+      .filter((c) => c.policy_coverage_id || c.coverage_catalog_id)
+      .map((c) => c.policy_coverage_id || c.coverage_catalog_id)
   );
 
-  // Coberturas de la póliza disponibles para vincular a esta gestión
-  const availableCoverages = (policyCoverages || []).filter(
-    (pc) => !addedPolicyIds.has(pc.id) &&
-    (!searchTerm ||
-      pc.coverage_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (pc.subcoverage_name || "").toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Coberturas disponibles para vincular
+  const availableCoverages = policyType === "emision"
+    ? (coverageCatalog || []).filter(
+        (cc) => !addedIds.has(cc.id) &&
+        (!searchTerm ||
+          cc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          cc.code.toLowerCase().includes(searchTerm.toLowerCase()))
+      ).map((cc) => ({
+        id: cc.id,
+        coverage_name: cc.name,
+        subcoverage_name: null as string | null,
+        insured_amount: null as number | null,
+        coverage_catalog: { code: cc.code, name: cc.name },
+        subcoverage_catalog: null as { code: string; name: string } | null,
+      }))
+    : (policyCoverages || []).filter(
+        (pc) => !addedIds.has(pc.id) &&
+        (!searchTerm ||
+          pc.coverage_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (pc.subcoverage_name || "").toLowerCase().includes(searchTerm.toLowerCase()))
+      );
 
-  if (loadingPolicy || loadingClaim) {
+  if (loadingPolicy || loadingClaim || loadingCatalog) {
     return <div className="text-[11px] text-muted-foreground py-2">Cargando coberturas...</div>;
   }
 
-  if (!policyId) {
-    return <div className="text-[11px] text-muted-foreground py-3 text-center">El siniestro no tiene póliza asignada.</div>;
+  // Sin póliza → bloquear
+  if (policyType === "none") {
+    return (
+      <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4 text-center">
+        <p className="text-[12px] font-medium text-amber-700 dark:text-amber-400">
+          Sin Póliza asignada
+        </p>
+        <p className="text-[11px] text-muted-foreground mt-1">
+          Debe asociar el siniestro a una póliza con coberturas para ejecutar esta acción.
+          Seleccione una póliza existente o use &ldquo;En Emisión de Número&rdquo; en el formulario del siniestro.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -830,6 +1007,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
       {canEditCoverages ? (
         <div className="relative">
           <button
+            ref={comboBtnRef}
             type="button"
             onClick={() => setComboOpen(!comboOpen)}
             className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-[12px] text-muted-foreground hover:border-primary/40 transition-colors"
@@ -841,10 +1019,13 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${comboOpen ? "rotate-180" : ""}`} />
           </button>
 
-          {comboOpen && (
+          {comboOpen && createPortal(
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setComboOpen(false)} />
-              <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-[280px] overflow-hidden flex flex-col">
+              <div className="fixed inset-0 z-60" onClick={() => setComboOpen(false)} />
+              <div
+                className="fixed z-70 rounded-md border border-border bg-popover shadow-lg max-h-[280px] overflow-hidden flex flex-col"
+                style={{ top: comboPos.top, left: comboPos.left, width: comboPos.width }}
+              >
                 <div className="p-2 border-b">
                   <Input
                     className="app-input h-8 text-[12px]"
@@ -892,7 +1073,8 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
                   )}
                 </div>
               </div>
-            </>
+            </>,
+            document.body
           )}
         </div>
       ) : null}
@@ -925,10 +1107,12 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
                 return (
                 <tr key={c.id} className="border-t border-border">
                   <td className="px-2 py-1.5">
-                    <div className="font-medium">{c.coverage_name}</div>
-                    {c.subcoverage_name && (
-                      <div className="text-[10px] text-muted-foreground">{c.subcoverage_name}</div>
-                    )}
+                    <CoverageCell
+                      coverageCode={c.policy_coverage?.coverage_catalog?.code || c.coverage_catalog?.code}
+                      coverageName={c.coverage_name}
+                      subcoverageCode={c.policy_coverage?.subcoverage_catalog?.code}
+                      subcoverageName={c.subcoverage_name}
+                    />
                   </td>
                   <td className="px-2 py-1.5 text-right">
                     {canEditCoverages ? (
@@ -1050,7 +1234,14 @@ function ClaimReservesView({ claimId }: { claimId: string }) {
                 <tbody>
                   {r.reserve_coverages.map((rc) => (
                     <tr key={rc.id} className="border-t border-border">
-                      <td className="px-2 py-1">{rc.claim_coverage?.coverage_name || rc.claim_coverage_id.slice(0, 8)}</td>
+                      <td className="px-2 py-1">
+                        <CoverageCell
+                          coverageCode={rc.claim_coverage?.policy_coverage?.coverage_catalog?.code || rc.claim_coverage?.coverage_catalog?.code}
+                          coverageName={rc.claim_coverage?.coverage_name}
+                          subcoverageCode={rc.claim_coverage?.policy_coverage?.subcoverage_catalog?.code}
+                          subcoverageName={rc.claim_coverage?.subcoverage_name}
+                        />
+                      </td>
                       <td className="px-2 py-1 text-right font-mono">{formatMoney(rc.reserved_amount)}</td>
                       <td className="px-2 py-1 text-right font-mono">{formatMoney(rc.deductible_amount)}</td>
                       <td className="px-2 py-1 text-right font-mono">{formatMoney(rc.net_reserve)}</td>
@@ -1168,7 +1359,11 @@ function OwnField({
         </div>
       );
 
-    case "select":
+    case "select": {
+      const selectItems = [
+        { value: "__none", label: field.placeholder || "Seleccionar..." },
+        ...(field.options || []).map((opt) => ({ value: opt.value, label: opt.label })),
+      ];
       return (
         <div className="flex flex-col gap-1">
           <Label className="app-field-label text-[11px]">
@@ -1178,13 +1373,15 @@ function OwnField({
             value={String(value || "__none")}
             onValueChange={(v) => onChange(field.id, v === "__none" ? "" : v)}
             disabled={readOnly}
-            items={[
-              { value: "__none", label: field.placeholder || "Seleccionar..." },
-              ...(field.options || []).map((opt) => ({ value: opt.value, label: opt.label })),
-            ]}
+            items={selectItems}
           >
             <SelectTrigger className="app-input h-7 text-[12px] w-full">
-              <SelectValue placeholder={field.placeholder || "Seleccionar..."} />
+              <SelectValue placeholder={field.placeholder || "Seleccionar..."}>
+                {(val: string) => {
+                  const item = selectItems.find((i) => i.value === val);
+                  return item ? item.label : (field.placeholder || "Seleccionar...");
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">{field.placeholder || "Seleccionar..."}</SelectItem>
@@ -1195,6 +1392,7 @@ function OwnField({
           </Select>
         </div>
       );
+    }
 
     case "checkbox":
       return (
@@ -1211,9 +1409,82 @@ function OwnField({
     case "table":
       return <TableField field={field} value={value} onChange={onChange} readOnly={readOnly} />;
 
+    case "datetime":
+      return (
+        <div className="flex flex-col gap-1">
+          <Label className="app-field-label text-[11px]">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </Label>
+          <Input
+            type="datetime-local"
+            className={inputClass}
+            value={String(value || "")}
+            onChange={(e) => onChange(field.id, e.target.value)}
+            disabled={readOnly}
+          />
+        </div>
+      );
+
+    case "inspector_select":
+      return <InspectorSelectField field={field} value={value} onChange={onChange} readOnly={readOnly} />;
+
     default:
       return <div className="text-[11px] text-amber-600">Tipo no soportado: <strong>{field.type}</strong></div>;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// InspectorSelectField — select de inspectores disponibles
+// ═══════════════════════════════════════════════════════════════
+function InspectorSelectField({
+  field,
+  value,
+  onChange,
+  readOnly,
+}: {
+  field: ScreenField;
+  value: unknown;
+  onChange: (id: string, value: unknown) => void;
+  readOnly?: boolean;
+}) {
+  const { data: inspectors } = useQuery({
+    queryKey: ["users-by-roles", ["inspector", "adjuster"]],
+    queryFn: () => getUsersByRoles(["inspector", "adjuster"]),
+  });
+
+  const selectItems = [
+    { value: "__none", label: "Seleccionar inspector..." },
+    ...(inspectors || []).map((p) => ({ value: p.id, label: p.full_name || p.email })),
+  ];
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Label className="app-field-label text-[11px]">
+        {field.label} {field.required && <span className="text-red-500">*</span>}
+      </Label>
+      <Select
+        value={String(value || "__none")}
+        onValueChange={(v) => onChange(field.id, v === "__none" ? "" : v)}
+        disabled={readOnly}
+        items={selectItems}
+      >
+        <SelectTrigger className="app-input h-8 text-[12px] w-full">
+          <SelectValue placeholder="Seleccionar inspector...">
+            {(val: string) => {
+              const item = selectItems.find((i) => i.value === val);
+              return item ? item.label : "Seleccionar inspector...";
+            }}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none">Seleccionar inspector...</SelectItem>
+          {(inspectors || []).map((p) => (
+            <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1383,12 +1654,65 @@ function TableField({
 // Editor de Reserva por Cobertura
 // ═══════════════════════════════════════════════════════════════
 
-function ReserveEditorView({ claimId, actionId, readOnly, generalValues }: { claimId: string; actionId?: string; readOnly?: boolean; generalValues: Record<string, unknown> }) {
-  // Cargar SOLO las coberturas ingresadas via Ingreso de Coberturas (cadena)
-  const { data: claimCoverages, isLoading: loadingCov } = useQuery({
-    queryKey: ["claim-coverages-from-ingreso", claimId],
-    queryFn: () => getClaimCoveragesFromIngreso(claimId),
+const CURRENCY_OPTIONS = [
+  { value: "CLP", label: "CLP — Peso Chileno" },
+  { value: "USD", label: "USD — Dólar EE.UU." },
+  { value: "EUR", label: "EUR — Euro" },
+  { value: "UF",  label: "UF — Unidad de Fomento" },
+  { value: "UTM", label: "UTM — Unidad Tributaria Mensual" },
+  { value: "BRL", label: "BRL — Real Brasileño" },
+  { value: "MXN", label: "MXN — Peso Mexicano" },
+  { value: "ARS", label: "ARS — Peso Argentino" },
+  { value: "COP", label: "COP — Peso Colombiano" },
+  { value: "PEN", label: "PEN — Sol Peruano" },
+];
+
+function ReserveEditorView({ claimId, actionId, readOnly, generalValues, action, onChange }: { claimId: string; actionId?: string; readOnly?: boolean; generalValues: Record<string, unknown>; action?: ActionWithRelations; onChange?: (data: Record<string, unknown>) => void }) {
+  // Snapshot de coberturas del padre (COB) — copia inmutable en action_data
+  const snapshotCoverages = (generalValues.parent_snapshot as Array<{
+    id: string;
+    coverage_name: string;
+    subcoverage_name: string | null;
+    policy_coverage_id: string | null;
+    coverage_catalog_id: string | null;
+    coverage_code: string | null;
+    subcoverage_code: string | null;
+    insured_amount: number;
+    claimed_amount: number;
+    reserved_amount: number;
+    deductible_amount: number;
+    currency: string;
+  }> | undefined);
+
+  // Cargar claim para obtener moneda de la póliza o del siniestro
+  const { data: claim } = useQuery({
+    queryKey: ["claim", claimId],
+    queryFn: () => getClaimById(claimId),
     enabled: !!claimId,
+  });
+
+  // Moneda: póliza → siniestro → CLP
+  const defaultCurrency = claim?.policy?.currency || claim?.currency?.code || "CLP";
+
+  // Fecha de resolución: hoy + days_to_issue del template
+  const daysToIssue = action?.action_template?.days_to_issue || 0;
+  const defaultPaymentDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysToIssue);
+    return d.toISOString().slice(0, 10);
+  }, [daysToIssue]);
+
+  // parent_action_id = ID del COB que generó esta reserva (para fallback)
+  const parentActionId = generalValues.parent_action_id as string | undefined;
+
+  // Fallback a DB query solo si no hay snapshot (acciones antiguas)
+  // Usa parent_action_id para traer SOLO las coberturas del COB padre, no todas
+  const { data: dbCoverages, isLoading: loadingCov } = useQuery({
+    queryKey: ["claim-coverages-by-parent-action", claimId, parentActionId],
+    queryFn: () => parentActionId
+      ? getClaimCoveragesByAction(claimId, parentActionId)
+      : getClaimCoveragesFromIngreso(claimId),
+    enabled: !!claimId && !snapshotCoverages,
   });
 
   // Cargar reserva existente para esta acción
@@ -1398,15 +1722,22 @@ function ReserveEditorView({ claimId, actionId, readOnly, generalValues }: { cla
     enabled: !!actionId,
   });
 
+  // Usar snapshot si existe, sino fallback a DB
+  const claimCoverages = snapshotCoverages || dbCoverages;
+
   if (loadingCov || loadingRes) {
     return <div className="text-[11px] text-muted-foreground py-2">Cargando...</div>;
   }
 
   if (!claimCoverages || claimCoverages.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border py-6 text-center">
-        <p className="text-[11px] text-muted-foreground">
-          No hay coberturas ingresadas. Completa primero el Ingreso de Coberturas.
+      <div className="rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-4 text-center">
+        <p className="text-[12px] font-medium text-red-700 dark:text-red-400">
+          Inconsistencia de datos
+        </p>
+        <p className="text-[11px] text-muted-foreground mt-1">
+          La reserva existe pero no se encontraron coberturas del Ingreso de Coberturas.
+          Esto indica una inconsistencia en los datos. Contacte al administrador.
         </p>
       </div>
     );
@@ -1420,7 +1751,12 @@ function ReserveEditorView({ claimId, actionId, readOnly, generalValues }: { cla
       claimCoverages={claimCoverages}
       existingReserve={existingReserve || null}
       readOnly={readOnly}
-      generalValues={generalValues}
+      generalValues={{
+        ...generalValues,
+        default_currency: defaultCurrency,
+        default_payment_date: defaultPaymentDate,
+      }}
+      onChange={(data) => onChange?.(data)}
     />
   );
 }
@@ -1432,21 +1768,26 @@ function ReserveEditorForm({
   existingReserve,
   readOnly,
   generalValues,
+  onChange,
 }: {
   claimId: string;
   actionId?: string;
-  claimCoverages: { id: string; coverage_name: string | null; subcoverage_name: string | null; claimed_amount: number | null; deductible_amount: number | null }[];
+  claimCoverages: { id: string; coverage_name: string | null; subcoverage_name: string | null; coverage_code?: string | null; subcoverage_code?: string | null; claimed_amount: number | null; deductible_amount: number | null }[];
   existingReserve: { id: string; currency: string | null; payment_date: string | null; notes: string | null; reserve_coverages?: { claim_coverage_id: string; claimed_amount: number | null; reserved_amount: number | null; deductible_amount: number | null }[] } | null;
   readOnly?: boolean;
   generalValues: Record<string, unknown>;
+  onChange?: (data: Record<string, unknown>) => void;
 }) {
   const queryClient = useQueryClient();
 
-  // Campos generales vienen de los own fields de primer nivel (action_data)
-  // Fallback a la reserva existente si no están en action_data todavía
-  const currency = (generalValues.reserve_currency as string) || existingReserve?.currency || "CLP";
-  const paymentDate = (generalValues.reserve_payment_date as string) || existingReserve?.payment_date || new Date().toISOString().slice(0, 10);
-  const notes = (generalValues.reserve_notes as string) || existingReserve?.notes || "";
+  // Campos generales: own field → reserva existente → valor por defecto calculado
+  const initialCurrency = (generalValues.reserve_currency as string) || existingReserve?.currency || (generalValues.default_currency as string) || "CLP";
+  const initialPaymentDate = (generalValues.reserve_payment_date as string) || existingReserve?.payment_date || (generalValues.default_payment_date as string) || new Date().toISOString().slice(0, 10);
+  const initialNotes = (generalValues.reserve_notes as string) || existingReserve?.notes || "";
+
+  const [currency, setCurrency] = useState(initialCurrency);
+  const [paymentDate, setPaymentDate] = useState(initialPaymentDate);
+  const [notes, setNotes] = useState(initialNotes);
 
   const [rows, setRows] = useState(() =>
     claimCoverages.map((c) => {
@@ -1463,8 +1804,42 @@ function ReserveEditorForm({
   );
 
   const updateRow = (idx: number, field: "claimed" | "reserved" | "deductible", value: number) => {
-    setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+    setRows((prev) => prev.map((r, i) => {
+      if (i !== idx) return r;
+      const next = { ...r, [field]: value };
+      // Validaciones:
+      // 1. reclamado >= 0
+      // 2. reserva <= reclamado
+      // 3. deducible <= reserva
+      if (field === "claimed") {
+        next.claimed = Math.max(0, value);
+        if (next.reserved > next.claimed) next.reserved = next.claimed;
+        if (next.deductible > next.reserved) next.deductible = next.reserved;
+      } else if (field === "reserved") {
+        next.reserved = Math.max(0, value);
+        if (next.reserved > next.claimed) next.reserved = next.claimed;
+        if (next.deductible > next.reserved) next.deductible = next.reserved;
+      } else if (field === "deductible") {
+        next.deductible = Math.max(0, value);
+        if (next.deductible > next.reserved) next.deductible = next.reserved;
+      }
+      return next;
+    }));
   };
+
+  // Parsear número: quita ceros a la izquierda ("0400" → 400, "020" → 20)
+  const parseNum = (s: string): number => {
+    const cleaned = s.replace(/[^0-9]/g, "");
+    if (!cleaned) return 0;
+    return parseInt(cleaned, 10);
+  };
+
+  // Errores de validación por fila
+  const rowErrors = rows.map((r) => ({
+    claimed: r.claimed < 0,
+    reserved: r.reserved > r.claimed,
+    deductible: r.deductible > r.reserved,
+  }));
 
   // Totales
   const totalClaimed = rows.reduce((s, r) => s + (r.claimed || 0), 0);
@@ -1525,8 +1900,80 @@ function ReserveEditorForm({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Autoguardado con debounce
+  useAutoSave(
+    () => saveMut.mutate(),
+    [rows, currency, paymentDate, notes],
+    !readOnly
+  );
+
   return (
     <div className="space-y-3">
+      {/* Campos superiores: Moneda, Fecha de Resolución, Notas */}
+      <div className="grid grid-cols-4 gap-3 p-3 rounded-lg border border-border bg-muted/20">
+        <div className="space-y-1">
+          <Label className="app-field-label text-[10px]">Moneda</Label>
+          {readOnly ? (
+            <Input className="app-input h-7 text-[12px] bg-muted/30" value={currency} readOnly />
+          ) : (
+            <Select
+              value={currency}
+              onValueChange={(v) => {
+                const val = v || "CLP";
+                setCurrency(val);
+                onChange?.({ reserve_currency: val });
+              }}
+              items={CURRENCY_OPTIONS}
+            >
+              <SelectTrigger className="app-input h-7 text-[12px]">
+                <SelectValue>
+                  {(val: string) => {
+                    const opt = CURRENCY_OPTIONS.find((o) => o.value === val);
+                    return opt ? opt.label : val;
+                  }}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        <div className="space-y-1">
+          <Label className="app-field-label text-[10px]">Fecha Resolución</Label>
+          {readOnly ? (
+            <Input className="app-input h-7 text-[12px] bg-muted/30" value={formatDateDisplay(paymentDate)} readOnly />
+          ) : (
+            <Input
+              type="date"
+              className="app-input h-7 text-[12px]"
+              value={paymentDate}
+              min={new Date().toISOString().slice(0, 10)}
+              max={(generalValues.default_payment_date as string) || undefined}
+              onChange={(e) => {
+                setPaymentDate(e.target.value);
+                onChange?.({ reserve_payment_date: e.target.value });
+              }}
+            />
+          )}
+        </div>
+        <div className="space-y-1 col-span-2">
+          <Label className="app-field-label text-[10px]">Notas</Label>
+          <Input
+            className="app-input h-7 text-[12px]"
+            value={notes}
+            readOnly={readOnly}
+            onChange={(e) => {
+              setNotes(e.target.value);
+              onChange?.({ reserve_notes: e.target.value });
+            }}
+            placeholder="Notas de la reserva..."
+          />
+        </div>
+      </div>
+
       {/* Tabla de coberturas con reserva por fila */}
       <div className="rounded-lg border border-border overflow-x-auto">
         <table className="app-data-table">
@@ -1546,20 +1993,24 @@ function ReserveEditorForm({
               return (
                 <tr key={row.claim_coverage_id} className="border-t border-border">
                   <td className="px-2 py-1.5">
-                    <div className="font-medium">{cov?.coverage_name || "—"}</div>
-                    {cov?.subcoverage_name && (
-                      <div className="text-[10px] text-muted-foreground">{cov.subcoverage_name}</div>
-                    )}
+                    <CoverageCell
+                      coverageCode={cov?.coverage_code}
+                      coverageName={cov?.coverage_name}
+                      subcoverageCode={cov?.subcoverage_code}
+                      subcoverageName={cov?.subcoverage_name}
+                    />
                   </td>
                   <td className="px-2 py-1.5 text-right">
                     {readOnly ? (
                       <span className="font-mono">{formatMoney(row.claimed)}</span>
                     ) : (
                       <Input
-                        type="number"
-                        className="app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto"
+                        type="text"
+                        inputMode="decimal"
+                        className={`app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto ${rowErrors[idx].claimed ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         value={row.claimed}
-                        onChange={(e) => updateRow(idx, "claimed", Number(e.target.value) || 0)}
+                        onChange={(e) => updateRow(idx, "claimed", parseNum(e.target.value))}
+                        title="El reclamado debe ser mayor o igual que 0"
                       />
                     )}
                   </td>
@@ -1568,10 +2019,12 @@ function ReserveEditorForm({
                       <span className="font-mono">{formatMoney(row.reserved)}</span>
                     ) : (
                       <Input
-                        type="number"
-                        className="app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto"
+                        type="text"
+                        inputMode="decimal"
+                        className={`app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto ${rowErrors[idx].reserved ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         value={row.reserved}
-                        onChange={(e) => updateRow(idx, "reserved", Number(e.target.value) || 0)}
+                        onChange={(e) => updateRow(idx, "reserved", parseNum(e.target.value))}
+                        title="La reserva no puede ser mayor que el reclamado"
                       />
                     )}
                   </td>
@@ -1580,10 +2033,12 @@ function ReserveEditorForm({
                       <span className="font-mono">{formatMoney(row.deductible)}</span>
                     ) : (
                       <Input
-                        type="number"
-                        className="app-input h-7 text-[11px] text-right font-mono w-[90px] ml-auto"
+                        type="text"
+                        inputMode="decimal"
+                        className={`app-input h-7 text-[11px] text-right font-mono w-[90px] ml-auto ${rowErrors[idx].deductible ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         value={row.deductible}
-                        onChange={(e) => updateRow(idx, "deductible", Number(e.target.value) || 0)}
+                        onChange={(e) => updateRow(idx, "deductible", parseNum(e.target.value))}
+                        title="El deducible no puede ser mayor que la reserva"
                       />
                     )}
                   </td>
@@ -1598,47 +2053,11 @@ function ReserveEditorForm({
               <td className="px-2 py-1.5 text-right font-mono font-semibold">{formatMoney(totalClaimed)}</td>
               <td className="px-2 py-1.5 text-right font-mono font-semibold">{formatMoney(totalReserved)}</td>
               <td className="px-2 py-1.5 text-right font-mono font-semibold">{formatMoney(totalDeductible)}</td>
-              <td className="px-2 py-1.5 text-right font-mono font-semibold">{formatMoney(totalNet)}</td>
+              <td className="px-2 py-1.5 text-right font-mono font-bold text-primary">{formatMoney(totalNet)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
-
-      {/* Reserva Final (sumatoria de todas las reservas menos deducibles) */}
-      <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
-        <div className="flex items-center gap-6">
-          <div>
-            <Label className="app-field-label text-[10px]">Total Reclamado</Label>
-            <p className="text-[13px] font-mono font-semibold">{formatMoney(totalClaimed)} {currency}</p>
-          </div>
-          <div>
-            <Label className="app-field-label text-[10px]">Total Reservado</Label>
-            <p className="text-[13px] font-mono font-semibold">{formatMoney(totalReserved)} {currency}</p>
-          </div>
-          <div>
-            <Label className="app-field-label text-[10px]">Total Deducible</Label>
-            <p className="text-[13px] font-mono font-semibold">{formatMoney(totalDeductible)} {currency}</p>
-          </div>
-          <div>
-            <Label className="app-field-label text-[10px]">Reserva Final</Label>
-            <p className="text-[13px] font-mono font-semibold text-primary">{formatMoney(totalNet)} {currency}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Botón guardar */}
-      {!readOnly && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="btn-save btn-sm"
-            disabled={saveMut.isPending}
-            onClick={() => saveMut.mutate()}
-          >
-            {saveMut.isPending ? "Guardando..." : "Guardar"}
-          </button>
-        </div>
-      )}
 
       {readOnly && (
         <p className="text-[10px] text-muted-foreground text-center">
@@ -1654,16 +2073,67 @@ function ReserveEditorForm({
 // Toma los datos reservados por cobertura y permite ajustar montos
 // ═══════════════════════════════════════════════════════════════
 
-function AdjustmentEditorView({ claimId, readOnly, generalValues }: { claimId: string; actionId?: string; readOnly?: boolean; generalValues: Record<string, unknown> }) {
-  // Cargar reservas del siniestro (para obtener la reserva a ajustar)
-  const { data: reserves, isLoading: loadingRes } = useQuery({
+function AdjustmentEditorView({ claimId, readOnly, generalValues, action, onChange }: { claimId: string; actionId?: string; readOnly?: boolean; generalValues: Record<string, unknown>; action?: ActionWithRelations; onChange?: (data: Record<string, unknown>) => void }) {
+  // Snapshot de reservas del padre (RES) — copia inmutable en action_data
+  const snapshotReserves = (generalValues.parent_snapshot as Array<{
+    id: string;
+    reserve_number: string | null;
+    currency: string | null;
+    payment_date: string | null;
+    notes: string | null;
+    claimed_amount: number;
+    reserve_amount: number;
+    deductible_amount: number;
+    final_amount: number;
+    adjusted_amount: number | null;
+    adjusted_deductible: number | null;
+    adjusted_final_amount: number | null;
+    coverages: Array<{
+      claim_coverage_id: string;
+      coverage_name: string | null;
+      subcoverage_name: string | null;
+      coverage_code: string | null;
+      subcoverage_code: string | null;
+      insured_amount: number;
+      claimed_amount: number;
+      reserved_amount: number;
+      deductible_amount: number;
+      net_reserve: number;
+      adjusted_amount: number | null;
+      adjusted_deductible: number | null;
+      adjusted_net: number | null;
+      adjustment_notes: string | null;
+    }>;
+  }> | undefined);
+
+  // Fallback a DB query solo si no hay snapshot (acciones antiguas)
+  const { data: dbReserves, isLoading: loadingRes } = useQuery({
     queryKey: ["claim-reserves", claimId],
     queryFn: () => getClaimReserves(claimId),
-    enabled: !!claimId,
+    enabled: !!claimId && !snapshotReserves,
   });
 
-  // Tomar la primera reserva activa (la que se va a ajustar)
-  const reserve = reserves && reserves.length > 0 ? reserves[0] : null;
+  // Transformar snapshot al formato que espera AdjustmentEditorForm
+  const reserve = snapshotReserves && snapshotReserves.length > 0
+    ? {
+        id: snapshotReserves[0].id,
+        reserve_number: snapshotReserves[0].reserve_number,
+        currency: snapshotReserves[0].currency,
+        payment_date: snapshotReserves[0].payment_date,
+        notes: snapshotReserves[0].notes,
+        reserve_coverages: snapshotReserves[0].coverages.map((c) => ({
+          claim_coverage_id: c.claim_coverage_id,
+          reserved_amount: c.reserved_amount,
+          deductible_amount: c.deductible_amount,
+          adjusted_amount: c.adjusted_amount,
+          adjusted_deductible: c.adjusted_deductible,
+          adjustment_notes: c.adjustment_notes,
+          claim_coverage: { coverage_name: c.coverage_name, subcoverage_name: c.subcoverage_name, coverage_code: c.coverage_code, subcoverage_code: c.subcoverage_code },
+        })),
+      }
+    : dbReserves && dbReserves.length > 0
+    ? dbReserves[0]
+    : null;
 
   if (loadingRes) {
     return <div className="text-[11px] text-muted-foreground py-2">Cargando...</div>;
@@ -1695,7 +2165,11 @@ function AdjustmentEditorView({ claimId, readOnly, generalValues }: { claimId: s
       claimId={claimId}
       reserve={reserve}
       readOnly={readOnly}
-      generalValues={generalValues}
+      generalValues={{
+        ...generalValues,
+        days_to_issue: action?.action_template?.days_to_issue || 0,
+      }}
+      onChange={onChange}
     />
   );
 }
@@ -1705,6 +2179,7 @@ function AdjustmentEditorForm({
   reserve,
   readOnly,
   generalValues,
+  onChange,
 }: {
   claimId: string;
   reserve: {
@@ -1720,16 +2195,32 @@ function AdjustmentEditorForm({
       adjusted_amount: number | null;
       adjusted_deductible: number | null;
       adjustment_notes: string | null;
-      claim_coverage?: { coverage_name: string | null; subcoverage_name: string | null } | null;
+      claim_coverage?: { coverage_name: string | null; subcoverage_name: string | null; coverage_code?: string | null; subcoverage_code?: string | null } | null;
     }[];
   };
   readOnly?: boolean;
   generalValues: Record<string, unknown>;
+  onChange?: (data: Record<string, unknown>) => void;
 }) {
   const queryClient = useQueryClient();
 
-  // Notas del ajuste vienen de los own fields de primer nivel
-  const notes = (generalValues.adjustment_notes as string) || reserve.notes || "";
+  // Moneda del ajuste = moneda de la reserva (inmutable)
+  const currency = reserve.currency || "CLP";
+
+  // Fecha de resolución del ajuste: own field → fecha de la reserva → hoy + days_to_issue del PCA
+  const daysToIssue = (generalValues.days_to_issue as number) || 0;
+  const maxDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysToIssue);
+    return d.toISOString().slice(0, 10);
+  }, [daysToIssue]);
+
+  const initialAdjDate = (generalValues.adjustment_date as string) || reserve.payment_date || new Date().toISOString().slice(0, 10);
+  const [adjustmentDate, setAdjustmentDate] = useState(initialAdjDate);
+
+  // Notas del ajuste
+  const initialNotes = (generalValues.adjustment_notes as string) || reserve.notes || "";
+  const [notes, setNotes] = useState(initialNotes);
 
   // Inicializar estado desde la reserva (lazy init)
   const [rows, setRows] = useState(() =>
@@ -1737,6 +2228,8 @@ function AdjustmentEditorForm({
       claim_coverage_id: rc.claim_coverage_id,
       coverage_name: rc.claim_coverage?.coverage_name || "—",
       subcoverage_name: rc.claim_coverage?.subcoverage_name || null,
+      coverage_code: rc.claim_coverage?.coverage_code || null,
+      subcoverage_code: rc.claim_coverage?.subcoverage_code || null,
       reserved: rc.reserved_amount ?? 0,
       deductible: rc.deductible_amount ?? 0,
       adjusted_amount: rc.adjusted_amount ?? rc.reserved_amount ?? 0,
@@ -1747,6 +2240,13 @@ function AdjustmentEditorForm({
 
   const updateRow = (idx: number, field: "adjusted_amount" | "adjusted_deductible" | "adjustment_notes", value: number | string) => {
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+  };
+
+  // Parsear número: quita ceros a la izquierda ("0400" → 400, "020" → 20)
+  const parseNum = (s: string): number => {
+    const cleaned = s.replace(/[^0-9]/g, "");
+    if (!cleaned) return 0;
+    return parseInt(cleaned, 10);
   };
 
   // Totales
@@ -1787,21 +2287,51 @@ function AdjustmentEditorForm({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Autoguardado con debounce
+  useAutoSave(
+    () => saveMut.mutate(),
+    [rows, notes],
+    !readOnly && !!reserve
+  );
+
   return (
     <div className="space-y-3">
-      {/* Info de la reserva origen */}
-      <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-muted/20 text-[11px]">
-        <div>
-          <span className="text-muted-foreground">Reserva:</span>{" "}
-          <span className="font-medium">{reserve.reserve_number || reserve.id.slice(0, 8)}</span>
+      {/* Campos superiores: Moneda, Fecha Resolución, Notas (igual que reserva) */}
+      <div className="grid grid-cols-4 gap-3 p-3 rounded-lg border border-border bg-muted/20">
+        <div className="space-y-1">
+          <Label className="app-field-label text-[10px]">Moneda</Label>
+          <Input className="app-input h-7 text-[12px] bg-muted/30" value={currency} readOnly />
         </div>
-        <div>
-          <span className="text-muted-foreground">Moneda:</span>{" "}
-          <span className="font-medium">{reserve.currency}</span>
+        <div className="space-y-1">
+          <Label className="app-field-label text-[10px]">Fecha Resolución</Label>
+          {readOnly ? (
+            <Input className="app-input h-7 text-[12px] bg-muted/30" value={formatDateDisplay(adjustmentDate)} readOnly />
+          ) : (
+            <Input
+              type="date"
+              className="app-input h-7 text-[12px]"
+              value={adjustmentDate}
+              min={new Date().toISOString().slice(0, 10)}
+              max={maxDate}
+              onChange={(e) => {
+                setAdjustmentDate(e.target.value);
+                onChange?.({ adjustment_date: e.target.value });
+              }}
+            />
+          )}
         </div>
-        <div>
-          <span className="text-muted-foreground">Fecha Pago:</span>{" "}
-          <span className="font-medium">{reserve.payment_date || "—"}</span>
+        <div className="space-y-1 col-span-2">
+          <Label className="app-field-label text-[10px]">Notas</Label>
+          <Input
+            className="app-input h-7 text-[12px]"
+            value={notes}
+            readOnly={readOnly}
+            onChange={(e) => {
+              setNotes(e.target.value);
+              onChange?.({ adjustment_notes: e.target.value });
+            }}
+            placeholder="Notas del ajuste..."
+          />
         </div>
       </div>
 
@@ -1825,10 +2355,12 @@ function AdjustmentEditorForm({
               return (
                 <tr key={row.claim_coverage_id} className="border-t border-border">
                   <td className="px-2 py-1.5">
-                    <div className="font-medium">{row.coverage_name}</div>
-                    {row.subcoverage_name && (
-                      <div className="text-[10px] text-muted-foreground">{row.subcoverage_name}</div>
-                    )}
+                    <CoverageCell
+                      coverageCode={row.coverage_code}
+                      coverageName={row.coverage_name}
+                      subcoverageCode={row.subcoverage_code}
+                      subcoverageName={row.subcoverage_name}
+                    />
                   </td>
                   <td className="px-2 py-1.5 text-right font-mono text-muted-foreground">{formatMoney(row.reserved)}</td>
                   <td className="px-2 py-1.5 text-right font-mono text-muted-foreground">{formatMoney(row.deductible)}</td>
@@ -1837,10 +2369,11 @@ function AdjustmentEditorForm({
                       <span className="font-mono">{formatMoney(row.adjusted_amount)}</span>
                     ) : (
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         className="app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto"
                         value={row.adjusted_amount}
-                        onChange={(e) => updateRow(idx, "adjusted_amount", Number(e.target.value) || 0)}
+                        onChange={(e) => updateRow(idx, "adjusted_amount", parseNum(e.target.value))}
                       />
                     )}
                   </td>
@@ -1849,10 +2382,11 @@ function AdjustmentEditorForm({
                       <span className="font-mono">{formatMoney(row.adjusted_deductible)}</span>
                     ) : (
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         className="app-input h-7 text-[11px] text-right font-mono w-[90px] ml-auto"
                         value={row.adjusted_deductible}
-                        onChange={(e) => updateRow(idx, "adjusted_deductible", Number(e.target.value) || 0)}
+                        onChange={(e) => updateRow(idx, "adjusted_deductible", parseNum(e.target.value))}
                       />
                     )}
                   </td>
@@ -1880,46 +2414,21 @@ function AdjustmentEditorForm({
               <td className="px-2 py-1.5 text-right font-mono">{formatMoney(totalDeductible)}</td>
               <td className="px-2 py-1.5 text-right font-mono font-semibold">{formatMoney(totalAdjusted)}</td>
               <td className="px-2 py-1.5 text-right font-mono font-semibold">{formatMoney(totalAdjustedDeductible)}</td>
-              <td className="px-2 py-1.5 text-right font-mono font-semibold">{formatMoney(totalFinal)}</td>
+              <td className="px-2 py-1.5 text-right font-mono font-bold text-primary">{formatMoney(totalFinal)}</td>
               <td className="px-2 py-1.5"></td>
+            </tr>
+            <tr className="border-t border-border">
+              <td className="px-2 py-1.5 text-[10px] text-muted-foreground" colSpan={5}>Reserva Neta vs Ajuste Final</td>
+              <td className="px-2 py-1.5 text-right font-mono text-[11px] text-muted-foreground">{formatMoney(totalNetReserve)}</td>
+              <td className="px-2 py-1.5 text-right">
+                <span className={`font-mono text-[11px] font-semibold ${difference < 0 ? "text-rose-600" : difference > 0 ? "text-emerald-600" : "text-muted-foreground"}`}>
+                  {difference >= 0 ? "+" : ""}{formatMoney(difference)}
+                </span>
+              </td>
             </tr>
           </tfoot>
         </table>
       </div>
-
-      {/* Ajuste Final (sumatoria de todos los ajustados menos deducibles) */}
-      <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
-        <div className="flex items-center gap-6">
-          <div>
-            <Label className="app-field-label text-[10px]">Reserva Neta</Label>
-            <p className="text-[13px] font-mono font-semibold">{formatMoney(totalNetReserve)} {reserve.currency}</p>
-          </div>
-          <div>
-            <Label className="app-field-label text-[10px]">Ajuste Final</Label>
-            <p className="text-[13px] font-mono font-semibold text-primary">{formatMoney(totalFinal)} {reserve.currency}</p>
-          </div>
-          <div>
-            <Label className="app-field-label text-[10px]">Diferencia</Label>
-            <p className={`text-[13px] font-mono font-semibold ${difference < 0 ? "text-rose-600" : difference > 0 ? "text-emerald-600" : ""}`}>
-              {difference >= 0 ? "+" : ""}{formatMoney(difference)} {reserve.currency}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Botón guardar */}
-      {!readOnly && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="btn-save btn-sm"
-            disabled={saveMut.isPending}
-            onClick={() => saveMut.mutate()}
-          >
-            {saveMut.isPending ? "Guardando..." : "Guardar"}
-          </button>
-        </div>
-      )}
 
       {readOnly && (
         <p className="text-[10px] text-muted-foreground text-center">
@@ -2007,9 +2516,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
           document_name: d.document_name,
           sort_order: i + 1,
         }));
-      if (items.length === 0) {
-        throw new Error("Selecciona al menos un documento para solicitar");
-      }
+      if (items.length === 0) return; // No crear solicitud vacía
       await createClaimDocumentRequest({
         claim_id: claimId!,
         claim_action_id: actionId,
@@ -2024,6 +2531,13 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Autoguardado: crear solicitud cuando hay documentos seleccionados
+  useAutoSave(
+    () => saveMut.mutate(),
+    [selected, notes],
+    !readOnly && !existingRequest && selected.size > 0
+  );
 
   // Si hay solicitud existente, mostrar sus items
   if (loadingReq || loadingEx) {
@@ -2153,18 +2667,6 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
           disabled={readOnly}
         />
       </div>
-      {!readOnly && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="btn-save btn-sm"
-            disabled={saveMut.isPending || selected.size === 0}
-            onClick={() => saveMut.mutate()}
-          >
-            {saveMut.isPending ? "Guardando" : "Solicitar"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -2354,7 +2856,7 @@ function DocumentReceiptView({ claimId, readOnly }: { claimId?: string; actionId
         <div className="flex justify-end gap-2">
           <button
             type="button"
-            className="btn-cancel btn-sm"
+            className="pg-btn-platinum"
             disabled={closeMut.isPending}
             onClick={() => {
               if (confirm("¿Cancelar esta solicitud de documentos?")) {
@@ -2369,7 +2871,7 @@ function DocumentReceiptView({ claimId, readOnly }: { claimId?: string; actionId
           </button>
           <button
             type="button"
-            className="btn-save btn-sm"
+            className="pg-btn-platinum"
             disabled={closeMut.isPending || !allResolved}
             onClick={() => closeMut.mutate()}
             title={allResolved ? "Cerrar solicitud" : "Todos los items deben estar recibidos o no necesarios"}
@@ -2524,7 +3026,12 @@ function InspectionCoordinationView({ claimId, readOnly, action }: { claimId?: s
             ]}
           >
             <SelectTrigger className="app-input h-7 text-[12px] mt-1">
-              <SelectValue placeholder="Sin asignar" />
+              <SelectValue placeholder="Sin asignar">
+                {(val: string) => {
+                  const insp = inspectors?.find((i) => i.id === val);
+                  return insp ? insp.full_name : "Sin asignar";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">Sin asignar</SelectItem>
@@ -2610,7 +3117,7 @@ function InspectionCoordinationView({ claimId, readOnly, action }: { claimId?: s
       </div>
 
       <button
-        className="btn-save btn-sm"
+        className="pg-btn-platinum"
         disabled={createMut.isPending || !scheduledDate || !scheduledTime}
         onClick={() => createMut.mutate()}
       >

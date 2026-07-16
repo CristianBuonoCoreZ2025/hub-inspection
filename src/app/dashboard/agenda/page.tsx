@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getInspectionSessions } from "@/services/inspections";
+import { getInspectionSessions, type SessionWithRelations } from "@/services/inspections";
 import { getUsers } from "@/services/users";
 import {
   ChevronLeft,
@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { InspectionSession } from "@/types";
 
 const sessionStatusLabels: Record<string, string> = {
   pending: "Pendiente",
@@ -131,7 +130,7 @@ export default function AgendaPage() {
           <Button className="btn-icon" onClick={nextWeek}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button className="btn-cancel" onClick={todayWeek}>
+          <Button className="pg-btn-platinum" onClick={todayWeek}>
             Hoy
           </Button>
         </div>
@@ -225,7 +224,7 @@ export default function AgendaPage() {
   );
 }
 
-function EventCard({ session }: { session: InspectionSession & { claim?: any } }) {
+function EventCard({ session }: { session: SessionWithRelations }) {
   const time = session.scheduled_at
     ? new Date(session.scheduled_at).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
     : "";

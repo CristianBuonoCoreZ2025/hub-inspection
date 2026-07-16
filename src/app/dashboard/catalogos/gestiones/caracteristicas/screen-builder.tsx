@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,11 +13,7 @@ import {
   ChevronUp,
   ChevronDown,
   LayoutTemplate,
-  Info,
-  Save,
-  X,
   Pencil,
-  Eye,
   Database,
   Boxes,
 } from "lucide-react";
@@ -28,7 +24,6 @@ import {
   CLAIM_ENTITIES,
   ACTION_ENTITIES,
   COMPLEX_ENTITIES,
-  ALL_SYSTEM_CODES,
 } from "@/app/dashboard/claims/[id]/gestion-screens/DynamicScreen";
 
 interface ScreenBuilderProps {
@@ -53,27 +48,28 @@ const DATE_VALIDATION_TYPES: { code: DateValidation["type"]; label: string }[] =
 export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPending }: ScreenBuilderProps) {
   const [fields, setFields] = useState<ScreenField[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
-  // Recargar campos cuando se abre el modal o cambia la pantalla
-  useEffect(() => {
+  const [prevScreenKey, setPrevScreenKey] = useState<string | null>(null);
+  const currentScreenKey = open ? screen?.id ?? "open-empty" : "closed";
+  if (currentScreenKey !== prevScreenKey) {
+    setPrevScreenKey(currentScreenKey);
     if (open && screen) {
       const loaded = Array.isArray(screen.form_schema?.fields)
         ? (screen.form_schema.fields as ScreenField[])
         : [];
       setFields(loaded);
       setSelectedIndex(null);
-    } else if (!open) {
+    } else {
       setFields([]);
       setSelectedIndex(null);
     }
-  }, [open, screen]);
+  }
 
   const selectedField = selectedIndex !== null ? fields[selectedIndex] : null;
   const dateFields = fields.filter((f) => f.type === "date" && f.id !== selectedField?.id);
 
   const addField = (category: FieldCategory, type: string, label: string) => {
     const newField: ScreenField = {
-      id: `${type}_${Date.now()}`,
+      id: `${type}_${crypto.randomUUID()}`,
       category,
       type,
       label,
@@ -123,24 +119,6 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
     setSelectedIndex(swapIndex);
   };
 
-  const updateOptions = (text: string) => {
-    if (!selectedField) return;
-    const options = text
-      .split("\n")
-      .map((line) => {
-        const [value, label] = line.split("=").map((s) => s.trim());
-        return { value: value || line.trim(), label: label || value || line.trim() };
-      })
-      .filter((o) => o.value);
-    updateField(selectedIndex!, { options });
-  };
-
-  const updateColumns = (text: string) => {
-    if (!selectedField) return;
-    const columns = text.split("\n").map((s) => s.trim()).filter(Boolean);
-    updateField(selectedIndex!, { columns });
-  };
-
   const handleSave = () => {
     if (!screen) return;
     onSave(screen.id, { fields });
@@ -161,11 +139,11 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => onOpenChange(false)} className="btn-cancel btn-sm">
-              <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+            <Button type="button" size="sm" variant="outline" onClick={() => onOpenChange(false)} className="pg-btn-platinum">
+              Cancelar
             </Button>
-            <Button type="button" size="sm" onClick={handleSave} disabled={isPending} className="btn-save btn-sm">
-              <Save className="h-3.5 w-3.5 mr-1" /> {isPending ? "Guardando" : "Guardar"}
+            <Button type="button" size="sm" onClick={handleSave} disabled={isPending} className="pg-btn-platinum">
+              {isPending ? "Guardando" : "Guardar"}
             </Button>
           </div>
         </div>
@@ -328,7 +306,6 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
                 <PropertiesPanel
                   field={selectedField}
                   index={selectedIndex!}
-                  allFields={fields}
                   dateFields={dateFields}
                   onUpdate={updateField}
                   onRemove={removeField}
@@ -354,14 +331,12 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
 function PropertiesPanel({
   field,
   index,
-  allFields,
   dateFields,
   onUpdate,
   onRemove,
 }: {
   field: ScreenField;
   index: number;
-  allFields: ScreenField[];
   dateFields: ScreenField[];
   onUpdate: (index: number, updates: Partial<ScreenField>) => void;
   onRemove: (index: number) => void;
@@ -598,10 +573,10 @@ function PropertiesPanel({
           type="button"
           size="sm"
           variant="outline"
-          className="btn-danger btn-sm w-full"
+          className="pg-btn-platinum w-full"
           onClick={() => onRemove(index)}
         >
-          <Trash2 className="h-3.5 w-3.5 mr-1" /> Eliminar campo
+          Eliminar campo
         </Button>
       </div>
     </div>

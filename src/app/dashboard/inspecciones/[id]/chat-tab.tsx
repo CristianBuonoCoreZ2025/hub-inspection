@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getChatMessages, sendChatMessage } from "@/services/chat";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Send, MessageSquare, User } from "lucide-react";
+import { MessageSquare, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ChatTab({ sessionId, compact = false }: { sessionId: string; compact?: boolean }) {
@@ -131,10 +131,9 @@ export default function ChatTab({ sessionId, compact = false }: { sessionId: str
         <Button
           type="submit"
           size="sm"
-          className="btn-save btn-footer shrink-0"
+          className="pg-btn-platinum shrink-0"
           disabled={sendMutation.isPending || !message.trim()}
         >
-          <Send className="mr-1.5 h-3.5 w-3.5" />
           Enviar
         </Button>
       </form>

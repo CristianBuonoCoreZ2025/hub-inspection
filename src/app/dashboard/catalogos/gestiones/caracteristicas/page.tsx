@@ -12,7 +12,7 @@ import {
 import { getGestionScreens } from "@/services/gestion-screens";
 import type { GestionScreen } from "@/types";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Boxes, Layers, LayoutTemplate } from "lucide-react";
+import { Pencil, Trash2, Boxes, Layers, LayoutTemplate } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -123,8 +123,8 @@ export default function CaracteristicasPage() {
         </h1>
         <div className="flex-1" />
         {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="liquid-button">
-            <Plus className="h-3.5 w-3.5" /> Nueva
+          <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="pg-btn-platinum">
+            Nueva
           </Button>
         )}
       </div>
@@ -339,8 +339,8 @@ export default function CaracteristicasPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
-              <Button type="submit" size="sm" disabled={createMut.isPending || updateMut.isPending} className="btn-save btn-footer">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createMut.isPending || updateMut.isPending} className="pg-btn-platinum">
                 {createMut.isPending || updateMut.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}
               </Button>
             </div>
@@ -360,7 +360,7 @@ function ScreenHelpPanel({ screen }: { screen: GestionScreen | undefined }) {
     );
   }
 
-  const fields = Array.isArray(screen.form_schema?.fields) ? (screen.form_schema.fields as string[]) : [];
+  const fields = Array.isArray(screen.form_schema?.fields) ? (screen.form_schema.fields as { id?: string; code?: string; label?: string; type?: string }[]) : [];
 
   return (
     <div className="rounded-md border border-border bg-card p-3 space-y-1.5">
@@ -374,11 +374,15 @@ function ScreenHelpPanel({ screen }: { screen: GestionScreen | undefined }) {
         <div>
           <p className="text-[10px] font-medium text-muted-foreground mb-1">Campos del formulario:</p>
           <div className="flex flex-wrap gap-1">
-            {fields.map((field) => (
-              <span key={field} className="inline-flex rounded bg-muted px-2 py-0.5 text-[10px]">
-                {field}
-              </span>
-            ))}
+            {fields.map((field) => {
+              const key = field.id || field.code || `${field.type}-${field.label}`;
+              const label = field.label || field.code || field.id || field.type || 'campo';
+              return (
+                <span key={key} className="inline-flex rounded bg-muted px-2 py-0.5 text-[10px]">
+                  {label}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}

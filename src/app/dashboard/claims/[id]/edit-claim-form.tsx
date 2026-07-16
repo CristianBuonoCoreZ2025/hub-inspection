@@ -10,8 +10,6 @@ import {
   Users,
   MapPin,
   Briefcase,
-  Save,
-  X,
   Shield,
   Plus,
   FileCheck,
@@ -31,12 +29,13 @@ import {
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { FormSelect } from "@/components/ui/form-select";
 import { SelectItem } from "@/components/ui/select";
-import { updateClaimFields, updateClaimStatus, updateClaimParticipant, createClaimParticipant, type ParticipantMatch } from "@/services/claims";
+import { updateClaimFields, updateClaimStatus, updateClaimParticipant, createClaimParticipant } from "@/services/claims";
 import { findPerson, upsertPerson, addPersonAddress, type PersonWithAddresses } from "@/services/persons";
-import { validateRut, formatRut, isRutCountry, guessPersonType } from "@/lib/validations/rut";
+import { formatRut, guessPersonType } from "@/lib/validations/rut";
 import { getCountries, getRegions, getCities, getCommunes } from "@/services/catalogs";
 import { getPolicies, createPolicy } from "@/services/policies";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
+import { useAuth } from "@/hooks/use-auth";
 import type { Claim, ClaimsParticipant } from "@/types";
 
 // ──────────────────────────────────────────────────────────────
@@ -361,6 +360,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   const queryClient = useQueryClient();
   const { statusCode, codeToId } = useClaimStatuses();
   const currentStatusCode = statusCode(claim.status_id) ?? "created";
+  const { profile } = useAuth();
 
   // Linking state
 
@@ -496,7 +496,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
       // 1. Actualizar campos del claim
       const claimSet: Record<string, unknown> = {
         claim_number: values.claimNumber,
-        policy_id: values.policyId || null,
+        policy_id: (values.policyId && !values.policyId.startsWith("__")) ? values.policyId : null,
         policy_number: values.policyNumber,
         policy_item: values.policyItem || null,
         client_reference: values.clientReference || null,
@@ -538,13 +538,13 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
         assistant_id: values.assistantId || null,
       };
 
-      await updateClaimFields(claim.id, claimSet);
+      await updateClaimFields(claim.id, claimSet, profile?.id);
 
       // Si el claim estaba en "created" y ahora tiene inspector o liquidador → cambiar a "adjustment"
       if (currentStatusCode === "created" && (values.inspectorId || values.adjusterId)) {
         const adjustmentId = codeToId["adjustment"];
         if (adjustmentId) {
-          await updateClaimStatus(claim.id, adjustmentId);
+          await updateClaimStatus(claim.id, adjustmentId, profile?.id);
         }
       }
 
@@ -748,6 +748,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   // Watched values
   // ──────────────────────────────────────────────────────────────
   // Incidente geo (FK-based, usa IDs)
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedCountryId = watch("countryId");
   const watchedRegionId = watch("regionId");
   const watchedCityId = watch("cityId");
@@ -756,7 +757,6 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   const watchedInsuredCountry = useWatch({ control, name: "insuredCountry" });
   const watchedInsuredRegion = useWatch({ control, name: "insuredRegion" });
   const watchedInsuredCity = useWatch({ control, name: "insuredCity" });
-  const watchedInsuredCommune = useWatch({ control, name: "insuredCommune" });
   const watchedInsuredRut = useWatch({ control, name: "insuredRut" });
   const watchedInsuredPersonType = useWatch({ control, name: "insuredPersonType" });
 
@@ -792,10 +792,16 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
     queryFn: () => getPolicies({ companyId: claim.company_id }),
   });
 
-  const policyItems = (policiesList || []).map((p) => ({
-    value: p.id,
-    label: p.policy_number ? `${p.policy_number} — ${p.policy_name}` : `${p.policy_name} (sin número)`,
-  }));
+  const policyItems = [
+    // Opciones especiales (siempre presentes, independientes de compañía/país)
+    { value: "__no_policy", label: "Sin Póliza" },
+    { value: "__emision", label: "En Emisión de Número" },
+    // Pólizas reales
+    ...(policiesList || []).map((p) => ({
+      value: p.id,
+      label: p.policy_number ? `${p.policy_number} — ${p.policy_name}` : `${p.policy_name} (sin número)`,
+    })),
+  ];
 
   // ── Modal de creación de póliza ──
   const [openPolicyModal, setOpenPolicyModal] = useState(false);
@@ -1465,15 +1471,38 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                       className="app-input h-7 text-[12px]"
                       items={policyItems}
                       onValueChange={(value) => {
-                        const selected = policiesList?.find((p) => p.id === value);
-                        if (selected) {
-                          setValue("policyNumber", selected.policy_number || "");
-                          setValue("policyStartDate", selected.start_date);
-                          setValue("policyEndDate", selected.end_date);
-                          setValue("policyAmount", selected.insured_amount?.toString() || "");
-                          setValue("policyPremium", selected.premium_amount?.toString() || "");
-                        } else {
+                        if (value === "__no_policy") {
+                          setValue("policyId", "" as never);
                           setValue("policyNumber", "");
+                          setValue("policyStartDate", null as never);
+                          setValue("policyEndDate", null as never);
+                          setValue("policyAmount", "");
+                          setValue("policyPremium", "");
+                        } else if (value === "__emision") {
+                          // Crear póliza pendiente automáticamente si no existe
+                          const existingPending = policiesList?.find(
+                            (p) => !p.policy_number && p.status === "draft"
+                          );
+                          if (existingPending) {
+                            setValue("policyId", existingPending.id as never);
+                            setValue("policyNumber", "");
+                            setValue("policyStartDate", existingPending.start_date as never);
+                            setValue("policyEndDate", existingPending.end_date as never);
+                          } else {
+                            // Disparar creación de póliza pendiente
+                            createPolicyMut.mutate();
+                          }
+                        } else {
+                          const selected = policiesList?.find((p) => p.id === value);
+                          if (selected) {
+                            setValue("policyNumber", selected.policy_number || "");
+                            setValue("policyStartDate", selected.start_date);
+                            setValue("policyEndDate", selected.end_date);
+                            setValue("policyAmount", selected.insured_amount?.toString() || "");
+                            setValue("policyPremium", selected.premium_amount?.toString() || "");
+                          } else {
+                            setValue("policyNumber", "");
+                          }
                         }
                       }}
                     >
@@ -1543,7 +1572,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                         </div>
                         <button
                           type="button"
-                          className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                          className="btn-link-sm"
                           onClick={() => applySuggestion("insured")}
                         >
                           Usar datos
@@ -1672,7 +1701,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                         </div>
                         <button
                           type="button"
-                          className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                          className="btn-link-sm"
                           onClick={() => applySuggestion("contractor")}
                         >
                           Usar datos
@@ -1803,7 +1832,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                         </div>
                         <button
                           type="button"
-                          className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 underline shrink-0"
+                          className="btn-link-sm"
                           onClick={() => applySuggestion("beneficiary")}
                         >
                           Usar datos
@@ -2063,12 +2092,10 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
 
         {/* Footer buttons */}
         <div className="flex justify-end gap-2 border-t pt-4">
-          <Button type="button" className="btn-cancel btn-sm" onClick={() => onCancel(activeTab)}>
-            <X className="mr-2 h-4 w-4" />
+          <Button type="button" className="pg-btn-platinum" onClick={() => onCancel(activeTab)}>
             Cancelar
           </Button>
-          <Button type="submit" className="btn-save btn-sm" disabled={saveMutation.isPending}>
-            <Save className="mr-2 h-4 w-4" />
+          <Button type="submit" className="pg-btn-platinum" disabled={saveMutation.isPending}>
             {saveMutation.isPending ? "Guardando..." : "Guardar"}
           </Button>
         </div>
@@ -2205,17 +2232,15 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
           </div>
 
           <div className="modal-footer">
-            <Button type="button" className="btn-cancel btn-sm" onClick={() => setOpenPolicyModal(false)}>
-              <X className="mr-2 h-4 w-4" />
+            <Button type="button" className="pg-btn-platinum" onClick={() => setOpenPolicyModal(false)}>
               Cancelar
             </Button>
             <Button
               type="button"
-              className="btn-save btn-sm"
+              className="pg-btn-platinum"
               disabled={createPolicyMut.isPending}
               onClick={() => createPolicyMut.mutate()}
             >
-              <Save className="mr-2 h-4 w-4" />
               {createPolicyMut.isPending ? "Creando..." : "Crear"}
             </Button>
           </div>

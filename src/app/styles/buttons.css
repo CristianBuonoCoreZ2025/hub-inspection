@@ -392,4 +392,496 @@
       @apply h-4 w-4;
     }
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * BTN-WIZARD — Botones de pie de wizard (Cancelar, Atrás, Siguiente)
+   * Ancho fijo 122px, alto 29px. Usar con .btn-save o .btn-cancel.
+   * ═══════════════════════════════════════════════════════════════ */
+  .btn-wizard {
+    width: 122px !important;
+    height: 29px !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * BTN-LINK-SM — Botón tipo enlace inline (ej: "Usar datos")
+   * No es un botón sólido, es un texto subrayado clickable.
+   * ═══════════════════════════════════════════════════════════════ */
+  .btn-link-sm {
+    @apply inline-flex items-center text-[11px] font-semibold underline shrink-0 cursor-pointer transition-colors;
+    color: hsl(var(--primary)) !important;
+  }
+
+  .btn-link-sm:hover {
+    opacity: 0.8 !important;
+  }
+
+  .dark .btn-link-sm {
+    color: hsl(var(--primary)) !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * BTN-ICON-SM — Glass Icon Solid para tablas (28px)
+   * Glass siempre visible con blur, borde sutil, sombra interna.
+   * Usar .btn-icon-sm para acciones neutrales (ver, editar).
+   * Usar .btn-icon-sm .btn-danger-hover para eliminar (rojo glass al hover).
+   * ═══════════════════════════════════════════════════════════════ */
+  .btn-icon-sm {
+    @apply inline-flex items-center justify-center cursor-pointer transition-all p-0;
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 8px !important;
+    color: var(--foreground) !important;
+    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.03) 100%
+    ) !important;
+    backdrop-filter: blur(8px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  }
+
+  .btn-icon-sm:hover {
+    transform: translateY(-1px) !important;
+    border-color: color-mix(in srgb, var(--foreground) 15%, transparent) !important;
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  }
+
+  .dark .btn-icon-sm {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    ) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .btn-icon-sm.btn-danger-hover:hover {
+    color: rgb(244, 63, 94) !important;
+    border-color: rgba(244, 63, 94, 0.2) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(244, 63, 94, 0.12) 0%,
+      rgba(244, 63, 94, 0.04) 100%
+    ) !important;
+    box-shadow:
+      0 4px 14px rgba(244, 63, 94, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .dark .btn-icon-sm.btn-danger-hover:hover {
+    background: linear-gradient(
+      180deg,
+      rgba(244, 63, 94, 0.15) 0%,
+      rgba(244, 63, 94, 0.05) 100%
+    ) !important;
+    box-shadow:
+      0 4px 18px rgba(244, 63, 94, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * BTN-ICON-XS — Glass Icon Solid extra pequeño (20px) para sub-filas
+   * Mismo estilo glass que btn-icon-sm pero más compacto.
+   * ═══════════════════════════════════════════════════════════════ */
+  .btn-icon-xs {
+    @apply inline-flex items-center justify-center cursor-pointer transition-all p-0;
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 6px !important;
+    color: var(--foreground) !important;
+    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.03) 100%
+    ) !important;
+    backdrop-filter: blur(8px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  }
+
+  .btn-icon-xs:hover {
+    transform: translateY(-1px) !important;
+    border-color: color-mix(in srgb, var(--foreground) 15%, transparent) !important;
+    box-shadow:
+      0 3px 10px rgba(0, 0, 0, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  }
+
+  .dark .btn-icon-xs {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    ) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .btn-icon-xs.btn-danger-hover:hover {
+    color: rgb(244, 63, 94) !important;
+    border-color: rgba(244, 63, 94, 0.2) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(244, 63, 94, 0.12) 0%,
+      rgba(244, 63, 94, 0.04) 100%
+    ) !important;
+    box-shadow:
+      0 3px 12px rgba(244, 63, 94, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .dark .btn-icon-xs.btn-danger-hover:hover {
+    background: linear-gradient(
+      180deg,
+      rgba(244, 63, 94, 0.15) 0%,
+      rgba(244, 63, 94, 0.05) 100%
+    ) !important;
+    box-shadow:
+      0 3px 14px rgba(244, 63, 94, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * LIQUID GLASS PLATINUM — Botones del sistema (4 tipos)
+   *   · pg-btn-platinum:       slate glass, sin icono, 125px
+   *   · pg-btn-platinum-icon:  slate glass, con icono, 125px
+   *   · pg-btn-common:         teal glass, sin icono, 125px
+   *   · pg-btn-common-icon:    teal glass, con icono, 125px
+   * Sin color sólido. Cristal translúcido. Bordes redondeados.
+   * Tamaño fijo. NUNCA parece deshabilitado.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  .pg-btn-common,
+  .pg-btn-common-icon,
+  .pg-btn-platinum,
+  .pg-btn-platinum-icon {
+    @apply inline-flex items-center justify-center cursor-pointer;
+    position: relative;
+    width: 125px !important;
+    height: 34px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    border: 1px solid transparent !important;
+    backdrop-filter: blur(20px) saturate(160%) brightness(1.08) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) brightness(1.08) !important;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .pg-btn-common-icon,
+  .pg-btn-platinum-icon {
+    @apply gap-1.5;
+  }
+
+  .pg-btn-common::before,
+  .pg-btn-common-icon::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 15%;
+    right: 15%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      transparent 100%
+    );
+    border-radius: 999px;
+  }
+
+  .pg-btn-common:hover,
+  .pg-btn-common-icon:hover,
+  .pg-btn-platinum:hover,
+  .pg-btn-platinum-icon:hover {
+    transform: translateY(-1px);
+  }
+
+  .pg-btn-common:active,
+  .pg-btn-common-icon:active,
+  .pg-btn-platinum:active,
+  .pg-btn-platinum-icon:active {
+    transform: translateY(0);
+  }
+
+  /* ── Teal (común) ── */
+  .pg-btn-common,
+  .pg-btn-common-icon {
+    color: rgb(15, 118, 110) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(20, 184, 166, 0.14) 0%,
+        rgba(13, 148, 136, 0.1) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 4px 16px rgba(20, 184, 166, 0.14),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.55) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
+  }
+
+  .pg-btn-common::after,
+  .pg-btn-common-icon::after {
+    content: "";
+    position: absolute;
+    bottom: -80%;
+    left: 10%;
+    right: 10%;
+    height: 160%;
+    pointer-events: none;
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(20, 184, 166, 0.16) 0%,
+      transparent 70%
+    );
+    border-radius: 999px;
+  }
+
+  .pg-btn-common:hover,
+  .pg-btn-common-icon:hover {
+    box-shadow:
+      0 8px 24px rgba(20, 184, 166, 0.2),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.65) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.05) inset !important;
+  }
+
+  .pg-btn-common:hover::after,
+  .pg-btn-common-icon:hover::after {
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(20, 184, 166, 0.26) 0%,
+      transparent 70%
+    );
+  }
+
+  .dark .pg-btn-common,
+  .dark .pg-btn-common-icon {
+    color: rgb(94, 234, 212) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(20, 184, 166, 0.1) 0%,
+        rgba(13, 148, 136, 0.06) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 4px 20px rgba(20, 184, 166, 0.16),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .dark .pg-btn-common::before,
+  .dark .pg-btn-common-icon::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
+  }
+
+  .dark .pg-btn-common::after,
+  .dark .pg-btn-common-icon::after {
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(20, 184, 166, 0.2) 0%,
+      transparent 70%
+    );
+  }
+
+  .dark .pg-btn-common:hover,
+  .dark .pg-btn-common-icon:hover {
+    box-shadow:
+      0 8px 28px rgba(20, 184, 166, 0.22),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.28) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
+  }
+
+  /* ── Platinum (Glassy Button Pinterest) ──
+     Botón pill de cristal translúcido:
+     · Default: gris/blanco neutro, glass sutil.
+     · Hover: se ilumina con tinte celeste/lavanda y brillo de cristal.
+  */
+  .pg-btn-platinum,
+  .pg-btn-platinum-icon {
+    color: rgb(17, 24, 39) !important;
+    border-radius: 12px !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.58) 0%,
+        rgba(249, 250, 251, 0.32) 50%,
+        rgba(229, 231, 235, 0.18) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.25) 0%,
+        rgba(209, 213, 219, 0.12) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 10px 30px rgba(0, 0, 0, 0.08),
+      0 3px 10px rgba(0, 0, 0, 0.04),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.65) inset,
+      0 -1px 0 0.5px rgba(209, 213, 219, 0.35) inset,
+      0 0 0 1px rgba(209, 213, 219, 0.18) inset !important;
+  }
+
+  /* Reflejo superior del cristal */
+  .pg-btn-platinum::before,
+  .pg-btn-platinum-icon::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 45%;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    border-radius: 10px 10px 0 0;
+  }
+
+  /* Halo inferior sutil */
+  .pg-btn-platinum::after,
+  .pg-btn-platinum-icon::after {
+    content: "";
+    position: absolute;
+    bottom: -70%;
+    left: 15%;
+    right: 15%;
+    height: 140%;
+    pointer-events: none;
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(209, 213, 219, 0.14) 0%,
+      transparent 70%
+    );
+    border-radius: 999px;
+  }
+
+  .pg-btn-platinum:hover,
+  .pg-btn-platinum-icon:hover {
+    color: rgb(17, 24, 39) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.72) 0%,
+        rgba(224, 231, 255, 0.38) 45%,
+        rgba(199, 210, 254, 0.22) 75%,
+        rgba(255, 255, 255, 0.2) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(165, 180, 252, 0.2) 0%,
+        rgba(99, 102, 241, 0.1) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 14px 40px rgba(99, 102, 241, 0.18),
+      0 6px 16px rgba(99, 102, 241, 0.1),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.75) inset,
+      0 -1px 0 0.5px rgba(165, 180, 252, 0.35) inset,
+      0 0 0 1px rgba(165, 180, 252, 0.25) inset !important;
+  }
+
+  .pg-btn-platinum:hover::after,
+  .pg-btn-platinum-icon:hover::after {
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(165, 180, 252, 0.28) 0%,
+      transparent 70%
+    );
+  }
+
+  .dark .pg-btn-platinum,
+  .dark .pg-btn-platinum-icon {
+    color: rgb(243, 244, 246) !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.14) 0%,
+        rgba(255, 255, 255, 0.06) 50%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(75, 85, 99, 0.06) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 10px 30px rgba(0, 0, 0, 0.35),
+      0 3px 10px rgba(0, 0, 0, 0.18),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.15) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+  }
+
+  .dark .pg-btn-platinum::before,
+  .dark .pg-btn-platinum-icon::before {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    );
+  }
+
+  .dark .pg-btn-platinum::after,
+  .dark .pg-btn-platinum-icon::after {
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(255, 255, 255, 0.08) 0%,
+      transparent 70%
+    );
+  }
+
+  .dark .pg-btn-platinum:hover,
+  .dark .pg-btn-platinum-icon:hover {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.18) 0%,
+        rgba(129, 140, 248, 0.12) 45%,
+        rgba(99, 102, 241, 0.08) 75%,
+        rgba(255, 255, 255, 0.06) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(129, 140, 248, 0.14) 0%,
+        rgba(99, 102, 241, 0.08) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 14px 40px rgba(99, 102, 241, 0.25),
+      0 6px 16px rgba(99, 102, 241, 0.15),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(99, 102, 241, 0.25) inset,
+      0 0 0 1px rgba(129, 140, 248, 0.2) inset !important;
+  }
+
+  .dark .pg-btn-platinum:hover::after,
+  .dark .pg-btn-platinum-icon:hover::after {
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(129, 140, 248, 0.2) 0%,
+      transparent 70%
+    );
+  }
 }

@@ -75,6 +75,9 @@ export async function getMyClaims(
   const closedId = (closedStatus as { id: string } | null)?.id;
 
   // Construir query
+  // Nota: no existe FK directa claims -> asegurado; el asegurado vive en
+  // claims_participants con type='insured'. Seleccionamos todos los
+  // participantes y filtramos por type='insured' en JS.
   const select = `
     id, claim_number, liquidation_number, client_reference, internal_number,
     claim_date, status_id, disabled, insurance_company_id,
@@ -85,7 +88,7 @@ export async function getMyClaims(
     auditor:profiles!claims_auditor_id_fkey(id, full_name),
     dispatcher:profiles!claims_dispatcher_id_fkey(id, full_name),
     insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name),
-    insured:claim_participants!claims_insured_participant_id_fkey(full_name, address, city),
+    participants:claims_participants(full_name, address, city, type),
     inspection_sessions:inspection_sessions(id, status)
   `;
 
@@ -108,6 +111,9 @@ export async function getMyClaims(
 
   const { data, error } = await query.order("claim_date", { ascending: false });
 
+  if (error) {
+    console.error("[getMyClaims] error en query de claims:", error.message, { claimRole, pid });
+  }
   if (error || !data) return [];
 
   const rows = data as Array<{
@@ -125,31 +131,34 @@ export async function getMyClaims(
     auditor: { id: string; full_name: string | null } | null;
     dispatcher: { id: string; full_name: string | null } | null;
     insurance_company: { id: string; name: string | null } | null;
-    insured: { full_name: string | null; address: string | null; city: string | null } | null;
+    participants: Array<{ full_name: string | null; address: string | null; city: string | null; type: string }> | null;
     inspection_sessions: Array<{ id: string; status: string }> | null;
   }>;
 
-  return rows.map((r) => ({
-    id: r.id,
-    claim_number: r.claim_number,
-    liquidation_number: r.liquidation_number,
-    client_reference: r.client_reference,
-    internal_number: r.internal_number,
-    claim_date: r.claim_date,
-    status_id: r.status_id,
-    status_code: r.status?.code ?? null,
-    status_name: r.status?.name ?? null,
-    insured_name: r.insured?.full_name ?? null,
-    insured_address: r.insured?.address ?? null,
-    insured_city: r.insured?.city ?? null,
-    insurance_company_name: r.insurance_company?.name ?? null,
-    assigned_adjuster_name: r.assigned_adjuster?.full_name ?? null,
-    inspector_name: r.inspector?.full_name ?? null,
-    auditor_name: r.auditor?.full_name ?? null,
-    dispatcher_name: r.dispatcher?.full_name ?? null,
-    inspection_count: r.inspection_sessions?.length ?? 0,
-    inspection_active_count: r.inspection_sessions?.filter((s) => s.status === "scheduled" || s.status === "active").length ?? 0,
-  }));
+  return rows.map((r) => {
+    const insured = r.participants?.find((p) => p.type === "insured") ?? null;
+    return {
+      id: r.id,
+      claim_number: r.claim_number,
+      liquidation_number: r.liquidation_number,
+      client_reference: r.client_reference,
+      internal_number: r.internal_number,
+      claim_date: r.claim_date,
+      status_id: r.status_id,
+      status_code: r.status?.code ?? null,
+      status_name: r.status?.name ?? null,
+      insured_name: insured?.full_name ?? null,
+      insured_address: insured?.address ?? null,
+      insured_city: insured?.city ?? null,
+      insurance_company_name: r.insurance_company?.name ?? null,
+      assigned_adjuster_name: r.assigned_adjuster?.full_name ?? null,
+      inspector_name: r.inspector?.full_name ?? null,
+      auditor_name: r.auditor?.full_name ?? null,
+      dispatcher_name: r.dispatcher?.full_name ?? null,
+      inspection_count: r.inspection_sessions?.length ?? 0,
+      inspection_active_count: r.inspection_sessions?.filter((s) => s.status === "scheduled" || s.status === "active").length ?? 0,
+    };
+  });
 }
 
 export { ROLE_TITLE, ROLE_ICON_NAME };

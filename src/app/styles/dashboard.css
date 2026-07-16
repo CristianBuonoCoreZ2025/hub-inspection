@@ -14,10 +14,10 @@
     margin-bottom: 8px;
   }
 
-  /* ═══ REAL LIQUID GLASS ═══
-     Casi transparente — se ve el fondo borroso detrás.
-     Borde luminoso especular arriba, sombra interna abajo.
-     NO es una tarjeta con blur, ES cristal de verdad. */
+  /* ═══ APPLE LIQUID GLASS TOOLBAR ═══
+     Barra flotante tipo toolbar de Apple: pill redondeada, cristal
+     translúcido casi neutro, blur intenso, sombra suave que flota.
+  */
   .topbar-inner {
     position: relative;
     display: flex;
@@ -26,37 +26,54 @@
     gap: 12px;
     height: 48px;
     padding: 0 14px;
-    border-radius: 18px;
-    /* Borde: brillante arriba (luz especular), mas tenue abajo */
+    border-radius: 999px;
     border: 1px solid transparent !important;
     background:
       linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.5) 0%,
-        rgba(255, 255, 255, 0.08) 50%,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.12) 50%,
+        rgba(255, 255, 255, 0.04) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0.04) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(32px) saturate(200%) brightness(1.06) !important;
+    -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.06) !important;
+    box-shadow:
+      0 14px 44px rgba(0, 0, 0, 0.1),
+      0 6px 16px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.05) inset,
+      0 8px 20px rgba(0, 0, 0, 0.05) inset !important;
+    overflow: visible;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .dark .topbar-inner {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.14) 0%,
+        rgba(255, 255, 255, 0.05) 50%,
         rgba(255, 255, 255, 0.02) 100%
       ) border-box,
       linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.03) 100%
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.02) 100%
       ) padding-box !important;
-    backdrop-filter: blur(40px) saturate(180%) brightness(1.08) !important;
-    -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.08) !important;
     box-shadow:
-      /* Sombra exterior — flota */
-      0 12px 40px rgba(0, 0, 0, 0.12),
-      0 4px 12px rgba(0, 0, 0, 0.06),
-      /* Highlight especular superior — el brillo del borde de vidrio */
-      0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
-      /* Sombra interna inferior — profundidad de lente */
-      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset,
-      0 8px 16px rgba(0, 0, 0, 0.04) inset !important;
-    overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      0 14px 44px rgba(0, 0, 0, 0.45),
+      0 6px 16px rgba(0, 0, 0, 0.25),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.25) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset,
+      0 8px 20px rgba(0, 0, 0, 0.15) inset !important;
   }
 
-  /* Destello especular superior — la línea de luz que recorre el borde */
+  /* Destello especular superior — el brillo de lente del cristal */
   .topbar-inner::before {
     content: "";
     position: absolute;
@@ -74,51 +91,69 @@
     border-radius: 999px;
   }
 
-  /* Halo de color muy sutil en la base — profundidad */
+  .dark .topbar-inner::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
+  }
+
+  /* Halo de luz sutil en la base — profundidad de lente */
   .topbar-inner::after {
     content: "";
     position: absolute;
     bottom: -60%;
-    left: 25%;
-    right: 25%;
+    left: 30%;
+    right: 30%;
     height: 120%;
     pointer-events: none;
     background: radial-gradient(
       100% 50% at 50% 100%,
-      rgba(0, 122, 255, 0.06) 0%,
+      rgba(0, 122, 255, 0.05) 0%,
       transparent 70%
     );
     border-radius: 999px;
   }
 
-  /* ── DARK MODE: cristal oscuro pero translúcido ── */
-  .dark .topbar-inner {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.12) 0%,
-        rgba(255, 255, 255, 0.04) 50%,
-        rgba(255, 255, 255, 0.01) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.05) 0%,
-        rgba(255, 255, 255, 0.01) 100%
-      ) padding-box !important;
-    box-shadow:
-      0 12px 40px rgba(0, 0, 0, 0.4),
-      0 4px 12px rgba(0, 0, 0, 0.2),
-      0 1px 0 0.5px rgba(255, 255, 255, 0.25) inset,
-      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset,
-      0 8px 16px rgba(0, 0, 0, 0.15) inset !important;
+  .dark .topbar-inner::after {
+    background: radial-gradient(
+      100% 50% at 50% 100%,
+      rgba(0, 122, 255, 0.04) 0%,
+      transparent 70%
+    );
   }
 
-  .dark .topbar-inner::before {
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.4) 50%,
-      transparent 100%
+  /* ═══ LIQUID GLASS LENS — barrido de luz que sigue el cursor ═══
+     Capa translúcida sobre el cristal del topbar: un destello radial
+     que se desplaza con el cursor (variable --dock-x seteada por el
+     hook useDockMagnification). Da la sensación de una gota de vidrio
+     líquido pasando sobre la barra. Opacidad controlada por --dock-active.
+  */
+  .topbar-lens {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+    opacity: calc(var(--dock-active, 0) * 0.85);
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    background: radial-gradient(
+      150px 80px at var(--dock-x, -9999px) 50%,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.14) 35%,
+      transparent 70%
+    );
+    mix-blend-mode: screen;
+  }
+
+  .dark .topbar-lens {
+    background: radial-gradient(
+      150px 80px at var(--dock-x, -9999px) 50%,
+      rgba(255, 255, 255, 0.32) 0%,
+      rgba(120, 170, 255, 0.1) 40%,
+      transparent 70%
     );
   }
 
@@ -129,6 +164,8 @@
     gap: 8px;
     flex-shrink: 0;
     min-width: 0;
+    position: relative;
+    z-index: 1;
   }
 
   .topbar-user-info {
@@ -154,164 +191,29 @@
     text-transform: capitalize;
   }
 
-  /* ── Centro: 2 grupos de chips ── */
+  /* ── Centro: chips icon-only tipo Apple toolbar ── */
   .topbar-center {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     flex: 1;
     justify-content: center;
-    overflow: hidden;
+    overflow: visible;
+    position: relative;
+    z-index: 1;
   }
 
-  /* Grupo Liquid Glass — translúcido real */
-  .topbar-group {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 8px 3px 10px;
-    border-radius: 14px;
-    border: 1px solid transparent;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.25) 0%,
-        rgba(255, 255, 255, 0.03) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.05) 0%,
-        rgba(255, 255, 255, 0.01) 100%
-      ) padding-box;
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
-    box-shadow:
-      0 2px 12px rgba(0, 0, 0, 0.05),
-      0 1px 0 0.5px rgba(255, 255, 255, 0.3) inset,
-      0 -1px 0 0.5px rgba(0, 0, 0, 0.02) inset;
-    flex-shrink: 0;
-  }
-
-  .dark .topbar-group {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(255, 255, 255, 0.01) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.03) 0%,
-        rgba(255, 255, 255, 0.005) 100%
-      ) padding-box;
-    box-shadow:
-      0 2px 12px rgba(0, 0, 0, 0.2),
-      0 1px 0 0.5px rgba(255, 255, 255, 0.12) inset,
-      0 -1px 0 0.5px rgba(0, 0, 0, 0.1) inset;
-  }
-
-  .topbar-group-label {
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted-foreground);
-    white-space: nowrap;
-    padding-right: 4px;
-    border-right: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
-    margin-right: 2px;
-  }
-
-  .topbar-group-chips {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-  }
-
-  /* ── Chip: burbuja de cristal real — translúcida ── */
+  /* Chip Apple: pill con icono + número DENTRO (como botones de Apple) */
   .topbar-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 5px 14px 5px 5px;
+    justify-content: center;
+    gap: 5px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0 10px;
     border-radius: 999px !important;
     border: 1px solid transparent !important;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.35) 0%,
-        rgba(255, 255, 255, 0.05) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) padding-box !important;
-    backdrop-filter: blur(20px) saturate(180%) brightness(1.05) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.05) !important;
-    box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.08),
-      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
-      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--foreground);
-    text-decoration: none;
-    white-space: nowrap;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    cursor: pointer;
-    flex-shrink: 0;
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* Línea especular superior en el chip */
-  .topbar-chip::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 15%;
-    right: 15%;
-    height: 1px;
-    pointer-events: none;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.7) 50%,
-      transparent 100%
-    );
-    border-radius: 999px;
-  }
-
-  .dark .topbar-chip {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.12) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.04) 0%,
-        rgba(255, 255, 255, 0.01) 100%
-      ) padding-box !important;
-    box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.25),
-      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
-      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
-  }
-
-  .dark .topbar-chip::before {
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.35) 50%,
-      transparent 100%
-    );
-  }
-
-  .topbar-chip:hover {
-    transform: translateY(-2px) scale(1.05) !important;
     background:
       linear-gradient(
         180deg,
@@ -320,12 +222,73 @@
       ) border-box,
       linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.1) 0%,
         rgba(255, 255, 255, 0.03) 100%
       ) padding-box !important;
     box-shadow:
-      0 12px 32px rgba(0, 0, 0, 0.15),
-      0 1px 0 0.5px rgba(255, 255, 255, 0.7) inset,
+      0 2px 8px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
+    color: var(--foreground);
+    text-decoration: none;
+    white-space: nowrap;
+    transform: scale(var(--dock-scale, 1));
+    transform-origin: center bottom;
+    transition:
+      transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+      background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.2s ease !important;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    will-change: transform;
+  }
+
+  /* Mientras se trackea el cursor: sin transición de transform →
+     el scale sigue al cursor en tiempo real (cada frame rAF), fluido.
+     El spring solo actúa al salir el cursor (reposo). */
+  .topbar-inner.dock-tracking .topbar-chip {
+    transition:
+      background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.2s ease !important;
+  }
+
+  .dark .topbar-chip {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.14) 0%,
+        rgba(255, 255, 255, 0.04) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.25),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.15) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .topbar-chip:hover {
+    --dock-scale: 1.08;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0.12) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0.04) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.1),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
       0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
   }
 
@@ -333,110 +296,49 @@
     background:
       linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.18) 0%,
-        rgba(255, 255, 255, 0.04) 100%
+        rgba(255, 255, 255, 0.2) 0%,
+        rgba(255, 255, 255, 0.06) 100%
       ) border-box,
       linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.06) 0%,
-        rgba(255, 255, 255, 0.01) 100%
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.02) 100%
       ) padding-box !important;
     box-shadow:
-      0 12px 32px rgba(0, 0, 0, 0.4),
-      0 1px 0 0.5px rgba(255, 255, 255, 0.3) inset,
+      0 6px 18px rgba(0, 0, 0, 0.35),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
       0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
   }
 
-  /* Icono dentro de circulo de cristal — translúcido */
   .topbar-chip-icon {
-    width: 28px;
-    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 999px;
     color: var(--foreground);
     flex-shrink: 0;
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.3) 0%,
-      rgba(255, 255, 255, 0.05) 100%
-    );
-    border: 1px solid transparent;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.4) 0%,
-        rgba(255, 255, 255, 0.05) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) padding-box;
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.06),
-      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
-      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset;
-    backdrop-filter: blur(12px) saturate(160%);
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    transition: all 0.2s ease;
   }
 
   .topbar-chip-icon svg {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
   }
 
-  .topbar-chip:hover .topbar-chip-icon {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.5) 0%,
-        rgba(255, 255, 255, 0.08) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.15) 0%,
-        rgba(255, 255, 255, 0.03) 100%
-      ) padding-box;
-  }
-
+  /* Número DENTRO del pill, al lado del icono */
   .topbar-chip-count {
+    font-size: 11px;
     font-weight: 700;
     color: var(--foreground);
-    font-size: 12px;
-    padding-right: 2px;
+    line-height: 1;
+    pointer-events: none;
   }
 
-  .topbar-chip-label {
-    font-weight: 500;
-    color: var(--muted-foreground);
-    font-size: 10px;
-  }
-
-  /* Variantes de chip */
-  .topbar-chip-alert {
-    background: color-mix(in srgb, #f59e0b 12%, transparent) !important;
-    border-color: color-mix(in srgb, #f59e0b 25%, transparent) !important;
-  }
-
+  /* Variantes semánticas */
   .topbar-chip-alert .topbar-chip-icon {
     color: #f59e0b;
   }
 
   .topbar-chip-alert .topbar-chip-count {
     color: #f59e0b;
-  }
-
-  .topbar-chip-alert:hover {
-    background: color-mix(in srgb, #f59e0b 18%, transparent) !important;
-    border-color: color-mix(in srgb, #f59e0b 35%, transparent) !important;
-  }
-
-  .topbar-chip-overdue {
-    background: color-mix(in srgb, #ef4444 12%, transparent) !important;
-    border-color: color-mix(in srgb, #ef4444 25%, transparent) !important;
   }
 
   .topbar-chip-overdue .topbar-chip-icon {
@@ -447,43 +349,351 @@
     color: #ef4444;
   }
 
-  .topbar-chip-overdue:hover {
-    background: color-mix(in srgb, #ef4444 18%, transparent) !important;
-    border-color: color-mix(in srgb, #ef4444 35%, transparent) !important;
-  }
-
   /* ── Derecha: Acciones ── */
   .topbar-right {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     flex-shrink: 0;
+    position: relative;
+    z-index: 1;
   }
 
+  /* ── Acciones del topbar: pills suaves tipo Apple toolbar ── */
   .topbar-action {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--muted-foreground);
+    width: 34px;
+    height: 34px;
+    border-radius: 999px !important;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.35) 0%,
+        rgba(255, 255, 255, 0.06) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.45) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
+    color: var(--foreground);
     cursor: pointer;
-    transition: all 0.15s ease !important;
+    transform: scale(var(--dock-scale, 1));
+    transform-origin: center bottom;
+    transition:
+      transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+      background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.2s ease !important;
+    position: relative;
+    flex-shrink: 0;
+    will-change: transform;
+  }
+
+  .topbar-inner.dock-tracking .topbar-action {
+    transition:
+      background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.2s ease !important;
   }
 
   .topbar-action:hover {
-    background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
-    color: var(--primary);
-    border-color: color-mix(in srgb, var(--primary) 15%, transparent) !important;
+    --dock-scale: 1.1;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0.1) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.1),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.55) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
+  }
+
+  .dark .topbar-action {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.25),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.12) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .dark .topbar-action:hover {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.18) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.35),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.18) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
+  }
+
+  .topbar-action svg {
+    width: 15px;
+    height: 15px;
   }
 
   .topbar-action-logout:hover {
-    background: color-mix(in srgb, #ef4444 10%, transparent) !important;
+    color: #ef4444 !important;
+  }
+
+  /* ── Botón Recientes — pill como los chips del centro ── */
+  .topbar-action-recents {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0 10px;
+    border-radius: 999px !important;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.45) 0%,
+        rgba(255, 255, 255, 0.08) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
+    color: var(--foreground) !important;
+    cursor: pointer;
+    transform: scale(var(--dock-scale, 1));
+    transform-origin: center bottom;
+    transition:
+      transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+      background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.2s ease !important;
+    position: relative;
+    flex-shrink: 0;
+    will-change: transform;
+  }
+
+  .topbar-inner.dock-tracking .topbar-action-recents {
+    transition:
+      background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.2s ease !important;
+  }
+
+  .dark .topbar-action-recents {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.14) 0%,
+        rgba(255, 255, 255, 0.04) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.25),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.15) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  .topbar-action-recents:hover {
+    --dock-scale: 1.08;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0.12) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0.04) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.1),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset !important;
+  }
+
+  .dark .topbar-action-recents:hover {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.2) 0%,
+        rgba(255, 255, 255, 0.06) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.35),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
+  }
+
+  .topbar-action-recents .topbar-chip-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .topbar-action-recents .topbar-chip-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--foreground);
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  /* Filas del dropdown de recientes */
+  .recent-claim-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 4px;
+  }
+
+  .recent-claim-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--foreground);
+    transition: background 0.12s ease;
+  }
+
+  .recent-claim-link:hover {
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+
+  .recent-claim-bl-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+
+  .recent-claim-flag-img {
+    width: 18px;
+    height: 13px;
+    border-radius: 2px;
+    object-fit: cover;
+    flex-shrink: 0;
+    display: block;
+  }
+
+  .recent-claim-flag-placeholder {
+    width: 18px;
+    height: 13px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--muted) 40%, transparent);
+    flex-shrink: 0;
+  }
+
+  .recent-claim-number {
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+    width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .recent-claim-ref {
+    font-size: 10px;
+    color: var(--muted-foreground);
+    flex-shrink: 0;
+    width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.8;
+  }
+
+  .recent-claim-insured {
+    font-size: 11px;
+    color: var(--muted-foreground);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .recent-claim-time {
+    font-size: 10px;
+    color: var(--muted-foreground);
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  .recent-claim-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.12s ease;
+    flex-shrink: 0;
+  }
+
+  .recent-claim-remove:hover {
+    opacity: 1;
+    background: color-mix(in srgb, #ef4444 12%, transparent);
     color: #ef4444;
-    border-color: color-mix(in srgb, #ef4444 15%, transparent) !important;
   }
 
   /* ── Responsive ── */
@@ -493,20 +703,89 @@
     display: none;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: color-mix(in srgb, var(--muted) 20%, transparent);
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.35) 0%,
+        rgba(255, 255, 255, 0.06) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.06),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.45) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset;
     color: var(--foreground);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
   }
 
   .topbar-hamburger:hover {
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-    color: var(--primary);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0.1) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) padding-box;
+    transform: translateY(-2px) scale(1.06);
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.1),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.55) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.04) inset;
+  }
+
+  .dark .topbar-hamburger {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box;
+    box-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.25),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.12) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset;
+  }
+
+  .dark .topbar-hamburger:hover {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.18) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      ) padding-box;
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.35),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.18) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset;
+  }
+
+  .topbar-hamburger svg {
+    width: 15px;
+    height: 15px;
   }
 
   /* Tablet: mostrar hamburger, ocultar labels de chips */
@@ -517,19 +796,13 @@
     .topbar-user-name {
       max-width: 100px;
     }
-    .topbar-chip-label {
-      display: none;
-    }
     .topbar-chip {
-      padding: 4px 8px 4px 4px;
-    }
-    .topbar-chip-icon {
-      width: 22px;
-      height: 22px;
+      width: 28px;
+      height: 26px;
     }
   }
 
-  /* Mobile: solo iconos + count, ocultar labels y user name */
+  /* Mobile: solo iconos + count, ocultar user name */
   @media (max-width: 767px) {
     .topbar {
       padding: 3px 4px;
@@ -547,54 +820,107 @@
       gap: 4px;
       justify-content: flex-start;
       overflow-x: auto;
+      overflow-y: hidden;
       scrollbar-width: none;
     }
     .topbar-center::-webkit-scrollbar {
       display: none;
     }
-    .topbar-group {
-      padding: 2px 6px;
-      gap: 3px;
-    }
-    .topbar-group-label {
-      display: none;
-    }
-    .topbar-group {
-      border-left: none;
-      border-right: none;
-      border-radius: 8px;
-      background: transparent;
-      box-shadow: none;
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-      padding: 0;
-      gap: 3px;
-    }
     .topbar-chip {
-      padding: 3px 6px 3px 3px;
-      gap: 3px;
+      height: 28px;
+      padding: 0 8px;
     }
-    .topbar-chip-icon {
-      width: 20px;
-      height: 20px;
+    .topbar-chip-icon svg {
+      width: 14px;
+      height: 14px;
     }
-    .topbar-chip-label {
-      display: none;
+    .topbar-chip-count {
+      font-size: 10px;
     }
     .topbar-action {
-      width: 26px;
-      height: 26px;
+      width: 30px;
+      height: 30px;
+    }
+    .topbar-action-recents {
+      height: 28px;
+      padding: 0 8px;
     }
   }
 
   /* Mobile pequeño: aún más compacto */
   @media (max-width: 480px) {
-    .topbar-chip-count {
-      font-size: 10px;
+    .topbar {
+      padding: 3px 4px;
     }
-    .topbar-chip-icon {
-      width: 12px;
-      height: 12px;
+    .topbar-inner {
+      height: 42px;
+      padding: 0 8px;
+      gap: 6px;
+      border-radius: 12px;
+    }
+    .topbar-user-info {
+      display: none;
+    }
+    .topbar-center {
+      gap: 4px;
+      justify-content: flex-start;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+    }
+    .topbar-center::-webkit-scrollbar {
+      display: none;
+    }
+    .topbar-chip {
+      height: 26px;
+      padding: 0 6px;
+      gap: 4px;
+    }
+    .topbar-chip-icon svg {
+      width: 13px;
+      height: 13px;
+    }
+    .topbar-chip-count {
+      font-size: 9px;
+    }
+    .topbar-action {
+      width: 28px;
+      height: 28px;
+    }
+    .topbar-action-recents {
+      height: 26px;
+      padding: 0 6px;
+      gap: 4px;
+    }
+  }
+
+  /* ═══ LIQUID GLASS DOCK — deshabilitado en touch / movimiento reducido ═══
+     En dispositivos sin hover (movil/tablet touch) no hay magnificación ni
+     lente: los iconos quedan en su tamaño natural. Se conserva el cambio de
+     background al tap como feedback mínimo.
+  */
+  @media (hover: none) {
+    .topbar-chip,
+    .topbar-action,
+    .topbar-action-recents {
+      transform: none !important;
+      will-change: auto;
+    }
+    .topbar-lens {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .topbar-chip,
+    .topbar-action,
+    .topbar-action-recents {
+      transform: none !important;
+      transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease !important;
+      will-change: auto;
+    }
+    .topbar-lens {
+      display: none;
     }
   }
 

@@ -14,12 +14,11 @@ import { updateClaimStatus } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getUsers } from "@/services/users";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   ClipboardCheck,
-  Play,
-  CheckCircle,
   XCircle,
   FileText,
   MapPin,
@@ -112,6 +111,7 @@ export default function InspectionDetailPage() {
   const queryClient = useQueryClient();
   const sessionId = params.id as string;
   const { canView } = usePermissions();
+  const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState("resumen");
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
@@ -213,7 +213,7 @@ export default function InspectionDetailPage() {
         const statusId = statusCode ? codeToId[statusCode] : null;
         if (statusId) {
           try {
-            await updateClaimStatus(session.claim_id, statusId);
+            await updateClaimStatus(session.claim_id, statusId, profile?.id);
             queryClient.invalidateQueries({ queryKey: ["claim", session.claim_id] });
             queryClient.invalidateQueries({ queryKey: ["claims"] });
           } catch {
@@ -247,7 +247,7 @@ export default function InspectionDetailPage() {
         const statusId = codeToId["created"];
         if (statusId) {
           try {
-            await updateClaimStatus(session.claim_id, statusId);
+            await updateClaimStatus(session.claim_id, statusId, profile?.id);
             queryClient.invalidateQueries({ queryKey: ["claim", session.claim_id] });
             queryClient.invalidateQueries({ queryKey: ["claims"] });
           } catch {}
@@ -334,16 +334,15 @@ export default function InspectionDetailPage() {
           <div className="flex gap-2 flex-wrap">
             <Button
               size="sm"
-              className="btn-save btn-footer"
+              className="pg-btn-platinum"
               onClick={() => updateMutation.mutate({ id: session.id, input: { status: "active" } })}
             >
-              <Play className="mr-2 h-3.5 w-3.5" />
               Iniciar
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="btn-cancel btn-footer"
+              className="pg-btn-platinum"
               onClick={() => {
                 const claimData = session?.claim as Record<string, unknown> | undefined;
                 if (claimData?.inspector_id) {
@@ -352,16 +351,14 @@ export default function InspectionDetailPage() {
                 setRescheduleModalOpen(true);
               }}
             >
-              <RotateCcw className="mr-2 h-3.5 w-3.5" />
               Reagendar
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="btn-cancel btn-footer"
+              className="pg-btn-platinum"
               onClick={() => setCancelModalOpen(true)}
             >
-              <XCircle className="mr-2 h-3.5 w-3.5" />
               Cancelar
             </Button>
           </div>
@@ -371,7 +368,7 @@ export default function InspectionDetailPage() {
           <div className="flex gap-2 flex-wrap">
             <Button
               size="sm"
-              className="btn-save btn-footer"
+              className="pg-btn-platinum"
               onClick={() => {
                 // Validar: al menos una evidencia (foto/doc) o un daño o checklist item
                 const hasEvidences = (session.inspection_evidences?.length ?? 0) > 0;
@@ -391,7 +388,6 @@ export default function InspectionDetailPage() {
                 updateMutation.mutate({ id: session.id, input: { status: "completed" } });
               }}
             >
-              <CheckCircle className="mr-2 h-3.5 w-3.5" />
               Finalizar
             </Button>
           </div>
@@ -420,7 +416,7 @@ export default function InspectionDetailPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 w-7 p-0 shrink-0"
+            className="btn-icon-sm shrink-0"
             onClick={() => router.push("/dashboard/inspecciones")}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -443,10 +439,9 @@ export default function InspectionDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              className="btn-save btn-sm"
+              className="pg-btn-platinum"
               onClick={() => setVideoCallOpen(true)}
             >
-              <Video className="mr-1.5 h-3.5 w-3.5" />
               Videollamada
             </Button>
           )}
@@ -649,7 +644,7 @@ export default function InspectionDetailPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-6 px-2 text-[11px] shrink-0"
+                  className="btn-icon-sm shrink-0"
                   onClick={() => {
                     if (typeof navigator !== "undefined" && navigator.clipboard) {
                       navigator.clipboard.writeText(`${window.location.origin}/inspection/${session.magic_link_token}`);
@@ -802,7 +797,7 @@ export default function InspectionDetailPage() {
             </div>
           </div>
           <div className="modal-footer">
-            <Button variant="outline" size="sm" onClick={() => setCancelModalOpen(false)} className="btn-cancel btn-footer">
+            <Button variant="outline" size="sm" onClick={() => setCancelModalOpen(false)} className="pg-btn-platinum">
               Cerrar
             </Button>
             <Button
@@ -813,9 +808,8 @@ export default function InspectionDetailPage() {
                 reasonId: cancelReasonId,
                 notes: cancelNotes || undefined,
               })}
-              className="btn-cancel btn-footer"
+              className="pg-btn-platinum"
             >
-              {cancelMutation.isPending ? <Clock className="mr-2 h-3.5 w-3.5 animate-spin" /> : <XCircle className="mr-2 h-3.5 w-3.5" />}
               Cancelar
             </Button>
           </div>
@@ -949,7 +943,7 @@ export default function InspectionDetailPage() {
             </div>
           </div>
           <div className="modal-footer">
-            <Button variant="outline" size="sm" onClick={() => setRescheduleModalOpen(false)} className="btn-cancel btn-footer">
+            <Button variant="outline" size="sm" onClick={() => setRescheduleModalOpen(false)} className="pg-btn-platinum">
               Cerrar
             </Button>
             <Button
@@ -965,9 +959,8 @@ export default function InspectionDetailPage() {
                   newOptions: { inspectionType: rescheduleType, scheduledAt, inspectorId: rescheduleInspectorId || undefined },
                 });
               }}
-              className="btn-save btn-footer"
+              className="pg-btn-platinum"
             >
-              {rescheduleMutation.isPending ? <Clock className="mr-2 h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="mr-2 h-3.5 w-3.5" />}
               Reagendar
             </Button>
           </div>

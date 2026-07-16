@@ -3,7 +3,7 @@
 import { Controller, type Control, type FieldValues, type FieldPath } from "react-hook-form";
 import { DatePicker } from "@/components/ui/date-picker";
 
-interface FormDatePickerProps<TFieldValues extends FieldValues = any> {
+interface FormDatePickerProps<TFieldValues extends FieldValues = FieldValues> {
   control: Control<TFieldValues>;
   name: string;
   placeholder?: string;
@@ -12,7 +12,7 @@ interface FormDatePickerProps<TFieldValues extends FieldValues = any> {
   clearable?: boolean;
 }
 
-export function FormDatePicker<TFieldValues extends FieldValues = any>({
+export function FormDatePicker<TFieldValues extends FieldValues = FieldValues>({
   control,
   name,
   placeholder,

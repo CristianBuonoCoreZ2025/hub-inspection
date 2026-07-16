@@ -170,7 +170,7 @@ export default function ReabrirPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="btn-cancel btn-sm"
+                  className="pg-btn-platinum"
                   onClick={() => { setSelectedClaimId(null); setReason(""); }}
                 >
                   Cancelar
@@ -178,11 +178,10 @@ export default function ReabrirPage() {
                 {canEdit("operaciones") && (
                   <Button
                     size="sm"
-                    className="btn-save btn-sm"
+                    className="pg-btn-platinum"
                     disabled={!reason.trim() || reopenMutation.isPending}
                     onClick={() => reopenMutation.mutate({ id: selectedClaim.id, reason: reason.trim() })}
                   >
-                    <LockOpen className="mr-1.5 h-3.5 w-3.5" />
                     {reopenMutation.isPending ? "Reabriendo..." : "Reabrir"}
                   </Button>
                 )}

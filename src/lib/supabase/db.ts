@@ -43,13 +43,11 @@ export async function fetchAll<T = AnyObj>(
     range?: { from: number; to: number };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     neq?: Record<string, any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ilike?: Record<string, string>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     gte?: Record<string, any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     lte?: Record<string, any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     is?: Record<string, boolean | null>;
     single?: boolean;
   }

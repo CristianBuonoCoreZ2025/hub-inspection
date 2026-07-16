@@ -225,7 +225,7 @@ export default function CargaSiniestrosPage() {
               <Button
                 onClick={() => loadMutation.mutate(parsedRows)}
                 disabled={isUploading || validCount === 0}
-                className="btn-save btn-sm"
+                className="pg-btn-platinum-icon"
               >
                 {isUploading ? (
                   <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando...</>

@@ -1,4 +1,4 @@
-import { fetchAll, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
+import { fetchAll, insertRow, updateRow, getSupabaseClient } from "@/lib/supabase/db";
 import type { GestionScreen, CharacteristicScreen, ClaimAction } from "@/types";
 
 const SCREEN_FIELDS =

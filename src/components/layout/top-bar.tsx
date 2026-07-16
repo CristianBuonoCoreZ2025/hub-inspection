@@ -1,21 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import Image from "next/image";
 import {
-  FilePen,
-  FileSearch,
-  Navigation,
-  ScrollText,
-  LogOut,
   Loader2,
   Sun,
   Moon,
   Monitor,
   Palette,
   Menu,
+  X,
+  History,
+  Power,
 } from "lucide-react";
+import {
+  LiquidacionIcon,
+  InspeccionIcon,
+  DespachoIcon,
+  AuditoriaIcon,
+} from "@/components/icons/claim-toolbar-icons";
 import { useSyncExternalStore } from "react";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -38,6 +43,9 @@ import {
   UI_STYLE_SWATCHES,
   type UiStyleSkin,
 } from "@/lib/ui-style-client-store";
+import { getClaimTypeIcon } from "@/lib/claim-type-icons";
+import { useRecentClaims } from "@/hooks/use-recent-claims";
+import { useDockMagnification } from "@/hooks/use-dock-magnification";
 import { MobileNav } from "@/components/layout/mobile-nav";
 
 function getInitials(email?: string | null) {
@@ -60,27 +68,23 @@ function StatChip({ icon: Icon, count, label, href, variant = "default", iconCla
   return (
     <Link
       href={href}
-      className={`topbar-chip topbar-chip-${variant}`}
+      className={`topbar-chip topbar-chip-${variant} dock-item`}
       title={`${label}: ${count}`}
     >
       <span className="topbar-chip-icon">
         <Icon className={iconClassName} />
       </span>
-      <span className="topbar-chip-count">{count}</span>
+      {count > 0 && <span className="topbar-chip-count">{count}</span>}
     </Link>
   );
 }
 
 function ThemeToggleCompact() {
-  const { setTheme, resolvedTheme, theme } = useTheme();
+  const { setTheme, theme } = useTheme();
   const mounted = useMounted();
 
   const currentIcon =
-    mounted && resolvedTheme === "dark" ? (
-      <Moon className="size-3.5" />
-    ) : (
-      <Sun className="size-3.5" />
-    );
+    mounted && theme === "dark" ? <Moon /> : <Sun />;
 
   const currentValue = mounted ? theme ?? "system" : "system";
 
@@ -88,7 +92,7 @@ function ThemeToggleCompact() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button type="button" className="topbar-action" title="Tema">
+          <button type="button" className="topbar-action dock-item" title="Tema">
             {currentIcon}
           </button>
         }
@@ -96,15 +100,15 @@ function ThemeToggleCompact() {
       <DropdownMenuContent align="end" className="w-40">
         <DropdownMenuRadioGroup value={currentValue} onValueChange={setTheme}>
           <DropdownMenuRadioItem value="light" className="text-xs">
-            <Sun className="mr-2 size-3.5" />
+            <Sun className="mr-2 size-3" />
             <span>Claro</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark" className="text-xs">
-            <Moon className="mr-2 size-3.5" />
+            <Moon className="mr-2 size-3" />
             <span>Oscuro</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system" className="text-xs">
-            <Monitor className="mr-2 size-3.5" />
+            <Monitor className="mr-2 size-3" />
             <span>Sistema</span>
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
@@ -125,8 +129,8 @@ function SkinToggleCompact() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button type="button" className="topbar-action" title="Color">
-            <Palette className="size-3.5" />
+          <button type="button" className="topbar-action dock-item" title="Color">
+            <Palette />
           </button>
         }
       />
@@ -147,9 +151,109 @@ function SkinToggleCompact() {
   );
 }
 
+/** URL de imagen de bandera desde flagcdn (funciona en Windows). */
+function flagImgUrl(code: string | null): string | null {
+  if (!code || code.length !== 2) return null;
+  const lower = code.toLowerCase();
+  if (!/^[a-z]{2}$/.test(lower)) return null;
+  return `https://flagcdn.com/h20/${lower}.png`;
+}
+
+function RecentClaimsButton() {
+  const { recents, remove, clear } = useRecentClaims();
+  const count = recents.length;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button type="button" className="topbar-chip topbar-action-recents dock-item" title="Siniestros recientes">
+            <span className="topbar-chip-icon">
+              <History />
+            </span>
+            {count > 0 && <span className="topbar-chip-count">{count}</span>}
+          </button>
+        }
+      />
+      <DropdownMenuContent align="end" className="w-[480px] p-0">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+          <span className="text-xs font-semibold">
+            Siniestros recientes
+          </span>
+          {count > 0 && (
+            <button
+              type="button"
+              onClick={clear}
+              className="pg-btn-platinum"
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
+        {count === 0 ? (
+          <div className="px-3 py-8 text-center text-xs text-muted-foreground">
+            No hay siniestros visitados todavía.
+          </div>
+        ) : (
+          <div className="max-h-96 overflow-y-auto py-1">
+            {recents.map((r) => {
+              const flagUrl = flagImgUrl(r.countryCode);
+              const BlIcon = getClaimTypeIcon(r.claimTypeIcon);
+              return (
+                <div key={r.id} className="recent-claim-row">
+                  <Link href={`/dashboard/claims/${r.id}`} className="recent-claim-link">
+                    <span className="recent-claim-number">
+                      {r.liquidationNumber || "—"}
+                    </span>
+                    <span className="recent-claim-ref truncate">
+                      {r.clientReference || "—"}
+                    </span>
+                    <span className="recent-claim-insured truncate">
+                      {r.insuredName || "Sin asegurado"}
+                    </span>
+                    <span className="recent-claim-time">
+                      {new Date(r.visitedAt).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" })}
+                    </span>
+                    <span className="recent-claim-bl-icon" title={r.businessLineName ?? "Tipo de Siniestro"}>
+                      <BlIcon className="size-3" />
+                    </span>
+                    {flagUrl ? (
+                      <Image
+                        src={flagUrl}
+                        alt={r.countryCode ?? ""}
+                        className="recent-claim-flag-img"
+                        title={r.countryCode ?? ""}
+                        width={18}
+                        height={13}
+                        unoptimized
+                      />
+                    ) : (
+                      <span className="recent-claim-flag-placeholder" />
+                    )}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => remove(r.id)}
+                    className="recent-claim-remove"
+                    title="Quitar"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function TopBar() {
   const { user, profile, isLoading, signOut } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const topbarInnerRef = useRef<HTMLDivElement>(null);
+  useDockMagnification(topbarInnerRef);
 
   const { data: stats } = useQuery({
     queryKey: ["topbar-stats", profile?.id],
@@ -176,7 +280,9 @@ export function TopBar() {
       {/* Mobile nav drawer — solo visible < 1024px */}
       <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
-      <div className="topbar-inner">
+      <div className="topbar-inner" ref={topbarInnerRef}>
+        {/* Lente líquido — barrido de luz que sigue el cursor (Liquid Glass) */}
+        <div className="topbar-lens" aria-hidden="true" />
         {/* ── Izquierda: Hamburger (movil) + Usuario ── */}
         <div className="topbar-left">
           <button
@@ -185,7 +291,7 @@ export function TopBar() {
             className="topbar-hamburger"
             aria-label="Abrir menú"
           >
-            <Menu className="size-4" />
+            <Menu />
           </button>
           <Avatar size="sm">
             <AvatarFallback className="bg-primary/20 text-primary text-[10px] border border-primary/20">
@@ -209,25 +315,25 @@ export function TopBar() {
         {/* ── Centro: Siniestros (solo iconos + tooltip) ── */}
         <div className="topbar-center">
           <StatChip
-            icon={FilePen}
+            icon={LiquidacionIcon}
             count={s.liquidations}
             label="Liquidaciones"
             href="/dashboard/mis-casos?role=liquidador"
           />
           <StatChip
-            icon={FileSearch}
+            icon={InspeccionIcon}
             count={s.inspections}
             label="Inspecciones"
             href="/dashboard/mis-casos?role=inspector"
           />
           <StatChip
-            icon={Navigation}
+            icon={DespachoIcon}
             count={s.dispatches}
             label="Despachos"
             href="/dashboard/mis-casos?role=despachador"
           />
           <StatChip
-            icon={ScrollText}
+            icon={AuditoriaIcon}
             count={s.audits}
             label="Auditoría"
             href="/dashboard/mis-casos?role=auditor"
@@ -236,16 +342,17 @@ export function TopBar() {
 
         {/* ── Derecha: Acciones ── */}
         <div className="topbar-right">
+          <RecentClaimsButton />
           <ThemeToggleCompact />
           <SkinToggleCompact />
           <button
             type="button"
             onClick={() => signOut()}
             disabled={isLoading}
-            className="topbar-action topbar-action-logout"
+            className="topbar-action topbar-action-logout dock-item"
             title="Salir"
           >
-            {isLoading ? <Loader2 className="size-3.5 animate-spin" /> : <LogOut className="size-3.5" />}
+            {isLoading ? <Loader2 className="animate-spin" /> : <Power />}
           </button>
         </div>
       </div>

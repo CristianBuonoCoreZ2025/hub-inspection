@@ -2,7 +2,7 @@ import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient
 import type {
   InspectionSession, PropertyRisk, PropertyMateriality,
   SecurityMeasures, InsuredStatement, ThirdParty, DamageSketch,
-  InspectionDamage,
+  InspectionDamage, InspectionEvidence,
 } from "@/types";
 
 const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, created_at, updated_at";
@@ -11,8 +11,82 @@ const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, sched
 // SESSIONS
 // ═══════════════════════════════════════════════════════════════
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SessionWithRelations = InspectionSession & { created_at: string; claim_action?: { code: string | null } | null; action_template?: { code: string | null } | null; claim?: any };
+export interface SessionClaim {
+  claim_number?: string;
+  policy_number?: string;
+  claim_date?: string;
+  client_reference?: string;
+  claim_address?: string;
+  liquidation_number?: string;
+  inspector_id?: string;
+  broker_executive?: string;
+  adjuster_id?: string;
+  auditor_id?: string;
+  dispatcher_id?: string;
+  assistant_id?: string;
+  insurance_company_id?: string;
+  broker_id?: string;
+  advisor_id?: string;
+  claims_participants?: { type: string; full_name?: string; first_name?: string; last_name?: string; email?: string; phone?: string; cell_phone?: string }[];
+  insurance_company?: { name: string } | null;
+  broker?: { name: string } | null;
+  advisor?: { name: string } | null;
+}
+
+export type SessionWithRelations = InspectionSession & { created_at: string; claim_action?: { code: string | null } | null; action_template?: { code: string | null } | null; claim?: SessionClaim };
+
+interface LiveSession {
+  id: string;
+  claim_id: string;
+  status: string;
+  inspection_type: string;
+  scheduled_at: string;
+  started_at: string;
+  ended_at: string;
+  magic_link_token: string;
+  magic_link_expires_at: string;
+  created_at: string;
+  inspection_date: string;
+  inspection_time: string;
+  interviewed_name: string;
+  interviewed_email: string;
+  interviewed_relationship: string;
+  police_report_number: string;
+  police_report_name: string;
+  police_report_rut: string;
+  firefighters_company: string;
+  other_insurances: string;
+  other_insurance_company: string;
+  active_tab: string;
+  acta_step: string;
+  inspector_observations: string;
+  property_risk: PropertyRisk;
+  property_materiality: PropertyMateriality;
+  security_measures: SecurityMeasures;
+  insured_statement: InsuredStatement;
+  third_parties: ThirdParty[];
+  action_template?: { code: string } | null;
+  claim_action?: { code: string } | null;
+  inspection_evidences?: { id: string; url: string; type: string; description: string; category: string; created_at: string }[];
+  inspection_notes?: { id: string; content: string; created_at: string }[];
+  inspection_checklists?: { id: string; area: string; item: string; status: string; notes: string; created_at: string }[];
+  inspection_damages?: { id: string; category: string; subcategory: string; description: string; observations: string; severity: string; dependency: string; sector: string; materiality_type: string; unit: string; quantity: string; damage_type: string; product: string; brand_model: string; purchase_date: string; estimated_amount: string; created_at: string }[];
+  inspection_chat_messages?: { id: string; content: string; sender_name: string; sender_role: string; created_at: string }[];
+  inspection_signatures?: { id: string; role: string; signature_url: string; signed_at: string }[];
+  damage_sketches?: { id: string; sketch_url: string; label: string; created_at: string }[];
+  claim?: SessionClaim;
+  inspection_number?: string;
+}
+
+export interface SessionDetail extends Omit<InspectionSession, 'inspection_evidences' | 'inspection_checklists' | 'inspection_damages' | 'inspection_signatures' | 'damage_sketches'> {
+  inspection_evidences?: InspectionEvidence[];
+  inspection_checklists?: { id: string; area: string; item: string; status: string }[];
+  inspection_damages?: { id: string; description: string; severity: string }[];
+  inspection_signatures?: { id: string; role: string }[];
+  damage_sketches?: { id: string }[];
+  claim_action?: { code: string } | null;
+  claim?: SessionClaim;
+}
 
 export async function getInspectionSessions(claimId?: string) {
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
@@ -69,7 +143,7 @@ export async function getInspectionSessionByToken(token: string) {
  * Trae evidencias, notas, checklist, daños y mensajes del chat.
  */
 export async function getInspectionSessionLive(token: string) {
-  const sessions = await fetchAll<any>("inspection_sessions", {
+  const sessions = await fetchAll<LiveSession>("inspection_sessions", {
     select: `
       id, claim_id, status, inspection_type, scheduled_at, started_at, ended_at,
       magic_link_token, magic_link_expires_at, created_at,
@@ -98,25 +172,25 @@ export async function getInspectionSessionLive(token: string) {
 
   // Sort nested relations client-side (Supabase no soporta order_by en nested select)
   if (session.inspection_evidences) {
-    session.inspection_evidences.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    session.inspection_evidences.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }
   if (session.inspection_notes) {
-    session.inspection_notes.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    session.inspection_notes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }
   if (session.inspection_checklists) {
-    session.inspection_checklists.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    session.inspection_checklists.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }
   if (session.inspection_damages) {
-    session.inspection_damages.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    session.inspection_damages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }
   if (session.inspection_chat_messages) {
-    session.inspection_chat_messages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    session.inspection_chat_messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   }
   if (session.inspection_signatures) {
-    session.inspection_signatures.sort((a: any, b: any) => new Date(a.signed_at).getTime() - new Date(b.signed_at).getTime());
+    session.inspection_signatures.sort((a, b) => new Date(a.signed_at).getTime() - new Date(b.signed_at).getTime());
   }
   if (session.damage_sketches) {
-    session.damage_sketches.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    session.damage_sketches.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }
   // Filtrar claims_participants client-side: insured + contact
   if (session.claim?.claims_participants) {
@@ -126,7 +200,7 @@ export async function getInspectionSessionLive(token: string) {
   }
 
   // Usar el code del claim_action como inspection_number (estándar de gestiones)
-  const ca = session as any;
+  const ca = session;
   if (ca.claim_action?.code) {
     ca.inspection_number = ca.claim_action.code;
   }
@@ -135,7 +209,7 @@ export async function getInspectionSessionLive(token: string) {
 }
 
 export async function getInspectionSessionById(id: string) {
-  const session = await fetchById<any>("inspection_sessions", id, `
+  const session = await fetchById<SessionDetail>("inspection_sessions", id, `
     ${SESSION_SELECT}, created_at,
     claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, issuer_id, issued_on, issued_by),
     action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
@@ -182,7 +256,7 @@ export async function getInspectorSchedule(
     .eq("inspector_id", inspectorId);
 
   if (claimsError) throw new Error(claimsError.message);
-  const claims = (claimsData as any[]) || [];
+  const claims = (claimsData as { id: string; claim_number: string; claim_address: string }[]) || [];
   const claimIds = claims.map(c => c.id);
   if (claimIds.length === 0) return [];
 

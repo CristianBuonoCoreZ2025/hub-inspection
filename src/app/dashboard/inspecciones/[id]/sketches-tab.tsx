@@ -124,6 +124,7 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
           {sketches.map((sketch) => (
             <div key={sketch.id} className="app-panel space-y-3">
               <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from Supabase Storage with dynamic URL */}
                 <img
                   src={sketch.sketch_url}
                   alt={sketch.label || "Croquis"}

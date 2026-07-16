@@ -5,6 +5,7 @@ export interface ClaimCoverage {
   claim_id: string;
   claim_action_id: string | null;
   policy_coverage_id: string | null;
+  coverage_catalog_id: string | null;
   coverage_name: string | null;
   subcoverage_name: string | null;
   insured_amount: number | null;
@@ -22,13 +23,14 @@ export interface ClaimCoverage {
     coverage_catalog?: { code: string; name: string } | null;
     subcoverage_catalog?: { code: string; name: string } | null;
   } | null;
+  coverage_catalog?: { code: string; name: string } | null;
 }
 
 const COVERAGE_SELECT =
-  "id, claim_id, claim_action_id, policy_coverage_id, coverage_name, subcoverage_name, insured_amount, claimed_amount, reserved_amount, recovered_amount, deductible_amount, net_reserve, currency, is_active, created_at, updated_at, policy_coverage:policy_coverages!claim_coverages_policy_coverage_id_fkey(id, coverage_catalog:coverage_catalog!policy_coverages_coverage_catalog_id_fkey(code, name), subcoverage_catalog:subcoverage_catalog!policy_coverages_subcoverage_catalog_id_fkey(code, name))";
+  "id, claim_id, claim_action_id, policy_coverage_id, coverage_catalog_id, coverage_name, subcoverage_name, insured_amount, claimed_amount, reserved_amount, recovered_amount, deductible_amount, net_reserve, currency, is_active, created_at, updated_at, policy_coverage:policy_coverages!claim_coverages_policy_coverage_id_fkey(id, coverage_catalog:coverage_catalog!policy_coverages_coverage_catalog_id_fkey(code, name), subcoverage_catalog:subcoverage_catalog!policy_coverages_subcoverage_catalog_id_fkey(code, name)), coverage_catalog:coverage_catalog!claim_coverages_coverage_catalog_id_fkey(code, name)";
 
 const COVERAGE_INSERT_SELECT =
-  "id, claim_id, claim_action_id, policy_coverage_id, coverage_name, subcoverage_name, insured_amount, claimed_amount, reserved_amount, recovered_amount, deductible_amount, net_reserve, currency, is_active, created_at, updated_at";
+  "id, claim_id, claim_action_id, policy_coverage_id, coverage_catalog_id, coverage_name, subcoverage_name, insured_amount, claimed_amount, reserved_amount, recovered_amount, deductible_amount, net_reserve, currency, is_active, created_at, updated_at";
 
 export async function getClaimCoverages(claimId: string): Promise<ClaimCoverage[]> {
   return fetchAll<ClaimCoverage>("claim_coverages", {
@@ -63,6 +65,7 @@ export async function createClaimCoverage(input: {
   claim_id: string;
   claim_action_id?: string;
   policy_coverage_id?: string;
+  coverage_catalog_id?: string;
   coverage_name?: string;
   subcoverage_name?: string;
   insured_amount?: number;

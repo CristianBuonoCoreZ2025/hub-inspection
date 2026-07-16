@@ -19,6 +19,7 @@ export default function ReservaScreen({ action, onChange, readOnly }: GestionScr
 
   useEffect(() => {
     onChange?.(form);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   return (

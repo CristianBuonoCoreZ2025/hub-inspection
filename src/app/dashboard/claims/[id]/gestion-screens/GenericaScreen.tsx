@@ -15,6 +15,7 @@ export default function GenericaScreen({ action, onChange, readOnly }: GestionSc
     } catch {
       // JSON inválido - no propagar
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [json]);
 
   return (

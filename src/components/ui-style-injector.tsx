@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import {
   getUiStyleSnapshot,
   subscribeUiStyle,
-  type UiStyleSkin,
 } from "@/lib/ui-style-client-store";
 import { useSyncExternalStore } from "react";
 

@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectTrigger, SelectValue, SelectItem } from "@
 
 const CLEAR_VALUE = "__none";
 
-interface FormSelectProps<TFieldValues extends FieldValues = any> {
+interface FormSelectProps<TFieldValues extends FieldValues = FieldValues> {
   control: Control<TFieldValues>;
   name: string;
   placeholder?: string;
@@ -20,7 +20,11 @@ interface FormSelectProps<TFieldValues extends FieldValues = any> {
   clearLabel?: string;
 }
 
-export function FormSelect<TFieldValues extends FieldValues = any>({ control, name, placeholder, disabled, className, children, onValueChange, items, clearable, clearLabel = "Sin selección" }: FormSelectProps<TFieldValues>) {
+export function FormSelect<TFieldValues extends FieldValues = FieldValues>({ control, name, placeholder, disabled, className, children, onValueChange, items, clearable, clearLabel = "Sin selección" }: FormSelectProps<TFieldValues>) {
+  const allItems = [
+    ...(clearable ? [{ value: CLEAR_VALUE, label: clearLabel }] : []),
+    ...(items || []),
+  ];
   return (
     <Controller
       control={control}
@@ -28,16 +32,21 @@ export function FormSelect<TFieldValues extends FieldValues = any>({ control, na
       render={({ field }) => (
         <Select
           value={field.value || CLEAR_VALUE}
-          onValueChange={(v: any) => {
-            const value = v === CLEAR_VALUE || v === null ? "" : v;
+          onValueChange={(v: string | null) => {
+            const value = !v || v === CLEAR_VALUE ? "" : v;
             field.onChange(value);
             onValueChange?.(value);
           }}
           disabled={disabled}
-          items={items}
+          items={allItems}
         >
           <SelectTrigger className={className}>
-            <SelectValue placeholder={placeholder} />
+            <SelectValue placeholder={placeholder}>
+              {(val: string) => {
+                const item = allItems.find((i) => i.value === val);
+                return item ? item.label : (placeholder || "");
+              }}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {clearable && (

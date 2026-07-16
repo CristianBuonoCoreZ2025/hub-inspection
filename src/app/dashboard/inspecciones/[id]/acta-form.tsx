@@ -5,12 +5,9 @@ import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { actaSchema, type ActaInput } from "@/lib/validations";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateInspectionSession } from "@/services/inspections";
+import { updateInspectionSession, type SessionDetail } from "@/services/inspections";
 import { toast } from "sonner";
 import {
-  ChevronRight,
-  ChevronLeft,
-  Save,
   Shield,
   Building,
   Hammer,
@@ -41,14 +38,14 @@ const steps = [
 ];
 
 interface ActaFormProps {
-  session: InspectionSession & { claim?: Record<string, unknown> | null };
+  session: SessionDetail;
 }
 
 export default function ActaForm({ session }: ActaFormProps) {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
 
-  const { catalogs, isLoading: catalogsLoading } = useLookupCatalogs([
+  const { catalogs } = useLookupCatalogs([
     "interviewed_relationship",
     "materiality_walls",
     "materiality_roof",
@@ -169,6 +166,7 @@ export default function ActaForm({ session }: ActaFormProps) {
   const lastSavedDataRef = useRef<string>("");
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/incompatible-library
     const subscription = form.watch((formData) => {
       // Solo guardar si hay cambios reales
       const dataStr = JSON.stringify(formData);
@@ -598,7 +596,7 @@ export default function ActaForm({ session }: ActaFormProps) {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs btn-danger"
+                    className="h-7 text-xs pg-btn-platinum"
                     onClick={() => {
                       const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
                       set("third_parties", current.filter((_, i) => i !== idx));
@@ -649,7 +647,7 @@ export default function ActaForm({ session }: ActaFormProps) {
               type="button"
               variant="outline"
               size="sm"
-              className="btn-save btn-sm"
+              className="pg-btn-platinum"
               onClick={() => {
                 const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
                 set("third_parties", [
@@ -658,7 +656,6 @@ export default function ActaForm({ session }: ActaFormProps) {
                 ]);
               }}
             >
-              <Users className="mr-2 h-3.5 w-3.5" />
               Agregar
             </Button>
           </div>
@@ -669,15 +666,13 @@ export default function ActaForm({ session }: ActaFormProps) {
       <div className="flex items-center justify-between border-t border-border pt-4">
         <div className="flex items-center gap-2">
           {step > 1 && (
-            <Button type="button" variant="outline" size="sm" onClick={goPrev} className="btn-cancel btn-sm">
-              <ChevronLeft className="mr-1 h-3.5 w-3.5" />
+            <Button type="button" variant="outline" size="sm" onClick={goPrev} className="pg-btn-platinum">
               Atrás
             </Button>
           )}
           {step < steps.length && (
-            <Button type="button" size="sm" onClick={goNext} className="btn-save btn-sm">
+            <Button type="button" size="sm" onClick={goNext} className="pg-btn-platinum">
               Siguiente
-              <ChevronRight className="ml-1 h-3.5 w-3.5" />
             </Button>
           )}
         </div>
@@ -685,16 +680,9 @@ export default function ActaForm({ session }: ActaFormProps) {
           type="submit"
           size="sm"
           disabled={saveMutation.isPending}
-          className="btn-save btn-sm"
+          className="pg-btn-platinum"
         >
-          {saveMutation.isPending ? (
-            "Guardando..."
-          ) : (
-            <>
-              <Save className="mr-2 h-3.5 w-3.5" />
-              Guardar
-            </>
-          )}
+          {saveMutation.isPending ? "Guardando..." : "Guardar"}
         </Button>
       </div>
     </form>

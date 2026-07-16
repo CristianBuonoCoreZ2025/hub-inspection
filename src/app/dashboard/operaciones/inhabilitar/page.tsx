@@ -10,7 +10,7 @@ import { getClaims, getDisabledClaims, disableClaim, enableClaim } from "@/servi
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Ban, Search, RotateCcw, Loader2, AlertTriangle } from "lucide-react";
+import { Ban, Search, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function InhabilitarPage() {
@@ -46,7 +46,7 @@ export default function InhabilitarPage() {
   });
 
   const enableMutation = useMutation({
-    mutationFn: (id: string) => enableClaim(id),
+    mutationFn: (id: string) => enableClaim(id, user?.id),
     onSuccess: () => {
       toast.success("Siniestro reactivado");
       queryClient.invalidateQueries({ queryKey: ["claims"] });
@@ -175,7 +175,7 @@ export default function InhabilitarPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="btn-cancel btn-sm"
+                  className="pg-btn-platinum"
                   onClick={() => { setSelectedClaimId(null); setReason(""); }}
                 >
                   Cancelar
@@ -183,11 +183,10 @@ export default function InhabilitarPage() {
                 {canDelete("operaciones") && (
                   <Button
                     size="sm"
-                    className="btn-danger btn-sm"
+                    className="pg-btn-platinum"
                     disabled={!reason.trim() || disableMutation.isPending}
                     onClick={() => disableMutation.mutate({ id: selectedClaim.id, reason: reason.trim() })}
                   >
-                    <Ban className="mr-1.5 h-3.5 w-3.5" />
                     {disableMutation.isPending ? "Inhabilitando..." : "Inhabilitar"}
                   </Button>
                 )}
@@ -239,13 +238,12 @@ export default function InhabilitarPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="btn-save btn-sm h-7 px-2 text-xs"
+                          className="pg-btn-platinum h-7 px-2 text-xs"
                           disabled={enableMutation.isPending}
                           onClick={() => {
                             if (confirm("¿Reactivar este siniestro?")) enableMutation.mutate(claim.id);
                           }}
                         >
-                          <RotateCcw className="h-3.5 w-3.5 mr-1" />
                           Reactivar
                         </Button>
                       )}

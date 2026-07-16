@@ -2,7 +2,7 @@ import { fetchAll, fetchById, insertRow, updateRow, deleteRow } from "@/lib/supa
 import type { Claim, ClaimInput } from "@/types";
 
 const CLAIM_SELECT =
-  "id, claim_number, policy_number, policy_id, claim_date, status_id, report_date, assignment_date, client_reference, company_report_number, liquidation_number, is_special_claim, summary, event_id, internal_number, notes, company_id, assigned_adjuster_id, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, claim_cause_id, claim_type_id, business_line_id, insurance_product_id, country_id, region_id, city_id, commune_id, construction_type_id, destination_housing_id, damage_classification_id, habitability_id, type_id, currency_id, service_type_id, billing_type_id, claim_address, owner_same_as_insured, policy_item, policy_start_date, policy_end_date, policy_amount, policy_premium, recovery_type_legal, recovery_type_material, recovery_comments, broker_executive, created_at, updated_at, disabled, disabled_reason, disabled_at, disabled_by, reopened_at, reopened_by, reopened_reason, inspection_sessions:inspection_sessions(id, claim_action_id, status, inspection_number, inspection_type, scheduled_at, started_at, ended_at, created_at), status:lookup_catalog!claims_status_id_fkey(id, category, code, name), assigned_adjuster:profiles!claims_assigned_adjuster_id_fkey(id, full_name, email), adjuster:profiles!claims_adjuster_id_fkey(id, full_name, email), inspector:profiles!claims_inspector_id_fkey(id, full_name, email), assistant:profiles!claims_assistant_id_fkey(id, full_name, email), broker:brokers!claims_broker_id_fkey(id, name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name)";
+  "id, claim_number, policy_number, policy_id, claim_date, status_id, report_date, assignment_date, client_reference, company_report_number, liquidation_number, is_special_claim, summary, event_id, internal_number, notes, company_id, assigned_adjuster_id, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, claim_cause_id, claim_type_id, business_line_id, insurance_product_id, country_id, region_id, city_id, commune_id, construction_type_id, destination_housing_id, damage_classification_id, habitability_id, type_id, currency_id, service_type_id, billing_type_id, claim_address, owner_same_as_insured, policy_item, policy_start_date, policy_end_date, policy_amount, policy_premium, recovery_type_legal, recovery_type_material, recovery_comments, broker_executive, created_at, updated_at, updated_by, disabled, disabled_reason, disabled_at, disabled_by, reopened_at, reopened_by, reopened_reason, inspection_sessions:inspection_sessions(id, claim_action_id, status, inspection_number, inspection_type, scheduled_at, started_at, ended_at, created_at), status:lookup_catalog!claims_status_id_fkey(id, category, code, name), assigned_adjuster:profiles!claims_assigned_adjuster_id_fkey(id, full_name, email), adjuster:profiles!claims_adjuster_id_fkey(id, full_name, email), inspector:profiles!claims_inspector_id_fkey(id, full_name, email), assistant:profiles!claims_assistant_id_fkey(id, full_name, email), broker:brokers!claims_broker_id_fkey(id, name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name), policy:policies!claims_policy_id_fkey(id, policy_number, policy_name, status, currency), currency:lookup_catalog!claims_currency_id_fkey(id, category, code, name)";
 
 export async function getClaims(companyId?: string) {
   const eq: Record<string, unknown> = { disabled: false };
@@ -95,15 +95,17 @@ export async function disableClaim(id: string, reason: string, userId?: string) 
     disabled_reason: reason,
     disabled_at: new Date().toISOString(),
     disabled_by: userId || null,
+    updated_by: userId || null,
   }, "id, disabled");
 }
 
-export async function enableClaim(id: string) {
+export async function enableClaim(id: string, userId?: string) {
   return updateRow<{ id: string; disabled: boolean }>("claims", id, {
     disabled: false,
     disabled_reason: null,
     disabled_at: null,
     disabled_by: null,
+    updated_by: userId || null,
   }, "id, disabled");
 }
 
@@ -511,13 +513,17 @@ export async function updateClaim(id: string, input: Partial<ClaimInput>) {
  * Acepta cualquier combinación de columnas de la tabla claims.
  * Los valores null se incluyen en el _set (para limpiar campos).
  * Los valores undefined se omiten (no se modifican).
+ * updatedBy: ID del usuario que modifica (para auditoria).
  */
-export async function updateClaimFields(id: string, set: Record<string, unknown>) {
-  return updateRow<Claim>("claims", id, set, CLAIM_SELECT);
+export async function updateClaimFields(id: string, set: Record<string, unknown>, updatedBy?: string) {
+  const finalSet = updatedBy ? { ...set, updated_by: updatedBy } : set;
+  return updateRow<Claim>("claims", id, finalSet, CLAIM_SELECT);
 }
 
-export async function updateClaimStatus(id: string, statusId: string) {
-  return updateRow<Claim>("claims", id, { status_id: statusId }, CLAIM_SELECT);
+export async function updateClaimStatus(id: string, statusId: string, updatedBy?: string) {
+  const set: Record<string, unknown> = { status_id: statusId };
+  if (updatedBy) set.updated_by = updatedBy;
+  return updateRow<Claim>("claims", id, set, CLAIM_SELECT);
 }
 
 export async function deleteClaim(id: string) {

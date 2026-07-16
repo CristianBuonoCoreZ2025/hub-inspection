@@ -28,9 +28,8 @@ export default function EmailScreen({ action, onChange, readOnly }: GestionScree
 
   useEffect(() => {
     onChange?.(form);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
-
-  const selectedTemplate = templates?.find((t) => t.id === form.plantilla_id);
 
   return (
     <div className="space-y-3">

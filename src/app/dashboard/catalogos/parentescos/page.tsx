@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getRelationships, createRelationship, updateRelationship, deleteRelationship } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, Heart, Users } from "lucide-react";
+import { Search, Pencil, Trash2, Heart, Users } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -103,8 +103,8 @@ export default function RelationshipPage() {
           </div>
           <div className="flex items-center gap-2">
             {canCreate("catalogos") && (
-              <Button onClick={() => { setEditingId(null); setFormData({"name":""}); setOpen(true); }} className="liquid-button">
-                <Plus className="h-3.5 w-3.5" /> Nuevo
+              <Button onClick={() => { setEditingId(null); setFormData({"name":""}); setOpen(true); }} className="pg-btn-platinum">
+                Nuevo
               </Button>
             )}
           </div>
@@ -184,8 +184,8 @@ export default function RelationshipPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="btn-cancel btn-footer">Cancelar</Button>
-              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="btn-save btn-footer">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="pg-btn-platinum">
                 {createMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Crear"}
               </Button>
             </div>

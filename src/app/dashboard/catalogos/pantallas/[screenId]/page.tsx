@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -18,12 +18,10 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { toast } from "sonner";
 import {
   ArrowLeft,
-  Save,
   Eye,
   Code2,
   LayoutTemplate,
   Monitor,
-  Undo2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -65,16 +63,15 @@ export default function ScreenBuilderPage() {
 
   const screen = screens?.find((s) => s.id === screenId);
 
-  // Cargar campos desde la pantalla
-  useEffect(() => {
-    if (screen) {
-      const loaded = Array.isArray(screen.form_schema?.fields)
-        ? (screen.form_schema.fields as ScreenField[])
-        : [];
-      setFields(loaded);
-      setDirty(false);
-    }
-  }, [screen?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [loadedScreenId, setLoadedScreenId] = useState<string | null>(null);
+  if (screen && screen.id !== loadedScreenId) {
+    setLoadedScreenId(screen.id);
+    const loaded = Array.isArray(screen.form_schema?.fields)
+      ? (screen.form_schema.fields as ScreenField[])
+      : [];
+    setFields(loaded);
+    setDirty(false);
+  }
 
   const saveMut = useMutation({
     mutationFn: ({ id, schema }: { id: string; schema: Record<string, unknown> }) =>
@@ -171,7 +168,6 @@ export default function ScreenBuilderPage() {
     // Drop desde paleta → agregar campo
     if (activeData?.source === "palette") {
       const code = activeData.code as string;
-      const isOwn = OWN_FIELD_TYPES.some((t) => t.code === code);
       const isClaim = CLAIM_ENTITIES.some((t) => t.code === code);
       const isAction = ACTION_ENTITIES.some((t) => t.code === code);
       const isComplex = COMPLEX_ENTITIES.some((t) => t.code === code);
@@ -238,8 +234,8 @@ export default function ScreenBuilderPage() {
       <div className="flex h-screen flex-col items-center justify-center gap-3 text-muted-foreground">
         <Monitor className="h-12 w-12 opacity-30" />
         <p>Pantalla no encontrada</p>
-        <Button onClick={() => router.push("/dashboard/catalogos/pantallas")} className="btn-cancel btn-sm">
-          <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Volver
+        <Button onClick={() => router.push("/dashboard/catalogos/pantallas")} className="pg-btn-platinum">
+          Volver
         </Button>
       </div>
     );
@@ -313,19 +309,18 @@ export default function ScreenBuilderPage() {
                   setDirty(false);
                 }
               }}
-              className="btn-cancel btn-sm"
+              className="pg-btn-platinum"
               title="Deshacer cambios"
             >
-              <Undo2 className="h-3.5 w-3.5 mr-1" /> Revertir
+              Revertir
             </Button>
           )}
           <Button
             size="sm"
             onClick={handleSave}
             disabled={saveMut.isPending || !dirty}
-            className="btn-save btn-sm"
+            className="pg-btn-platinum"
           >
-            <Save className="h-3.5 w-3.5 mr-1" />
             {saveMut.isPending ? "Guardando" : "Guardar"}
           </Button>
         </div>

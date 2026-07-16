@@ -376,9 +376,8 @@ export default function WorkflowsPage() {
             <Button
               size="sm"
               onClick={() => setOpenCreateModal(true)}
-              className="liquid-button ml-auto"
+              className="pg-btn-platinum ml-auto"
             >
-              <Plus className="h-3.5 w-3.5" />
               Nuevo
             </Button>
           )}
@@ -798,7 +797,7 @@ function CreateWorkflowModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="modal-sm !bg-white/80 dark:!bg-zinc-900/80 !backdrop-blur-xl !border-white/20 dark:!border-white/10 !shadow-2xl">
+      <DialogContent className="modal-sm bg-white/80! dark:bg-zinc-900/80! backdrop-blur-xl! border-white/20! dark:border-white/10! shadow-2xl!">
         <div className="modal-header">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500/20 to-sky-500/20 border border-white/10">
             <Workflow className="h-4 w-4 text-violet-400" />
@@ -934,8 +933,8 @@ function CreateWorkflowModal({
             )}
           </div>
           <div className="modal-footer">
-            <Button type="button" className="btn-cancel btn-footer" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" className="btn-save btn-footer" disabled={!canSubmit}>Crear</Button>
+            <Button type="button" className="pg-btn-platinum" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" className="pg-btn-platinum" disabled={!canSubmit}>Crear</Button>
           </div>
         </form>
       </DialogContent>

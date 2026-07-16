@@ -178,6 +178,8 @@ export interface Claim {
   assistant?: { id: string; full_name: string; email: string } | null;
   broker?: { id: string; name: string } | null;
   insurance_company?: { id: string; name: string } | null;
+  policy?: { id: string; policy_number: string | null; policy_name: string; status: string | null; currency: string | null } | null;
+  currency?: { id: string; category: string; code: string; name: string } | null;
 }
 
 export interface ClaimsParticipant {
@@ -813,7 +815,7 @@ export interface ActionTemplateClaimStatus {
   action_template?: ActionTemplate;
 }
 
-export interface GestionScreenType extends GestionScreen {}
+export type GestionScreenType = GestionScreen;
 
 export type ClaimActionStatus =
   | "todo"

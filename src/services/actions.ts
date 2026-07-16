@@ -1,4 +1,4 @@
-import { fetchAll, insertRow, insertMany, updateRow, deleteRow, deleteWhere } from "@/lib/supabase/db";
+import { fetchAll, insertRow, insertMany, updateRow, deleteWhere } from "@/lib/supabase/db";
 
 // ──────────────────────────────────────────────────────────────
 // Types
