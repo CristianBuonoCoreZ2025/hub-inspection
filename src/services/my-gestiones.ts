@@ -70,15 +70,7 @@ export async function getMyGestiones(
     .eq("is_active", true);
 
   // Filtro por rol
-  if (profile.role === "client_operator" && profile.company_id) {
-    query = supabase
-      .from("claim_actions")
-      .select(
-        `${select.replace("claim:claims!claim_actions_claim_id_fkey(", "claim:claims!claim_actions_claim_id_fkey(insurance_company_id, ")}, claim:claims!claim_actions_claim_id_fkey(insurance_company_id)`
-      )
-      .eq("is_active", true)
-      .eq("claim.insurance_company_id", profile.company_id!);
-  } else if (profile.role === "adjuster" || profile.role === "internal") {
+  if (profile.role === "adjuster" || profile.role === "internal") {
     query = query.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
   } else if (profile.role === "inspector") {
     query = query.eq("issuer_id", pid);

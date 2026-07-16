@@ -22,7 +22,7 @@ import type { UserTypePermission, UserRole, PermissionSection } from "@/types";
 import { toast } from "sonner";
 import { Check, Lock, Unlock, ChevronRight, ChevronDown, Settings2 } from "lucide-react";
 
-const userTypes: UserRole[] = ["internal", "adjuster", "inspector", "client_operator"];
+const userTypes: UserRole[] = ["internal", "adjuster", "inspector", "assistant", "auditor", "dispatcher"];
 
 type ColumnKey = "can_view" | "can_edit" | "can_create" | "can_delete";
 
@@ -177,7 +177,6 @@ export default function PermisosPage() {
     assistant: {},
     auditor: {},
     dispatcher: {},
-    client_operator: {},
   };
 
   permissions?.forEach((p) => {
@@ -364,7 +363,9 @@ export default function PermisosPage() {
           <li><strong>Internal:</strong> Usuarios internos del sistema. Acceso total por defecto.</li>
           <li><strong>Liquidador:</strong> Liquidadores asociados a uno o más clientes. Ven siniestros de sus clientes.</li>
           <li><strong>Inspector:</strong> Inspectores asociados a clientes. Completan inspecciones donde están a cargo.</li>
-          <li><strong>Operativo:</strong> Usuarios operativos del cliente. Ven casos de su empresa.</li>
+          <li><strong>Asistente:</strong> Asistentes del liquidador. Realizan gestiones asignadas en los siniestros.</li>
+          <li><strong>Auditor:</strong> Auditores de siniestros. Revisan y aprueban gestiones que requieren auditoría.</li>
+          <li><strong>Despachador:</strong> Despachadores. Asignan y despachan gestiones a los responsables correspondientes.</li>
           <li className="mt-1 pt-1 border-t border-border/50">
             Los checks solo aparecen para acciones que existen en cada módulo.
             Módulos con <ChevronRight className="inline h-3 w-3" /> se pueden expandir para configurar permisos por pantalla individual.

@@ -57,7 +57,6 @@ const ROLE_LABELS: Record<UserRole, string> = {
   assistant: "Asistente",
   auditor: "Auditor",
   dispatcher: "Despachador",
-  client_operator: "Operador de Compañía",
 };
 
 function formatRelativeTime(dateStr: string): string {
@@ -101,7 +100,6 @@ function getActivityIcon(log: AuditLog) {
  * - adjuster: claims donde es assigned_adjuster, adjuster, auditor o dispatcher
  * - inspector: claims donde es inspector
  * - assistant: claims donde es assistant
- * - client_operator: claims de su compañía de seguros (insurance_company_id)
  */
 function filterClaimsForUser(
   allClaims: Claim[],
@@ -110,12 +108,7 @@ function filterClaimsForUser(
   if (!profile) return [];
   if (profile.role === "internal") return allClaims;
 
-  if (profile.role === "client_operator") {
-    if (!profile.company_id) return [];
-    return allClaims.filter((c) => c.insurance_company_id === profile.company_id);
-  }
-
-  // adjuster, inspector, assistant: filtrar por asignación personal
+  // adjuster, inspector, assistant, auditor, dispatcher: filtrar por asignación personal
   const pid = profile.id;
   return allClaims.filter((c) => {
     if (profile.role === "adjuster") {
@@ -445,9 +438,7 @@ export default function DashboardPage() {
   // Subtítulo contextual según el rol
   const subtitle = isInternal
     ? "Panel de gestión visual — métricas globales en tiempo real"
-    : profile?.role === "client_operator"
-      ? `Casos de tu compañía — vista operativa`
-      : `Tus casos asignados — ${roleLabel.toLowerCase()}`;
+    : `Tus casos asignados — ${roleLabel.toLowerCase()}`;
 
   // ¿Mostrar sección de sistema (top compañías + actividad)?
   const showSystemSection = isInternal || profile?.role === "adjuster";
@@ -871,7 +862,7 @@ export default function DashboardPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════
-          SECCIÓN: RESUMEN (client_operator / inspector / assistant)
+          SECCIÓN: RESUMEN (inspector / assistant)
           Distribución por estado + Actividad reciente
           ═══════════════════════════════════════════════════════════════ */}
       {stats.totalClaims > 0 && !showSystemSection && (

@@ -87,13 +87,8 @@ export async function getTopbarStats(
       return q;
     }
 
-    if (profile.role === "client_operator" && profile.company_id) {
-      // client_operator: claims de su compañía no cerrados
-      const { count } = await buildClaimsQuery().eq("insurance_company_id", profile.company_id!);
-      // Para client_operator mostramos total en liquidations
-      liquidations = count ?? 0;
-    } else {
-      // Todos los demás roles (incluido internal): filtrar por asignación directa
+    // Todos los roles (incluido internal): filtrar por asignación directa
+    {
       const { data: myClaims, error: claimsError } = await buildClaimsQuery()
         .or(`assigned_adjuster_id.eq.${pid},adjuster_id.eq.${pid},inspector_id.eq.${pid},dispatcher_id.eq.${pid},auditor_id.eq.${pid},assistant_id.eq.${pid}`);
 
@@ -132,17 +127,9 @@ export async function getTopbarStats(
       )
       .eq("is_active", true);
 
-    // Filtro por rol (igual que antes)
-    if (profile.role === "client_operator" && profile.company_id) {
-      actionsQuery = supabase
-        .from("claim_actions")
-        .select(
-          "id, issuer_id, reviewer_id, approver_id, dispatcher_id, expected_date, action_status_id, is_active, action_status:lookup_catalog!claim_actions_action_status_id_fkey(id, code), claim:claims!inner(insurance_company_id)"
-        )
-        .eq("is_active", true)
-        .eq("claim.insurance_company_id", profile.company_id!);
-    } else {
-      // adjuster, internal, inspector, assistant — filtrar por asignación
+    // Filtro por rol
+    {
+      // adjuster, internal, inspector, assistant, auditor, dispatcher — filtrar por asignación
       if (profile.role === "adjuster" || profile.role === "internal") {
         actionsQuery = actionsQuery.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
       } else if (profile.role === "inspector") {

@@ -43,7 +43,6 @@ const roleLabels: Record<UserRole, string> = {
   assistant: "Asistente",
   auditor: "Auditor",
   dispatcher: "Despachador",
-  client_operator: "Operativo",
 };
 
 const roleTones: Record<UserRole, "blue" | "emerald" | "amber" | "sky" | "slate" | "violet" | "rose"> = {
@@ -53,7 +52,6 @@ const roleTones: Record<UserRole, "blue" | "emerald" | "amber" | "sky" | "slate"
   assistant: "sky",
   auditor: "violet",
   dispatcher: "rose",
-  client_operator: "slate",
 };
 
 const roleDescriptions: Record<UserRole, string> = {
@@ -63,10 +61,9 @@ const roleDescriptions: Record<UserRole, string> = {
   assistant: "Asistente del liquidador. Realiza gestiones asignadas en los siniestros.",
   auditor: "Auditor de siniestros. Revisa y aprueba gestiones que requieren auditoría.",
   dispatcher: "Despachador. Asigna y despacha gestiones a los responsables correspondientes.",
-  client_operator: "Operativo del cliente. Solo vista de los siniestros de su empresa.",
 };
 
-// Roles que pueden ser perfiles secundarios (nunca "internal" ni "client_operator")
+// Roles que pueden ser perfiles secundarios (nunca "internal")
 const secondaryRoleOptions: { value: SecondaryRole; label: string }[] = [
   { value: "inspector", label: "Inspector" },
   { value: "adjuster", label: "Liquidador" },
@@ -76,7 +73,7 @@ const secondaryRoleOptions: { value: SecondaryRole; label: string }[] = [
 ];
 
 // Roles que requieren asignar clientes
-const rolesWithClients: UserRole[] = ["adjuster", "inspector", "assistant", "client_operator"];
+const rolesWithClients: UserRole[] = ["adjuster", "inspector", "assistant", "auditor", "dispatcher"];
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
@@ -143,10 +140,16 @@ export default function UsersPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, userId, data, clientIds }: { id: string; userId: string; data: Partial<Profile>; clientIds: string[] }) => {
+    mutationFn: async ({ id, userId, data, clientIds, secondaryRoleIds }: { id: string; userId: string; data: Partial<Profile>; clientIds: string[]; secondaryRoleIds: string[] }) => {
       await updateUser(id, data);
       if (rolesWithClients.includes(data.role as UserRole)) {
         await setUserClients(userId, clientIds);
+      }
+      // Si el usuario pasa a internal, eliminar todos sus roles secundarios
+      if (data.role === "internal") {
+        for (const srId of secondaryRoleIds) {
+          await removeSecondaryRole(srId);
+        }
       }
     },
     onSuccess: () => {
@@ -209,10 +212,10 @@ export default function UsersPage() {
           role: editForm.role,
         },
         clientIds: selectedClientIds,
+        secondaryRoleIds: secondaryRoles.map((sr) => sr.id),
       });
     } else {
-      const company_id = values.role === "client_operator" ? selectedClientIds[0] || "" : "";
-      inviteMutation.mutate({ ...values, company_id, clientIds: selectedClientIds });
+      inviteMutation.mutate({ ...values, company_id: "", clientIds: selectedClientIds });
     }
   };
 
@@ -455,6 +458,10 @@ export default function UsersPage() {
                       const role = v as UserRole;
                       if (editingId) {
                         setEditForm({ ...editForm, role });
+                        // Al cambiar el perfil principal, limpiar todos los roles secundarios
+                        setSecondaryRoles([]);
+                        // Si cambia a internal, limpiar también la vinculación con clientes
+                        if (role === "internal") setSelectedClientIds([]);
                       } else {
                         form.setValue("role", role);
                       }
@@ -465,7 +472,8 @@ export default function UsersPage() {
                       { value: "adjuster", label: "Liquidador" },
                       { value: "inspector", label: "Inspector" },
                       { value: "assistant", label: "Asistente" },
-                      { value: "client_operator", label: "Operativo (Cliente)" },
+                      { value: "auditor", label: "Auditor" },
+                      { value: "dispatcher", label: "Despachador" },
                     ]}
                   >
                     <SelectTrigger className="app-input h-7"><SelectValue placeholder="Selecciona un tipo" /></SelectTrigger>
@@ -474,7 +482,8 @@ export default function UsersPage() {
                       <SelectItem value="adjuster">Liquidador</SelectItem>
                       <SelectItem value="inspector">Inspector</SelectItem>
                       <SelectItem value="assistant">Asistente</SelectItem>
-                      <SelectItem value="client_operator">Operativo (Cliente)</SelectItem>
+                      <SelectItem value="auditor">Auditor</SelectItem>
+                      <SelectItem value="dispatcher">Despachador</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-[11px] text-muted-foreground mt-1">{roleDescriptions[selectedRole]}</p>
@@ -483,23 +492,9 @@ export default function UsersPage() {
                 {showClientsSection && (
                   <div className="modal-field modal-field-full">
                     <Label className="app-field-label">
-                      {selectedRole === "client_operator" ? "Empresa asignada" : "Clientes asignados"}
+                      Clientes asignados
                       <span className="text-red-500"> *</span>
                     </Label>
-                    {selectedRole === "client_operator" ? (
-                      <Select
-                        value={selectedClientIds[0] ?? ""}
-                        onValueChange={(v) => setSelectedClientIds(v ? [v] : [])}
-                        items={companies?.map((c: Company) => ({ value: c.id, label: c.name })) || []}
-                      >
-                        <SelectTrigger className="app-input h-7"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
-                        <SelectContent>
-                          {companies?.map((c: Company) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
                       <div className="space-y-1 max-h-[200px] overflow-y-auto rounded-lg border border-border p-2">
                         {companies?.map((c: Company) => (
                           <label
@@ -516,17 +511,16 @@ export default function UsersPage() {
                           </label>
                         ))}
                       </div>
-                    )}
                     {selectedClientIds.length === 0 && (
                       <p className="text-xs text-amber-600 mt-1">
-                        {selectedRole === "client_operator" ? "Debe seleccionar una empresa" : "Debe seleccionar al menos un cliente"}
+                        Debe seleccionar al menos un cliente
                       </p>
                     )}
                   </div>
                 )}
 
-                {/* ── Roles secundarios (solo en edición) ── */}
-                {editingId && (
+                {/* ── Roles secundarios (solo en edición, nunca para internal) ── */}
+                {editingId && editForm.role !== "internal" && (
                   <div className="modal-field modal-field-full">
                     <Label className="app-field-label">Perfiles Secundarios</Label>
                     <p className="text-[11px] text-muted-foreground mb-2">

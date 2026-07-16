@@ -4,8 +4,7 @@ export type UserRole =
   | "inspector"
   | "assistant"
   | "auditor"
-  | "dispatcher"
-  | "client_operator";
+  | "dispatcher";
 
 /** Roles que pueden ser asignados como perfiles secundarios (nunca "internal") */
 export type SecondaryRole = "adjuster" | "inspector" | "assistant" | "auditor" | "dispatcher";

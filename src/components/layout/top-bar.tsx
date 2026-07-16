@@ -307,7 +307,8 @@ export function TopBar() {
                 profile?.role === "adjuster" ? "Liquidador" :
                 profile?.role === "inspector" ? "Inspector" :
                 profile?.role === "assistant" ? "Asistente" :
-                profile?.role === "client_operator" ? "Operador" : ""}
+                profile?.role === "auditor" ? "Auditor" :
+                profile?.role === "dispatcher" ? "Despachador" : ""}
             </span>
           </div>
         </div>

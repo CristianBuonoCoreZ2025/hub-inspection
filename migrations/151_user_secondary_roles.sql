@@ -130,6 +130,41 @@ CREATE TRIGGER trg_secondary_role_updated_at
   BEFORE UPDATE ON user_secondary_roles
   FOR EACH ROW EXECUTE FUNCTION update_secondary_role_updated_at();
 
+-- ═══ Trigger: impedir roles secundarios a usuarios "internal" ═══
+CREATE OR REPLACE FUNCTION prevent_internal_secondary_roles()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  v_profile_role TEXT;
+BEGIN
+  SELECT role::TEXT INTO v_profile_role FROM profiles WHERE id = NEW.profile_id LIMIT 1;
+  IF v_profile_role = 'internal' THEN
+    RAISE EXCEPTION 'Los usuarios con perfil "internal" no pueden tener roles secundarios. El perfil internal incluye todos los roles automáticamente.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_prevent_internal_sec_roles ON user_secondary_roles;
+CREATE TRIGGER trg_prevent_internal_sec_roles
+  BEFORE INSERT ON user_secondary_roles
+  FOR EACH ROW EXECUTE FUNCTION prevent_internal_secondary_roles();
+
+-- ═══ Trigger: si un usuario cambia a "internal", eliminar sus roles secundarios ═══
+CREATE OR REPLACE FUNCTION cleanup_secondary_roles_on_internal()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.role::TEXT = 'internal' AND OLD.role::TEXT <> 'internal' THEN
+    DELETE FROM user_secondary_roles WHERE profile_id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_cleanup_sec_roles_on_internal ON profiles;
+CREATE TRIGGER trg_cleanup_sec_roles_on_internal
+  AFTER UPDATE OF role ON profiles
+  FOR EACH ROW EXECUTE FUNCTION cleanup_secondary_roles_on_internal();
+
 -- ═══ RLS: Row Level Security ═══
 -- Habilitar RLS (Supabase lo exige en todas las tablas).
 -- Policy permissive: usuarios autenticados pueden leer y escribir.

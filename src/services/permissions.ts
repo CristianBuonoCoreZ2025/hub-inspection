@@ -72,7 +72,6 @@ export const userTypeLabels: Record<UserRole, string> = {
   assistant: "Asistente",
   auditor: "Auditor",
   dispatcher: "Despachador",
-  client_operator: "Operativo",
 };
 
 // ═══════════════════════════════════════════════════════════════
