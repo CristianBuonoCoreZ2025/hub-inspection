@@ -239,7 +239,7 @@ export async function getInspectionSessionById(id: string) {
 
 /**
  * Obtener las sesiones agendadas de un inspector en un rango de fechas.
- * El inspector se identifica via claim.inspector_id.
+ * Busca por inspector_id de la sesión Y por claim.inspector_id (compatibilidad).
  * Solo retorna sesiones con status scheduled o active.
  */
 export async function getInspectorSchedule(
@@ -249,7 +249,22 @@ export async function getInspectorSchedule(
 ) {
   const supabase = getSupabaseClient();
 
-  // 1. Obtener claim_ids donde el inspector esta asignado
+  // 1. Buscar sesiones directamente por inspector_id
+  const { data: directData, error: directError } = await supabase
+    .from("inspection_sessions")
+    .select(`
+      id, scheduled_at, inspection_type, status, claim_id,
+      claim:claims!inspection_sessions_claim_id_fkey(claim_number, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))
+    `)
+    .eq("inspector_id", inspectorId)
+    .gte("scheduled_at", dateStart)
+    .lt("scheduled_at", dateEnd)
+    .in("status", ["scheduled", "active"])
+    .order("scheduled_at", { ascending: true });
+
+  if (directError) throw new Error(directError.message);
+
+  // 2. Buscar también por claims.inspector_id (sesiones sin inspector_id propio)
   const { data: claimsData, error: claimsError } = await supabase
     .from("claims")
     .select("id, claim_number, claim_address")
@@ -258,24 +273,34 @@ export async function getInspectorSchedule(
   if (claimsError) throw new Error(claimsError.message);
   const claims = (claimsData as { id: string; claim_number: string; claim_address: string }[]) || [];
   const claimIds = claims.map(c => c.id);
-  if (claimIds.length === 0) return [];
 
-  // 2. Obtener sesiones de inspeccion para esos claims en el rango de fechas
-  const { data, error } = await supabase
-    .from("inspection_sessions")
-    .select(`
-      id, scheduled_at, inspection_type, status, claim_id,
-      claim:claims!inspection_sessions_claim_id_fkey(claim_number, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))
-    `)
-    .in("claim_id", claimIds)
-    .gte("scheduled_at", dateStart)
-    .lt("scheduled_at", dateEnd)
-    .in("status", ["scheduled", "active"])
-    .order("scheduled_at", { ascending: true });
+  let legacySessions: typeof directData = [];
+  if (claimIds.length > 0) {
+    const { data: legacyData, error: legacyError } = await supabase
+      .from("inspection_sessions")
+      .select(`
+        id, scheduled_at, inspection_type, status, claim_id,
+        claim:claims!inspection_sessions_claim_id_fkey(claim_number, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))
+      `)
+      .in("claim_id", claimIds)
+      .is("inspector_id", null)
+      .gte("scheduled_at", dateStart)
+      .lt("scheduled_at", dateEnd)
+      .in("status", ["scheduled", "active"])
+      .order("scheduled_at", { ascending: true });
 
-  if (error) throw new Error(error.message);
+    if (legacyError) throw new Error(legacyError.message);
+    legacySessions = legacyData ?? [];
+  }
 
-  const sessions = (data ?? []) as {
+  // Combinar y deduplicar
+  const allSessions = [...(directData ?? []), ...legacySessions];
+  const seen = new Set<string>();
+  const sessions = allSessions.filter((s) => {
+    if (seen.has(s.id)) return false;
+    seen.add(s.id);
+    return true;
+  }) as {
     id: string;
     scheduled_at: string;
     inspection_type: "onsite" | "remote";

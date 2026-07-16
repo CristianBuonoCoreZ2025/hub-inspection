@@ -39,9 +39,10 @@ const steps = [
 
 interface ActaFormProps {
   session: SessionDetail;
+  readOnly?: boolean;
 }
 
-export default function ActaForm({ session }: ActaFormProps) {
+export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
 
@@ -217,10 +218,23 @@ export default function ActaForm({ session }: ActaFormProps) {
   const catalogSelect = (name: string, category: string, placeholder = "Seleccionar...") => {
     const items = catalogs[category] || [];
     const current = watch(name) as unknown as string;
+    const selectItems = [{ value: "__none", label: placeholder }, ...items.map((item) => ({ value: item.name, label: item.name }))];
     return (
-      <Select value={current || undefined} onValueChange={(v) => set(name, v ?? "")} items={items.map((item) => ({ value: item.name, label: item.name }))}>
-        <SelectTrigger className="app-input"><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <Select
+        value={current || "__none"}
+        onValueChange={(v) => set(name, v === "__none" ? "" : v)}
+        items={selectItems}
+      >
+        <SelectTrigger className="app-input h-8 text-[12px] w-full">
+          <SelectValue placeholder={placeholder}>
+            {(val: string) => {
+              const item = selectItems.find((i) => i.value === val);
+              return item ? item.label : placeholder;
+            }}
+          </SelectValue>
+        </SelectTrigger>
         <SelectContent>
+          <SelectItem value="__none">{placeholder}</SelectItem>
           {items.map((item) => (
             <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
           ))}
@@ -231,10 +245,23 @@ export default function ActaForm({ session }: ActaFormProps) {
 
   const tableSelect = (name: string, items: { id: string; name: string }[], placeholder = "Seleccionar...") => {
     const current = watch(name) as unknown as string;
+    const selectItems = [{ value: "__none", label: placeholder }, ...items.map((item) => ({ value: item.name, label: item.name }))];
     return (
-      <Select value={current || undefined} onValueChange={(v) => set(name, v ?? "")} items={items.map((item) => ({ value: item.name, label: item.name }))}>
-        <SelectTrigger className="app-input"><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <Select
+        value={current || "__none"}
+        onValueChange={(v) => set(name, v === "__none" ? "" : v)}
+        items={selectItems}
+      >
+        <SelectTrigger className="app-input h-8 text-[12px] w-full">
+          <SelectValue placeholder={placeholder}>
+            {(val: string) => {
+              const item = selectItems.find((i) => i.value === val);
+              return item ? item.label : placeholder;
+            }}
+          </SelectValue>
+        </SelectTrigger>
         <SelectContent>
+          <SelectItem value="__none">{placeholder}</SelectItem>
           {items.map((item) => (
             <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
           ))}
@@ -245,10 +272,27 @@ export default function ActaForm({ session }: ActaFormProps) {
 
   const numberSelect = (name: string, max: number, placeholder = "Seleccionar...") => {
     const current = watch(name) as unknown as string;
+    const numberItems = [
+      { value: "__none", label: placeholder },
+      ...Array.from({ length: max }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
+      { value: "10+", label: "10+" },
+    ];
     return (
-      <Select value={current || undefined} onValueChange={(v) => set(name, v ?? "")} items={[...Array.from({ length: max }, (_, i) => String(i + 1)).map((n) => ({ value: n, label: n })), { value: "10+", label: "10+" }]}>
-        <SelectTrigger className="app-input"><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <Select
+        value={current || "__none"}
+        onValueChange={(v) => set(name, v === "__none" ? "" : v)}
+        items={numberItems}
+      >
+        <SelectTrigger className="app-input h-8 text-[12px] w-full">
+          <SelectValue placeholder={placeholder}>
+            {(val: string) => {
+              const item = numberItems.find((i) => i.value === val);
+              return item ? item.label : placeholder;
+            }}
+          </SelectValue>
+        </SelectTrigger>
         <SelectContent>
+          <SelectItem value="__none">{placeholder}</SelectItem>
           {Array.from({ length: max }, (_, i) => String(i + 1)).map((n) => (
             <SelectItem key={n} value={n}>{n}</SelectItem>
           ))}
@@ -260,6 +304,7 @@ export default function ActaForm({ session }: ActaFormProps) {
 
   return (
     <form onSubmit={onSubmit} className="app-stack">
+      <fieldset disabled={readOnly} className="contents">
       {/* Stepper */}
       <div className="flex items-center gap-1 overflow-x-auto pb-2">
         {steps.map((s) => {
@@ -296,11 +341,11 @@ export default function ActaForm({ session }: ActaFormProps) {
             <div className="modal-grid-3">
               <div className="modal-field">
                 <Label className="app-field-label">Fecha Inspeccion</Label>
-                <FormDatePicker control={form.control} name="inspection_date" className="w-[130px]" />
+                <FormDatePicker control={form.control} name="inspection_date" className="w-[130px]" disabled={readOnly} />
               </div>
               <div className="modal-field">
                 <Label className="app-field-label">Hora Inspeccion</Label>
-                <Input {...field("inspection_time")} type="time" className="app-input" />
+                <Input {...field("inspection_time")} type="time" className="app-input" disabled={readOnly} />
               </div>
               <div className="modal-field">
                 <Label className="app-field-label">Nombre Entrevistado</Label>
@@ -679,12 +724,13 @@ export default function ActaForm({ session }: ActaFormProps) {
         <Button
           type="submit"
           size="sm"
-          disabled={saveMutation.isPending}
+          disabled={saveMutation.isPending || readOnly}
           className="pg-btn-platinum"
         >
-          {saveMutation.isPending ? "Guardando..." : "Guardar"}
+          {readOnly ? "Inicie la inspección para editar" : saveMutation.isPending ? "Guardando..." : "Guardar"}
         </Button>
       </div>
+      </fieldset>
     </form>
   );
 }

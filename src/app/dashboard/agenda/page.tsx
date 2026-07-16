@@ -88,7 +88,8 @@ export default function AgendaPage() {
 
   const filteredSessions = useMemo(() => {
     return sessions?.filter((s) => {
-      const matchesInspector = inspectorFilter === "all" || s.claim?.inspector_id === inspectorFilter;
+      const sessionInspectorId = s.inspector_id || s.claim?.inspector_id;
+      const matchesInspector = inspectorFilter === "all" || sessionInspectorId === inspectorFilter;
       return matchesInspector && (s.status === "scheduled" || s.status === "active");
     }) || [];
   }, [sessions, inspectorFilter]);
@@ -137,7 +138,7 @@ export default function AgendaPage() {
         <div className="flex items-center gap-2">
           <Filter className="h-3.5 w-3.5 text-muted-foreground" />
           <Select value={inspectorFilter || "all"} onValueChange={(v) => setInspectorFilter(v ?? "all")} items={[{ value: "all", label: "Todos los inspectores" }, ...inspectors.map((i) => ({ value: i.id, label: i.full_name || i.email }))]}>
-            <SelectTrigger className="h-8 w-full sm:w-[200px] text-[13px]">
+            <SelectTrigger className="app-input h-8 text-[12px] w-full sm:w-[200px]">
               <SelectValue placeholder="Todos los inspectores" />
             </SelectTrigger>
             <SelectContent>

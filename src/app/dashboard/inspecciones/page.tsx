@@ -120,7 +120,7 @@ function InspectionsPageContent() {
             />
           </div>
           <Select value={statusFilter || "__none"} onValueChange={(v) => setStatusFilter(v === "__none" ? "" : v ?? "all")} items={[{ value: "__none", label: "Sin selección" }, { value: "all", label: "Todos los estados" }, { value: "scheduled", label: "Agendada" }, { value: "active", label: "En progreso" }, { value: "completed", label: "Completada" }, { value: "cancelled", label: "Cancelada" }]}>
-            <SelectTrigger className="h-7 w-full sm:w-[160px]">
+            <SelectTrigger className="app-input h-8 text-[12px] w-full sm:w-[160px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>

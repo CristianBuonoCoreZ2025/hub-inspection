@@ -96,7 +96,7 @@ BEGIN
     CASE WHEN v_scheduled_at IS NOT NULL THEN v_scheduled_at::timestamptz ELSE NULL END,
     v_contact_name,
     v_inspection_number,
-    'pending',
+    'scheduled',
     CASE WHEN v_inspector_id IS NOT NULL THEN v_inspector_id::uuid ELSE NULL END,
     v_magic_link_token,
     CASE WHEN v_magic_link_token IS NOT NULL THEN now() + interval '7 days' ELSE NULL END,

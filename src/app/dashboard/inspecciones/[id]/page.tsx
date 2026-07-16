@@ -11,6 +11,7 @@ import {
   getInspectorSchedule,
 } from "@/services/inspections";
 import { updateClaimStatus } from "@/services/claims";
+import { issueClaimAction } from "@/services/claim-actions";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getUsers } from "@/services/users";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -29,6 +30,7 @@ import {
   RotateCcw,
   CalendarClock,
   Video,
+  Copy,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -103,6 +105,19 @@ function formatDateTime(dateStr: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function NotStartedNotice() {
+  return (
+    <div className="app-panel">
+      <h3 className="app-section-title">Pendiente</h3>
+      <div className="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30">
+        <p className="text-sm text-amber-950 dark:text-amber-100">
+          Inicia la inspección desde la pestaña Resumen para acceder a esta sección.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function InspectionDetailPage() {
@@ -257,6 +272,30 @@ export default function InspectionDetailPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Mutation para finalizar la inspección + emitir el INS
+  const finalizeMutation = useMutation({
+    mutationFn: async () => {
+      if (!session) return;
+      // 1. Marcar la sesión como completed con ended_at
+      await updateInspectionSession(session.id, { status: "completed", ended_at: new Date().toISOString() });
+      // 2. Emitir el claim_action INS si tiene claim_action_id
+      if (session.claim_action_id) {
+        await issueClaimAction(session.claim_action_id, profile?.id);
+      }
+    },
+    onSuccess: async () => {
+      toast.success("Inspección finalizada y emitida");
+      queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+      if (session?.claim_id) {
+        queryClient.invalidateQueries({ queryKey: ["claim", session.claim_id] });
+        queryClient.invalidateQueries({ queryKey: ["claim-actions", session.claim_id] });
+        queryClient.invalidateQueries({ queryKey: ["claims"] });
+      }
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const rescheduleMutation = useMutation({
     mutationFn: ({ currentId, claimId, reasonId, notes, newOptions }: {
       currentId: string;
@@ -327,76 +366,6 @@ export default function InspectionDetailPage() {
   const insuredParticipant = participants.find((p) => p.type === "insured");
   const contactParticipant = participants.find((p) => p.type === "contact");
 
-  const statusActions = () => {
-    switch (session.status) {
-      case "scheduled":
-        return (
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              size="sm"
-              className="pg-btn-platinum"
-              onClick={() => updateMutation.mutate({ id: session.id, input: { status: "active" } })}
-            >
-              Iniciar
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="pg-btn-platinum"
-              onClick={() => {
-                const claimData = session?.claim as Record<string, unknown> | undefined;
-                if (claimData?.inspector_id) {
-                  setRescheduleInspectorId(claimData.inspector_id as string);
-                }
-                setRescheduleModalOpen(true);
-              }}
-            >
-              Reagendar
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="pg-btn-platinum"
-              onClick={() => setCancelModalOpen(true)}
-            >
-              Cancelar
-            </Button>
-          </div>
-        );
-      case "active":
-        return (
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              size="sm"
-              className="pg-btn-platinum"
-              onClick={() => {
-                // Validar: al menos una evidencia (foto/doc) o un daño o checklist item
-                const hasEvidences = (session.inspection_evidences?.length ?? 0) > 0;
-                const hasDamages = (session.inspection_damages?.length ?? 0) > 0;
-                const hasChecklist = (session.inspection_checklists?.length ?? 0) > 0;
-                const hasSketches = (session.damage_sketches?.length ?? 0) > 0;
-                const hasActa = session.property_risk && Object.keys(session.property_risk).length > 0;
-
-                if (!hasEvidences && !hasDamages && !hasChecklist && !hasSketches && !hasActa) {
-                  toast.error("No se puede finalizar: la inspección no tiene datos. Suba al menos una foto, documento, daño o item de checklist.");
-                  return;
-                }
-                if (!hasEvidences) {
-                  toast.error("No se puede finalizar: suba al menos una foto o documento como evidencia.");
-                  return;
-                }
-                updateMutation.mutate({ id: session.id, input: { status: "completed" } });
-              }}
-            >
-              Finalizar
-            </Button>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
   const allTabs = [
     { id: "resumen", label: "Resumen", icon: FileText, section: "inspecciones_detalle" },
     { id: "acta", label: "Acta", icon: ClipboardCheck, section: "inspecciones_acta" },
@@ -406,6 +375,7 @@ export default function InspectionDetailPage() {
     { id: "firmas", label: "Firmas", icon: User, section: "inspecciones_firmas" },
     { id: "informe", label: "Informe", icon: FileText, section: "inspecciones_informe" },
   ];
+
   const tabs = allTabs.filter(t => canView(t.section));
 
   return (
@@ -434,7 +404,6 @@ export default function InspectionDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {statusActions()}
           {(session.status === "active" && session.inspection_type === "remote") && (
             <Button
               variant="outline"
@@ -601,7 +570,7 @@ export default function InspectionDetailPage() {
             </div>
           </div>
 
-          {/* Estado de la Sesion */}
+          {/* Estado de la Sesion + Acciones */}
           <div className="app-panel">
             <h3 className="app-section-title">
               Estado de la Sesion
@@ -628,6 +597,54 @@ export default function InspectionDetailPage() {
                 <p className="font-medium">{session.ended_at ? formatDateTime(session.ended_at) : "—"}</p>
               </div>
             </div>
+
+            {/* Botones de acción según estado */}
+            {session.status === "scheduled" && (
+              <div className="flex gap-2 mt-3 pt-3 border-t border-border">
+                <Button
+                  size="sm"
+                  className="pg-btn-platinum"
+                  onClick={() => {
+                    const now = new Date();
+                    const dateStr = now.toISOString().split("T")[0];
+                    const timeStr = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+                    updateMutation.mutate({
+                      id: session.id,
+                      input: {
+                        status: "active",
+                        started_at: now.toISOString(),
+                        inspection_date: dateStr,
+                        inspection_time: timeStr,
+                      },
+                    });
+                  }}
+                >
+                  Iniciar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="pg-btn-platinum"
+                  onClick={() => {
+                    const claimData = session?.claim as Record<string, unknown> | undefined;
+                    if (claimData?.inspector_id) {
+                      setRescheduleInspectorId(claimData.inspector_id as string);
+                    }
+                    setRescheduleModalOpen(true);
+                  }}
+                >
+                  Reagendar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="pg-btn-platinum"
+                  onClick={() => setCancelModalOpen(true)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Magic link */}
@@ -652,7 +669,7 @@ export default function InspectionDetailPage() {
                     }
                   }}
                 >
-                  Copiar
+                  <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -675,7 +692,7 @@ export default function InspectionDetailPage() {
               </div>
             </div>
           ) : (
-            <ActaForm session={session} />
+            <ActaForm session={session} readOnly={session.status !== "active"} />
           )}
         </div>
         )}
@@ -683,28 +700,44 @@ export default function InspectionDetailPage() {
         {/* ── TAB: DANOS ── */}
         {activeTab === "danos" && (
         <div className="mt-4">
-          <DamagesTab sessionId={session.id} />
+          {session.status === "scheduled" ? (
+            <NotStartedNotice />
+          ) : (
+            <DamagesTab sessionId={session.id} />
+          )}
         </div>
         )}
 
         {/* ── TAB: EVIDENCIAS ── */}
         {activeTab === "evidencias" && (
         <div className="mt-4">
-          <EvidencesTab sessionId={session.id} />
+          {session.status === "scheduled" ? (
+            <NotStartedNotice />
+          ) : (
+            <EvidencesTab sessionId={session.id} />
+          )}
         </div>
         )}
 
         {/* ── TAB: CROQUIS ── */}
         {activeTab === "croquis" && (
         <div className="mt-4">
-          <SketchesTab sessionId={session.id} />
+          {session.status === "scheduled" ? (
+            <NotStartedNotice />
+          ) : (
+            <SketchesTab sessionId={session.id} />
+          )}
         </div>
         )}
 
         {/* ── TAB: FIRMAS ── */}
         {activeTab === "firmas" && (
         <div className="mt-4">
-          <SignaturesTab sessionId={session.id} />
+          {session.status === "scheduled" ? (
+            <NotStartedNotice />
+          ) : (
+            <SignaturesTab sessionId={session.id} />
+          )}
         </div>
         )}
 
@@ -719,6 +752,32 @@ export default function InspectionDetailPage() {
             cancellationNotes={session.cancellation_notes}
             cancelledAt={session.cancelled_at}
           />
+          {session.status === "active" && (
+            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-border">
+              <Button
+                size="sm"
+                className="pg-btn-platinum"
+                disabled={finalizeMutation.isPending}
+                onClick={() => {
+                  // Validar: al menos una evidencia o un daño o acta
+                  const hasEvidences = (session.inspection_evidences?.length ?? 0) > 0;
+                  const hasDamages = (session.inspection_damages?.length ?? 0) > 0;
+                  const hasActa = session.property_risk && Object.keys(session.property_risk).length > 0;
+                  if (!hasEvidences && !hasDamages && !hasActa) {
+                    toast.error("No se puede finalizar: la inspección no tiene datos.");
+                    return;
+                  }
+                  if (!hasEvidences) {
+                    toast.error("No se puede finalizar: suba al menos una foto o documento como evidencia.");
+                    return;
+                  }
+                  finalizeMutation.mutate();
+                }}
+              >
+                {finalizeMutation.isPending ? "Finalizando..." : "Finalizar"}
+              </Button>
+            </div>
+          )}
         </div>
         )}
 

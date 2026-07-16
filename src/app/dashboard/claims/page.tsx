@@ -900,7 +900,7 @@ function ClaimsPageContent() {
             />
           </div>
           <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={statusOptions}>
-            <SelectTrigger className="h-8 w-full sm:w-[140px] shrink-0 text-xs">
+            <SelectTrigger className="app-input h-8 text-[12px] w-full sm:w-[140px] shrink-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

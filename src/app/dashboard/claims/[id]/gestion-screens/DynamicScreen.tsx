@@ -25,7 +25,7 @@ import { getPolicyCoveragesByPolicyId } from "@/services/policies";
 import { getClaimById, getClaimParticipants } from "@/services/claims";
 import { getUsersByRoles, updateClaimAction } from "@/services/claim-actions";
 import { getUsersByRoleForCompany } from "@/services/users";
-import { getInspectionSessions, createInspectionSession } from "@/services/inspections";
+import { getInspectionSessions, createInspectionSession, getInspectorSchedule } from "@/services/inspections";
 import { getCoverageCatalog } from "@/services/coverage-catalog";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -226,6 +226,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
   // review_levels se renderiza siempre al final, sin importar si está en los campos configurados
   const complexEntities = fields.filter((f) => f.category === "complex_entity" && f.type !== "review_levels");
   const ownFields = fields.filter((f) => f.category === "own");
+  const hasCoordFields = ownFields.some((f) => f.id === "coord_fecha");
 
   // Si la pantalla tiene reserva o ajuste, los campos de moneda/fecha/reserva van arriba del form
   // → quitarlos de claimEntities para no duplicarlos abajo
@@ -325,20 +326,32 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
       {/* ─── Formulario (campos propios) ─── */}
       {filteredOwnFields.length > 0 && (
         <section className="app-panel p-3">
-          <div className="grid grid-cols-12 gap-3">
-            {filteredOwnFields.map((field) => (
-              <div key={field.id} className={widthClass(field.width)}>
-                <OwnField
-                  field={field}
-                  value={values[field.id]}
-                  allFields={fields}
-                  onChange={updateValue}
-                  readOnly={readOnly}
-                  action={action}
-                />
-              </div>
-            ))}
-          </div>
+          {hasCoordFields ? (
+            <CoordFieldsGrid
+              fields={filteredOwnFields}
+              values={values}
+              allFields={fields}
+              onChange={updateValue}
+              readOnly={readOnly}
+              action={action}
+            />
+          ) : (
+            <div className="grid grid-cols-12 gap-3">
+              {filteredOwnFields.map((field) => (
+                <div key={field.id} className={widthClass(field.width)}>
+                  <OwnField
+                    field={field}
+                    value={values[field.id]}
+                    allFields={fields}
+                    allValues={values}
+                    onChange={updateValue}
+                    readOnly={readOnly}
+                    action={action}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
@@ -1339,6 +1352,7 @@ function OwnField({
   field,
   value,
   allFields,
+  allValues,
   onChange,
   readOnly,
   action,
@@ -1346,6 +1360,7 @@ function OwnField({
   field: ScreenField;
   value: unknown;
   allFields: ScreenField[];
+  allValues?: Record<string, unknown>;
   onChange: (id: string, value: unknown) => void;
   readOnly?: boolean;
   action?: ActionWithRelations;
@@ -1494,6 +1509,20 @@ function OwnField({
       return <TableField field={field} value={value} onChange={onChange} readOnly={readOnly} />;
 
     case "datetime": {
+      // Si es coord_fecha, usar el scheduler con disponibilidad
+      if (field.id === "coord_fecha") {
+        return (
+          <CoordScheduler
+            field={field}
+            value={value}
+            inspectorId={String(allValues?.coord_inspector || "")}
+            inspectionType={String(allValues?.coord_inspection_type || "onsite")}
+            onChange={onChange}
+            readOnly={readOnly}
+            daysToIssue={daysToIssue}
+          />
+        );
+      }
       const valStr = String(value || "");
       const now = new Date();
       const maxDateObj = new Date(datetimeMaxDate);
@@ -1501,6 +1530,8 @@ function OwnField({
       const isPast = valDate && valDate < now;
       const isOverMax = valDate && daysToIssue > 0 && valDate > maxDateObj;
       const hasAlert = isPast || isOverMax;
+      // min en hora local (datetime-local no usa UTC)
+      const minLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
       return (
         <div className="flex flex-col gap-1">
           <Label className="app-field-label text-[11px]">
@@ -1510,7 +1541,7 @@ function OwnField({
             type="datetime-local"
             className={`${inputClass} ${hasAlert ? "border-red-500 focus-visible:ring-red-500" : ""}`}
             value={valStr}
-            min={new Date().toISOString().slice(0, 16)}
+            min={minLocal}
             max={datetimeMaxDate || undefined}
             onChange={(e) => onChange(field.id, e.target.value)}
             disabled={readOnly}
@@ -3356,6 +3387,510 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CoordFieldsGrid — layout personalizado para pantalla de coordinación
+// Row 1: [Tipo Inspección (6)]  [Inspector (6)]
+// Row 2: [Fecha/Hora picker (6)]  [Ubicación (6)]
+// Row 3: [Slots (6)]              [Contacto (6)]
+// Row 4: [Comentarios (12)]
+// ═══════════════════════════════════════════════════════════════
+
+function CoordFieldsGrid({
+  fields,
+  values,
+  allFields,
+  onChange,
+  readOnly,
+  action,
+}: {
+  fields: ScreenField[];
+  values: Record<string, unknown>;
+  allFields: ScreenField[];
+  onChange: (id: string, value: unknown) => void;
+  readOnly?: boolean;
+  action?: ActionWithRelations;
+}) {
+  const findField = (id: string) => fields.find((f) => f.id === id);
+  const [coordSelectedDate, setCoordSelectedDate] = useState("");
+
+  const tipoField = findField("coord_inspection_type");
+  const inspectorField = findField("coord_inspector");
+  const fechaField = findField("coord_fecha");
+  const ubicacionField = findField("coord_ubicacion");
+  const contactoField = findField("coord_contacto");
+  const comentariosField = findField("coord_comentarios");
+
+  const inspectorId = String(values.coord_inspector || "");
+  const inspectionType = String(values.coord_inspection_type || "onsite");
+
+  return (
+    <div className="grid grid-cols-12 gap-3">
+      {/* Row 1: Tipo + Inspector */}
+      {tipoField && (
+        <div className="col-span-6">
+          <OwnField field={tipoField} value={values[tipoField.id]} allFields={allFields} allValues={values} onChange={onChange} readOnly={readOnly} action={action} />
+        </div>
+      )}
+      {inspectorField && (
+        <div className="col-span-6">
+          <OwnField field={inspectorField} value={values[inspectorField.id]} allFields={allFields} allValues={values} onChange={onChange} readOnly={readOnly} action={action} />
+        </div>
+      )}
+
+      {/* Row 2: Fecha picker + Ubicación */}
+      {fechaField && (
+        <div className="col-span-6">
+          <CoordScheduler
+            field={fechaField}
+            value={values[fechaField.id]}
+            inspectorId={inspectorId}
+            inspectionType={inspectionType}
+            onChange={onChange}
+            readOnly={readOnly}
+            mode="picker"
+            selectedDate={coordSelectedDate}
+            setSelectedDate={setCoordSelectedDate}
+          />
+        </div>
+      )}
+      {ubicacionField && (
+        <div className="col-span-6">
+          <OwnField field={ubicacionField} value={values[ubicacionField.id]} allFields={allFields} allValues={values} onChange={onChange} readOnly={readOnly} action={action} />
+        </div>
+      )}
+
+      {/* Row 3: Slots + Contacto */}
+      {fechaField && (
+        <div className="col-span-6">
+          <CoordScheduler
+            field={fechaField}
+            value={values[fechaField.id]}
+            inspectorId={inspectorId}
+            inspectionType={inspectionType}
+            onChange={onChange}
+            readOnly={readOnly}
+            mode="slots"
+            selectedDate={coordSelectedDate}
+            setSelectedDate={setCoordSelectedDate}
+          />
+        </div>
+      )}
+      {contactoField && (
+        <div className="col-span-6">
+          <OwnField field={contactoField} value={values[contactoField.id]} allFields={allFields} allValues={values} onChange={onChange} readOnly={readOnly} action={action} />
+        </div>
+      )}
+
+      {/* Row 4: Comentarios */}
+      {comentariosField && (
+        <div className="col-span-12">
+          <OwnField field={comentariosField} value={values[comentariosField.id]} allFields={allFields} allValues={values} onChange={onChange} readOnly={readOnly} action={action} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CoordScheduler — selector de fecha/hora con disponibilidad de inspector
+// mode="picker": solo el selector de fecha
+// mode="slots": solo la caja de slots disponibles
+// mode="full" (default): ambos (para uso standalone)
+// ═══════════════════════════════════════════════════════════════
+
+function CoordScheduler({
+  field,
+  value,
+  inspectorId,
+  inspectionType,
+  onChange,
+  readOnly,
+  daysToIssue,
+  mode = "full",
+  selectedDate: sharedDate,
+  setSelectedDate: sharedSetDate,
+}: {
+  field: ScreenField;
+  value: unknown;
+  inspectorId: string;
+  inspectionType: string;
+  onChange: (id: string, value: unknown) => void;
+  readOnly?: boolean;
+  daysToIssue?: number;
+  mode?: "picker" | "slots" | "full";
+  selectedDate?: string;
+  setSelectedDate?: (d: string) => void;
+}) {
+  const [localDate, setLocalDate] = useState<string>("");
+  const [showCustomTime, setShowCustomTime] = useState(false);
+  const [customTime, setCustomTime] = useState("12:00");
+
+  // Usar fecha compartida si está disponible, sino local
+  const selectedDate = sharedDate ?? localDate;
+  const setSelectedDate = sharedSetDate ?? setLocalDate;
+
+  // Duración según tipo de inspección
+  const slotMinutes = inspectionType === "remote" ? 30 : 180; // 30 min remota, 3h presencial
+  const slotLabel = inspectionType === "remote" ? "30 min" : "3 hrs";
+
+  // Rangos horarios
+  const DAY_START = 6, DAY_END = 22, NORMAL_START = 9, NORMAL_END = 19;
+
+  // Cargar disponibilidad del inspector para la fecha seleccionada
+  const { data: schedule, isLoading: scheduleLoading } = useQuery({
+    queryKey: ["inspector-schedule", inspectorId, selectedDate],
+    queryFn: () => {
+      const start = `${selectedDate}T00:00:00`;
+      const end = `${selectedDate}T23:59:59`;
+      return getInspectorSchedule(inspectorId, start, end);
+    },
+    enabled: !!inspectorId && !!selectedDate && mode !== "picker",
+  });
+
+  // Generar slots disponibles
+  const slots = useMemo(() => {
+    if (!selectedDate) return [];
+    const result: { time: string; label: string; available: boolean; extra: boolean; bookedInfo?: string }[] = [];
+    const totalMin = (DAY_END - DAY_START) * 60;
+    const now = new Date();
+    const isToday = selectedDate === new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+
+    for (let offset = 0; offset + slotMinutes <= totalMin; offset += slotMinutes) {
+      const startHour = DAY_START + Math.floor(offset / 60);
+      const startMin = offset % 60;
+      const endHour = DAY_START + Math.floor((offset + slotMinutes) / 60);
+      const endMin = (offset + slotMinutes) % 60;
+      const timeStr = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
+      const endStr = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
+
+      // Si es hoy, saltar slots que ya pasaron
+      if (isToday) {
+        const slotStartCheck = new Date(`${selectedDate}T${timeStr}:00`);
+        if (slotStartCheck <= now) continue;
+      }
+
+      const isExtra = startHour < NORMAL_START || startHour >= NORMAL_END;
+      const slotStart = new Date(`${selectedDate}T${timeStr}:00`);
+      const slotEnd = new Date(`${selectedDate}T${endStr}:00`);
+      const booked = schedule?.find((s) => {
+        const sStart = new Date(s.scheduled_at);
+        const sDuration = s.inspection_type === "onsite" ? 180 : 30;
+        const sEnd = new Date(sStart.getTime() + sDuration * 60000);
+        return sStart < slotEnd && sEnd > slotStart;
+      });
+
+      result.push({
+        time: timeStr,
+        label: `${timeStr} - ${endStr}`,
+        available: !booked,
+        extra: isExtra,
+        bookedInfo: booked ? `Ocupado: ${booked.claim?.claim_number}` : undefined,
+      });
+    }
+    return result;
+  }, [selectedDate, slotMinutes, schedule]);
+
+  // Valor actual formateado para mostrar
+  const currentValue = String(value || "");
+  const valDate = currentValue ? new Date(currentValue) : null;
+  const isPast = valDate && valDate < new Date();
+
+  // Asignar un slot
+  const assignSlot = (timeStr: string) => {
+    const datetimeStr = `${selectedDate}T${timeStr}`;
+    onChange(field.id, datetimeStr);
+  };
+
+  // Asignar horario personalizado
+  const assignCustom = () => {
+    const datetimeStr = `${selectedDate}T${customTime}`;
+    onChange(field.id, datetimeStr);
+  };
+
+  // Fecha mínima = hoy (inicializada una vez)
+  const [todayLocal] = useState(() => {
+    return new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split("T")[0];
+  });
+
+  // ─── Modo PICKER: solo el selector de fecha ───
+  if (mode === "picker") {
+    // Calcular si la fecha seleccionada excede daysToIssue (alarma, no bloqueo)
+    const isOverMax = daysToIssue && daysToIssue > 0 && selectedDate ? (() => {
+      const maxDate = new Date();
+      maxDate.setDate(maxDate.getDate() + daysToIssue);
+      const sel = new Date(selectedDate + "T23:59:59");
+      return sel > maxDate;
+    })() : false;
+
+    return (
+      <div className="flex flex-col gap-2">
+        <Label className="app-field-label text-[11px]">
+          {field.label} {field.required && <span className="text-red-500">*</span>}
+          <span className="text-muted-foreground ml-2">({slotLabel} por inspección)</span>
+        </Label>
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            className={`app-input h-8 text-[12px] w-auto ${isOverMax ? "border-amber-500 focus-visible:ring-amber-500" : ""}`}
+            value={selectedDate}
+            min={todayLocal}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            disabled={readOnly}
+          />
+          {currentValue && (
+            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0">
+              {valDate ? valDate.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : ""}
+            </Badge>
+          )}
+        </div>
+        {!inspectorId && selectedDate && (
+          <p className="text-[10px] text-amber-600">⚠ Seleccione un inspector para ver disponibilidades.</p>
+        )}
+        {isPast && (
+          <p className="text-[9px] text-red-600 font-medium">⚠ La fecha no puede ser en el pasado.</p>
+        )}
+        {isOverMax && (
+          <p className="text-[9px] text-amber-600 font-medium">
+            ⚠ La fecha excede el máximo recomendado de {daysToIssue} días. Se permite pero requiere justificación.
+          </p>
+        )}
+        {daysToIssue && daysToIssue > 0 && !isOverMax && (
+          <p className="text-[9px] text-muted-foreground">Máx recomendado: {daysToIssue} días</p>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Modo SLOTS: solo la caja de slots ───
+  if (mode === "slots") {
+    if (!selectedDate) {
+      return (
+        <div className="flex flex-col gap-2">
+          <Label className="app-field-label text-[11px]">
+            Disponibilidad
+          </Label>
+          <p className="text-[11px] text-muted-foreground py-2">Seleccione una fecha para ver horarios.</p>
+        </div>
+      );
+    }
+    if (!inspectorId) {
+      return (
+        <div className="flex flex-col gap-2">
+          <Label className="app-field-label text-[11px]">
+            Disponibilidad
+          </Label>
+          <p className="text-[11px] text-amber-600 py-2">⚠ Seleccione un inspector para ver disponibilidades.</p>
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col gap-2">
+        <Label className="app-field-label text-[11px]">
+          Disponibilidad {slotLabel}
+        </Label>
+        <div className="rounded-lg border border-border p-2">
+          {scheduleLoading ? (
+            <p className="text-[11px] text-muted-foreground text-center py-2">Cargando disponibilidades...</p>
+          ) : slots.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground text-center py-2">No hay slots disponibles para esta fecha.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-1.5">
+                {slots.map((slot) => (
+                  <button
+                    key={slot.time}
+                    type="button"
+                    disabled={readOnly || !slot.available}
+                    onClick={() => assignSlot(slot.time)}
+                    className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                      !slot.available
+                        ? "bg-muted/50 text-muted-foreground/50 cursor-not-allowed line-through"
+                        : slot.extra
+                        ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-500/20"
+                        : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 border border-emerald-500/20"
+                    } ${currentValue === `${selectedDate}T${slot.time}` ? "ring-2 ring-primary" : ""}`}
+                    title={slot.bookedInfo || (slot.extra ? "Horario extra (fuera de 09-19)" : "Horario normal")}
+                  >
+                    {slot.time}
+                    {slot.extra && <span className="ml-1 text-[8px]">★</span>}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border text-[9px] text-muted-foreground">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-emerald-500/30" /> Normal 09-19</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-amber-500/30" /> Extra ★</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-muted" /> Ocupado</span>
+              </div>
+            </>
+          )}
+
+          {/* Botón para horario personalizado */}
+          {!readOnly && (
+            <div className="mt-2 pt-2 border-t border-border">
+              {!showCustomTime ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCustomTime(true)}
+                  className="text-[10px] text-sky-600 hover:underline"
+                >
+                  + Asignar horario personalizado
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="time"
+                    className="app-input h-7 text-[11px] w-auto"
+                    value={customTime}
+                    onChange={(e) => setCustomTime(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={assignCustom}
+                    className="px-2 py-1 rounded-md text-[10px] font-medium bg-sky-500/10 text-sky-700 hover:bg-sky-500/20 border border-sky-500/20"
+                  >
+                    Asignar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomTime(false)}
+                    className="text-[10px] text-muted-foreground hover:underline"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {daysToIssue && daysToIssue > 0 && !isPast && (
+          <p className="text-[9px] text-muted-foreground">Máx: {daysToIssue} días desde hoy</p>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Modo FULL: picker + slots (standalone) ───
+  // Calcular si la fecha seleccionada excede daysToIssue (alarma, no bloqueo)
+  const isOverMaxDate = daysToIssue && daysToIssue > 0 && selectedDate ? (() => {
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + daysToIssue);
+    const sel = new Date(selectedDate + "T23:59:59");
+    return sel > maxDate;
+  })() : false;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label className="app-field-label text-[11px]">
+        {field.label} {field.required && <span className="text-red-500">*</span>}
+        <span className="text-muted-foreground ml-2">({slotLabel} por inspección)</span>
+      </Label>
+      <div className="flex items-center gap-2">
+        <Input
+          type="date"
+          className={`app-input h-8 text-[12px] w-auto ${isOverMaxDate ? "border-amber-500 focus-visible:ring-amber-500" : ""}`}
+          value={selectedDate}
+          min={todayLocal}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          disabled={readOnly}
+        />
+        {currentValue && (
+          <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0">
+            {valDate ? valDate.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : ""}
+          </Badge>
+        )}
+      </div>
+      {!inspectorId && selectedDate && (
+        <p className="text-[10px] text-amber-600">⚠ Seleccione un inspector para ver disponibilidades.</p>
+      )}
+      {inspectorId && selectedDate && (
+        <div className="rounded-lg border border-border p-2">
+          {scheduleLoading ? (
+            <p className="text-[11px] text-muted-foreground text-center py-2">Cargando disponibilidades...</p>
+          ) : slots.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground text-center py-2">No hay slots disponibles para esta fecha.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-1.5">
+                {slots.map((slot) => (
+                  <button
+                    key={slot.time}
+                    type="button"
+                    disabled={readOnly || !slot.available}
+                    onClick={() => assignSlot(slot.time)}
+                    className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                      !slot.available
+                        ? "bg-muted/50 text-muted-foreground/50 cursor-not-allowed line-through"
+                        : slot.extra
+                        ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-500/20"
+                        : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 border border-emerald-500/20"
+                    } ${currentValue === `${selectedDate}T${slot.time}` ? "ring-2 ring-primary" : ""}`}
+                    title={slot.bookedInfo || (slot.extra ? "Horario extra (fuera de 09-19)" : "Horario normal")}
+                  >
+                    {slot.time}
+                    {slot.extra && <span className="ml-1 text-[8px]">★</span>}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border text-[9px] text-muted-foreground">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-emerald-500/30" /> Normal 09-19</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-amber-500/30" /> Extra ★</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-muted" /> Ocupado</span>
+              </div>
+            </>
+          )}
+          {!readOnly && (
+            <div className="mt-2 pt-2 border-t border-border">
+              {!showCustomTime ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCustomTime(true)}
+                  className="text-[10px] text-sky-600 hover:underline"
+                >
+                  + Asignar horario personalizado
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="time"
+                    className="app-input h-7 text-[11px] w-auto"
+                    value={customTime}
+                    onChange={(e) => setCustomTime(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={assignCustom}
+                    className="px-2 py-1 rounded-md text-[10px] font-medium bg-sky-500/10 text-sky-700 hover:bg-sky-500/20 border border-sky-500/20"
+                  >
+                    Asignar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomTime(false)}
+                    className="text-[10px] text-muted-foreground hover:underline"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {isPast && (
+        <p className="text-[9px] text-red-600 font-medium">⚠ La fecha no puede ser en el pasado.</p>
+      )}
+      {isOverMaxDate && (
+        <p className="text-[9px] text-amber-600 font-medium">
+          ⚠ La fecha excede el máximo recomendado de {daysToIssue} días. Se permite pero requiere justificación.
+        </p>
+      )}
+      {daysToIssue && daysToIssue > 0 && !isPast && !isOverMaxDate && (
+        <p className="text-[9px] text-muted-foreground">Máx recomendado: {daysToIssue} días</p>
+      )}
     </div>
   );
 }
