@@ -14,9 +14,16 @@ WHERE role::TEXT IN ('admin', 'superadmin');
 
 -- 2. Recrear el enum sin los valores obsoletos
 -- PostgreSQL no soporta DROP VALUE, hay que recrear el tipo
--- Primero dropear triggers que referencian la columna role
+-- Primero dropear triggers y constraints que referencian la columna role
 DROP TRIGGER IF EXISTS trg_cleanup_sec_roles_on_internal ON profiles;
+DROP TRIGGER IF EXISTS trg_cleanup_sec_roles_on_role_change ON profiles;
 DROP FUNCTION IF EXISTS cleanup_secondary_roles_on_internal() CASCADE;
+DROP FUNCTION IF EXISTS cleanup_secondary_roles_on_role_change() CASCADE;
+
+-- Dropear el CHECK constraint y el default antes de cambiar el tipo
+-- (ambos usan ::user_role casts que dependen del tipo)
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+ALTER TABLE profiles ALTER COLUMN role DROP DEFAULT;
 
 ALTER TABLE profiles ALTER COLUMN role TYPE TEXT;
 DROP TYPE IF EXISTS user_role;
@@ -24,8 +31,7 @@ CREATE TYPE user_role AS ENUM ('internal', 'adjuster', 'inspector', 'assistant',
 ALTER TABLE profiles ALTER COLUMN role TYPE user_role USING role::user_role;
 ALTER TABLE profiles ALTER COLUMN role SET DEFAULT 'adjuster';
 
--- 3. Actualizar CHECK constraint de profiles.role
-ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+-- 3. Recrear CHECK constraint de profiles.role con el nuevo tipo
 ALTER TABLE profiles ADD CONSTRAINT profiles_role_check
   CHECK (role IN ('internal', 'adjuster', 'inspector', 'assistant', 'auditor', 'dispatcher'));
 

@@ -23,11 +23,11 @@ UPDATE user_type_permissions
 SET user_type = 'assistant'
 WHERE user_type::TEXT = 'client_operator';
 
--- 4. Eliminar duplicados que puedan surgir del merge (mismo user_type + section + field_name)
+-- 4. Eliminar duplicados que puedan surgir del merge (mismo user_type + section)
 DELETE FROM user_type_permissions
 WHERE id NOT IN (
-  SELECT MIN(id) FROM user_type_permissions
-  GROUP BY user_type, section, field_name
+  SELECT MIN(id::text)::uuid FROM user_type_permissions
+  GROUP BY user_type, section
 );
 
 -- 5. Actualizar CHECK constraint de profiles.role (sin client_operator)

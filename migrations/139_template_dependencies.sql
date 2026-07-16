@@ -13,8 +13,17 @@ CREATE TABLE IF NOT EXISTS action_template_dependencies (
 );
 
 -- Indice para buscar hijos de un template
-CREATE INDEX IF NOT EXISTS idx_atd_parent ON action_template_dependencies(parent_template_id);
-CREATE INDEX IF NOT EXISTS idx_atd_child ON action_template_dependencies(child_template_id);
+-- Solo crear si las columnas existen (la migration 142 las reemplaza por codes)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'action_template_dependencies' AND column_name = 'parent_template_id'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_atd_parent ON action_template_dependencies(parent_template_id);
+    CREATE INDEX IF NOT EXISTS idx_atd_child ON action_template_dependencies(child_template_id);
+  END IF;
+END $$;
 
 -- RLS
 ALTER TABLE action_template_dependencies ENABLE ROW LEVEL SECURITY;
@@ -35,11 +44,21 @@ FOR EACH ROW EXECUTE FUNCTION update_atd_updated_at();
 
 -- Migrar dependencias intrinsecas existentes (hardcoded en codigo)
 -- RES depende de COB, PCA depende de RES, RTA depende de NSA, INS depende de COI
-INSERT INTO action_template_dependencies (parent_template_id, child_template_id)
-SELECT p.id, c.id
-FROM action_template p, action_template c
-WHERE p.code = 'COB' AND c.code = 'RES'
-   OR p.code = 'RES' AND c.code = 'PCA'
-   OR p.code = 'NSA' AND c.code = 'RTA'
-   OR p.code = 'COI' AND c.code = 'INS'
-ON CONFLICT (parent_template_id, child_template_id) DO NOTHING;
+-- Solo ejecutar si las columnas parent_template_id/child_template_id existen
+-- (la migration 142 las reemplaza por parent_code/child_code)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'action_template_dependencies' AND column_name = 'parent_template_id'
+  ) THEN
+    INSERT INTO action_template_dependencies (parent_template_id, child_template_id)
+    SELECT p.id, c.id
+    FROM action_template p, action_template c
+    WHERE p.code = 'COB' AND c.code = 'RES'
+       OR p.code = 'RES' AND c.code = 'PCA'
+       OR p.code = 'NSA' AND c.code = 'RTA'
+       OR p.code = 'COI' AND c.code = 'INS'
+    ON CONFLICT (parent_template_id, child_template_id) DO NOTHING;
+  END IF;
+END $$;
