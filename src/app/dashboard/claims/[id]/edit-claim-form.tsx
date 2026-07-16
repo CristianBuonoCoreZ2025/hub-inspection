@@ -36,7 +36,8 @@ import { getCountries, getRegions, getCities, getCommunes } from "@/services/cat
 import { getPolicies, createPolicy } from "@/services/policies";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { useAuth } from "@/hooks/use-auth";
-import type { Claim, ClaimsParticipant } from "@/types";
+import { getUsersByRoleForCompany } from "@/services/users";
+import type { Claim, ClaimsParticipant, UserOption as UserOptionType } from "@/types";
 
 // ──────────────────────────────────────────────────────────────
 // Types
@@ -49,11 +50,7 @@ interface Catalog {
   business_line_id?: string | null;
 }
 
-interface UserOption {
-  id: string;
-  full_name: string | null;
-  email: string | null;
-}
+type UserOption = UserOptionType;
 
 interface EditClaimFormProps {
   claim: Claim;
@@ -742,7 +739,32 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   const damageClassItems = catalogs.damageClassifications.map((c) => ({ value: c.id, label: c.name }));
   const constructionTypeItems = catalogs.constructionTypes.map((c) => ({ value: c.id, label: c.name }));
   const habitabilityItems = catalogs.habitability.map((c) => ({ value: c.id, label: c.name }));
-  const userItems = catalogs.users.map((u) => ({ value: u.id, label: u.full_name || u.email || "—" }));
+
+  // ── Usuarios por rol (perfil principal + secundarios) ──
+  const claimCompanyId = claim.company_id;
+  const { data: inspectorUsers } = useQuery({
+    queryKey: ["users-by-role", "inspector", claimCompanyId],
+    queryFn: () => getUsersByRoleForCompany("inspector", claimCompanyId),
+  });
+  const { data: adjusterUsers } = useQuery({
+    queryKey: ["users-by-role", "adjuster", claimCompanyId],
+    queryFn: () => getUsersByRoleForCompany("adjuster", claimCompanyId),
+  });
+  const { data: assistantUsers } = useQuery({
+    queryKey: ["users-by-role", "assistant", claimCompanyId],
+    queryFn: () => getUsersByRoleForCompany("assistant", claimCompanyId),
+  });
+  const { data: auditorUsers } = useQuery({
+    queryKey: ["users-by-role", "auditor", claimCompanyId],
+    queryFn: () => getUsersByRoleForCompany("auditor", claimCompanyId),
+  });
+  const { data: dispatcherUsers } = useQuery({
+    queryKey: ["users-by-role", "dispatcher", claimCompanyId],
+    queryFn: () => getUsersByRoleForCompany("dispatcher", claimCompanyId),
+  });
+
+  const toItems = (users?: { id: string; full_name: string; email: string }[]) =>
+    (users || []).map((u) => ({ value: u.id, label: u.full_name || u.email || "—" }));
 
   // ──────────────────────────────────────────────────────────────
   // Watched values
@@ -1535,11 +1557,11 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                   Asignación
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-1">
-                  <EditSelect label="Inspector" control={control} name="inspectorId" placeholder="Sin asignar" clearable items={userItems} />
-                  <EditSelect label="Ajustador / Liquidador" control={control} name="adjusterId" placeholder="Sin asignar" clearable items={userItems} />
-                  <EditSelect label="Auditor" control={control} name="auditorId" placeholder="Sin asignar" clearable items={userItems} />
-                  <EditSelect label="Despachador" control={control} name="dispatcherId" placeholder="Sin asignar" clearable items={userItems} />
-                  <EditSelect label="Asistente" control={control} name="assistantId" placeholder="Sin asignar" clearable items={userItems} />
+                  <EditSelect label="Inspector" control={control} name="inspectorId" placeholder="Sin asignar" clearable items={toItems(inspectorUsers)} />
+                  <EditSelect label="Ajustador / Liquidador" control={control} name="adjusterId" placeholder="Sin asignar" clearable items={toItems(adjusterUsers)} />
+                  <EditSelect label="Auditor" control={control} name="auditorId" placeholder="Sin asignar" clearable items={toItems(auditorUsers)} />
+                  <EditSelect label="Despachador" control={control} name="dispatcherId" placeholder="Sin asignar" clearable items={toItems(dispatcherUsers)} />
+                  <EditSelect label="Asistente" control={control} name="assistantId" placeholder="Sin asignar" clearable items={toItems(assistantUsers)} />
                   <EditSelect label="Asesor" control={control} name="advisorId" placeholder="Sin asignar" clearable items={advisorItems} />
                 </div>
               </div>

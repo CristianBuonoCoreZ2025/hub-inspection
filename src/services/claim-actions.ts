@@ -420,8 +420,9 @@ async function autoAssignResponsibles(
 // ═══ Emitir una acción (cambiar estado a "issued") ═══
 
 export async function issueClaimAction(actionId: string, userId?: string, actionData?: Record<string, unknown>): Promise<ClaimAction> {
-  // ── Validar que el usuario sea el responsable de emisión ──
-  await validateResponsible(actionId, "issuer", userId);
+  if (!userId) {
+    throw new Error("Debe iniciar sesión para completar esta acción.");
+  }
 
   // ── Validar que el COB tenga al menos 1 cobertura ──
   const action = await fetchById<ClaimAction>("claim_actions", actionId, "id, action_template_id, claim_id, action_template:action_template!claim_actions_action_template_id_fkey(code)");
@@ -440,12 +441,14 @@ export async function issueClaimAction(actionId: string, userId?: string, action
   const issuedStatusId = statusRows[0]?.id;
   if (!issuedStatusId) throw new Error("No se encontró el estado de acción 'issued'");
 
+  // El usuario que emite pasa a ser el issuer_id (siempre, para todas las gestiones)
   const setFields: Record<string, unknown> = {
     action_status_id: issuedStatusId,
     issued_on: new Date().toISOString(),
-    issued_by: userId || null,
+    issued_by: userId,
+    issuer_id: userId,
     updated_on: new Date().toISOString(),
-    updated_by: userId || null,
+    updated_by: userId,
   };
   if (actionData) {
     setFields.action_data = actionData;
@@ -468,11 +471,10 @@ export async function issueClaimAction(actionId: string, userId?: string, action
 }
 /**
  * Valida que el usuario actual sea el responsable del nivel correspondiente.
- * Si no lo es, lanza un error con mensaje claro.
  *
  * Reglas:
- * - Si el nivel no tiene responsable asignado → error "no hay responsable"
- * - Si el usuario no es el responsable → error "solo el responsable puede completar"
+ * - Para "issuer": no valida (cualquiera puede emitir, pasa a ser el emisor)
+ * - Para "reviewer"/"approver": valida que el usuario sea el responsable asignado
  * - Si no hay userId → error "debe iniciar sesión"
  */
 async function validateResponsible(
@@ -483,6 +485,9 @@ async function validateResponsible(
   if (!userId) {
     throw new Error("Debe iniciar sesión para completar esta acción.");
   }
+
+  // El nivel "issuer" no valida responsable: cualquiera que emita pasa a ser el emisor
+  if (level === "issuer") return;
 
   const fieldMap = {
     issuer: "issuer_id",
@@ -495,11 +500,11 @@ async function validateResponsible(
 
   const responsibleId = action[fieldMap[level]];
   if (!responsibleId) {
-    throw new Error(`No hay responsable asignado para ${level === "issuer" ? "emisión" : level === "reviewer" ? "revisión" : "aprobación"}. Asigne un responsable primero.`);
+    throw new Error(`No hay responsable asignado para ${level === "reviewer" ? "revisión" : "aprobación"}. Asigne un responsable primero.`);
   }
 
   if (responsibleId !== userId) {
-    throw new Error(`Solo el responsable de ${level === "issuer" ? "emisión" : level === "reviewer" ? "revisión" : "aprobación"} puede completar esta acción. Si usted es el responsable, asígnese primero en el combo de responsables.`);
+    throw new Error(`Solo el responsable de ${level === "reviewer" ? "revisión" : "aprobación"} puede completar esta acción. Si usted es el responsable, asígnese primero en el combo de responsables.`);
   }
 }
 

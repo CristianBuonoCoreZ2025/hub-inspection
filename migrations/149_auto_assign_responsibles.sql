@@ -203,11 +203,20 @@ DECLARE
   v_todo_status UUID;
   v_child RECORD;
   v_child_template_id UUID;
+  v_child_code VARCHAR(50);
   v_existing_count INT;
   v_issuer_id UUID;
   v_reviewer_id UUID;
   v_approver_id UUID;
   v_dispatcher_id UUID;
+  v_coord_inspector UUID;
+  v_coord_type TEXT;
+  v_coord_fecha TEXT;
+  v_coord_contacto TEXT;
+  v_coord_ubicacion TEXT;
+  v_new_action_id UUID;
+  v_magic_token UUID;
+  v_magic_expires TIMESTAMPTZ;
 BEGIN
   IF NEW.issued_on IS NULL THEN RETURN NEW; END IF;
   IF OLD.issued_on IS NOT NULL THEN RETURN NEW; END IF;
@@ -218,6 +227,28 @@ BEGIN
   SELECT code INTO v_parent_code FROM action_template WHERE id = v_template_id LIMIT 1;
   IF v_parent_code IS NULL THEN RETURN NEW; END IF;
 
+  -- Si el padre es COI, extraer datos de la coordinación del action_data
+  IF v_parent_code = 'COI' THEN
+    v_coord_inspector := NULL;
+    v_coord_type := NULL;
+    v_coord_fecha := NULL;
+    v_coord_contacto := NULL;
+    v_coord_ubicacion := NULL;
+    IF NEW.action_data IS NOT NULL THEN
+      v_coord_inspector := (NEW.action_data->>'coord_inspector')::UUID;
+      v_coord_type := NEW.action_data->>'coord_inspection_type';
+      v_coord_fecha := NEW.action_data->>'coord_fecha';
+      v_coord_contacto := NEW.action_data->>'coord_contacto';
+      v_coord_ubicacion := NEW.action_data->>'coord_ubicacion';
+    END IF;
+    -- Si no se especificó inspector, usar el inspector_id del claim
+    IF v_coord_inspector IS NULL THEN
+      SELECT inspector_id INTO v_coord_inspector FROM claims WHERE id = v_claim_id LIMIT 1;
+    END IF;
+    -- Default a presencial si no se especificó
+    IF v_coord_type IS NULL THEN v_coord_type := 'onsite'; END IF;
+  END IF;
+
   SELECT business_line_id INTO v_claim_business_line FROM claims WHERE id = v_claim_id LIMIT 1;
 
   SELECT id INTO v_todo_status FROM lookup_catalog WHERE category = 'action_status' AND code = 'todo' LIMIT 1;
@@ -226,9 +257,11 @@ BEGIN
     SELECT child_code FROM action_template_dependencies
     WHERE parent_code = v_parent_code
   LOOP
+    v_child_code := v_child.child_code;
+
     SELECT id INTO v_child_template_id
     FROM action_template
-    WHERE code = v_child.child_code
+    WHERE code = v_child_code
       AND is_active = true
       AND (line_business_id = v_claim_business_line OR line_business_id IS NULL)
     LIMIT 1;
@@ -236,7 +269,7 @@ BEGIN
     IF v_child_template_id IS NULL THEN
       SELECT id INTO v_child_template_id
       FROM action_template
-      WHERE code = v_child.child_code
+      WHERE code = v_child_code
         AND is_active = true
       LIMIT 1;
     END IF;
@@ -259,18 +292,55 @@ BEGIN
       FROM assign_action_responsibles(v_claim_id, v_child_template_id) ar
       LIMIT 1;
 
+      -- Si el padre es COI y el hijo es INS, sobrescribir issuer_id con el inspector de la coordinación
+      IF v_parent_code = 'COI' AND v_child_code = 'INS' AND v_coord_inspector IS NOT NULL THEN
+        v_issuer_id := v_coord_inspector;
+      END IF;
+
       INSERT INTO claim_actions (
         claim_id, action_template_id, action_features_id,
         line_business_id, name, action_status_id,
         is_automatic, is_active, origin, created_by, created_on,
-        issuer_id, reviewer_id, approver_id, dispatcher_id
+        issuer_id, reviewer_id, approver_id, dispatcher_id,
+        action_data
       )
       SELECT
         v_claim_id, at.id, at.action_features_id,
         at.line_business_id, at.name, v_todo_status,
-        true, true, 'W', NEW.issued_by, now(),
-        v_issuer_id, v_reviewer_id, v_approver_id, v_dispatcher_id
-      FROM action_template at WHERE at.id = v_child_template_id;
+        true, true, 'W', COALESCE(NEW.issued_by, NEW.updated_by, NEW.created_by), now(),
+        v_issuer_id, v_reviewer_id, v_approver_id, v_dispatcher_id,
+        jsonb_build_object(
+          'parent_code', v_parent_code,
+          'parent_action_id', NEW.id,
+          'parent_action_data', COALESCE(NEW.action_data, '{}'::jsonb)
+        )
+      FROM action_template at WHERE at.id = v_child_template_id
+      RETURNING id INTO v_new_action_id;
+
+      -- Si el hijo es INS y el padre es COI, crear inspection_session
+      IF v_parent_code = 'COI' AND v_child_code = 'INS' AND v_new_action_id IS NOT NULL THEN
+        -- Generar magic link solo si es remota
+        v_magic_token := NULL;
+        v_magic_expires := NULL;
+        IF v_coord_type = 'remote' THEN
+          v_magic_token := gen_random_uuid();
+          v_magic_expires := now() + interval '24 hours';
+        END IF;
+
+        INSERT INTO inspection_sessions (
+          claim_id, claim_action_id, action_template_id,
+          status, inspection_type, scheduled_at,
+          interviewed_name,
+          magic_link_token, magic_link_expires_at,
+          created_at, updated_at
+        ) VALUES (
+          v_claim_id, v_new_action_id, v_child_template_id,
+          'scheduled', v_coord_type, COALESCE(v_coord_fecha, now()::text)::timestamptz,
+          v_coord_contacto,
+          v_magic_token, v_magic_expires,
+          now(), now()
+        );
+      END IF;
     END IF;
   END LOOP;
 

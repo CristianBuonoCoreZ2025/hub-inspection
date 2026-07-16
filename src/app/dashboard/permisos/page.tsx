@@ -175,6 +175,8 @@ export default function PermisosPage() {
     adjuster: {},
     inspector: {},
     assistant: {},
+    auditor: {},
+    dispatcher: {},
     client_operator: {},
   };
 

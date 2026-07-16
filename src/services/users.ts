@@ -1,9 +1,9 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { fetchAll, fetchById, updateRow } from "@/lib/supabase/db";
-import type { Profile, InviteUserInput, UserClient } from "@/types";
+import { fetchAll, fetchById, updateRow, insertRow, deleteRow } from "@/lib/supabase/db";
+import type { Profile, InviteUserInput, UserClient, UserSecondaryRole, SecondaryRole } from "@/types";
 
 const PROFILE_FIELDS =
-  "id, user_id, company_id, full_name, first_name, last_name, email, phone, rut, country_id, avatar_url, role, is_active, created_at, updated_at, user_clients:user_clients!user_clients_user_id_fkey(id, user_id, company_id, created_at, company:companies!user_clients_company_id_fkey(id, name, slug))";
+  "id, user_id, company_id, full_name, first_name, last_name, email, phone, rut, country_id, avatar_url, role, is_active, created_at, updated_at, user_clients:user_clients!user_clients_user_id_fkey(id, user_id, company_id, created_at, company:companies!user_clients_company_id_fkey(id, name, slug)), secondary_roles:user_secondary_roles!user_secondary_roles_profile_id_fkey(id, profile_id, role, company_id, created_at, updated_at, company:companies!user_secondary_roles_company_id_fkey(id, name))";
 
 export async function getUsers(companyId?: string) {
   const options: Parameters<typeof fetchAll>[1] = {
@@ -13,11 +13,57 @@ export async function getUsers(companyId?: string) {
   if (companyId) {
     options.eq = { company_id: companyId };
   }
-  return fetchAll<Profile & { user_clients: UserClient[] }>("profiles", options);
+  return fetchAll<Profile & { user_clients: UserClient[]; secondary_roles: UserSecondaryRole[] }>("profiles", options);
 }
 
 export async function getUserById(id: string) {
-  return fetchById<Profile>("profiles", id, PROFILE_FIELDS);
+  return fetchById<Profile & { secondary_roles: UserSecondaryRole[] }>("profiles", id, PROFILE_FIELDS);
+}
+
+// ═══ Obtener usuarios por rol (perfil principal o secundario) para una empresa ═══
+export async function getUsersByRoleForCompany(
+  role: string,
+  companyId?: string
+): Promise<{ id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" }[]> {
+  const { data, error } = await getSupabaseClient().rpc("get_users_by_role_for_company", {
+    p_role: role,
+    p_company_id: companyId || null,
+  });
+  if (error) throw new Error(`get_users_by_role_for_company: ${error.message}`);
+  return (data || []) as { id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" }[];
+}
+
+export async function getUsersByRolesForCompany(
+  roles: string[],
+  companyId?: string
+): Promise<{ id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" }[]> {
+  const { data, error } = await getSupabaseClient().rpc("get_users_by_roles_for_company", {
+    p_roles: roles,
+    p_company_id: companyId || null,
+  });
+  if (error) throw new Error(`get_users_by_roles_for_company: ${error.message}`);
+  return (data || []) as { id: string; full_name: string; email: string; role: string; source: "primary" | "secondary" }[];
+}
+
+// ═══ Gestionar perfiles secundarios ═══
+export async function addSecondaryRole(profileId: string, role: SecondaryRole, companyId?: string): Promise<UserSecondaryRole> {
+  return insertRow<UserSecondaryRole>("user_secondary_roles", {
+    profile_id: profileId,
+    role,
+    company_id: companyId || null,
+  }, "id, profile_id, role, company_id, created_at, updated_at");
+}
+
+export async function removeSecondaryRole(id: string): Promise<void> {
+  await deleteRow("user_secondary_roles", id);
+}
+
+export async function getSecondaryRoles(profileId: string): Promise<UserSecondaryRole[]> {
+  return fetchAll<UserSecondaryRole>("user_secondary_roles", {
+    select: "id, profile_id, role, company_id, created_at, updated_at, company:companies!user_secondary_roles_company_id_fkey(id, name)",
+    eq: { profile_id: profileId },
+    order: { column: "role", ascending: true },
+  });
 }
 
 export async function inviteUser(input: InviteUserInput & { company_id: string }) {

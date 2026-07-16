@@ -70,6 +70,8 @@ export const userTypeLabels: Record<UserRole, string> = {
   adjuster: "Liquidador",
   inspector: "Inspector",
   assistant: "Asistente",
+  auditor: "Auditor",
+  dispatcher: "Despachador",
   client_operator: "Operativo",
 };
 

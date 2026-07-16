@@ -674,7 +674,7 @@ export default function ClaimDetailPage() {
             habitability: habitabilityCatalog ?? [],
             events: eventsCatalog ?? [],
             currencies: currencyCatalog ?? [],
-            users: (users ?? []).map((u) => ({ id: u.id, full_name: u.full_name, email: u.email })),
+            users: (users ?? []).map((u) => ({ id: u.id, full_name: u.full_name || "", email: u.email || "" })),
             companies: (companiesCatalog ?? []).map((c) => ({ id: c.id, name: c.name ?? "" })),
             countries: (countriesCatalog ?? []).map((c) => ({ id: c.id, name: c.name })),
           }}

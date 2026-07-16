@@ -6,12 +6,12 @@ import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
-import { getUsers, inviteUser, updateUser, deactivateUser } from "@/services/users";
+import { getUsers, inviteUser, updateUser, deactivateUser, addSecondaryRole, removeSecondaryRole } from "@/services/users";
 import { getCompanies } from "@/services/companies";
 import { getCountries } from "@/services/countries";
 import { setUserClients } from "@/services/user-clients";
 import { inviteUserSchema, type InviteUserInput } from "@/lib/validations";
-import type { Company, Profile, UserClient, UserRole } from "@/types";
+import type { Company, Profile, UserClient, UserRole, SecondaryRole, UserSecondaryRole } from "@/types";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -41,14 +41,18 @@ const roleLabels: Record<UserRole, string> = {
   adjuster: "Liquidador",
   inspector: "Inspector",
   assistant: "Asistente",
+  auditor: "Auditor",
+  dispatcher: "Despachador",
   client_operator: "Operativo",
 };
 
-const roleTones: Record<UserRole, "blue" | "emerald" | "amber" | "sky" | "slate"> = {
+const roleTones: Record<UserRole, "blue" | "emerald" | "amber" | "sky" | "slate" | "violet" | "rose"> = {
   internal: "blue",
   adjuster: "emerald",
   inspector: "amber",
   assistant: "sky",
+  auditor: "violet",
+  dispatcher: "rose",
   client_operator: "slate",
 };
 
@@ -57,8 +61,19 @@ const roleDescriptions: Record<UserRole, string> = {
   adjuster: "Liquidador asociado a uno o más clientes. Ve siniestros donde es el ajustador.",
   inspector: "Inspector asociado a uno o más clientes. Completa inspecciones donde está a cargo.",
   assistant: "Asistente del liquidador. Realiza gestiones asignadas en los siniestros.",
+  auditor: "Auditor de siniestros. Revisa y aprueba gestiones que requieren auditoría.",
+  dispatcher: "Despachador. Asigna y despacha gestiones a los responsables correspondientes.",
   client_operator: "Operativo del cliente. Solo vista de los siniestros de su empresa.",
 };
+
+// Roles que pueden ser perfiles secundarios (nunca "internal" ni "client_operator")
+const secondaryRoleOptions: { value: SecondaryRole; label: string }[] = [
+  { value: "inspector", label: "Inspector" },
+  { value: "adjuster", label: "Liquidador" },
+  { value: "assistant", label: "Asistente" },
+  { value: "auditor", label: "Auditor" },
+  { value: "dispatcher", label: "Despachador" },
+];
 
 // Roles que requieren asignar clientes
 const rolesWithClients: UserRole[] = ["adjuster", "inspector", "assistant", "client_operator"];
@@ -71,6 +86,9 @@ export default function UsersPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+  const [secondaryRoles, setSecondaryRoles] = useState<UserSecondaryRole[]>([]);
+  const [newSecRole, setNewSecRole] = useState<SecondaryRole | "">("");
+  const [newSecCompany, setNewSecCompany] = useState<string>("");
   const [editForm, setEditForm] = useState({
     fullName: "",
     firstName: "",
@@ -138,6 +156,28 @@ export default function UsersPage() {
       setEditingId(null);
       setEditingUserId(null);
       setSelectedClientIds([]);
+      setSecondaryRoles([]);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const addSecRoleMut = useMutation({
+    mutationFn: ({ profileId, role, companyId }: { profileId: string; role: SecondaryRole; companyId?: string }) =>
+      addSecondaryRole(profileId, role, companyId),
+    onSuccess: () => {
+      toast.success("Rol secundario agregado");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setNewSecRole("");
+      setNewSecCompany("");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const removeSecRoleMut = useMutation({
+    mutationFn: (id: string) => removeSecondaryRole(id),
+    onSuccess: () => {
+      toast.success("Rol secundario eliminado");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -194,7 +234,7 @@ export default function UsersPage() {
     );
   };
 
-  const openEdit = (user: Profile & { user_clients: UserClient[] }) => {
+  const openEdit = (user: Profile & { user_clients: UserClient[]; secondary_roles?: UserSecondaryRole[] }) => {
     setEditingId(user.id);
     setEditingUserId(user.user_id);
     form.reset({
@@ -216,6 +256,9 @@ export default function UsersPage() {
     });
     const existingClientIds = user.user_clients?.map((uc: { company_id: string }) => uc.company_id) || [];
     setSelectedClientIds(existingClientIds);
+    setSecondaryRoles(user.secondary_roles || []);
+    setNewSecRole("");
+    setNewSecCompany("");
     setOpen(true);
   };
 
@@ -234,10 +277,31 @@ export default function UsersPage() {
       role: "adjuster" as UserRole,
     });
     setSelectedClientIds([]);
+    setSecondaryRoles([]);
+    setNewSecRole("");
+    setNewSecCompany("");
     setOpen(true);
   };
 
   const showClientsSection = rolesWithClients.includes(selectedRole);
+
+  // Roles secundarios disponibles: excluir el rol principal y los ya asignados
+  const availableSecRoles = secondaryRoleOptions.filter(
+    (r) => r.value !== editForm.role && !secondaryRoles.some((sr) => sr.role === r.value && (!sr.company_id || !newSecCompany || sr.company_id === newSecCompany))
+  );
+
+  const handleAddSecRole = () => {
+    if (!editingId || !newSecRole) return;
+    addSecRoleMut.mutate({
+      profileId: editingId,
+      role: newSecRole,
+      companyId: newSecCompany || undefined,
+    });
+  };
+
+  const handleRemoveSecRole = (id: string) => {
+    removeSecRoleMut.mutate(id);
+  };
 
   return (
     <div className="app-page">
@@ -454,6 +518,92 @@ export default function UsersPage() {
                     {selectedClientIds.length === 0 && (
                       <p className="text-xs text-amber-600 mt-1">
                         {selectedRole === "client_operator" ? "Debe seleccionar una empresa" : "Debe seleccionar al menos un cliente"}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Roles secundarios (solo en edición) ── */}
+                {editingId && (
+                  <div className="modal-field modal-field-full">
+                    <Label className="app-field-label">Perfiles Secundarios</Label>
+                    <p className="text-[11px] text-muted-foreground mb-2">
+                      Perfiles adicionales para aparecer en combos de asignación. No controlan acceso a páginas.
+                      No se puede repetir el perfil principal ni asignar &quot;Interno&quot;.
+                    </p>
+
+                    {/* Lista de roles secundarios actuales */}
+                    {secondaryRoles.length > 0 && (
+                      <div className="space-y-1 mb-2">
+                        {secondaryRoles.map((sr) => (
+                          <div key={sr.id} className="flex items-center justify-between px-2 py-1.5 rounded-md bg-muted/40 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{secondaryRoleOptions.find((r) => r.value === sr.role)?.label || sr.role}</span>
+                              {sr.company && <span className="text-muted-foreground">· {sr.company.name}</span>}
+                              {!sr.company_id && <span className="text-muted-foreground">· Todos los clientes</span>}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSecRole(sr.id)}
+                              disabled={removeSecRoleMut.isPending}
+                              className="text-red-500 hover:text-red-700 text-[11px]"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Formulario para agregar nuevo rol secundario */}
+                    {availableSecRoles.length > 0 ? (
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <Label className="app-field-label text-[10px]">Perfil</Label>
+                          <Select
+                            value={newSecRole}
+                            onValueChange={(v) => setNewSecRole(v as SecondaryRole)}
+                            items={availableSecRoles.map((r) => ({ value: r.value, label: r.label }))}
+                          >
+                            <SelectTrigger className="app-input h-7"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                            <SelectContent>
+                              {availableSecRoles.map((r) => (
+                                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1">
+                          <Label className="app-field-label text-[10px]">Cliente (opcional)</Label>
+                          <Select
+                            value={newSecCompany}
+                            onValueChange={(v) => setNewSecCompany(v || "")}
+                            items={[
+                              { value: "", label: "Todos los clientes" },
+                              ...(companies?.map((c: Company) => ({ value: c.id, label: c.name })) || []),
+                            ]}
+                          >
+                            <SelectTrigger className="app-input h-7"><SelectValue placeholder="Todos los clientes" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">Todos los clientes</SelectItem>
+                              {companies?.map((c: Company) => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddSecRole}
+                          disabled={!newSecRole || addSecRoleMut.isPending}
+                          className="pg-btn-platinum h-7 px-3 text-xs shrink-0"
+                        >
+                          {addSecRoleMut.isPending ? "..." : "Agregar"}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">
+                        {secondaryRoles.length > 0 ? "Todos los perfiles secundarios disponibles ya están asignados." : "No hay perfiles secundarios disponibles para este rol principal."}
                       </p>
                     )}
                   </div>

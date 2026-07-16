@@ -55,6 +55,8 @@ const ROLE_LABELS: Record<UserRole, string> = {
   adjuster: "Liquidador",
   inspector: "Inspector",
   assistant: "Asistente",
+  auditor: "Auditor",
+  dispatcher: "Despachador",
   client_operator: "Operador de Compañía",
 };
 

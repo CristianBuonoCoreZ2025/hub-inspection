@@ -181,12 +181,13 @@ export const ALL_SYSTEM_CODES = new Set([
 export default function DynamicScreen({ action, fields, onChange, readOnly, onAdvance, onReject }: DynamicScreenProps) {
   const values = (action.action_data || {}) as Record<string, unknown>;
 
-  // Cargar siniestro para entidades de tipo claim_*
+  // Cargar siniestro para entidades de tipo claim_* y para precargar inspector en coordinación
   const hasClaimEntities = fields.some((f) => CLAIM_ENTITIES.some((e) => e.code === f.type));
+  const hasCoordInspector = fields.some((f) => f.id === "coord_inspector");
   const { data: claim } = useQuery({
     queryKey: ["claim", action.claim_id],
     queryFn: () => getClaimById(action.claim_id),
-    enabled: hasClaimEntities && !!action.claim_id,
+    enabled: (hasClaimEntities || hasCoordInspector) && !!action.claim_id,
   });
 
   // Cargar participantes del siniestro (insured, broker, etc.)
@@ -208,6 +209,14 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
   const updateValue = (id: string, value: unknown) => {
     onChange?.({ ...values, [id]: value });
   };
+
+  // Precargar inspector del siniestro si el campo coord_inspector está vacío
+  useEffect(() => {
+    if (hasCoordInspector && claim?.inspector_id && !values.coord_inspector) {
+      onChange?.({ ...values, coord_inspector: claim.inspector_id });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claim?.inspector_id, hasCoordInspector]);
 
   // Separar campos por categoría
   const claimEntities = fields.filter((f) => f.category === "simple_entity" && CLAIM_ENTITIES.some((e) => e.code === f.type));
@@ -324,6 +333,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
                   allFields={fields}
                   onChange={updateValue}
                   readOnly={readOnly}
+                  action={action}
                 />
               </div>
             ))}
@@ -542,6 +552,7 @@ function ReviewLevelsView({ action, onAdvance, onReject }: { action: ActionWithR
             <LevelCard
               level={level}
               actionId={action.id}
+              claimId={action.claim_id}
               currentUserId={profile?.id || null}
               onAdvance={onAdvance}
               onReject={onReject}
@@ -556,6 +567,7 @@ function ReviewLevelsView({ action, onAdvance, onReject }: { action: ActionWithR
 function LevelCard({
   level,
   actionId,
+  claimId,
   currentUserId,
   onAdvance,
   onReject,
@@ -570,6 +582,7 @@ function LevelCard({
     active: boolean;
   };
   actionId: string;
+  claimId: string;
   currentUserId: string | null;
   onAdvance?: (level: "issuer" | "reviewer" | "approver") => void;
   onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void;
@@ -581,6 +594,41 @@ function LevelCard({
     queryKey: ["users-by-roles", level.roles],
     queryFn: () => getUsersByRoles(level.roles),
     enabled: level.roles.length > 0,
+  });
+
+  // Cargar los roles del claim (adjuster_id, inspector_id, etc.) para incluirlos como candidatos
+  const { data: claimRoleHolders } = useQuery({
+    queryKey: ["claim-role-holders", claimId, level.roles.join(",")],
+    queryFn: async () => {
+      const { getClaimById } = await import("@/services/claims");
+      const claim = await getClaimById(claimId);
+      if (!claim) return [];
+      const roleMap: Record<string, string | null | undefined> = {
+        adjuster: claim.adjuster_id,
+        assigned_adjuster: claim.assigned_adjuster_id,
+        assistant: claim.assistant_id,
+        inspector: claim.inspector_id,
+        auditor: claim.auditor_id,
+        dispatcher: claim.dispatcher_id,
+      };
+      // Recoger los profileIds que corresponden a los roles del nivel
+      const profileIds: string[] = [];
+      for (const [role, profileId] of Object.entries(roleMap)) {
+        if (!profileId) continue;
+        if (!level.roles.includes(role)) continue;
+        if (!profileIds.includes(profileId)) profileIds.push(profileId);
+      }
+      if (profileIds.length === 0) return [];
+      // Cargar los profiles
+      const { fetchAll } = await import("@/lib/supabase/db");
+      const profiles = await fetchAll<{ id: string; full_name: string; email: string; role: string }>("profiles", {
+        select: "id, full_name, email, role",
+        in: { id: profileIds },
+        eq: { is_active: true },
+      });
+      return profiles;
+    },
+    enabled: level.roles.length > 0 && !!claimId,
   });
 
   // Mutación para asignar responsable
@@ -597,6 +645,20 @@ function LevelCard({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Lista fusionada: usuarios por rol + holders del claim + responsable actual (sin duplicados)
+  const allCandidates = useMemo(() => {
+    const map = new Map<string, { id: string; full_name: string; email: string; role: string }>();
+    for (const c of (candidates || [])) map.set(c.id, c);
+    for (const h of (claimRoleHolders || [])) {
+      if (!map.has(h.id)) map.set(h.id, h);
+    }
+    // Incluir siempre al responsable actual aunque no cumpla el rol
+    if (level.currentId && !map.has(level.currentId)) {
+      map.set(level.currentId, { id: level.currentId, full_name: level.personName, email: "", role: "" });
+    }
+    return Array.from(map.values());
+  }, [candidates, claimRoleHolders, level.currentId, level.personName]);
+
   const sty = level.done
     ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
     : level.active
@@ -604,9 +666,12 @@ function LevelCard({
     : "bg-muted/40 text-muted-foreground";
 
   const isCurrentUser = level.currentId && currentUserId === level.currentId;
-  const isCandidate = !!currentUserId && (candidates || []).some(c => c.id === currentUserId);
-  // Puede avanzar/rechazar si la etapa está activa, no está done, y tiene el rol permitido
-  const canAct = level.active && !level.done && (isCandidate || isCurrentUser) && (onAdvance || onReject);
+  const isCandidate = !!currentUserId && allCandidates.some(c => c.id === currentUserId);
+  // Para emisión (issuer): cualquiera puede emitir, pasa a ser el emisor
+  // Para revisión/aprobación: solo el responsable o candidatos con el rol
+  const canAct = level.active && !level.done && (onAdvance || onReject) && (
+    level.key === "issuer" ? !!currentUserId : (isCandidate || isCurrentUser)
+  );
 
   const advanceLabel = level.key === "issuer" ? "Emitir" : level.key === "reviewer" ? "Revisar" : "Aprobar";
 
@@ -656,8 +721,8 @@ function LevelCard({
             disabled={assignMut.isPending}
           >
             <option value="" disabled>Seleccionar persona...</option>
-            {(candidates || []).map((c) => (
-              <option key={c.id} value={c.id}>{c.full_name || c.email}</option>
+            {(allCandidates || []).map((c) => (
+              <option key={c.id} value={c.id}>{c.full_name || c.email || c.id.slice(0, 8)}</option>
             ))}
           </select>
         </div>
@@ -1267,14 +1332,24 @@ function OwnField({
   allFields,
   onChange,
   readOnly,
+  action,
 }: {
   field: ScreenField;
   value: unknown;
   allFields: ScreenField[];
   onChange: (id: string, value: unknown) => void;
   readOnly?: boolean;
+  action?: ActionWithRelations;
 }) {
   const inputClass = "app-input h-8 text-[12px]";
+
+  // Calcular maxDate para campos datetime (días configurados en el template)
+  const daysToIssue = action?.action_template?.days_to_issue || 0;
+  const datetimeMaxDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysToIssue);
+    return d.toISOString().slice(0, 16);
+  }, [daysToIssue]);
 
   switch (field.type) {
     case "section":
@@ -1409,7 +1484,14 @@ function OwnField({
     case "table":
       return <TableField field={field} value={value} onChange={onChange} readOnly={readOnly} />;
 
-    case "datetime":
+    case "datetime": {
+      const valStr = String(value || "");
+      const now = new Date();
+      const maxDateObj = new Date(datetimeMaxDate);
+      const valDate = valStr ? new Date(valStr) : null;
+      const isPast = valDate && valDate < now;
+      const isOverMax = valDate && daysToIssue > 0 && valDate > maxDateObj;
+      const hasAlert = isPast || isOverMax;
       return (
         <div className="flex flex-col gap-1">
           <Label className="app-field-label text-[11px]">
@@ -1417,16 +1499,28 @@ function OwnField({
           </Label>
           <Input
             type="datetime-local"
-            className={inputClass}
-            value={String(value || "")}
+            className={`${inputClass} ${hasAlert ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+            value={valStr}
+            min={new Date().toISOString().slice(0, 16)}
+            max={datetimeMaxDate || undefined}
             onChange={(e) => onChange(field.id, e.target.value)}
             disabled={readOnly}
           />
+          {hasAlert && (
+            <p className="text-[9px] text-red-600 font-medium">
+              {isPast && "⚠ La fecha no puede ser en el pasado. "}
+              {isOverMax && `⚠ La fecha excede el máximo de ${daysToIssue} días configurados para esta gestión.`}
+            </p>
+          )}
+          {daysToIssue > 0 && !hasAlert && (
+            <p className="text-[9px] text-muted-foreground">Máx: {daysToIssue} días desde hoy</p>
+          )}
         </div>
       );
+    }
 
     case "inspector_select":
-      return <InspectorSelectField field={field} value={value} onChange={onChange} readOnly={readOnly} />;
+      return <InspectorSelectField field={field} value={value} onChange={onChange} readOnly={readOnly} claimId={action?.claim_id} />;
 
     default:
       return <div className="text-[11px] text-amber-600">Tipo no soportado: <strong>{field.type}</strong></div>;
@@ -1441,20 +1535,37 @@ function InspectorSelectField({
   value,
   onChange,
   readOnly,
+  claimId,
 }: {
   field: ScreenField;
   value: unknown;
   onChange: (id: string, value: unknown) => void;
   readOnly?: boolean;
+  claimId?: string;
 }) {
   const { data: inspectors } = useQuery({
     queryKey: ["users-by-roles", ["inspector", "adjuster"]],
     queryFn: () => getUsersByRoles(["inspector", "adjuster"]),
   });
 
+  // Cargar el claim para tener el inspector_id y marcarlo como sugerido
+  const { data: claim } = useQuery({
+    queryKey: ["claim", claimId],
+    queryFn: () => getClaimById(claimId!),
+    enabled: !!claimId,
+  });
+
+  const claimInspectorId = claim?.inspector_id || null;
+  const claimInspectorName = claim?.inspector?.full_name || null;
+
   const selectItems = [
     { value: "__none", label: "Seleccionar inspector..." },
-    ...(inspectors || []).map((p) => ({ value: p.id, label: p.full_name || p.email })),
+    ...(inspectors || []).map((p) => ({
+      value: p.id,
+      label: p.id === claimInspectorId && claimInspectorName
+        ? `${p.full_name || p.email} (Inspector del siniestro)`
+        : p.full_name || p.email,
+    })),
   ];
 
   return (

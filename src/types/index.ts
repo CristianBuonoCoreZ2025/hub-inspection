@@ -3,7 +3,28 @@ export type UserRole =
   | "adjuster"
   | "inspector"
   | "assistant"
+  | "auditor"
+  | "dispatcher"
   | "client_operator";
+
+/** Roles que pueden ser asignados como perfiles secundarios (nunca "internal") */
+export type SecondaryRole = "adjuster" | "inspector" | "assistant" | "auditor" | "dispatcher";
+
+export interface UserSecondaryRole {
+  id: string;
+  profile_id: string;
+  role: SecondaryRole;
+  company_id: string | null;
+  created_at: string;
+  updated_at: string;
+  company?: { id: string; name: string } | null;
+}
+
+export interface UserOption {
+  id: string;
+  full_name: string;
+  email: string;
+}
 
 export interface UserClient {
   id: string;

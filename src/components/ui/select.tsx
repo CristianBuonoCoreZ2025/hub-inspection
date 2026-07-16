@@ -77,29 +77,31 @@ function SelectContent({
       align={align}
       alignOffset={alignOffset}
       alignItemWithTrigger={alignItemWithTrigger}
-      className="isolate z-50"
+      positionMethod="fixed"
+      collisionAvoidance={{ side: "flip", align: "shift", fallbackAxisSide: "none" }}
+      className="isolate z-200"
     >
-        <SelectPrimitive.Popup
-          data-slot="select-content"
-          data-align-trigger={alignItemWithTrigger}
-          className={cn(
-            "relative isolate max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto",
-            "rounded-[10px] border border-input",
-            "bg-card/85 backdrop-blur-xl saturate-150",
-            "shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
-            "dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
-            "text-popover-foreground p-1",
-            "data-[side=bottom]:rounded-t-none data-[side=top]:rounded-b-none",
-            "duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-left-1 data-[side=inline-start]:slide-in-from-right-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-100 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-            className
-          )}
-          {...props}
-        >
-          <SelectScrollUpButton />
-          <SelectPrimitive.List>{children}</SelectPrimitive.List>
-          <SelectScrollDownButton />
-        </SelectPrimitive.Popup>
-      </SelectPrimitive.Positioner>
+      <SelectPrimitive.Popup
+        data-slot="select-content"
+        data-align-trigger={alignItemWithTrigger}
+        className={cn(
+          "relative isolate max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto",
+          "rounded-[10px] border border-input",
+          "bg-card/85 backdrop-blur-xl saturate-150",
+          "shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
+          "dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
+          "text-popover-foreground p-1",
+          "data-[side=bottom]:rounded-t-none data-[side=top]:rounded-b-none",
+          "duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-left-1 data-[side=inline-start]:slide-in-from-right-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-100 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          className
+        )}
+        {...props}
+      >
+        <SelectScrollUpButton />
+        <SelectPrimitive.List>{children}</SelectPrimitive.List>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Popup>
+    </SelectPrimitive.Positioner>
   )
 }
 
