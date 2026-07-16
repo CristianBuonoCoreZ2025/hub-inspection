@@ -61,6 +61,15 @@ AS $$
   WHERE p.is_active = true
     AND usr.role = p_role
     AND (p_company_id IS NULL OR usr.company_id IS NULL OR usr.company_id = p_company_id)
+
+  UNION
+
+  -- 3. Usuarios "internal" aparecen en TODOS los combos (super-rol)
+  SELECT p.id, p.full_name, p.email, p.role::TEXT, 'internal'::TEXT as source
+  FROM profiles p
+  WHERE p.is_active = true
+    AND p.role::TEXT = 'internal'
+    AND (p_company_id IS NULL OR p.company_id = p_company_id)
   ORDER BY full_name;
 $$;
 
@@ -95,6 +104,15 @@ AS $$
   WHERE p.is_active = true
     AND usr.role = ANY(p_roles)
     AND (p_company_id IS NULL OR usr.company_id IS NULL OR usr.company_id = p_company_id)
+
+  UNION
+
+  -- 3. Usuarios "internal" aparecen en TODOS los combos (super-rol)
+  SELECT p.id, p.full_name, p.email, p.role::TEXT, 'internal'::TEXT as source
+  FROM profiles p
+  WHERE p.is_active = true
+    AND p.role::TEXT = 'internal'
+    AND (p_company_id IS NULL OR p.company_id = p_company_id)
   ORDER BY full_name;
 $$;
 
@@ -111,3 +129,19 @@ DROP TRIGGER IF EXISTS trg_secondary_role_updated_at ON user_secondary_roles;
 CREATE TRIGGER trg_secondary_role_updated_at
   BEFORE UPDATE ON user_secondary_roles
   FOR EACH ROW EXECUTE FUNCTION update_secondary_role_updated_at();
+
+-- ═══ RLS: Row Level Security ═══
+-- Habilitar RLS (Supabase lo exige en todas las tablas).
+-- Policy permissive: usuarios autenticados pueden leer y escribir.
+-- Las restricciones finas de acceso se manejan en la app (server actions).
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'user_secondary_roles' AND relrowsecurity = true) THEN
+    ALTER TABLE user_secondary_roles ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE user_secondary_roles FORCE ROW LEVEL SECURITY;
+  END IF;
+END $$;
+
+DROP POLICY IF EXISTS "user_secondary_roles_all" ON user_secondary_roles;
+CREATE POLICY "user_secondary_roles_all" ON user_secondary_roles
+  FOR ALL TO public USING (true) WITH CHECK (true);
