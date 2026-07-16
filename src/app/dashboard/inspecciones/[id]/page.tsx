@@ -435,7 +435,7 @@ export default function InspectionDetailPage() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {statusActions()}
-          {(session.status === "active") && (
+          {(session.status === "active" && session.inspection_type === "remote") && (
             <Button
               variant="outline"
               size="sm"
@@ -536,7 +536,7 @@ export default function InspectionDetailPage() {
               </div>
               <div>
                 <span className="app-data-label">Inspector</span>
-                <p className="font-medium">{inspectors.find((i) => i.id === claim?.inspector_id)?.full_name || "—"}</p>
+                <p className="font-medium">{inspectors.find((i) => i.id === (session.inspector_id || claim?.inspector_id))?.full_name || "—"}</p>
               </div>
               <div>
                 <span className="app-data-label">Gestión</span>
@@ -724,8 +724,8 @@ export default function InspectionDetailPage() {
 
         </div>
 
-        {/* Panel lateral de Chat */}
-        {chatPanelOpen && (
+        {/* Panel lateral de Chat — solo para inspecciones remotas */}
+        {chatPanelOpen && session.inspection_type === "remote" && (
           <div className="w-[340px] shrink-0 hidden lg:flex flex-col">
             <div className="app-panel flex flex-col flex-1" style={{ position: "sticky", top: "80px", maxHeight: "calc(100vh - 100px)" }}>
               <div className="flex items-center justify-between mb-3 pb-2 border-b">
@@ -749,8 +749,8 @@ export default function InspectionDetailPage() {
           </div>
         )}
 
-        {/* Botón flotante para reabrir chat */}
-        {!chatPanelOpen && (
+        {/* Botón flotante para reabrir chat — solo para inspecciones remotas */}
+        {!chatPanelOpen && session.inspection_type === "remote" && (
           <button
             onClick={() => setChatPanelOpen(true)}
             className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 transition-transform"

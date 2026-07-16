@@ -352,11 +352,17 @@ export default function ClaimDetailPage() {
   const { profile } = useAuth();
 
   const issueMut = useMutation({
-    mutationFn: () => issueClaimAction(editingActionId!, profile?.id, editingAction?.action_data || undefined),
+    mutationFn: () => issueClaimAction(
+      editingActionId!,
+      profile?.id,
+      { ...(editingAction?.action_data || {}), ...editingActionData }
+    ),
     onSuccess: () => {
       toast.success("Gestión emitida");
       queryClient.invalidateQueries({ queryKey: ["claim-actions", id] });
       queryClient.invalidateQueries({ queryKey: ["claim-action", editingActionId] });
+      queryClient.invalidateQueries({ queryKey: ["claim", id] });
+      queryClient.invalidateQueries({ queryKey: ["inspection-sessions", id] });
     },
     onError: (err: Error) => toast.error(err.message),
   });

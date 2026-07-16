@@ -320,6 +320,7 @@ export interface InspectionSession {
   claim_id: string;
   claim_action_id: string | null;
   action_template_id: string | null;
+  inspector_id: string | null;
   inspection_number: string | null;
   scheduled_at: string | null;
   started_at: string | null;

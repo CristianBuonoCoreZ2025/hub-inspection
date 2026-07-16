@@ -425,11 +425,34 @@ export async function issueClaimAction(actionId: string, userId?: string, action
   }
 
   // ── Validar que el COB tenga al menos 1 cobertura ──
-  const action = await fetchById<ClaimAction>("claim_actions", actionId, "id, action_template_id, claim_id, action_template:action_template!claim_actions_action_template_id_fkey(code)");
+  const action = await fetchById<ClaimAction>("claim_actions", actionId, "id, action_template_id, claim_id, action_data, action_template:action_template!claim_actions_action_template_id_fkey(code)");
   if (action?.action_template?.code === "COB") {
     const coverages = await getClaimCoveragesByAction(action.claim_id!, actionId);
     if (!coverages || coverages.length === 0) {
       throw new Error("Debe seleccionar al menos una cobertura antes de emitir el Ingreso de Coberturas.");
+    }
+  }
+
+  // ── Validar campos obligatorios para COI (Coordinación de Inspección) ──
+  if (action?.action_template?.code === "COI") {
+    const data = actionData || action.action_data || {};
+    const errors: string[] = [];
+
+    if (!data.coord_inspection_type) {
+      errors.push("Tipo de inspección");
+    }
+    if (!data.coord_fecha) {
+      errors.push("Fecha y hora");
+    }
+    if (!data.coord_contacto) {
+      errors.push("Contacto");
+    }
+    if (!data.coord_inspector) {
+      errors.push("Inspector asignado");
+    }
+
+    if (errors.length > 0) {
+      throw new Error(`Faltan campos obligatorios: ${errors.join(", ")}.`);
     }
   }
 

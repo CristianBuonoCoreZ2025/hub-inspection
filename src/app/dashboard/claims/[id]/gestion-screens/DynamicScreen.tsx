@@ -3347,7 +3347,7 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
           {session.status === "completed" && (
             <div className="border-t border-border pt-2 flex gap-2">
               <a
-                href={`/dashboard/claims/${claimId}/inspeccion/${session.id}`}
+                href={`/dashboard/inspecciones/${session.id}`}
                 className="text-[11px] text-sky-600 hover:underline"
               >
                 Ver detalles →
