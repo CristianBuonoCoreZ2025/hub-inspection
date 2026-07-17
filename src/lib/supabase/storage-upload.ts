@@ -1,33 +1,29 @@
-import { getSupabaseClient } from "./client";
-
 /**
- * Sube un archivo a Supabase Storage.
- * Reemplaza a uploadFileToStorage de Nhost.
+ * Sube un archivo a Cloudflare R2 via API route server-side.
+ * Reemplaza al upload directo a Supabase Storage.
  *
  * @param file Archivo a subir
  * @param path Path dentro del bucket (ej: "evidences/foto.jpg")
- * @param bucket Bucket de Supabase Storage (default: "inspection-evidences")
  * @returns URL pública del archivo subido
  */
 export async function uploadFileToStorage(
   file: File | Blob,
-  path: string,
-  bucket = "inspection-evidences"
+  path: string
 ): Promise<string> {
-  const supabase = getSupabaseClient();
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const contentType = file instanceof File ? file.type : "application/octet-stream";
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("path", path);
 
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(path, buffer, { contentType });
+  const res = await fetch("/api/storage/upload", {
+    method: "POST",
+    body: formData,
+  });
 
-  if (error) throw new Error(error.message);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Error al subir archivo a R2");
+  }
 
-  const { data: urlData } = supabase.storage
-    .from(bucket)
-    .getPublicUrl(path);
-
-  return urlData.publicUrl;
+  const data = (await res.json()) as { url: string };
+  return data.url;
 }

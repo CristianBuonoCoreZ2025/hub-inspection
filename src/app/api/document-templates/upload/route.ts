@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { extractPlaceholdersFromDocx } from "@/services/document-templates-docx";
-import { createAdminClient } from "@/lib/supabase/server";
+import { uploadToR2 } from "@/lib/storage/r2-upload";
 
 /**
  * POST /api/document-templates/upload
  *
- * Sube un .docx a Supabase Storage y devuelve:
+ * Sube un .docx a Cloudflare R2 y devuelve:
  *  - url: URL pública del archivo
- *  - fileId: path del archivo en Storage
+ *  - fileId: path del archivo en R2
  *  - fileName, fileSize
  *  - placeholders: lista de {placeholders} detectados en el documento
  */
@@ -44,35 +44,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 2. Subir a Supabase Storage
-    const supabase = createAdminClient();
+    // 2. Subir a Cloudflare R2
     const filePath = `document-templates/${Date.now()}_${file.name}`;
     const buffer = Buffer.from(arrayBuffer);
 
-    const { error: uploadError } = await supabase.storage
-      .from("documents")
-      .upload(filePath, buffer, {
-        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      });
-
-    if (uploadError) {
-      logger.error("Doc template upload: Storage error", new Error(uploadError.message), {
-        component: "doc-template-upload",
-        action: "storage.upload",
-        metadata: { error: uploadError.message },
-      });
-      return NextResponse.json(
-        { error: `Error al subir archivo: ${uploadError.message}` },
-        { status: 500 }
-      );
-    }
-
-    const { data: urlData } = supabase.storage
-      .from("documents")
-      .getPublicUrl(filePath);
+    const url = await uploadToR2(
+      buffer,
+      filePath,
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    );
 
     return NextResponse.json({
-      url: urlData.publicUrl,
+      url,
       fileId: filePath,
       fileName: file.name,
       fileSize: file.size,
@@ -84,7 +67,7 @@ export async function POST(request: NextRequest) {
       action: "upload",
     });
     return NextResponse.json(
-      { error: "No se pudo subir el archivo" },
+      { error: err instanceof Error ? err.message : "No se pudo subir el archivo" },
       { status: 500 }
     );
   }

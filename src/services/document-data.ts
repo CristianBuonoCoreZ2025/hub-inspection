@@ -1,6 +1,5 @@
 import "server-only";
 
-import { getSupabaseClient } from "@/lib/supabase/client";
 import { fetchById, fetchAll } from "@/lib/supabase/db";
 import type { DocumentData, ParticipantData, UserData, CatalogRef } from "@/lib/document-fields";
 
@@ -191,24 +190,16 @@ export async function buildDocumentDataForClaim(claimId: string): Promise<Docume
 }
 
 /**
- * Descarga el .docx de una plantilla desde Supabase Storage (signed URL)
+ * Descarga el .docx de una plantilla desde Cloudflare R2 (URL pública)
  * y devuelve el buffer.
  */
 export async function fetchTemplateBuffer(fileUrl: string): Promise<Uint8Array> {
-  const supabase = getSupabaseClient();
-
-  // Si la URL es una ruta de Supabase Storage, generar signed URL
-  // El fileUrl puede ser una ruta relativa dentro del bucket o una URL completa
-  const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "documents";
+  // Con R2, las URLs ya son públicas — solo descargar
+  // Si es una ruta relativa (no empieza con http), construir URL con r2PublicUrl
   let downloadUrl = fileUrl;
-
-  // Si es una ruta relativa (no empieza con http), generar signed URL
   if (!fileUrl.startsWith("http")) {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(fileUrl, 60);
-    if (error) throw new Error(`No se pudo generar URL firmada: ${error.message}`);
-    downloadUrl = data.signedUrl;
+    const r2PublicUrl = process.env.R2_PUBLIC_URL || "";
+    downloadUrl = `${r2PublicUrl}/${fileUrl}`;
   }
 
   const res = await fetch(downloadUrl, { cache: "no-store" });
