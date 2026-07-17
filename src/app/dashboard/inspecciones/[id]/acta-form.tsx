@@ -218,7 +218,8 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
 
   const catalogSelect = (name: string, category: string, placeholder = "Seleccionar...") => {
     const items = catalogs[category] || [];
-    const current = String(watch(name) ?? "");
+    const raw = watch(name);
+    const current = raw ? String(raw) : null;
     return (
       <Select
         value={current}
@@ -241,7 +242,8 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
   };
 
   const tableSelect = (name: string, items: { id: string; name: string }[], placeholder = "Seleccionar...") => {
-    const current = String(watch(name) ?? "");
+    const raw = watch(name);
+    const current = raw ? String(raw) : null;
     return (
       <Select
         value={current}
@@ -264,7 +266,8 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
   };
 
   const numberSelect = (name: string, max: number, placeholder = "Seleccionar...") => {
-    const current = String(watch(name) ?? "");
+    const raw = watch(name);
+    const current = raw ? String(raw) : null;
     return (
       <Select
         value={current}

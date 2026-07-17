@@ -588,7 +588,7 @@ export default function GestionesPage() {
                   <Label className="text-[10px] text-muted-foreground">
                     Tipo <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={form.action_type_id ?? ""} onValueChange={(v) => setForm({ ...form, action_type_id: v ?? "" })} items={types?.map(t => ({ value: t.id, label: t.name })) || []}>
+                  <Select value={form.action_type_id || null} onValueChange={(v) => setForm({ ...form, action_type_id: v ?? "" })} items={types?.map(t => ({ value: t.id, label: t.name })) || []}>
                     <SelectTrigger className="app-input h-7"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                     <SelectContent>{types?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
                   </Select>
