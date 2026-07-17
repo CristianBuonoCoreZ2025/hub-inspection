@@ -8,8 +8,9 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getPropertyClassifications, createPropertyClassification, updatePropertyClassification, deletePropertyClassification } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, Home, Boxes } from "lucide-react";
+import { Search, Pencil, Trash2, Home, Boxes, Settings2 } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
+import type { PropertyClassification } from "@/types";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { FieldConfigEditor } from "@/components/ui/field-config-editor";
 
 export default function PropertyClassificationPage() {
   const queryClient = useQueryClient();
@@ -28,6 +30,8 @@ export default function PropertyClassificationPage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<{ name: string; description: string }>({"name":"","description":""});
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configItem, setConfigItem] = useState<PropertyClassification | null>(null);
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["clasificacion_bien"],
@@ -53,6 +57,15 @@ export default function PropertyClassificationPage() {
       setOpen(false);
       setEditingId(null);
       setFormData({"name":"","description":""});
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const updateConfigMutation = useMutation({
+    mutationFn: ({ id, config }: { id: string; config: any }) => updatePropertyClassification(id, { field_config: config }),
+    onSuccess: () => {
+      toast.success("Configuración de campos actualizada");
+      queryClient.invalidateQueries({ queryKey: ["clasificacion_bien"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -153,6 +166,12 @@ export default function PropertyClassificationPage() {
                             setOpen(true);
                           }}><Pencil className="h-4 w-4" /></Button>
                         )}
+                        {canEdit("catalogos") && (
+                          <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+                            setConfigItem(item);
+                            setConfigOpen(true);
+                          }}><Settings2 className="h-4 w-4" /></Button>
+                        )}
                         {canDelete("catalogos") && (
                           <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
                             <Trash2 className="h-4 w-4" />
@@ -199,6 +218,16 @@ export default function PropertyClassificationPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {configItem && (
+        <FieldConfigEditor
+          open={configOpen}
+          onOpenChange={setConfigOpen}
+          currentConfig={configItem.field_config as any}
+          onSave={(config) => updateConfigMutation.mutate({ id: configItem.id, config })}
+          itemName={configItem.name}
+        />
+      )}
     </div>
   );
 }

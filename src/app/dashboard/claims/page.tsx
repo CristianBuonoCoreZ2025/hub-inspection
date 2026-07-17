@@ -889,8 +889,8 @@ function ClaimsPageContent() {
       </div>
 
       <div className="app-toolbar">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full sm:w-[160px] shrink-0">
+        <div className="flex gap-2 flex-1 flex-wrap">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar..."
@@ -900,8 +900,8 @@ function ClaimsPageContent() {
             />
           </div>
           <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={statusOptions}>
-            <SelectTrigger className="app-input h-8 text-[12px] w-full sm:w-[140px] shrink-0">
-              <SelectValue />
+            <SelectTrigger className="app-input max-w-[140px]">
+              <SelectValue placeholder="Todos los estados" />
             </SelectTrigger>
             <SelectContent>
               {statusOptions.map((s) => (
@@ -909,15 +909,14 @@ function ClaimsPageContent() {
               ))}
             </SelectContent>
           </Select>
-          <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="w-full sm:w-[110px] shrink-0" />
-          <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="w-full sm:w-[110px] shrink-0" />
+          <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="max-w-[110px]" />
+          <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="max-w-[110px]" />
           {(statusFilter || dateFrom || dateTo) && (
             <button
               onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
-              className="btn-icon-sm"
-              aria-label="Limpiar filtros"
+              className="text-[12px] text-muted-foreground hover:text-foreground px-2"
             >
-              <X className="h-3.5 w-3.5" />
+              Limpiar
             </button>
           )}
         </div>

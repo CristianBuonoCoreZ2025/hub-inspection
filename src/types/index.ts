@@ -670,6 +670,7 @@ export interface PropertyClassification {
   name: string;
   description: string | null;
   is_active: boolean;
+  field_config?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -707,6 +708,7 @@ export interface HousingDestination {
   name: string;
   description: string | null;
   is_active: boolean;
+  field_config?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }

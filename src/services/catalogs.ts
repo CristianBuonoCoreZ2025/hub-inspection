@@ -345,7 +345,7 @@ export async function deleteCommune(id: string) {
 
 export async function getPropertyClassifications() {
   return fetchAll<PropertyClassification>("property_classifications", {
-    select: "id, name, description, is_active, created_at, updated_at",
+    select: "id, name, description, is_active, field_config, created_at, updated_at",
     eq: { is_active: true },
     order: { column: "name", ascending: true },
   });
@@ -355,7 +355,7 @@ export async function createPropertyClassification(input: { name: string; descri
   return insertRow<PropertyClassification>("property_classifications", {
     ...input,
     is_active: true,
-  }, "id, name, description, is_active");
+  }, "id, name, description, is_active, field_config");
 }
 
 export async function updatePropertyClassification(id: string, input: Partial<PropertyClassification>) {
@@ -363,7 +363,7 @@ export async function updatePropertyClassification(id: string, input: Partial<Pr
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  return updateRow<PropertyClassification>("property_classifications", id, set, "id, name, description, is_active");
+  return updateRow<PropertyClassification>("property_classifications", id, set, "id, name, description, is_active, field_config");
 }
 
 export async function deletePropertyClassification(id: string) {
@@ -469,7 +469,7 @@ export async function deleteClaimType(id: string) {
 
 export async function getHousingDestinations() {
   return fetchAll<HousingDestination>("housing_destinations", {
-    select: "id, name, description, is_active, created_at, updated_at",
+    select: "id, name, description, is_active, field_config, created_at, updated_at",
     eq: { is_active: true },
     order: { column: "name", ascending: true },
   });
@@ -479,7 +479,7 @@ export async function createHousingDestination(input: { name: string; descriptio
   return insertRow<HousingDestination>("housing_destinations", {
     ...input,
     is_active: true,
-  }, "id, name, description, is_active");
+  }, "id, name, description, is_active, field_config");
 }
 
 export async function updateHousingDestination(id: string, input: Partial<HousingDestination>) {
@@ -487,7 +487,7 @@ export async function updateHousingDestination(id: string, input: Partial<Housin
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  return updateRow<HousingDestination>("housing_destinations", id, set, "id, name, description, is_active");
+  return updateRow<HousingDestination>("housing_destinations", id, set, "id, name, description, is_active, field_config");
 }
 
 export async function deleteHousingDestination(id: string) {
