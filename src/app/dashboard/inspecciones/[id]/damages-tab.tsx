@@ -38,48 +38,48 @@ type DamageType = "building" | "content";
 interface DamageForm {
   session_id: string;
   category: string;
-  subcategory: string | null;
+  subcategory: string;
   description: string;
-  observations: string | null;
+  observations: string;
   severity: InspectionDamage["severity"];
-  dependency: string | null;
-  sector: string | null;
-  materiality_type: string | null;
-  unit: string | null;
-  quantity: number | null;
+  dependency: string;
+  sector: string;
+  materiality_type: string;
+  unit: string;
+  quantity: number;
   damage_type: DamageType;
-  product: string | null;
-  brand_model: string | null;
-  purchase_date: string | null;
-  estimated_amount: number | null;
-  third_party_id: string | null;
-  space_id: string | null;
-  content_good_type_id: string | null;
-  building_damage_category_id: string | null;
+  product: string;
+  brand_model: string;
+  purchase_date: string;
+  estimated_amount: number;
+  third_party_id: string;
+  space_id: string;
+  content_good_type_id: string;
+  building_damage_category_id: string;
 }
 
 function emptyForm(sessionId: string, type: DamageType): DamageForm {
   return {
     session_id: sessionId,
     category: type === "building" ? "structural" : "content",
-    subcategory: null,
+    subcategory: "",
     description: "",
-    observations: null,
+    observations: "",
     severity: "low",
-    dependency: null,
-    sector: null,
-    materiality_type: null,
-    unit: null,
-    quantity: null,
+    dependency: "",
+    sector: "",
+    materiality_type: "",
+    unit: "",
+    quantity: 0,
     damage_type: type,
-    product: null,
-    brand_model: null,
-    purchase_date: null,
-    estimated_amount: null,
-    third_party_id: null,
-    space_id: null,
-    content_good_type_id: null,
-    building_damage_category_id: null,
+    product: "",
+    brand_model: "",
+    purchase_date: "",
+    estimated_amount: 0,
+    third_party_id: "",
+    space_id: "",
+    content_good_type_id: "",
+    building_damage_category_id: "",
   };
 }
 
@@ -87,24 +87,24 @@ function damageToForm(d: InspectionDamage): DamageForm {
   return {
     session_id: d.session_id,
     category: d.category ?? "structural",
-    subcategory: d.subcategory ?? null,
+    subcategory: d.subcategory ?? "",
     description: d.description ?? "",
-    observations: d.observations ?? null,
+    observations: d.observations ?? "",
     severity: d.severity ?? "low",
-    dependency: d.dependency ?? null,
-    sector: d.sector ?? null,
-    materiality_type: d.materiality_type ?? null,
-    unit: d.unit ?? null,
-    quantity: d.quantity ?? null,
+    dependency: d.dependency ?? "",
+    sector: d.sector ?? "",
+    materiality_type: d.materiality_type ?? "",
+    unit: d.unit ?? "",
+    quantity: d.quantity ?? 0,
     damage_type: d.damage_type === "content" ? "content" : "building",
-    product: d.product ?? null,
-    brand_model: d.brand_model ?? null,
-    purchase_date: d.purchase_date ?? null,
-    estimated_amount: d.estimated_amount ?? null,
-    third_party_id: d.third_party_id ?? null,
-    space_id: d.space_id ?? null,
-    content_good_type_id: d.content_good_type_id ?? null,
-    building_damage_category_id: d.building_damage_category_id ?? null,
+    product: d.product ?? "",
+    brand_model: d.brand_model ?? "",
+    purchase_date: d.purchase_date ?? "",
+    estimated_amount: d.estimated_amount ?? 0,
+    third_party_id: d.third_party_id ?? "",
+    space_id: d.space_id ?? "",
+    content_good_type_id: d.content_good_type_id ?? "",
+    building_damage_category_id: d.building_damage_category_id ?? "",
   };
 }
 
@@ -199,10 +199,29 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
   const bldCategoryName = (id: string | null) => buildingCategories.find((c) => c.id === id)?.name || "—";
 
   const handleSubmit = () => {
+    // Convertir "" y 0 a null para campos opcionales de la API
+    const payload = {
+      ...form,
+      subcategory: form.subcategory || null,
+      observations: form.observations || null,
+      dependency: form.dependency || null,
+      sector: form.sector || null,
+      materiality_type: form.materiality_type || null,
+      unit: form.unit || null,
+      quantity: form.quantity || null,
+      product: form.product || null,
+      brand_model: form.brand_model || null,
+      purchase_date: form.purchase_date || null,
+      estimated_amount: form.estimated_amount || null,
+      third_party_id: form.third_party_id || null,
+      space_id: form.space_id || null,
+      content_good_type_id: form.content_good_type_id || null,
+      building_damage_category_id: form.building_damage_category_id || null,
+    };
     if (editing === "new") {
-      createMutation.mutate(form);
+      createMutation.mutate(payload);
     } else if (editing) {
-      updateMutation.mutate({ id: editing, data: form });
+      updateMutation.mutate({ id: editing, data: payload });
     }
   };
 
@@ -268,10 +287,10 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Espacio / Recinto</label>
                 <Select
-                  value={form.space_id ?? null}
+                  value={form.space_id || ""}
                   onValueChange={(v) => {
                     const space = spaces.find((s) => s.id === v);
-                    setForm({ ...form, space_id: v || null, dependency: space?.name || null });
+                    setForm({ ...form, space_id: v || "", dependency: space?.name || "" });
                   }}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
@@ -285,10 +304,10 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Categoría del Daño</label>
                 <Select
-                  value={form.building_damage_category_id ?? null}
+                  value={form.building_damage_category_id || ""}
                   onValueChange={(v) => {
                     const cat = buildingCategories.find((c) => c.id === v);
-                    setForm({ ...form, building_damage_category_id: v || null, category: cat?.name || form.category });
+                    setForm({ ...form, building_damage_category_id: v || "", category: cat?.name || form.category });
                   }}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
@@ -325,8 +344,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Materialidad</label>
                 <input
-                  value={form.materiality_type || ""}
-                  onChange={(e) => setForm({ ...form, materiality_type: e.target.value || null })}
+                  value={form.materiality_type}
+                  onChange={(e) => setForm({ ...form, materiality_type: e.target.value })}
                   placeholder="Ej. Hormigón, Albañilería..."
                   className="app-input h-7 w-full text-[13px]"
                 />
@@ -335,8 +354,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                 <label className="app-field-label">Cantidad</label>
                 <input
                   type="number"
-                  value={form.quantity ?? ""}
-                  onChange={(e) => setForm({ ...form, quantity: e.target.value ? Number(e.target.value) : null })}
+                  value={form.quantity}
+                  onChange={(e) => setForm({ ...form, quantity: e.target.value ? Number(e.target.value) : 0 })}
                   placeholder="0"
                   className="app-input h-7 w-full text-[13px]"
                 />
@@ -344,8 +363,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Unidad</label>
                 <Select
-                  value={form.unit ?? null}
-                  onValueChange={(v) => setForm({ ...form, unit: v || null })}
+                  value={form.unit}
+                  onValueChange={(v) => setForm({ ...form, unit: v || "" })}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
                     <SelectValue placeholder="Seleccionar..." />
@@ -358,8 +377,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field modal-field-full">
                 <label className="app-field-label">Observaciones</label>
                 <input
-                  value={form.observations || ""}
-                  onChange={(e) => setForm({ ...form, observations: e.target.value || null })}
+                  value={form.observations}
+                  onChange={(e) => setForm({ ...form, observations: e.target.value })}
                   placeholder="Observaciones adicionales..."
                   className="app-input h-7 w-full text-[13px]"
                 />
@@ -368,8 +387,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                 <label className="app-field-label">Monto Estimado ($)</label>
                 <input
                   type="number"
-                  value={form.estimated_amount ?? ""}
-                  onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : null })}
+                  value={form.estimated_amount}
+                  onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : 0 })}
                   placeholder="0"
                   className="app-input h-7 w-full text-[13px]"
                 />
@@ -378,8 +397,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                 <div className="modal-field">
                   <label className="app-field-label">Tercero Afectado (opcional)</label>
                   <Select
-                    value={form.third_party_id ?? null}
-                    onValueChange={(v) => setForm({ ...form, third_party_id: v || null })}
+                    value={form.third_party_id || ""}
+                    onValueChange={(v) => setForm({ ...form, third_party_id: v || "" })}
                   >
                     <SelectTrigger className="app-input h-7 w-full text-[13px]">
                       <SelectValue placeholder="Si es daño de un tercero..." />
@@ -399,10 +418,10 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Tipo de Bien</label>
                 <Select
-                  value={form.content_good_type_id ?? null}
+                  value={form.content_good_type_id || ""}
                   onValueChange={(v) => {
                     const gt = goodTypes.find((g) => g.id === v);
-                    setForm({ ...form, content_good_type_id: v || null, category: gt?.name || form.category });
+                    setForm({ ...form, content_good_type_id: v || "", category: gt?.name || form.category });
                   }}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
@@ -416,8 +435,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Producto</label>
                 <input
-                  value={form.product || ""}
-                  onChange={(e) => setForm({ ...form, product: e.target.value || null })}
+                  value={form.product}
+                  onChange={(e) => setForm({ ...form, product: e.target.value })}
                   placeholder="Ej. Televisor Samsung 55"
                   className="app-input h-7 w-full text-[13px]"
                 />
@@ -425,8 +444,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Marca / Modelo</label>
                 <input
-                  value={form.brand_model || ""}
-                  onChange={(e) => setForm({ ...form, brand_model: e.target.value || null })}
+                  value={form.brand_model}
+                  onChange={(e) => setForm({ ...form, brand_model: e.target.value })}
                   placeholder="Ej. UN55AU8000"
                   className="app-input h-7 w-full text-[13px]"
                 />
@@ -449,8 +468,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                 <label className="app-field-label">Cantidad</label>
                 <input
                   type="number"
-                  value={form.quantity ?? ""}
-                  onChange={(e) => setForm({ ...form, quantity: e.target.value ? Number(e.target.value) : null })}
+                  value={form.quantity}
+                  onChange={(e) => setForm({ ...form, quantity: e.target.value ? Number(e.target.value) : 0 })}
                   placeholder="1"
                   className="app-input h-7 w-full text-[13px]"
                 />
@@ -458,15 +477,15 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Fecha Compra</label>
                 <DatePicker
-                  value={form.purchase_date || ""}
-                  onChange={(value) => setForm({ ...form, purchase_date: value || null })}
+                  value={form.purchase_date}
+                  onChange={(value) => setForm({ ...form, purchase_date: value || "" })}
                   className="w-[130px]"
                 />
               </div>
               <div className="modal-field modal-field-full">
                 <label className="app-field-label">Descripción / Detalle del daño</label>
                 <input
-                  value={form.description || ""}
+                  value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Ej. Pantalla rota por impacto, quemado total..."
                   className="app-input h-7 w-full text-[13px]"
@@ -475,8 +494,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field modal-field-full">
                 <label className="app-field-label">Observaciones</label>
                 <input
-                  value={form.observations || ""}
-                  onChange={(e) => setForm({ ...form, observations: e.target.value || null })}
+                  value={form.observations}
+                  onChange={(e) => setForm({ ...form, observations: e.target.value })}
                   placeholder="Observaciones adicionales..."
                   className="app-input h-7 w-full text-[13px]"
                 />
@@ -484,8 +503,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Espacio (opcional)</label>
                 <Select
-                  value={form.space_id ?? null}
-                  onValueChange={(v) => setForm({ ...form, space_id: v || null })}
+                  value={form.space_id || ""}
+                  onValueChange={(v) => setForm({ ...form, space_id: v || "" })}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
                     <SelectValue placeholder="Si se puede ubicar..." />
@@ -499,8 +518,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                 <label className="app-field-label">Monto Estimado ($)</label>
                 <input
                   type="number"
-                  value={form.estimated_amount ?? ""}
-                  onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : null })}
+                  value={form.estimated_amount}
+                  onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : 0 })}
                   placeholder="0"
                   className="app-input h-7 w-full text-[13px]"
                 />
@@ -509,8 +528,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                 <div className="modal-field">
                   <label className="app-field-label">Tercero Afectado (opcional)</label>
                   <Select
-                    value={form.third_party_id ?? null}
-                    onValueChange={(v) => setForm({ ...form, third_party_id: v || null })}
+                    value={form.third_party_id || ""}
+                    onValueChange={(v) => setForm({ ...form, third_party_id: v || "" })}
                   >
                     <SelectTrigger className="app-input h-7 w-full text-[13px]">
                       <SelectValue placeholder="Si es daño de un tercero..." />
