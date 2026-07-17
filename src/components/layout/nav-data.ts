@@ -37,6 +37,7 @@ import {
   ShieldCheck,
   Workflow,
   Link2,
+  Grid3x3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -95,6 +96,7 @@ export const inspectionCatalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/inspeccion/terminaciones-interiores", label: "Terminaciones Interiores", icon: Paintbrush },
   { href: "/dashboard/catalogos/inspeccion/terminaciones-exteriores", label: "Terminaciones Exteriores", icon: Paintbrush },
   { href: "/dashboard/catalogos/inspeccion/cierre-perimetral", label: "Cierre Perimetral", icon: Fence },
+  { href: "/dashboard/catalogos/inspeccion/espacios-dano", label: "Espacios de Daño", icon: Grid3x3 },
   { href: "/dashboard/catalogos/inspeccion/categorias-evidencia", label: "Categorías Evidencia", icon: Camera },
 ];
 

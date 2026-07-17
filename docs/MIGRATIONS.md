@@ -115,6 +115,7 @@
 | 158 | Field config catalogs |
 | 159 | Damage catalogs (spaces, good types, building categories) |
 | 160 | Third parties extend (insurance, claim_number, company_name) |
+| 161 | Damage spaces × classifications (applicable_classifications) |
 
 ## Migraciones Clave (Detalle)
 

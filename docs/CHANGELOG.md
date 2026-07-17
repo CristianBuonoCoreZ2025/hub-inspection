@@ -3,6 +3,13 @@
 ## [Última versión] — 2026-07-17
 
 ### Agregado
+- **Migración 161: Matriz espacios × clasificaciones** — columna `applicable_classifications` (TEXT[]) en `damage_spaces`:
+  - Cada espacio asociado a tipos de inmueble donde aplica (Casa, Departamento, Oficinas, Galpón, Maquinaria, Edificio, Otros)
+  - Ej: Dormitorios solo en Casa/Departamento, Sala Reuniones solo en Oficinas
+  - Espacios compartidos (Baño, Pasillo, Hall, Exterior) aparecen en todas
+  - Página de catálogo `espacios-dano` con matriz visual configurable (iconos Eye/EyeOff)
+  - `SpaceClassificationMatrix` — componente reutilizable tipo FieldConfigEditor
+  - `damages-tab` filtra espacios según `property_risk.risk_class` del inmueble
 - **Migración 159: Catálogos de daños** — 3 tablas nuevas:
   - `damage_spaces` (22 espacios): Cocina, Baño, Dormitorio, Living, Garage, Oficina, etc.
   - `content_good_types` (16 tipos): Electrodomésticos, Electrónica, Móviles, Muebles, Ropa, Joyas, Maquinaria, etc.

@@ -1,4 +1,4 @@
-import { fetchAll, fetchById, insertRow, updateRow } from "@/lib/supabase/db";
+import { fetchAll, fetchById, insertRow, updateRow, deleteRow } from "@/lib/supabase/db";
 import type {
   ClaimCause,
   InsuranceCompanyCatalog,
@@ -696,6 +696,38 @@ export async function getDamageSpaces() {
     select: "id, name, description, is_active, applicable_classifications, created_at, updated_at",
     eq: { is_active: true },
   });
+}
+
+export async function createDamageSpace(input: { name: string; description?: string }) {
+  return insertRow<DamageSpace>("damage_spaces", {
+    ...input,
+    is_active: true,
+    applicable_classifications: ["Otros"],
+  }, "id, name, description, is_active, applicable_classifications, created_at, updated_at");
+}
+
+export async function updateDamageSpace(id: string, input: Partial<DamageSpace>) {
+  const set: Record<string, unknown> = {};
+  if (input.name !== undefined) set.name = input.name;
+  if (input.description !== undefined) set.description = input.description;
+  if (input.is_active !== undefined) set.is_active = input.is_active;
+  return updateRow<DamageSpace>("damage_spaces", id, set, "id, name, description, is_active, applicable_classifications, created_at, updated_at");
+}
+
+export async function deleteDamageSpace(id: string) {
+  await deleteRow("damage_spaces", id);
+}
+
+export async function updateDamageSpaceClassifications(updates: { id: string; applicable_classifications: string[] }[]) {
+  const results: DamageSpace[] = [];
+  for (const u of updates) {
+    const r = await updateRow<DamageSpace>("damage_spaces", u.id,
+      { applicable_classifications: u.applicable_classifications },
+      "id, name, description, is_active, applicable_classifications, created_at, updated_at"
+    );
+    results.push(r);
+  }
+  return results;
 }
 
 // ═══════════════════════════════════════════════════════════════
