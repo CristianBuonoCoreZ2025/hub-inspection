@@ -221,7 +221,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
     const current = String(watch(name) ?? "");
     return (
       <Select
-        value={current || undefined}
+        value={current}
         onValueChange={(v) => set(name, v ?? "")}
       >
         <SelectTrigger className="app-input h-8 text-[12px] w-full">
@@ -244,7 +244,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
     const current = String(watch(name) ?? "");
     return (
       <Select
-        value={current || undefined}
+        value={current}
         onValueChange={(v) => set(name, v ?? "")}
       >
         <SelectTrigger className="app-input h-8 text-[12px] w-full">
@@ -267,7 +267,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
     const current = String(watch(name) ?? "");
     return (
       <Select
-        value={current || undefined}
+        value={current}
         onValueChange={(v) => set(name, v ?? "")}
       >
         <SelectTrigger className="app-input h-8 text-[12px] w-full">

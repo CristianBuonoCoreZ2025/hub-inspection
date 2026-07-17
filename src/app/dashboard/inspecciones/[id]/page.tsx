@@ -822,7 +822,7 @@ export default function InspectionDetailPage() {
           <div className="modal-body space-y-2">
             <div className="modal-field">
               <Label className="app-field-label">Motivo de cancelación *</Label>
-              <Select value={cancelReasonId || undefined} onValueChange={(v) => setCancelReasonId(v ?? "")} items={cancellationReasons?.map((r) => ({ value: r.id, label: r.name })) ?? []}>
+              <Select value={cancelReasonId ?? ""} onValueChange={(v) => setCancelReasonId(v ?? "")} items={cancellationReasons?.map((r) => ({ value: r.id, label: r.name })) ?? []}>
                 <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar motivo..." /></SelectTrigger>
                 <SelectContent>
                   {cancellationReasons?.map((r) => (
@@ -878,7 +878,7 @@ export default function InspectionDetailPage() {
             <div className="modal-grid-3">
               <div className="modal-field">
                 <Label className="app-field-label">Inspector *</Label>
-                <Select value={rescheduleInspectorId || undefined} onValueChange={(v) => setRescheduleInspectorId(v ?? "")} items={inspectors.map((i) => ({ value: i.id, label: i.full_name || i.email }))}>
+                <Select value={rescheduleInspectorId ?? ""} onValueChange={(v) => setRescheduleInspectorId(v ?? "")} items={inspectors.map((i) => ({ value: i.id, label: i.full_name || i.email }))}>
                   <SelectTrigger className="app-input">
                     <SelectValue placeholder="Seleccionar...">
                       {inspectors.find((i) => i.id === rescheduleInspectorId)?.full_name || inspectors.find((i) => i.id === rescheduleInspectorId)?.email || "Seleccionar..."}
@@ -968,7 +968,7 @@ export default function InspectionDetailPage() {
 
             <div className="modal-field">
               <Label className="app-field-label">Motivo de reagendamiento *</Label>
-              <Select value={cancelReasonId || undefined} onValueChange={(v) => setCancelReasonId(v ?? "")} items={cancellationReasons?.map((r) => ({ value: r.id, label: r.name })) ?? []}>
+              <Select value={cancelReasonId ?? ""} onValueChange={(v) => setCancelReasonId(v ?? "")} items={cancellationReasons?.map((r) => ({ value: r.id, label: r.name })) ?? []}>
                 <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar motivo..." /></SelectTrigger>
                 <SelectContent>
                   {cancellationReasons?.map((r) => (
