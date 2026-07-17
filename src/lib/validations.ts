@@ -313,6 +313,11 @@ export const actaSchema = z.object({
     commune: z.string().optional(),
     phone: z.string().optional(),
     email: z.string().optional(),
+    company_name: z.string().optional(),
+    has_insurance: z.boolean().default(false),
+    insurance_company: z.string().optional(),
+    claim_number: z.string().optional(),
+    notes: z.string().optional(),
   })).default([]),
 });
 

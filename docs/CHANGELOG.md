@@ -1,6 +1,47 @@
 # Changelog — Claims Hub Platform
 
-## [Última versión] — 2026-07-07
+## [Última versión] — 2026-07-17
+
+### Agregado
+- **Migración 159: Catálogos de daños** — 3 tablas nuevas:
+  - `damage_spaces` (22 espacios): Cocina, Baño, Dormitorio, Living, Garage, Oficina, etc.
+  - `content_good_types` (16 tipos): Electrodomésticos, Electrónica, Móviles, Muebles, Ropa, Joyas, Maquinaria, etc.
+  - `building_damage_categories` (13 categorías): Muros, Pisos, Cielos, Cubierta, Estructura, Eléctricas, etc.
+  - 3 columnas nuevas en `inspection_damages`: `space_id`, `content_good_type_id`, `building_damage_category_id`
+- **Migración 160: Terceros extendidos** — 5 columnas nuevas en `third_parties`:
+  - `company_name`, `has_insurance`, `insurance_company`, `claim_number`, `notes`
+  - Tercero responsable/culpable: datos para demanda (compañía + siniestro o demanda particular)
+  - Tercero afectado: mismo esquema de daños que el asegurado (vía `third_party_id`)
+- **Daños separados Constructivo vs Contenido**:
+  - Tiles visuales con iconos de color (azul/violeta) para elegir tipo
+  - Formulario dinámico según tipo (espacios+categorias vs tipos de bien+producto)
+  - Tablas separadas con totales independientes
+  - Selector de tercero afectado en ambos formularios
+  - Badges de severidad con dark mode
+  - Botón eliminar en color rose
+- **Magic Link Sender** — 3 formas de enviar + copiar:
+  - WhatsApp (wa.me): link pre-llenado, sin backend
+  - WhatsApp Cloud API: envío directo via Meta API (1000/mes gratis)
+  - Email (Resend): email HTML con botón de acceso (3000/mes gratis)
+  - API route `/api/send-magic-link` con ambas integraciones
+- **VoiceTextarea** — editor de texto enriquecido:
+  - Negrilla (Ctrl+B), Cursiva (Ctrl+I), Listas, Corrección ortográfica
+  - Transcripción por voz (Web Speech API, es-CL)
+  - Usado en Relato de los Hechos y Observaciones del Inspector
+- **Ordenamiento natural** en todos los catálogos (`naturalCompare`):
+  - "1 Año" < "2 Años" < "10 años" (no alfabético)
+  - `fetchAllSorted` reemplaza `order: name` de la BD
+- **DropdownMenu y Popover**: `positionMethod="fixed"`, `z-9999`, `sideOffset=0`, sin isolate
+
+### Corregido
+- **Select simplificado**: sin patrón `__none`, placeholder nativo de base-ui
+- **Acta-form**: ToggleChips con Label arriba (alineados con demás campos)
+- **Otros Seguros**: movido a sección Parte Policial, Observaciones como panel aparte
+- **Select nativo**: reemplazado por componente Select en paso 6 (terceros)
+
+---
+
+## [2026-07-07]
 
 ### Agregado
 - **field_config dinámico**: Configuración de campos del acta por clasificación/destino del bien,

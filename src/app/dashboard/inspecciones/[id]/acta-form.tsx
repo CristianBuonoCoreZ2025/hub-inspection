@@ -705,7 +705,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="afectado">Afectado</SelectItem>
-                        <SelectItem value="responsable">Responsable</SelectItem>
+                        <SelectItem value="responsable">Responsable / Culpable</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -733,6 +733,50 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                     <Label className="app-field-label">Email</Label>
                     <Input {...field(`third_parties.${idx}.email`)} type="email" className="app-input" />
                   </div>
+
+                  {/* Campos adicionales para RESPONSABLE/CULPABLE */}
+                  {String(watch(`third_parties.${idx}.party_type`)) === "responsable" && (
+                    <>
+                      <div className="modal-field">
+                        <Label className="app-field-label">Empresa (si aplica)</Label>
+                        <Input {...field(`third_parties.${idx}.company_name`)} className="app-input" placeholder="Nombre empresa" />
+                      </div>
+                      <div className="modal-field">
+                        <Label className="app-field-label">¿Tiene seguro?</Label>
+                        <ToggleChip
+                          active={Boolean(watch(`third_parties.${idx}.has_insurance`))}
+                          onClick={(v) => set(`third_parties.${idx}.has_insurance`, v)}
+                        >
+                          {Boolean(watch(`third_parties.${idx}.has_insurance`)) ? "Sí" : "No"}
+                        </ToggleChip>
+                      </div>
+                      {Boolean(watch(`third_parties.${idx}.has_insurance`)) && (
+                        <>
+                          <div className="modal-field">
+                            <Label className="app-field-label">Compañía de Seguros</Label>
+                            <Input {...field(`third_parties.${idx}.insurance_company`)} className="app-input" placeholder="Ej: MetLife, BCI, etc." />
+                          </div>
+                          <div className="modal-field">
+                            <Label className="app-field-label">N° Siniestro (su compañía)</Label>
+                            <Input {...field(`third_parties.${idx}.claim_number`)} className="app-input" placeholder="N° de siniestro del tercero" />
+                          </div>
+                        </>
+                      )}
+                      {!Boolean(watch(`third_parties.${idx}.has_insurance`)) && (
+                        <div className="modal-field modal-field-full">
+                          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-2 text-[12px] text-amber-900 dark:text-amber-100">
+                            Sin seguro — Se procederá con demanda particular contra el tercero responsable.
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Notas para cualquier tipo */}
+                  <div className="modal-field modal-field-full">
+                    <Label className="app-field-label">Notas</Label>
+                    <Input {...field(`third_parties.${idx}.notes`)} className="app-input" placeholder="Notas adicionales..." />
+                  </div>
                 </div>
               </div>
             ))}
@@ -745,7 +789,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                 const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
                 set("third_parties", [
                   ...current,
-                  { party_type: "afectado", full_name: "", rut: "", address: "", commune: "", phone: "", email: "" },
+                  { party_type: "afectado", full_name: "", rut: "", address: "", commune: "", phone: "", email: "", company_name: "", has_insurance: false, insurance_company: "", claim_number: "", notes: "" },
                 ]);
               }}
             >

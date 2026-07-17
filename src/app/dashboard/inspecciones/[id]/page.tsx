@@ -30,11 +30,11 @@ import {
   RotateCcw,
   CalendarClock,
   Video,
-  Copy,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { MagicLinkSender } from "@/components/ui/magic-link-sender";
 // Tabs components no longer used — replaced with flat tab style matching claims page
 import {
   Dialog,
@@ -653,25 +653,12 @@ export default function InspectionDetailPage() {
               <h3 className="app-section-title">
                 Magic Link
               </h3>
-              <div className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[12px]">
-                <span className="text-violet-700 dark:text-violet-300 shrink-0">Link:</span>
-                <code className="flex-1 truncate text-muted-foreground">
-                  {typeof window !== "undefined" ? `${window.location.origin}/inspection/${session.magic_link_token}` : `/inspection/${session.magic_link_token}`}
-                </code>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="btn-icon-sm shrink-0"
-                  onClick={() => {
-                    if (typeof navigator !== "undefined" && navigator.clipboard) {
-                      navigator.clipboard.writeText(`${window.location.origin}/inspection/${session.magic_link_token}`);
-                      toast.success("Link copiado");
-                    }
-                  }}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+              <MagicLinkSender
+                token={session.magic_link_token}
+                contactName={session.interviewed_name || contactParticipant?.full_name}
+                contactEmail={session.interviewed_email || contactParticipant?.email}
+                contactPhone={contactParticipant?.cell_phone || contactParticipant?.phone || insuredParticipant?.cell_phone || insuredParticipant?.phone}
+              />
             </div>
           )}
         </div>

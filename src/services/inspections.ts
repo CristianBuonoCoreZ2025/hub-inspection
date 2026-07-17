@@ -577,6 +577,7 @@ export async function upsertInsuredStatement(sessionId: string, input: Partial<I
 
 const THIRD_PARTY_SELECT = `
   id, session_id, party_type, full_name, rut, address, commune, phone, email,
+  company_name, has_insurance, insurance_company, claim_number, notes,
   created_at, updated_at
 `;
 
@@ -639,6 +640,7 @@ const DAMAGE_SELECT = `
   id, session_id, category, subcategory, description, observations, severity,
   dependency, sector, materiality_type, unit, quantity, damage_type,
   product, brand_model, purchase_date, estimated_amount,
+  third_party_id, space_id, content_good_type_id, building_damage_category_id,
   created_at, updated_at
 `;
 

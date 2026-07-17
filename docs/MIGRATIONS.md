@@ -102,7 +102,7 @@
 | 149 | Auto assign responsibles |
 | 150 | Snapshot parent data |
 
-### 151-158 — Roles, Inspecciones, Field Config
+### 151-160 — Roles, Inspecciones, Field Config, Daños
 | # | Descripción |
 |---|-------------|
 | 151 | User secondary roles |
@@ -113,6 +113,8 @@
 | 156 | Fix inspector fallback |
 | 157 | Third parties relacional |
 | 158 | Field config catalogs |
+| 159 | Damage catalogs (spaces, good types, building categories) |
+| 160 | Third parties extend (insurance, claim_number, company_name) |
 
 ## Migraciones Clave (Detalle)
 
@@ -146,3 +148,19 @@ Workflow automático que crea gestiones según país + línea + evento + estado.
 ### 151 — user_secondary_roles.sql
 Perfiles secundarios de usuarios para aparecer en combos de asignación.
 Funciones: `get_users_by_role_for_company`, `get_users_by_roles_for_company`.
+
+### 159 — damage_catalogs.sql
+Crea 3 catálogos para el registro estructurado de daños:
+- `damage_spaces` (22 espacios): Cocina, Baño, Dormitorio, Living, Garage, Oficina, Bodega Industrial, etc.
+- `content_good_types` (16 tipos): Electrodomésticos, Electrónica, Móviles, Muebles, Ropa, Joyas, Maquinaria, Vehículos, etc.
+- `building_damage_categories` (13 categorías): Muros, Pisos, Cielos, Cubierta, Estructura, Eléctricas, Sanitarias, Aberturas, etc.
+- Agrega 3 FK a `inspection_damages`: `space_id`, `content_good_type_id`, `building_damage_category_id`
+
+### 160 — third_parties_extend.sql
+Extiende `third_parties` con 5 columnas para soportar culpables y afectados:
+- `company_name` — empresa del tercero (si aplica)
+- `has_insurance` — ¿el culpable tiene seguro?
+- `insurance_company` — compañía del tercero
+- `claim_number` — n° siniestro en su compañía
+- `notes` — notas adicionales
+- Normaliza `party_type` a "afectado"/"responsable" + RLS

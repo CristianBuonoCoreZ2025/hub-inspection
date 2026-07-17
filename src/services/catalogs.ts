@@ -20,6 +20,9 @@ import type {
   LookupCatalog,
   Country,
   DocumentType,
+  DamageSpace,
+  ContentGoodType,
+  BuildingDamageCategory,
 } from "@/types";
 
 // Ordenamiento natural: extrae partes numéricas y las compara como números,
@@ -682,6 +685,39 @@ export async function updateDocumentType(id: string, input: { country_id?: strin
   if (input.description !== undefined) set.description = input.description;
   if (input.is_active !== undefined) set.is_active = input.is_active;
   return updateRow<DocumentType>("document_types", id, set, "id, country_id, code, name, description, is_active");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DAMAGE SPACES (Espacios/Recintos para daños constructivos)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getDamageSpaces() {
+  return fetchAllSorted<DamageSpace>("damage_spaces", {
+    select: "id, name, description, is_active, created_at, updated_at",
+    eq: { is_active: true },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTENT GOOD TYPES (Tipos de Bien para daños de contenido)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getContentGoodTypes() {
+  return fetchAllSorted<ContentGoodType>("content_good_types", {
+    select: "id, name, description, is_active, created_at, updated_at",
+    eq: { is_active: true },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUILDING DAMAGE CATEGORIES (Categorías de daño constructivo)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getBuildingDamageCategories() {
+  return fetchAllSorted<BuildingDamageCategory>("building_damage_categories", {
+    select: "id, name, description, is_active, created_at, updated_at",
+    eq: { is_active: true },
+  });
 }
 
 export async function deleteDocumentType(id: string) {

@@ -157,6 +157,99 @@ className="app-field-label"  // labels de campos
 
 ---
 
+## 5b. Tiles de Selección (estilo daños)
+
+### Cuándo usar
+Cuando el usuario debe elegir entre 2+ categorías visuales antes de un formulario.
+
+### Estructura
+```tsx
+<div className="grid grid-cols-2 gap-3">
+  <button className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left
+    transition-all hover:border-blue-400/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/20">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg
+      bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400
+      transition-colors group-hover:bg-blue-500 group-hover:text-white">
+      <Icon className="h-5 w-5" />
+    </div>
+    <div className="min-w-0">
+      <div className="text-[13px] font-semibold text-foreground">Título</div>
+      <div className="text-[11px] text-muted-foreground truncate">Descripción</div>
+    </div>
+  </button>
+</div>
+```
+
+### Reglas
+- Grid de 2 columnas en desktop, 1 en móvil.
+- Cada tile: icono en círculo de color + título + descripción.
+- Hover: borde se ilumina + fondo tintado + icono se invierte (fondo color, texto blanco).
+- Colores por categoría: azul (constructivo), violeta (contenido), etc.
+- NO usar `pg-btn-platinum` para estos botones.
+
+---
+
+## 5c. Badges de Severidad (estilo daños)
+
+### Colores obligatorios
+```tsx
+// Total — rojo
+"bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"
+// Grave — naranja
+"bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
+// Moderado — ámbar
+"bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+// Leve — esmeralda
+"bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+```
+
+### Reglas
+- SIEMPRE con dark mode (`dark:bg-*-900/50 dark:text-*-300`).
+- Texto `text-[11px] font-medium px-2 py-0.5 rounded-full`.
+
+---
+
+## 5d. VoiceTextarea (editor enriquecido)
+
+### Cuándo usar
+En campos de texto largo que requieren formato o transcripción por voz
+(Relato de los Hechos, Observaciones del Inspector).
+
+### Toolbar
+- Negrilla (Ctrl+B), Cursiva (Ctrl+I), Listas, Corrección ortográfica, Micrófono
+- Solo mostrar micrófono si el navegador soporta SpeechRecognition
+
+### Reglas
+- Mínimo 5 filas (`rows={5}`)
+- `contentEditable` con `spellCheck` nativo
+- Placeholder cuando vacío (`empty:before:content-[attr(data-placeholder)]`)
+- Guarda HTML (no texto plano)
+
+---
+
+## 5e. Magic Link Sender
+
+### Botones de envío
+- **WhatsApp (wa.me)**: link pre-llenado, sin backend
+- **Enviar WA (Cloud API)**: via `/api/send-magic-link` (Meta API)
+- **Email (Resend)**: via `/api/send-magic-link` (Resend API)
+- **Copiar**: `navigator.clipboard.writeText`
+
+### Variables de entorno
+```
+WHATSAPP_PHONE_NUMBER_ID=xxx
+WHATSAPP_ACCESS_TOKEN=xxx
+RESEND_API_KEY=re_xxx
+RESEND_FROM_EMAIL=noreply@tudominio.com
+```
+
+### Reglas
+- Si no hay teléfono → botón WhatsApp deshabilitado
+- Si no hay email → botón Email deshabilitado
+- Si API no configurada → mensaje de usar alternativa (wa.me)
+
+---
+
 ## 6. Filtros de Grilla
 
 ### Formato unificado (estándar polizas/page.tsx)

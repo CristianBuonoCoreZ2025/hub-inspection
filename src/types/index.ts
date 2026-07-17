@@ -313,6 +313,11 @@ export interface ActaThirdParty {
   commune?: string;
   phone?: string;
   email?: string;
+  company_name?: string;
+  has_insurance?: boolean;
+  insurance_company?: string;
+  claim_number?: string;
+  notes?: string;
 }
 
 export interface InspectionSession {
@@ -449,13 +454,18 @@ export interface InsuredStatement {
 export interface ThirdParty {
   id: string;
   session_id: string;
-  party_type: "affected" | "responsible";
+  party_type: "afectado" | "responsable";
   full_name: string | null;
   rut: string | null;
   address: string | null;
   commune: string | null;
   phone: string | null;
   email: string | null;
+  company_name: string | null;
+  has_insurance: boolean;
+  insurance_company: string | null;
+  claim_number: string | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -618,11 +628,42 @@ export interface InspectionDamage {
   materiality_type: string | null;
   unit: string | null;
   quantity: number | null;
-  damage_type: string;
+  damage_type: "building" | "content";
   product: string | null;
   brand_model: string | null;
   purchase_date: string | null;
   estimated_amount: number | null;
+  third_party_id: string | null;
+  space_id: string | null;
+  content_good_type_id: string | null;
+  building_damage_category_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DamageSpace {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContentGoodType {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BuildingDamageCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }

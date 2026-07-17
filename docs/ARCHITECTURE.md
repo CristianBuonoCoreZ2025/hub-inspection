@@ -86,6 +86,36 @@ Merge en frontend:
 6. Label: classification.labels > destination.labels > default
 ```
 
+## Registro de Daños
+
+### Separación inicial
+Al registrar un daño, primero se elige entre:
+1. **Daño Constructivo** (edificio/estructura)
+2. **Daño de Contenido** (artículos/bienes)
+
+### Daño Constructivo → organizado por ESPACIO/RECINTO
+- Catálogo `damage_spaces` (22 espacios): Cocina, Baño, Dormitorio, Living, Garage, etc.
+- Catálogo `building_damage_categories` (13): Muros, Pisos, Cielos, Cubierta, Estructura, etc.
+- Campos: Espacio, Categoría, Severidad, Descripción, Materialidad, Cantidad/Unidad, Monto
+
+### Daño de Contenido → organizado por TIPO DE BIEN
+- Catálogo `content_good_types` (16 tipos): Electrodomésticos, Electrónica, Móviles, Muebles, Ropa, Joyas, Maquinaria, etc.
+- Campos: Tipo de Bien, Producto, Marca/Modelo, Fecha Compra, Severidad, Cantidad, Monto
+- Espacio opcional (solo si se puede ubicar, ej: TV en Living)
+
+### Terceros
+- **Responsable/Culpable**: datos para demanda
+  - `has_insurance`: si tiene seguro → `insurance_company` + `claim_number` (demanda a su compañía)
+  - Si no tiene seguro → demanda particular
+  - `company_name`: si es empresa
+- **Afectado**: mismo esquema de daños que el asegurado
+  - Sus daños se asocian vía `third_party_id` en `inspection_damages`
+  - Selector de tercero afectado en el formulario de daños
+
+### Ordenamiento natural
+Todos los catálogos usan `naturalCompare` (extrae números y los ordena como números):
+"1 Año" < "2 Años" < "10 años" (no alfabético)
+
 ## Roles y Permisos
 
 ### Roles principales
