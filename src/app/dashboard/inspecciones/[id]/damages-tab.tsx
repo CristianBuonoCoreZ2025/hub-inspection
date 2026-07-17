@@ -108,7 +108,7 @@ function damageToForm(d: InspectionDamage): DamageForm {
   };
 }
 
-export default function DamagesTab({ sessionId }: { sessionId: string }) {
+export default function DamagesTab({ sessionId, propertyClassification }: { sessionId: string; propertyClassification?: string | null }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<DamageForm>(emptyForm(sessionId, "building"));
@@ -145,6 +145,16 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
 
   // Terceros afectados (para asociar daños)
   const affectedThirdParties = thirdParties.filter((t) => t.party_type === "afectado");
+
+  // Filtrar espacios según la clasificación del inmueble
+  const filteredSpaces = propertyClassification
+    ? spaces.filter((s) =>
+        !s.applicable_classifications ||
+        s.applicable_classifications.length === 0 ||
+        s.applicable_classifications.includes(propertyClassification) ||
+        s.applicable_classifications.includes("Otros")
+      )
+    : spaces;
 
   const createMutation = useMutation({
     mutationFn: createDamage,
@@ -268,7 +278,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
                     <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {spaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    {filteredSpaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -481,7 +491,7 @@ export default function DamagesTab({ sessionId }: { sessionId: string }) {
                     <SelectValue placeholder="Si se puede ubicar..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {spaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    {filteredSpaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

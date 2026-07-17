@@ -693,7 +693,7 @@ export async function updateDocumentType(id: string, input: { country_id?: strin
 
 export async function getDamageSpaces() {
   return fetchAllSorted<DamageSpace>("damage_spaces", {
-    select: "id, name, description, is_active, created_at, updated_at",
+    select: "id, name, description, is_active, applicable_classifications, created_at, updated_at",
     eq: { is_active: true },
   });
 }

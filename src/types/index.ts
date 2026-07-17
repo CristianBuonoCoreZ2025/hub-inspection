@@ -646,6 +646,7 @@ export interface DamageSpace {
   name: string;
   description: string | null;
   is_active: boolean;
+  applicable_classifications: string[] | null;
   created_at: string;
   updated_at: string;
 }
