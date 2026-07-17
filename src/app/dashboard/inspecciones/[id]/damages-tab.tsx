@@ -256,7 +256,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
 
       {/* Formulario */}
       {editing !== null && (
-        <div className="app-panel space-y-3">
+        <div className="app-panel space-y-3" key={`edit-${editing}-${form.damage_type}`}>
           <h3 className="app-section-title flex items-center gap-2">
             {form.damage_type === "building" ? <Building2 className="h-4 w-4" /> : <Package className="h-4 w-4" />}
             {editing === "new" ? "Nuevo" : "Editar"} {form.damage_type === "building" ? "Daño Constructivo" : "Daño de Contenido"}
@@ -264,7 +264,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
 
           {form.damage_type === "building" ? (
             /* ── FORMULARIO CONSTRUCTIVO ── */
-            <div className="modal-grid-3">
+            <div className="modal-grid-3" key="building-form">
               <div className="modal-field">
                 <label className="app-field-label">Espacio / Recinto</label>
                 <Select
@@ -395,7 +395,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
             </div>
           ) : (
             /* ── FORMULARIO CONTENIDO ── */
-            <div className="modal-grid-3">
+            <div className="modal-grid-3" key="content-form">
               <div className="modal-field">
                 <label className="app-field-label">Tipo de Bien</label>
                 <Select
