@@ -1,0 +1,12 @@
+{
+  "rules": [
+    "docs/DESIGN_SYSTEM.md",
+    "AGENTS.md"
+  ],
+  "skills": [
+    ".devin/skills/design-system-check/SKILL.md"
+  ],
+  "always_load_before_editing": [
+    "docs/DESIGN_SYSTEM.md"
+  ]
+}

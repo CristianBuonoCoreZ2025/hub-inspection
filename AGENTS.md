@@ -1,5 +1,13 @@
 # Claims Hub Platform — Reglas del Proyecto
 
+> ## ⚠️ ANTES DE TOCAR CUALQUIER ARCHIVO `.tsx`
+> **LEER OBLIGATORIAMENTE:** [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md)
+>
+> Ese archivo contiene las reglas de diseño UI/UX que TODA página debe cumplir.
+> Ningún cambio en la UI se hace sin pasar por ese criterio.
+>
+> **Documentación completa:** [`docs/README.md`](docs/README.md)
+
 ## Stack Tecnológico
 - **Framework:** Next.js 16 (App Router)
 - **Lenguaje:** TypeScript (estricto)

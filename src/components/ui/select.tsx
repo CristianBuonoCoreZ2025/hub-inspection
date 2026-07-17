@@ -71,6 +71,7 @@ function SelectContent({
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
   >) {
   return (
+    <SelectPrimitive.Portal>
     <SelectPrimitive.Positioner
       side={side}
       sideOffset={sideOffset}
@@ -79,7 +80,7 @@ function SelectContent({
       alignItemWithTrigger={alignItemWithTrigger}
       positionMethod="fixed"
       collisionAvoidance={{ side: "flip", align: "shift", fallbackAxisSide: "none" }}
-      className="isolate z-200"
+      className="z-9999"
     >
       <SelectPrimitive.Popup
         data-slot="select-content"
@@ -102,6 +103,7 @@ function SelectContent({
         <SelectScrollDownButton />
       </SelectPrimitive.Popup>
     </SelectPrimitive.Positioner>
+    </SelectPrimitive.Portal>
   )
 }
 
