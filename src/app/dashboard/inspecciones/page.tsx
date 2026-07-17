@@ -171,7 +171,11 @@ function InspectionsPageContent() {
               </tr>
             ) : (
               paginatedData.map((session) => (
-                <tr key={session.id} className="hover:bg-muted/40 transition-colors">
+                <tr
+                  key={session.id}
+                  className="cursor-pointer hover:bg-muted/40 transition-colors"
+                  onClick={() => router.push(`/dashboard/inspecciones/${session.id}`)}
+                >
                   <td>
                     <div className="flex flex-col gap-0">
                       <span className="font-mono text-[11px] font-semibold text-primary">
@@ -233,7 +237,7 @@ function InspectionsPageContent() {
                     </div>
                   </td>
                   <td>
-                    <div className="app-row-actions">
+                    <div className="app-row-actions" onClick={(e) => e.stopPropagation()}>
                       <Button
                         className="pg-btn-platinum"
                         onClick={() => router.push(`/dashboard/inspecciones/${session.id}`)}
