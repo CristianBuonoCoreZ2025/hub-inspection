@@ -700,7 +700,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                   <div className="modal-field">
                     <Label className="app-field-label">Tipo</Label>
                     <Select
-                      value={String(watch(`third_parties.${idx}.party_type`) ?? "")}
+                      value={String(watch(`third_parties.${idx}.party_type`) ?? "") || null}
                       onValueChange={(v) => set(`third_parties.${idx}.party_type`, v)}
                     >
                       <SelectTrigger className="app-input h-7">

@@ -457,7 +457,7 @@ export default function GestionesPage() {
                     type="number"
                     min={0}
                     max={999}
-                    value={daysValue}
+                    value={daysValue ?? 0}
                     onChange={(e) => {
                       const newDays = clampDays(parseInt(e.target.value));
                       const currentAlert = form[cfg.alertField];
@@ -481,7 +481,7 @@ export default function GestionesPage() {
                     type="number"
                     min={0}
                     max={999}
-                    value={alertValue}
+                    value={alertValue ?? 0}
                     onChange={(e) => setForm({ ...form, [cfg.alertField]: clampAlert(parseInt(e.target.value)) })}
                     disabled={alertDisabled}
                     style={{ borderRadius: "6px", height: "28px", width: "56px", padding: 0, fontSize: "12px" }}
