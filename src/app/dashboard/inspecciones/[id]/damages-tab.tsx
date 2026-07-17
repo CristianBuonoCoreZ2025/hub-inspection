@@ -86,25 +86,25 @@ function emptyForm(sessionId: string, type: DamageType): DamageForm {
 function damageToForm(d: InspectionDamage): DamageForm {
   return {
     session_id: d.session_id,
-    category: d.category,
-    subcategory: d.subcategory,
-    description: d.description,
-    observations: d.observations,
-    severity: d.severity,
-    dependency: d.dependency,
-    sector: d.sector,
-    materiality_type: d.materiality_type,
-    unit: d.unit,
-    quantity: d.quantity,
+    category: d.category ?? "structural",
+    subcategory: d.subcategory ?? null,
+    description: d.description ?? "",
+    observations: d.observations ?? null,
+    severity: d.severity ?? "low",
+    dependency: d.dependency ?? null,
+    sector: d.sector ?? null,
+    materiality_type: d.materiality_type ?? null,
+    unit: d.unit ?? null,
+    quantity: d.quantity ?? null,
     damage_type: d.damage_type === "content" ? "content" : "building",
-    product: d.product,
-    brand_model: d.brand_model,
-    purchase_date: d.purchase_date,
-    estimated_amount: d.estimated_amount,
-    third_party_id: d.third_party_id,
-    space_id: d.space_id,
-    content_good_type_id: d.content_good_type_id,
-    building_damage_category_id: d.building_damage_category_id,
+    product: d.product ?? null,
+    brand_model: d.brand_model ?? null,
+    purchase_date: d.purchase_date ?? null,
+    estimated_amount: d.estimated_amount ?? null,
+    third_party_id: d.third_party_id ?? null,
+    space_id: d.space_id ?? null,
+    content_good_type_id: d.content_good_type_id ?? null,
+    building_damage_category_id: d.building_damage_category_id ?? null,
   };
 }
 
@@ -302,7 +302,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Severidad</label>
                 <Select
-                  value={form.severity}
+                  value={form.severity || "low"}
                   onValueChange={(v) => setForm({ ...form, severity: (v || "low") as InspectionDamage["severity"] })}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
@@ -316,7 +316,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field modal-field-full">
                 <label className="app-field-label">Descripción</label>
                 <input
-                  value={form.description}
+                  value={form.description || ""}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Ej. Grieta en muro de carga, filtración en techumbre..."
                   className="app-input h-7 w-full text-[13px]"
@@ -434,7 +434,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Severidad</label>
                 <Select
-                  value={form.severity}
+                  value={form.severity || "low"}
                   onValueChange={(v) => setForm({ ...form, severity: (v || "low") as InspectionDamage["severity"] })}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
@@ -466,7 +466,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field modal-field-full">
                 <label className="app-field-label">Descripción / Detalle del daño</label>
                 <input
-                  value={form.description}
+                  value={form.description || ""}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Ej. Pantalla rota por impacto, quemado total..."
                   className="app-input h-7 w-full text-[13px]"
