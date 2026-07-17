@@ -103,7 +103,7 @@ export default function UsersPage() {
   });
 
   const watchedRole = useWatch({ control: form.control, name: "role" });
-  const selectedRole = editingId ? editForm.role : watchedRole;
+  const selectedRole = editingId ? editForm.role : (watchedRole || "adjuster");
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
@@ -418,7 +418,7 @@ export default function UsersPage() {
                     <div className="modal-field">
                       <Label className="app-field-label">País</Label>
                       <Select
-                        value={editForm.countryId ?? ""}
+                        value={editForm.countryId || null}
                         onValueChange={(v) => setEditForm({ ...editForm, countryId: v || "" })}
                         items={countries?.map((c: { id: string; name: string }) => ({ value: c.id, label: c.name })) || []}
                       >
@@ -557,7 +557,7 @@ export default function UsersPage() {
                         <div className="flex-1">
                           <Label className="app-field-label text-[10px]">Perfil</Label>
                           <Select
-                            value={newSecRole}
+                            value={newSecRole || null}
                             onValueChange={(v) => setNewSecRole(v as SecondaryRole)}
                             items={availableSecRoles.map((r) => ({ value: r.value, label: r.label }))}
                           >
@@ -572,7 +572,7 @@ export default function UsersPage() {
                         <div className="flex-1">
                           <Label className="app-field-label text-[10px]">Cliente (opcional)</Label>
                           <Select
-                            value={newSecCompany}
+                            value={newSecCompany || null}
                             onValueChange={(v) => setNewSecCompany(v || "")}
                             items={[
                               { value: "", label: "Todos los clientes" },
