@@ -268,10 +268,10 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Espacio / Recinto</label>
                 <Select
-                  value={form.space_id || undefined}
+                  value={form.space_id ?? ""}
                   onValueChange={(v) => {
                     const space = spaces.find((s) => s.id === v);
-                    setForm({ ...form, space_id: v ?? null, dependency: space?.name || null });
+                    setForm({ ...form, space_id: v || null, dependency: space?.name || null });
                   }}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
@@ -285,10 +285,10 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Categoría del Daño</label>
                 <Select
-                  value={form.building_damage_category_id || undefined}
+                  value={form.building_damage_category_id ?? ""}
                   onValueChange={(v) => {
                     const cat = buildingCategories.find((c) => c.id === v);
-                    setForm({ ...form, building_damage_category_id: v ?? null, category: cat?.name || form.category });
+                    setForm({ ...form, building_damage_category_id: v || null, category: cat?.name || form.category });
                   }}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
@@ -344,8 +344,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Unidad</label>
                 <Select
-                  value={form.unit || undefined}
-                  onValueChange={(v) => setForm({ ...form, unit: v ?? null })}
+                  value={form.unit ?? ""}
+                  onValueChange={(v) => setForm({ ...form, unit: v || null })}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
                     <SelectValue placeholder="Seleccionar..." />
@@ -378,8 +378,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                 <div className="modal-field">
                   <label className="app-field-label">Tercero Afectado (opcional)</label>
                   <Select
-                    value={form.third_party_id || undefined}
-                    onValueChange={(v) => setForm({ ...form, third_party_id: v ?? null })}
+                    value={form.third_party_id ?? ""}
+                    onValueChange={(v) => setForm({ ...form, third_party_id: v || null })}
                   >
                     <SelectTrigger className="app-input h-7 w-full text-[13px]">
                       <SelectValue placeholder="Si es daño de un tercero..." />
@@ -399,10 +399,10 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Tipo de Bien</label>
                 <Select
-                  value={form.content_good_type_id || undefined}
+                  value={form.content_good_type_id ?? ""}
                   onValueChange={(v) => {
                     const gt = goodTypes.find((g) => g.id === v);
-                    setForm({ ...form, content_good_type_id: v ?? null, category: gt?.name || form.category });
+                    setForm({ ...form, content_good_type_id: v || null, category: gt?.name || form.category });
                   }}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
@@ -484,8 +484,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
               <div className="modal-field">
                 <label className="app-field-label">Espacio (opcional)</label>
                 <Select
-                  value={form.space_id || undefined}
-                  onValueChange={(v) => setForm({ ...form, space_id: v ?? null })}
+                  value={form.space_id ?? ""}
+                  onValueChange={(v) => setForm({ ...form, space_id: v || null })}
                 >
                   <SelectTrigger className="app-input h-7 w-full text-[13px]">
                     <SelectValue placeholder="Si se puede ubicar..." />
@@ -509,8 +509,8 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                 <div className="modal-field">
                   <label className="app-field-label">Tercero Afectado (opcional)</label>
                   <Select
-                    value={form.third_party_id || undefined}
-                    onValueChange={(v) => setForm({ ...form, third_party_id: v ?? null })}
+                    value={form.third_party_id ?? ""}
+                    onValueChange={(v) => setForm({ ...form, third_party_id: v || null })}
                   >
                     <SelectTrigger className="app-input h-7 w-full text-[13px]">
                       <SelectValue placeholder="Si es daño de un tercero..." />
