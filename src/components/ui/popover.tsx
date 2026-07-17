@@ -34,7 +34,7 @@ function PopoverContent({
   className,
   children,
   side = "bottom",
-  sideOffset = 4,
+  sideOffset = 0,
   align = "start",
   ...props
 }: PopoverPrimitive.Popup.Props &
@@ -45,12 +45,14 @@ function PopoverContent({
         side={side}
         sideOffset={sideOffset}
         align={align}
-        className="z-50"
+        className="z-9999"
+        positionMethod="fixed"
+        collisionAvoidance={{ side: "flip", align: "shift", fallbackAxisSide: "none" }}
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "relative isolate z-50 w-auto min-w-[280px] origin-(--transform-origin) rounded-[10px] border border-input p-0",
+            "relative z-9999 w-auto min-w-[280px] origin-(--transform-origin) rounded-[10px] border border-input p-0",
             "bg-card/85 backdrop-blur-xl saturate-150",
             "shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
             "text-popover-foreground",

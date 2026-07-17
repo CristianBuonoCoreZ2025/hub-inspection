@@ -22,15 +22,36 @@ import type {
   DocumentType,
 } from "@/types";
 
+// Ordenamiento natural: extrae partes numéricas y las compara como números,
+// y las partes de texto como strings. Ej: "1 Año" < "2 Años" < "10 años" < "20 años"
+function naturalCompare(a: string, b: string): number {
+  const ax: (string | number)[] = [];
+  const bx: (string | number)[] = [];
+  a.replace(/(\d+)|(\D+)/g, (_, $1, $2) => { ax.push($1 ? parseInt($1, 10) : $2); return ""; });
+  b.replace(/(\d+)|(\D+)/g, (_, $1, $2) => { bx.push($1 ? parseInt($1, 10) : $2); return ""; });
+  while (ax.length && bx.length) {
+    const an = ax.shift()!;
+    const bn = bx.shift()!;
+    const nn = (typeof an === "number" && typeof bn === "number") ? (an as number) - (bn as number) : String(an).localeCompare(String(bn));
+    if (nn) return nn;
+  }
+  return ax.length - bx.length;
+}
+
+// fetchAll + ordenamiento natural por nombre (reemplaza order: name de la BD)
+async function fetchAllSorted<T extends { name?: string }>(table: string, options: Parameters<typeof fetchAll>[1]): Promise<T[]> {
+  const items = await fetchAll<T>(table, options);
+  return items.sort((a, b) => naturalCompare(a.name || "", b.name || ""));
+}
+
 // ═══════════════════════════════════════════════════════════════
 // CLAIM CAUSES
 // ═══════════════════════════════════════════════════════════════
 
 export async function getClaimCauses() {
-  return fetchAll<ClaimCause>("claim_causes", {
+  return fetchAllSorted<ClaimCause>("claim_causes", {
     select: "id, name, description, country_id, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -59,10 +80,9 @@ export async function deleteClaimCause(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getInsuranceCompanies() {
-  return fetchAll<InsuranceCompanyCatalog>("insurance_companies", {
+  return fetchAllSorted<InsuranceCompanyCatalog>("insurance_companies", {
     select: "id, name, rut, address, line_of_business, code, type, country_id, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -93,10 +113,9 @@ export async function deleteInsuranceCompany(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getBrokers() {
-  return fetchAll<BrokerCatalog>("brokers", {
+  return fetchAllSorted<BrokerCatalog>("brokers", {
     select: "id, name, rut, address, contact, country_id, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -128,10 +147,9 @@ export async function deleteBroker(id: string) {
 
 export async function getBusinessLines() {
   try {
-    return await fetchAll<BusinessLine>("business_lines", {
+    return await fetchAllSorted<BusinessLine>("business_lines", {
       select: "id, country_id, name, code_prefix, claim_type, claim_type_id, ramo_fecu, description, is_active, created_at, updated_at",
       eq: { is_active: true },
-      order: { column: "name", ascending: true },
     });
   } catch (err) {
     console.error("[getBusinessLines] Error:", err);
@@ -167,10 +185,9 @@ export async function deleteBusinessLine(id: string) {
 
 export async function getInsuranceProducts() {
   try {
-    return await fetchAll<InsuranceProduct>("insurance_products", {
+    return await fetchAllSorted<InsuranceProduct>("insurance_products", {
       select: "id, business_line_id, name, description, country_id, is_active, created_at, updated_at",
       eq: { is_active: true },
-      order: { column: "name", ascending: true },
     });
   } catch (err) {
     console.error("[getInsuranceProducts] Error:", err);
@@ -205,10 +222,9 @@ export async function deleteInsuranceProduct(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getAdvisors() {
-  return fetchAll<Advisor>("advisors", {
+  return fetchAllSorted<Advisor>("advisors", {
     select: "id, name, email, phone, country_id, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -242,12 +258,11 @@ export async function getRegions(countryId?: string) {
   const options: Parameters<typeof fetchAll>[1] = {
     select: "id, country_id, code, name, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   };
   if (countryId) {
     options.eq = { ...options.eq, country_id: countryId };
   }
-  return fetchAll<Region>("regions", options);
+  return fetchAllSorted<Region>("regions", options);
 }
 
 export async function createRegion(input: { country_id: string; code?: string; name: string }) {
@@ -277,12 +292,11 @@ export async function getCities(regionId?: string) {
   const options: Parameters<typeof fetchAll>[1] = {
     select: "id, region_id, name, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   };
   if (regionId) {
     options.eq = { ...options.eq, region_id: regionId };
   }
-  return fetchAll<City>("cities", options);
+  return fetchAllSorted<City>("cities", options);
 }
 
 export async function createCity(input: { region_id: string; name: string }) {
@@ -312,12 +326,11 @@ export async function getCommunes(cityId?: string) {
   const options: Parameters<typeof fetchAll>[1] = {
     select: "id, city_id, name, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   };
   if (cityId) {
     options.eq = { ...options.eq, city_id: cityId };
   }
-  return fetchAll<Commune>("communes", options);
+  return fetchAllSorted<Commune>("communes", options);
 }
 
 export async function createCommune(input: { city_id: string; name: string }) {
@@ -344,10 +357,9 @@ export async function deleteCommune(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getPropertyClassifications() {
-  return fetchAll<PropertyClassification>("property_classifications", {
+  return fetchAllSorted<PropertyClassification>("property_classifications", {
     select: "id, name, description, is_active, field_config, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -375,10 +387,9 @@ export async function deletePropertyClassification(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getDamageClassifications() {
-  return fetchAll<DamageClassification>("damage_classifications", {
+  return fetchAllSorted<DamageClassification>("damage_classifications", {
     select: "id, name, description, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -406,10 +417,9 @@ export async function deleteDamageClassification(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getPolicyTypes() {
-  return fetchAll<PolicyType>("policy_types", {
+  return fetchAllSorted<PolicyType>("policy_types", {
     select: "id, name, description, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -437,10 +447,9 @@ export async function deletePolicyType(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getClaimTypes() {
-  return fetchAll<ClaimType>("claim_types", {
+  return fetchAllSorted<ClaimType>("claim_types", {
     select: "id, name, description, icon, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -468,10 +477,9 @@ export async function deleteClaimType(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getHousingDestinations() {
-  return fetchAll<HousingDestination>("housing_destinations", {
+  return fetchAllSorted<HousingDestination>("housing_destinations", {
     select: "id, name, description, is_active, field_config, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -499,10 +507,9 @@ export async function deleteHousingDestination(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getBuildingAges() {
-  return fetchAll<BuildingAge>("building_ages", {
+  return fetchAllSorted<BuildingAge>("building_ages", {
     select: "id, name, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -530,10 +537,9 @@ export async function deleteBuildingAge(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getRelationships() {
-  return fetchAll<Relationship>("relationships", {
+  return fetchAllSorted<Relationship>("relationships", {
     select: "id, name, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -565,15 +571,14 @@ export async function deleteRelationship(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getCountries() {
-  return fetchAll<Country>("countries", {
+  return fetchAllSorted<Country>("countries", {
     select: "id, code, name, phone_prefix, is_active, created_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
 export async function getLookupCatalog(category: string) {
-  return fetchAll<LookupCatalog>("lookup_catalog", {
+  return fetchAllSorted<LookupCatalog>("lookup_catalog", {
     select: "id, country_id, category, code, name, description, sort_order, is_active",
     eq: { category, is_active: true },
     order: { column: "sort_order", ascending: true },
@@ -604,10 +609,9 @@ export async function deleteLookupCatalogItem(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getEvents() {
-  return fetchAll<Event>("events", {
+  return fetchAllSorted<Event>("events", {
     select: "id, country_id, code, name, description, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 
@@ -657,10 +661,9 @@ export async function deleteEvent(id: string) {
 // ═══════════════════════════════════════════════════════════════
 
 export async function getDocumentTypes() {
-  return fetchAll<DocumentType>("document_types", {
+  return fetchAllSorted<DocumentType>("document_types", {
     select: "id, country_id, code, name, description, is_active, created_at, updated_at",
     eq: { is_active: true },
-    order: { column: "name", ascending: true },
   });
 }
 

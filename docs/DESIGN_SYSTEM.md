@@ -36,23 +36,51 @@ className="pg-btn-platinum"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 ```
 
-### Reglas del dropdown
-- **SIEMPRE** se despliega hacia abajo (`side="bottom"`).
+## 2. Selects / Dropdowns / Combobox / Popovers
+
+### Componentes
+```tsx
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+```
+
+### Reglas OBLIGATORIAS para TODOS los popups (Select, DropdownMenu, Popover)
+- **SIEMPRE** se despliegan hacia abajo (`side="bottom"`).
 - `sideOffset={0}` — pegado al trigger, sin gap.
 - `positionMethod="fixed"` — escapa de contenedores con overflow.
-- `SelectPrimitive.Portal` — renderiza en `<body>`, no dentro del modal.
+- `Portal` — renderiza en `<body>`, no dentro del modal.
 - `z-9999` — sobre todo, incluido modals.
 - `collisionAvoidance={{ side: "flip", align: "shift", fallbackAxisSide: "none" }}`.
-- **NO** usar `isolate` en el Positioner (crea stacking context que atrapa el z-index).
+- **NO** usar `isolate` en el Positioner ni en el Popup (crea stacking context que atrapa el z-index).
 - `max-h-(--available-height)` — altura dinámica según espacio disponible.
 - Mínimo 20 items visibles sin scroll.
 
-### Trigger
+### Select Trigger
 ```tsx
 <SelectTrigger className="app-input h-7">
   <SelectValue placeholder="Seleccionar..." />
 </SelectTrigger>
 ```
+
+### DropdownMenu Trigger
+```tsx
+<DropdownMenuTrigger asChild>
+  <Button className="pg-btn-platinum">Acciones</Button>
+</DropdownMenuTrigger>
+```
+
+### Popover Trigger
+```tsx
+<PopoverTrigger asChild>
+  <Button className="pg-btn-platinum">Abrir</Button>
+</PopoverTrigger>
+```
+
+### Regla
+> **TODOS** los popups (Select, DropdownMenu, Popover) siguen las mismas reglas:
+> Portal + fixed + z-9999 + sideOffset=0 + sin isolate. NINGÚN popup se renderiza
+> dentro del modal sin Portal.
 
 ---
 

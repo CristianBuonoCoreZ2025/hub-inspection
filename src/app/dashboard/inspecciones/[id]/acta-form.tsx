@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { FormDatePicker } from "@/components/ui/form-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleChip } from "@/components/ui/toggle-chip";
+import { VoiceTextarea } from "@/components/ui/voice-textarea";
 import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
 import { getPropertyClassifications, getHousingDestinations, getBuildingAges } from "@/services/catalogs";
 import { useQuery } from "@tanstack/react-query";
@@ -217,82 +218,62 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
 
   const catalogSelect = (name: string, category: string, placeholder = "Seleccionar...") => {
     const items = catalogs[category] || [];
-    const current = watch(name) as unknown as string;
-    const selectItems = [{ value: "__none", label: placeholder }, ...items.map((item) => ({ value: item.name, label: item.name }))];
+    const current = String(watch(name) ?? "");
     return (
       <Select
-        value={current || "__none"}
-        onValueChange={(v) => set(name, v === "__none" ? "" : v)}
-        items={selectItems}
+        value={current || undefined}
+        onValueChange={(v) => set(name, v ?? "")}
       >
         <SelectTrigger className="app-input h-8 text-[12px] w-full">
-          <SelectValue placeholder={placeholder}>
-            {(val: string) => {
-              const item = selectItems.find((i) => i.value === val);
-              return item ? item.label : placeholder;
-            }}
-          </SelectValue>
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="__none">{placeholder}</SelectItem>
-          {items.map((item) => (
-            <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
-          ))}
+          {items.length === 0 ? (
+            <div className="px-2 py-1.5 text-[12px] text-muted-foreground">Sin opciones</div>
+          ) : (
+            items.map((item) => (
+              <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
     );
   };
 
   const tableSelect = (name: string, items: { id: string; name: string }[], placeholder = "Seleccionar...") => {
-    const current = watch(name) as unknown as string;
-    const selectItems = [{ value: "__none", label: placeholder }, ...items.map((item) => ({ value: item.name, label: item.name }))];
+    const current = String(watch(name) ?? "");
     return (
       <Select
-        value={current || "__none"}
-        onValueChange={(v) => set(name, v === "__none" ? "" : v)}
-        items={selectItems}
+        value={current || undefined}
+        onValueChange={(v) => set(name, v ?? "")}
       >
         <SelectTrigger className="app-input h-8 text-[12px] w-full">
-          <SelectValue placeholder={placeholder}>
-            {(val: string) => {
-              const item = selectItems.find((i) => i.value === val);
-              return item ? item.label : placeholder;
-            }}
-          </SelectValue>
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="__none">{placeholder}</SelectItem>
-          {items.map((item) => (
-            <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
-          ))}
+          {items.length === 0 ? (
+            <div className="px-2 py-1.5 text-[12px] text-muted-foreground">Sin opciones</div>
+          ) : (
+            items.map((item) => (
+              <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
     );
   };
 
   const numberSelect = (name: string, max: number, placeholder = "Seleccionar...") => {
-    const current = watch(name) as unknown as string;
-    const numberItems = [
-      { value: "__none", label: placeholder },
-      ...Array.from({ length: max }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-      { value: "10+", label: "10+" },
-    ];
+    const current = String(watch(name) ?? "");
     return (
       <Select
-        value={current || "__none"}
-        onValueChange={(v) => set(name, v === "__none" ? "" : v)}
-        items={numberItems}
+        value={current || undefined}
+        onValueChange={(v) => set(name, v ?? "")}
       >
         <SelectTrigger className="app-input h-8 text-[12px] w-full">
-          <SelectValue placeholder={placeholder}>
-            {(val: string) => {
-              const item = numberItems.find((i) => i.value === val);
-              return item ? item.label : placeholder;
-            }}
-          </SelectValue>
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="__none">{placeholder}</SelectItem>
           {Array.from({ length: max }, (_, i) => String(i + 1)).map((n) => (
             <SelectItem key={n} value={n}>{n}</SelectItem>
           ))}
@@ -383,20 +364,13 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                 <Label className="app-field-label">Compañia Bomberos</Label>
                 <Input {...field("firefighters_company")} placeholder="Nombre compañia" className="app-input" />
               </div>
-            </div>
-          </div>
-
-          <div className="app-panel">
-            <h3 className="app-section-title">
-              Otros Seguros y Observaciones
-            </h3>
-            <div className="modal-grid">
               <div className="modal-field">
+                <Label className="app-field-label">¿Presenta otros seguros?</Label>
                 <ToggleChip
                   active={Boolean(watch("other_insurances"))}
                   onClick={(v) => set("other_insurances", v)}
                 >
-                  ¿Presenta otros seguros?
+                  {watch("other_insurances") ? "Sí" : "No"}
                 </ToggleChip>
               </div>
               {Boolean(watch("other_insurances")) && (
@@ -405,15 +379,21 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                   <Input {...field("other_insurance_company")} className="app-input" />
                 </div>
               )}
-              <div className="modal-field modal-field-full">
-                <Label className="app-field-label">Observaciones del Inspector</Label>
-                <textarea
-                  {...field("inspector_observations")}
-                  rows={4}
-                  className="app-input resize-none"
-                  placeholder="Observaciones finales del inspector sobre la inspeccion..."
-                />
-              </div>
+            </div>
+          </div>
+
+          <div className="app-panel">
+            <h3 className="app-section-title">
+              Observaciones del Inspector
+            </h3>
+            <div className="modal-field modal-field-full">
+              <VoiceTextarea
+                value={String(watch("inspector_observations") ?? "")}
+                onChange={(v) => set("inspector_observations", v)}
+                rows={5}
+                placeholder="Observaciones finales del inspector sobre la inspeccion... (puede usar el microfono para transcribir)"
+                disabled={readOnly}
+              />
             </div>
           </div>
         </div>
@@ -527,11 +507,12 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                 )}
                 {isFieldVisible("is_habitable") && (
                   <div className="modal-field">
+                    <Label className="app-field-label">{labelFor("is_habitable")}</Label>
                     <ToggleChip
                       active={Boolean(watch("property_risk.is_habitable"))}
                       onClick={(v) => set("property_risk.is_habitable", v)}
                     >
-                      {labelFor("is_habitable")}
+                      {watch("property_risk.is_habitable") ? "Sí" : "No"}
                     </ToggleChip>
                   </div>
                 )}
@@ -656,11 +637,12 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
           <div className="modal-grid">
             <div className="modal-field modal-field-full">
               <Label className="app-field-label">Relato de los Hechos</Label>
-              <textarea
-                {...field("insured_statement.statement")}
+              <VoiceTextarea
+                value={String(watch("insured_statement.statement") ?? "")}
+                onChange={(v) => set("insured_statement.statement", v)}
                 rows={5}
-                className="app-input resize-none"
-                placeholder="De acuerdo a lo relatado por el Sr..."
+                placeholder="De acuerdo a lo relatado por el Sr... (puede usar el micrófono para transcribir)"
+                disabled={readOnly}
               />
             </div>
             <div className="modal-field">
@@ -714,13 +696,18 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                 <div className="modal-grid-3">
                   <div className="modal-field">
                     <Label className="app-field-label">Tipo</Label>
-                    <select
-                      {...field(`third_parties.${idx}.party_type`)}
-                      className="app-input h-7"
+                    <Select
+                      value={String(watch(`third_parties.${idx}.party_type`) ?? "")}
+                      onValueChange={(v) => set(`third_parties.${idx}.party_type`, v)}
                     >
-                      <option value="afectado">Afectado</option>
-                      <option value="responsable">Responsable</option>
-                    </select>
+                      <SelectTrigger className="app-input h-7">
+                        <SelectValue placeholder="Seleccionar..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="afectado">Afectado</SelectItem>
+                        <SelectItem value="responsable">Responsable</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="modal-field">
                     <Label className="app-field-label">Nombre Completo</Label>
