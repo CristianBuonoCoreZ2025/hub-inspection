@@ -4,7 +4,7 @@ import React from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Settings2, Check, X } from "lucide-react";
+import { Settings2, Eye, EyeOff, Lock } from "lucide-react";
 
 interface FieldConfig {
   show?: string[];
@@ -20,46 +20,47 @@ interface FieldConfigEditorProps {
   itemName: string;
 }
 
-// Campos siempre visibles por defecto (no se pueden ocultar)
 const ALWAYS_VISIBLE = ["age_years", "owner_name", "worker_resident_count"];
 
-// Grupos de campos para la matriz
 const FIELD_GROUPS: {
   title: string;
-  fields: { key: string; defaultLabel: string; type: "text" | "number" | "select" | "toggle" }[];
+  icon: React.ElementType;
+  fields: { key: string; defaultLabel: string }[];
 }[] = [
   {
-    title: "Campos Base (siempre visibles)",
+    title: "Base",
+    icon: Lock,
     fields: [
-      { key: "age_years", defaultLabel: "Antigüedad del Inmueble", type: "select" },
-      { key: "owner_name", defaultLabel: "Nombre Propietario(s)", type: "text" },
-      { key: "worker_resident_count", defaultLabel: "N° Habitantes", type: "number" },
+      { key: "age_years", defaultLabel: "Antigüedad del Inmueble" },
+      { key: "owner_name", defaultLabel: "Nombre Propietario(s)" },
+      { key: "worker_resident_count", defaultLabel: "N° Habitantes" },
     ],
   },
   {
-    title: "Campos de Propiedad",
+    title: "Propiedad",
+    icon: Settings2,
     fields: [
-      { key: "apartment_number", defaultLabel: "N° Dpto / Oficina", type: "text" },
-      { key: "floor_count", defaultLabel: "N° Pisos", type: "number" },
-      { key: "built_surface", defaultLabel: "Superficie Construida (m²)", type: "number" },
-      { key: "room_count", defaultLabel: "Cantidad Espacios", type: "number" },
-      { key: "bathroom_count", defaultLabel: "Cantidad Baños", type: "number" },
-      { key: "is_habitable", defaultLabel: "¿Se encuentra habitable?", type: "toggle" },
+      { key: "apartment_number", defaultLabel: "N° Dpto / Oficina" },
+      { key: "floor_count", defaultLabel: "N° Pisos" },
+      { key: "built_surface", defaultLabel: "Superficie Construida (m²)" },
+      { key: "room_count", defaultLabel: "Cantidad Espacios" },
+      { key: "bathroom_count", defaultLabel: "Cantidad Baños" },
+      { key: "is_habitable", defaultLabel: "¿Se encuentra habitable?" },
     ],
   },
   {
-    title: "Campos Comerciales",
+    title: "Comercial",
+    icon: Settings2,
     fields: [
-      { key: "office_count", defaultLabel: "N° Oficinas", type: "number" },
-      { key: "warehouse_count", defaultLabel: "N° Bodegas", type: "number" },
-      { key: "branch_count", defaultLabel: "Sucursales", type: "number" },
-      { key: "business_line", defaultLabel: "Rubro de la Empresa", type: "text" },
+      { key: "office_count", defaultLabel: "N° Oficinas" },
+      { key: "warehouse_count", defaultLabel: "N° Bodegas" },
+      { key: "branch_count", defaultLabel: "Sucursales" },
+      { key: "business_line", defaultLabel: "Rubro de la Empresa" },
     ],
   },
 ];
 
 export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, itemName }: FieldConfigEditorProps) {
-  // Derivar estado inicial desde currentConfig cada vez que se abre
   const buildShow = () => {
     const show = new Set<string>(ALWAYS_VISIBLE);
     if (currentConfig?.show) currentConfig.show.forEach((f) => show.add(f));
@@ -73,7 +74,6 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
   const [labels, setLabels] = React.useState<Record<string, string>>(buildLabels);
   const [lastOpen, setLastOpen] = React.useState(false);
 
-  // Reset state when dialog opens (sin useEffect, evita cascading renders)
   if (open && !lastOpen) {
     setLastOpen(true);
     setShowFields(buildShow());
@@ -84,7 +84,7 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
   }
 
   const toggleField = (field: string) => {
-    if (ALWAYS_VISIBLE.includes(field)) return; // No se puede ocultar
+    if (ALWAYS_VISIBLE.includes(field)) return;
     setShowFields((prev) => {
       const next = new Set(prev);
       if (next.has(field)) {
@@ -131,77 +131,80 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500 to-purple-500 text-white shadow-sm">
               <Settings2 className="h-4 w-4" />
             </div>
-            Configurar Campos — {itemName}
+            {itemName}
           </DialogTitle>
           <DialogDescription className="modal-subtitle">
-            Define qué campos del acta de inspección se muestran para esta clasificación/destino y personaliza los labels.
-            Los campos base siempre están visibles.
+            Click en el ojo para mostrar u ocultar campos del acta.
           </DialogDescription>
         </div>
 
-        <div className="modal-body space-y-4">
-          {FIELD_GROUPS.map((group) => (
-            <div key={group.title}>
-              <h4 className="text-[13px] font-semibold text-muted-foreground mb-2">{group.title}</h4>
-              <table className="app-data-table">
-                <thead>
-                  <tr>
-                    <th className="w-16 text-center">Visible</th>
-                    <th className="w-[200px]">Campo</th>
-                    <th>Label Personalizado</th>
-                  </tr>
-                </thead>
-                <tbody>
+        <div className="modal-body space-y-3">
+          {FIELD_GROUPS.map((group) => {
+            const GroupIcon = group.icon;
+            return (
+              <div key={group.title}>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <GroupIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">{group.title}</h4>
+                </div>
+                <div className="grid grid-cols-1 gap-1">
                   {group.fields.map((field) => {
                     const isVisible = showFields.has(field.key) || ALWAYS_VISIBLE.includes(field.key);
                     const isLocked = ALWAYS_VISIBLE.includes(field.key);
                     return (
-                      <tr key={field.key} className={!isVisible ? "opacity-50" : ""}>
-                        <td className="text-center">
+                      <div
+                        key={field.key}
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-colors ${
+                          isVisible ? "bg-background" : "bg-muted/30 opacity-60"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleField(field.key)}
+                          disabled={isLocked}
+                          className={`shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md transition-all ${
+                            isLocked
+                              ? "text-muted-foreground/40 cursor-default"
+                              : isVisible
+                                ? "text-emerald-500 hover:bg-emerald-500/10"
+                                : "text-muted-foreground hover:bg-muted"
+                          }`}
+                          title={isLocked ? "Siempre visible" : isVisible ? "Visible" : "Oculto"}
+                        >
                           {isLocked ? (
-                            <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-primary/10 text-primary">
-                              <Check className="h-3 w-3" />
-                            </span>
+                            <Lock className="h-3.5 w-3.5" />
+                          ) : isVisible ? (
+                            <Eye className="h-4 w-4" />
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => toggleField(field.key)}
-                              className={`inline-flex items-center justify-center h-5 w-5 rounded border transition-colors ${
-                                isVisible
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-background border-input hover:bg-muted"
-                              }`}
-                            >
-                              {isVisible ? <Check className="h-3 w-3" /> : <X className="h-3 w-3 opacity-0" />}
-                            </button>
+                            <EyeOff className="h-4 w-4" />
                           )}
-                        </td>
-                        <td className="font-medium text-[13px]">{field.defaultLabel}</td>
-                        <td>
-                          <Input
-                            type="text"
-                            placeholder={field.defaultLabel}
-                            value={labels[field.key] || ""}
-                            onChange={(e) => updateLabel(field.key, e.target.value)}
-                            className="app-input h-7 text-[12px]"
-                            disabled={!isVisible}
-                          />
-                        </td>
-                      </tr>
+                        </button>
+                        <span className={`text-[13px] font-medium min-w-[140px] ${isVisible ? "text-foreground" : "text-muted-foreground line-through"}`}>
+                          {field.defaultLabel}
+                        </span>
+                        <Input
+                          type="text"
+                          placeholder={field.defaultLabel}
+                          value={labels[field.key] || ""}
+                          onChange={(e) => updateLabel(field.key, e.target.value)}
+                          className="app-input h-7 text-[12px] flex-1"
+                          disabled={!isVisible}
+                        />
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="modal-footer">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancelar
+          <Button className="pg-btn-platinum" variant="ghost" onClick={() => onOpenChange(false)}>
+            Cerrar
           </Button>
           <Button className="pg-btn-platinum" onClick={handleSave}>
-            Guardar Configuración
+            Guardar
           </Button>
         </div>
       </DialogContent>
