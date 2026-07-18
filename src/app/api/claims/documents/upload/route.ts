@@ -9,12 +9,13 @@ import { logger } from "@/lib/logger";
  * Recibe multipart/form-data:
  *   - file: el archivo
  *   - claimId: UUID del siniestro
+ *   - documentTypeCode: código del tipo de documento (opcional)
  *
  * Flujo:
  *  1. Resuelve claimId → claim.liquidation_number
  *  2. Obtiene el siguiente correlativo DOC-NNNNNN atómico desde la BD
  *  3. Sube a R2 con path: claims/{L}/documents/{L}-DOC-NNNNNN.ext
- *  4. Inserta el registro en claim_documents
+ *  4. Inserta el registro en claim_documents (doc_code, file_path, file_url NOT NULL)
  *
  * Devuelve: { document: { id, document_name, document_url, ... } }
  */
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file");
     const claimId = formData.get("claimId");
+    const documentTypeCode = formData.get("documentTypeCode");
 
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "No se encontró el archivo" }, { status: 400 });
@@ -40,17 +42,22 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // Subir a R2 con path estructurado del plan
-    const { url } = await uploadClaimDocument(claimId, buffer, mimeType, ext || ".bin");
+    const { url, key, docCode } = await uploadClaimDocument(claimId, buffer, mimeType, ext || ".bin");
 
-    // Insertar en claim_documents
+    // Insertar en claim_documents — llenar columnas NOT NULL del schema original
     const supabase = createAdminClient();
     const { data: document, error } = await supabase
       .from("claim_documents")
       .insert({
         claim_id: claimId,
+        doc_code: docCode,
+        file_path: key,
+        file_url: url,
+        original_filename: file.name,
+        mime_type: mimeType,
         document_name: file.name,
         document_url: url,
-        document_type: mimeType,
+        document_type: typeof documentTypeCode === "string" && documentTypeCode ? documentTypeCode : null,
         file_size: file.size,
         is_active: true,
       })

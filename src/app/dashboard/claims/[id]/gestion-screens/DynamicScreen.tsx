@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -18,15 +19,13 @@ import {
  getClaimDocumentRequestByAction,
  createClaimDocumentRequest,
  updateClaimDocumentRequestItem,
- closeClaimDocumentRequest,
- cancelClaimDocumentRequest,
  addItemsToClaimDocumentRequest,
  removeItemFromClaimDocumentRequest,
  updateClaimDocumentRequestNotes,
 } from "@/services/claim-documents";
 import { getPolicyCoveragesByPolicyId } from "@/services/policies";
-import { getClaimById, getClaimParticipants } from "@/services/claims";
-import { getUsersByRoles, updateClaimAction } from "@/services/claim-actions";
+import { getClaimById } from "@/services/claims";
+import { getUsersByRoles, updateClaimAction, issueClaimAction } from "@/services/claim-actions";
 import { getUsersByRoleForCompany } from "@/services/users";
 import { getInspectionSessions, createInspectionSession, getInspectorSchedule } from "@/services/inspections";
 import { getCoverageCatalog } from "@/services/coverage-catalog";
@@ -72,6 +71,18 @@ export interface ScreenField {
  dateValidation?: DateValidation;
  options?: { value: string; label: string }[];
  columns?: string[];
+ // Configuración específica por tipo de campo complejo
+ config?: Record<string, boolean | string | number>;
+}
+
+// Config del campo claim_document_receipt (Recepción de Documentos)
+export interface ReceiptFieldConfig {
+ // Bloquear emisión manual hasta que todos los documentos estén resueltos
+ blockEmitUntilAllResolved?: boolean;
+ // "No necesario" requiere motivo obligatorio
+ notNeededRequiresReason?: boolean;
+ // "No necesario" solo lo pueden marcar los emisores del combo
+ notNeededOnlyIssuers?: boolean;
 }
 
 export function widthClass(width: FieldWidth = "full"): string {
@@ -194,13 +205,6 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  enabled: (hasClaimEntities || hasCoordInspector) && !!action.claim_id,
  });
 
- // Cargar participantes del siniestro (insured, broker, etc.)
- const { data: claimParticipants } = useQuery({
- queryKey: ["claim-participants", action.claim_id],
- queryFn: () => getClaimParticipants(action.claim_id),
- enabled: hasClaimEntities && !!action.claim_id,
- });
-
  // Cargar reserva del siniestro (para entidades reserve_currency, reserve_payment_date, reserve_number)
  const hasReserveEntities = fields.some((f) => f.type === "reserve_currency" || f.type === "reserve_payment_date" || f.type === "reserve_number");
  const { data: reserves } = useQuery({
@@ -223,7 +227,6 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  }, [claim?.inspector_id, hasCoordInspector]);
 
  // Separar campos por categoría
- const claimEntities = fields.filter((f) => f.category === "simple_entity" && CLAIM_ENTITIES.some((e) => e.code === f.type));
  const actionEntities = fields.filter((f) => f.category === "simple_entity" && ACTION_ENTITIES.some((e) => e.code === f.type));
  const otherEntities = fields.filter((f) => f.category === "simple_entity" && !CLAIM_ENTITIES.some((e) => e.code === f.type) && !ACTION_ENTITIES.some((e) => e.code === f.type));
  // review_levels se renderiza siempre al final, sin importar si está en los campos configurados
@@ -232,22 +235,9 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  const hasCoordFields = ownFields.some((f) => f.id === "coord_fecha");
 
  // Si la pantalla tiene reserva o ajuste, los campos de moneda/fecha/reserva van arriba del form
- // → quitarlos de claimEntities para no duplicarlos abajo
- // → también quitar toda la sección "Datos del Siniestro" porque ya están arriba
+ // → quitarlos de los own fields para no duplicarlos
  const hasReserveForm = complexEntities.some((f) => f.type === "claim_reserve_form");
  const hasAdjustmentForm = complexEntities.some((f) => f.type === "claim_adjustment_form");
- const hideClaimSection = hasReserveForm || hasAdjustmentForm;
- const hiddenEntityTypes = new Set<string>();
- if (hasReserveForm) {
- hiddenEntityTypes.add("reserve_currency");
- hiddenEntityTypes.add("reserve_payment_date");
- }
- if (hasAdjustmentForm) {
- hiddenEntityTypes.add("reserve_number");
- hiddenEntityTypes.add("reserve_currency");
- hiddenEntityTypes.add("reserve_payment_date");
- }
- const filteredClaimEntities = hideClaimSection ? [] : claimEntities;
 
  // Own fields: quitar los que ya están en los forms superiores de reserva/ajuste
  const hiddenOwnFields = new Set<string>();
@@ -273,27 +263,13 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
 
  return (
  <div className="space-y-4">
- {/* ─── Datos del siniestro (PRIMERO) ─── */}
- {filteredClaimEntities.length > 0 && (
- <section className="app-panel p-3">
- <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">Datos del Siniestro</h4>
- <div className="grid grid-cols-12 gap-3">
- {filteredClaimEntities.map((field) => (
- <div key={field.id} className={widthClass(field.width)}>
- <EntityField field={field} value={values[field.id]} action={action} reserveData={reserveData} claim={claim ?? undefined} claimParticipants={claimParticipants} />
- </div>
- ))}
- </div>
- </section>
- )}
-
  {/* ─── Entidades complejas (coberturas primero, review_levels al final) ─── */}
  {sortedComplexEntities.length > 0 && (
  <div className="space-y-4">
  {sortedComplexEntities.map((field) => (
  <section key={field.id} className="app-panel p-3">
  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">{field.label}</h4>
- <ComplexEntityView type={field.type} action={action} readOnly={readOnly} values={values} onAdvance={onAdvance} onReject={onReject} onChange={onChange} />
+ <ComplexEntityView type={field.type} field={field} action={action} readOnly={readOnly} values={values} onAdvance={onAdvance} onReject={onReject} onChange={onChange} />
  </section>
  ))}
  </div>
@@ -360,7 +336,12 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
 
  {/* ─── Niveles de Revisión (SIEMPRE al final, en toda gestión) ─── */}
  {action.action_feature && (action.action_feature.has_issue || action.action_feature.has_review || action.action_feature.has_approve) && (
- <ReviewLevelsView action={action} onAdvance={onAdvance} onReject={onReject} />
+ <ReviewLevelsView
+ action={action}
+ onAdvance={onAdvance}
+ onReject={onReject}
+ receiptFieldConfig={(fields.find((f) => f.type === "claim_document_receipt")?.config || {}) as ReceiptFieldConfig}
+ />
  )}
  </div>
  );
@@ -480,13 +461,29 @@ function getActionEntityValue(type: string, action: ActionWithRelations | null, 
 // Muestra 1, 2 o 3 niveles según la configuración de action_feature
 // ═══════════════════════════════════════════════════════════════
 
-function ReviewLevelsView({ action, onAdvance, onReject }: { action: ActionWithRelations; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void }) {
+function ReviewLevelsView({ action, onAdvance, onReject, receiptFieldConfig }: { action: ActionWithRelations; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void; receiptFieldConfig?: ReceiptFieldConfig }) {
  const feature = action.action_feature;
  const { profile } = useAuth();
+ const tpl = action.action_template;
+
+ // ── Bloqueo de emisión: si el campo claim_document_receipt tiene
+ // blockEmitUntilAllResolved=true, no se puede emitir hasta que todos
+ // los documentos estén resueltos (received o not_needed). ──
+ const blockEmit = receiptFieldConfig?.blockEmitUntilAllResolved === true;
+ const { data: rtaRequest } = useQuery({
+ queryKey: ["claim-doc-request-by-action", action.id],
+ queryFn: () => getClaimDocumentRequestByAction(action.id),
+ enabled: blockEmit && !!feature,
+ });
+ const rtaItems = rtaRequest?.claim_document_request_items || [];
+ const rtaAllResolved = blockEmit
+ ? rtaItems.length > 0 && rtaItems.every((it) => it.status === "received" || it.status === "not_needed")
+ : true;
+ const rtaPendingCount = rtaItems.filter((it) => it.status === "requested").length;
+
  if (!feature) return null;
 
  const statusCode = action.action_status?.code || "todo";
- const tpl = action.action_template;
 
  // Construir niveles dinámicamente según config
  const levels: {
@@ -573,6 +570,8 @@ function ReviewLevelsView({ action, onAdvance, onReject }: { action: ActionWithR
  currentUserId={profile?.id || null}
  onAdvance={onAdvance}
  onReject={onReject}
+ canIssue={level.key === "issuer" ? rtaAllResolved : undefined}
+ issueBlockedReason={level.key === "issuer" && blockEmit && !rtaAllResolved ? `Faltan ${rtaPendingCount} documento(s) por recibir` : undefined}
  />
  </div>
  ))}
@@ -588,6 +587,8 @@ function LevelCard({
  currentUserId,
  onAdvance,
  onReject,
+ canIssue,
+ issueBlockedReason,
 }: {
  level: {
  key: "issuer" | "reviewer" | "approver";
@@ -603,6 +604,8 @@ function LevelCard({
  currentUserId: string | null;
  onAdvance?: (level: "issuer" | "reviewer" | "approver") => void;
  onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void;
+ canIssue?: boolean;
+ issueBlockedReason?: string;
 }) {
  const queryClient = useQueryClient();
  const [showRejectBox, setShowRejectBox] = useState(false);
@@ -692,7 +695,9 @@ function LevelCard({
  const isCandidate = !!currentUserId && allCandidates.some(c => c.id === currentUserId);
  // Para emisión (issuer): cualquiera puede emitir, pasa a ser el emisor
  // Para revisión/aprobación: solo el responsable o candidatos con el rol
- const canAct = level.active && !level.done && (onAdvance || onReject) && (
+ // RTA: la emisión se bloquea hasta que todos los documentos estén resueltos
+ const isIssueBlocked = level.key === "issuer" && canIssue === false;
+ const canAct = level.active && !level.done && !isIssueBlocked && (onAdvance || onReject) && (
  level.key === "issuer" ? !!currentUserId : (isCandidate || isCurrentUser)
  );
 
@@ -773,6 +778,14 @@ function LevelCard({
  </button>
  </div>
  )}
+ {/* Bloqueo de emisión para RTA: mostrar motivo cuando no se puede emitir */}
+ {isIssueBlocked && level.active && !level.done && (
+ <div className="pt-0.5">
+ <p className="text-[9px] text-amber-600 dark:text-amber-400 italic" title={issueBlockedReason}>
+ 🔒 {issueBlockedReason}
+ </p>
+ </div>
+ )}
  {/* Caja de rechazo con motivo */}
  {canAct && showRejectBox && (
  <div className="flex flex-col gap-1 pt-0.5">
@@ -810,7 +823,7 @@ function LevelCard({
 // Entidades complejas (solo vista, datos reales)
 // ═══════════════════════════════════════════════════════════════
 
-function ComplexEntityView({ type, action, readOnly, values, onAdvance, onReject, onChange }: { type: string; action: ActionWithRelations; readOnly?: boolean; values: Record<string, unknown>; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void; onChange?: (data: Record<string, unknown>) => void }) {
+function ComplexEntityView({ type, field, action, readOnly, values, onAdvance, onReject, onChange }: { type: string; field?: ScreenField; action: ActionWithRelations; readOnly?: boolean; values: Record<string, unknown>; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void; onChange?: (data: Record<string, unknown>) => void }) {
  switch (type) {
  case "review_levels":
  return <ReviewLevelsView action={action} onAdvance={onAdvance} onReject={onReject} />;
@@ -825,7 +838,7 @@ function ComplexEntityView({ type, action, readOnly, values, onAdvance, onReject
  case "claim_documents":
  return <DocumentRequestView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} />;
  case "claim_document_receipt":
- return <DocumentReceiptView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} />;
+ return <DocumentReceiptView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} action={action} fieldConfig={(field?.config || {}) as ReceiptFieldConfig} />;
  case "inspection_coordination":
  return <InspectionCoordinationView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} action={action} />;
  case "inspection_session_view":
@@ -2698,9 +2711,6 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  // Clave estable para deps de useMemo/useAutoSave
  const requiredCodesKey = requiredAvailableDocs.map((d) => d.document_type_code).join(",");
 
- // Mapa code → is_required para consultar si un ítem existente es obligatorio
- const codeToRequired = new Map((requirements || []).map((r) => [r.document_type_code, r.is_required]));
-
  const [selected, setSelected] = useState<Set<string>>(new Set());
  const [notes, setNotes] = useState<string>(existingRequest?.notes || "");
 
@@ -2714,9 +2724,12 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  // ── Mutación: crear solicitud nueva ──
  const saveMut = useMutation({
  mutationFn: async () => {
- // Siempre incluir docs obligatorios + los seleccionados por el usuario
- const items = availableDocs
+ // Guard: si ya existe la solicitud, no crear otra
+ if (existingRequest) return;
+ // Incluir docs obligatorios + los seleccionados por el usuario
+ const items = (requirements || [])
  .filter((d) => d.is_required || selected.has(d.document_type_code))
+ .filter((d) => !thisRequestCodes.has(d.document_type_code) && !otherRequestCodes.has(d.document_type_code))
  .map((d, i) => ({
  document_type_code: d.document_type_code,
  document_name: d.document_name,
@@ -2739,24 +2752,20 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  onError: (e: Error) => toast.error(e.message),
  });
 
- // ── Mutación: agregar items a solicitud existente ──
- const addItemsMut = useMutation({
- mutationFn: async () => {
+ // ── Mutación: agregar un item a solicitud existente ──
+ const addItemMut = useMutation({
+ mutationFn: async (doc: { document_type_code: string; document_name: string }) => {
  if (!existingRequest) return;
- // Siempre incluir docs obligatorios disponibles + los seleccionados por el usuario
- const items = availableDocs
- .filter((d) => d.is_required || selected.has(d.document_type_code))
- .map((d, i) => ({
- document_type_code: d.document_type_code,
- document_name: d.document_name,
- sort_order: existingItems.length + i + 1,
- }));
- if (items.length === 0) return;
- await addItemsToClaimDocumentRequest(existingRequest.id, items);
+ // Guard: no agregar si ya existe un item con el mismo document_type_code
+ if (existingItems.some((it) => it.document_type_code === doc.document_type_code)) return;
+ const sort_order = (existingItems.length || 0) + 1;
+ await addItemsToClaimDocumentRequest(existingRequest.id, [{
+ document_type_code: doc.document_type_code,
+ document_name: doc.document_name,
+ sort_order,
+ }]);
  },
  onSuccess: () => {
- toast.success("Documentos agregados");
- setSelected(new Set());
  queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
  queryClient.invalidateQueries({ queryKey: ["claim-doc-request-by-action", actionId] });
  },
@@ -2767,7 +2776,6 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  const removeItemMut = useMutation({
  mutationFn: (itemId: string) => removeItemFromClaimDocumentRequest(itemId),
  onSuccess: () => {
- toast.success("Documento removido");
  queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
  queryClient.invalidateQueries({ queryKey: ["claim-doc-request-by-action", actionId] });
  },
@@ -2790,13 +2798,6 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  !readOnly && !existingRequest && (selected.size > 0 || requiredAvailableDocs.length > 0)
  );
 
- // Autoguardado: agregar items a solicitud existente (seleccionados o docs obligatorios faltantes)
- useAutoSave(
- () => addItemsMut.mutate(),
- [selected, requiredAvailableDocs.length],
- !readOnly && !!existingRequest && (selected.size > 0 || requiredAvailableDocs.length > 0)
- );
-
  // Autoguardado: notas (solo si cambió respecto al original)
  useAutoSave(
  () => {
@@ -2810,268 +2811,163 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  return <div className="text-[11px] text-muted-foreground py-2">Cargando...</div>;
  }
 
- // ── Vista read-only: solicitud emitida (readOnly) ──
- if (existingRequest && readOnly) {
- return (
- <div className="space-y-2">
- <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
- <span className="font-medium">Gestión: {actionCode || "—"}</span>
- <Badge className={
- existingRequest.status === "closed" ? "bg-emerald-100 text-emerald-700" :
- existingRequest.status === "cancelled" ? "bg-rose-100 text-rose-700" :
- existingRequest.status === "received" ? "bg-blue-100 text-blue-700" :
- "bg-amber-100 text-amber-700"
- }>
- {existingRequest.status === "requested" ? "Solicitada" :
- existingRequest.status === "received" ? "Recibida" :
- existingRequest.status === "closed" ? "Cerrada" : "Cancelada"}
- </Badge>
- </div>
- <div className="rounded-lg border border-border overflow-hidden">
- <table className="app-data-table">
- <thead className="bg-muted/50">
- <tr>
- <th className="px-2 py-1.5 text-left font-medium">Documento</th>
- <th className="px-2 py-1.5 text-left font-medium w-[100px]">Estado</th>
- </tr>
- </thead>
- <tbody>
- {existingItems.map((item) => (
- <tr key={item.id} className="border-t border-border">
- <td className="px-2 py-1.5">{item.document_name}</td>
- <td className="px-2 py-1.5">
- <Badge className={
- item.status === "received" ? "bg-emerald-100 text-emerald-700" :
- item.status === "not_needed" ? "bg-muted text-muted-foreground" :
- "bg-amber-100 text-amber-700"
- }>
- {item.status === "received" ? "Recibido" :
- item.status === "not_needed" ? "No necesario" : "Solicitado"}
- </Badge>
- </td>
- </tr>
- ))}
- </tbody>
- </table>
- </div>
- {existingRequest.notes && (
- <p className="text-[10px] text-muted-foreground italic">{existingRequest.notes}</p>
- )}
- </div>
- );
+ // ── Construir filas unificadas: TODOS los docs de la línea en una grilla ──
+ // Mapa de items de esta solicitud: code → item
+ const thisRequestItems = new Map(existingItems.map((i) => [i.document_type_code, i]));
+ // Mapa de items de otras solicitudes: code → status
+ const otherRequestItems = new Map<string, string>();
+ existingRequests?.forEach((r) => {
+ if (r.id === existingRequest?.id) return;
+ r.claim_document_request_items?.forEach((item) => {
+ if (item.status === "requested" || item.status === "received") {
+ otherRequestItems.set(item.document_type_code, item.status);
+ }
+ });
+ });
+
+ type RowState = {
+ code: string;
+ name: string;
+ isRequired: boolean;
+ isOn: boolean; // toggle iluminado
+ isLocked: boolean; // no se puede cambiar
+ badge?: { text: string; className: string };
+ itemId?: string; // si está en esta solicitud, el id del item
+ };
+
+ const rows: RowState[] = (requirements || []).map((doc) => {
+ const thisItem = thisRequestItems.get(doc.document_type_code);
+ const otherStatus = otherRequestItems.get(doc.document_type_code);
+
+ // ¿Está encendido?
+ const isOn = !!thisItem || doc.is_required || otherStatus === "requested" || otherStatus === "received" || checkedSet.has(doc.document_type_code);
+
+ // ¿Está bloqueado?
+ let isLocked = false;
+ let badge: { text: string; className: string } | undefined;
+
+ if (readOnly) {
+ isLocked = true;
+ } else if (thisItem?.status === "received") {
+ isLocked = true;
+ badge = { text: "Recibido", className: "bg-emerald-100 text-emerald-700" };
+ } else if (thisItem?.status === "not_needed") {
+ isLocked = true;
+ badge = { text: "No necesario", className: "bg-muted text-muted-foreground" };
+ } else if (otherStatus === "received") {
+ isLocked = true;
+ badge = { text: "Recibido en otra", className: "bg-emerald-100 text-emerald-700" };
+ } else if (otherStatus === "requested") {
+ isLocked = true;
+ badge = { text: "En otra solicitud", className: "bg-blue-100 text-blue-700" };
+ } else if (doc.is_required) {
+ isLocked = true;
  }
 
- // ── Vista editable: solicitud existente NO emitida ──
- if (existingRequest && !readOnly) {
- return (
- <div className="space-y-3">
- <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
- <span className="font-medium">Gestión: {actionCode || "—"}</span>
- <Badge className="bg-amber-100 text-amber-700">Editable</Badge>
- </div>
+ if (doc.is_required && !badge) {
+ badge = { text: "Obligatorio", className: "bg-rose-100 text-rose-700" };
+ }
 
- {/* Items ya solicitados — se pueden quitar si no están recibidos */}
- <div>
- <p className="text-[10px] font-semibold text-muted-foreground mb-1">DOCUMENTOS SOLICITADOS</p>
- <div className="rounded-lg border border-border overflow-hidden">
- <table className="app-data-table">
- <thead className="bg-muted/50">
- <tr>
- <th className="px-2 py-1.5 text-left font-medium">Documento</th>
- <th className="px-2 py-1.5 text-left font-medium w-[100px]">Estado</th>
- <th className="px-2 py-1.5 w-8"></th>
- </tr>
- </thead>
- <tbody>
- {existingItems.length === 0 ? (
- <tr>
- <td colSpan={3} className="px-2 py-3 text-center text-[11px] text-muted-foreground">
- Sin documentos. Agrega abajo.
- </td>
- </tr>
- ) : existingItems.map((item) => (
- <tr key={item.id} className="border-t border-border">
- <td className="px-2 py-1.5">{item.document_name}</td>
- <td className="px-2 py-1.5">
- <Badge className={
- item.status === "received" ? "bg-emerald-100 text-emerald-700" :
- item.status === "not_needed" ? "bg-muted text-muted-foreground" :
- "bg-amber-100 text-amber-700"
- }>
- {item.status === "received" ? "Recibido" :
- item.status === "not_needed" ? "No necesario" : "Solicitado"}
- </Badge>
- </td>
- <td className="px-2 py-1.5 text-center">
- {item.status === "requested" && !codeToRequired.get(item.document_type_code) && (
- <button
- className="text-rose-500 hover:text-rose-700 text-[11px]"
- onClick={() => removeItemMut.mutate(item.id)}
- disabled={removeItemMut.isPending}
- title="Quitar documento"
- >
- ✕
- </button>
- )}
- {item.status === "requested" && codeToRequired.get(item.document_type_code) && (
- <span className="text-[9px] text-rose-600 font-medium" title="Documento obligatorio — no se puede quitar">
- Oblig.
- </span>
- )}
- </td>
- </tr>
- ))}
- </tbody>
- </table>
- </div>
- </div>
+ return {
+ code: doc.document_type_code,
+ name: doc.document_name,
+ isRequired: doc.is_required,
+ isOn,
+ isLocked,
+ badge,
+ itemId: thisItem?.id,
+ };
+ });
 
- {/* Documentos disponibles para agregar */}
- {availableDocs.length > 0 && (
- <div>
- <p className="text-[10px] font-semibold text-muted-foreground mb-1">DOCUMENTOS DISPONIBLES PARA AGREGAR</p>
- <div className="rounded-lg border border-border overflow-hidden">
- <table className="app-data-table">
- <thead className="bg-muted/50">
- <tr>
- <th className="px-2 py-1.5 w-8"></th>
- <th className="px-2 py-1.5 text-left font-medium">Documento</th>
- <th className="px-2 py-1.5 text-left font-medium w-[80px]">Obligatorio</th>
- </tr>
- </thead>
- <tbody>
- {availableDocs.map((doc) => {
- const isReq = doc.is_required;
- return (
- <tr
- key={doc.id}
- className={`border-t border-border transition-colors ${
- isReq ? "bg-primary/5 cursor-not-allowed" :
- checkedSet.has(doc.document_type_code) ? "bg-primary/5 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
- }`}
- onClick={() => {
- if (isReq) return; // no se puede deseleccionar un obligatorio
+ // ── Acción del toggle ──
+ const handleToggle = (row: RowState) => {
+ if (row.isLocked || readOnly) return;
+ // Bloquear si hay una mutación en curso (evita race condition / doble click)
+ if (addItemMut.isPending || removeItemMut.isPending || saveMut.isPending) return;
+
+ if (existingRequest) {
+ // Solicitud existente: agregar o remover inmediatamente
+ if (row.isOn) {
+ // Apagar = remover de la solicitud
+ if (row.itemId) removeItemMut.mutate(row.itemId);
+ } else {
+ // Encender = agregar a la solicitud
+ addItemMut.mutate({ document_type_code: row.code, document_name: row.name });
+ }
+ } else {
+ // Sin solicitud: usar set local (autoguardado crea la solicitud)
  setSelected((prev) => {
  const next = new Set(prev);
- if (next.has(doc.document_type_code)) next.delete(doc.document_type_code);
- else next.add(doc.document_type_code);
+ if (next.has(row.code)) next.delete(row.code);
+ else next.add(row.code);
  return next;
  });
- }}
- >
- <td className="px-2 py-1.5 text-center">
- <Checkbox
- checked={checkedSet.has(doc.document_type_code)}
- onChange={() => {}}
- disabled={isReq}
- />
- </td>
- <td className="px-2 py-1.5">{doc.document_name}</td>
- <td className="px-2 py-1.5">
- {doc.is_required && (
- <span className="text-[9px] text-rose-600 font-medium">Obligatorio</span>
- )}
- </td>
- </tr>
- );
- })}
- </tbody>
- </table>
- </div>
- {selected.size > 0 && (
- <p className="text-[10px] text-primary mt-1">
- {selected.size} documento(s) seleccionado(s) — se agregarán automáticamente...
- </p>
- )}
- </div>
- )}
-
- {/* Notas */}
- <div>
- <Label className="app-field-label text-[10px]">Notas de la solicitud</Label>
- <Textarea
- className="app-input text-[11px] min-h-[50px]"
- placeholder="Indicaciones para el asegurado o corredor..."
- value={notes}
- onChange={(e) => setNotes(e.target.value)}
- />
- </div>
- </div>
- );
  }
+ };
 
- // ── Vista: no hay solicitud — selección inicial ──
- if (availableDocs.length === 0) {
+ // ── Una sola grilla unificada ──
+ if (rows.length === 0) {
  return (
  <div className="rounded-lg border border-dashed border-border py-6 text-center">
  <p className="text-[11px] text-muted-foreground">
- No hay documentos pendientes para solicitar. Todos los documentos ya fueron solicitados o recibidos.
+ No hay documentos configurados para esta línea de negocio.
  </p>
  </div>
  );
  }
 
- const toggle = (code: string) => {
- const doc = availableDocs.find((d) => d.document_type_code === code);
- if (doc?.is_required) return; // los obligatorios no se pueden deseleccionar
- setSelected((prev) => {
- const next = new Set(prev);
- if (next.has(code)) next.delete(code);
- else next.add(code);
- return next;
- });
- };
-
  return (
  <div className="space-y-2">
- <p className="text-[10px] text-muted-foreground">
- Selecciona los documentos a solicitar. Solo se muestran los que no han sido solicitados o recibidos.
- </p>
- <div className="rounded-lg border border-border overflow-hidden">
- <table className="app-data-table">
- <thead className="bg-muted/50">
- <tr>
- <th className="px-2 py-1.5 w-8"></th>
- <th className="px-2 py-1.5 text-left font-medium">Documento</th>
- <th className="px-2 py-1.5 text-left font-medium w-[80px]">Obligatorio</th>
- </tr>
- </thead>
- <tbody>
- {availableDocs.map((doc) => {
- const isReq = doc.is_required;
- return (
- <tr
- key={doc.id}
- className={`border-t border-border transition-colors ${
- isReq ? "bg-primary/5 cursor-not-allowed" :
- checkedSet.has(doc.document_type_code) ? "bg-primary/5 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
- }`}
- onClick={() => toggle(doc.document_type_code)}
- >
- <td className="px-2 py-1.5 text-center">
- <Checkbox
- checked={checkedSet.has(doc.document_type_code)}
- onChange={() => {}}
- disabled={isReq}
- />
- </td>
- <td className="px-2 py-1.5">{doc.document_name}</td>
- <td className="px-2 py-1.5">
- {doc.is_required && (
- <span className="text-[9px] text-rose-600 font-medium">Obligatorio</span>
- )}
- </td>
- </tr>
- );
- })}
- </tbody>
- </table>
+ {/* Header de la solicitud */}
+ <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
+ <span className="font-medium">Gestión: {actionCode || "—"}</span>
+ <Badge className={
+ existingRequest?.status === "closed" ? "bg-emerald-100 text-emerald-700" :
+ existingRequest?.status === "cancelled" ? "bg-rose-100 text-rose-700" :
+ existingRequest?.status === "received" ? "bg-blue-100 text-blue-700" :
+ existingRequest ? "bg-amber-100 text-amber-700" :
+ "bg-muted text-muted-foreground"
+ }>
+ {existingRequest?.status === "requested" ? "Solicitada" :
+ existingRequest?.status === "received" ? "Recibida" :
+ existingRequest?.status === "closed" ? "Cerrada" :
+ existingRequest?.status === "cancelled" ? "Cancelada" :
+ "Nueva"}
+ </Badge>
  </div>
- {selected.size > 0 && (
- <p className="text-[10px] text-primary">
- {selected.size} documento(s) seleccionado(s) — se crearán automáticamente...
- </p>
+
+ {/* Grilla única con todos los documentos — ToggleChip por fila */}
+ <div className="space-y-1.5">
+ {rows.map((row) => (
+ <div
+ key={row.code}
+ className={`flex items-center justify-between gap-2 p-2 rounded-lg border transition-colors ${
+ row.isOn ? "border-primary/40 bg-primary/5" : "border-border"
+ } ${row.isLocked ? "cursor-not-allowed" : ""}`}
+ >
+ <div className="flex items-center gap-2 flex-1 min-w-0">
+ <ToggleChip
+ active={row.isOn}
+ onClick={() => handleToggle(row)}
+ disabled={row.isLocked}
+ className={row.isRequired ? "border-emerald-400 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400" : ""}
+ >
+ {row.name}
+ </ToggleChip>
+ </div>
+ {row.badge ? (
+ <Badge className={row.badge.className}>{row.badge.text}</Badge>
+ ) : row.isOn ? (
+ <Badge className="bg-amber-100 text-amber-700">Solicitado</Badge>
+ ) : (
+ <span className="text-[10px] text-muted-foreground">Disponible</span>
  )}
+ </div>
+ ))}
+ </div>
+
+ {/* Notas */}
+ {!readOnly && (
  <div>
  <Label className="app-field-label text-[10px]">Notas de la solicitud</Label>
  <Textarea
@@ -3081,80 +2977,150 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  onChange={(e) => setNotes(e.target.value)}
  />
  </div>
+ )}
  </div>
  );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Recepción de Documentos
-// Controla la recepción de los documentos solicitados.
-// Se cierra cuando todos están recibidos o no necesarios.
+// Recepción Total de Antecedentes (RTA)
+// Controla la recepción de los documentos solicitados en la NSA.
+// NO sube documentos nuevos — solo controla cuáles se han recibido.
+// Muestra exactamente los documentos de la solicitud NSA.
+// Auto-emite cuando todos los documentos están received o not_needed.
+// issued_by = usuario que marcó el último documento.
+// No hay responsable real — cualquiera puede marcar recibido.
+// "No necesario" solo lo pueden marcar los emisores del combo (issuer_roles).
+// Obligatorios no pueden marcarse como not_needed.
 // ═══════════════════════════════════════════════════════════════
 
-function DocumentReceiptView({ claimId, readOnly }: { claimId?: string; actionId?: string; readOnly?: boolean }) {
- // Cargar la solicitud de documentos más reciente del siniestro
+function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig }: { claimId?: string; actionId?: string; readOnly?: boolean; action?: ActionWithRelations; fieldConfig?: ReceiptFieldConfig }) {
+ const { profile } = useAuth();
+ const queryClient = useQueryClient();
+
+ // Config del campo (desde la configuración de la pantalla, no hardcodeado)
+ const notNeededRequiresReason = fieldConfig?.notNeededRequiresReason !== false; // default true
+ const notNeededOnlyIssuers = fieldConfig?.notNeededOnlyIssuers !== false; // default true
+
+ // Estado del modal "No necesario" (motivo obligatorio si notNeededRequiresReason=true)
+ const [notNeededTarget, setNotNeededTarget] = useState<{ itemId: string; docCode: string; docName: string } | null>(null);
+ const [notNeededReason, setNotNeededReason] = useState("");
+
+ // Cargar todas las solicitudes de documentos del siniestro
  const { data: requests, isLoading } = useQuery({
  queryKey: ["claim-doc-requests", claimId],
  queryFn: () => getClaimDocumentRequests(claimId!),
  enabled: !!claimId,
  });
 
+ // Cargar el código de la gestión (ej: HRTA-001)
+ const { data: actionCode } = useQuery({
+ queryKey: ["action-code", actionId],
+ queryFn: async () => {
+ const { getSupabaseClient } = await import("@/lib/supabase/client");
+ const supabase = getSupabaseClient();
+ const { data, error } = await supabase
+ .from("claim_actions")
+ .select("code")
+ .eq("id", actionId!)
+ .maybeSingle();
+ if (error) throw new Error(error.message);
+ return data?.code || null;
+ },
+ enabled: !!actionId,
+ });
+
+ // Cargar documentos disponibles para saber cuáles son obligatorios
+ const { data: claim } = useQuery({
+ queryKey: ["claim-for-docs", claimId],
+ queryFn: async () => {
+ const { getSupabaseClient } = await import("@/lib/supabase/client");
+ const supabase = getSupabaseClient();
+ const { data, error } = await supabase
+ .from("claims")
+ .select("business_line_id")
+ .eq("id", claimId!)
+ .maybeSingle();
+ if (error) throw new Error(error.message);
+ return data;
+ },
+ enabled: !!claimId,
+ });
+
+ const { data: requirements } = useQuery({
+ queryKey: ["document-requirements", claim?.business_line_id],
+ queryFn: () => getDocumentRequirements(claim?.business_line_id || undefined),
+ enabled: !!claim?.business_line_id,
+ });
+
+ // Mapa code → is_required
+ const codeToRequired = new Map((requirements || []).map((r) => [r.document_type_code, r.is_required]));
+
  // Tomar la solicitud más reciente que no esté cerrada/cancelada
  const activeRequest = requests?.find(
  (r) => r.status === "requested" || r.status === "received"
  ) || requests?.[0] || null;
 
- const queryClient = useQueryClient();
-
- const [itemStatuses, setItemStatuses] = useState<Record<string, string>>({});
- const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
- const lastRequestIdRef = useRef<string | undefined>(undefined);
-
- // Reset state when activeRequest changes (React-recommended pattern: adjust state during render, not in effect)
- if (activeRequest?.id !== lastRequestIdRef.current) {
- lastRequestIdRef.current = activeRequest?.id;
- if (activeRequest?.claim_document_request_items) {
- const statuses: Record<string, string> = {};
- const notes: Record<string, string> = {};
- activeRequest.claim_document_request_items.forEach((item) => {
- statuses[item.id] = item.status;
- notes[item.id] = item.notes || "";
- });
- setItemStatuses(statuses);
- setItemNotes(notes);
- }
- }
-
  const items = activeRequest?.claim_document_request_items || [];
 
+ // ── Cargar nombres de los usuarios que aparecen en received_by / not_needed_by ──
+ const userIds = Array.from(new Set(
+ items.flatMap((i) => [i.received_by, i.not_needed_by].filter(Boolean) as string[])
+ ));
+ const { data: receiptUsers } = useQuery({
+ queryKey: ["receipt-users", userIds.join(",")],
+ queryFn: async () => {
+ if (userIds.length === 0) return [];
+ const { getSupabaseClient } = await import("@/lib/supabase/client");
+ const supabase = getSupabaseClient();
+ const { data, error } = await supabase
+ .from("profiles")
+ .select("id, full_name, email")
+ .in("id", userIds);
+ if (error) throw new Error(error.message);
+ return data || [];
+ },
+ enabled: userIds.length > 0,
+ });
+ const userMap = new Map((receiptUsers || []).map((u) => [u.id, u]));
+ const getUserName = (id: string | null) => id ? (userMap.get(id)?.full_name || userMap.get(id)?.email || "—") : null;
+
+ // ── Permisos del usuario ──
+ // No hay responsable real — cualquiera puede marcar recibido.
+ // "No necesario": si notNeededOnlyIssuers=true, solo emisores del combo.
+ const issuerRoles = action?.action_template?.issuer_roles || [];
+ const userRole = profile?.role || "";
+ const canMarkNotNeeded = !readOnly && (
+ notNeededOnlyIssuers ? issuerRoles.includes(userRole) : true
+ );
+
+ // ── Mutación: actualizar estado de un item ──
  const updateItemMut = useMutation({
- mutationFn: async ({ itemId, status, notes }: { itemId: string; status: string; notes?: string }) => {
- await updateClaimDocumentRequestItem(itemId, { status, notes });
+ mutationFn: async ({ itemId, status, notes, userId }: { itemId: string; status: string; notes?: string; userId?: string }) => {
+ const updates: { status: string; received_by?: string | null; not_needed_by?: string | null; notes?: string | null } = { status };
+ if (status === "received" && userId) updates.received_by = userId;
+ if (status === "not_needed" && userId) updates.not_needed_by = userId;
+ if (notes !== undefined) updates.notes = notes;
+ await updateClaimDocumentRequestItem(itemId, updates);
  },
  onSuccess: () => {
  queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
+ queryClient.invalidateQueries({ queryKey: ["claim-action", actionId] });
+ queryClient.invalidateQueries({ queryKey: ["claim-actions", claimId] });
  },
  onError: (e: Error) => toast.error(e.message),
  });
 
- const closeMut = useMutation({
+ // ── Mutación: auto-emitir la RTA ──
+ const autoIssueMut = useMutation({
  mutationFn: async () => {
- // Actualizar todos los items con los estados actuales
- for (const item of items) {
- const newStatus = itemStatuses[item.id];
- if (newStatus && newStatus !== item.status) {
- await updateClaimDocumentRequestItem(item.id, {
- status: newStatus,
- notes: itemNotes[item.id] || null,
- });
- }
- }
- if (activeRequest) {
- await closeClaimDocumentRequest(activeRequest.id);
- }
+ if (!actionId) throw new Error("Sin gestión");
+ await issueClaimAction(actionId, profile?.id);
  },
  onSuccess: () => {
- toast.success("Solicitud cerrada");
+ toast.success("Recepción completada — gestión emitida automáticamente");
+ queryClient.invalidateQueries({ queryKey: ["claim-actions", claimId] });
+ queryClient.invalidateQueries({ queryKey: ["claim-action", actionId] });
  queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
  },
  onError: (e: Error) => toast.error(e.message),
@@ -3168,137 +3134,316 @@ function DocumentReceiptView({ claimId, readOnly }: { claimId?: string; actionId
  return (
  <div className="rounded-lg border border-dashed border-border py-6 text-center">
  <p className="text-[11px] text-muted-foreground">
- No hay solicitudes de documentos para este siniestro. Crea una solicitud primero.
+ No hay solicitudes de documentos para este siniestro. La gestión NSA debe crear una solicitud primero.
  </p>
  </div>
  );
  }
 
- const allResolved = items.every(
- (item) => itemStatuses[item.id] === "received" || itemStatuses[item.id] === "not_needed"
+ // ── ¿Todos los documentos están resueltos? ──
+ const allResolved = items.length > 0 && items.every(
+ (item) => item.status === "received" || item.status === "not_needed"
  );
 
- const updateStatus = (itemId: string, status: string) => {
- setItemStatuses((prev) => ({ ...prev, [itemId]: status }));
- updateItemMut.mutate({ itemId, status });
+ // ── Contar estados ──
+ const receivedCount = items.filter((i) => i.status === "received").length;
+ const notNeededCount = items.filter((i) => i.status === "not_needed").length;
+ const pendingCount = items.filter((i) => i.status === "requested").length;
+
+ // ── Verificar auto-emisión después de un cambio ──
+ const checkAutoIssue = (updatedItems: typeof items) => {
+ const nowAllResolved = updatedItems.length > 0 && updatedItems.every(
+ (i) => i.status === "received" || i.status === "not_needed"
+ );
+ if (nowAllResolved && action?.action_status?.code === "todo") {
+ setTimeout(() => autoIssueMut.mutate(), 300);
+ }
  };
 
- const updateNotes = (itemId: string, notes: string) => {
- setItemNotes((prev) => ({ ...prev, [itemId]: notes }));
+ // ── Marcar documento como recibido (cualquiera) ──
+ const markReceived = (itemId: string) => {
+ if (readOnly) return;
+ updateItemMut.mutate(
+ { itemId, status: "received", userId: profile?.id },
+ {
+ onSuccess: () => {
+ const updatedItems = items.map((i) =>
+ i.id === itemId ? { ...i, status: "received" as const, received_by: profile?.id || null, received_at: new Date().toISOString() } : i
+ );
+ checkAutoIssue(updatedItems);
+ },
+ }
+ );
+ };
+
+ // ── Marcar documento como no necesario ──
+ // Si notNeededRequiresReason=true: abre modal con motivo obligatorio.
+ // Si notNeededRequiresReason=false: marca directo sin motivo.
+ // Si era el último pendiente → auto-emite a nombre del usuario.
+ const openNotNeededModal = (itemId: string, docCode: string, docName: string) => {
+ if (readOnly || !canMarkNotNeeded) return;
+ // No se puede marcar como no necesario un obligatorio
+ if (codeToRequired.get(docCode)) {
+ toast.error("No se puede marcar como 'No necesario' un documento obligatorio.");
+ return;
+ }
+ // Si no requiere motivo, marcar directo
+ if (!notNeededRequiresReason) {
+ updateItemMut.mutate(
+ { itemId, status: "not_needed", userId: profile?.id },
+ {
+ onSuccess: () => {
+ const updatedItems = items.map((i) =>
+ i.id === itemId ? { ...i, status: "not_needed" as const, not_needed_by: profile?.id || null, not_needed_at: new Date().toISOString() } : i
+ );
+ checkAutoIssue(updatedItems);
+ },
+ }
+ );
+ return;
+ }
+ // Si requiere motivo, abrir modal
+ setNotNeededTarget({ itemId, docCode, docName });
+ setNotNeededReason("");
+ };
+
+ const confirmNotNeeded = () => {
+ if (!notNeededTarget) return;
+ const reason = notNeededReason.trim();
+ if (notNeededRequiresReason && !reason) {
+ toast.error("Debe ingresar el motivo por el que no es necesario.");
+ return;
+ }
+ updateItemMut.mutate(
+ { itemId: notNeededTarget.itemId, status: "not_needed", notes: notNeededRequiresReason ? reason : undefined, userId: profile?.id },
+ {
+ onSuccess: () => {
+ const updatedItems = items.map((i) =>
+ i.id === notNeededTarget.itemId ? {
+ ...i,
+ status: "not_needed" as const,
+ notes: notNeededRequiresReason ? reason : null,
+ not_needed_by: profile?.id || null,
+ not_needed_at: new Date().toISOString(),
+ } : i
+ );
+ setNotNeededTarget(null);
+ setNotNeededReason("");
+ checkAutoIssue(updatedItems);
+ },
+ }
+ );
+ };
+
+ const cancelNotNeeded = () => {
+ setNotNeededTarget(null);
+ setNotNeededReason("");
+ };
+
+ // ── Revertir a pendiente (cualquiera) ──
+ const markPending = (itemId: string) => {
+ if (readOnly) return;
+ updateItemMut.mutate({ itemId, status: "requested" });
+ };
+
+ const isClosed = activeRequest.status === "closed" || activeRequest.status === "cancelled";
+ const isIssued = action?.action_status?.code !== "todo"; // ya emitida
+ const canEdit = !readOnly && !isClosed && !isIssued;
+
+ // Formatear fecha de recepción
+ const formatReceivedDate = (dateStr: string | null) => {
+ if (!dateStr) return null;
+ const d = new Date(dateStr);
+ return d.toLocaleDateString("es-CL") + " " + d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
  };
 
  return (
  <div className="space-y-2">
- {/* Info de la solicitud */}
+ {/* Header */}
  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
  <span className="font-medium">Gestión: {actionCode || "—"}</span>
  <Badge className={
+ isIssued ? "bg-emerald-100 text-emerald-700" :
  activeRequest.status === "closed" ? "bg-emerald-100 text-emerald-700" :
  activeRequest.status === "cancelled" ? "bg-rose-100 text-rose-700" :
- activeRequest.status === "received" ? "bg-blue-100 text-blue-700" :
  "bg-amber-100 text-amber-700"
  }>
- {activeRequest.status === "requested" ? "Solicitada" :
- activeRequest.status === "received" ? "Recibida" :
- activeRequest.status === "closed" ? "Cerrada" : "Cancelada"}
+ {isIssued ? "Emitida" :
+ activeRequest.status === "closed" ? "Cerrada" :
+ activeRequest.status === "cancelled" ? "Cancelada" :
+ "Pendiente"}
  </Badge>
  </div>
 
- {activeRequest.notes && (
- <p className="text-[10px] text-muted-foreground italic">{activeRequest.notes}</p>
- )}
+ {/* Resumen de progreso */}
+ <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+ <span className="text-emerald-600 font-medium">✓ {receivedCount} recibidos</span>
+ {notNeededCount > 0 && <span className="text-muted-foreground font-medium">○ {notNeededCount} no necesarios</span>}
+ {pendingCount > 0 && <span className="text-amber-600 font-medium">● {pendingCount} pendientes</span>}
+ <span className="ml-auto">{items.length} total</span>
+ </div>
 
- {/* Tabla de items */}
- <div className="rounded-lg border border-border overflow-hidden">
- <table className="app-data-table">
- <thead className="bg-muted/50">
- <tr>
- <th className="px-2 py-1.5 text-left font-medium">Documento</th>
- <th className="px-2 py-1.5 text-left font-medium w-[120px]">Estado</th>
- <th className="px-2 py-1.5 text-left font-medium w-[180px]">Notas</th>
- </tr>
- </thead>
- <tbody>
+ {/* Grilla de documentos con ToggleChip */}
+ <div className="space-y-1.5">
  {items.map((item) => {
- const currentStatus = itemStatuses[item.id] || item.status;
- return (
- <tr key={item.id} className="border-t border-border">
- <td className="px-2 py-1.5 font-medium">{item.document_name}</td>
- <td className="px-2 py-1.5">
- {readOnly || activeRequest.status === "closed" ? (
- <Badge className={
- currentStatus === "received" ? "bg-emerald-100 text-emerald-700" :
- currentStatus === "not_needed" ? "bg-muted text-muted-foreground" :
- "bg-amber-100 text-amber-700"
- }>
- {currentStatus === "received" ? "Recibido" :
- currentStatus === "not_needed" ? "No necesario" : "Pendiente"}
- </Badge>
- ) : (
- <select
- className="app-input h-7 w-full"
- value={currentStatus}
- onChange={(e) => updateStatus(item.id, e.target.value)}
- >
- <option value="requested">Pendiente</option>
- <option value="received">Recibido</option>
- <option value="not_needed">No necesario</option>
- </select>
- )}
- </td>
- <td className="px-2 py-1.5">
- {readOnly || activeRequest.status === "closed" ? (
- <span className="text-[10px] text-muted-foreground">{itemNotes[item.id] || item.notes || "—"}</span>
- ) : (
- <Input
- className="app-input h-7 w-full"
- value={itemNotes[item.id] || ""}
- onChange={(e) => updateNotes(item.id, e.target.value)}
- placeholder="Notas..."
- />
- )}
- </td>
- </tr>
- );
- })}
- </tbody>
- </table>
- </div>
+ const isRequired = codeToRequired.get(item.document_type_code) || false;
+ const isReceived = item.status === "received";
+ const isNotNeeded = item.status === "not_needed";
+ const isPending = item.status === "requested";
 
- {/* Botón cerrar */}
- {!readOnly && activeRequest.status !== "closed" && activeRequest.status !== "cancelled" && (
- <div className="flex justify-end gap-2">
- <button
- type="button"
- className="pg-btn-platinum"
- disabled={closeMut.isPending}
+ return (
+ <div
+ key={item.id}
+ className={`flex items-center justify-between gap-2 p-2 rounded-lg border transition-colors ${
+ isReceived ? "border-emerald-400/50 bg-emerald-50 dark:bg-emerald-950/20" :
+ isNotNeeded ? "border-border bg-muted/20" :
+ "border-border"
+ }`}
+ >
+ <div className="flex items-center gap-2 flex-1 min-w-0">
+ {/* ToggleChip: Recibido — cualquiera puede marcar */}
+ <ToggleChip
+ active={isReceived}
  onClick={() => {
- if (confirm("¿Cancelar esta solicitud de documentos?")) {
- cancelClaimDocumentRequest(activeRequest.id).then(() => {
- toast.success("Solicitud cancelada");
- queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
- });
+ if (isReceived) {
+ markPending(item.id);
+ } else {
+ markReceived(item.id);
  }
  }}
+ disabled={!canEdit || isNotNeeded}
+ className={isReceived ? "border-emerald-400 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400" : ""}
+ >
+ {item.document_name}
+ </ToggleChip>
+ {isRequired && (
+ <Badge className="bg-rose-100 text-rose-700 text-[9px]">Obligatorio</Badge>
+ )}
+ </div>
+
+ {/* Estado / Acciones */}
+ <div className="flex items-center gap-1.5 shrink-0">
+ {isReceived && (
+ <div className="flex flex-col items-end gap-0.5">
+ <Badge className="bg-emerald-100 text-emerald-700">Recibido</Badge>
+ {item.received_at && (
+ <span className="text-[9px] text-muted-foreground" title={`Recibido por ${getUserName(item.received_by) || "—"}`}>
+ por {getUserName(item.received_by) || "—"} · {formatReceivedDate(item.received_at)}
+ </span>
+ )}
+ </div>
+ )}
+ {isNotNeeded && (
+ <div className="flex flex-col items-end gap-0.5">
+ <Badge className="bg-muted text-muted-foreground">No necesario</Badge>
+ {item.not_needed_at && (
+ <span className="text-[9px] text-muted-foreground" title={`Marcado por ${getUserName(item.not_needed_by) || "—"}`}>
+ por {getUserName(item.not_needed_by) || "—"} · {formatReceivedDate(item.not_needed_at)}
+ </span>
+ )}
+ {item.notes && (
+ <span className="text-[9px] text-muted-foreground italic max-w-[220px] truncate" title={item.notes}>
+ &ldquo;{item.notes}&rdquo;
+ </span>
+ )}
+ </div>
+ )}
+ {isPending && (
+ <>
+ <Badge className="bg-amber-100 text-amber-700">Pendiente</Badge>
+ {/* Botón "No necesario" — solo emisores del combo, no obligatorios */}
+ {canMarkNotNeeded && !isRequired && (
+ <button
+ type="button"
+ className="text-[10px] text-muted-foreground hover:text-rose-600 transition-colors px-1.5 py-0.5 rounded border border-border hover:border-rose-300"
+ onClick={() => openNotNeededModal(item.id, item.document_type_code, item.document_name)}
+ disabled={updateItemMut.isPending}
+ title="Marcar como no necesario"
+ >
+ No necesario
+ </button>
+ )}
+ </>
+ )}
+ </div>
+ </div>
+ );
+ })}
+ </div>
+
+ {/* Mensaje de auto-emisión */}
+ {allResolved && !isIssued && (
+ <p className="text-[10px] text-emerald-600 text-center font-medium py-1">
+ ✓ Todos los documentos recibidos — la gestión se emitirá automáticamente...
+ </p>
+ )}
+
+ {isIssued && (
+ <p className="text-[10px] text-emerald-600 text-center font-medium py-1">
+ ✓ Recepción completada — gestión emitida por {action?.issuer?.full_name || action?.issuer?.email || "—"}
+ </p>
+ )}
+
+ {/* Notas de la solicitud */}
+ {activeRequest.notes && (
+ <p className="text-[10px] text-muted-foreground italic px-1">{activeRequest.notes}</p>
+ )}
+
+ {/* Modal: Motivo "No necesario" — motivo obligatorio antes de grabar */}
+ {notNeededTarget && createPortal(
+ <div
+ className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+ onClick={cancelNotNeeded}
+ >
+ <div
+ className="w-full max-w-md rounded-lg border border-border bg-background p-4 shadow-lg"
+ onClick={(e) => e.stopPropagation()}
+ >
+ <div className="mb-3">
+ <h3 className="text-[13px] font-semibold">Marcar como “No necesario”</h3>
+ <p className="text-[11px] text-muted-foreground mt-0.5">
+ Documento: <strong>{notNeededTarget.docName}</strong>
+ </p>
+ </div>
+ <div className="space-y-2">
+ <Label className="text-[11px]">Motivo <span className="text-rose-600">*</span></Label>
+ <Textarea
+ className="min-h-[80px] text-[12px]"
+ placeholder="Explique por qué este documento no es necesario..."
+ value={notNeededReason}
+ onChange={(e) => setNotNeededReason(e.target.value)}
+ autoFocus
+ onKeyDown={(e) => {
+ if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) confirmNotNeeded();
+ }}
+ />
+ <p className="text-[10px] text-muted-foreground">
+ {notNeededReason.trim().length === 0
+ ? "Debe ingresar un motivo para poder grabar."
+ : "Si este era el último documento pendiente, la RTA se emitirá automáticamente a su nombre."}
+ </p>
+ </div>
+ <div className="flex justify-end gap-2 mt-3">
+ <button
+ type="button"
+ className="px-3 py-1.5 text-[11px] rounded border border-border text-muted-foreground hover:bg-muted/30"
+ onClick={cancelNotNeeded}
+ disabled={updateItemMut.isPending}
  >
  Cancelar
  </button>
  <button
  type="button"
- className="pg-btn-platinum"
- disabled={closeMut.isPending || !allResolved}
- onClick={() => closeMut.mutate()}
- title={allResolved ? "Cerrar solicitud" : "Todos los items deben estar recibidos o no necesarios"}
+ className="px-3 py-1.5 text-[11px] rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+ onClick={confirmNotNeeded}
+ disabled={updateItemMut.isPending || notNeededReason.trim().length === 0}
  >
- {closeMut.isPending ? "Cerrando" : "Cerrar"}
+ {updateItemMut.isPending ? "Grabando..." : "Grabar"}
  </button>
  </div>
- )}
-
- {activeRequest.status === "closed" && (
- <p className="text-[10px] text-emerald-600 text-center font-medium">
- ✓ Solicitud cerrada — {activeRequest.closed_at && new Date(activeRequest.closed_at).toLocaleDateString("es-CL")}
- </p>
+ </div>
+ </div>,
+ document.body
  )}
  </div>
  );

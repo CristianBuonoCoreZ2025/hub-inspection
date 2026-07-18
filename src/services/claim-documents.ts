@@ -25,6 +25,8 @@ export interface ClaimDocumentRequestItem {
   received_file_id: string | null;
   received_at: string | null;
   received_by: string | null;
+  not_needed_by: string | null;
+  not_needed_at: string | null;
   notes: string | null;
   sort_order: number;
 }
@@ -48,7 +50,7 @@ export interface ClaimDocumentRequest {
 // ──────────────────────────────────────────────────────────────
 
 const REQUEST_ITEM_FIELDS =
-  "id, request_id, document_type_code, document_name, status, received_file_url, received_file_id, received_at, received_by, notes, sort_order";
+  "id, request_id, document_type_code, document_name, status, received_file_url, received_file_id, received_at, received_by, not_needed_by, not_needed_at, notes, sort_order";
 
 const REQUEST_FIELDS =
   "id, claim_id, claim_action_id, request_number, status, notes, created_at, updated_at, closed_at, closed_by";
@@ -125,7 +127,15 @@ export async function createClaimDocumentRequest(input: {
 
 export async function updateClaimDocumentRequestItem(
   itemId: string,
-  updates: { status?: string; received_file_url?: string | null; received_file_id?: string | null; notes?: string | null }
+  updates: {
+    status?: string;
+    received_file_url?: string | null;
+    received_file_id?: string | null;
+    received_by?: string | null;
+    not_needed_by?: string | null;
+    not_needed_at?: string | null;
+    notes?: string | null;
+  }
 ): Promise<void> {
   const set: Record<string, unknown> = {};
   if (updates.status !== undefined) {
@@ -133,9 +143,23 @@ export async function updateClaimDocumentRequestItem(
     if (updates.status === "received") {
       set.received_at = new Date().toISOString();
     }
+    if (updates.status === "not_needed") {
+      set.not_needed_at = new Date().toISOString();
+    }
+    // Al revertir a pendiente, limpiar marcas
+    if (updates.status === "requested") {
+      set.received_at = null;
+      set.received_by = null;
+      set.not_needed_at = null;
+      set.not_needed_by = null;
+      set.notes = null;
+    }
   }
   if (updates.received_file_url !== undefined) set.received_file_url = updates.received_file_url;
   if (updates.received_file_id !== undefined) set.received_file_id = updates.received_file_id;
+  if (updates.received_by !== undefined) set.received_by = updates.received_by;
+  if (updates.not_needed_by !== undefined) set.not_needed_by = updates.not_needed_by;
+  if (updates.not_needed_at !== undefined) set.not_needed_at = updates.not_needed_at;
   if (updates.notes !== undefined) set.notes = updates.notes;
 
   await updateRow("claim_document_request_items", itemId, set, "id");

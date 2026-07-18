@@ -523,6 +523,345 @@ Cada país define si las conversiones usan la fecha del siniestro
 
 ---
 
+## 0h. Permisos por Nivel de Revisión — LA REGLA MÁS IMPORTANTE DE GESTIONES
+
+> ⚠️ **ESTA ES LA REGLA MÁS IMPORTANTE DE TODO EL SISTEMA DE GESTIONES.**
+> Cualquier desarrollo de gestiones DEBE cumplirla al pie de la letra.
+
+### La Idea en 30 Segundos
+
+Cada gestión tiene **3 niveles** que se resuelven en secuencia:
+**Emisión → Revisión → Aprobación**. Cada nivel tiene:
+
+- **Combo** = quiénes PUEDEN resolver (perfiles del `action_template`)
+- **Responsable** = quién DEBE resolver (usuario asignado en la `claim_action`)
+
+> **Para resolver: tienes que estar en el combo Y ser el responsable.**
+> Si solo estás en el combo, puedes trabajar pero no resolver.
+> Si no estás en el combo, solo ves la gestión en modo lectura.
+
+---
+
+### Flujo de Decisión — ¿Puede el usuario resolver?
+
+```
+                    ┌─────────────────────────┐
+                    │  Usuario abre gestión   │
+                    └───────────┬─────────────┘
+                                │
+                    ┌───────────▼─────────────┐
+                    │ ¿Está en el combo del   │
+                    │ nivel actual?           │
+                    └───────────┬─────────────┘
+                          NO    │    SÍ
+                    ┌───────────┘    └───────────┐
+                    ▼                            ▼
+          ┌─────────────────┐         ┌─────────────────────┐
+          │ Modo LECTURA    │         │ ¿Es el responsable  │
+          │ Sin botones     │         │ asignado del nivel? │
+          │ de resolución   │         └──────────┬──────────┘
+          └─────────────────┘               NO   │   SÍ
+                                    ┌─────────────┘    └────────────┐
+                                    ▼                               ▼
+                          ┌──────────────────┐         ┌────────────────────┐
+                          │ Botón visible    │         │ Botón HABILITADO   │
+                          │ pero DESHABILIT. │         │ Puede RESOLVER     │
+                          │ Puede editar     │         │ Puede REASIGNAR    │
+                          │ No puede resolver│         │ a otro del combo   │
+                          └──────────────────┘         └────────────────────┘
+```
+
+---
+
+### Tabla de Decisión
+
+| # | ¿En combo? | ¿Es responsable? | Editar campos | Botón resolver | Reasignar | Resultado |
+|:-:|:---:|:---:|:---:|:---:|:---:|---|
+| 1 | ✅ | ✅ | ✅ | ✅ Habilitado | ✅ | **Puede resolver** o delegar a otro del combo |
+| 2 | ✅ | ❌ | ✅ | 🔒 Deshabilitado | ❌ | Trabaja pero **no puede resolver** |
+| 3 | ❌ | ❌ | ❌ | 🚫 No visible | ❌ | **Solo lectura** |
+| 4 | ❌ | ✅ | ❌ | 🚫 No visible | ⚠️ Override | Caso anómalo: admin reasigna |
+
+---
+
+### Los 3 Niveles y sus Estados
+
+```
+   ┌──────────┐     ┌──────────┐     ┌──────────┐
+   │ EMISIÓN  │ ──► │ REVISIÓN │ ──► │APROBACIÓN│
+   │ (issuer) │     │(reviewer)│     │(approver)│
+   └──────────┘     └──────────┘     └──────────┘
+   estado: todo     estado: issued    estado: reviewed
+        ▲                ▲                 ▲
+        │                │                 │
+   responsable:     responsable:      responsable:
+   issuer_id        reviewer_id       approver_id
+   combo:           combo:            combo:
+   issuer_roles     reviewer_roles    approver_roles
+```
+
+| Estado gestión | Nivel activo | Combo que ve el botón | Quién puede resolver |
+|:--|:--|:--|:--|
+| `todo` | Emisión | `issuer_roles` | `issuer_id` (si está en combo) |
+| `issued` | Revisión | `reviewer_roles` | `reviewer_id` (si está en combo) |
+| `reviewed` | Aprobación | `approver_roles` | `approver_id` (si está en combo) |
+| `approved` | Cerrada | — | Nadie |
+| `rejected` | — | — | Nadie (ver regla de rechazo) |
+
+---
+
+### Reasignación — ¿Puede delegar a otro?
+
+**Solo el responsable actual** puede dejársela a otro usuario del combo.
+
+```
+                    ┌─────────────────────────────┐
+                    │ ¿Es el responsable actual   │
+                    │ del nivel pendiente?        │
+                    └──────────────┬──────────────┘
+                            NO     │     SÍ
+                    ┌──────────────┘     └──────────────┐
+                    ▼                                   ▼
+          ┌──────────────────┐              ┌─────────────────────┐
+          │ NO puede         │              │ ¿A quién?           │
+          │ reasignar        │              │ Solo usuarios del   │
+          └──────────────────┘              │ combo del nivel     │
+                                            │ (excluyéndose)      │
+                                            └──────────┬──────────┘
+                                                       │
+                                                       ▼
+                                            ┌─────────────────────┐
+                                            │ issuer_id cambia    │
+                                            │ al nuevo usuario    │
+                                            │ + auditoría         │
+                                            └─────────────────────┘
+```
+
+**Reglas de reasignación:**
+- ✅ Solo el responsable actual del nivel pendiente
+- ✅ Solo a otro usuario del combo del mismo nivel
+- ✅ Solo en el nivel actual (no niveles pasados ni futuros)
+- ❌ No se puede reasignar a alguien fuera del combo
+- ❌ No se puede reasignar un nivel ya resuelto
+- ❌ No se puede reasignar a sí mismo (ya es el responsable)
+- ✅ El responsable anterior pierde la capacidad de resolver
+- ✅ Se registra en auditoría: quién, a quién, nivel, timestamp
+
+---
+
+### Ejemplo Real — 3 Usuarios, 3 Niveles
+
+```
+Gestión: HPCA-001 (Planilla Cuadro de Ajuste)
+  issuer_roles:    [adjuster, assistant]    → issuer_id:    usuario_A (adjuster)
+  reviewer_roles:  [auditor]                → reviewer_id:  usuario_C (auditor)
+  approver_roles:  [adjuster]               → approver_id:  usuario_A (adjuster)
+```
+
+**Nivel 1 — Emisión (estado: `todo`)**
+
+| Usuario | ¿En combo? | ¿Es responsable? | ¿Puede emitir? | ¿Puede reasignar? |
+|:--|:--:|:--:|:--:|:--:|
+| usuario_A (adjuster) | ✅ | ✅ | ✅ Sí | ✅ A usuario_B |
+| usuario_B (assistant) | ✅ | ❌ | 🔒 No | ❌ |
+| usuario_C (auditor) | ❌ | ❌ | 🚫 No ve botón | ❌ |
+
+**Nivel 2 — Revisión (estado: `issued`)**
+
+| Usuario | ¿En combo? | ¿Es responsable? | ¿Puede revisar? |
+|:--|:--:|:--:|:--:|
+| usuario_C (auditor) | ✅ | ✅ | ✅ Sí |
+| usuario_A (adjuster) | ❌ | ❌ | 🚫 No ve botón |
+| usuario_B (assistant) | ❌ | ❌ | 🚫 No ve botón |
+
+**Nivel 3 — Aprobación (estado: `reviewed`)**
+
+| Usuario | ¿En combo? | ¿Es responsable? | ¿Puede aprobar? |
+|:--|:--:|:--:|:--:|
+| usuario_A (adjuster) | ✅ | ✅ | ✅ Sí |
+| usuario_B (assistant) | ❌ | ❌ | 🚫 No ve botón |
+
+---
+
+### Casos Borde
+
+| Caso | Solución |
+|---|---|
+| Responsable de 2 niveles (ej: issuer + approver) | ✅ Puede resolver ambos, pero solo el nivel ACTUAL |
+| Responsable cambió de rol y ya no está en el combo | ⚠️ Botón deshabilitado + warning. Admin puede reasignar |
+| Combo vacío (`issuer_roles = []`) | 🚫 Gestión bloqueada. Mensaje: "Sin perfiles configurados" |
+| Reasignar nivel ya resuelto | ❌ No se puede. Ese nivel está cerrado |
+| Reasignar nivel futuro | ❌ No se puede. Aún no está activo |
+| Delegar y seguir viendo | ✅ El responsable anterior ve la gestión en modo lectura |
+
+---
+
+### Implementación UI (pseudocódigo)
+
+```typescript
+// Para cada botón de resolución (Emitir / Revisar / Aprobar):
+const isInCombo = user.roles.some(r => template[`${level}_roles`].includes(r));
+const isResponsible = action[`${level}_id`] === user.id;
+
+if (!isInCombo)        return null;                    // no ve el botón
+if (!isResponsible)    return <Button disabled />;     // ve el botón bloqueado
+return <Button onClick={resolve} />;                   // puede resolver
+
+// Combo de reasignación (solo si es responsable actual + está en combo):
+if (isInCombo && isResponsible) {
+  const candidates = users.filter(u =>
+    u.roles.some(r => comboRoles.includes(r)) &&
+    u.id !== action[`${level}_id`]   // no a sí mismo
+  );
+  return <Select options={candidates} onChange={reassign} />;
+}
+```
+
+### Auditoría
+
+| Acción | Campos registrados | Historial |
+|---|---|---|
+| Emisión | `issued_by`, `issued_on` | `event_type: "issued"` |
+| Revisión | `reviewed_by`, `reviewed_on` | `event_type: "reviewed"` |
+| Aprobación | `approved_by`, `approved_on` | `event_type: "approved"` |
+| Reasignación | — | `event_type: "reassigned"`, `from_user_id`, `to_user_id`, `level`, `performed_by` |
+
+### Resumen en 1 Línea
+
+```
+Resolver  = estar en el combo  +  ser el responsable del nivel actual.
+Delegar   = ser el responsable +  elegir otro del combo del nivel actual.
+Ver       = estar en el combo  →  ve el botón (habilitado o no).
+No ver    = no estar en el combo →  modo lectura.
+```
+
+---
+
+## 0i. Recepción Total de Antecedentes (RTA)
+
+### Concepto
+La gestión **RTA** (Recepción Total de Antecedentes) es la continuación
+natural de la gestión **NSA** (Notificación y Solicitud de Antecedentes).
+NO es una gestión independiente que sube documentos nuevos. Su función es
+**controlar la recepción de los documentos que se solicitaron en la NSA**.
+
+> **No hay responsable real en la RTA.** Cualquier usuario puede marcar
+> un documento como recibido. La RTA solo controla y muestra cuándo se
+> recibió cada documento.
+
+### Flujo
+```
+NSA (Notificación y Solicitud de Antecedentes)
+  → crea claim_document_request con los documentos a solicitar
+  → cada documento tiene status: requested | received | not_needed
+  → el asegurado/corredor sube los documentos al sistema
+  → cada documento subido cambia su status a "received"
+
+RTA (Recepción Total de Antecedentes)
+  → NO sube documentos nuevos
+  → Muestra EXACTAMENTE los mismos documentos de la solicitud NSA
+  → Si la NSA pidió 5 documentos, la RTA muestra esos 5 documentos
+  → Controla cuáles se han recibido y cuáles faltan
+  → Muestra la fecha/hora en que cada documento fue recibido
+  → Cuando el ÚLTIMO documento solicitado se recibe → auto-emite la RTA
+  → El emisor (issued_by) = usuario que marcó el último documento
+```
+
+### Regla de Auto-Emisión
+```
+Cuando TODOS los documentos de la solicitud están en status "received"
+o "not_needed" (no queda ninguno en "requested"):
+  → La gestión RTA se auto-emite
+  → issued_by = usuario que marcó/subió el último documento
+  → issued_on = NOW()
+  → action_status = "issued"
+
+Si el último documento se marca como "not_needed" (no necesario):
+  → La RTA se auto-emite igual
+  → issued_by = usuario que marcó el último como "not_needed"
+```
+
+### Marcar Documento como Recibido
+```
+Cualquier usuario puede marcar un documento como recibido (no hay
+responsable real en la RTA).
+
+Al marcar como recibido:
+  → status = "received"
+  → received_at = NOW()
+  → received_by = usuario que lo marcó
+  → Se muestra la fecha/hora de recepción en la UI
+
+Al desmarcar (revertir a pendiente):
+  → status = "requested"
+  → received_at = null
+  → received_by = null
+```
+
+### Cancelación de Documento No Necesario
+```
+Solo los usuarios que están en el combo de emisores (issuer_roles) de la RTA
+pueden marcar un documento como "not_needed".
+
+NO se puede marcar como "not_needed" un documento OBLIGATORIO
+(is_required = true en document_requirements).
+
+AL marcar como "not_needed" se abre un modal que exige un MOTIVO obligatorio:
+  → El emisor DEBE escribir por qué el documento no es necesario
+  → Sin motivo, no se puede grabar (botón "Grabar" deshabilitado)
+  → El motivo se guarda en claim_document_request_items.notes
+  → El motivo se muestra junto al badge "No necesario" en la UI
+
+Si un emisor marca un documento como "not_needed" (con motivo):
+  → Se registra el usuario que lo canceló (received_by / updated_by)
+  → Se guarda el motivo en item.notes
+  → Si era el último documento pendiente → auto-emite la RTA
+  → El emisor (issued_by) = usuario que canceló el último documento
+
+El emisor de la RTA puede ser diferente al que subió los documentos anteriores:
+  → Si usuario_A sube 6 documentos y usuario_B marca el 7º como "not_needed"
+  → issued_by = usuario_B (quien completó la recepción)
+```
+
+### UI
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Gestión: HRTA-001                       [Pendiente]         │
+├─────────────────────────────────────────────────────────────┤
+│ ✓ 3 recibidos  ○ 1 no necesarios  ● 1 pendientes  5 total  │
+├─────────────────────────────────────────────────────────────┤
+│ ┌──────────────────────┐  Obligatorio                       │
+│ │ Póliza Vigente       │  [Recibido] 15/01/2025 14:32      │
+│ └──────────────────────┘  (chip verde iluminado)            │
+│                                                             │
+│ ┌──────────────────────┐  Obligatorio                       │
+│ │ Fotografías del Daño │  [Pendiente]                       │
+│ └──────────────────────┘  (chip gris, apagado)              │
+│                                                             │
+│ ┌──────────────────────┐                                    │
+│ │ Cotización Reparación│  [Pendiente] [No necesario]        │
+│ └──────────────────────┘  (chip gris + botón "No necesario")│
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Regla
+```
+RTA = control de recepción de documentos solicitados en NSA.
+No sube documentos nuevos.
+Muestra exactamente los documentos de la solicitud NSA.
+No hay responsable real — cualquiera puede marcar recibido.
+Auto-emite cuando todos los documentos están received o not_needed.
+issued_by = usuario que completó el último documento.
+Obligatorios no pueden marcarse como not_needed.
+Solo emisores del combo pueden marcar not_needed.
+Muestra fecha/hora de recepción de cada documento.
+NO se puede emitir manualmente hasta que todos los documentos estén resueltos.
+ El botón "Emitir" se bloquea y muestra "Faltan N documento(s) por recibir".
+ La única forma de emitir es la auto-emisión al recibir el último documento.
+```
+
+---
+
 ## 1. Migraciones SQL en Nhost / Hasura
 
 ### Problema

@@ -567,6 +567,43 @@ function PropertiesPanel({
  </div>
  )}
 
+ {/* Configuración específica para Recepción de Documentos (claim_document_receipt) */}
+ {field.type === "claim_document_receipt" && (
+ <div className="space-y-2 pt-2 border-t">
+ <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Comportamiento</p>
+ <label className="flex items-start gap-2 cursor-pointer">
+ <Checkbox
+ checked={field.config?.blockEmitUntilAllResolved !== false}
+ onChange={(e) => onUpdate(index, { config: { ...field.config, blockEmitUntilAllResolved: e.target.checked } })}
+ />
+ <div>
+ <span className="text-[11px] font-medium">Bloquear emisión hasta recibir todos</span>
+ <p className="text-[9px] text-muted-foreground">No permite emitir manualmente hasta que todos los documentos estén recibidos o no necesarios</p>
+ </div>
+ </label>
+ <label className="flex items-start gap-2 cursor-pointer">
+ <Checkbox
+ checked={field.config?.notNeededRequiresReason !== false}
+ onChange={(e) => onUpdate(index, { config: { ...field.config, notNeededRequiresReason: e.target.checked } })}
+ />
+ <div>
+ <span className="text-[11px] font-medium">&ldquo;No necesario&rdquo; requiere motivo</span>
+ <p className="text-[9px] text-muted-foreground">Al marcar como no necesario, abre un modal pidiendo el motivo obligatorio</p>
+ </div>
+ </label>
+ <label className="flex items-start gap-2 cursor-pointer">
+ <Checkbox
+ checked={field.config?.notNeededOnlyIssuers !== false}
+ onChange={(e) => onUpdate(index, { config: { ...field.config, notNeededOnlyIssuers: e.target.checked } })}
+ />
+ <div>
+ <span className="text-[11px] font-medium">&ldquo;No necesario&rdquo; solo emisores</span>
+ <p className="text-[9px] text-muted-foreground">Solo los usuarios en el combo de emisores pueden marcar como no necesario</p>
+ </div>
+ </label>
+ </div>
+ )}
+
  {/* Eliminar */}
  <div className="pt-2 border-t">
  <Button

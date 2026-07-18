@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getClaimDocuments,
@@ -14,6 +14,7 @@ import {
   getCoverageCatalog,
   getSubcoveragesByCoverageIds,
 } from "@/services/coverage-catalog";
+import { getDocumentTypes } from "@/services/catalogs";
 import { toast } from "sonner";
 import {
   FolderOpen,
@@ -27,6 +28,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/hooks/use-permissions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ClaimDocumentsTabProps {
   claimId: string;
@@ -37,12 +45,20 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
   const queryClient = useQueryClient();
   const { canCreate, canDelete } = usePermissions();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedDocType, setSelectedDocType] = useState<string>("");
 
   // 1. Documentos físicos del siniestro
   const { data: claimDocs, isLoading: claimDocsLoading } = useQuery({
     queryKey: ["claim-documents", claimId],
     queryFn: () => getClaimDocuments(claimId),
     enabled: !!claimId,
+  });
+
+  // Tipos de documento para el selector al subir
+  const { data: documentTypes } = useQuery({
+    queryKey: ["document-types"],
+    queryFn: getDocumentTypes,
+    staleTime: 5 * 60 * 1000,
   });
 
   // 2. Documentos físicos de la póliza asociada
@@ -125,10 +141,11 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
 
   // Mutation: subir documento del siniestro
   const uploadMut = useMutation({
-    mutationFn: async ({ file }: { file: File }) => {
+    mutationFn: async ({ file, docTypeCode }: { file: File; docTypeCode: string }) => {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("claimId", claimId);
+      if (docTypeCode) formData.append("documentTypeCode", docTypeCode);
       const res = await fetch("/api/claims/documents/upload", { method: "POST", body: formData });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -154,7 +171,14 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) uploadMut.mutate({ file });
+    if (file) {
+      if (!selectedDocType) {
+        toast.error("Selecciona un tipo de documento antes de subir");
+        e.target.value = "";
+        return;
+      }
+      uploadMut.mutate({ file, docTypeCode: selectedDocType });
+    }
     e.target.value = "";
   }
 
@@ -186,14 +210,31 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 onChange={handleFileSelect}
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
               />
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="pg-btn-platinum-icon"
-                disabled={uploadMut.isPending}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                {uploadMut.isPending ? "Subiendo..." : "Subir"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={selectedDocType || "__none"}
+                  onValueChange={(v) => setSelectedDocType(v === "__none" ? "" : (v ?? ""))}
+                  items={[{ value: "__none", label: "Sin selección" }, ...(documentTypes || []).map((d) => ({ value: d.code || d.id, label: d.name }))]}
+                >
+                  <SelectTrigger className="app-input h-7 w-[200px]">
+                    <SelectValue placeholder="Tipo de documento..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Sin selección</SelectItem>
+                    {documentTypes?.map((d) => (
+                      <SelectItem key={d.id} value={d.code || d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="pg-btn-platinum-icon"
+                  disabled={uploadMut.isPending}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {uploadMut.isPending ? "Subiendo..." : "Subir"}
+                </Button>
+              </div>
             </>
           )}
         </div>
@@ -215,7 +256,9 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 {claimDocs.map((doc) => (
                   <tr key={doc.id}>
                     <td className="font-medium wrap-break-word">{doc.document_name}</td>
-                    <td className="text-muted-foreground">{doc.document_type || "-"}</td>
+                    <td className="text-muted-foreground">
+                      {documentTypes?.find((d) => d.code === doc.document_type)?.name || doc.document_type || "—"}
+                    </td>
                     <td className="text-muted-foreground">{formatFileSize(doc.file_size)}</td>
                     <td>
                       <div className="app-row-actions">
@@ -282,7 +325,9 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 {policyDocs.map((doc) => (
                   <tr key={doc.id}>
                     <td className="font-medium wrap-break-word">{doc.document_name}</td>
-                    <td className="text-muted-foreground">{doc.document_type || "-"}</td>
+                    <td className="text-muted-foreground">
+                      {documentTypes?.find((d) => d.code === doc.document_type)?.name || doc.document_type || "—"}
+                    </td>
                     <td className="text-muted-foreground">{formatFileSize(doc.file_size)}</td>
                     <td>
                       {doc.document_url && (
