@@ -269,9 +269,14 @@ export default function ReportTab({
   const damages = session.inspection_damages || [];
   const signatures = session.inspection_signatures || [];
   const sketches = session.damage_sketches || [];
-  const photos = evidences.filter(e => e.type === "photo");
-  const videos = evidences.filter(e => e.type === "video");
-  const docs = evidences.filter(e => e.type === "document");
+  // Filtro flexible: el type puede venir como "photo", "image", "video", "document", "pdf", etc.
+  const isPhoto = (t: string) => ["photo", "image", "jpg", "jpeg", "png"].includes(t.toLowerCase());
+  const isVideo = (t: string) => ["video", "mp4", "mov"].includes(t.toLowerCase());
+  const isDoc = (t: string) => ["document", "pdf", "doc", "docx", "file"].includes(t.toLowerCase());
+  const photos = evidences.filter(e => isPhoto(e.type));
+  const videos = evidences.filter(e => isVideo(e.type));
+  const docs = evidences.filter(e => isDoc(e.type));
+  const otherEvidences = evidences.filter(e => !isPhoto(e.type) && !isVideo(e.type) && !isDoc(e.type));
   // Solo una firma por rol (insured + adjuster = máximo 2)
   const uniqueSignatures = signatures.filter((s, i, arr) => arr.findIndex(x => x.role === s.role) === i);
   const companyName = profile?.company?.name || "—";
@@ -571,6 +576,35 @@ export default function ReportTab({
             </>
           )}
 
+          {/* ═══ RESUMEN DE EVIDENCIAS ═══ */}
+          {evidences.length > 0 && (
+            <>
+              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+                Resumen de Evidencias ({evidences.length})
+              </div>
+              <table className="w-full border-collapse my-1.5">
+                <thead>
+                  <tr>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">N°</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Tipo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Fecha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evidences.map((ev, idx) => (
+                    <tr key={ev.id}>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px] capitalize">{ev.type}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{ev.description || "Sin descripción"}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{fmtDateTime(ev.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
           {/* ═══ EVIDENCIAS FOTOGRÁFICAS ═══ */}
           {photos.length > 0 && (
             <>
@@ -625,6 +659,35 @@ export default function ReportTab({
                       <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
                       <td className="p-1.5 border border-gray-300 text-[9px]">{d.description || "Sin descripción"}</td>
                       <td className="p-1.5 border border-gray-300 text-[9px]"><a href={d.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver documento</a></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {/* ═══ OTRAS EVIDENCIAS ═══ */}
+          {otherEvidences.length > 0 && (
+            <>
+              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+                Otras Evidencias ({otherEvidences.length})
+              </div>
+              <table className="w-full border-collapse my-1.5">
+                <thead>
+                  <tr>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">N°</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Tipo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Referencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {otherEvidences.map((d, idx) => (
+                    <tr key={d.id}>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px] capitalize">{d.type}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.description || "Sin descripción"}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]"><a href={d.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver</a></td>
                     </tr>
                   ))}
                 </tbody>
