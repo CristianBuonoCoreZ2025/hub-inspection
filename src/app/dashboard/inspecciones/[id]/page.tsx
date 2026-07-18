@@ -335,7 +335,9 @@ export default function InspectionDetailPage() {
     insurance_company?: { name: string } | null;
     broker?: { name: string } | null;
     advisor?: { name: string } | null;
-    claims_participants?: Array<{ type: string; full_name: string | null; email: string | null; phone: string | null; cell_phone: string | null }>;
+    claim_cause?: { name: string } | null;
+    commune?: { name: string } | null;
+    claims_participants?: Array<{ type: string; full_name: string | null; email: string | null; phone: string | null; cell_phone: string | null; rut?: string | null }>;
   };
   const claim = session.claim as ClaimData | undefined;
   const participants = claim?.claims_participants || [];
@@ -713,6 +715,12 @@ export default function InspectionDetailPage() {
             claimLiquidationNumber={claim?.liquidation_number ?? undefined}
             claimAddress={claim?.claim_address ?? undefined}
             insuredName={claim?.claims_participants?.find(p => p.type === "insured")?.full_name ?? undefined}
+            insuredRut={claim?.claims_participants?.find(p => p.type === "insured")?.rut ?? undefined}
+            insuredPhone={claim?.claims_participants?.find(p => p.type === "insured")?.cell_phone ?? undefined}
+            insuredEmail={claim?.claims_participants?.find(p => p.type === "insured")?.email ?? undefined}
+            claimCause={claim?.claim_cause?.name ?? undefined}
+            claimDate={claim?.claim_date ?? undefined}
+            commune={claim?.commune?.name ?? undefined}
             cancellationReason={cancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || null}
             cancellationNotes={session.cancellation_notes}
             cancelledAt={session.cancelled_at}
