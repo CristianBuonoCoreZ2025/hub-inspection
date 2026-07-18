@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
@@ -252,6 +252,7 @@ function RecentClaimsButton() {
 export function TopBar() {
   const { user, profile, isLoading, signOut } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
   const topbarInnerRef = useRef<HTMLDivElement>(null);
   useDockMagnification(topbarInnerRef);
 
@@ -278,7 +279,7 @@ export function TopBar() {
   return (
     <div className="topbar">
       {/* Mobile nav drawer — solo visible < 1024px */}
-      <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <MobileNav open={mobileNavOpen} onClose={closeMobileNav} />
 
       <div className="topbar-inner" ref={topbarInnerRef}>
         {/* Lente líquido — barrido de luz que sigue el cursor (Liquid Glass) */}

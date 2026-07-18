@@ -2,8 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSignatures, createSignature } from "@/services/inspections";
-import { uploadFileToStorage } from "@/lib/supabase/storage-upload";
+import { getSignatures } from "@/services/inspections";
 import { toast } from "sonner";
 import { User, ShieldCheck } from "lucide-react";
 
@@ -145,28 +144,24 @@ export default function SignaturesTab({ sessionId }: { sessionId: string }) {
     queryFn: () => getSignatures(sessionId),
   });
 
-  const createMutation = useMutation({
-    mutationFn: createSignature,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["signatures", sessionId] });
-      toast.success("Firma guardada");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
   const handleSave = async (role: "insured" | "adjuster", dataUrl: string) => {
     const blob = await fetch(dataUrl).then((r) => r.blob());
     const file = new File([blob], `signature_${role}_${Date.now()}.png`, { type: "image/png" });
-    const path = `signatures/${sessionId}/${role}_${Date.now()}.png`;
-    const url = await uploadFileToStorage(file, path);
-    createMutation.mutate({
-      session_id: sessionId,
-      role,
-      signature_url: url,
-      signed_at: new Date().toISOString(),
-      ip_address: null,
-      user_agent: null,
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("sessionId", sessionId);
+    formData.append("role", role);
+    const res = await fetch("/api/inspection/sign/upload", {
+      method: "POST",
+      body: formData,
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      toast.error(body.error || "Error al subir firma");
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["signatures", sessionId] });
+    toast.success("Firma guardada");
   };
 
   const insuredSig = signatures?.find((s) => s.role === "insured");

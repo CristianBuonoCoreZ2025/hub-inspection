@@ -141,7 +141,8 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
   // Cerrar al cambiar de ruta
   useEffect(() => {
     onClose();
-  }, [pathname, onClose]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // Cerrar con Escape
   useEffect(() => {
@@ -150,7 +151,8 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
     }
     if (open) document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open, onClose]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Bloquear scroll del body cuando está abierto
   useEffect(() => {

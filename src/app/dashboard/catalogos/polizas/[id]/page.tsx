@@ -382,17 +382,13 @@ export default function PolicyDetailPage() {
     mutationFn: async ({ file }: { file: File }) => {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/inspection/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Error al subir archivo");
-      const data = await res.json();
-      if (!data.url) throw new Error("No se recibió URL");
-      return createPolicyDocument({
-        policy_id: policyId,
-        document_name: file.name,
-        document_url: data.url,
-        document_type: file.type,
-        file_size: file.size,
-      });
+      formData.append("policyId", policyId);
+      const res = await fetch("/api/policies/documents/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Error al subir archivo");
+      }
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["policy-documents", policyId] });

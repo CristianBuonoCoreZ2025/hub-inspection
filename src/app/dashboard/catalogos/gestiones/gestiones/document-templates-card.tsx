@@ -54,6 +54,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("actionTemplateId", actionTemplateId);
       const res = await fetch("/api/document-templates/upload", {
         method: "POST",
         body: formData,

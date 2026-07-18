@@ -4,11 +4,9 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getDamageSketches,
-  createDamageSketch,
   updateDamageSketch,
   deleteDamageSketch,
 } from "@/services/inspections";
-import { uploadFileToStorage } from "@/lib/supabase/storage-upload";
 import { DrawingCanvas } from "@/components/ui/drawing-canvas";
 import { toast } from "sonner";
 import { Upload, Trash2, ImageIcon, Pencil, Check, X, PenTool } from "lucide-react";
@@ -27,15 +25,6 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
   const { data: sketches, isLoading } = useQuery({
     queryKey: ["damage-sketches", sessionId],
     queryFn: () => getDamageSketches(sessionId),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: createDamageSketch,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
-      toast.success("Croquis guardado");
-    },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   const updateMutation = useMutation({
@@ -77,16 +66,33 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const sketchFileMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("sessionId", sessionId);
+      formData.append("label", file.name);
+      const res = await fetch("/api/inspection/sketch/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Error al subir croquis");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
+      toast.success("Croquis subido");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   async function handleFile(file: File) {
     setUploading(true);
     try {
-      const path = `sketches/${sessionId}/${Date.now()}_${file.name}`;
-      const url = await uploadFileToStorage(file, path);
-      createMutation.mutate({
-        session_id: sessionId,
-        sketch_url: url,
-        label: file.name,
-      });
+      sketchFileMutation.mutate(file);
     } catch (err) {
       toast.error("Error al subir archivo");
       console.error(err);

@@ -490,6 +490,20 @@ export async function issueClaimAction(actionId: string, userId?: string, action
     level: "issue",
   });
 
+  // ── Generar y subir documento desde template (fire-and-forget) ──
+  // Si la gestión tiene un document_template asociado, se renderiza el .docx
+  // con los datos del siniestro y se sube a R2 con el path del plan:
+  // siniestros/{L}/gestiones/{code}/{code}.docx
+  // No bloquea la emisión — si falla, el documento se puede generar después.
+  if (action?.action_template_id) {
+    fetch(`/api/claims/actions/${actionId}/generate-document`, {
+      method: "POST",
+    }).catch((e) => {
+      // Fire-and-forget: solo log, no bloquea
+      console.warn(`[issueClaimAction] generate-document falló para ${actionId}:`, e);
+    });
+  }
+
   return result;
 }
 /**

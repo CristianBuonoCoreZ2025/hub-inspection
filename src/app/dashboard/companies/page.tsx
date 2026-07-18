@@ -211,7 +211,11 @@ export default function CompaniesPage() {
                           if (!file) return;
                           setLogoUploading(true);
                           try {
-                            const url = await uploadFileToStorage(file, `companies/logos/${Date.now()}-${file.name}`);
+                            const ext = file.name.includes(".") ? "." + file.name.split(".").pop()?.toLowerCase() : "";
+                            const logoPath = editingId
+                              ? `empresas/${editingId}/logos/logo${ext}`
+                              : `empresas/_pending/${Date.now()}-${file.name}`;
+                            const url = await uploadFileToStorage(file, logoPath);
                             form.setValue("logoUrl", url);
                             toast.success("Logo subido");
                           } catch (err) {

@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { extractPlaceholdersFromDocx } from "@/services/document-templates-docx";
-import { uploadToR2 } from "@/lib/storage/r2-upload";
+import { uploadGestionTemplate } from "@/lib/storage/template-upload";
 
 /**
  * POST /api/document-templates/upload
  *
- * Sube un .docx a Cloudflare R2 y devuelve:
+ * Sube un .docx a Cloudflare R2 con el path estructurado del plan:
+ *   configuracion/gestiones/{CODIGO_COMPUESTO}/{CODIGO_COMPUESTO}-NNNNN.docx
+ *
+ * Recibe multipart/form-data:
+ *   - file: el archivo .docx
+ *   - actionTemplateId: UUID del action_template (para resolver el compositeCode)
+ *
+ * Devuelve:
  *  - url: URL pública del archivo
  *  - fileId: path del archivo en R2
  *  - fileName, fileSize
@@ -16,8 +23,13 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
+    const actionTemplateId = formData.get("actionTemplateId");
+
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "No se encontró el archivo" }, { status: 400 });
+    }
+    if (!actionTemplateId || typeof actionTemplateId !== "string") {
+      return NextResponse.json({ error: "Falta actionTemplateId" }, { status: 400 });
     }
 
     // Validar que sea .docx
@@ -44,14 +56,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 2. Subir a Cloudflare R2
-    const filePath = `document-templates/${Date.now()}_${file.name}`;
+    // 2. Subir a R2 con path estructurado del plan
     const buffer = Buffer.from(arrayBuffer);
-
-    const url = await uploadToR2(
+    const { url, key: filePath } = await uploadGestionTemplate(
+      actionTemplateId,
       buffer,
-      filePath,
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ".docx"
     );
 
     return NextResponse.json({

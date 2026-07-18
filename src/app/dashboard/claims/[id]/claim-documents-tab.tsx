@@ -129,17 +129,13 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     mutationFn: async ({ file }: { file: File }) => {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/inspection/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Error al subir archivo");
-      const data = await res.json();
-      if (!data.url) throw new Error("No se recibió URL");
-      return createClaimDocument({
-        claim_id: claimId,
-        document_name: file.name,
-        document_url: data.url,
-        document_type: file.type,
-        file_size: file.size,
-      });
+      formData.append("claimId", claimId);
+      const res = await fetch("/api/claims/documents/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Error al subir archivo");
+      }
+      return res.json();
     },
     onSuccess: () => {
       toast.success("Documento subido");
