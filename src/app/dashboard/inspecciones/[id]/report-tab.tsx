@@ -108,7 +108,7 @@ export default function ReportTab({
     const content = printRef.current;
     if (!content) return null;
     const { jsPDF } = await import("jspdf");
-    const html2canvas = (await import("html2canvas")).default;
+    const html2canvas = (await import("html2canvas-pro")).default;
 
     const canvas = await html2canvas(content, {
       scale: 2,
@@ -355,31 +355,6 @@ export default function ReportTab({
       ) : (
         <div className="pdf-viewer rounded-lg p-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)", backgroundColor: "#e5e7eb" }}>
           <div className="pdf-page shadow-lg mx-auto relative" ref={printRef} style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: "800px", padding: "30px 40px", backgroundColor: "#ffffff", color: "#1a1a1a" }}>
-          {/* Override Tailwind lab()/oklch() colors with hex for html2canvas compatibility */}
-          <style>{`
-            .pdf-page, .pdf-page * { color: #1a1a1a !important; }
-            .pdf-page .text-gray-900, .pdf-page .border-gray-900 { color: #111827 !important; border-color: #111827 !important; }
-            .pdf-page .text-gray-800 { color: #1f2937 !important; }
-            .pdf-page .text-gray-700 { color: #374151 !important; }
-            .pdf-page .text-gray-600 { color: #4b5563 !important; }
-            .pdf-page .text-gray-500 { color: #6b7280 !important; }
-            .pdf-page .text-gray-400 { color: #9ca3af !important; }
-            .pdf-page .text-gray-300 { color: #d1d5db !important; }
-            .pdf-page .bg-gray-100 { background-color: #f3f4f6 !important; }
-            .pdf-page .bg-gray-50 { background-color: #f9fafb !important; }
-            .pdf-page .bg-gray-200 { background-color: #e5e7eb !important; }
-            .pdf-page .border-gray-300 { border-color: #d1d5db !important; }
-            .pdf-page .border-gray-200 { border-color: #e5e7eb !important; }
-            .pdf-page .border-gray-700 { border-color: #374151 !important; }
-            .pdf-page .text-blue-600 { color: #2563eb !important; }
-            .pdf-page .text-emerald-600 { color: #059669 !important; }
-            .pdf-page .text-rose-600 { color: #e11d48 !important; }
-            .pdf-page .text-rose-700 { color: #be123c !important; }
-            .pdf-page .bg-rose-50 { background-color: #fff1f2 !important; }
-            .pdf-page .border-rose-600 { border-color: #e11d48 !important; }
-            .pdf-page .border-emerald-600 { border-color: #059669 !important; }
-            .pdf-page .text-muted-foreground { color: #6b7280 !important; }
-          `}</style>
 
           {/* Marca de agua BORRADOR */}
           {!isFinal && (
