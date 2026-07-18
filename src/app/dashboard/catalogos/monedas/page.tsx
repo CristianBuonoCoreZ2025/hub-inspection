@@ -49,7 +49,7 @@ function MonedasTab() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ code: "", name: "", symbol: "", decimals: "2" });
-  const [showInactive, setShowInactive] = useState(false);
+  const [onlyActive, setOnlyActive] = useState(true);
 
   // Modal de países
   const [paisesOpen, setPaisesOpen] = useState(false);
@@ -88,8 +88,8 @@ function MonedasTab() {
     else createMut.mutate(data);
   };
 
-  // Filtrar activas/inactivas
-  const visibleCurrencies = (currencies || []).filter(c => showInactive || c.is_active);
+  // Filtrar: si onlyActive, solo activas; si no, todas
+  const visibleCurrencies = (currencies || []).filter(c => !onlyActive || c.is_active);
 
   // Contar países asociados por moneda
   const countryCountByCode: Record<string, number> = {};
@@ -107,13 +107,10 @@ function MonedasTab() {
   return (
     <div className="app-stack">
       <div className="flex justify-between items-center">
-        {/* Toggle activas/inactivas */}
+        {/* Toggle: activo = solo activas, inactivo = todas */}
         <div className="flex items-center gap-2">
-          <ToggleChip active={!showInactive} onClick={() => setShowInactive(false)}>
-            Activas
-          </ToggleChip>
-          <ToggleChip active={showInactive} onClick={() => setShowInactive(true)}>
-            Todas
+          <ToggleChip active={onlyActive} onClick={() => setOnlyActive(!onlyActive)}>
+            Solo activas
           </ToggleChip>
           <span className="text-[11px] text-muted-foreground">
             {visibleCurrencies.length} de {currencies?.length || 0} monedas
