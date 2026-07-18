@@ -239,10 +239,20 @@ export default function AgendaPage() {
           <Select
             value={inspectorFilter || "all"}
             onValueChange={(v) => setInspectorFilter(v ?? "all")}
+            items={[
+              { value: "all", label: "Todos" },
+              ...inspectors.map((i) => ({ value: i.id, label: i.full_name || i.email })),
+            ]}
           >
             <SelectTrigger className="app-input h-8 text-[12px] w-[200px]!">
               <User className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <SelectValue placeholder="Todos" />
+              <SelectValue placeholder="Todos">
+                {(val: string) => {
+                  if (val === "all") return "Todos";
+                  const insp = inspectors.find((i) => i.id === val);
+                  return insp?.full_name || insp?.email || "Todos";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
