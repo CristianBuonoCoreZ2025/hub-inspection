@@ -3070,7 +3070,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  const { data: receiptUsers } = useQuery({
  queryKey: ["receipt-users", userIds.join(",")],
  queryFn: async () => {
- if (userIds.length === 0) return [];
+ if (userIds.length === 0) return [] as { id: string; full_name: string | null; email: string | null }[];
  const { getSupabaseClient } = await import("@/lib/supabase/client");
  const supabase = getSupabaseClient();
  const { data, error } = await supabase
@@ -3078,7 +3078,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  .select("id, full_name, email")
  .in("id", userIds);
  if (error) throw new Error(error.message);
- return data || [];
+ return (data || []) as { id: string; full_name: string | null; email: string | null }[];
  },
  enabled: userIds.length > 0,
  });

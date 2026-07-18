@@ -6,6 +6,7 @@ import {
   getClaimDocuments,
   deactivateClaimDocument,
 } from "@/services/claim-documents-physical";
+import { getDocumentRequirements } from "@/services/claim-documents";
 import {
   getPolicyDocuments,
   getPolicyCoveragesByPolicyIdDirect,
@@ -14,7 +15,6 @@ import {
   getCoverageCatalog,
   getSubcoveragesByCoverageIds,
 } from "@/services/coverage-catalog";
-import { getDocumentTypes } from "@/services/catalogs";
 import { toast } from "sonner";
 import {
   FolderOpen,
@@ -54,11 +54,28 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     enabled: !!claimId,
   });
 
-  // Tipos de documento para el selector al subir
-  const { data: documentTypes } = useQuery({
-    queryKey: ["document-types"],
-    queryFn: getDocumentTypes,
-    staleTime: 5 * 60 * 1000,
+  // Obtener business_line_id del siniestro
+  const { data: claim } = useQuery({
+    queryKey: ["claim-business-line", claimId],
+    queryFn: async () => {
+      const { getSupabaseClient } = await import("@/lib/supabase/client");
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from("claims")
+        .select("business_line_id")
+        .eq("id", claimId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    enabled: !!claimId,
+  });
+
+  // Tipos de documento = requirements configurados para la línea de negocio
+  const { data: documentRequirements } = useQuery({
+    queryKey: ["doc-requirements", claim?.business_line_id],
+    queryFn: () => getDocumentRequirements(claim?.business_line_id || undefined),
+    enabled: !!claim?.business_line_id,
   });
 
   // 2. Documentos físicos de la póliza asociada
@@ -214,15 +231,15 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 <Select
                   value={selectedDocType || "__none"}
                   onValueChange={(v) => setSelectedDocType(v === "__none" ? "" : (v ?? ""))}
-                  items={[{ value: "__none", label: "Sin selección" }, ...(documentTypes || []).map((d) => ({ value: d.code || d.id, label: d.name }))]}
+                  items={[{ value: "__none", label: "Sin selección" }, ...(documentRequirements || []).map((d) => ({ value: d.document_type_code, label: d.document_name }))]}
                 >
                   <SelectTrigger className="app-input h-7 w-[200px]">
                     <SelectValue placeholder="Tipo de documento..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">Sin selección</SelectItem>
-                    {documentTypes?.map((d) => (
-                      <SelectItem key={d.id} value={d.code || d.id}>{d.name}</SelectItem>
+                    {documentRequirements?.map((d) => (
+                      <SelectItem key={d.id} value={d.document_type_code}>{d.document_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -257,7 +274,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                   <tr key={doc.id}>
                     <td className="font-medium wrap-break-word">{doc.document_name}</td>
                     <td className="text-muted-foreground">
-                      {documentTypes?.find((d) => d.code === doc.document_type)?.name || doc.document_type || "—"}
+                      {documentRequirements?.find((d) => d.document_type_code === doc.document_type)?.document_name || doc.document_type || "—"}
                     </td>
                     <td className="text-muted-foreground">{formatFileSize(doc.file_size)}</td>
                     <td>
@@ -326,7 +343,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                   <tr key={doc.id}>
                     <td className="font-medium wrap-break-word">{doc.document_name}</td>
                     <td className="text-muted-foreground">
-                      {documentTypes?.find((d) => d.code === doc.document_type)?.name || doc.document_type || "—"}
+                      {documentRequirements?.find((d) => d.document_type_code === doc.document_type)?.document_name || doc.document_type || "—"}
                     </td>
                     <td className="text-muted-foreground">{formatFileSize(doc.file_size)}</td>
                     <td>
