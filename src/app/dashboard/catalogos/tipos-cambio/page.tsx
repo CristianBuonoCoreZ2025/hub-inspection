@@ -88,20 +88,25 @@ function TiposCambioContent() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Monedas del país seleccionado
+  // Monedas del país seleccionado (excluyendo la base, que siempre es tasa 1)
   const countryCurrencyOptions = useMemo(() =>
     (countryCurrenciesAll || [])
-      .filter(cc => cc.country_id === filterCountry && cc.is_active)
+      .filter(cc => cc.country_id === filterCountry && cc.is_active && !cc.is_base)
       .map(cc => ({ code: cc.currency_code, name: cc.currency?.name || cc.currency_code, isBase: cc.is_base }))
   , [countryCurrenciesAll, filterCountry]);
 
+  // Si la moneda seleccionada ya no está en las opciones (ej: era la base), usar string vacío
+  const effectiveFilterCurrency = filterCurrency && countryCurrencyOptions.length > 0 && !countryCurrencyOptions.find(c => c.code === filterCurrency)
+    ? ""
+    : filterCurrency;
+
   const selectedCountry = countries?.find(c => c.id === filterCountry);
-  const selectedCurrency = countryCurrencyOptions.find(c => c.code === filterCurrency);
+  const selectedCurrency = countryCurrencyOptions.find(c => c.code === effectiveFilterCurrency);
 
   // Filtrar tasas
   const filteredRates = useMemo(() => (rates || []).filter(r => {
     if (filterCountry && r.country_id !== filterCountry) return false;
-    if (filterCurrency && r.currency_code !== filterCurrency) return false;
+    if (effectiveFilterCurrency && r.currency_code !== effectiveFilterCurrency) return false;
     const rYear = r.effective_date.split("-")[0];
     if (filterYear && rYear !== filterYear) return false;
     if (viewMode === "month") {
@@ -109,7 +114,7 @@ function TiposCambioContent() {
       if (rMonth !== filterMonth) return false;
     }
     return true;
-  }), [rates, filterCountry, filterCurrency, filterYear, filterMonth, viewMode]);
+  }), [rates, filterCountry, effectiveFilterCurrency, filterYear, filterMonth, viewMode]);
 
   // Pivot: day → month → { rate, id, source }
   const pivot = useMemo(() => {
@@ -204,7 +209,7 @@ function TiposCambioContent() {
             <div className="min-w-[160px]">
               <Label className="app-field-label">Moneda</Label>
               <Select
-                value={filterCurrency || "__none"}
+                value={effectiveFilterCurrency || "__none"}
                 onValueChange={(v) => setFilterCurrency(v === "__none" ? "" : (v ?? ""))}
                 items={[{ value: "__none", label: "Todas" }, ...countryCurrencyOptions.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))]}
               >
@@ -290,7 +295,7 @@ function TiposCambioContent() {
               {canCreate("catalogos") && (
                 <Button
                   variant="outline"
-                  onClick={() => { setEditingId(null); setForm({ country_id: filterCountry, currency_code: filterCurrency, rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" }); setOpen(true); }}
+                  onClick={() => { setEditingId(null); setForm({ country_id: filterCountry, currency_code: effectiveFilterCurrency, rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" }); setOpen(true); }}
                   className="pg-btn-platinum-icon"
                 >
                   <Plus className="mr-1.5 h-4 w-4" /> Nuevo
@@ -325,7 +330,7 @@ function TiposCambioContent() {
         {/* ── Tabla pivote ── */}
         {isLoading ? (
           <div className="app-panel text-center py-8 text-muted-foreground text-sm">Cargando...</div>
-        ) : !filterCountry || !filterCurrency ? (
+        ) : !filterCountry || !effectiveFilterCurrency ? (
           <div className="app-panel text-center py-12">
             <ArrowRightLeft className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-[13px] text-muted-foreground">
@@ -336,7 +341,7 @@ function TiposCambioContent() {
           <div className="app-panel text-center py-12">
             <Calendar className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-[13px] text-muted-foreground">
-              No hay tipos de cambio para {selectedCurrency?.name || filterCurrency} en {selectedCountry?.name || filterCountry}
+              No hay tipos de cambio para {selectedCurrency?.name || effectiveFilterCurrency} en {selectedCountry?.name || filterCountry}
               {viewMode === "month" ? ` durante ${MONTHS[parseInt(filterMonth)]} ${filterYear}` : ` durante ${filterYear}`}.
             </p>
             {canCreate("catalogos") && (
@@ -347,7 +352,7 @@ function TiposCambioContent() {
                     ? `${filterYear}-${String(parseInt(filterMonth) + 1).padStart(2, "0")}-01`
                     : `${filterYear}-01-01`;
                   setEditingId(null);
-                  setForm({ country_id: filterCountry, currency_code: filterCurrency, rate_to_base: "", effective_date: defaultDate, source: "manual" });
+                  setForm({ country_id: filterCountry, currency_code: effectiveFilterCurrency, rate_to_base: "", effective_date: defaultDate, source: "manual" });
                   setOpen(true);
                 }}
                 className="pg-btn-platinum-icon mt-3"
@@ -364,10 +369,7 @@ function TiposCambioContent() {
                 <span className="font-mono text-[11px] text-muted-foreground">{selectedCountry?.code}</span>
                 {selectedCountry?.name}
                 <span className="text-muted-foreground">·</span>
-                <span className="font-mono font-semibold text-[13px]">{filterCurrency}</span>
-                {selectedCurrency?.isBase && (
-                  <span className="text-[10px] rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 font-medium">Base</span>
-                )}
+                <span className="font-mono font-semibold text-[13px]">{effectiveFilterCurrency}</span>
                 <span className="text-muted-foreground">·</span>
                 <span className="text-[12px] text-muted-foreground">
                   {viewMode === "month" ? `${MONTHS[parseInt(filterMonth)]} ${filterYear}` : filterYear}
@@ -400,7 +402,7 @@ function TiposCambioContent() {
                                 key={monthIdx}
                                 className="text-center font-mono cursor-pointer hover:bg-primary/10 rounded transition-colors"
                                 title={`${day}/${String(monthIdx + 1).padStart(2, "0")}/${filterYear} — ${cell.source || "manual"}`}
-                                onClick={() => { if (canEdit("catalogos")) { setEditingId(cell.id); setForm({ country_id: filterCountry, currency_code: filterCurrency, rate_to_base: String(cell.rate), effective_date: `${filterYear}-${String(monthIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`, source: cell.source || "manual" }); setOpen(true); } }}
+                                onClick={() => { if (canEdit("catalogos")) { setEditingId(cell.id); setForm({ country_id: filterCountry, currency_code: effectiveFilterCurrency, rate_to_base: String(cell.rate), effective_date: `${filterYear}-${String(monthIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`, source: cell.source || "manual" }); setOpen(true); } }}
                               >
                                 {formatRate(cell.rate)}
                               </td>
@@ -471,9 +473,9 @@ function TiposCambioContent() {
               <span className="flex items-center gap-1.5">
                 <span className="font-mono">—</span> Sin dato
               </span>
-              {selectedCurrency && !selectedCurrency.isBase && (
+              {selectedCurrency && effectiveFilterCurrency && (
                 <span className="ml-auto">
-                  Tasa = 1 {filterCurrency} en moneda base ({countryCurrencyOptions.find(c => c.isBase)?.code || "—"})
+                  Tasa = 1 {effectiveFilterCurrency} en moneda base ({(countryCurrenciesAll || []).find(cc => cc.country_id === filterCountry && cc.is_base)?.currency_code || "—"})
                 </span>
               )}
             </div>
