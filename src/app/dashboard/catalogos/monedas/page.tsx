@@ -9,7 +9,7 @@ import {
   getCountries, updateCountryReferenceDateType,
 } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Coins, Pencil, Trash2, Plus, Star, ArrowRightLeft, Calendar, Globe, Eye, EyeOff } from "lucide-react";
+import { Coins, Pencil, Trash2, Plus, Star, ArrowRightLeft, Calendar, Globe } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 
 type Tab = "monedas" | "paises";
 
@@ -131,16 +131,12 @@ function MonedasTab() {
       <div className="flex justify-between items-center">
         {/* Toggle activas/inactivas */}
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowInactive(!showInactive)}
-            className="pg-btn-platinum-icon"
-            title={showInactive ? "Ocultar inactivas" : "Mostrar inactivas"}
-          >
-            {showInactive ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            {showInactive ? "Todas" : "Activas"}
-          </Button>
+          <ToggleChip active={!showInactive} onClick={() => setShowInactive(false)}>
+            Activas
+          </ToggleChip>
+          <ToggleChip active={showInactive} onClick={() => setShowInactive(true)}>
+            Todas
+          </ToggleChip>
           <span className="text-[11px] text-muted-foreground">
             {visibleCurrencies.length} de {currencies?.length || 0} monedas
           </span>
@@ -171,7 +167,15 @@ function MonedasTab() {
               : visibleCurrencies.length === 0 ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">No hay monedas.</td></tr>
               : visibleCurrencies.map((c) => (
                 <tr key={c.id} className={!c.is_active ? "opacity-50" : ""}>
-                  <td><StatusBadge status={c.is_active ? "active" : "inactive"} label={c.is_active ? "Activo" : "Inactivo"} /></td>
+                  <td>
+                    <ToggleChip
+                      active={c.is_active}
+                      onClick={() => toggleActiveMut.mutate({ id: c.id, isActive: !c.is_active })}
+                      disabled={!canEdit("catalogos")}
+                    >
+                      {c.is_active ? "Activa" : "Inactiva"}
+                    </ToggleChip>
+                  </td>
                   <td className="font-mono font-semibold text-[13px]">{c.code}</td>
                   <td className="font-medium">{c.name}</td>
                   <td className="text-muted-foreground">{c.symbol || "—"}</td>
@@ -203,23 +207,6 @@ function MonedasTab() {
                       {canEdit("catalogos") && (
                         <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(c.id); setForm({ code: c.code, name: c.name, symbol: c.symbol || "", decimals: String(c.decimals) }); setOpen(true); }}>
                           <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {/* Activar/Desactivar */}
-                      {canEdit("catalogos") && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={c.is_active ? "btn-danger btn-icon" : "btn-neutral btn-icon"}
-                          onClick={() => {
-                            const action = c.is_active ? "desactivar" : "activar";
-                            if (confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} ${c.code}?`)) {
-                              toggleActiveMut.mutate({ id: c.id, isActive: !c.is_active });
-                            }
-                          }}
-                          title={c.is_active ? "Desactivar" : "Activar"}
-                        >
-                          {c.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       )}
                     </div>
