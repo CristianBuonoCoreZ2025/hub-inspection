@@ -15,6 +15,7 @@ import {
   getCoverageCatalog,
   getSubcoveragesByCoverageIds,
 } from "@/services/coverage-catalog";
+import { getDocumentTypes } from "@/services/catalogs";
 import { toast } from "sonner";
 import {
   FolderOpen,
@@ -31,7 +32,10 @@ import { usePermissions } from "@/hooks/use-permissions";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -77,6 +81,28 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     queryFn: () => getDocumentRequirements(claim?.business_line_id || undefined),
     enabled: !!claim?.business_line_id,
   });
+
+  // Todos los tipos de documento del catálogo (para el resto)
+  const { data: allDocumentTypes } = useQuery({
+    queryKey: ["document-types"],
+    queryFn: getDocumentTypes,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Combinar: primero los de la línea de negocio, luego separador, luego el resto alfabético
+  const docOptions = useMemo(() => {
+    const lineDocs = (documentRequirements || []).map((r) => ({
+      code: r.document_type_code,
+      name: r.document_name,
+      isLine: true,
+    }));
+    const lineCodes = new Set(lineDocs.map((d) => d.code));
+    const restDocs = (allDocumentTypes || [])
+      .filter((d) => d.is_active && d.code && !lineCodes.has(d.code))
+      .map((d) => ({ code: d.code!, name: d.name, isLine: false }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { lineDocs, restDocs };
+  }, [documentRequirements, allDocumentTypes]);
 
   // 2. Documentos físicos de la póliza asociada
   const { data: policyDocs } = useQuery({
@@ -231,16 +257,31 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 <Select
                   value={selectedDocType || "__none"}
                   onValueChange={(v) => setSelectedDocType(v === "__none" ? "" : (v ?? ""))}
-                  items={[{ value: "__none", label: "Sin selección" }, ...(documentRequirements || []).map((d) => ({ value: d.document_type_code, label: d.document_name }))]}
                 >
                   <SelectTrigger className="app-input h-7 w-[200px]">
                     <SelectValue placeholder="Tipo de documento..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">Sin selección</SelectItem>
-                    {documentRequirements?.map((d) => (
-                      <SelectItem key={d.id} value={d.document_type_code}>{d.document_name}</SelectItem>
-                    ))}
+                    {docOptions.lineDocs.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>Línea de Negocio</SelectLabel>
+                        {docOptions.lineDocs.map((d) => (
+                          <SelectItem key={d.code} value={d.code}>{d.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {docOptions.lineDocs.length > 0 && docOptions.restDocs.length > 0 && (
+                      <SelectSeparator />
+                    )}
+                    {docOptions.restDocs.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>Otros Documentos</SelectLabel>
+                        {docOptions.restDocs.map((d) => (
+                          <SelectItem key={d.code} value={d.code}>{d.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
                   </SelectContent>
                 </Select>
                 <Button
@@ -274,7 +315,9 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                   <tr key={doc.id}>
                     <td className="font-medium wrap-break-word">{doc.document_name}</td>
                     <td className="text-muted-foreground">
-                      {documentRequirements?.find((d) => d.document_type_code === doc.document_type)?.document_name || doc.document_type || "—"}
+                      {docOptions.lineDocs.find((d) => d.code === doc.document_type)?.name ||
+                       docOptions.restDocs.find((d) => d.code === doc.document_type)?.name ||
+                       doc.document_type || "—"}
                     </td>
                     <td className="text-muted-foreground">{formatFileSize(doc.file_size)}</td>
                     <td>
@@ -343,7 +386,9 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                   <tr key={doc.id}>
                     <td className="font-medium wrap-break-word">{doc.document_name}</td>
                     <td className="text-muted-foreground">
-                      {documentRequirements?.find((d) => d.document_type_code === doc.document_type)?.document_name || doc.document_type || "—"}
+                      {docOptions.lineDocs.find((d) => d.code === doc.document_type)?.name ||
+                       docOptions.restDocs.find((d) => d.code === doc.document_type)?.name ||
+                       doc.document_type || "—"}
                     </td>
                     <td className="text-muted-foreground">{formatFileSize(doc.file_size)}</td>
                     <td>
