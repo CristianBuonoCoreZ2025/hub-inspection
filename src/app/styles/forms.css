@@ -106,7 +106,7 @@
   /* Input (inmune a --radius, --border, --input) */
   .app-input {
     width: 100% !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
     height: 28px !important;
     padding: 0 10px !important;
     border: 1px solid var(--input) !important;
@@ -123,7 +123,7 @@
   .app-input::placeholder {
     color: var(--muted-foreground) !important;
     opacity: 0.6 !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
   }
 
   .app-input:focus {
@@ -134,7 +134,14 @@
   /* Select trigger (combobox) — misma altura y fuente que app-input */
   [data-slot="select-trigger"].app-input {
     height: 28px !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
+  }
+
+  /* Select dropdown (popup) — fuente 11px en todos los combos de la app */
+  [data-slot="select-popup"],
+  [data-slot="select-popup"] [data-slot="select-item"],
+  [data-slot="select-popup"] [data-slot="select-label"] {
+    font-size: 11px !important;
   }
 
   /* ═══════════════════════════════════════════════════════════════
