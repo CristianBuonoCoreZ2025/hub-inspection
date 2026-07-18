@@ -240,7 +240,7 @@ export default function AgendaPage() {
             value={inspectorFilter || "all"}
             onValueChange={(v) => setInspectorFilter(v ?? "all")}
           >
-            <SelectTrigger className="app-input h-8 text-[12px] w-[220px]">
+            <SelectTrigger className="app-input h-8 text-[12px] w-[280px]">
               <User className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
               <SelectValue placeholder="Todos los inspectores" />
             </SelectTrigger>
