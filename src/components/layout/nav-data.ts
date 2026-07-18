@@ -39,6 +39,7 @@ import {
   Link2,
   Grid3x3,
   Coins,
+  ArrowRightLeft,
   type LucideIcon,
 } from "lucide-react";
 
@@ -81,7 +82,8 @@ export const catalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/coberturas", label: "Coberturas", icon: ShieldCheck },
   { href: "/dashboard/catalogos/parentescos", label: "Parentescos", icon: Heart },
   { href: "/dashboard/catalogos/tipos-documentos", label: "Tipos Documentos", icon: FileText },
-  { href: "/dashboard/catalogos/monedas", label: "Monedas y Cambios", icon: Coins },
+  { href: "/dashboard/catalogos/monedas", label: "Monedas", icon: Coins },
+  { href: "/dashboard/catalogos/tipos-cambio", label: "Tipos de Cambio", icon: ArrowRightLeft },
 ];
 
 // ── Catálogos de Inspección ──

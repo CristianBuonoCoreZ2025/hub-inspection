@@ -164,7 +164,7 @@ export default function ReportTab({
             th { text-align: left; padding: 5px 6px; background: #f0f0f0; border: 1px solid #ccc; font-size: 9px; font-weight: 700; text-transform: uppercase; }
             td { padding: 5px 6px; border: 1px solid #ccc; font-size: 9px; }
             .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0; }
-            .photo-grid img { width: 100%; height: 100px; object-fit: cover; border: 1px solid #ccc; }
+            .photo-grid img { width: 100%; height: 130px; object-fit: contain; }
             .photo-label { font-size: 8px; color: #666; text-align: center; margin-top: 2px; }
             .sketch-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 6px 0; }
             .sketch-grid img { width: 100%; height: 140px; object-fit: contain; border: 1px solid #ccc; background: #fff; }
@@ -193,6 +193,8 @@ export default function ReportTab({
   const photos = evidences.filter(e => e.type === "photo");
   const videos = evidences.filter(e => e.type === "video");
   const docs = evidences.filter(e => e.type === "document");
+  // Solo una firma por rol (insured + adjuster = máximo 2)
+  const uniqueSignatures = signatures.filter((s, i, arr) => arr.findIndex(x => x.role === s.role) === i);
   const companyName = profile?.company?.name || "—";
   const companyLogo = profile?.company?.logo_url || null;
   const companyPhone = profile?.company?.phone || null;
@@ -485,9 +487,9 @@ export default function ReportTab({
               </div>
               <div className="photo-grid grid grid-cols-3 gap-1.5 my-1.5">
                 {photos.map((ev, idx) => (
-                  <div key={ev.id}>
+                  <div key={ev.id} className="border border-gray-300 p-1 bg-gray-50">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ev.url} alt={`Foto ${idx + 1}`} className="w-full h-24 object-cover border border-gray-300" />
+                    <img src={ev.url} alt={`Foto ${idx + 1}`} className="w-full h-32 object-contain" />
                     <p className="photo-label text-[8px] text-gray-600 text-center mt-0.5">
                       Foto {idx + 1}{ev.description ? ` — ${ev.description}` : ""}
                     </p>
@@ -497,20 +499,44 @@ export default function ReportTab({
             </>
           )}
 
-          {/* ═══ VIDEOS Y DOCUMENTOS ═══ */}
-          {(videos.length > 0 || docs.length > 0) && (
+          {/* ═══ VIDEOS ═══ */}
+          {videos.length > 0 && (
             <>
               <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
-                Videos y Documentos
+                Videos ({videos.length})
               </div>
               <ul className="text-[10px] text-gray-700 space-y-0.5 list-disc list-inside mb-3">
                 {videos.map((v, idx) => (
-                  <li key={v.id}>Video {idx + 1}: {v.description || "Sin descripción"} — <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver</a></li>
-                ))}
-                {docs.map((d, idx) => (
-                  <li key={d.id}>Documento {idx + 1}: {d.description || "Sin descripción"} — <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver</a></li>
+                  <li key={v.id}>Video {idx + 1}: {v.description || "Sin descripción"} — <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver video</a></li>
                 ))}
               </ul>
+            </>
+          )}
+
+          {/* ═══ DOCUMENTOS ADJUNTOS ═══ */}
+          {docs.length > 0 && (
+            <>
+              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+                Documentos Adjuntos ({docs.length})
+              </div>
+              <table className="w-full border-collapse my-1.5">
+                <thead>
+                  <tr>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">N°</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Referencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {docs.map((d, idx) => (
+                    <tr key={d.id}>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.description || "Sin descripción"}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]"><a href={d.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver documento</a></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </>
           )}
 
@@ -535,18 +561,18 @@ export default function ReportTab({
           )}
 
           {/* ═══ FIRMAS ═══ */}
-          {signatures.length > 0 && (
+          {uniqueSignatures.length > 0 && (
             <>
               <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Firmas
               </div>
               <div className="sig-grid grid grid-cols-2 gap-5 mt-6">
-                {signatures.map((sig) => (
+                {uniqueSignatures.map((sig) => (
                   <div key={sig.id} className="sig-box text-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={sig.signature_url} alt={`Firma ${sig.role}`} className="max-h-16 max-w-[180px] border-b border-gray-700 pb-1 mx-auto" />
                     <p className="name text-[10px] font-semibold mt-1">
-                      {sig.role === "insured" ? "Asegurado" : sig.role === "adjuster" ? "Inspector" : sig.role}
+                      {sig.role === "insured" ? "Asegurado" : "Inspector"}
                     </p>
                     <p className="role text-[9px] text-gray-500">{fmtDateTime(sig.signed_at)}</p>
                   </div>
