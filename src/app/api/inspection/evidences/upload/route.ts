@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { uploadInspectionFile } from "@/lib/storage/inspection-upload";
 import { extractGpsFromExif } from "@/lib/storage/exif";
+import { summarizePdf } from "@/lib/storage/pdf-summary";
 import { logger } from "@/lib/logger";
 
 /**
@@ -85,6 +86,15 @@ export async function POST(request: NextRequest) {
       mimeType,
       userAgent: request.headers.get("user-agent") || null,
     };
+
+    // Si es PDF, extraer resumen del contenido (primeras 10 páginas)
+    if (fileType === "pdf") {
+      const pdfSummary = await summarizePdf(buffer, 10);
+      if (pdfSummary) {
+        metadata.pdfSummary = pdfSummary.summary;
+        metadata.pdfPageCount = pdfSummary.pageCount;
+      }
+    }
     // Geo del navegador → columnas lat/lng
     const deviceLat = lat && typeof lat === "string" ? parseFloat(lat) : null;
     const deviceLng = lng && typeof lng === "string" ? parseFloat(lng) : null;

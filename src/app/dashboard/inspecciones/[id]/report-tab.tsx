@@ -661,21 +661,29 @@ export default function ReportTab({
               {docs.map((d, idx) => {
                 const fileName = d.metadata?.originalName || `documento-${idx + 1}`;
                 const mimeType = d.metadata?.mimeType || "";
+                const pdfSummary = d.metadata?.pdfSummary as string | undefined;
+                const pageCount = d.metadata?.pdfPageCount as number | undefined;
                 const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName);
                 return (
                   <div key={d.id} className="border border-gray-300 p-2 mb-2 bg-gray-50">
                     <p className="text-[10px] font-semibold text-gray-700 mb-1">
                       Documento {idx + 1}: {fileName}
+                      {pageCount ? ` (${pageCount} ${pageCount === 1 ? "página" : "páginas"})` : ""}
                     </p>
                     {d.description && (
                       <p className="text-[9px] text-gray-600 mb-1">{d.description}</p>
                     )}
+                    {pdfSummary && (
+                      <p className="text-[9px] text-gray-700 italic mb-1 border-l-2 border-gray-300 pl-2">
+                        {pdfSummary}
+                      </p>
+                    )}
                     {isImage ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={d.url} alt={fileName} className="w-full max-h-48 object-contain border border-gray-200" crossOrigin="anonymous" />
-                    ) : (
+                    ) : !pdfSummary && (
                       <p className="text-[9px] text-gray-500 italic">
-                        Documento {mimeType || "adjunto"} — {d.metadata?.fileSize ? `${(d.metadata.fileSize / 1024).toFixed(0)} KB` : ""}
+                        Documento {mimeType || "adjunto"} — {d.metadata?.fileSize ? `${(d.metadata.fileSize as number / 1024).toFixed(0)} KB` : ""}
                       </p>
                     )}
                   </div>

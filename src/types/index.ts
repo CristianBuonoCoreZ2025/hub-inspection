@@ -537,7 +537,7 @@ export interface InspectionEvidence {
   type: "photo" | "video" | "document";
   url: string;
   description: string | null;
-  metadata: { originalName?: string; fileSize?: number; mimeType?: string } | null;
+  metadata: { originalName?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number } | null;
   created_at: string;
 }
 

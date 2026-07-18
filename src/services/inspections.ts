@@ -72,7 +72,7 @@ interface LiveSession {
   third_parties: ThirdParty[];
   action_template?: { code: string } | null;
   claim_action?: { code: string } | null;
-  inspection_evidences?: { id: string; url: string; type: string; description: string; category: string; created_at: string }[];
+  inspection_evidences?: { id: string; url: string; type: string; description: string; category: string; metadata: { originalName?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number } | null; created_at: string }[];
   inspection_notes?: { id: string; content: string; created_at: string }[];
   inspection_checklists?: { id: string; area: string; item: string; status: string; notes: string; created_at: string }[];
   inspection_damages?: { id: string; category: string; subcategory: string; description: string; observations: string; severity: string; dependency: string; sector: string; materiality_type: string; unit: string; quantity: string; damage_type: string; product: string; brand_model: string; purchase_date: string; estimated_amount: string; created_at: string }[];
