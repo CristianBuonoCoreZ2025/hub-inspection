@@ -252,6 +252,47 @@ export interface ClaimsStaging {
   updated_at: string;
 }
 
+// ── Monedas y Tipos de Cambio ──
+
+export interface Currency {
+  id: string;
+  code: string;
+  name: string;
+  symbol: string | null;
+  decimals: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CountryCurrency {
+  id: string;
+  country_id: string;
+  currency_code: string;
+  is_base: boolean;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joins opcionales
+  country?: { id: string; name: string; code: string } | null;
+  currency?: { code: string; name: string; symbol: string | null } | null;
+}
+
+export interface ExchangeRate {
+  id: string;
+  country_id: string;
+  currency_code: string;
+  rate_to_base: number;
+  effective_date: string;
+  source: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joins opcionales
+  country?: { id: string; name: string; code: string } | null;
+  currency?: { code: string; name: string; symbol: string | null } | null;
+}
+
 export interface ActaPropertyRisk {
   risk_type?: string;
   risk_class?: string;
@@ -511,6 +552,7 @@ export interface InspectionSignature {
 export interface InspectionReport {
   id: string;
   session_id: string;
+  claim_id: string | null;
   report_url: string | null;
   generated_at: string | null;
   status: "draft" | "generated" | "sent" | "cancellation";
@@ -633,6 +675,7 @@ export interface InspectionDamage {
   brand_model: string | null;
   purchase_date: string | null;
   estimated_amount: number | null;
+  currency: string | null;
   third_party_id: string | null;
   space_id: string | null;
   content_good_type_id: string | null;

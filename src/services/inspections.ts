@@ -27,6 +27,7 @@ export interface SessionClaim {
   insurance_company_id?: string;
   broker_id?: string;
   advisor_id?: string;
+  country_id?: string;
   claims_participants?: { type: string; full_name?: string; first_name?: string; last_name?: string; email?: string; phone?: string; cell_phone?: string }[];
   insurance_company?: { name: string } | null;
   broker?: { name: string } | null;
@@ -213,7 +214,7 @@ export async function getInspectionSessionById(id: string) {
     ${SESSION_SELECT}, created_at,
     claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, issuer_id, issued_on, issued_by),
     action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
-    claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, broker_executive, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone)),
+    claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, broker_executive, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone)),
     inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description),
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
     inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, description, severity),
@@ -639,7 +640,7 @@ export async function deleteDamageSketch(id: string) {
 const DAMAGE_SELECT = `
   id, session_id, category, subcategory, description, observations, severity,
   dependency, sector, materiality_type, unit, quantity, damage_type,
-  product, brand_model, purchase_date, estimated_amount,
+  product, brand_model, purchase_date, estimated_amount, currency,
   third_party_id, space_id, content_good_type_id, building_damage_category_id,
   created_at, updated_at
 `;
@@ -738,7 +739,7 @@ export async function createSignature(input: Omit<import("@/types").InspectionSi
 //  REPORTS
 // ═══════════════════════════════════════════════════════════════
 
-const REPORT_SELECT = `id, session_id, report_url, generated_at, status, report_type, cancellation_reason_id, cancellation_notes`;
+const REPORT_SELECT = `id, session_id, claim_id, report_url, generated_at, status, report_type, cancellation_reason_id, cancellation_notes`;
 
 export async function getReport(sessionId: string) {
   const rows = await fetchAll<import("@/types").InspectionReport>("inspection_reports", {

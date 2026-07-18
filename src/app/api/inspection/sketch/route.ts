@@ -9,7 +9,7 @@ import { logger } from "@/lib/logger";
  *
  * Recibe: { sessionId, sketchDataUrl (base64 PNG), label }
  * 1. Sube la imagen a Cloudflare R2 con path estructurado del plan:
- *    siniestros/{L}/gestiones/{code}/documentos/{code}-DOC-NNNN.png
+ *    siniestros/{L}/gestiones/{code}/documentos/{code}-CRO-NNNN.png
  * 2. Crea el registro en damage_sketches
  *
  * Si se envía sketchId, actualiza el croquis existente (editar).
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // 1. Convertir base64 a buffer y subir a R2 con path estructurado (DOC = documento)
+    // 1. Convertir base64 a buffer y subir a R2 con path estructurado (CRO = croquis)
     const base64Response = await fetch(sketchDataUrl);
     const blob = await base64Response.blob();
     const buffer = Buffer.from(await blob.arrayBuffer());
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       sessionId,
       buffer,
       "image/png",
-      "DOC",
+      "CRO",
       ".png"
     );
 

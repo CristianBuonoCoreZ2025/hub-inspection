@@ -1,15 +1,16 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSignatures } from "@/services/inspections";
 import { toast } from "sonner";
-import { User, ShieldCheck } from "lucide-react";
+import { User, ShieldCheck, Lock } from "lucide-react";
 
-function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => void; label: string }) {
+function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => Promise<void>; label: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // ResizeObserver: ajusta el canvas al contenedor con devicePixelRatio para nitidez
@@ -102,14 +103,21 @@ function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => void;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  const save = () => {
+  const save = async () => {
     const canvas = canvasRef.current!;
     const dataUrl = canvas.toDataURL("image/png");
     if (dataUrl.length < 1000) {
       toast.error("La firma está vacía");
       return;
     }
-    onSave(dataUrl);
+    setSaving(true);
+    try {
+      await onSave(dataUrl);
+    } catch {
+      // El error ya lo maneja el parent con toast
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -129,15 +137,18 @@ function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => void;
         />
       </div>
       <div className="flex gap-2">
-        <button onClick={clear} className="pg-btn-platinum">Limpiar</button>
-        <button onClick={save} className="pg-btn-platinum">Guardar</button>
+        <button onClick={clear} className="pg-btn-platinum" disabled={saving}>Limpiar</button>
+        <button onClick={save} className="pg-btn-platinum" disabled={saving}>
+          {saving ? "Guardando..." : "Guardar"}
+        </button>
       </div>
     </div>
   );
 }
 
-export default function SignaturesTab({ sessionId }: { sessionId: string }) {
+export default function SignaturesTab({ sessionId, sessionStatus }: { sessionId: string; sessionStatus?: string }) {
   const queryClient = useQueryClient();
+  const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
   const { data: signatures, isLoading } = useQuery({
     queryKey: ["signatures", sessionId],
@@ -158,9 +169,10 @@ export default function SignaturesTab({ sessionId }: { sessionId: string }) {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       toast.error(body.error || "Error al subir firma");
-      return;
+      throw new Error(body.error || "Error al subir firma");
     }
-    queryClient.invalidateQueries({ queryKey: ["signatures", sessionId] });
+    // Invalidar y esperar a que el query se refresque para que el canvas se oculte
+    await queryClient.invalidateQueries({ queryKey: ["signatures", sessionId] });
     toast.success("Firma guardada");
   };
 
@@ -173,6 +185,14 @@ export default function SignaturesTab({ sessionId }: { sessionId: string }) {
         <div className="app-panel text-center py-8 text-muted-foreground text-sm">Cargando firmas...</div>
       ) : (
         <>
+          {/* Banner de solo lectura */}
+          {readOnly && (
+            <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+              <Lock className="h-3.5 w-3.5 shrink-0" />
+              Inspección finalizada — las firmas son de solo lectura
+            </div>
+          )}
+
           {/* Firmas existentes */}
           {(insuredSig || adjusterSig) && (
             <div className="app-panel">
@@ -206,11 +226,11 @@ export default function SignaturesTab({ sessionId }: { sessionId: string }) {
             </div>
           )}
 
-          {/* Canvas de firma */}
-          {!insuredSig && (
+          {/* Canvas de firma (oculto si readOnly) */}
+          {!readOnly && !insuredSig && (
             <SignatureCanvas label="Firma del Asegurado" onSave={(url) => handleSave("insured", url)} />
           )}
-          {!adjusterSig && (
+          {!readOnly && !adjusterSig && (
             <SignatureCanvas label="Firma del Ajustador" onSave={(url) => handleSave("adjuster", url)} />
           )}
         </>

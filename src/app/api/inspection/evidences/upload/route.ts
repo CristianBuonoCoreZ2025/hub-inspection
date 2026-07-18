@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { uploadInspectionFile } from "@/lib/storage/inspection-upload";
+import { extractGpsFromExif } from "@/lib/storage/exif";
 import { logger } from "@/lib/logger";
 
 /**
@@ -9,13 +10,18 @@ import { logger } from "@/lib/logger";
  * Recibe multipart/form-data:
  *   - file: el archivo (foto, video, pdf)
  *   - sessionId: UUID de la inspection_session
- *   - description: descripción opcional (default: nombre original del archivo)
+ *   - lat: latitud opcional (geolocalización del navegador)
+ *   - lng: longitud opcional
+ *   - originalName: nombre original del archivo (se guarda en metadata)
+ *
+ * El description se setea automáticamente al código del archivo (ej: L-000000141-HINS-001-EVI-0001).
+ * El nombre original del archivo NO se muestra — la regla del plan es "el nombre ES el código".
  *
  * Flujo:
  *  1. Resuelve sessionId → claim_action.code + claim.liquidation_number
  *  2. Obtiene el siguiente correlativo EVI-NNNN atómico desde la BD
  *  3. Sube a R2 con path: siniestros/{L}/gestiones/{code}/imagenes/{code}-EVI-NNNN.ext
- *  4. Inserta el registro en inspection_evidences
+ *  4. Inserta el registro en inspection_evidences con captured_by + metadata
  *
  * Devuelve: { evidence: { id, url, type, description, created_at } }
  */
@@ -24,7 +30,9 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file");
     const sessionId = formData.get("sessionId");
-    const description = formData.get("description");
+    const lat = formData.get("lat");
+    const lng = formData.get("lng");
+    const originalName = formData.get("originalName");
 
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "No se encontró el archivo" }, { status: 400 });
@@ -50,7 +58,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // Subir a R2 con path estructurado (EVI = evidencia)
-    const { url } = await uploadInspectionFile(
+    const { url, fileCode } = await uploadInspectionFile(
       sessionId,
       buffer,
       mimeType,
@@ -58,17 +66,47 @@ export async function POST(request: NextRequest) {
       ext || ".bin"
     );
 
-    // Insertar en inspection_evidences
+    // Resolver usuario actual desde la sesión
     const supabase = createAdminClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Extraer GPS de los metadatos EXIF de la foto (si los tiene)
+    // Esto es clave para prevenir fraudes — la ubicación real de la foto
+    // puede diferir de la ubicación del dispositivo al subir
+    let exifGps: { lat: number; lng: number } | null = null;
+    if (fileType === "photo") {
+      exifGps = await extractGpsFromExif(buffer);
+    }
+
+    // Construir metadata con info del archivo (geo va en columnas dedicadas)
+    const metadata: Record<string, unknown> = {
+      originalName: typeof originalName === "string" ? originalName : file.name,
+      fileSize: file.size,
+      mimeType,
+      userAgent: request.headers.get("user-agent") || null,
+    };
+    // Geo del navegador → columnas lat/lng
+    const deviceLat = lat && typeof lat === "string" ? parseFloat(lat) : null;
+    const deviceLng = lng && typeof lng === "string" ? parseFloat(lng) : null;
+
+    // Insertar en inspection_evidences — el description es el código del archivo
+    // Geo del dispositivo en columnas lat/lng, geo EXIF en exif_lat/exif_lng
     const { data: evidence, error } = await supabase
       .from("inspection_evidences")
       .insert({
         session_id: sessionId,
         type: fileType,
         url,
-        description: typeof description === "string" && description ? description : file.name,
+        description: fileCode,
+        captured_by: user?.id || null,
+        captured_at: new Date().toISOString(),
+        metadata,
+        lat: deviceLat,
+        lng: deviceLng,
+        exif_lat: exifGps?.lat ?? null,
+        exif_lng: exifGps?.lng ?? null,
       })
-      .select("id, url, type, description, created_at")
+      .select("id, url, type, description, created_at, lat, lng, exif_lat, exif_lng")
       .single();
 
     if (error) {

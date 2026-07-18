@@ -21,7 +21,9 @@ export async function GET(
 
     const { data: evidences, error } = await supabase
       .from("inspection_evidences")
-      .select("id, url, type, description, category, created_at")
+      .select(
+        "id, url, type, description, category, captured_at, created_at, metadata, captured_by, lat, lng, exif_lat, exif_lng, uploader:profiles!inspection_evidences_captured_by_fkey(id, full_name, email)"
+      )
       .eq("session_id", sessionId)
       .order("created_at", { ascending: false });
 

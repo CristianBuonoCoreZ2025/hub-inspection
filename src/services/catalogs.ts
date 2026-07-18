@@ -23,6 +23,9 @@ import type {
   DamageSpace,
   ContentGoodType,
   BuildingDamageCategory,
+  Currency,
+  CountryCurrency,
+  ExchangeRate,
 } from "@/types";
 
 // Ordenamiento natural: extrae partes numéricas y las compara como números,
@@ -591,6 +594,31 @@ export async function getLookupCatalog(category: string) {
   }));
 }
 
+/**
+ * Obtiene las monedas asociadas a un país específico desde lookup_catalog.
+ * Si el país no tiene monedas configuradas, devuelve todas las monedas
+ * activas como fallback (para no bloquear al usuario).
+ */
+export async function getCountryCurrencies(countryId: string | null | undefined) {
+  if (!countryId) {
+    // Sin país → traer todas las monedas activas
+    return getLookupCatalog("currency");
+  }
+  const rows = await fetchAllSorted<LookupCatalog>("lookup_catalog", {
+    select: "id, country_id, category, code, name, description, sort_order, is_active",
+    eq: { category: "currency", is_active: true, country_id: countryId },
+    order: { column: "sort_order", ascending: true },
+  });
+  if (rows.length === 0) {
+    // Fallback: si el país no tiene monedas, traer todas
+    return getLookupCatalog("currency");
+  }
+  return rows.sort((a, b) => {
+    if (a.sort_order === b.sort_order) return a.name.localeCompare(b.name);
+    return a.sort_order - b.sort_order;
+  });
+}
+
 export async function createLookupCatalogItem(input: { category: string; name: string; code?: string; sort_order?: number }) {
   return insertRow<LookupCatalog>("lookup_catalog", {
     ...input,
@@ -754,4 +782,139 @@ export async function getBuildingDamageCategories() {
 
 export async function deleteDocumentType(id: string) {
   return updateDocumentType(id, { is_active: false });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CURRENCIES (Catálogo global de monedas)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getCurrencies() {
+  return fetchAll<Currency>("currencies", {
+    select: "id, code, name, symbol, decimals, is_active, created_at, updated_at",
+    order: { column: "code", ascending: true },
+  });
+}
+
+export async function createCurrency(input: { code: string; name: string; symbol?: string; decimals?: number }) {
+  return insertRow<Currency>("currencies", {
+    ...input,
+    decimals: input.decimals ?? 2,
+    is_active: true,
+  }, "id, code, name, symbol, decimals, is_active, created_at, updated_at");
+}
+
+export async function updateCurrency(id: string, input: Partial<{ code: string; name: string; symbol: string; decimals: number; is_active: boolean }>) {
+  return updateRow<Currency>("currencies", id, input, "id, code, name, symbol, decimals, is_active, created_at, updated_at");
+}
+
+export async function deleteCurrency(id: string) {
+  return updateCurrency(id, { is_active: false });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COUNTRY CURRENCIES (Relación país ↔ moneda)
+// ═══════════════════════════════════════════════════════════════
+
+const COUNTRY_CURRENCY_SELECT = `
+  id, country_id, currency_code, is_base, sort_order, is_active, created_at, updated_at,
+  country:countries!country_currencies_country_id_fkey(id, name, code),
+  currency:currencies!country_currencies_currency_code_fkey(code, name, symbol)
+`;
+
+export async function getCountryCurrenciesAll() {
+  return fetchAll<CountryCurrency>("country_currencies", {
+    select: COUNTRY_CURRENCY_SELECT,
+    order: { column: "sort_order", ascending: true },
+  });
+}
+
+export async function getCountryCurrenciesByCountry(countryId: string) {
+  return fetchAll<CountryCurrency>("country_currencies", {
+    select: COUNTRY_CURRENCY_SELECT,
+    eq: { country_id: countryId, is_active: true },
+    order: { column: "sort_order", ascending: true },
+  });
+}
+
+export async function createCountryCurrency(input: { country_id: string; currency_code: string; is_base?: boolean; sort_order?: number }) {
+  // Si is_base es true, quitar el flag de la moneda base anterior del país
+  if (input.is_base) {
+    const existing = await fetchAll<CountryCurrency>("country_currencies", {
+      select: "id",
+      eq: { country_id: input.country_id, is_base: true },
+    });
+    for (const row of existing) {
+      await updateRow<CountryCurrency>("country_currencies", row.id, { is_base: false });
+    }
+  }
+  return insertRow<CountryCurrency>("country_currencies", {
+    ...input,
+    is_base: input.is_base ?? false,
+    sort_order: input.sort_order ?? 0,
+    is_active: true,
+  }, COUNTRY_CURRENCY_SELECT);
+}
+
+export async function updateCountryCurrency(id: string, input: Partial<{ is_base: boolean; sort_order: number; is_active: boolean }>) {
+  // Si se está marcando como base, quitar el flag de la anterior
+  if (input.is_base === true) {
+    const current = await fetchById<CountryCurrency>("country_currencies", id, "id, country_id");
+    if (current) {
+      const existing = await fetchAll<CountryCurrency>("country_currencies", {
+        select: "id",
+        eq: { country_id: current.country_id, is_base: true },
+      });
+      for (const row of existing) {
+        if (row.id !== id) {
+          await updateRow<CountryCurrency>("country_currencies", row.id, { is_base: false });
+        }
+      }
+    }
+  }
+  return updateRow<CountryCurrency>("country_currencies", id, input, COUNTRY_CURRENCY_SELECT);
+}
+
+export async function deleteCountryCurrency(id: string) {
+  return updateCountryCurrency(id, { is_active: false });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXCHANGE RATES (Tipos de cambio por país)
+// ═══════════════════════════════════════════════════════════════
+
+const EXCHANGE_RATE_SELECT = `
+  id, country_id, currency_code, rate_to_base, effective_date, source, created_at, updated_at,
+  country:countries!exchange_rates_country_id_fkey(id, name, code),
+  currency:currencies!exchange_rates_currency_code_fkey(code, name, symbol)
+`;
+
+export async function getExchangeRates() {
+  return fetchAll<ExchangeRate>("exchange_rates", {
+    select: EXCHANGE_RATE_SELECT,
+    order: { column: "effective_date", ascending: false },
+  });
+}
+
+export async function getExchangeRatesByCountry(countryId: string) {
+  return fetchAll<ExchangeRate>("exchange_rates", {
+    select: EXCHANGE_RATE_SELECT,
+    eq: { country_id: countryId },
+    order: { column: "effective_date", ascending: false },
+  });
+}
+
+export async function createExchangeRate(input: { country_id: string; currency_code: string; rate_to_base: number; effective_date?: string; source?: string }) {
+  return insertRow<ExchangeRate>("exchange_rates", {
+    ...input,
+    effective_date: input.effective_date || new Date().toISOString().split("T")[0],
+    source: input.source || "manual",
+  }, EXCHANGE_RATE_SELECT);
+}
+
+export async function updateExchangeRate(id: string, input: Partial<{ rate_to_base: number; effective_date: string; source: string }>) {
+  return updateRow<ExchangeRate>("exchange_rates", id, input, EXCHANGE_RATE_SELECT);
+}
+
+export async function deleteExchangeRate(id: string) {
+  return deleteRow("exchange_rates", id);
 }

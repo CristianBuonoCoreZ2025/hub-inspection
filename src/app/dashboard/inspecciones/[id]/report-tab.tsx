@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 
 export default function ReportTab({
   sessionId,
+  claimId,
   claimNumber,
   sessionStatus,
   cancellationReason,
@@ -16,6 +17,7 @@ export default function ReportTab({
   cancelledAt,
 }: {
   sessionId: string;
+  claimId?: string;
   claimNumber?: string;
   sessionStatus?: string;
   cancellationReason?: string | null;
@@ -58,6 +60,7 @@ export default function ReportTab({
     } else {
       createMutation.mutate({
         session_id: sessionId,
+        claim_id: claimId || null,
         report_url: null,
         generated_at: new Date().toISOString(),
         status,

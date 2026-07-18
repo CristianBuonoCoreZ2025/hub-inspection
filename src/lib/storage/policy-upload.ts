@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
 import { uploadToR2 } from "./r2-upload";
 import { policyDocumentPath } from "./paths";
+import { optimizeFile } from "./optimize";
 import { logger } from "@/lib/logger";
 
 /**
@@ -50,17 +51,28 @@ export async function uploadPolicyDocument(
 
   const seqNum = seq as number;
 
-  // 3. Construir path
-  const key = policyDocumentPath(policyNumber, seqNum, ext);
+  // 3. Optimizar el archivo antes de subir (imágenes se redimensionan y comprimen)
+  const optimized = await optimizeFile(buffer, contentType, ext);
+
+  // 4. Construir path
+  const key = policyDocumentPath(policyNumber, seqNum, optimized.ext);
   const docCode = `${policyNumber}-DOC-${String(seqNum).padStart(4, "0")}`;
 
-  // 4. Subir a R2
-  const url = await uploadToR2(buffer, key, contentType);
+  // 5. Subir a R2
+  const url = await uploadToR2(optimized.buffer, key, optimized.mimeType);
 
   logger.info("Documento de póliza subido", {
     component: "policy-upload",
     action: "policy.doc.upload",
-    metadata: { policyId, policyNumber, docCode, seq: seqNum, key, size: buffer.length },
+    metadata: {
+      policyId,
+      policyNumber,
+      docCode,
+      seq: seqNum,
+      key,
+      originalSize: buffer.length,
+      optimizedSize: optimized.buffer.length,
+    },
   });
 
   return { url, key, seq: seqNum, docCode };

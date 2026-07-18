@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDamages, createDamage, updateDamage, deleteDamage, getThirdParties } from "@/services/inspections";
-import { getDamageSpaces, getContentGoodTypes, getBuildingDamageCategories } from "@/services/catalogs";
+import { getDamageSpaces, getContentGoodTypes, getBuildingDamageCategories, getCountryCurrencies } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Trash2, Pencil, Building2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ const severityOptions = [
 
 const unitOptions = ["UND", "M2", "M3", "KG", "LT", "MT", "GLB"];
 
+// Opciones de moneda se construyen dinámicamente desde countryCurrencies en el componente
+
 type DamageType = "building" | "content";
 
 interface DamageForm {
@@ -52,6 +54,7 @@ interface DamageForm {
   brand_model: string;
   purchase_date: string;
   estimated_amount: number;
+  currency: string;
   third_party_id: string;
   space_id: string;
   content_good_type_id: string;
@@ -76,6 +79,7 @@ function emptyForm(sessionId: string, type: DamageType): DamageForm {
     brand_model: "",
     purchase_date: "",
     estimated_amount: 0,
+    currency: "CLP",
     third_party_id: "",
     space_id: "",
     content_good_type_id: "",
@@ -101,6 +105,7 @@ function damageToForm(d: InspectionDamage): DamageForm {
     brand_model: d.brand_model ?? "",
     purchase_date: d.purchase_date ?? "",
     estimated_amount: d.estimated_amount ?? 0,
+    currency: d.currency ?? "CLP",
     third_party_id: d.third_party_id ?? "",
     space_id: d.space_id ?? "",
     content_good_type_id: d.content_good_type_id ?? "",
@@ -108,7 +113,7 @@ function damageToForm(d: InspectionDamage): DamageForm {
   };
 }
 
-export default function DamagesTab({ sessionId, propertyClassification }: { sessionId: string; propertyClassification?: string | null }) {
+export default function DamagesTab({ sessionId, propertyClassification, countryId }: { sessionId: string; propertyClassification?: string | null; countryId?: string | null }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<DamageForm>(emptyForm(sessionId, "building"));
@@ -136,6 +141,22 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
     queryFn: getBuildingDamageCategories,
     staleTime: 1000 * 60 * 30,
   });
+
+  // Monedas filtradas por país del siniestro
+  const { data: countryCurrencies = [] } = useQuery({
+    queryKey: ["country-currencies", countryId],
+    queryFn: () => getCountryCurrencies(countryId),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  // Construir opciones de moneda desde el catálogo del país
+  // Fallback: si no hay monedas configuradas, usar CLP
+  const currencyOptions = countryCurrencies.length > 0
+    ? countryCurrencies.map((c) => ({
+        value: c.code || c.name,
+        label: `${c.code} — ${c.name}`,
+      }))
+    : [{ value: "CLP", label: "CLP — Peso Chileno" }];
 
   const { data: thirdParties = [] } = useQuery({
     queryKey: ["third-parties", sessionId],
@@ -190,9 +211,24 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
   const isEditingNew = editing === "new";
   const buildingDamages = damages?.filter((d) => d.damage_type !== "content") || [];
   const contentDamages = damages?.filter((d) => d.damage_type === "content") || [];
-  const totalBuilding = buildingDamages.reduce((s, d) => s + (d.estimated_amount || 0), 0);
-  const totalContent = contentDamages.reduce((s, d) => s + (d.estimated_amount || 0), 0);
-  const totalAmount = totalBuilding + totalContent;
+
+  // Totales agrupados por moneda
+  const totalsByCurrency: Record<string, { building: number; content: number }> = {};
+  for (const d of damages || []) {
+    const cur = d.currency || "CLP";
+    if (!totalsByCurrency[cur]) totalsByCurrency[cur] = { building: 0, content: 0 };
+    if (d.damage_type === "content") {
+      totalsByCurrency[cur].content += d.estimated_amount || 0;
+    } else {
+      totalsByCurrency[cur].building += d.estimated_amount || 0;
+    }
+  }
+  const currencyTotals = Object.entries(totalsByCurrency).map(([cur, t]) => ({
+    currency: cur,
+    building: t.building,
+    content: t.content,
+    total: t.building + t.content,
+  }));
 
   const spaceName = (id: string | null) => spaces.find((s) => s.id === id)?.name || "—";
   const goodTypeName = (id: string | null) => goodTypes.find((g) => g.id === id)?.name || "—";
@@ -213,6 +249,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
       brand_model: form.brand_model || null,
       purchase_date: form.purchase_date || null,
       estimated_amount: form.estimated_amount || null,
+      currency: form.currency || "CLP",
       third_party_id: form.third_party_id || null,
       space_id: form.space_id || null,
       content_good_type_id: form.content_good_type_id || null,
@@ -233,13 +270,23 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
 
   return (
     <div className="app-stack">
-      {/* Header con totales */}
+      {/* Header con totales por moneda */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {damages?.length || 0} registros · Total: <span className="font-semibold text-foreground">${totalAmount.toLocaleString("es-CL")}</span>
-          <span className="text-[11px] ml-2">
-            (Constructivo: ${totalBuilding.toLocaleString("es-CL")} · Contenido: ${totalContent.toLocaleString("es-CL")})
-          </span>
+          {damages?.length || 0} registros ·{" "}
+          {currencyTotals.length === 0 ? (
+            <span className="font-semibold text-foreground">$0</span>
+          ) : currencyTotals.map((t, i) => (
+            <span key={t.currency}>
+              {i > 0 && " · "}
+              <span className="font-semibold text-foreground">
+                {t.currency} {t.total.toLocaleString("es-CL")}
+              </span>
+              <span className="text-[11px] ml-1">
+                (Const: {t.currency} {t.building.toLocaleString("es-CL")} · Cont: {t.currency} {t.content.toLocaleString("es-CL")})
+              </span>
+            </span>
+          ))}
         </div>
       </div>
 
@@ -388,14 +435,28 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                 />
               </div>
               <div className="modal-field">
-                <label className="app-field-label">Monto Estimado ($)</label>
-                <input
-                  type="number"
-                  value={form.estimated_amount}
-                  onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : 0 })}
-                  placeholder="0"
-                  className="app-input h-7 w-full text-[13px]"
-                />
+                <label className="app-field-label">Monto Estimado</label>
+                <div className="flex gap-1.5">
+                  <Select
+                    value={form.currency}
+                    items={currencyOptions}
+                    onValueChange={(v) => setForm({ ...form, currency: v || "CLP" })}
+                  >
+                    <SelectTrigger className="app-input h-7 w-[90px] text-[13px] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencyOptions.map((c) => <SelectItem key={c.value} value={c.value}>{c.value}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <input
+                    type="number"
+                    value={form.estimated_amount}
+                    onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : 0 })}
+                    placeholder="0"
+                    className="app-input h-7 w-full text-[13px]"
+                  />
+                </div>
               </div>
               {affectedThirdParties.length > 0 && (
                 <div className="modal-field">
@@ -523,14 +584,28 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                 </Select>
               </div>
               <div className="modal-field">
-                <label className="app-field-label">Monto Estimado ($)</label>
-                <input
-                  type="number"
-                  value={form.estimated_amount}
-                  onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : 0 })}
-                  placeholder="0"
-                  className="app-input h-7 w-full text-[13px]"
-                />
+                <label className="app-field-label">Monto Estimado</label>
+                <div className="flex gap-1.5">
+                  <Select
+                    value={form.currency}
+                    items={currencyOptions}
+                    onValueChange={(v) => setForm({ ...form, currency: v || "CLP" })}
+                  >
+                    <SelectTrigger className="app-input h-7 w-[90px] text-[13px] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencyOptions.map((c) => <SelectItem key={c.value} value={c.value}>{c.value}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <input
+                    type="number"
+                    value={form.estimated_amount}
+                    onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : 0 })}
+                    placeholder="0"
+                    className="app-input h-7 w-full text-[13px]"
+                  />
+                </div>
               </div>
               {affectedThirdParties.length > 0 && (
                 <div className="modal-field">
@@ -581,7 +656,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
           </span>
           Daños Constructivos
           <span className="text-[11px] text-muted-foreground font-normal">
-            ({buildingDamages.length} · ${totalBuilding.toLocaleString("es-CL")})
+            ({buildingDamages.length})
           </span>
         </h3>
         {isLoading ? (
@@ -619,7 +694,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                         {severityLabels[d.severity] || d.severity}
                       </span>
                     </td>
-                    <td className="text-right font-medium text-[11px]">${(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
+                    <td className="text-right font-medium text-[11px]">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
                     <td>
                       <div className="app-row-actions">
                         <Button variant="ghost" size="icon" className="btn-icon" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
@@ -646,7 +721,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
           </span>
           Daños de Contenido
           <span className="text-[11px] text-muted-foreground font-normal">
-            ({contentDamages.length} · ${totalContent.toLocaleString("es-CL")})
+            ({contentDamages.length})
           </span>
         </h3>
         {isLoading ? (
@@ -684,7 +759,7 @@ export default function DamagesTab({ sessionId, propertyClassification }: { sess
                         {severityLabels[d.severity] || d.severity}
                       </span>
                     </td>
-                    <td className="text-right font-medium text-[11px]">${(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
+                    <td className="text-right font-medium text-[11px]">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
                     <td>
                       <div className="app-row-actions">
                         <Button variant="ghost" size="icon" className="btn-icon" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>

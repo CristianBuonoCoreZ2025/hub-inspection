@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
 import { uploadToR2 } from "./r2-upload";
 import { gestionTemplatePath } from "./paths";
+import { optimizeFile } from "./optimize";
 import { logger } from "@/lib/logger";
 
 /**
@@ -74,16 +75,27 @@ export async function uploadGestionTemplate(
 
   const seqNum = seq as number;
 
-  // 3. Construir path
-  const key = gestionTemplatePath(compositeCode, String(seqNum), ext);
+  // 3. Optimizar el archivo antes de subir (imágenes se redimensionan y comprimen)
+  // Para .docx el helper pasa sin cambios — solo optimiza imágenes
+  const optimized = await optimizeFile(buffer, contentType, ext);
 
-  // 4. Subir a R2
-  const url = await uploadToR2(buffer, key, contentType);
+  // 4. Construir path
+  const key = gestionTemplatePath(compositeCode, String(seqNum), optimized.ext);
+
+  // 5. Subir a R2
+  const url = await uploadToR2(optimized.buffer, key, optimized.mimeType);
 
   logger.info("Template de gestión subido", {
     component: "template-upload",
     action: "template.upload",
-    metadata: { actionTemplateId, compositeCode, seq: seqNum, key, size: buffer.length },
+    metadata: {
+      actionTemplateId,
+      compositeCode,
+      seq: seqNum,
+      key,
+      originalSize: buffer.length,
+      optimizedSize: optimized.buffer.length,
+    },
   });
 
   return { url, key, seq: seqNum, templateCode: compositeCode };

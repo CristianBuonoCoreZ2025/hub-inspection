@@ -218,23 +218,26 @@ export function inspectionImagePath(
 }
 
 /**
- * Path para un documento de una gestión de inspección (croquis, doc extra).
+ * Path para un documento de una gestión de inspección (doc extra o croquis).
  *
  * @param actionCode — Código de la gestión desde claim_actions.code, ej: "L-000000141-HINS-001"
  * @param liquidationNumber — ej: "L-000000141"
  * @param docSeq — Correlativo desde next_file_seq(), ej: 1
  * @param ext — ej: ".png"
+ * @param type — "DOC" (documento extra) o "CRO" (croquis). Default: "DOC"
  * @returns ej: "siniestros/L-000000141/gestiones/L-000000141-HINS-001/documentos/L-000000141-HINS-001-DOC-0001.png"
+ *          o "siniestros/L-000000141/gestiones/L-000000141-HINS-001/documentos/L-000000141-HINS-001-CRO-0001.png"
  */
 export function inspectionDocumentPath(
   actionCode: string,
   liquidationNumber: string,
   docSeq: number,
-  ext: string
+  ext: string,
+  type: "DOC" | "CRO" = "DOC"
 ): string {
   const seq = String(docSeq).padStart(4, "0");
   const e = ext.startsWith(".") ? ext : "." + ext;
-  const filename = `${actionCode}-DOC-${seq}${e}`;
+  const filename = `${actionCode}-${type}-${seq}${e}`;
   return `siniestros/${liquidationNumber}/gestiones/${actionCode}/documentos/${filename}`;
 }
 

@@ -9,10 +9,10 @@ import {
 } from "@/services/inspections";
 import { DrawingCanvas } from "@/components/ui/drawing-canvas";
 import { toast } from "sonner";
-import { Upload, Trash2, ImageIcon, Pencil, Check, X, PenTool } from "lucide-react";
+import { Upload, Trash2, ImageIcon, Pencil, Check, X, PenTool, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function SketchesTab({ sessionId }: { sessionId: string }) {
+export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: string; sessionStatus?: string }) {
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -21,6 +21,7 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
   const [drawEditingSketch, setDrawEditingSketch] = useState<{ id: string; url: string; label: string } | null>(null);
   const [savingDrawing, setSavingDrawing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
   const { data: sketches, isLoading } = useQuery({
     queryKey: ["damage-sketches", sessionId],
@@ -166,7 +167,16 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="app-stack">
-      {/* Botones de acción */}
+      {/* Banner de solo lectura */}
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+          <Lock className="h-3.5 w-3.5 shrink-0" />
+          Inspección finalizada — los croquis son de solo lectura
+        </div>
+      )}
+
+      {/* Botones de acción (ocultos si readOnly) */}
+      {!readOnly && (
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setMode("draw")}
@@ -191,6 +201,7 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
           multiple
         />
       </div>
+      )}
 
       {uploading && <p className="text-xs text-muted-foreground">Subiendo...</p>}
 
@@ -244,39 +255,43 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
                     <span className="flex-1 truncate text-sm font-medium">
                       {sketch.label || "Sin título"}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      title="Dibujar / Editar"
-                      onClick={() => {
-                        setDrawEditingSketch({ id: sketch.id, url: sketch.sketch_url, label: sketch.label || "" });
-                        setMode("draw");
-                      }}
-                    >
-                      <PenTool className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      title="Renombrar"
-                      onClick={() => startEdit(sketch)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-rose-500"
-                      onClick={() => {
-                        if (confirm("¿Eliminar este croquis?")) {
-                          deleteMutation.mutate(sketch.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {!readOnly && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Dibujar / Editar"
+                          onClick={() => {
+                            setDrawEditingSketch({ id: sketch.id, url: sketch.sketch_url, label: sketch.label || "" });
+                            setMode("draw");
+                          }}
+                        >
+                          <PenTool className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Renombrar"
+                          onClick={() => startEdit(sketch)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-rose-500"
+                          onClick={() => {
+                            if (confirm("¿Eliminar este croquis?")) {
+                              deleteMutation.mutate(sketch.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </>
                 )}
               </div>

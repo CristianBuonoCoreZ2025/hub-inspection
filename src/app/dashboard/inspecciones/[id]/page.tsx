@@ -356,6 +356,7 @@ export default function InspectionDetailPage() {
     liquidation_number?: string | null;
     broker_executive?: string | null;
     inspector_id?: string | null;
+    country_id?: string | null;
     insurance_company?: { name: string } | null;
     broker?: { name: string } | null;
     advisor?: { name: string } | null;
@@ -690,7 +691,7 @@ export default function InspectionDetailPage() {
           {session.status === "scheduled" ? (
             <NotStartedNotice />
           ) : (
-            <DamagesTab sessionId={session.id} propertyClassification={session.property_risk?.risk_class} />
+            <DamagesTab sessionId={session.id} propertyClassification={session.property_risk?.risk_class} countryId={session.claim?.country_id} />
           )}
         </div>
         )}
@@ -701,7 +702,7 @@ export default function InspectionDetailPage() {
           {session.status === "scheduled" ? (
             <NotStartedNotice />
           ) : (
-            <EvidencesTab sessionId={session.id} />
+            <EvidencesTab sessionId={session.id} sessionStatus={session.status} />
           )}
         </div>
         )}
@@ -712,7 +713,7 @@ export default function InspectionDetailPage() {
           {session.status === "scheduled" ? (
             <NotStartedNotice />
           ) : (
-            <SketchesTab sessionId={session.id} />
+            <SketchesTab sessionId={session.id} sessionStatus={session.status} />
           )}
         </div>
         )}
@@ -723,7 +724,7 @@ export default function InspectionDetailPage() {
           {session.status === "scheduled" ? (
             <NotStartedNotice />
           ) : (
-            <SignaturesTab sessionId={session.id} />
+            <SignaturesTab sessionId={session.id} sessionStatus={session.status} />
           )}
         </div>
         )}
@@ -733,6 +734,7 @@ export default function InspectionDetailPage() {
         <div className="mt-4">
           <ReportTab
             sessionId={session.id}
+            claimId={session.claim_id}
             claimNumber={claim?.claim_number ?? undefined}
             sessionStatus={session.status}
             cancellationReason={cancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || null}

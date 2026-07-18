@@ -9,7 +9,7 @@ import { logger } from "@/lib/logger";
  * A diferencia de /api/inspection/sketch (que recibe base64 dibujado),
  * este endpoint recibe un File subido por el usuario.
  *
- * Path: siniestros/{L}/gestiones/{code}/documentos/{code}-DOC-NNNN.ext
+ * Path: siniestros/{L}/gestiones/{code}/documentos/{code}-CRO-NNNN.ext
  *
  * Recibe multipart/form-data:
  *   - file: el archivo (png, jpg, pdf)
@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Subir a R2 con path estructurado (DOC = documento extra de la gestión)
-    const { url } = await uploadInspectionFile(sessionId, buffer, mimeType, "DOC", ext);
+    // Subir a R2 con path estructurado (CRO = croquis)
+    const { url } = await uploadInspectionFile(sessionId, buffer, mimeType, "CRO", ext);
 
     // Insertar en damage_sketches
     const supabase = createAdminClient();

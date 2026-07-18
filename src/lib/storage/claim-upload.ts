@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
 import { uploadToR2 } from "./r2-upload";
 import { claimDocumentPath } from "./paths";
+import { optimizeFile } from "./optimize";
 import { logger } from "@/lib/logger";
 
 /**
@@ -50,17 +51,28 @@ export async function uploadClaimDocument(
 
   const seqNum = seq as number;
 
-  // 3. Construir path
-  const key = claimDocumentPath(liquidationNumber, String(seqNum), ext);
+  // 3. Optimizar el archivo antes de subir (imágenes se redimensionan y comprimen)
+  const optimized = await optimizeFile(buffer, contentType, ext);
+
+  // 4. Construir path
+  const key = claimDocumentPath(liquidationNumber, String(seqNum), optimized.ext);
   const docCode = `${liquidationNumber}-DOC-${String(seqNum).padStart(6, "0")}`;
 
-  // 4. Subir a R2
-  const url = await uploadToR2(buffer, key, contentType);
+  // 5. Subir a R2
+  const url = await uploadToR2(optimized.buffer, key, optimized.mimeType);
 
   logger.info("Documento de siniestro subido", {
     component: "claim-upload",
     action: "claim.doc.upload",
-    metadata: { claimId, liquidationNumber, docCode, seq: seqNum, key, size: buffer.length },
+    metadata: {
+      claimId,
+      liquidationNumber,
+      docCode,
+      seq: seqNum,
+      key,
+      originalSize: buffer.length,
+      optimizedSize: optimized.buffer.length,
+    },
   });
 
   return { url, key, seq: seqNum, docCode };

@@ -202,9 +202,6 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
     return () => subscription.unsubscribe();
   }, [form, session.id]);
 
-  const goNext = () => setStep((s) => Math.min(s + 1, steps.length));
-  const goPrev = () => setStep((s) => Math.max(s - 1, 1));
-
   // Sincronizar el step del acta con el cliente (piloto automático)
   const currentStepKey = steps.find((s) => s.id === step)?.key || "datos";
   useEffect(() => {
@@ -613,7 +610,11 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                 <div className="pt-0.5 shrink-0">
                   <ToggleChip
                     active={Boolean(watch(`security_measures.${item.key}.has_it`))}
-                    onClick={(v) => set(`security_measures.${item.key}.has_it`, v)}
+                    onClick={(v) => {
+                      set(`security_measures.${item.key}.has_it`, v);
+                      // Si se desactiva el chip, limpiar el detalle
+                      if (!v) set(`security_measures.${item.key}.detail`, "");
+                    }}
                   >
                     {item.label}
                   </ToggleChip>
@@ -623,6 +624,13 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                     {...field(`security_measures.${item.key}.detail`)}
                     placeholder="Detalle..."
                     className="app-input h-7 text-[12px]"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Si hay texto → activar automáticamente
+                      // Si no hay texto → desactivar automáticamente
+                      set(`security_measures.${item.key}.detail`, val);
+                      set(`security_measures.${item.key}.has_it`, val.trim().length > 0);
+                    }}
                   />
                 </div>
               </div>
@@ -802,20 +810,8 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
         </div>
       )}
 
-      {/* Navegacion y Guardar */}
-      <div className="flex items-center justify-between border-t border-border pt-4">
-        <div className="flex items-center gap-2">
-          {step > 1 && (
-            <Button type="button" variant="outline" size="sm" onClick={goPrev} className="pg-btn-platinum">
-              Atrás
-            </Button>
-          )}
-          {step < steps.length && (
-            <Button type="button" size="sm" onClick={goNext} className="pg-btn-platinum">
-              Siguiente
-            </Button>
-          )}
-        </div>
+      {/* Guardar */}
+      <div className="flex items-center justify-end border-t border-border pt-4">
         <Button
           type="submit"
           size="sm"

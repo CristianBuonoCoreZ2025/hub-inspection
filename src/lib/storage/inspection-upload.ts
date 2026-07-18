@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
 import { uploadToR2 } from "./r2-upload";
 import { inspectionImagePath, inspectionDocumentPath } from "./paths";
+import { optimizeFile } from "./optimize";
 import { logger } from "@/lib/logger";
 
 /**
@@ -17,11 +18,12 @@ export interface InspectionStorageContext {
 /**
  * Tipo de archivo de inspección para el correlativo.
  *  EVI = evidencia (foto, video, pdf)
- *  DOC = documento extra (croquis, oficio)
+ *  DOC = documento extra (oficio, respaldo)
+ *  CRO = croquis (dibujo de áreas afectadas)
  *  FIR = firma
  *  DAN = foto de daño
  */
-export type InspectionFileType = "EVI" | "DOC" | "FIR" | "DAN";
+export type InspectionFileType = "EVI" | "DOC" | "CRO" | "FIR" | "DAN";
 
 /**
  * Resuelve el contexto de almacenamiento desde un sessionId.
@@ -94,11 +96,13 @@ export async function nextFileSeq(
  * Sube un archivo de inspección a R2 con el path estructurado del plan.
  *
  * 1. Resuelve el contexto (actionCode + liquidationNumber) desde sessionId
- * 2. Obtiene el siguiente correlativo (EVI/DOC/FIR/DAN) atómico desde la BD
- * 3. Construye el path físico: siniestros/{L}/gestiones/{code}/imagenes|documentos/{code}-TYPE-NNNN.ext
+ * 2. Obtiene el siguiente correlativo (EVI/DOC/CRO/FIR/DAN) atómico desde la BD
+ * 3. Construye el path físico:
+ *    - EVI, DAN, FIR → siniestros/{L}/gestiones/{code}/imagenes/{code}-TYPE-NNNN.ext
+ *    - DOC, CRO      → siniestros/{L}/gestiones/{code}/documentos/{code}-TYPE-NNNN.ext
  * 4. Sube el buffer a R2
  *
- * @returns { url, key, seq } — URL pública, key en R2, y correlativo usado
+ * @returns { url, key, seq, fileCode } — URL pública, key en R2, correlativo, y código del archivo
  */
 export async function uploadInspectionFile(
   sessionId: string,
@@ -106,22 +110,39 @@ export async function uploadInspectionFile(
   contentType: string,
   fileType: InspectionFileType,
   ext: string
-): Promise<{ url: string; key: string; seq: number }> {
+): Promise<{ url: string; key: string; seq: number; fileCode: string }> {
   const ctx = await resolveInspectionStorageContext(sessionId);
   const seq = await nextFileSeq(ctx.claimActionId, fileType);
 
-  const key =
-    fileType === "DOC"
-      ? inspectionDocumentPath(ctx.actionCode, ctx.liquidationNumber, seq, ext)
-      : inspectionImagePath(ctx.actionCode, ctx.liquidationNumber, fileType, seq, ext);
+  // Optimizar el archivo antes de subir (imágenes se redimensionan y comprimen)
+  const optimized = await optimizeFile(buffer, contentType, ext);
 
-  const url = await uploadToR2(buffer, key, contentType);
+  const key =
+    fileType === "DOC" || fileType === "CRO"
+      ? inspectionDocumentPath(ctx.actionCode, ctx.liquidationNumber, seq, optimized.ext, fileType)
+      : inspectionImagePath(ctx.actionCode, ctx.liquidationNumber, fileType, seq, optimized.ext);
+
+  // El código del archivo es el nombre del archivo sin extensión
+  // ej: "L-000000141-HINS-001-EVI-0001"
+  const fileCode = key.split("/").pop()?.replace(/\.[^.]+$/, "") || "";
+
+  const url = await uploadToR2(optimized.buffer, key, optimized.mimeType);
 
   logger.info("Archivo de inspección subido", {
     component: "inspection-upload",
     action: "inspection.file.upload",
-    metadata: { sessionId, actionCode: ctx.actionCode, fileType, seq, key, size: buffer.length },
+    metadata: {
+      sessionId,
+      actionCode: ctx.actionCode,
+      fileType,
+      seq,
+      key,
+      fileCode,
+      originalSize: buffer.length,
+      optimizedSize: optimized.buffer.length,
+      ext: optimized.ext,
+    },
   });
 
-  return { url, key, seq };
+  return { url, key, seq, fileCode };
 }
