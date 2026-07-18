@@ -2138,11 +2138,12 @@
     );
   }
 
-  /* Select de inspectores — ancho fijo */
+  /* Select de inspectores — ancho fijo + fuente 10px */
   .agenda-toolbar [data-slot="select-trigger"] {
     width: 260px !important;
     min-width: 260px !important;
     max-width: 260px !important;
+    font-size: 10px !important;
   }
 
   /* Panel principal del calendario — glass profundo */
