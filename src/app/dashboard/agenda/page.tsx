@@ -205,17 +205,19 @@ export default function AgendaPage() {
       <header className="app-page-header">
         <h1 className="app-page-title">Agenda</h1>
         <p className="app-page-lead">
-          Calendario semanal de inspecciones — {stats.total} en esta semana
-          {stats.total > 0 && (
-            <span className="ml-2 text-muted-foreground">
-              ({stats.onsite} presenciales · {stats.remote} remotas)
-            </span>
-          )}
+          <span className="agenda-stats inline-flex items-center gap-1.5">
+            {stats.total} en esta semana
+            {stats.total > 0 && (
+              <span className="text-muted-foreground">
+                · {stats.onsite} presenciales · {stats.remote} remotas
+              </span>
+            )}
+          </span>
         </p>
       </header>
 
-      {/* Toolbar */}
-      <div className="app-toolbar flex-wrap">
+      {/* Toolbar — pill flotante liquid glass */}
+      <div className="agenda-toolbar">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevWeek}>
             <ChevronLeft className="h-4 w-4" />
@@ -233,7 +235,6 @@ export default function AgendaPage() {
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          {/* Combo de inspectores con separación: con casos / sin casos */}
           <Select
             value={inspectorFilter || "all"}
             onValueChange={(v) => setInspectorFilter(v ?? "all")}
@@ -288,15 +289,15 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* Vista Semanal estilo macOS Calendar */}
-      <div className="app-panel p-0 overflow-hidden">
+      {/* Vista Semanal — calendario liquid glass estilo macOS */}
+      <div className="agenda-calendar">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Clock className="h-5 w-5 animate-spin text-muted-foreground" />
             <span className="ml-2 text-muted-foreground text-sm">Cargando agenda...</span>
           </div>
         ) : (
-          <div className="flex overflow-x-auto border-b">
+          <div className="flex overflow-x-auto border-b border-border/30">
             {weekDays.map((day, idx) => {
               const isToday = sameDay(day, new Date());
               const daySessions = filteredSessions
@@ -310,12 +311,12 @@ export default function AgendaPage() {
               return (
                 <div
                   key={idx}
-                  className={`flex flex-col border-r last:border-r-0 min-h-[280px] sm:min-h-[400px] shrink-0 w-[85%] sm:w-1/3 md:w-1/4 lg:w-auto lg:flex-1 ${
+                  className={`flex flex-col border-r border-border/20 last:border-r-0 min-h-[280px] sm:min-h-[400px] shrink-0 w-[85%] sm:w-1/3 md:w-1/4 lg:w-auto lg:flex-1 ${
                     isToday ? "bg-primary/3" : ""
                   }`}
                 >
                   {/* Header del día */}
-                  <div className={`px-3 py-2.5 text-center border-b ${isToday ? "bg-primary/10" : "bg-muted/30"}`}>
+                  <div className={`agenda-day-header px-3 py-2.5 text-center border-b border-border/20 ${isToday ? "bg-primary/10" : "bg-muted/20"}`}>
                     <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       {dayNames[idx]}
                     </p>
@@ -333,7 +334,7 @@ export default function AgendaPage() {
                   <div className="flex-1 p-1.5 space-y-1.5 overflow-y-auto">
                     {daySessions.length === 0 ? (
                       <div className="flex items-center justify-center h-full min-h-[60px]">
-                        <p className="text-[10px] text-muted-foreground/50">—</p>
+                        <p className="text-[10px] text-muted-foreground/40">—</p>
                       </div>
                     ) : (
                       daySessions.map((s) => (
@@ -353,8 +354,8 @@ export default function AgendaPage() {
         )}
       </div>
 
-      {/* Leyenda */}
-      <div className="flex items-center gap-4 text-[11px] text-muted-foreground flex-wrap">
+      {/* Leyenda — pill glass */}
+      <div className="agenda-legend text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm bg-sky-500" />
           Presencial
@@ -365,11 +366,11 @@ export default function AgendaPage() {
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Inspector con casos esta semana
+          Con casos esta semana
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
-          Sin casos esta semana
+          Sin casos
         </div>
       </div>
     </div>
@@ -399,7 +400,7 @@ function EventCard({
   return (
     <Link
       href={`/dashboard/inspecciones/${session.id}`}
-      className={`block rounded-lg border ${style.card} p-2 transition-all hover:shadow-md group`}
+      className={`agenda-event block border ${style.card} p-2 group`}
     >
       {/* Barra de color superior (estilo macOS) */}
       <div className={`h-0.5 rounded-full ${style.bar} mb-1.5`} />

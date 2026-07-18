@@ -2053,4 +2053,257 @@
       height: 28px;
     }
   }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * AGENDA — Calendario estilo macOS con Liquid Glass
+   * ═══════════════════════════════════════════════════════════════ */
+
+  /* Toolbar de agenda — pill flotante como el topbar */
+  .agenda-toolbar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.45) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(28px) saturate(180%) brightness(1.05) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.05) !important;
+    box-shadow:
+      0 10px 36px rgba(0, 0, 0, 0.08),
+      0 4px 12px rgba(0, 0, 0, 0.04),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset !important;
+    margin-bottom: 12px;
+  }
+
+  .dark .agenda-toolbar {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.12) 0%,
+        rgba(255, 255, 255, 0.04) 50%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 10px 36px rgba(0, 0, 0, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.2),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.15) inset !important;
+  }
+
+  /* Destello especular del toolbar */
+  .agenda-toolbar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      transparent 100%
+    );
+    border-radius: 999px;
+  }
+
+  .dark .agenda-toolbar::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+  }
+
+  /* Panel principal del calendario — glass profundo */
+  .agenda-calendar {
+    position: relative;
+    border-radius: 20px !important;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.35) 0%,
+        rgba(255, 255, 255, 0.04) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) padding-box !important;
+    backdrop-filter: blur(36px) saturate(160%) brightness(1.04) !important;
+    -webkit-backdrop-filter: blur(36px) saturate(160%) brightness(1.04) !important;
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.08),
+      0 4px 12px rgba(0, 0, 0, 0.04),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.4) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.02) inset !important;
+    overflow: hidden;
+  }
+
+  .dark .agenda-calendar {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box,
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 255, 255, 0.005) 100%
+      ) padding-box !important;
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.35),
+      0 4px 12px rgba(0, 0, 0, 0.18),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.15) inset,
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.12) inset !important;
+  }
+
+  /* Destello superior del calendario */
+  .agenda-calendar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 5%;
+    right: 5%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 50%,
+      transparent 100%
+    );
+    border-radius: 999px;
+    z-index: 2;
+  }
+
+  .dark .agenda-calendar::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.25) 50%,
+      transparent 100%
+    );
+  }
+
+  /* Event cards — glass mini cards con blur */
+  .agenda-event {
+    position: relative;
+    border-radius: 12px !important;
+    border: 1px solid transparent !important;
+    backdrop-filter: blur(16px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .agenda-event:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.12),
+      0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  }
+
+  /* Header del día — glass sutil */
+  .agenda-day-header {
+    backdrop-filter: blur(12px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+  }
+
+  /* Leyenda — pill glass */
+  .agenda-legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.25) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) border-box !important;
+    backdrop-filter: blur(20px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.05),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.3) inset !important;
+  }
+
+  .dark .agenda-legend {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box !important;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.2),
+      0 1px 0 0.5px rgba(255, 255, 255, 0.1) inset !important;
+  }
+
+  /* Stats badge en header — glass pill */
+  .agenda-stats {
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid transparent !important;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.2) 0%,
+        rgba(255, 255, 255, 0.03) 100%
+      ) border-box !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+
+  .dark .agenda-stats {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.01) 100%
+      ) border-box !important;
+  }
+
+  /* Mobile: reducir blur para performance */
+  @media (max-width: 640px) {
+    .agenda-toolbar,
+    .agenda-calendar,
+    .agenda-event,
+    .agenda-legend {
+      backdrop-filter: blur(12px) saturate(130%) !important;
+      -webkit-backdrop-filter: blur(12px) saturate(130%) !important;
+    }
+    .agenda-event:hover {
+      transform: none !important;
+    }
+  }
 }
