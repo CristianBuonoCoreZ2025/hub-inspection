@@ -15,6 +15,7 @@ import {
   Users,
   ClipboardList,
   CheckCircle,
+  Lock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -285,6 +286,13 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
 
   return (
     <form onSubmit={onSubmit} className="app-stack">
+      {/* Banner de solo lectura */}
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+          <Lock className="h-3.5 w-3.5 shrink-0" />
+          Inspección finalizada — el acta es de solo lectura
+        </div>
+      )}
       <fieldset disabled={readOnly} className="contents">
       {/* Stepper */}
       <div className="flex items-center gap-1 overflow-x-auto pb-2">

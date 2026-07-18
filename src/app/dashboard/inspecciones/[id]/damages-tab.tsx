@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDamages, createDamage, updateDamage, deleteDamage, getThirdParties } from "@/services/inspections";
 import { getDamageSpaces, getContentGoodTypes, getBuildingDamageCategories, getCountryCurrencies } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Trash2, Pencil, Building2, Package } from "lucide-react";
+import { Trash2, Pencil, Building2, Package, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -271,6 +271,14 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
   return (
     <div className="app-stack">
+      {/* Banner de solo lectura */}
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+          <Lock className="h-3.5 w-3.5 shrink-0" />
+          Inspección finalizada — los daños son de solo lectura
+        </div>
+      )}
+
       {/* Header con totales por moneda */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
