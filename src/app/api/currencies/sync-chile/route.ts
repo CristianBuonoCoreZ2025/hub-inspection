@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       ? allIndicators.filter(i => i.currencyCode === currencyFilter)
       : allIndicators;
 
-    const results: Array<{ date: string; currency: string; rate: number; status: "inserted" | "exists" | "error" }> = [];
+    const results: Array<{ date: string; currency: string; rate: number; status: "inserted" | "exists" | "error" | "updated" }> = [];
 
     // ── Modo año completo o mes específico: una sola llamada por indicador ──
     if (year !== undefined && month === undefined) {
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
               continue;
             }
 
-            await upsertRate(supabase, chile.id, ind.currencyCode, date, serie[0].valor, results);
+            await upsertRate(supabase, chile.id, ind.currencyCode, date, serie[0].valor, results, force);
           } catch {
             results.push({ date, currency: ind.currencyCode, rate: 0, status: "error" });
           }
@@ -159,15 +159,16 @@ export async function POST(request: NextRequest) {
     }
 
     const inserted = results.filter(r => r.status === "inserted").length;
+    const updated = results.filter(r => r.status === "updated").length;
     const exists = results.filter(r => r.status === "exists").length;
     const errors = results.filter(r => r.status === "error").length;
 
-    logger.info(`Sync BCCh: ${inserted} insertados, ${exists} ya existían, ${errors} errores`);
+    logger.info(`Sync BCCh: ${inserted} insertados, ${updated} actualizados, ${exists} ya existían, ${errors} errores`);
 
     return NextResponse.json({
       success: true,
-      summary: { inserted, exists, errors, total: results.length },
-      details: results.filter(r => r.status === "inserted" || r.status === "error"),
+      summary: { inserted, updated, exists, errors, total: results.length },
+      details: results.filter(r => r.status === "inserted" || r.status === "updated" || r.status === "error"),
     });
   } catch (err) {
     logger.error("Error en sync-chile:", err instanceof Error ? err : new Error(String(err)));

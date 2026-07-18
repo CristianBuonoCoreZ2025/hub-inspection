@@ -127,6 +127,34 @@ function TiposCambioContent() {
     setSyncState({ active: false, done: false, inserted: 0, exists: 0, errors: 0, total: 0, current: 0, totalMonths: 0 });
   };
 
+  // Sincronizar un solo día desde el modal de edición
+  const [syncDayLoading, setSyncDayLoading] = useState(false);
+  const syncSingleDay = async () => {
+    if (!form.country_id || !form.currency_code || !form.effective_date) return;
+    setSyncDayLoading(true);
+    try {
+      const resp = await fetch("/api/currencies/sync-chile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: form.effective_date, currency: form.currency_code, force: true }),
+      });
+      if (!resp.ok) throw new Error("Error al sincronizar");
+      const data = await resp.json() as { summary: { inserted: number; updated: number; exists: number; errors: number; total: number }, details: Array<{ date: string; currency: string; rate: number; status: string }> };
+      const detail = data.details.find(d => d.date === form.effective_date);
+      if (detail && detail.status !== "error") {
+        // Actualizar el form con el valor descargado
+        setForm(f => ({ ...f, rate_to_base: String(detail.rate), source: "mindicador.cl" }));
+        toast.success(`Valor sincronizado: ${formatRate(detail.rate)}`);
+        queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
+      } else {
+        toast.error("No se encontró valor para esa fecha en mindicador.cl");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al sincronizar");
+    }
+    setSyncDayLoading(false);
+  };
+
   // Monedas del país seleccionado (excluyendo la base, que siempre es tasa 1)
   const countryCurrencyOptions = useMemo(() =>
     (countryCurrenciesAll || [])
@@ -159,7 +187,7 @@ function TiposCambioContent() {
       if (rMonth !== filterMonth) return false;
     }
     return true;
-  }), [rates, filterCountry, effectiveFilterCurrency, filterYear, filterMonth, viewMode]);
+  }), [rates, filterCountry, effectiveFilterCurrency, filterYear, filterMonth, viewMode]); // eslint-disable-line react-hooks/preserve-manual-memoization -- effectiveFilterCurrency es derivado, no se muta
 
   // Pivot: day → month → { rate, id, source }
   const pivot = useMemo(() => {
@@ -661,7 +689,21 @@ function TiposCambioContent() {
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Tasa hacia Moneda Base</Label>
-                  <Input type="number" step="0.000001" min={0} value={form.rate_to_base} onChange={(e) => setForm({ ...form, rate_to_base: e.target.value })} placeholder="Ej: 950.00" className="app-input font-mono" />
+                  <div className="flex gap-2">
+                    <Input type="number" step="0.000001" min={0} value={form.rate_to_base} onChange={(e) => setForm({ ...form, rate_to_base: e.target.value })} placeholder="Ej: 950.00" className="app-input font-mono" />
+                    {canEdit("catalogos") && form.effective_date && form.currency_code && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={syncSingleDay}
+                        disabled={syncDayLoading}
+                        className="pg-btn-platinum-icon shrink-0"
+                        title="Descargar este valor desde mindicador.cl (Banco Central de Chile)"
+                      >
+                        <ArrowRightLeft className={`h-4 w-4 ${syncDayLoading ? "animate-spin" : ""}`} />
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div className="modal-field">
                   <Label className="app-field-label">Fecha de Vigencia</Label>
