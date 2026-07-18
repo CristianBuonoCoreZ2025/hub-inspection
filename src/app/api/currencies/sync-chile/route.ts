@@ -6,12 +6,13 @@ import { logger } from "@/lib/logger";
  * Sincroniza tipos de cambio desde mindicador.cl (wrapper gratuito del Banco Central de Chile).
  *
  * POST /api/currencies/sync-chile
- * Body: { year?: number, month?: number (0-11), startDate?: "YYYY-MM-DD", endDate?: "YYYY-MM-DD", date?: "YYYY-MM-DD" }
+ * Body: { year?: number, month?: number (0-11), currency?: "USD"|"UF", date?: "YYYY-MM-DD", startDate?: "YYYY-MM-DD", endDate?: "YYYY-MM-DD" }
  *
- * - Si viene `year` (sin month): trae todo el año en 2 llamadas (dolar + uf)
- * - Si viene `year` + `month`: tre ese mes en 2 llamadas
- * - Si viene `date`: solo esa fecha (2 llamadas)
- * - Si vienen `startDate` y `endDate`: rango entre esas fechas (batch por día)
+ * - `currency`: si se pasa, solo sincroniza esa moneda. Si no, sincroniza ambas.
+ * - Si viene `year` (sin month): trae todo el año en 1-2 llamadas
+ * - Si viene `year` + `month`: trae ese mes (filtra del año)
+ * - Si viene `date`: solo esa fecha
+ * - Si vienen `startDate` y `endDate`: rango entre esas fechas
  * - Si no viene nada: últimos 30 días desde hoy
  *
  * mindicador.cl API:
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
     const endDateStr = body.endDate as string | undefined;
     const year = body.year as number | undefined;
     const month = body.month as number | undefined; // 0-11
+    const currencyFilter = body.currency as string | undefined; // "USD" | "UF"
 
     // Obtener el country_id de Chile
     const supabase = createAdminClient();
@@ -40,11 +42,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No se encontró Chile en la base de datos" }, { status: 500 });
     }
 
-    // Indicadores a sincronizar
-    const indicators = [
+    // Indicadores a sincronizar (filtrar por currency si se especifica)
+    const allIndicators = [
       { apiCode: "dolar", currencyCode: "USD" },
       { apiCode: "uf", currencyCode: "UF" },
     ];
+    const indicators = currencyFilter
+      ? allIndicators.filter(i => i.currencyCode === currencyFilter)
+      : allIndicators;
 
     const results: Array<{ date: string; currency: string; rate: number; status: "inserted" | "exists" | "error" }> = [];
 

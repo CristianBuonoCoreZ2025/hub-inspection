@@ -75,19 +75,26 @@ function TiposCambioContent() {
     onSuccess: () => { toast.success("Tipo de cambio eliminado"); queryClient.invalidateQueries({ queryKey: ["exchange-rates"] }); setOpen(false); setEditingId(null); },
     onError: (e: Error) => toast.error(e.message),
   });
-  // Sincronización BCCh: 2 llamadas (USD + UF) para el año o mes seleccionado
+  // Sincronización BCCh: 1 llamada para la moneda seleccionada
   const syncChile = async () => {
+    if (!effectiveFilterCurrency) {
+      toast.error("Selecciona una moneda para sincronizar");
+      return;
+    }
     const year = parseInt(filterYear);
     const month = viewMode === "month" ? parseInt(filterMonth) : undefined;
 
-    // 2 pasos: paso 1 = fetch USD+UF, paso 2 = done
     setSyncState({ active: true, current: 0, total: 1, inserted: 0, exists: 0, errors: 0 });
 
     try {
       const resp = await fetch("/api/currencies/sync-chile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(month !== undefined ? { year, month } : { year }),
+        body: JSON.stringify({
+          year,
+          ...(month !== undefined ? { month } : {}),
+          currency: effectiveFilterCurrency,
+        }),
       });
       if (!resp.ok) throw new Error("Error al sincronizar");
       const data = await resp.json() as { summary: { inserted: number; exists: number; errors: number } };
@@ -222,11 +229,11 @@ function TiposCambioContent() {
               <Select
                 value={filterCountry || "__none"}
                 onValueChange={(v) => { const val = v === "__none" ? "" : (v ?? ""); setFilterCountry(val); setFilterCurrency(""); }}
-                items={[{ value: "__none", label: "Todos" }, ...countriesWithCurrencies.map((c) => ({ value: c.id, label: c.name }))]}
+                items={[{ value: "__none", label: "Seleccione..." }, ...countriesWithCurrencies.map((c) => ({ value: c.id, label: c.name }))]}
               >
                 <SelectTrigger className="app-input h-7"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none">Todos</SelectItem>
+                  <SelectItem value="__none">Seleccione...</SelectItem>
                   {countriesWithCurrencies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -238,11 +245,11 @@ function TiposCambioContent() {
               <Select
                 value={effectiveFilterCurrency || "__none"}
                 onValueChange={(v) => setFilterCurrency(v === "__none" ? "" : (v ?? ""))}
-                items={[{ value: "__none", label: "Todas" }, ...countryCurrencyOptions.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))]}
+                items={[{ value: "__none", label: "Seleccione..." }, ...countryCurrencyOptions.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))]}
               >
                 <SelectTrigger className="app-input h-7"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none">Todas</SelectItem>
+                  <SelectItem value="__none">Seleccione...</SelectItem>
                   {countryCurrencyOptions.map((c) => <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -311,9 +318,11 @@ function TiposCambioContent() {
                 <Button
                   variant="outline"
                   onClick={syncChile}
-                  disabled={syncState.active}
+                  disabled={syncState.active || !effectiveFilterCurrency}
                   className="pg-btn-platinum-icon"
-                  title="Descarga USD y UF del período seleccionado desde mindicador.cl (Banco Central de Chile)"
+                  title={effectiveFilterCurrency
+                    ? `Descargar ${effectiveFilterCurrency} del período seleccionado desde mindicador.cl`
+                    : "Selecciona una moneda primero"}
                 >
                   <ArrowRightLeft className={`mr-1.5 h-4 w-4 ${syncState.active ? "animate-spin" : ""}`} />
                   {syncState.active ? "Sincronizando" : "Sincronizar"}
@@ -524,7 +533,9 @@ function TiposCambioContent() {
           </div>
           <div className="modal-body space-y-3">
             <p className="text-[12px] text-muted-foreground">
-              Descargando USD y UF desde mindicador.cl para{" "}
+              Descargando{" "}
+              <span className="font-mono font-medium text-foreground">{effectiveFilterCurrency}</span>
+              {" "}desde mindicador.cl para{" "}
               <span className="font-medium text-foreground">
                 {viewMode === "month"
                   ? `${MONTHS[parseInt(filterMonth)]} ${filterYear}`
