@@ -779,11 +779,13 @@ function CanvasFieldPreview({ field, allFields }: { field: ScreenField; allField
  );
  }
 
- // Checkbox
+ // Checkbox (renderizado como toggle)
  if (field.type === "checkbox") {
  return (
  <label className="flex items-center gap-2 text-[12px]">
- <span className="h-4 w-4 rounded border border-input" />
+ <span className="inline-flex h-[18px] w-[32px] items-center rounded-full bg-input">
+ <span className="ml-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-sm" />
+ </span>
  {field.label}
  </label>
  );

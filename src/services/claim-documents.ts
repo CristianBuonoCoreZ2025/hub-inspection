@@ -76,11 +76,12 @@ export async function getClaimDocumentRequests(claimId: string): Promise<ClaimDo
   });
 }
 
-// Obtener solicitud por acción
+// Obtener solicitud por acción (la más reciente si hay varias)
 export async function getClaimDocumentRequestByAction(actionId: string): Promise<ClaimDocumentRequest | null> {
   const rows = await fetchAll<ClaimDocumentRequest>("claim_document_requests", {
     select: REQUEST_SELECT,
     eq: { claim_action_id: actionId },
+    order: { column: "created_at", ascending: false },
     limit: 1,
   });
   return rows[0] || null;
@@ -98,12 +99,10 @@ export async function createClaimDocumentRequest(input: {
   created_by?: string;
   items: { document_type_code: string; document_name: string; sort_order: number }[];
 }): Promise<ClaimDocumentRequest> {
-  const request_number = `SD-${Date.now().toString(36).toUpperCase()}`;
-
   const request = await insertRow<ClaimDocumentRequest>("claim_document_requests", {
     claim_id: input.claim_id,
     claim_action_id: input.claim_action_id || null,
-    request_number,
+    request_number: null,
     status: "requested",
     notes: input.notes || null,
     company_id: input.company_id || null,

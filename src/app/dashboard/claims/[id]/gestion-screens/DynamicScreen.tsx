@@ -126,7 +126,7 @@ export const OWN_FIELD_TYPES: { code: string; label: string; icon: string; desc:
  { code: "number", label: "Número", icon: "#", desc: "Campo numérico con decimales" },
  { code: "date", label: "Fecha", icon: "📅", desc: "Calendario con validaciones opcionales" },
  { code: "select", label: "Selección", icon: "▼", desc: "Lista desplegable de opciones" },
- { code: "checkbox", label: "Checkbox", icon: "✓", desc: "Casilla de verificación" },
+ { code: "checkbox", label: "Toggle", icon: "⊙", desc: "Interruptor on/off" },
  { code: "table", label: "Tabla", icon: "⊞", desc: "Tabla editable con columnas" },
  { code: "section", label: "Sección", icon: "§", desc: "Título separador de grupos" },
 ];
@@ -2614,7 +2614,7 @@ function AdjustmentEditorForm({
 // ═══════════════════════════════════════════════════════════════
 
 function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string; actionId?: string; readOnly?: boolean }) {
- // Cargar el siniestro para obtener business_line_id
+ // Cargar el siniestro para obtener business_line_id + código de la gestión
  const { data: claim } = useQuery({
  queryKey: ["claim-for-docs", claimId],
  queryFn: async () => {
@@ -2629,6 +2629,23 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  return data;
  },
  enabled: !!claimId,
+ });
+
+ // Cargar el código de la gestión (ej: HNSA-001)
+ const { data: actionCode } = useQuery({
+ queryKey: ["action-code", actionId],
+ queryFn: async () => {
+ const { getSupabaseClient } = await import("@/lib/supabase/client");
+ const supabase = getSupabaseClient();
+ const { data, error } = await supabase
+ .from("claim_actions")
+ .select("code")
+ .eq("id", actionId!)
+ .maybeSingle();
+ if (error) throw new Error(error.message);
+ return data?.code || null;
+ },
+ enabled: !!actionId,
  });
 
  // Cargar documentos disponibles para la línea de negocio
@@ -2798,7 +2815,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  return (
  <div className="space-y-2">
  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
- <span className="font-medium">Solicitud: {existingRequest.request_number}</span>
+ <span className="font-medium">Gestión: {actionCode || "—"}</span>
  <Badge className={
  existingRequest.status === "closed" ? "bg-emerald-100 text-emerald-700" :
  existingRequest.status === "cancelled" ? "bg-rose-100 text-rose-700" :
@@ -2849,7 +2866,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  return (
  <div className="space-y-3">
  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
- <span className="font-medium">Solicitud: {existingRequest.request_number}</span>
+ <span className="font-medium">Gestión: {actionCode || "—"}</span>
  <Badge className="bg-amber-100 text-amber-700">Editable</Badge>
  </div>
 
@@ -2943,12 +2960,10 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  }}
  >
  <td className="px-2 py-1.5 text-center">
- <input
- type="checkbox"
+ <Checkbox
  checked={checkedSet.has(doc.document_type_code)}
  onChange={() => {}}
  disabled={isReq}
- className="h-3.5 w-3.5 rounded border-border"
  />
  </td>
  <td className="px-2 py-1.5">{doc.document_name}</td>
@@ -3034,12 +3049,10 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  onClick={() => toggle(doc.document_type_code)}
  >
  <td className="px-2 py-1.5 text-center">
- <input
- type="checkbox"
+ <Checkbox
  checked={checkedSet.has(doc.document_type_code)}
  onChange={() => {}}
  disabled={isReq}
- className="h-3.5 w-3.5 rounded border-border"
  />
  </td>
  <td className="px-2 py-1.5">{doc.document_name}</td>
@@ -3178,7 +3191,7 @@ function DocumentReceiptView({ claimId, readOnly }: { claimId?: string; actionId
  <div className="space-y-2">
  {/* Info de la solicitud */}
  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
- <span className="font-medium">Solicitud: {activeRequest.request_number}</span>
+ <span className="font-medium">Gestión: {actionCode || "—"}</span>
  <Badge className={
  activeRequest.status === "closed" ? "bg-emerald-100 text-emerald-700" :
  activeRequest.status === "cancelled" ? "bg-rose-100 text-rose-700" :

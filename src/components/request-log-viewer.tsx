@@ -6,6 +6,7 @@ import { requestLogger, type LogEntry } from '@/lib/request-logger'
 import { useMounted } from '@/hooks/use-mounted'
 import { X, Trash2, Download, Clock, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 
 export function RequestLogViewer() {
@@ -150,11 +151,9 @@ export function RequestLogViewer() {
         ))}
         <div className="flex-1" />
         <label className="flex items-center gap-1 text-[10px] cursor-pointer">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={autoScroll}
             onChange={(e) => setAutoScroll(e.target.checked)}
-            className="rounded"
           />
           Auto
         </label>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { requestLogger } from "@/lib/request-logger";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function DiagnosticLogToggle() {
   const [enabled, setEnabled] = useState(() => requestLogger.getEnabled());
@@ -18,9 +19,7 @@ export default function DiagnosticLogToggle() {
       </p>
       <div className="mt-3 flex items-center gap-3">
         <label className="inline-flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300"
+          <Checkbox
             checked={enabled}
             onChange={(e) => requestLogger.setEnabled(e.target.checked)}
           />

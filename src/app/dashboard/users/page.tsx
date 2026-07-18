@@ -6,6 +6,7 @@ import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
+import { Checkbox } from "@/components/ui/checkbox";
 import { getUsers, inviteUser, updateUser, deactivateUser, addSecondaryRole, removeSecondaryRole } from "@/services/users";
 import { getCompanies } from "@/services/companies";
 import { getCountries } from "@/services/countries";
@@ -501,11 +502,9 @@ export default function UsersPage() {
  key={c.id}
  className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-xs"
  >
- <input
- type="checkbox"
+ <Checkbox
  checked={selectedClientIds.includes(c.id)}
  onChange={() => toggleClient(c.id)}
- className="size-3.5 rounded border-input"
  />
  {c.name}
  </label>
