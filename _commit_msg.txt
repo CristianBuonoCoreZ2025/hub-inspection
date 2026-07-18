@@ -1,12 +1,13 @@
-fix: botones platinum deben tener texto de una sola palabra
+fix: rediseño tab Tipos de Cambio con tabla pivote por año (estilo SII)
 
-- "Nueva Moneda" → "Nueva"
-- "Nueva Relacion" → "Nueva"
-- "Sincronizar BCCh (30 dias)" → "Sincronizar"
-- "Nuevo Tipo de Cambio" → "Nuevo"
-- "Cerrar caso" → "Cerrar"
-- "Inicie la inspeccion para editar" → "Bloqueado"
-- "Ver regiones/ciudades/comunas" → "Ver"
+- Filtro obligatorio por país + moneda + año (Select del design system)
+- Tabla pivote: filas = días (1-31), columnas = meses (Ene-Dic)
+- Cada celda muestra la tasa; clic para editar
+- Stats del año: registros, mínimo, promedio, máximo
+- Badge de fecha de referencia (Siniestro/Ejecución) del país
+- Botón Sincronizar BCCh integrado en el toolbar
+- Botón Eliminar dentro del modal de edición
+- Eliminados los <select> nativos → ahora usa Select de shadcn/ui
 
 Generated with [Devin](https://devin.ai)
 

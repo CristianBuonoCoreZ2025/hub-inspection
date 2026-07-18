@@ -402,8 +402,10 @@ function PaisesTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// TAB 3: Tipos de Cambio
+// TAB 3: Tipos de Cambio — Vista pivote por año (estilo SII)
 // ═══════════════════════════════════════════════════════════════
+
+const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
 function CambiosTab() {
   const queryClient = useQueryClient();
@@ -412,11 +414,11 @@ function CambiosTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ country_id: "", currency_code: "", rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" });
 
-  // Panel de entrada rápida
-  const [quickCountry, setQuickCountry] = useState("");
-  const [quickCurrency, setQuickCurrency] = useState("");
-  const [quickDate, setQuickDate] = useState(new Date().toISOString().split("T")[0]);
-  const [quickRate, setQuickRate] = useState("");
+  // Filtros: país, moneda, año
+  const currentYear = new Date().getFullYear();
+  const [filterCountry, setFilterCountry] = useState("");
+  const [filterCurrency, setFilterCurrency] = useState("");
+  const [filterYear, setFilterYear] = useState(String(currentYear));
 
   const { data: rates, isLoading } = useQuery({ queryKey: ["exchange-rates"], queryFn: getExchangeRates });
   const { data: countries } = useQuery({ queryKey: ["countries"], queryFn: getCountries });
@@ -456,31 +458,53 @@ function CambiosTab() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Monedas disponibles para el país seleccionado en entrada rápida
-  const quickCurrencyOptions = (countryCurrenciesAll || [])
-    .filter(cc => cc.country_id === quickCountry && cc.is_active)
-    .map(cc => ({ code: cc.currency_code, name: cc.currency?.name || cc.currency_code }));
+  // Monedas del país seleccionado
+  const countryCurrencyOptions = (countryCurrenciesAll || [])
+    .filter(cc => cc.country_id === filterCountry && cc.is_active)
+    .map(cc => ({ code: cc.currency_code, name: cc.currency?.name || cc.currency_code, isBase: cc.is_base }));
 
-  // Agrupar por país → moneda → historial de fechas
-  const byCountry: Record<string, { countryName: string; countryCode: string; byCurrency: Record<string, { currencyName: string; currencyCode: string; items: NonNullable<typeof rates> }> }> = {};
-  for (const r of rates || []) {
-    const key = r.country_id;
-    if (!byCountry[key]) byCountry[key] = { countryName: r.country?.name || "—", countryCode: r.country?.code || "", byCurrency: {} };
-    const cKey = r.currency_code;
-    if (!byCountry[key]!.byCurrency[cKey]) byCountry[key]!.byCurrency[cKey] = { currencyName: r.currency?.name || r.currency_code, currencyCode: r.currency_code, items: [] };
-    byCountry[key]!.byCurrency[cKey]!.items.push(r);
+  // País seleccionado: datos
+  const selectedCountry = countries?.find(c => c.id === filterCountry);
+  const selectedCurrency = countryCurrencyOptions.find(c => c.code === filterCurrency);
+
+  // Filtrar tasas por país + moneda + año
+  const filteredRates = (rates || []).filter(r => {
+    if (filterCountry && r.country_id !== filterCountry) return false;
+    if (filterCurrency && r.currency_code !== filterCurrency) return false;
+    if (filterYear) {
+      const rYear = r.effective_date.split("-")[0];
+      if (rYear !== filterYear) return false;
+    }
+    return true;
+  });
+
+  // Construir matriz pivote: filas = día (1-31), columnas = mes (0-11)
+  // pivot[day][month] = { rate, id, source }
+  const pivot: Record<number, Record<number, { rate: number; id: string; source: string | null } | undefined>> = {};
+  for (const r of filteredRates) {
+    const d = new Date(r.effective_date + "T00:00:00");
+    const day = d.getDate();
+    const month = d.getMonth();
+    if (!pivot[day]) pivot[day] = {};
+    pivot[day][month] = { rate: r.rate_to_base, id: r.id, source: r.source };
   }
 
-  const handleQuickSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickCountry || !quickCurrency || !quickRate) { toast.error("País, moneda y tasa son requeridos"); return; }
-    createMut.mutate(
-      { country_id: quickCountry, currency_code: quickCurrency, rate_to_base: parseFloat(quickRate), effective_date: quickDate, source: "manual" },
-      {
-        onSuccess: () => { setQuickRate(""); },
-      }
-    );
-  };
+  // Años disponibles (de los datos + actual)
+  const availableYears = new Set<string>();
+  for (const r of rates || []) {
+    availableYears.add(r.effective_date.split("-")[0]);
+  }
+  availableYears.add(String(currentYear));
+  const yearOptions = Array.from(availableYears).sort().reverse();
+
+  // Estadísticas del año
+  const yearRates = filteredRates.map(r => r.rate_to_base);
+  const yearStats = yearRates.length > 0 ? {
+    min: Math.min(...yearRates),
+    max: Math.max(...yearRates),
+    avg: yearRates.reduce((a, b) => a + b, 0) / yearRates.length,
+    count: yearRates.length,
+  } : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -490,144 +514,226 @@ function CambiosTab() {
     else createMut.mutate(data);
   };
 
+  const formatRate = (rate: number) => {
+    if (rate >= 1000) return rate.toLocaleString("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    if (rate >= 100) return rate.toLocaleString("es-CL", { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+    return rate.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  };
+
   return (
     <div className="app-stack">
-      {/* ── Panel de entrada rápida ── */}
-      {canCreate("catalogos") && (
-        <div className="app-panel">
-          <h3 className="app-section-title flex items-center gap-2 mb-3">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            Carga Rápida de Tasa
-          </h3>
-          <form onSubmit={handleQuickSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
-            <div>
-              <Label className="app-field-label">País</Label>
-              <select
-                className="app-input w-full"
-                value={quickCountry}
-                onChange={(e) => { setQuickCountry(e.target.value); setQuickCurrency(""); }}
-              >
-                <option value="">Seleccionar...</option>
-                {countries?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <Label className="app-field-label">Moneda</Label>
-              <select
-                className="app-input w-full"
-                value={quickCurrency}
-                onChange={(e) => setQuickCurrency(e.target.value)}
-                disabled={!quickCountry}
-              >
-                <option value="">Seleccionar...</option>
-                {quickCurrencyOptions.map(c => <option key={c.code} value={c.code}>{c.code} — {c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <Label className="app-field-label">Fecha</Label>
-              <Input type="date" value={quickDate} onChange={(e) => setQuickDate(e.target.value)} className="app-input" />
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label className="app-field-label">Tasa → Base</Label>
-                <Input type="number" step="0.000001" min={0} value={quickRate} onChange={(e) => setQuickRate(e.target.value)} placeholder="Ej: 950.00" className="app-input font-mono" />
-              </div>
-              <Button type="submit" disabled={createMut.isPending} className="pg-btn-platinum">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* ── Toolbar de filtros ── */}
+      <div className="app-panel">
+        <div className="flex flex-wrap items-end gap-3">
+          {/* País */}
+          <div className="min-w-[180px]">
+            <Label className="app-field-label">País</Label>
+            <Select
+              value={filterCountry || "__none"}
+              onValueChange={(v) => { const val = v === "__none" ? "" : (v ?? ""); setFilterCountry(val); setFilterCurrency(""); }}
+              items={[{ value: "__none", label: "Todos" }, ...(countries || []).map((c) => ({ value: c.id, label: c.name }))]}
+            >
+              <SelectTrigger className="app-input h-7"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Todos</SelectItem>
+                {countries?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* ── Botones de acción ── */}
-      <div className="flex justify-end gap-2">
-        {canCreate("catalogos") && (
-          <Button
-            variant="outline"
-            onClick={() => syncChileMut.mutate(undefined)}
-            disabled={syncChileMut.isPending}
-            className="pg-btn-platinum-icon"
-            title="Descarga USD y UF de los últimos 30 días desde mindicador.cl (Banco Central de Chile)"
-          >
-            <ArrowRightLeft className={`mr-1.5 h-4 w-4 ${syncChileMut.isPending ? "animate-spin" : ""}`} />
-            {syncChileMut.isPending ? "Sincronizando..." : "Sincronizar"}
-          </Button>
-        )}
-        {canCreate("catalogos") && (
-          <Button variant="outline" onClick={() => { setEditingId(null); setForm({ country_id: "", currency_code: "", rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" }); setOpen(true); }} className="pg-btn-platinum-icon">
-            <Plus className="mr-1.5 h-4 w-4" /> Nuevo
-          </Button>
-        )}
-      </div>
+          {/* Moneda */}
+          <div className="min-w-[160px]">
+            <Label className="app-field-label">Moneda</Label>
+            <Select
+              value={filterCurrency || "__none"}
+              onValueChange={(v) => setFilterCurrency(v === "__none" ? "" : (v ?? ""))}
+              items={[{ value: "__none", label: "Todas" }, ...countryCurrencyOptions.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))]}
+            >
+              <SelectTrigger className="app-input h-7"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Todas</SelectItem>
+                {countryCurrencyOptions.map((c) => <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* ── Historial agrupado por país → moneda ── */}
-      <div className="space-y-3">
-        {isLoading ? <div className="app-panel text-center py-4 text-muted-foreground text-sm">Cargando...</div>
-        : Object.values(byCountry).length === 0 ? <div className="app-panel text-center py-4 text-muted-foreground text-sm">No hay tipos de cambio configurados.</div>
-        : Object.values(byCountry).sort((a, b) => a.countryName.localeCompare(b.countryName)).map((group) => {
-          const countryData = countries?.find(c => c.id === Object.keys(byCountry).find(k => byCountry[k] === group));
-          return (
-          <div key={group.countryCode} className="app-panel">
-            <h3 className="app-section-title flex items-center gap-2 mb-3">
-              <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-              <span className="font-mono text-[11px] text-muted-foreground">{group.countryCode}</span>
-              {group.countryName}
-              {countryData?.reference_date_type === "execution_date" && (
-                <span className="text-[10px] rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+          {/* Año */}
+          <div className="min-w-[100px]">
+            <Label className="app-field-label">Año</Label>
+            <Select
+              value={filterYear}
+              onValueChange={(v) => setFilterYear(v ?? String(currentYear))}
+              items={yearOptions.map(y => ({ value: y, label: y }))}
+            >
+              <SelectTrigger className="app-input h-7"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {yearOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Badge de fecha de referencia */}
+          {selectedCountry && (
+            <div className="ml-auto flex items-center gap-2">
+              {selectedCountry.reference_date_type === "execution_date" ? (
+                <span className="text-[10px] rounded-full bg-blue-100 px-2.5 py-1 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 font-medium">
                   Ref: Fecha Ejecución
                 </span>
-              )}
-              {countryData?.reference_date_type === "claim_date" && (
-                <span className="text-[10px] rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+              ) : (
+                <span className="text-[10px] rounded-full bg-amber-100 px-2.5 py-1 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 font-medium">
                   Ref: Fecha Siniestro
                 </span>
               )}
-            </h3>
-            <div className="space-y-3">
-              {Object.values(group.byCurrency).sort((a, b) => a.currencyCode.localeCompare(b.currencyCode)).map((curr) => (
-                <div key={curr.currencyCode}>
-                  <h4 className="text-[12px] font-semibold text-muted-foreground mb-1.5 flex items-center gap-2">
-                    <span className="font-mono">{curr.currencyCode}</span>
-                    {curr.currencyName}
-                    <span className="text-[10px] text-muted-foreground font-normal">({curr.items.length} registros)</span>
-                  </h4>
-                  <div className="app-data-table-wrap">
-                    <table className="app-data-table">
-                      <thead><tr><th className="text-right">Tasa → Base</th><th>Fecha</th><th>Origen</th><th className="w-[80px]"></th></tr></thead>
-                      <tbody>
-                        {curr.items.sort((a, b) => b.effective_date.localeCompare(a.effective_date)).map((r) => (
-                          <tr key={r.id}>
-                            <td className="text-right font-mono font-semibold">{r.rate_to_base.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</td>
-                            <td className="text-muted-foreground text-[11px]">{new Date(r.effective_date).toLocaleDateString("es-CL")}</td>
-                            <td className="text-muted-foreground text-[11px]">{r.source || "—"}</td>
-                            <td>
-                              <div className="app-row-actions">
-                                {canEdit("catalogos") && (
-                                  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(r.id); setForm({ country_id: r.country_id, currency_code: r.currency_code, rate_to_base: String(r.rate_to_base), effective_date: r.effective_date, source: r.source || "manual" }); setOpen(true); }}>
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                {canDelete("catalogos") && (
-                                  <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Eliminar este tipo de cambio?")) deleteMut.mutate(r.id); }}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
             </div>
-          </div>
-        );
-        })}
+          )}
+
+          {/* Botón Sincronizar BCCh */}
+          {canCreate("catalogos") && (
+            <Button
+              variant="outline"
+              onClick={() => syncChileMut.mutate(undefined)}
+              disabled={syncChileMut.isPending}
+              className="pg-btn-platinum-icon"
+              title="Descarga USD y UF de los últimos 30 días desde mindicador.cl (Banco Central de Chile)"
+            >
+              <ArrowRightLeft className={`mr-1.5 h-4 w-4 ${syncChileMut.isPending ? "animate-spin" : ""}`} />
+              {syncChileMut.isPending ? "Sincronizando..." : "Sincronizar"}
+            </Button>
+          )}
+
+          {/* Botón Nuevo */}
+          {canCreate("catalogos") && (
+            <Button
+              variant="outline"
+              onClick={() => { setEditingId(null); setForm({ country_id: filterCountry, currency_code: filterCurrency, rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" }); setOpen(true); }}
+              className="pg-btn-platinum-icon"
+            >
+              <Plus className="mr-1.5 h-4 w-4" /> Nuevo
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* ── Stats del año ── */}
+      {yearStats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="app-panel py-3 px-4">
+            <div className="text-[11px] text-muted-foreground">Registros {filterYear}</div>
+            <div className="text-xl font-bold font-mono">{yearStats.count}</div>
+          </div>
+          <div className="app-panel py-3 px-4">
+            <div className="text-[11px] text-muted-foreground">Mínimo</div>
+            <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">{formatRate(yearStats.min)}</div>
+          </div>
+          <div className="app-panel py-3 px-4">
+            <div className="text-[11px] text-muted-foreground">Promedio</div>
+            <div className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400">{formatRate(yearStats.avg)}</div>
+          </div>
+          <div className="app-panel py-3 px-4">
+            <div className="text-[11px] text-muted-foreground">Máximo</div>
+            <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400">{formatRate(yearStats.max)}</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tabla pivote: días × meses ── */}
+      {isLoading ? (
+        <div className="app-panel text-center py-8 text-muted-foreground text-sm">Cargando...</div>
+      ) : !filterCountry || !filterCurrency ? (
+        <div className="app-panel text-center py-12">
+          <ArrowRightLeft className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-[13px] text-muted-foreground">
+            Selecciona un país y una moneda para ver la tabla de tipos de cambio del año.
+          </p>
+        </div>
+      ) : filteredRates.length === 0 ? (
+        <div className="app-panel text-center py-12">
+          <Calendar className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-[13px] text-muted-foreground">
+            No hay tipos de cambio para {selectedCurrency?.name || filterCurrency} en {selectedCountry?.name || filterCountry} durante {filterYear}.
+          </p>
+          {canCreate("catalogos") && (
+            <Button
+              variant="outline"
+              onClick={() => { setEditingId(null); setForm({ country_id: filterCountry, currency_code: filterCurrency, rate_to_base: "", effective_date: `${filterYear}-01-01`, source: "manual" }); setOpen(true); }}
+              className="pg-btn-platinum-icon mt-3"
+            >
+              <Plus className="mr-1.5 h-4 w-4" /> Nuevo
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="app-panel">
+          {/* Header de la tabla pivote */}
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h3 className="app-section-title flex items-center gap-2">
+              <span className="font-mono text-[11px] text-muted-foreground">{selectedCountry?.code}</span>
+              {selectedCountry?.name}
+              <span className="text-muted-foreground">·</span>
+              <span className="font-mono font-semibold text-[13px]">{filterCurrency}</span>
+              {selectedCurrency?.isBase && (
+                <span className="text-[10px] rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 font-medium">Base</span>
+              )}
+              <span className="text-muted-foreground">·</span>
+              <span className="text-[12px] text-muted-foreground">{filterYear}</span>
+            </h3>
+          </div>
+
+          {/* Tabla pivote */}
+          <div className="overflow-x-auto">
+            <table className="app-data-table text-[11px]">
+              <thead>
+                <tr>
+                  <th className="sticky left-0 z-10 bg-background w-10 text-center">Día</th>
+                  {MONTHS.map(m => <th key={m} className="text-center min-w-[70px]">{m}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
+                  const hasAny = pivot[day] && Object.keys(pivot[day]).length > 0;
+                  if (!hasAny) return null;
+                  return (
+                    <tr key={day} className="hover:bg-muted/30">
+                      <td className="sticky left-0 z-10 bg-background text-center font-mono font-semibold text-muted-foreground">{day}</td>
+                      {MONTHS.map((_, monthIdx) => {
+                        const cell = pivot[day]?.[monthIdx];
+                        if (!cell) return <td key={monthIdx} className="text-center text-muted-foreground/20">—</td>;
+                        return (
+                          <td
+                            key={monthIdx}
+                            className="text-center font-mono cursor-pointer hover:bg-primary/10 rounded transition-colors"
+                            title={`${day}/${String(monthIdx + 1).padStart(2, "0")}/${filterYear} — ${cell.source || "manual"}`}
+                            onClick={() => { if (canEdit("catalogos")) { setEditingId(cell.id); setForm({ country_id: filterCountry, currency_code: filterCurrency, rate_to_base: String(cell.rate), effective_date: `${filterYear}-${String(monthIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`, source: cell.source || "manual" }); setOpen(true); } }}
+                          >
+                            {formatRate(cell.rate)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Leyenda */}
+          <div className="mt-3 flex items-center gap-4 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded bg-primary/10" /> Clic para editar
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="font-mono">—</span> Sin dato
+            </span>
+            {selectedCurrency && !selectedCurrency.isBase && (
+              <span className="ml-auto">
+                Tasa = 1 {filterCurrency} en moneda base ({countryCurrencyOptions.find(c => c.isBase)?.code || "—"})
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de edición/creación ── */}
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>
           <div className="modal-header">
@@ -684,10 +790,15 @@ function CambiosTab() {
               </div>
             </div>
             <div className="modal-footer">
-              <button type="button" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</button>
-              <button type="submit" disabled={createMut.isPending || updateMut.isPending} className="pg-btn-platinum">
-                {createMut.isPending || updateMut.isPending ? "Guardando..." : "Guardar"}
-              </button>
+              {editingId && canDelete("catalogos") ? (
+                <button type="button" onClick={() => { if (confirm("¿Eliminar este tipo de cambio?")) { deleteMut.mutate(editingId); setOpen(false); setEditingId(null); } }} className="pg-btn-platinum text-rose-600 dark:text-rose-400">Eliminar</button>
+              ) : <span />}
+              <div className="flex gap-2 ml-auto">
+                <button type="button" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</button>
+                <button type="submit" disabled={createMut.isPending || updateMut.isPending} className="pg-btn-platinum">
+                  {createMut.isPending || updateMut.isPending ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
             </div>
           </form>
         </DialogContent>
