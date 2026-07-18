@@ -305,7 +305,8 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
               <thead>
                 <tr>
                   <th>Código</th>
-                  <th>Nombre</th>
+                  <th>Tipo</th>
+                  <th>Ext.</th>
                   <th>Tamaño</th>
                   <th className="w-[80px]"></th>
                 </tr>
@@ -318,16 +319,19 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                     doc.document_type || "—";
                   return (
                   <tr key={doc.id}>
-                    <td className="text-muted-foreground font-mono text-[11px] whitespace-nowrap">
-                      {doc.document_type || "—"}
+                    <td className="font-mono text-[11px] whitespace-nowrap text-muted-foreground">
+                      {doc.doc_code || "—"}
                     </td>
                     <td className="font-medium wrap-break-word">
                       <div>{docTypeName}</div>
-                      {doc.original_filename && doc.original_filename !== docTypeName && (
+                      {doc.original_filename && (
                         <div className="text-[10px] text-muted-foreground/70 truncate max-w-[220px]">
                           {doc.original_filename}
                         </div>
                       )}
+                    </td>
+                    <td className="text-muted-foreground uppercase text-[11px]">
+                      {(doc.original_filename?.split(".").pop() || "—")}
                     </td>
                     <td className="text-muted-foreground">{formatFileSize(doc.file_size)}</td>
                     <td>
