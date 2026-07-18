@@ -110,11 +110,37 @@ export default function ReportTab({
     const { jsPDF } = await import("jspdf");
     const html2canvas = (await import("html2canvas-pro")).default;
 
+    // Convertir todas las imágenes a data URLs para evitar problemas de CORS
+    // html2canvas no puede capturar imágenes de R2 si no tiene CORS configurado
+    const images = content.querySelectorAll("img");
+    const originalSrcs: string[] = [];
+    await Promise.all(Array.from(images).map(async (img) => {
+      try {
+        const res = await fetch(img.src);
+        const blob = await res.blob();
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        originalSrcs.push(img.src);
+        img.src = dataUrl;
+      } catch {
+        // Si falla, dejar la imagen original
+      }
+    }));
+
     const canvas = await html2canvas(content, {
       scale: 2,
-      useCORS: true,
+      useCORS: false,
+      allowTaint: false,
       backgroundColor: "#ffffff",
       logging: false,
+    });
+
+    // Restaurar los src originales
+    Array.from(images).forEach((img, i) => {
+      if (originalSrcs[i]) img.src = originalSrcs[i];
     });
 
     const imgWidth = 210; // A4 width in mm
@@ -370,7 +396,7 @@ export default function ReportTab({
             <div>
               {companyLogo ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={companyLogo} alt={companyName} className="logo h-14 w-auto" crossOrigin="anonymous" />
+                <img src={companyLogo} alt={companyName} className="logo h-14 w-auto" />
               ) : (
                 <div className="logo-text text-sm font-bold">{companyName}</div>
               )}
@@ -615,7 +641,7 @@ export default function ReportTab({
                 {photos.map((ev, idx) => (
                   <div key={ev.id} className="border border-gray-300 p-1 bg-gray-50">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ev.url} alt={`Foto ${idx + 1}`} className="w-full h-32 object-contain" crossOrigin="anonymous" />
+                    <img src={ev.url} alt={`Foto ${idx + 1}`} className="w-full h-32 object-contain" />
                     <p className="photo-label text-[8px] text-gray-600 text-center mt-0.5">
                       Foto {idx + 1}{ev.description ? ` — ${ev.description}` : ""}
                     </p>
@@ -680,7 +706,7 @@ export default function ReportTab({
                     )}
                     {isImage ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={d.url} alt={fileName} className="w-full max-h-48 object-contain border border-gray-200" crossOrigin="anonymous" />
+                      <img src={d.url} alt={fileName} className="w-full max-h-48 object-contain border border-gray-200" />
                     ) : !pdfSummary && (
                       <p className="text-[9px] text-gray-500 italic">
                         Documento {mimeType || "adjunto"} — {d.metadata?.fileSize ? `${(d.metadata.fileSize as number / 1024).toFixed(0)} KB` : ""}
@@ -731,7 +757,7 @@ export default function ReportTab({
                 {sketches.map((sk, idx) => (
                   <div key={sk.id}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sk.sketch_url} alt={`Croquis ${idx + 1}`} className="w-full h-36 object-contain border border-gray-300 bg-white" crossOrigin="anonymous" />
+                    <img src={sk.sketch_url} alt={`Croquis ${idx + 1}`} className="w-full h-36 object-contain border border-gray-300 bg-white" />
                     <p className="photo-label text-[8px] text-gray-600 text-center mt-0.5">
                       Croquis {idx + 1}{sk.label ? ` — ${sk.label}` : ""}
                     </p>
@@ -751,7 +777,7 @@ export default function ReportTab({
                 {uniqueSignatures.map((sig) => (
                   <div key={sig.id} className="sig-box text-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sig.signature_url} alt={`Firma ${sig.role}`} className="max-h-16 max-w-[180px] border-b border-gray-700 pb-1 mx-auto" crossOrigin="anonymous" />
+                    <img src={sig.signature_url} alt={`Firma ${sig.role}`} className="max-h-16 max-w-[180px] border-b border-gray-700 pb-1 mx-auto" />
                     <p className="name text-[10px] font-semibold mt-1">
                       {sig.role === "insured" ? "Asegurado" : "Inspector"}
                     </p>
