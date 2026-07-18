@@ -22,7 +22,7 @@ const DAMAGE_TYPE_LABELS: Record<string, string> = {
   building: "Daño Constructivo",
   content: "Daño de Contenido",
 };
-º
+
 function fmtDateTime(s?: string | null): string {
   if (!s) return "—";
   return new Date(s).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
