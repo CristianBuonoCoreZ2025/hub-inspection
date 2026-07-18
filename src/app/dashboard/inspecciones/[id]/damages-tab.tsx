@@ -113,11 +113,12 @@ function damageToForm(d: InspectionDamage): DamageForm {
   };
 }
 
-export default function DamagesTab({ sessionId, propertyClassification, countryId }: { sessionId: string; propertyClassification?: string | null; countryId?: string | null }) {
+export default function DamagesTab({ sessionId, propertyClassification, countryId, sessionStatus }: { sessionId: string; propertyClassification?: string | null; countryId?: string | null; sessionStatus?: string }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<DamageForm>(emptyForm(sessionId, "building"));
   const [newType, setNewType] = useState<DamageType>("building");
+  const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
   const { data: damages, isLoading } = useQuery({
     queryKey: ["damages", sessionId],
@@ -291,7 +292,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
       </div>
 
       {/* Botones de nuevo daño — estilo tiles */}
-      {!isEditingNew && (
+      {!isEditingNew && !readOnly && (
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => startNew("building")}
@@ -697,12 +698,16 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
                     <td className="text-right font-medium text-[11px]">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
                     <td>
                       <div className="app-row-actions">
-                        <Button variant="ghost" size="icon" className="btn-icon" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="btn-icon text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {!readOnly && (
+                          <>
+                            <Button variant="ghost" size="icon" className="btn-icon" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="btn-icon text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -762,12 +767,16 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
                     <td className="text-right font-medium text-[11px]">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
                     <td>
                       <div className="app-row-actions">
-                        <Button variant="ghost" size="icon" className="btn-icon" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="btn-icon text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {!readOnly && (
+                          <>
+                            <Button variant="ghost" size="icon" className="btn-icon" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="btn-icon text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

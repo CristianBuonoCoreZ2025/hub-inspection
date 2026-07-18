@@ -668,7 +668,7 @@ export default function InspectionDetailPage() {
           {session.status === "scheduled" ? (
             <NotStartedNotice />
           ) : (
-            <DamagesTab sessionId={session.id} propertyClassification={session.property_risk?.risk_class} countryId={session.claim?.country_id} />
+            <DamagesTab sessionId={session.id} propertyClassification={session.property_risk?.risk_class} countryId={session.claim?.country_id} sessionStatus={session.status} />
           )}
         </div>
         )}
