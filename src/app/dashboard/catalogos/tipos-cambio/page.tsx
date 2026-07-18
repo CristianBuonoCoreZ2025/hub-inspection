@@ -42,6 +42,11 @@ function TiposCambioContent() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ country_id: "", currency_code: "", rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" });
 
+  // Estado de sincronización
+  const [syncState, setSyncState] = useState<{ active: boolean; current: number; total: number; inserted: number; exists: number; errors: number }>({
+    active: false, current: 0, total: 0, inserted: 0, exists: 0, errors: 0,
+  });
+
   // Filtros
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
@@ -70,23 +75,50 @@ function TiposCambioContent() {
     onSuccess: () => { toast.success("Tipo de cambio eliminado"); queryClient.invalidateQueries({ queryKey: ["exchange-rates"] }); setOpen(false); setEditingId(null); },
     onError: (e: Error) => toast.error(e.message),
   });
-  const syncChileMut = useMutation({
-    mutationFn: async (date?: string) => {
-      const resp = await fetch("/api/currencies/sync-chile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(date ? { date } : {}),
-      });
-      if (!resp.ok) throw new Error("Error al sincronizar");
-      return resp.json();
-    },
-    onSuccess: (data: { summary: { inserted: number; exists: number; errors: number } }) => {
-      const s = data.summary;
-      toast.success(`Sincronización BCCh: ${s.inserted} nuevas, ${s.exists} ya existían${s.errors > 0 ? `, ${s.errors} errores` : ""}`);
-      queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  // Sincronización BCCh con progreso por batches
+  const syncChile = async () => {
+    const totalDays = 30;
+    const batchSize = 5;
+    const today = new Date();
+    const allDates: string[] = [];
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      allDates.push(d.toISOString().split("T")[0]);
+    }
+
+    const batches: Array<{ startDate: string; endDate: string }> = [];
+    for (let i = 0; i < allDates.length; i += batchSize) {
+      const batchDates = allDates.slice(i, i + batchSize);
+      batches.push({ startDate: batchDates[batchDates.length - 1], endDate: batchDates[0] });
+    }
+
+    setSyncState({ active: true, current: 0, total: batches.length, inserted: 0, exists: 0, errors: 0 });
+
+    let totalInserted = 0, totalExists = 0, totalErrors = 0;
+
+    for (let i = 0; i < batches.length; i++) {
+      try {
+        const resp = await fetch("/api/currencies/sync-chile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(batches[i]),
+        });
+        if (!resp.ok) throw new Error("Error en batch");
+        const data = await resp.json() as { summary: { inserted: number; exists: number; errors: number } };
+        totalInserted += data.summary.inserted;
+        totalExists += data.summary.exists;
+        totalErrors += data.summary.errors;
+      } catch {
+        totalErrors += batchSize * 2;
+      }
+      setSyncState({ active: true, current: i + 1, total: batches.length, inserted: totalInserted, exists: totalExists, errors: totalErrors });
+    }
+
+    setSyncState(s => ({ ...s, active: false }));
+    toast.success(`Sincronización BCCh: ${totalInserted} nuevas, ${totalExists} ya existían${totalErrors > 0 ? `, ${totalErrors} errores` : ""}`);
+    queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
+  };
 
   // Monedas del país seleccionado (excluyendo la base, que siempre es tasa 1)
   const countryCurrencyOptions = useMemo(() =>
@@ -289,19 +321,20 @@ function TiposCambioContent() {
               {canCreate("catalogos") && (
                 <Button
                   variant="outline"
-                  onClick={() => syncChileMut.mutate(undefined)}
-                  disabled={syncChileMut.isPending}
+                  onClick={syncChile}
+                  disabled={syncState.active}
                   className="pg-btn-platinum-icon"
                   title="Descarga USD y UF de los últimos 30 días desde mindicador.cl (Banco Central de Chile)"
                 >
-                  <ArrowRightLeft className={`mr-1.5 h-4 w-4 ${syncChileMut.isPending ? "animate-spin" : ""}`} />
-                  {syncChileMut.isPending ? "Sincronizando..." : "Sincronizar"}
+                  <ArrowRightLeft className={`mr-1.5 h-4 w-4 ${syncState.active ? "animate-spin" : ""}`} />
+                  {syncState.active ? "Sincronizando" : "Sincronizar"}
                 </Button>
               )}
               {canCreate("catalogos") && (
                 <Button
                   variant="outline"
                   onClick={() => { setEditingId(null); setForm({ country_id: filterCountry, currency_code: effectiveFilterCurrency, rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" }); setOpen(true); }}
+                  disabled={syncState.active}
                   className="pg-btn-platinum-icon"
                 >
                   <Plus className="mr-1.5 h-4 w-4" /> Nuevo
@@ -489,7 +522,54 @@ function TiposCambioContent() {
         )}
       </div>
 
-      {/* ── Modal ── */}
+      {/* ── Modal de sincronización (progreso) ── */}
+      <Dialog open={syncState.active} onOpenChange={() => {}} dismissible={false}>
+        <DialogContent className="modal-sm" showCloseButton={false}>
+          <div className="modal-header">
+            <DialogTitle className="modal-title flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-emerald-500 to-teal-500 text-white shadow-sm">
+                <ArrowRightLeft className="h-4 w-4 animate-spin" />
+              </div>
+              Sincronizando BCCh
+            </DialogTitle>
+          </div>
+          <div className="modal-body space-y-3">
+            <p className="text-[12px] text-muted-foreground">
+              Descargando USD y UF desde mindicador.cl (Banco Central de Chile)...
+            </p>
+            {/* Barra de progreso */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[11px] text-muted-foreground">
+                <span>Progreso</span>
+                <span className="font-mono">{syncState.current} / {syncState.total} batches</span>
+              </div>
+              <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-linear-to-r from-emerald-500 to-teal-500 transition-all duration-300 ease-out"
+                  style={{ width: `${syncState.total > 0 ? (syncState.current / syncState.total) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+            {/* Stats parciales */}
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="text-center rounded-lg bg-muted/50 py-2">
+                <div className="text-[10px] text-muted-foreground">Nuevas</div>
+                <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">{syncState.inserted}</div>
+              </div>
+              <div className="text-center rounded-lg bg-muted/50 py-2">
+                <div className="text-[10px] text-muted-foreground">Existían</div>
+                <div className="text-base font-bold font-mono text-blue-600 dark:text-blue-400">{syncState.exists}</div>
+              </div>
+              <div className="text-center rounded-lg bg-muted/50 py-2">
+                <div className="text-[10px] text-muted-foreground">Errores</div>
+                <div className="text-base font-bold font-mono text-rose-600 dark:text-rose-400">{syncState.errors}</div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal de editar/crear ── */}
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>
           <div className="modal-header">

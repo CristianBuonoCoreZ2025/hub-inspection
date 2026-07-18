@@ -6,9 +6,13 @@ import { logger } from "@/lib/logger";
  * Sincroniza tipos de cambio desde mindicador.cl (wrapper gratuito del Banco Central de Chile).
  *
  * POST /api/currencies/sync-chile
- * Body: { date?: "YYYY-MM-DD" }  // si no se pasa, usa hoy
+ * Body: { startDate?: "YYYY-MM-DD", endDate?: "YYYY-MM-DD", date?: "YYYY-MM-DD" }
  *
- * Trae USD y UF para la fecha indicada (o un rango) y los inserta en exchange_rates
+ * - Si viene `date`: solo esa fecha.
+ * - Si vienen `startDate` y `endDate`: rango entre esas fechas.
+ * - Si no viene nada: últimos 30 días desde hoy.
+ *
+ * Trae USD y UF para las fechas indicadas y los inserta en exchange_rates
  * para Chile (country_id del país con code='CL').
  *
  * mindicador.cl API:
@@ -19,6 +23,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const dateStr = body.date as string | undefined;
+    const startDateStr = body.startDate as string | undefined;
+    const endDateStr = body.endDate as string | undefined;
 
     // Obtener el country_id de Chile
     const supabase = createAdminClient();
@@ -32,10 +38,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No se encontró Chile en la base de datos" }, { status: 500 });
     }
 
-    // Fechas a sincronizar: si viene una fecha, solo esa; si no, últimos 30 días
+    // Calcular fechas a sincronizar
     const dates: string[] = [];
     if (dateStr) {
       dates.push(dateStr);
+    } else if (startDateStr && endDateStr) {
+      const start = new Date(startDateStr + "T00:00:00");
+      const end = new Date(endDateStr + "T00:00:00");
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(d.toISOString().split("T")[0]);
+      }
     } else {
       const today = new Date();
       for (let i = 0; i < 30; i++) {
