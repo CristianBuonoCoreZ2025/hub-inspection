@@ -923,8 +923,12 @@ Estructura interna:
 ### Formularios
 ```
 .app-field-label   → text-[11px] font-semibold uppercase tracking-wide
-.app-input         → h-7 (28px) rounded-lg border px-2.5 text-[12px]
+.app-input         → h-7 (28px) rounded-lg border px-2.5 text-[11px]
 ```
+
+> **Regla de tipografía global:** TODOS los inputs, selects (trigger + dropdown),
+> placeholders y labels de formulario usan **11px**. Definido en `forms.css`
+> con `!important`. No sobreescribir con `text-[12px]` u otros tamaños.
 
 ### Espaciado entre Agrupaciones (OBLIGATORIO)
 ```
@@ -1891,7 +1895,7 @@ Todas se importan en `src/app/globals.css`:
      [data-slot="select-trigger"] { background: var(--card) !important; }
      [data-slot="textarea"] { background: var(--card) !important; }
 
-4. La clase .app-input es un override compacto (28px, 12px, 10px radius)
+4. La clase .app-input es un override compacto (28px, 11px, 10px radius)
    para formularios densos. Se aplica solo donde se necesita.
 
 5. Si necesitas un estilo nuevo, lo agregas a la hoja CSS correspondiente,
@@ -3044,7 +3048,7 @@ Los `<select>` nativos de HTML no se pueden estilar con CSS. El dropdown con las
 - **OBLIGATORIO** usar el componente `Select` de shadcn/ui (Base UI) definido en `src/components/ui/select.tsx`.
 - El estilo del Select (trigger, popup, items) está centralizado en el componente — NO se modifica por página.
 - Para formularios con react-hook-form, usar `FormSelect` (wrapper de Select).
-- Los triggers SIEMPRE llevan `className="app-input"` para heredar el estilo compacto (28px, 12px, border 10px).
+- Los triggers SIEMPRE llevan `className="app-input"` para heredar el estilo compacto (28px, 11px, border 10px).
 - El popup aparece pegado al trigger (`sideOffset: 0`), con el mismo border-radius y borde, fusionándose visualmente como una extensión del combobox.
 - Los items tienen hover (`bg-primary/10`) y cursor pointer.
 - El chevron rota 180° al abrir el popup.

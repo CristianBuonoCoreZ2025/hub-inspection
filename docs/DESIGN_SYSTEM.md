@@ -97,6 +97,9 @@ className="app-field-label"  // labels de campos
 - **TODOS** los labels usan `app-field-label`.
 - **NO** usar `liquid-search` (deprecado).
 - Altura estándar: `h-7` (28px) en inputs dentro de modals y toolbars.
+- **Tamaño de fuente: 11px** en TODOS los inputs, selects (trigger + dropdown),
+  placeholders y labels de formulario. Esta es la regla global definida en
+  `forms.css` — no sobreescribir con `text-[12px]` u otros tamaños.
 - Placeholders en español, cortos y descriptivos.
 
 ---
