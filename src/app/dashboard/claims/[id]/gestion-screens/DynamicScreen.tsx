@@ -32,7 +32,7 @@ import { getInspectionSessions, createInspectionSession, getInspectorSchedule } 
 import { getCoverageCatalog } from "@/services/coverage-catalog";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Plus, Trash2, ChevronDown, Check, CheckCircle, X } from "lucide-react";
+import { Plus, Ban, ChevronDown, Check, CheckCircle, X } from "lucide-react";
 import type { ClaimAction, Claim } from "@/types";
 import type { GestionScreenProps } from "./types";
 
@@ -1038,7 +1038,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  mutationFn: (id: string) => deactivateClaimCoverage(id),
  onSuccess: () => {
  queryClient.invalidateQueries({ queryKey: ["claim-coverages-action", claimId, actionId] });
- toast.success("Cobertura eliminada");
+ toast.success("Cobertura desactivada");
  },
  onError: (e: Error) => toast.error(e.message),
  });
@@ -1255,9 +1255,9 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  type="button"
  onClick={() => removeCoverageMut.mutate(c.id)}
  className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors"
- title="Quitar cobertura"
+ title="Desactivar cobertura"
  >
- <Trash2 className="h-3 w-3" />
+ <Ban className="h-3 w-3" />
  </button>
  </td>
  )}
@@ -2688,7 +2688,6 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  const [notes, setNotes] = useState<string>(existingRequest?.notes || "");
 
  // Set derivado: seleccionados por el usuario + obligatorios (siempre checked)
- const requiredCodesKey = requiredAvailableDocs.map((d) => d.document_type_code).join(",");
  const checkedSet = useMemo(
  () => new Set([...selected, ...requiredAvailableDocs.map((d) => d.document_type_code)]),
  // eslint-disable-next-line react-hooks/exhaustive-deps

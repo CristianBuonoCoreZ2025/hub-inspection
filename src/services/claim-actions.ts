@@ -179,6 +179,51 @@ async function checkGestionExists(claimId: string, templateCode: string): Promis
   return (data?.length ?? 0) > 0;
 }
 
+// Verifica si existe una gestión PENDIENTE (status "todo") del mismo código de template.
+// Solo bloquea la creación de una nueva si hay una activa en estado "todo".
+// Las rechazadas (status "rejected") NO bloquean — se pueden recrear.
+// Las cerradas (issued/reviewed/approved/dispatched) NO bloquean — ya terminaron.
+// Retorna la acción pendiente encontrada (con su código) o null.
+async function findPendingGestion(
+  claimId: string,
+  templateCode: string
+): Promise<{ id: string; code: string } | null> {
+  const supabase = getSupabaseClient();
+
+  // 1. Obtener TODOS los template_ids con ese código
+  const { data: templateRows, error: templateError } = await supabase
+    .from("action_template")
+    .select("id")
+    .eq("code", templateCode);
+  if (templateError) throw new Error(templateError.message);
+  const templateIds = ((templateRows as { id: string }[]) || []).map(r => r.id);
+  if (templateIds.length === 0) return null;
+
+  // 2. Obtener el status_id de "todo"
+  const { data: statusRow, error: statusError } = await supabase
+    .from("lookup_catalog")
+    .select("id")
+    .eq("category", "action_status")
+    .eq("code", "todo")
+    .limit(1);
+  if (statusError) throw new Error(statusError.message);
+  const todoStatusId = (statusRow as { id: string }[] | null)?.[0]?.id;
+  if (!todoStatusId) return null;
+
+  // 3. Buscar claim_actions pendientes de esos templates
+  const { data, error } = await supabase
+    .from("claim_actions")
+    .select("id, code")
+    .eq("claim_id", claimId)
+    .eq("is_active", true)
+    .eq("action_status_id", todoStatusId)
+    .in("action_template_id", templateIds)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  const row = (data as { id: string; code: string }[] | null)?.[0];
+  return row ? { id: row.id, code: row.code } : null;
+}
+
 // Mapa de dependencias de cadena:
 // Código de template → { código prerequisito, requiereCerrada, mensaje }
 const CHAIN_DEPENDENCIES: Record<string, { prereqCode: string; requireClosed: boolean; message: string }> = {
@@ -254,6 +299,19 @@ export async function createClaimAction(input: {
       if (!hasPrereq) {
         throw new Error(dep.message);
       }
+    }
+  }
+
+  // ── Validar que no exista ya una gestión pendiente del mismo tipo ──
+  // Solo puede haber una gestión activa en estado "todo" por código de template.
+  // Las rechazadas no bloquean (se pueden recrear); las cerradas tampoco (ya terminaron).
+  if (templateCode) {
+    const pending = await findPendingGestion(input.claim_id, templateCode);
+    if (pending) {
+      throw new Error(
+        `Ya existe una gestión "${input.name}" pendiente (${pending.code}) en este siniestro. ` +
+        `Debe emitir, cerrar o finalizar la gestión existente antes de crear una nueva del mismo tipo.`
+      );
     }
   }
 

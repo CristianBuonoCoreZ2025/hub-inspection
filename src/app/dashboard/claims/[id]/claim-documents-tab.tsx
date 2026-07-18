@@ -20,7 +20,7 @@ import {
   FileText,
   ExternalLink,
   Upload,
-  Trash2,
+  Ban,
   Layers,
   Shield,
   Globe,
@@ -146,7 +146,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
   const deleteMut = useMutation({
     mutationFn: deactivateClaimDocument,
     onSuccess: () => {
-      toast.success("Documento eliminado");
+      toast.success("Documento desactivado");
       queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -236,10 +236,10 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             size="icon"
                             className="btn-icon-sm btn-danger-hover"
                             onClick={() => {
-                              if (confirm("¿Eliminar este documento?")) deleteMut.mutate(doc.id);
+                              if (confirm("¿Desactivar este documento?")) deleteMut.mutate(doc.id);
                             }}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Ban className="h-3.5 w-3.5" />
                           </Button>
                         )}
                       </div>
