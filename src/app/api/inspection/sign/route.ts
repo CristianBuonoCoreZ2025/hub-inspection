@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { uploadToR2 } from "@/lib/storage/r2-upload";
+import { uploadInspectionFile } from "@/lib/storage/inspection-upload";
 import { logger } from "@/lib/logger";
 
 /**
  * API route para que el cliente (magic link) guarde su firma.
  * Recibe: { sessionId, role, signatureDataUrl (base64 PNG) }
- * 1. Sube la imagen a Cloudflare R2
+ * 1. Sube la imagen a Cloudflare R2 con path estructurado del plan:
+ *    siniestros/{L}/gestiones/{code}/imagenes/{code}-FIR-NNNN.png
  * 2. Crea el registro en inspection_signatures
  */
 export async function POST(request: NextRequest) {
@@ -18,13 +19,18 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // 1. Convertir base64 a buffer y subir a R2
+    // 1. Convertir base64 a buffer y subir a R2 con path estructurado (FIR = firma)
     const base64Response = await fetch(signatureDataUrl);
     const blob = await base64Response.blob();
     const buffer = Buffer.from(await blob.arrayBuffer());
-    const filePath = `signatures/signature_${role}_${Date.now()}.png`;
 
-    const signatureUrl = await uploadToR2(buffer, filePath, "image/png");
+    const { url: signatureUrl } = await uploadInspectionFile(
+      sessionId,
+      buffer,
+      "image/png",
+      "FIR",
+      ".png"
+    );
 
     // 2. Crear registro en inspection_signatures
     const { data: signature, error: insertError } = await supabase

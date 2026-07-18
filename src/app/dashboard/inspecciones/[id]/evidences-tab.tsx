@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createEvidence, deleteEvidence } from "@/services/inspections";
-import { uploadFileToStorage } from "@/lib/supabase/storage-upload";
+import { deleteEvidence } from "@/services/inspections";
 import { toast } from "sonner";
 import { Upload, Trash2, ImageIcon, Video, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,25 @@ async function fetchEvidences(sessionId: string) {
   return data.evidences;
 }
 
+// Sube una evidencia via API route server-side que arma el path estructurado del plan
+// (siniestros/{L}/gestiones/{code}/imagenes/{code}-EVI-NNNN.ext) e inserta en BD.
+async function uploadEvidence(file: File, sessionId: string) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("sessionId", sessionId);
+  formData.append("description", file.name);
+
+  const res = await fetch("/api/inspection/evidences/upload", {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Error al subir evidencia");
+  }
+  return res.json() as Promise<{ evidence: { id: string; url: string; type: string; description: string | null } }>;
+}
+
 export default function EvidencesTab({ sessionId }: { sessionId: string }) {
   const queryClient = useQueryClient();
   const [isDragging, setIsDragging] = useState(false);
@@ -26,8 +44,8 @@ export default function EvidencesTab({ sessionId }: { sessionId: string }) {
     queryFn: () => fetchEvidences(sessionId),
   });
 
-  const createMutation = useMutation({
-    mutationFn: createEvidence,
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => uploadEvidence(file, sessionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
       toast.success("Evidencia subida");
@@ -48,17 +66,7 @@ export default function EvidencesTab({ sessionId }: { sessionId: string }) {
     async (file: File) => {
       setUploading(true);
       try {
-        const path = `evidences/${sessionId}/${Date.now()}_${file.name}`;
-        const url = await uploadFileToStorage(file, path);
-        const type: "photo" | "video" | "document" =
-          file.type.startsWith("image/") ? "photo" :
-          file.type.startsWith("video/") ? "video" : "document";
-        createMutation.mutate({
-          session_id: sessionId,
-          type,
-          url,
-          description: file.name,
-        });
+        uploadMutation.mutate(file);
       } catch (err) {
         toast.error("Error al subir archivo");
         console.error(err);
@@ -66,7 +74,7 @@ export default function EvidencesTab({ sessionId }: { sessionId: string }) {
         setUploading(false);
       }
     },
-    [sessionId, createMutation]
+    [uploadMutation]
   );
 
   const handleDrop = (e: React.DragEvent) => {

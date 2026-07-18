@@ -166,6 +166,78 @@ export function gestionImagePath(
   return `${base}/imagenes/${filename}`;
 }
 
+// ═══ Pólizas: documentos ═══
+
+/**
+ * Path para un documento de una póliza.
+ *
+ * @param policyNumber — ej: "POL-2026-0001"
+ * @param docSeq — Correlativo desde next_policy_doc_seq(), ej: 1
+ * @param ext — ej: ".pdf"
+ * @returns ej: "polizas/POL-2026-0001/documentos/POL-2026-0001-DOC-0001.pdf"
+ */
+export function policyDocumentPath(
+  policyNumber: string,
+  docSeq: number,
+  ext: string
+): string {
+  const seq = String(docSeq).padStart(4, "0");
+  const e = ext.startsWith(".") ? ext : "." + ext;
+  const filename = `${policyNumber}-DOC-${seq}${e}`;
+  return `polizas/${policyNumber}/documentos/${filename}`;
+}
+
+// ═══ Inspección: helpers que usan el actionCode completo del DB ═══
+//
+// El trigger set_claim_action_code() (migración 131) genera el código de la
+// instancia con 3 dígitos de correlativo: "L-000000141-HINS-001".
+// Estos helpers reciben ese código tal cual viene de la BD (sin re-padear)
+// y construyen el path físico según el plan de PLAN.md.
+
+/**
+ * Path para una imagen de una gestión de inspección (evidencia, daño, firma).
+ *
+ * @param actionCode — Código de la gestión desde claim_actions.code, ej: "L-000000141-HINS-001"
+ * @param liquidationNumber — ej: "L-000000141"
+ * @param type — "EVI" | "DAN" | "FIR"
+ * @param fileSeq — Correlativo desde next_file_seq(), ej: 1
+ * @param ext — ej: ".jpg"
+ * @returns ej: "siniestros/L-000000141/gestiones/L-000000141-HINS-001/imagenes/L-000000141-HINS-001-EVI-0001.jpg"
+ */
+export function inspectionImagePath(
+  actionCode: string,
+  liquidationNumber: string,
+  type: "EVI" | "DAN" | "FIR",
+  fileSeq: number,
+  ext: string
+): string {
+  const seq = String(fileSeq).padStart(4, "0");
+  const e = ext.startsWith(".") ? ext : "." + ext;
+  const filename = `${actionCode}-${type}-${seq}${e}`;
+  return `siniestros/${liquidationNumber}/gestiones/${actionCode}/imagenes/${filename}`;
+}
+
+/**
+ * Path para un documento de una gestión de inspección (croquis, doc extra).
+ *
+ * @param actionCode — Código de la gestión desde claim_actions.code, ej: "L-000000141-HINS-001"
+ * @param liquidationNumber — ej: "L-000000141"
+ * @param docSeq — Correlativo desde next_file_seq(), ej: 1
+ * @param ext — ej: ".png"
+ * @returns ej: "siniestros/L-000000141/gestiones/L-000000141-HINS-001/documentos/L-000000141-HINS-001-DOC-0001.png"
+ */
+export function inspectionDocumentPath(
+  actionCode: string,
+  liquidationNumber: string,
+  docSeq: number,
+  ext: string
+): string {
+  const seq = String(docSeq).padStart(4, "0");
+  const e = ext.startsWith(".") ? ext : "." + ext;
+  const filename = `${actionCode}-DOC-${seq}${e}`;
+  return `siniestros/${liquidationNumber}/gestiones/${actionCode}/documentos/${filename}`;
+}
+
 // ═══ Empresas ═══
 
 /**

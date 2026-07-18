@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { uploadToR2 } from "@/lib/storage/r2-upload";
+import { uploadInspectionFile } from "@/lib/storage/inspection-upload";
 import { logger } from "@/lib/logger";
 
 /**
@@ -8,7 +8,8 @@ import { logger } from "@/lib/logger";
  * guarde un croquis dibujado desde la herramienta de dibujo.
  *
  * Recibe: { sessionId, sketchDataUrl (base64 PNG), label }
- * 1. Sube la imagen a Cloudflare R2
+ * 1. Sube la imagen a Cloudflare R2 con path estructurado del plan:
+ *    siniestros/{L}/gestiones/{code}/documentos/{code}-DOC-NNNN.png
  * 2. Crea el registro en damage_sketches
  *
  * Si se envía sketchId, actualiza el croquis existente (editar).
@@ -22,13 +23,18 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // 1. Convertir base64 a buffer y subir a R2
+    // 1. Convertir base64 a buffer y subir a R2 con path estructurado (DOC = documento)
     const base64Response = await fetch(sketchDataUrl);
     const blob = await base64Response.blob();
     const buffer = Buffer.from(await blob.arrayBuffer());
-    const filePath = `sketches/${sessionId}/${sketchId || Date.now()}.png`;
 
-    const sketchUrl = await uploadToR2(buffer, filePath, "image/png");
+    const { url: sketchUrl } = await uploadInspectionFile(
+      sessionId,
+      buffer,
+      "image/png",
+      "DOC",
+      ".png"
+    );
 
     // 2. Crear o actualizar registro en damage_sketches
     if (sketchId) {
