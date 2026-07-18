@@ -6,18 +6,18 @@ import { logger } from "@/lib/logger";
  * Sincroniza tipos de cambio desde mindicador.cl (wrapper gratuito del Banco Central de Chile).
  *
  * POST /api/currencies/sync-chile
- * Body: { startDate?: "YYYY-MM-DD", endDate?: "YYYY-MM-DD", date?: "YYYY-MM-DD" }
+ * Body: { year?: number, month?: number (0-11), startDate?: "YYYY-MM-DD", endDate?: "YYYY-MM-DD", date?: "YYYY-MM-DD" }
  *
- * - Si viene `date`: solo esa fecha.
- * - Si vienen `startDate` y `endDate`: rango entre esas fechas.
- * - Si no viene nada: últimos 30 días desde hoy.
- *
- * Trae USD y UF para las fechas indicadas y los inserta en exchange_rates
- * para Chile (country_id del país con code='CL').
+ * - Si viene `year` (sin month): trae todo el año en 2 llamadas (dolar + uf)
+ * - Si viene `year` + `month`: tre ese mes en 2 llamadas
+ * - Si viene `date`: solo esa fecha (2 llamadas)
+ * - Si vienen `startDate` y `endDate`: rango entre esas fechas (batch por día)
+ * - Si no viene nada: últimos 30 días desde hoy
  *
  * mindicador.cl API:
- *   GET https://mindicador.cl/api/dolar/DD-MM-YYYY → { serie: [{ fecha, valor }] }
- *   GET https://mindicador.cl/api/uf/DD-MM-YYYY    → { serie: [{ fecha, valor }] }
+ *   GET https://mindicador.cl/api/dolar           → serie completa
+ *   GET https://mindicador.cl/api/dolar/2024      → todo el año 2024
+ *   GET https://mindicador.cl/api/dolar/DD-MM-YYYY → fecha específica
  */
 export async function POST(request: NextRequest) {
   try {
@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
     const dateStr = body.date as string | undefined;
     const startDateStr = body.startDate as string | undefined;
     const endDateStr = body.endDate as string | undefined;
+    const year = body.year as number | undefined;
+    const month = body.month as number | undefined; // 0-11
 
     // Obtener el country_id de Chile
     const supabase = createAdminClient();
@@ -38,26 +40,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No se encontró Chile en la base de datos" }, { status: 500 });
     }
 
-    // Calcular fechas a sincronizar
-    const dates: string[] = [];
-    if (dateStr) {
-      dates.push(dateStr);
-    } else if (startDateStr && endDateStr) {
-      const start = new Date(startDateStr + "T00:00:00");
-      const end = new Date(endDateStr + "T00:00:00");
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        dates.push(d.toISOString().split("T")[0]);
-      }
-    } else {
-      const today = new Date();
-      for (let i = 0; i < 30; i++) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        dates.push(d.toISOString().split("T")[0]);
-      }
-    }
-
-    // Indicadores a sincronizar (código mindicador → código en nuestra tabla currencies)
+    // Indicadores a sincronizar
     const indicators = [
       { apiCode: "dolar", currencyCode: "USD" },
       { apiCode: "uf", currencyCode: "UF" },
@@ -65,69 +48,106 @@ export async function POST(request: NextRequest) {
 
     const results: Array<{ date: string; currency: string; rate: number; status: "inserted" | "exists" | "error" }> = [];
 
-    for (const date of dates) {
-      // Convertir YYYY-MM-DD a DD-MM-YYYY para la API de mindicador
-      const [yyyy, mm, dd] = date.split("-");
-      const apiDate = `${dd}-${mm}-${yyyy}`;
-
+    // ── Modo año completo o mes específico: una sola llamada por indicador ──
+    if (year !== undefined && month === undefined) {
+      // Año completo: GET /api/dolar/2024 → serie con todos los días del año
       for (const ind of indicators) {
         try {
-          // Verificar si ya existe un registro para esta fecha + moneda + país
-          const { data: existing } = await supabase
-            .from("exchange_rates")
-            .select("id")
-            .eq("country_id", chile.id)
-            .eq("currency_code", ind.currencyCode)
-            .eq("effective_date", date)
-            .maybeSingle();
-
-          if (existing) {
-            results.push({ date, currency: ind.currencyCode, rate: 0, status: "exists" });
-            continue;
-          }
-
-          // Fetch desde mindicador.cl
-          const apiUrl = `https://mindicador.cl/api/${ind.apiCode}/${apiDate}`;
+          const apiUrl = `https://mindicador.cl/api/${ind.apiCode}/${year}`;
           const resp = await fetch(apiUrl, { next: { revalidate: 0 } });
-
           if (!resp.ok) {
-            results.push({ date, currency: ind.currencyCode, rate: 0, status: "error" });
+            results.push({ date: `${year}-01-01`, currency: ind.currencyCode, rate: 0, status: "error" });
             continue;
           }
-
           const data = await resp.json();
           const serie = data.serie as Array<{ fecha: string; valor: number }>;
-
           if (!serie || serie.length === 0) {
-            results.push({ date, currency: ind.currencyCode, rate: 0, status: "error" });
+            results.push({ date: `${year}-01-01`, currency: ind.currencyCode, rate: 0, status: "error" });
             continue;
           }
-
-          const rate = serie[0].valor;
-
-          // Insertar en exchange_rates
-          const { error: insertErr } = await supabase
-            .from("exchange_rates")
-            .insert({
-              country_id: chile.id,
-              currency_code: ind.currencyCode,
-              rate_to_base: rate,
-              effective_date: date,
-              source: "mindicador.cl",
-            });
-
-          if (insertErr) {
-            // Puede ser duplicate key (constraint unique country_id + currency_code + effective_date)
-            if (insertErr.code === "23505") {
-              results.push({ date, currency: ind.currencyCode, rate, status: "exists" });
-            } else {
-              results.push({ date, currency: ind.currencyCode, rate, status: "error" });
-            }
-          } else {
-            results.push({ date, currency: ind.currencyCode, rate, status: "inserted" });
+          // Insertar cada fecha de la serie
+          for (const item of serie) {
+            const date = item.fecha.split("T")[0];
+            await upsertRate(supabase, chile.id, ind.currencyCode, date, item.valor, results);
           }
         } catch {
-          results.push({ date, currency: ind.currencyCode, rate: 0, status: "error" });
+          results.push({ date: `${year}-01-01`, currency: ind.currencyCode, rate: 0, status: "error" });
+        }
+      }
+    } else if (year !== undefined && month !== undefined) {
+      // Mes específico: traer todo el año y filtrar el mes
+      // (mindicador.cl no soporta query por mes, solo por año o por día)
+      for (const ind of indicators) {
+        try {
+          const apiUrl = `https://mindicador.cl/api/${ind.apiCode}/${year}`;
+          const resp = await fetch(apiUrl, { next: { revalidate: 0 } });
+          if (!resp.ok) {
+            results.push({ date: `${year}-${String(month + 1).padStart(2, "0")}-01`, currency: ind.currencyCode, rate: 0, status: "error" });
+            continue;
+          }
+          const data = await resp.json();
+          const serie = data.serie as Array<{ fecha: string; valor: number }>;
+          if (!serie || serie.length === 0) {
+            results.push({ date: `${year}-${String(month + 1).padStart(2, "0")}-01`, currency: ind.currencyCode, rate: 0, status: "error" });
+            continue;
+          }
+          // Filtrar solo el mes solicitado
+          const monthStr = String(month + 1).padStart(2, "0");
+          for (const item of serie) {
+            const date = item.fecha.split("T")[0];
+            if (date.split("-")[1] !== monthStr) continue;
+            await upsertRate(supabase, chile.id, ind.currencyCode, date, item.valor, results);
+          }
+        } catch {
+          results.push({ date: `${year}-${String(month + 1).padStart(2, "0")}-01`, currency: ind.currencyCode, rate: 0, status: "error" });
+        }
+      }
+    } else {
+      // ── Modo fecha específica o rango: una llamada por día por indicador ──
+      const dates: string[] = [];
+      if (dateStr) {
+        dates.push(dateStr);
+      } else if (startDateStr && endDateStr) {
+        const start = new Date(startDateStr + "T00:00:00");
+        const end = new Date(endDateStr + "T00:00:00");
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          dates.push(d.toISOString().split("T")[0]);
+        }
+      } else {
+        const today = new Date();
+        for (let i = 0; i < 30; i++) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          dates.push(d.toISOString().split("T")[0]);
+        }
+      }
+
+      for (const date of dates) {
+        const [yyyy, mm, dd] = date.split("-");
+        const apiDate = `${dd}-${mm}-${yyyy}`;
+
+        for (const ind of indicators) {
+          try {
+            const apiUrl = `https://mindicador.cl/api/${ind.apiCode}/${apiDate}`;
+            const resp = await fetch(apiUrl, { next: { revalidate: 0 } });
+
+            if (!resp.ok) {
+              results.push({ date, currency: ind.currencyCode, rate: 0, status: "error" });
+              continue;
+            }
+
+            const data = await resp.json();
+            const serie = data.serie as Array<{ fecha: string; valor: number }>;
+
+            if (!serie || serie.length === 0) {
+              results.push({ date, currency: ind.currencyCode, rate: 0, status: "error" });
+              continue;
+            }
+
+            await upsertRate(supabase, chile.id, ind.currencyCode, date, serie[0].valor, results);
+          } catch {
+            results.push({ date, currency: ind.currencyCode, rate: 0, status: "error" });
+          }
         }
       }
     }
@@ -149,5 +169,51 @@ export async function POST(request: NextRequest) {
       { error: err instanceof Error ? err.message : "Error interno" },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Inserta una tasa si no existe, o la marca como "exists" si ya está.
+ */
+async function upsertRate(
+  supabase: ReturnType<typeof createAdminClient>,
+  countryId: string,
+  currencyCode: string,
+  date: string,
+  rate: number,
+  results: Array<{ date: string; currency: string; rate: number; status: "inserted" | "exists" | "error" }>,
+) {
+  // Verificar si ya existe
+  const { data: existing } = await supabase
+    .from("exchange_rates")
+    .select("id")
+    .eq("country_id", countryId)
+    .eq("currency_code", currencyCode)
+    .eq("effective_date", date)
+    .maybeSingle();
+
+  if (existing) {
+    results.push({ date, currency: currencyCode, rate, status: "exists" });
+    return;
+  }
+
+  const { error: insertErr } = await supabase
+    .from("exchange_rates")
+    .insert({
+      country_id: countryId,
+      currency_code: currencyCode,
+      rate_to_base: rate,
+      effective_date: date,
+      source: "mindicador.cl",
+    });
+
+  if (insertErr) {
+    if (insertErr.code === "23505") {
+      results.push({ date, currency: currencyCode, rate, status: "exists" });
+    } else {
+      results.push({ date, currency: currencyCode, rate, status: "error" });
+    }
+  } else {
+    results.push({ date, currency: currencyCode, rate, status: "inserted" });
   }
 }
