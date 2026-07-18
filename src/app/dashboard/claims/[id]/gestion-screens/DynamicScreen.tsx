@@ -20,6 +20,9 @@ import {
  updateClaimDocumentRequestItem,
  closeClaimDocumentRequest,
  cancelClaimDocumentRequest,
+ addItemsToClaimDocumentRequest,
+ removeItemFromClaimDocumentRequest,
+ updateClaimDocumentRequestNotes,
 } from "@/services/claim-documents";
 import { getPolicyCoveragesByPolicyId } from "@/services/policies";
 import { getClaimById, getClaimParticipants } from "@/services/claims";
@@ -2651,27 +2654,32 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
 
  const queryClient = useQueryClient();
 
- // Items ya solicitados (de todas las solicitudes) — para no mostrarlos again
- const alreadyRequestedCodes = new Set<string>();
+ // Items ya solicitados en esta acción
+ const existingItems = existingRequest?.claim_document_request_items || [];
+
+ // Códigos ya en esta solicitud (para no mostrarlos en "disponibles para agregar")
+ const thisRequestCodes = new Set(existingItems.map((i) => i.document_type_code));
+
+ // Items ya solicitados en OTRAS solicitudes (para no mostrarlos again)
+ const otherRequestCodes = new Set<string>();
  existingRequests?.forEach((r) => {
+ if (r.id === existingRequest?.id) return; // excluir esta solicitud
  r.claim_document_request_items?.forEach((item) => {
  if (item.status === "requested" || item.status === "received") {
- alreadyRequestedCodes.add(item.document_type_code);
+ otherRequestCodes.add(item.document_type_code);
  }
  });
  });
 
- // Documentos disponibles = requirements - ya solicitados/recibidos
+ // Documentos disponibles para agregar = requirements - ya en esta solicitud - ya en otras
  const availableDocs = (requirements || []).filter(
- (r) => !alreadyRequestedCodes.has(r.document_type_code)
+ (r) => !thisRequestCodes.has(r.document_type_code) && !otherRequestCodes.has(r.document_type_code)
  );
-
- // Items ya solicitados en esta acción
- const existingItems = existingRequest?.claim_document_request_items || [];
 
  const [selected, setSelected] = useState<Set<string>>(new Set());
  const [notes, setNotes] = useState<string>(existingRequest?.notes || "");
 
+ // ── Mutación: crear solicitud nueva ──
  const saveMut = useMutation({
  mutationFn: async () => {
  const items = availableDocs
@@ -2681,7 +2689,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  document_name: d.document_name,
  sort_order: i + 1,
  }));
- if (items.length === 0) return; // No crear solicitud vacía
+ if (items.length === 0) return;
  await createClaimDocumentRequest({
  claim_id: claimId!,
  claim_action_id: actionId,
@@ -2691,26 +2699,85 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  },
  onSuccess: () => {
  toast.success("Solicitud de documentos creada");
+ setSelected(new Set());
  queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
  queryClient.invalidateQueries({ queryKey: ["claim-doc-request-by-action", actionId] });
  },
  onError: (e: Error) => toast.error(e.message),
  });
 
- // Autoguardado: crear solicitud cuando hay documentos seleccionados
+ // ── Mutación: agregar items a solicitud existente ──
+ const addItemsMut = useMutation({
+ mutationFn: async () => {
+ if (!existingRequest) return;
+ const items = availableDocs
+ .filter((d) => selected.has(d.document_type_code))
+ .map((d, i) => ({
+ document_type_code: d.document_type_code,
+ document_name: d.document_name,
+ sort_order: existingItems.length + i + 1,
+ }));
+ if (items.length === 0) return;
+ await addItemsToClaimDocumentRequest(existingRequest.id, items);
+ },
+ onSuccess: () => {
+ toast.success("Documentos agregados");
+ setSelected(new Set());
+ queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
+ queryClient.invalidateQueries({ queryKey: ["claim-doc-request-by-action", actionId] });
+ },
+ onError: (e: Error) => toast.error(e.message),
+ });
+
+ // ── Mutación: remover item ──
+ const removeItemMut = useMutation({
+ mutationFn: (itemId: string) => removeItemFromClaimDocumentRequest(itemId),
+ onSuccess: () => {
+ toast.success("Documento removido");
+ queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
+ queryClient.invalidateQueries({ queryKey: ["claim-doc-request-by-action", actionId] });
+ },
+ onError: (e: Error) => toast.error(e.message),
+ });
+
+ // ── Mutación: actualizar notas ──
+ const updateNotesMut = useMutation({
+ mutationFn: ({ reqId, value }: { reqId: string; value: string }) =>
+ updateClaimDocumentRequestNotes(reqId, value),
+ onSuccess: () => {
+ queryClient.invalidateQueries({ queryKey: ["claim-doc-request-by-action", actionId] });
+ },
+ });
+
+ // Autoguardado: crear solicitud nueva cuando hay selección
  useAutoSave(
  () => saveMut.mutate(),
  [selected, notes],
  !readOnly && !existingRequest && selected.size > 0
  );
 
- // Si hay solicitud existente, mostrar sus items
+ // Autoguardado: agregar items a solicitud existente
+ useAutoSave(
+ () => addItemsMut.mutate(),
+ [selected],
+ !readOnly && !!existingRequest && selected.size > 0
+ );
+
+ // Autoguardado: notas (solo si cambió respecto al original)
+ useAutoSave(
+ () => {
+ if (existingRequest) updateNotesMut.mutate({ reqId: existingRequest.id, value: notes });
+ },
+ [notes],
+ !readOnly && !!existingRequest && notes !== (existingRequest?.notes || "")
+ );
+
  if (loadingReq || loadingEx) {
  return <div className="text-[11px] text-muted-foreground py-2">Cargando...</div>;
  }
 
- // Si ya existe solicitud para esta acción, mostrar resumen
- if (existingRequest) {
+ // ── Vista read-only: solicitud emitida (readOnly) ──
+ if (existingRequest && readOnly) {
  return (
  <div className="space-y-2">
  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
@@ -2760,6 +2827,137 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  );
  }
 
+ // ── Vista editable: solicitud existente NO emitida ──
+ if (existingRequest && !readOnly) {
+ return (
+ <div className="space-y-3">
+ <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
+ <span className="font-medium">Solicitud: {existingRequest.request_number}</span>
+ <Badge className="bg-amber-100 text-amber-700">Editable</Badge>
+ </div>
+
+ {/* Items ya solicitados — se pueden quitar si no están recibidos */}
+ <div>
+ <p className="text-[10px] font-semibold text-muted-foreground mb-1">DOCUMENTOS SOLICITADOS</p>
+ <div className="rounded-lg border border-border overflow-hidden">
+ <table className="app-data-table">
+ <thead className="bg-muted/50">
+ <tr>
+ <th className="px-2 py-1.5 text-left font-medium">Documento</th>
+ <th className="px-2 py-1.5 text-left font-medium w-[100px]">Estado</th>
+ <th className="px-2 py-1.5 w-8"></th>
+ </tr>
+ </thead>
+ <tbody>
+ {existingItems.length === 0 ? (
+ <tr>
+ <td colSpan={3} className="px-2 py-3 text-center text-[11px] text-muted-foreground">
+ Sin documentos. Agrega abajo.
+ </td>
+ </tr>
+ ) : existingItems.map((item) => (
+ <tr key={item.id} className="border-t border-border">
+ <td className="px-2 py-1.5">{item.document_name}</td>
+ <td className="px-2 py-1.5">
+ <Badge className={
+ item.status === "received" ? "bg-emerald-100 text-emerald-700" :
+ item.status === "not_needed" ? "bg-muted text-muted-foreground" :
+ "bg-amber-100 text-amber-700"
+ }>
+ {item.status === "received" ? "Recibido" :
+ item.status === "not_needed" ? "No necesario" : "Solicitado"}
+ </Badge>
+ </td>
+ <td className="px-2 py-1.5 text-center">
+ {item.status === "requested" && (
+ <button
+ className="text-rose-500 hover:text-rose-700 text-[11px]"
+ onClick={() => removeItemMut.mutate(item.id)}
+ disabled={removeItemMut.isPending}
+ title="Quitar documento"
+ >
+ ✕
+ </button>
+ )}
+ </td>
+ </tr>
+ ))}
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ {/* Documentos disponibles para agregar */}
+ {availableDocs.length > 0 && (
+ <div>
+ <p className="text-[10px] font-semibold text-muted-foreground mb-1">DOCUMENTOS DISPONIBLES PARA AGREGAR</p>
+ <div className="rounded-lg border border-border overflow-hidden">
+ <table className="app-data-table">
+ <thead className="bg-muted/50">
+ <tr>
+ <th className="px-2 py-1.5 w-8"></th>
+ <th className="px-2 py-1.5 text-left font-medium">Documento</th>
+ <th className="px-2 py-1.5 text-left font-medium w-[80px]">Obligatorio</th>
+ </tr>
+ </thead>
+ <tbody>
+ {availableDocs.map((doc) => (
+ <tr
+ key={doc.id}
+ className={`border-t border-border cursor-pointer transition-colors ${
+ selected.has(doc.document_type_code) ? "bg-primary/5" : "hover:bg-muted/30"
+ }`}
+ onClick={() => {
+ setSelected((prev) => {
+ const next = new Set(prev);
+ if (next.has(doc.document_type_code)) next.delete(doc.document_type_code);
+ else next.add(doc.document_type_code);
+ return next;
+ });
+ }}
+ >
+ <td className="px-2 py-1.5 text-center">
+ <input
+ type="checkbox"
+ checked={selected.has(doc.document_type_code)}
+ onChange={() => {}}
+ className="h-3.5 w-3.5 rounded border-border"
+ />
+ </td>
+ <td className="px-2 py-1.5">{doc.document_name}</td>
+ <td className="px-2 py-1.5">
+ {doc.is_required && (
+ <span className="text-[9px] text-rose-600 font-medium">Obligatorio</span>
+ )}
+ </td>
+ </tr>
+ ))}
+ </tbody>
+ </table>
+ </div>
+ {selected.size > 0 && (
+ <p className="text-[10px] text-primary mt-1">
+ {selected.size} documento(s) seleccionado(s) — se agregarán automáticamente...
+ </p>
+ )}
+ </div>
+ )}
+
+ {/* Notas */}
+ <div>
+ <Label className="app-field-label text-[10px]">Notas de la solicitud</Label>
+ <Textarea
+ className="app-input text-[11px] min-h-[50px]"
+ placeholder="Indicaciones para el asegurado o corredor..."
+ value={notes}
+ onChange={(e) => setNotes(e.target.value)}
+ />
+ </div>
+ </div>
+ );
+ }
+
+ // ── Vista: no hay solicitud — selección inicial ──
  if (availableDocs.length === 0) {
  return (
  <div className="rounded-lg border border-dashed border-border py-6 text-center">
@@ -2800,13 +2998,12 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  className={`border-t border-border cursor-pointer transition-colors ${
  selected.has(doc.document_type_code) ? "bg-primary/5" : "hover:bg-muted/30"
  }`}
- onClick={() => !readOnly && toggle(doc.document_type_code)}
+ onClick={() => toggle(doc.document_type_code)}
  >
  <td className="px-2 py-1.5 text-center">
  <input
  type="checkbox"
  checked={selected.has(doc.document_type_code)}
- readOnly={readOnly}
  onChange={() => {}}
  className="h-3.5 w-3.5 rounded border-border"
  />
@@ -2822,6 +3019,11 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  </tbody>
  </table>
  </div>
+ {selected.size > 0 && (
+ <p className="text-[10px] text-primary">
+ {selected.size} documento(s) seleccionado(s) — se crearán automáticamente...
+ </p>
+ )}
  <div>
  <Label className="app-field-label text-[10px]">Notas de la solicitud</Label>
  <Textarea
@@ -2829,7 +3031,6 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  placeholder="Indicaciones para el asegurado o corredor..."
  value={notes}
  onChange={(e) => setNotes(e.target.value)}
- disabled={readOnly}
  />
  </div>
  </div>

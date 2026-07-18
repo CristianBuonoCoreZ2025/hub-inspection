@@ -1,4 +1,4 @@
-import { fetchAll, insertRow, insertMany, updateRow } from "@/lib/supabase/db";
+import { fetchAll, insertRow, insertMany, updateRow, deleteRow } from "@/lib/supabase/db";
 
 // ──────────────────────────────────────────────────────────────
 // Types
@@ -154,4 +154,29 @@ export async function cancelClaimDocumentRequest(requestId: string): Promise<voi
   await updateRow("claim_document_requests", requestId, {
     status: "cancelled",
   }, "id");
+}
+
+// Agregar items a una solicitud existente
+export async function addItemsToClaimDocumentRequest(
+  requestId: string,
+  items: { document_type_code: string; document_name: string; sort_order: number }[]
+): Promise<void> {
+  if (items.length === 0) return;
+  await insertMany("claim_document_request_items", items.map((item) => ({
+    request_id: requestId,
+    document_type_code: item.document_type_code,
+    document_name: item.document_name,
+    status: "requested",
+    sort_order: item.sort_order,
+  })));
+}
+
+// Eliminar un item de una solicitud (solo si no está recibido)
+export async function removeItemFromClaimDocumentRequest(itemId: string): Promise<void> {
+  await deleteRow("claim_document_request_items", itemId, "id");
+}
+
+// Actualizar notas de una solicitud
+export async function updateClaimDocumentRequestNotes(requestId: string, notes: string): Promise<void> {
+  await updateRow("claim_document_requests", requestId, { notes: notes || null }, "id");
 }
