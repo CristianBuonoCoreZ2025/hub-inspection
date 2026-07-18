@@ -465,9 +465,27 @@ Dos items separados:
 ### Sincronización con Banco Central de Chile (BCCh)
 - **API:** `mindicador.cl` (gratuita, sin credenciales)
 - **Endpoint:** `POST /api/currencies/sync-chile`
-- **Funcionamiento:** descarga USD y UF de los últimos 30 días (o fecha específica)
-  e inserta en `exchange_rates` con `source='mindicador'`
-- **UI:** botón "Sincronizar" en la página de Tipos de Cambio
+- **Parámetros del body:**
+  - `{ year, month?, currency }` — sincroniza una moneda específica para un año o mes
+  - `{ date }` — sincroniza una fecha específica
+  - `{ startDate, endDate }` — sincroniza un rango de fechas
+  - Sin parámetros — últimos 30 días desde hoy
+- **Moneda:** solo sincroniza la moneda seleccionada en el filtro (no ambas)
+  - `currency: "USD"` → solo descarga USD
+  - `currency: "UF"` → solo descarga UF
+- **Modos de la API mindicador.cl:**
+  - `GET /api/dolar/2024` → todo el año 2024 en una sola respuesta
+  - `GET /api/dolar/DD-MM-YYYY` → fecha específica
+  - Para mes específico: trae todo el año y filtra el mes en el servidor
+- **Performance:** 1 llamada por moneda (no 365×2 como antes)
+- **UI:** botón "Sincronizar" en Tipos de Cambio
+  - Deshabilitado si no hay moneda seleccionada
+  - Modal con barra de progreso indeterminada (pulse) mientras descarga
+  - Respeta los filtros: vista mes = ese mes, vista año = todo el año
+  - Botón "Nuevo" se bloquea mientras sincroniza
+- **Inserta en:** `exchange_rates` con `source='mindicador.cl'`
+- **Deduplicación:** verifica si ya existe registro para (country_id, currency_code, effective_date)
+  antes de insertar. Duplicate key constraint como safety net.
 
 ### Fecha de referencia por país
 Cada país define si las conversiones usan la fecha del siniestro
@@ -497,6 +515,10 @@ Cada país define si las conversiones usan la fecha del siniestro
 5. Asociar moneda a país = modal con ToggleChip, sin navegar a otra página
 6. Al marcar moneda base, se quita el base de otra moneda del mismo país
 7. Vista Año = pivote días×meses; Vista Mes = tabla simple día→tasa
+8. Sincronizar BCCh = solo la moneda seleccionada, no ambas
+9. Sincronizar respeta filtros: vista mes = ese mes, vista año = todo el año
+10. Botón Sincronizar deshabilitado si no hay moneda seleccionada
+11. Dropdowns dicen "Seleccione..." no "Todas"/"Todos"
 ```
 
 ---
