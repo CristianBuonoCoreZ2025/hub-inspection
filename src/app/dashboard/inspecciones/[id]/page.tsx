@@ -712,7 +712,6 @@ export default function InspectionDetailPage() {
             claimNumber={claim?.claim_number ?? undefined}
             claimLiquidationNumber={claim?.liquidation_number ?? undefined}
             claimAddress={claim?.claim_address ?? undefined}
-            insuranceCompanyName={claim?.insurance_company?.name ?? undefined}
             insuredName={claim?.claims_participants?.find(p => p.type === "insured")?.full_name ?? undefined}
             cancellationReason={cancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || null}
             cancellationNotes={session.cancellation_notes}

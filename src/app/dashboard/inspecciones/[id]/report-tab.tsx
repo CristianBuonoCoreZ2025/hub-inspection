@@ -44,7 +44,6 @@ export default function ReportTab({
   claimNumber,
   claimLiquidationNumber,
   claimAddress,
-  insuranceCompanyName,
   insuredName,
   cancellationReason,
   cancellationNotes,
@@ -54,7 +53,6 @@ export default function ReportTab({
   claimNumber?: string;
   claimLiquidationNumber?: string;
   claimAddress?: string;
-  insuranceCompanyName?: string;
   insuredName?: string;
   cancellationReason?: string | null;
   cancellationNotes?: string | null;
@@ -300,7 +298,7 @@ export default function ReportTab({
           </div>
           <div className="report-subheader text-center mb-4">
             <p className="text-sm text-muted-foreground">
-              Compañía Aseguradora: {insuranceCompanyName || "—"} · Siniestro N° {claimNumber || "—"}
+              Siniestro N° {claimNumber || "—"}
               {claimLiquidationNumber && ` · Liquidación ${claimLiquidationNumber}`}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -323,7 +321,6 @@ export default function ReportTab({
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[13px] mb-4">
             <div><strong className="text-muted-foreground">N° Siniestro:</strong> {claimNumber || "—"}</div>
             <div><strong className="text-muted-foreground">N° Liquidación:</strong> {claimLiquidationNumber || "—"}</div>
-            <div><strong className="text-muted-foreground">Compañía:</strong> {insuranceCompanyName || "—"}</div>
             <div><strong className="text-muted-foreground">Asegurado:</strong> {insuredName || "—"}</div>
             <div><strong className="text-muted-foreground">Dirección:</strong> {claimAddress || "—"}</div>
             <div><strong className="text-muted-foreground">Fecha Inspección:</strong> {fmtDate(session.inspection_date)}</div>

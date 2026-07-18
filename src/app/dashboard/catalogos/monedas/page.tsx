@@ -116,7 +116,7 @@ function MonedasTab() {
       <div className="flex justify-end">
         {canCreate("catalogos") && (
           <Button onClick={() => { setEditingId(null); setForm({ code: "", name: "", symbol: "", decimals: "2" }); setOpen(true); }} className="pg-btn-platinum">
-            <Plus className="mr-1.5 h-4 w-4" /> Nueva Moneda
+            <Plus className="mr-1.5 h-4 w-4" /> Nueva
           </Button>
         )}
       </div>
@@ -261,7 +261,7 @@ function PaisesTab() {
       <div className="flex justify-end">
         {canCreate("catalogos") && (
           <Button onClick={() => { setEditingId(null); setForm({ country_id: "", currency_code: "", is_base: false, sort_order: "0" }); setOpen(true); }} className="pg-btn-platinum">
-            <Plus className="mr-1.5 h-4 w-4" /> Nueva Relación
+            <Plus className="mr-1.5 h-4 w-4" /> Nueva
           </Button>
         )}
       </div>
@@ -551,12 +551,12 @@ function CambiosTab() {
             title="Descarga USD y UF de los últimos 30 días desde mindicador.cl (Banco Central de Chile)"
           >
             <ArrowRightLeft className={`mr-1.5 h-4 w-4 ${syncChileMut.isPending ? "animate-spin" : ""}`} />
-            {syncChileMut.isPending ? "Sincronizando..." : "Sincronizar BCCh (30 días)"}
+            {syncChileMut.isPending ? "Sincronizando..." : "Sincronizar"}
           </Button>
         )}
         {canCreate("catalogos") && (
           <Button variant="outline" onClick={() => { setEditingId(null); setForm({ country_id: "", currency_code: "", rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" }); setOpen(true); }} className="pg-btn-platinum-icon">
-            <Plus className="mr-1.5 h-4 w-4" /> Nuevo Tipo de Cambio
+            <Plus className="mr-1.5 h-4 w-4" /> Nuevo
           </Button>
         )}
       </div>
