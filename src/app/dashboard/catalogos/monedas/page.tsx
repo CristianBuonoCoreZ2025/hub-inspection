@@ -9,22 +9,15 @@ import {
   getCountries, updateCountryReferenceDateType,
 } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Coins, Pencil, Trash2, Plus, Star, ArrowRightLeft, Calendar, Globe } from "lucide-react";
+import { Coins, Pencil, Plus, Star, ArrowRightLeft, Globe } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ToggleChip } from "@/components/ui/toggle-chip";
 
-type Tab = "monedas" | "paises";
-
 export default function MonedasPage() {
-  const [tab, setTab] = useState<Tab>("monedas");
-
   return (
     <div className="app-page">
       <div className="app-page-header">
@@ -38,39 +31,15 @@ export default function MonedasPage() {
           </div>
         </div>
       </div>
-
-      {/* Tabs internos */}
-      <div className="border-b">
-        <div className="flex gap-1">
-          {([
-            { id: "monedas" as Tab, label: "Monedas" },
-            { id: "paises" as Tab, label: "Por País" },
-          ]).map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
-                tab === t.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className="mt-4">
-        {tab === "monedas" && <MonedasTab />}
-        {tab === "paises" && <PaisesTab />}
+        <MonedasTab />
       </div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// TAB 1: Monedas (catálogo global)
+// Monedas (catálogo global)
 // ═══════════════════════════════════════════════════════════════
 
 function MonedasTab() {
@@ -81,6 +50,10 @@ function MonedasTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ code: "", name: "", symbol: "", decimals: "2" });
   const [showInactive, setShowInactive] = useState(false);
+
+  // Modal de países
+  const [paisesOpen, setPaisesOpen] = useState(false);
+  const [paisesCurrency, setPaisesCurrency] = useState<{ code: string; name: string } | null>(null);
 
   const { data: currencies, isLoading } = useQuery({
     queryKey: ["currencies"],
@@ -126,6 +99,11 @@ function MonedasTab() {
     }
   }
 
+  const openPaises = (code: string, name: string) => {
+    setPaisesCurrency({ code, name });
+    setPaisesOpen(true);
+  };
+
   return (
     <div className="app-stack">
       <div className="flex justify-between items-center">
@@ -159,7 +137,7 @@ function MonedasTab() {
                 <th>Símbolo</th>
                 <th>Dec.</th>
                 <th className="text-center">Países</th>
-                <th className="w-[160px]"></th>
+                <th className="w-[140px]"></th>
               </tr>
             </thead>
             <tbody>
@@ -198,7 +176,7 @@ function MonedasTab() {
                         variant="ghost"
                         size="icon"
                         className="btn-neutral btn-icon"
-                        onClick={() => router.push(`/dashboard/catalogos/monedas?paises&currency=${c.code}`)}
+                        onClick={() => openPaises(c.code, c.name)}
                         title={`Asociar países a ${c.code}`}
                       >
                         <Globe className="h-4 w-4" />
@@ -218,6 +196,7 @@ function MonedasTab() {
         </div>
       </div>
 
+      {/* Modal editar/crear moneda */}
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
         <DialogContent className="modal-md" showCloseButton={false}>
           <div className="modal-header">
@@ -258,207 +237,186 @@ function MonedasTab() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Modal asociar países */}
+      {paisesCurrency && (
+        <PaisesModal
+          currencyCode={paisesCurrency.code}
+          currencyName={paisesCurrency.name}
+          open={paisesOpen}
+          onOpenChange={setPaisesOpen}
+        />
+      )}
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// TAB 2: Monedas por País
+// Modal: asociar países a una moneda
 // ═══════════════════════════════════════════════════════════════
 
-function PaisesTab() {
+function PaisesModal({
+  currencyCode,
+  currencyName,
+  open,
+  onOpenChange,
+}: {
+  currencyCode: string;
+  currencyName: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const queryClient = useQueryClient();
-  const { canCreate, canEdit, canDelete } = usePermissions();
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ country_id: "", currency_code: "", is_base: false, sort_order: "0" });
+  const { canEdit } = usePermissions();
 
-  const { data: relations, isLoading } = useQuery({
-    queryKey: ["country-currencies-all"],
-    queryFn: getCountryCurrenciesAll,
-  });
   const { data: countries } = useQuery({ queryKey: ["countries"], queryFn: getCountries });
-  const { data: currencies } = useQuery({ queryKey: ["currencies"], queryFn: getCurrencies });
+  const { data: relations } = useQuery({ queryKey: ["country-currencies-all"], queryFn: getCountryCurrenciesAll });
 
-  const createMut = useMutation({
-    mutationFn: createCountryCurrency,
-    onSuccess: () => { toast.success("Relación creada"); queryClient.invalidateQueries({ queryKey: ["country-currencies-all"] }); setOpen(false); },
+  // Relaciones existentes para esta moneda
+  const existingByCountry: Record<string, { id: string; is_base: boolean; is_active: boolean; sort_order: number }> = {};
+  for (const r of relations || []) {
+    if (r.currency_code === currencyCode) {
+      existingByCountry[r.country_id] = { id: r.id, is_base: r.is_base, is_active: r.is_active, sort_order: r.sort_order };
+    }
+  }
+
+  const toggleMut = useMutation({
+    mutationFn: async ({ countryId, activate }: { countryId: string; activate: boolean }) => {
+      const existing = existingByCountry[countryId];
+      if (activate && !existing) {
+        // Crear relación nueva
+        return createCountryCurrency({ country_id: countryId, currency_code: currencyCode, is_base: false, sort_order: 0 });
+      } else if (!activate && existing) {
+        // Desactivar relación
+        return deleteCountryCurrency(existing.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["country-currencies-all"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
-  const updateMut = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateCountryCurrency>[1] }) => updateCountryCurrency(id, input),
-    onSuccess: () => { toast.success("Relación actualizada"); queryClient.invalidateQueries({ queryKey: ["country-currencies-all"] }); setOpen(false); setEditingId(null); },
+
+  const setBaseMut = useMutation({
+    mutationFn: async ({ countryId, relationId, makeBase }: { countryId: string; relationId: string; makeBase: boolean }) => {
+      // Si estamos activando base, primero quitar base de otras monedas del mismo país
+      if (makeBase) {
+        const otherBase = (relations || []).find(r => r.country_id === countryId && r.is_base && r.currency_code !== currencyCode);
+        if (otherBase) {
+          await updateCountryCurrency(otherBase.id, { is_base: false });
+        }
+      }
+      return updateCountryCurrency(relationId, { is_base: makeBase });
+    },
+    onSuccess: () => {
+      toast.success(makeBaseToast());
+      queryClient.invalidateQueries({ queryKey: ["country-currencies-all"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
-  const deleteMut = useMutation({
-    mutationFn: deleteCountryCurrency,
-    onSuccess: () => { toast.success("Relación desactivada"); queryClient.invalidateQueries({ queryKey: ["country-currencies-all"] }); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-  const updateRefDateMut = useMutation({
+
+  function makeBaseToast() {
+    return "Moneda base actualizada";
+  }
+
+  const refDateMut = useMutation({
     mutationFn: ({ countryId, type }: { countryId: string; type: "claim_date" | "execution_date" }) =>
       updateCountryReferenceDateType(countryId, type),
     onSuccess: () => { toast.success("Fecha de referencia actualizada"); queryClient.invalidateQueries({ queryKey: ["countries"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Agrupar por país
-  const byCountry: Record<string, { countryName: string; countryCode: string; items: NonNullable<typeof relations> }> = {};
-  for (const r of relations || []) {
-    const key = r.country_id;
-    if (!byCountry[key]) byCountry[key] = { countryName: r.country?.name || "—", countryCode: r.country?.code || "", items: [] };
-    byCountry[key]!.items.push(r);
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.country_id || !form.currency_code) { toast.error("País y moneda son requeridos"); return; }
-    const data = { country_id: form.country_id, currency_code: form.currency_code, is_base: form.is_base, sort_order: parseInt(form.sort_order) || 0 };
-    if (editingId) updateMut.mutate({ id: editingId, input: data });
-    else createMut.mutate(data);
-  };
+  const sortedCountries = (countries || []).slice().sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="app-stack">
-      <div className="flex justify-end">
-        {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); setForm({ country_id: "", currency_code: "", is_base: false, sort_order: "0" }); setOpen(true); }} className="pg-btn-platinum">
-            <Plus className="mr-1.5 h-4 w-4" /> Nueva
-          </Button>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        {isLoading ? <div className="app-panel text-center py-4 text-muted-foreground text-sm">Cargando...</div>
-        : Object.values(byCountry).length === 0 ? <div className="app-panel text-center py-4 text-muted-foreground text-sm">No hay relaciones configuradas.</div>
-        : Object.values(byCountry).sort((a, b) => a.countryName.localeCompare(b.countryName)).map((group) => {
-          const countryId = group.items?.[0]?.country_id || "";
-          const countryData = countries?.find(c => c.id === countryId);
-          const refDateType = countryData?.reference_date_type || "claim_date";
-          return (
-          <div key={group.countryCode} className="app-panel">
-            <h3 className="app-section-title flex items-center gap-2 mb-3">
-              <span className="font-mono text-[11px] text-muted-foreground">{group.countryCode}</span>
-              {group.countryName}
-              <span className="text-[11px] text-muted-foreground font-normal">({group.items?.length || 0} monedas)</span>
-              <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                Fecha ref.:
-                <select
-                  className="h-6 rounded border-border bg-transparent text-[11px] px-1"
-                  value={refDateType}
-                  onChange={(e) => {
-                    updateRefDateMut.mutate({ countryId, type: e.target.value as "claim_date" | "execution_date" });
-                  }}
-                >
-                  <option value="claim_date">Fecha Siniestro</option>
-                  <option value="execution_date">Fecha Ejecución</option>
-                </select>
-              </span>
-            </h3>
-            <div className="app-data-table-wrap">
-              <table className="app-data-table">
-                <thead><tr><th>Moneda</th><th>Código</th><th>Base</th><th>Orden</th><th className="w-[80px]"></th></tr></thead>
-                <tbody>
-                  {group.items?.sort((a, b) => a.sort_order - b.sort_order).map((r) => (
-                    <tr key={r.id}>
-                      <td className="font-medium">{r.currency?.name || r.currency_code}</td>
-                      <td className="font-mono font-semibold text-[13px]">{r.currency_code}</td>
-                      <td>
-                        {r.is_base ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
-                            <Star className="h-3 w-3 fill-current" /> Base
-                          </span>
-                        ) : <span className="text-muted-foreground text-[11px]">—</span>}
+    <Dialog open={open} onOpenChange={onOpenChange} dismissible={false}>
+      <DialogContent className="modal-lg" showCloseButton={false}>
+        <div className="modal-header">
+          <DialogTitle className="modal-title flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-blue-500 to-indigo-500 text-white shadow-sm">
+              <Globe className="h-4 w-4" />
+            </div>
+            <span className="font-mono font-bold">{currencyCode}</span>
+            <span className="text-muted-foreground font-normal">— {currencyName}</span>
+          </DialogTitle>
+        </div>
+        <div className="modal-body">
+          <p className="text-[12px] text-muted-foreground mb-3">
+            Activa los países donde esta moneda se utiliza. Marca <Star className="inline h-3 w-3 fill-current text-amber-500" /> Base para la moneda base de cada país.
+          </p>
+          <div className="app-data-table-wrap max-h-[400px] overflow-y-auto">
+            <table className="app-data-table">
+              <thead>
+                <tr>
+                  <th>País</th>
+                  <th className="text-center w-20">Asoc.</th>
+                  <th className="text-center w-20">Base</th>
+                  <th className="w-32">Fecha Ref.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedCountries.map((country) => {
+                  const rel = existingByCountry[country.id];
+                  const isAssociated = rel?.is_active ?? false;
+                  const isBase = rel?.is_base ?? false;
+                  const refDateType = country.reference_date_type || "claim_date";
+                  return (
+                    <tr key={country.id}>
+                      <td className="font-medium">
+                        <span className="font-mono text-[11px] text-muted-foreground mr-2">{country.code}</span>
+                        {country.name}
                       </td>
-                      <td className="text-muted-foreground text-[11px]">{r.sort_order}</td>
+                      <td className="text-center">
+                        <ToggleChip
+                          active={isAssociated}
+                          onClick={() => toggleMut.mutate({ countryId: country.id, activate: !isAssociated })}
+                          disabled={!canEdit("catalogos") || toggleMut.isPending}
+                        >
+                          {isAssociated ? "Sí" : "No"}
+                        </ToggleChip>
+                      </td>
+                      <td className="text-center">
+                        {isAssociated ? (
+                          <button
+                            type="button"
+                            disabled={!canEdit("catalogos") || setBaseMut.isPending}
+                            onClick={() => setBaseMut.mutate({ countryId: country.id, relationId: rel.id, makeBase: !isBase })}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border transition-all ${
+                              isBase
+                                ? "border-amber-400 bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                                : "border-border text-muted-foreground hover:bg-muted/50"
+                            } ${!canEdit("catalogos") ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+                          >
+                            <Star className={`h-3 w-3 ${isBase ? "fill-current" : ""}`} />
+                            {isBase ? "Base" : "—"}
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground/30 text-[11px]">—</span>
+                        )}
+                      </td>
                       <td>
-                        <div className="app-row-actions">
-                          {canEdit("catalogos") && (
-                            <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(r.id); setForm({ country_id: r.country_id, currency_code: r.currency_code, is_base: r.is_base, sort_order: String(r.sort_order) }); setOpen(true); }}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canDelete("catalogos") && (
-                            <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar esta relación?")) deleteMut.mutate(r.id); }}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
+                        {isAssociated && (
+                          <select
+                            className="h-6 rounded border-border bg-transparent text-[11px] px-1"
+                            value={refDateType}
+                            onChange={(e) => refDateMut.mutate({ countryId: country.id, type: e.target.value as "claim_date" | "execution_date" })}
+                          >
+                            <option value="claim_date">Siniestro</option>
+                            <option value="execution_date">Ejecución</option>
+                          </select>
+                        )}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        );
-        })}
-      </div>
-
-      <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
-        <DialogContent className="modal-md" showCloseButton={false}>
-          <div className="modal-header">
-            <DialogTitle className="modal-title flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-blue-500 to-indigo-500 text-white shadow-sm">
-                <Coins className="h-4 w-4" />
-              </div>
-              {editingId ? "Editar" : "Nueva"} Relación País-Moneda
-            </DialogTitle>
-          </div>
-          <form onSubmit={handleSubmit}>
-            <div className="modal-body space-y-2">
-              <div className="modal-grid">
-                <div className="modal-field">
-                  <Label className="app-field-label">País</Label>
-                  <Select
-                    value={form.country_id || "__none"}
-                    onValueChange={(v) => setForm({ ...form, country_id: v === "__none" ? "" : (v ?? "") })}
-                    items={[{ value: "__none", label: "Seleccionar..." }, ...(countries || []).map((c) => ({ value: c.id, label: c.name }))]}
-                  >
-                    <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none">Seleccionar...</SelectItem>
-                      {countries?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Moneda</Label>
-                  <Select
-                    value={form.currency_code || "__none"}
-                    onValueChange={(v) => setForm({ ...form, currency_code: v === "__none" ? "" : (v ?? "") })}
-                    items={[{ value: "__none", label: "Seleccionar..." }, ...(currencies || []).filter(c => c.is_active).map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))]}
-                  >
-                    <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none">Seleccionar...</SelectItem>
-                      {currencies?.filter(c => c.is_active).map((c) => <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">¿Moneda Base?</Label>
-                  <label className="flex items-center gap-2 h-9">
-                    <input type="checkbox" checked={form.is_base} onChange={(e) => setForm({ ...form, is_base: e.target.checked })} className="h-4 w-4 rounded border-border" />
-                    <span className="text-[13px] text-muted-foreground">Marcar como moneda base del país</span>
-                  </label>
-                </div>
-                <div className="modal-field">
-                  <Label className="app-field-label">Orden</Label>
-                  <Input type="number" min={0} value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} className="app-input" />
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button type="button" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</button>
-              <button type="submit" disabled={createMut.isPending || updateMut.isPending} className="pg-btn-platinum">
-                {createMut.isPending || updateMut.isPending ? "Guardando..." : "Guardar"}
-              </button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </div>
+        <div className="modal-footer">
+          <button type="button" onClick={() => onOpenChange(false)} className="pg-btn-platinum ml-auto">Cerrar</button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
