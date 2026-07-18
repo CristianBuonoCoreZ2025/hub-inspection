@@ -65,6 +65,7 @@ export interface Country {
   code: string;
   name: string;
   phone_prefix?: string | null;
+  reference_date_type?: "claim_date" | "execution_date";
   created_at: string;
 }
 

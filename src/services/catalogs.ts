@@ -578,7 +578,7 @@ export async function deleteRelationship(id: string) {
 
 export async function getCountries() {
   return fetchAllSorted<Country>("countries", {
-    select: "id, code, name, phone_prefix, is_active, created_at",
+    select: "id, code, name, phone_prefix, reference_date_type, is_active, created_at",
     eq: { is_active: true },
   });
 }
@@ -963,4 +963,97 @@ export async function updateExchangeRate(id: string, input: Partial<{ rate_to_ba
 
 export async function deleteExchangeRate(id: string) {
   return deleteRow("exchange_rates", id);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONVERSIONES DE MONEDA (usando tipos de cambio por fecha)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Obtiene el tipo de cambio vigente para una moneda en una fecha específica.
+ * Busca la tasa con effective_date <= fecha solicitada, ordenada descendentemente.
+ * Si no hay tasa anterior, busca la primera disponible después de la fecha.
+ */
+export async function getExchangeRateForDate(countryId: string, currencyCode: string, date: string) {
+  // Primero buscar la tasa más reciente ON o BEFORE la fecha solicitada
+  const before = await fetchAll<ExchangeRate>("exchange_rates", {
+    select: EXCHANGE_RATE_SELECT,
+    eq: { country_id: countryId, currency_code: currencyCode },
+    order: { column: "effective_date", ascending: false },
+  });
+  // PostgREST no soporta <= directamente, traemos todas y filtramos en JS
+  const sorted = before
+    .filter(r => r.effective_date <= date)
+    .sort((a, b) => b.effective_date.localeCompare(a.effective_date));
+  if (sorted.length > 0) return sorted[0];
+  // Si no hay tasa anterior, buscar la primera disponible después de la fecha
+  const after = before
+    .filter(r => r.effective_date > date)
+    .sort((a, b) => a.effective_date.localeCompare(b.effective_date));
+  return after[0] || null;
+}
+
+/**
+ * Convierte un monto desde una moneda a la moneda base del país,
+ * usando el tipo de cambio vigente en la fecha de referencia.
+ *
+ * @param countryId - ID del país
+ * @param fromCurrency - Código de la moneda origen (ej: "USD")
+ * @param amount - Monto a convertir
+ * @param referenceDate - Fecha para buscar el tipo de cambio (YYYY-MM-DD)
+ * @returns { rate, convertedAmount, baseCurrency, effectiveDate } o null si no hay tasa
+ */
+export async function convertToBaseCurrency(
+  countryId: string,
+  fromCurrency: string,
+  amount: number,
+  referenceDate: string,
+) {
+  // Si la moneda origen es la base, no hay conversión
+  const baseCurrency = await getBaseCurrencyCode(countryId);
+  if (baseCurrency === fromCurrency) {
+    return { rate: 1, convertedAmount: amount, baseCurrency, effectiveDate: referenceDate };
+  }
+
+  const rate = await getExchangeRateForDate(countryId, fromCurrency, referenceDate);
+  if (!rate) return null;
+
+  return {
+    rate: rate.rate_to_base,
+    convertedAmount: amount * rate.rate_to_base,
+    baseCurrency,
+    effectiveDate: rate.effective_date,
+  };
+}
+
+/**
+ * Obtiene el código de la moneda base de un país.
+ */
+export async function getBaseCurrencyCode(countryId: string): Promise<string | null> {
+  const rows = await fetchAll<CountryCurrency>("country_currencies", {
+    select: `
+      id, country_id, currency_code, is_base,
+      currency:currencies!country_currencies_currency_code_fkey(code, name, symbol)
+    `,
+    eq: { country_id: countryId, is_base: true, is_active: true },
+  });
+  return rows[0]?.currency_code || rows[0]?.currency?.code || null;
+}
+
+/**
+ * Obtiene el tipo de fecha de referencia de un país (claim_date o execution_date).
+ */
+export async function getCountryReferenceDateType(countryId: string): Promise<"claim_date" | "execution_date"> {
+  const rows = await fetchAll<Country>("countries", {
+    select: "id, reference_date_type",
+    eq: { id: countryId },
+  });
+  return (rows[0]?.reference_date_type as "claim_date" | "execution_date") || "claim_date";
+}
+
+/**
+ * Actualiza el tipo de fecha de referencia de un país.
+ */
+export async function updateCountryReferenceDateType(countryId: string, referenceDateType: "claim_date" | "execution_date") {
+  return updateRow<Country>("countries", countryId, { reference_date_type: referenceDateType }, "id, code, name, reference_date_type");
 }

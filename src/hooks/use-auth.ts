@@ -14,6 +14,7 @@ interface UserProfile {
   full_name: string;
   role: UserRole;
   company_id: string | null;
+  company?: { id: string; name: string; logo_url: string | null } | null;
 }
 
 interface AppUser {
@@ -71,7 +72,7 @@ export function useAuth() {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, user_id, email, full_name, role, company_id")
+        .select("id, user_id, email, full_name, role, company_id, company:companies!profiles_company_id_fkey(id, name, logo_url)")
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw new Error(error.message);

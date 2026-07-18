@@ -155,9 +155,13 @@ export default function ReportTab({
             table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 11px; }
             th { text-align: left; padding: 6px 8px; background: #f5f5f5; border: 1px solid #ddd; font-weight: 600; }
             td { padding: 6px 8px; border: 1px solid #ddd; }
-            .header { text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #333; }
-            .header h1 { font-size: 24px; }
-            .header .subtitle { font-size: 13px; color: #666; margin-top: 4px; }
+            .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 3px solid #333; }
+            .report-header img { max-height: 60px; width: auto; }
+            .report-header .header-title { text-align: right; }
+            .report-header .header-title h1 { font-size: 20px; }
+            .report-header .header-title p { font-size: 11px; color: #666; margin-top: 2px; }
+            .report-subheader { text-align: center; margin-bottom: 20px; }
+            .report-subheader p { font-size: 12px; color: #555; }
             .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; margin: 12px 0; }
             .info-grid div { font-size: 12px; }
             .info-grid strong { color: #555; }
@@ -167,6 +171,8 @@ export default function ReportTab({
             .badge-cancel { background: #f8d7da; color: #721c24; }
             .evidence-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; }
             .evidence-grid img { width: 100%; height: 120px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px; }
+            .evidence-item { border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+            .evidence-item p { font-size: 9px; color: #666; padding: 4px; }
             .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
             .signature-box { text-align: center; }
             .signature-box img { max-height: 80px; max-width: 200px; border-bottom: 1px solid #333; padding-bottom: 4px; }
@@ -189,6 +195,8 @@ export default function ReportTab({
   const photos = evidences.filter(e => e.type === "photo");
   const videos = evidences.filter(e => e.type === "video");
   const docs = evidences.filter(e => e.type === "document");
+  const companyName = profile?.company?.name || "—";
+  const companyLogo = profile?.company?.logo_url || null;
 
   return (
     <div className="app-stack">
@@ -271,13 +279,28 @@ export default function ReportTab({
         <div className="app-panel text-center py-8 text-muted-foreground text-sm">Cargando informe...</div>
       ) : (
         <div className="app-panel" ref={printRef}>
-          {/* Header */}
-          <div className="text-center mb-6 pb-4 border-b-2 border-border">
-            <h1 className="text-xl font-bold">
-              {isCancellation ? "Informe de Cancelación de Inspección" : "Acta de Inspección"}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {insuranceCompanyName || "—"} · Siniestro N° {claimNumber || "—"}
+          {/* Header con logo del cliente (company) */}
+          <div className="report-header flex items-center justify-between mb-6 pb-4 border-b-2 border-border">
+            <div className="flex items-center gap-3">
+              {companyLogo ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={companyLogo} alt={companyName} className="h-16 w-auto object-contain" />
+              ) : (
+                <div className="h-12 px-4 flex items-center bg-muted rounded text-sm font-bold">{companyName}</div>
+              )}
+            </div>
+            <div className="header-title text-right">
+              <h1 className="text-xl font-bold">
+                {isCancellation ? "Informe de Cancelación de Inspección" : "Acta de Inspección"}
+              </h1>
+              <p className="text-xs text-muted-foreground mt-1">
+                Emitido por: <strong>{companyName}</strong>
+              </p>
+            </div>
+          </div>
+          <div className="report-subheader text-center mb-4">
+            <p className="text-sm text-muted-foreground">
+              Compañía Aseguradora: {insuranceCompanyName || "—"} · Siniestro N° {claimNumber || "—"}
               {claimLiquidationNumber && ` · Liquidación ${claimLiquidationNumber}`}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -473,18 +496,20 @@ export default function ReportTab({
             </>
           )}
 
-          {/* 4. Evidencias */}
+          {/* 4. Evidencias Fotográficas */}
           {!isCancellation && photos.length > 0 && (
             <>
               <h2 className="text-[11px] font-semibold text-muted-foreground border-b pb-1 mb-3 mt-4">
                 4. Evidencias Fotográficas ({photos.length})
               </h2>
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                {photos.map((ev) => (
-                  <div key={ev.id} className="rounded-lg overflow-hidden border border-border">
+              <div className="evidence-grid grid grid-cols-3 gap-2 mb-3">
+                {photos.map((ev, idx) => (
+                  <div key={ev.id} className="evidence-item rounded-lg overflow-hidden border border-border">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ev.url} alt={ev.description || ""} className="w-full h-32 object-cover" />
-                    {ev.description && <p className="text-[10px] text-muted-foreground p-1 truncate">{ev.description}</p>}
+                    <img src={ev.url} alt={ev.description || `Foto ${idx + 1}`} className="w-full h-32 object-cover" />
+                    <p className="text-[10px] text-muted-foreground p-1">
+                      Foto {idx + 1}{ev.description ? ` — ${ev.description}` : ""}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -498,8 +523,12 @@ export default function ReportTab({
                 5. Videos y Documentos
               </h2>
               <ul className="text-[13px] text-muted-foreground space-y-1 list-disc list-inside mb-3">
-                {videos.map((v) => <li key={v.id}>Video: {v.description || v.url}</li>)}
-                {docs.map((d) => <li key={d.id}>Documento: {d.description || d.url}</li>)}
+                {videos.map((v, idx) => (
+                  <li key={v.id}>Video {idx + 1}: {v.description || "Sin descripción"} — <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver video</a></li>
+                ))}
+                {docs.map((d, idx) => (
+                  <li key={d.id}>Documento {idx + 1}: {d.description || "Sin descripción"} — <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver documento</a></li>
+                ))}
               </ul>
             </>
           )}
@@ -511,11 +540,13 @@ export default function ReportTab({
                 6. Croquis ({sketches.length})
               </h2>
               <div className="grid grid-cols-2 gap-2 mb-3">
-                {sketches.map((sk) => (
-                  <div key={sk.id} className="rounded-lg overflow-hidden border border-border">
+                {sketches.map((sk, idx) => (
+                  <div key={sk.id} className="evidence-item rounded-lg overflow-hidden border border-border">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sk.sketch_url} alt={sk.label || "Croquis"} className="w-full h-40 object-contain bg-white" />
-                    {sk.label && <p className="text-[10px] text-muted-foreground p-1">{sk.label}</p>}
+                    <img src={sk.sketch_url} alt={sk.label || `Croquis ${idx + 1}`} className="w-full h-40 object-contain bg-white" />
+                    <p className="text-[10px] text-muted-foreground p-1">
+                      Croquis {idx + 1}{sk.label ? ` — ${sk.label}` : ""}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -544,8 +575,8 @@ export default function ReportTab({
           )}
 
           {/* Footer */}
-          <div className="pt-4 border-t text-center text-[11px] text-muted-foreground mt-6">
-            Documento {isFinal ? "definitivo" : "en borrador"} generado por Claims Hub · {new Date().toLocaleDateString("es-CL")}
+          <div className="footer pt-4 border-t text-center text-[11px] text-muted-foreground mt-6">
+            Documento {isFinal ? "definitivo" : "en borrador"} emitido por {companyName} · {new Date().toLocaleDateString("es-CL")}
             {isFinal && report?.generated_at && ` · Finalizado el ${fmtDateTime(report.generated_at)}`}
           </div>
         </div>

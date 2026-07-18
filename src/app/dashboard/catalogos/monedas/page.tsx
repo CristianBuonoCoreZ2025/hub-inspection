@@ -6,10 +6,10 @@ import {
   getCurrencies, createCurrency, updateCurrency, deleteCurrency,
   getCountryCurrenciesAll, createCountryCurrency, updateCountryCurrency, deleteCountryCurrency,
   getExchangeRates, createExchangeRate, updateExchangeRate, deleteExchangeRate,
-  getCountries,
+  getCountries, updateCountryReferenceDateType,
 } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Coins, Pencil, Trash2, Plus, Star, ArrowRightLeft } from "lucide-react";
+import { Coins, Pencil, Trash2, Plus, Star, ArrowRightLeft, Calendar } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,6 +233,12 @@ function PaisesTab() {
     onSuccess: () => { toast.success("Relación desactivada"); queryClient.invalidateQueries({ queryKey: ["country-currencies-all"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const updateRefDateMut = useMutation({
+    mutationFn: ({ countryId, type }: { countryId: string; type: "claim_date" | "execution_date" }) =>
+      updateCountryReferenceDateType(countryId, type),
+    onSuccess: () => { toast.success("Fecha de referencia actualizada"); queryClient.invalidateQueries({ queryKey: ["countries"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   // Agrupar por país
   const byCountry: Record<string, { countryName: string; countryCode: string; items: NonNullable<typeof relations> }> = {};
@@ -263,12 +269,30 @@ function PaisesTab() {
       <div className="space-y-3">
         {isLoading ? <div className="app-panel text-center py-4 text-muted-foreground text-sm">Cargando...</div>
         : Object.values(byCountry).length === 0 ? <div className="app-panel text-center py-4 text-muted-foreground text-sm">No hay relaciones configuradas.</div>
-        : Object.values(byCountry).sort((a, b) => a.countryName.localeCompare(b.countryName)).map((group) => (
+        : Object.values(byCountry).sort((a, b) => a.countryName.localeCompare(b.countryName)).map((group) => {
+          const countryId = group.items?.[0]?.country_id || "";
+          const countryData = countries?.find(c => c.id === countryId);
+          const refDateType = countryData?.reference_date_type || "claim_date";
+          return (
           <div key={group.countryCode} className="app-panel">
             <h3 className="app-section-title flex items-center gap-2 mb-3">
               <span className="font-mono text-[11px] text-muted-foreground">{group.countryCode}</span>
               {group.countryName}
               <span className="text-[11px] text-muted-foreground font-normal">({group.items?.length || 0} monedas)</span>
+              <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                Fecha ref.:
+                <select
+                  className="h-6 rounded border-border bg-transparent text-[11px] px-1"
+                  value={refDateType}
+                  onChange={(e) => {
+                    updateRefDateMut.mutate({ countryId, type: e.target.value as "claim_date" | "execution_date" });
+                  }}
+                >
+                  <option value="claim_date">Fecha Siniestro</option>
+                  <option value="execution_date">Fecha Ejecución</option>
+                </select>
+              </span>
             </h3>
             <div className="app-data-table-wrap">
               <table className="app-data-table">
@@ -306,7 +330,8 @@ function PaisesTab() {
               </table>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
@@ -387,13 +412,20 @@ function CambiosTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ country_id: "", currency_code: "", rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" });
 
+  // Panel de entrada rápida
+  const [quickCountry, setQuickCountry] = useState("");
+  const [quickCurrency, setQuickCurrency] = useState("");
+  const [quickDate, setQuickDate] = useState(new Date().toISOString().split("T")[0]);
+  const [quickRate, setQuickRate] = useState("");
+
   const { data: rates, isLoading } = useQuery({ queryKey: ["exchange-rates"], queryFn: getExchangeRates });
   const { data: countries } = useQuery({ queryKey: ["countries"], queryFn: getCountries });
   const { data: currencies } = useQuery({ queryKey: ["currencies"], queryFn: getCurrencies });
+  const { data: countryCurrenciesAll } = useQuery({ queryKey: ["country-currencies-all"], queryFn: getCountryCurrenciesAll });
 
   const createMut = useMutation({
     mutationFn: createExchangeRate,
-    onSuccess: () => { toast.success("Tipo de cambio creado"); queryClient.invalidateQueries({ queryKey: ["exchange-rates"] }); setOpen(false); },
+    onSuccess: () => { toast.success("Tipo de cambio guardado"); queryClient.invalidateQueries({ queryKey: ["exchange-rates"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
   const updateMut = useMutation({
@@ -406,14 +438,49 @@ function CambiosTab() {
     onSuccess: () => { toast.success("Tipo de cambio eliminado"); queryClient.invalidateQueries({ queryKey: ["exchange-rates"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const syncChileMut = useMutation({
+    mutationFn: async (date?: string) => {
+      const resp = await fetch("/api/currencies/sync-chile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(date ? { date } : {}),
+      });
+      if (!resp.ok) throw new Error("Error al sincronizar");
+      return resp.json();
+    },
+    onSuccess: (data: { summary: { inserted: number; exists: number; errors: number } }) => {
+      const s = data.summary;
+      toast.success(`Sincronización BCCh: ${s.inserted} nuevas, ${s.exists} ya existían${s.errors > 0 ? `, ${s.errors} errores` : ""}`);
+      queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
-  // Agrupar por país
-  const byCountry: Record<string, { countryName: string; countryCode: string; items: NonNullable<typeof rates> }> = {};
+  // Monedas disponibles para el país seleccionado en entrada rápida
+  const quickCurrencyOptions = (countryCurrenciesAll || [])
+    .filter(cc => cc.country_id === quickCountry && cc.is_active)
+    .map(cc => ({ code: cc.currency_code, name: cc.currency?.name || cc.currency_code }));
+
+  // Agrupar por país → moneda → historial de fechas
+  const byCountry: Record<string, { countryName: string; countryCode: string; byCurrency: Record<string, { currencyName: string; currencyCode: string; items: NonNullable<typeof rates> }> }> = {};
   for (const r of rates || []) {
     const key = r.country_id;
-    if (!byCountry[key]) byCountry[key] = { countryName: r.country?.name || "—", countryCode: r.country?.code || "", items: [] };
-    byCountry[key]!.items.push(r);
+    if (!byCountry[key]) byCountry[key] = { countryName: r.country?.name || "—", countryCode: r.country?.code || "", byCurrency: {} };
+    const cKey = r.currency_code;
+    if (!byCountry[key]!.byCurrency[cKey]) byCountry[key]!.byCurrency[cKey] = { currencyName: r.currency?.name || r.currency_code, currencyCode: r.currency_code, items: [] };
+    byCountry[key]!.byCurrency[cKey]!.items.push(r);
   }
+
+  const handleQuickSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickCountry || !quickCurrency || !quickRate) { toast.error("País, moneda y tasa son requeridos"); return; }
+    createMut.mutate(
+      { country_id: quickCountry, currency_code: quickCurrency, rate_to_base: parseFloat(quickRate), effective_date: quickDate, source: "manual" },
+      {
+        onSuccess: () => { setQuickRate(""); },
+      }
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -425,56 +492,140 @@ function CambiosTab() {
 
   return (
     <div className="app-stack">
-      <div className="flex justify-end">
+      {/* ── Panel de entrada rápida ── */}
+      {canCreate("catalogos") && (
+        <div className="app-panel">
+          <h3 className="app-section-title flex items-center gap-2 mb-3">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            Carga Rápida de Tasa
+          </h3>
+          <form onSubmit={handleQuickSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+            <div>
+              <Label className="app-field-label">País</Label>
+              <select
+                className="app-input w-full"
+                value={quickCountry}
+                onChange={(e) => { setQuickCountry(e.target.value); setQuickCurrency(""); }}
+              >
+                <option value="">Seleccionar...</option>
+                {countries?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label className="app-field-label">Moneda</Label>
+              <select
+                className="app-input w-full"
+                value={quickCurrency}
+                onChange={(e) => setQuickCurrency(e.target.value)}
+                disabled={!quickCountry}
+              >
+                <option value="">Seleccionar...</option>
+                {quickCurrencyOptions.map(c => <option key={c.code} value={c.code}>{c.code} — {c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label className="app-field-label">Fecha</Label>
+              <Input type="date" value={quickDate} onChange={(e) => setQuickDate(e.target.value)} className="app-input" />
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label className="app-field-label">Tasa → Base</Label>
+                <Input type="number" step="0.000001" min={0} value={quickRate} onChange={(e) => setQuickRate(e.target.value)} placeholder="Ej: 950.00" className="app-input font-mono" />
+              </div>
+              <Button type="submit" disabled={createMut.isPending} className="pg-btn-platinum">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── Botones de acción ── */}
+      <div className="flex justify-end gap-2">
         {canCreate("catalogos") && (
-          <Button onClick={() => { setEditingId(null); setForm({ country_id: "", currency_code: "", rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" }); setOpen(true); }} className="pg-btn-platinum">
+          <Button
+            variant="outline"
+            onClick={() => syncChileMut.mutate(undefined)}
+            disabled={syncChileMut.isPending}
+            className="pg-btn-platinum-icon"
+            title="Descarga USD y UF de los últimos 30 días desde mindicador.cl (Banco Central de Chile)"
+          >
+            <ArrowRightLeft className={`mr-1.5 h-4 w-4 ${syncChileMut.isPending ? "animate-spin" : ""}`} />
+            {syncChileMut.isPending ? "Sincronizando..." : "Sincronizar BCCh (30 días)"}
+          </Button>
+        )}
+        {canCreate("catalogos") && (
+          <Button variant="outline" onClick={() => { setEditingId(null); setForm({ country_id: "", currency_code: "", rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" }); setOpen(true); }} className="pg-btn-platinum-icon">
             <Plus className="mr-1.5 h-4 w-4" /> Nuevo Tipo de Cambio
           </Button>
         )}
       </div>
 
+      {/* ── Historial agrupado por país → moneda ── */}
       <div className="space-y-3">
         {isLoading ? <div className="app-panel text-center py-4 text-muted-foreground text-sm">Cargando...</div>
         : Object.values(byCountry).length === 0 ? <div className="app-panel text-center py-4 text-muted-foreground text-sm">No hay tipos de cambio configurados.</div>
-        : Object.values(byCountry).sort((a, b) => a.countryName.localeCompare(b.countryName)).map((group) => (
+        : Object.values(byCountry).sort((a, b) => a.countryName.localeCompare(b.countryName)).map((group) => {
+          const countryData = countries?.find(c => c.id === Object.keys(byCountry).find(k => byCountry[k] === group));
+          return (
           <div key={group.countryCode} className="app-panel">
             <h3 className="app-section-title flex items-center gap-2 mb-3">
               <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
               <span className="font-mono text-[11px] text-muted-foreground">{group.countryCode}</span>
               {group.countryName}
+              {countryData?.reference_date_type === "execution_date" && (
+                <span className="text-[10px] rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+                  Ref: Fecha Ejecución
+                </span>
+              )}
+              {countryData?.reference_date_type === "claim_date" && (
+                <span className="text-[10px] rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+                  Ref: Fecha Siniestro
+                </span>
+              )}
             </h3>
-            <div className="app-data-table-wrap">
-              <table className="app-data-table">
-                <thead><tr><th>Moneda</th><th>Código</th><th className="text-right">Tasa → Base</th><th>Fecha</th><th>Origen</th><th className="w-[80px]"></th></tr></thead>
-                <tbody>
-                  {group.items?.map((r) => (
-                    <tr key={r.id}>
-                      <td className="font-medium">{r.currency?.name || r.currency_code}</td>
-                      <td className="font-mono font-semibold text-[13px]">{r.currency_code}</td>
-                      <td className="text-right font-mono font-semibold">{r.rate_to_base.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</td>
-                      <td className="text-muted-foreground text-[11px]">{new Date(r.effective_date).toLocaleDateString("es-CL")}</td>
-                      <td className="text-muted-foreground text-[11px]">{r.source || "—"}</td>
-                      <td>
-                        <div className="app-row-actions">
-                          {canEdit("catalogos") && (
-                            <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(r.id); setForm({ country_id: r.country_id, currency_code: r.currency_code, rate_to_base: String(r.rate_to_base), effective_date: r.effective_date, source: r.source || "manual" }); setOpen(true); }}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canDelete("catalogos") && (
-                            <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Eliminar este tipo de cambio?")) deleteMut.mutate(r.id); }}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {Object.values(group.byCurrency).sort((a, b) => a.currencyCode.localeCompare(b.currencyCode)).map((curr) => (
+                <div key={curr.currencyCode}>
+                  <h4 className="text-[12px] font-semibold text-muted-foreground mb-1.5 flex items-center gap-2">
+                    <span className="font-mono">{curr.currencyCode}</span>
+                    {curr.currencyName}
+                    <span className="text-[10px] text-muted-foreground font-normal">({curr.items.length} registros)</span>
+                  </h4>
+                  <div className="app-data-table-wrap">
+                    <table className="app-data-table">
+                      <thead><tr><th className="text-right">Tasa → Base</th><th>Fecha</th><th>Origen</th><th className="w-[80px]"></th></tr></thead>
+                      <tbody>
+                        {curr.items.sort((a, b) => b.effective_date.localeCompare(a.effective_date)).map((r) => (
+                          <tr key={r.id}>
+                            <td className="text-right font-mono font-semibold">{r.rate_to_base.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</td>
+                            <td className="text-muted-foreground text-[11px]">{new Date(r.effective_date).toLocaleDateString("es-CL")}</td>
+                            <td className="text-muted-foreground text-[11px]">{r.source || "—"}</td>
+                            <td>
+                              <div className="app-row-actions">
+                                {canEdit("catalogos") && (
+                                  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(r.id); setForm({ country_id: r.country_id, currency_code: r.currency_code, rate_to_base: String(r.rate_to_base), effective_date: r.effective_date, source: r.source || "manual" }); setOpen(true); }}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {canDelete("catalogos") && (
+                                  <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Eliminar este tipo de cambio?")) deleteMut.mutate(r.id); }}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
