@@ -219,15 +219,23 @@ export async function getDocumentRequirementsByBusinessLine(businessLineId: stri
 export async function createDocumentRequirement(input: {
   business_line_id: string;
   document_type_code: string;
-  document_name: string;
   description?: string | null;
   is_required: boolean;
   sort_order: number;
 }): Promise<DocumentRequirement> {
+  // Obtener el nombre desde document_types (no inventarlo)
+  const { getSupabaseClient } = await import("@/lib/supabase/client");
+  const supabase = getSupabaseClient();
+  const { data: docType } = await supabase
+    .from("document_types")
+    .select("name")
+    .eq("code", input.document_type_code)
+    .maybeSingle();
+
   return insertRow<DocumentRequirement>("document_requirements", {
     business_line_id: input.business_line_id,
     document_type_code: input.document_type_code,
-    document_name: input.document_name,
+    document_name: docType?.name || input.document_type_code,
     description: input.description || null,
     is_required: input.is_required,
     is_active: true,

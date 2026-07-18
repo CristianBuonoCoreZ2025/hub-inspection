@@ -315,7 +315,6 @@ function DocumentosModal({ lineId, lineName, onClose }: { lineId: string; lineNa
         await createDocumentRequirement({
           business_line_id: lineId,
           document_type_code: item.code,
-          document_name: item.name,
           is_required: item.required,
           sort_order: item.sort_order,
         });
