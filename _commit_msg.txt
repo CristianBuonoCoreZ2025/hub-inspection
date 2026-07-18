@@ -1,0 +1,13 @@
+fix: botones platinum deben tener texto de una sola palabra
+
+- "Nueva Moneda" → "Nueva"
+- "Nueva Relacion" → "Nueva"
+- "Sincronizar BCCh (30 dias)" → "Sincronizar"
+- "Nuevo Tipo de Cambio" → "Nuevo"
+- "Cerrar caso" → "Cerrar"
+- "Inicie la inspeccion para editar" → "Bloqueado"
+- "Ver regiones/ciudades/comunas" → "Ver"
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

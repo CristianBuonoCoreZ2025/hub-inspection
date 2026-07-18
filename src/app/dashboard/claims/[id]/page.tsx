@@ -614,7 +614,7 @@ export default function ClaimDetailPage() {
                   disabled={closeMutation.isPending || !claim?.policy_id}
                   title={!claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined}
                 >
-                  Cerrar caso
+                  Cerrar
                 </Button>
               )}
             </>

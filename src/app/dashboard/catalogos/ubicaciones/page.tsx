@@ -192,9 +192,9 @@ export default function UbicacionesPage() {
 
   const getNextLevelLabel = () => {
     switch (level) {
-      case 0: return "Ver regiones";
-      case 1: return "Ver ciudades";
-      case 2: return "Ver comunas";
+      case 0: return "Ver";
+      case 1: return "Ver";
+      case 2: return "Ver";
       case 3: return null;
     }
   };

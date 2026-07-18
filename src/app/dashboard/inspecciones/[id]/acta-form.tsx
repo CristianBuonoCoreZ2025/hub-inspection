@@ -818,7 +818,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
           disabled={saveMutation.isPending || readOnly}
           className="pg-btn-platinum"
         >
-          {readOnly ? "Inicie la inspección para editar" : saveMutation.isPending ? "Guardando..." : "Guardar"}
+          {readOnly ? "Bloqueado" : saveMutation.isPending ? "Guardando..." : "Guardar"}
         </Button>
       </div>
       </fieldset>
