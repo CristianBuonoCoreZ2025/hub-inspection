@@ -95,6 +95,12 @@ function TiposCambioContent() {
       .map(cc => ({ code: cc.currency_code, name: cc.currency?.name || cc.currency_code, isBase: cc.is_base }))
   , [countryCurrenciesAll, filterCountry]);
 
+  // Países que tienen al menos una moneda activa no-base (para el dropdown)
+  const countriesWithCurrencies = useMemo(() => {
+    const countryIds = new Set((countryCurrenciesAll || []).filter(cc => cc.is_active && !cc.is_base).map(cc => cc.country_id));
+    return (countries || []).filter(c => countryIds.has(c.id));
+  }, [countries, countryCurrenciesAll]);
+
   // Si la moneda seleccionada ya no está en las opciones (ej: era la base), usar string vacío
   const effectiveFilterCurrency = filterCurrency && countryCurrencyOptions.length > 0 && !countryCurrencyOptions.find(c => c.code === filterCurrency)
     ? ""
@@ -195,12 +201,12 @@ function TiposCambioContent() {
               <Select
                 value={filterCountry || "__none"}
                 onValueChange={(v) => { const val = v === "__none" ? "" : (v ?? ""); setFilterCountry(val); setFilterCurrency(""); }}
-                items={[{ value: "__none", label: "Todos" }, ...(countries || []).map((c) => ({ value: c.id, label: c.name }))]}
+                items={[{ value: "__none", label: "Todos" }, ...countriesWithCurrencies.map((c) => ({ value: c.id, label: c.name }))]}
               >
                 <SelectTrigger className="app-input h-7"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">Todos</SelectItem>
-                  {countries?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  {countriesWithCurrencies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
