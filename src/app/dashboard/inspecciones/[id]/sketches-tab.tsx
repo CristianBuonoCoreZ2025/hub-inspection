@@ -9,8 +9,9 @@ import {
   deleteDamageSketch,
 } from "@/services/inspections";
 import { uploadFileToStorage } from "@/lib/supabase/storage-upload";
+import { DrawingCanvas } from "@/components/ui/drawing-canvas";
 import { toast } from "sonner";
-import { Upload, Trash2, ImageIcon, Pencil, Check, X } from "lucide-react";
+import { Upload, Trash2, ImageIcon, Pencil, Check, X, PenTool } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function SketchesTab({ sessionId }: { sessionId: string }) {
@@ -18,6 +19,9 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
+  const [mode, setMode] = useState<"view" | "upload" | "draw">("view");
+  const [drawEditingSketch, setDrawEditingSketch] = useState<{ id: string; url: string; label: string } | null>(null);
+  const [savingDrawing, setSavingDrawing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: sketches, isLoading } = useQuery({
@@ -29,7 +33,7 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
     mutationFn: createDamageSketch,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
-      toast.success("Croquis subido");
+      toast.success("Croquis guardado");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -50,6 +54,25 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
       toast.success("Croquis eliminado");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const sketchMutation = useMutation({
+    mutationFn: async (data: { sessionId: string; sketchDataUrl: string; label: string; sketchId?: string }) => {
+      const res = await fetch("/api/inspection/sketch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Error al guardar croquis");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
+      setMode("view");
+      setDrawEditingSketch(null);
+      toast.success("Croquis guardado");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -89,6 +112,19 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
     }
   }
 
+  function handleSaveDrawing(dataUrl: string) {
+    setSavingDrawing(true);
+    sketchMutation.mutate(
+      {
+        sessionId,
+        sketchDataUrl: dataUrl,
+        label: drawEditingSketch?.label || "Croquis dibujado",
+        sketchId: drawEditingSketch?.id,
+      },
+      { onSettled: () => setSavingDrawing(false) }
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="app-panel">
@@ -97,13 +133,49 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
     );
   }
 
+  // Modo dibujo
+  if (mode === "draw") {
+    return (
+      <div className="app-stack">
+        <div className="flex items-center justify-between">
+          <h3 className="app-section-title flex items-center gap-2">
+            <PenTool className="h-4 w-4" />
+            {drawEditingSketch ? "Editar Croquis" : "Dibujar Croquis"}
+          </h3>
+          <Button variant="outline" size="sm" onClick={() => { setMode("view"); setDrawEditingSketch(null); }}>
+            <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+          </Button>
+        </div>
+        <div className="app-panel">
+          <DrawingCanvas
+            onSave={handleSaveDrawing}
+            saving={savingDrawing}
+            initialImage={drawEditingSketch?.url}
+            height={500}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-stack">
-      {/* Upload zone */}
-      <div
-        className="app-panel flex cursor-pointer flex-col items-center justify-center gap-2 border-2 border-dashed border-border py-8 transition-colors hover:border-primary/50"
-        onClick={() => fileInputRef.current?.click()}
-      >
+      {/* Botones de acción */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setMode("draw")}
+          className="inline-flex items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-[13px] font-medium shadow-sm transition-colors hover:bg-accent"
+        >
+          <PenTool className="h-4 w-4" />
+          Dibujar Croquis
+        </button>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="inline-flex items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-[13px] font-medium shadow-sm transition-colors hover:bg-accent"
+        >
+          <Upload className="h-4 w-4" />
+          Subir Imagen
+        </button>
         <input
           ref={fileInputRef}
           type="file"
@@ -112,11 +184,9 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
           onChange={handleInput}
           multiple
         />
-        <Upload className="h-6 w-6 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          {uploading ? "Subiendo..." : "Haz clic o arrastra imágenes para subir croquis"}
-        </p>
       </div>
+
+      {uploading && <p className="text-xs text-muted-foreground">Subiendo...</p>}
 
       {/* Grid */}
       {sketches && sketches.length > 0 ? (
@@ -124,7 +194,7 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
           {sketches.map((sketch) => (
             <div key={sketch.id} className="app-panel space-y-3">
               <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from Supabase Storage with dynamic URL */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 with dynamic URL */}
                 <img
                   src={sketch.sketch_url}
                   alt={sketch.label || "Croquis"}
@@ -172,6 +242,19 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
+                      title="Dibujar / Editar"
+                      onClick={() => {
+                        setDrawEditingSketch({ id: sketch.id, url: sketch.sketch_url, label: sketch.label || "" });
+                        setMode("draw");
+                      }}
+                    >
+                      <PenTool className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title="Renombrar"
                       onClick={() => startEdit(sketch)}
                     >
                       <Pencil className="h-4 w-4" />
@@ -198,7 +281,7 @@ export default function SketchesTab({ sessionId }: { sessionId: string }) {
         <div className="app-panel text-center py-8">
           <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground" />
           <p className="mt-2 text-sm text-muted-foreground">
-            No hay croquis subidos aún.
+            No hay croquis aún. Dibuja o sube uno.
           </p>
         </div>
       )}

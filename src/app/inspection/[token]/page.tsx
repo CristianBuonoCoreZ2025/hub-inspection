@@ -9,6 +9,7 @@ import {
   ShieldCheck, MapPin, PenTool, XCircle,
 } from "lucide-react";
 import VideoCall from "@/components/video-call";
+import { DrawingCanvas } from "@/components/ui/drawing-canvas";
 
 // ═══════════════════════════════════════════════════════════════
 // Tipos
@@ -372,7 +373,7 @@ export default function MagicLinkPage() {
         {effectiveTab === "acta" && <ActaTab session={session} actaStep={session.acta_step || "datos"} />}
         {effectiveTab === "danos" && <DamagesTab damages={session.inspection_damages} />}
         {effectiveTab === "evidencias" && <EvidencesTab evidences={session.inspection_evidences} />}
-        {effectiveTab === "croquis" && <SketchesTab sketches={session.damage_sketches} />}
+        {effectiveTab === "croquis" && <SketchesTab sketches={session.damage_sketches} session={session} />}
         {effectiveTab === "firmas" && <SignaturesTab session={session} />}
         </main>
 
@@ -749,24 +750,105 @@ function EvidencesTab({ evidences }: { evidences: LiveEvidence[] }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Tab: Croquis (read-only)
+// Tab: Croquis (interactivo — cliente puede dibujar y editar)
 // ═══════════════════════════════════════════════════════════════
-function SketchesTab({ sketches }: { sketches: LiveSketch[] }) {
-  if (!sketches.length) {
-    return <EmptyState icon={MapPin} text="No hay croquis aún." />;
+function SketchesTab({ sketches, session }: { sketches: LiveSketch[]; session: LiveSession }) {
+  const queryClient = useQueryClient();
+  const [mode, setMode] = useState<"view" | "draw">("view");
+  const [editingSketch, setEditingSketch] = useState<{ id: string; url: string; label: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const sketchMutation = useMutation({
+    mutationFn: async (data: { sessionId: string; sketchDataUrl: string; label: string; sketchId?: string }) => {
+      const res = await fetch("/api/inspection/sketch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Error al guardar croquis");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["magic-link-live", session.magic_link_token] });
+      setMode("view");
+      setEditingSketch(null);
+    },
+  });
+
+  function handleSave(dataUrl: string) {
+    setSaving(true);
+    sketchMutation.mutate(
+      {
+        sessionId: session.id,
+        sketchDataUrl: dataUrl,
+        label: editingSketch?.label || "Croquis del asegurado",
+        sketchId: editingSketch?.id,
+      },
+      { onSettled: () => setSaving(false) }
+    );
   }
-  return (
-    <Panel>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {sketches.map((sk) => (
-          <div key={sk.id} className="rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={sk.sketch_url} alt={sk.label || "Croquis"} className="w-full h-48 object-contain bg-white" />
-            {sk.label && <p className="text-[11px] text-slate-400 p-2">{sk.label}</p>}
-          </div>
-        ))}
+
+  if (mode === "draw") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[14px] font-semibold text-slate-200 flex items-center gap-2">
+            <PenTool className="h-4 w-4 text-sky-400" />
+            {editingSketch ? "Editar Croquis" : "Dibujar Croquis del Bien Siniestrado"}
+          </h3>
+          <button
+            onClick={() => { setMode("view"); setEditingSketch(null); }}
+            className="rounded-lg border border-slate-700 px-3 py-1.5 text-[12px] text-slate-300 hover:bg-slate-800"
+          >
+            Cancelar
+          </button>
+        </div>
+        <Panel>
+          <DrawingCanvas
+            onSave={handleSave}
+            saving={saving}
+            initialImage={editingSketch?.url}
+            height={450}
+          />
+        </Panel>
       </div>
-    </Panel>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Botón dibujar */}
+      <button
+        onClick={() => { setEditingSketch(null); setMode("draw"); }}
+        className="w-full rounded-lg border-2 border-dashed border-slate-700 py-4 text-[13px] text-slate-300 hover:border-sky-500/50 hover:bg-sky-950/20 transition-colors flex items-center justify-center gap-2"
+      >
+        <PenTool className="h-4 w-4" />
+        Dibujar Croquis
+      </button>
+
+      {/* Croquis existentes */}
+      {sketches.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {sketches.map((sk) => (
+            <div key={sk.id} className="rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={sk.sketch_url} alt={sk.label || "Croquis"} className="w-full h-48 object-contain bg-white" />
+              <div className="flex items-center justify-between p-2">
+                <p className="text-[11px] text-slate-400 truncate">{sk.label}</p>
+                <button
+                  onClick={() => { setEditingSketch({ id: sk.id, url: sk.sketch_url, label: sk.label || "" }); setMode("draw"); }}
+                  className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center gap-1"
+                >
+                  <PenTool className="h-3 w-3" /> Editar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState icon={MapPin} text="No hay croquis aún. Dibuja el plano del bien siniestrado." />
+      )}
+    </div>
   );
 }
 
