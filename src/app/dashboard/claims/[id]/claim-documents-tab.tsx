@@ -305,19 +305,25 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
               <thead>
                 <tr>
                   <th>Nombre</th>
-                  <th>Tipo</th>
                   <th>Tamaño</th>
                   <th className="w-[80px]"></th>
                 </tr>
               </thead>
               <tbody>
-                {claimDocs.map((doc) => (
+                {claimDocs.map((doc) => {
+                  const docTypeName =
+                    docOptions.lineDocs.find((d) => d.code === doc.document_type)?.name ||
+                    docOptions.restDocs.find((d) => d.code === doc.document_type)?.name ||
+                    doc.document_type || "—";
+                  return (
                   <tr key={doc.id}>
-                    <td className="font-medium wrap-break-word">{doc.document_name}</td>
-                    <td className="text-muted-foreground">
-                      {docOptions.lineDocs.find((d) => d.code === doc.document_type)?.name ||
-                       docOptions.restDocs.find((d) => d.code === doc.document_type)?.name ||
-                       doc.document_type || "—"}
+                    <td className="font-medium wrap-break-word">
+                      <div>{docTypeName}</div>
+                      {doc.original_filename && doc.original_filename !== docTypeName && (
+                        <div className="text-[10px] text-muted-foreground/70 truncate max-w-[220px]">
+                          {doc.original_filename}
+                        </div>
+                      )}
                     </td>
                     <td className="text-muted-foreground">{formatFileSize(doc.file_size)}</td>
                     <td>
@@ -348,7 +354,8 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
