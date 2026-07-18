@@ -370,7 +370,7 @@ export default function ReportTab({
             <div>
               {companyLogo ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={companyLogo} alt={companyName} className="logo h-14 w-auto" />
+                <img src={companyLogo} alt={companyName} className="logo h-14 w-auto" crossOrigin="anonymous" />
               ) : (
                 <div className="logo-text text-sm font-bold">{companyName}</div>
               )}
@@ -587,8 +587,8 @@ export default function ReportTab({
                   <tr>
                     <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">N°</th>
                     <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Tipo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Archivo</th>
                     <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Fecha</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -596,8 +596,8 @@ export default function ReportTab({
                     <tr key={ev.id}>
                       <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
                       <td className="p-1.5 border border-gray-300 text-[9px] capitalize">{ev.type}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{ev.description || "Sin descripción"}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{fmtDateTime(ev.created_at)}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{ev.metadata?.originalName || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{ev.description || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -615,7 +615,7 @@ export default function ReportTab({
                 {photos.map((ev, idx) => (
                   <div key={ev.id} className="border border-gray-300 p-1 bg-gray-50">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ev.url} alt={`Foto ${idx + 1}`} className="w-full h-32 object-contain" />
+                    <img src={ev.url} alt={`Foto ${idx + 1}`} className="w-full h-32 object-contain" crossOrigin="anonymous" />
                     <p className="photo-label text-[8px] text-gray-600 text-center mt-0.5">
                       Foto {idx + 1}{ev.description ? ` — ${ev.description}` : ""}
                     </p>
@@ -631,11 +631,24 @@ export default function ReportTab({
               <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Videos ({videos.length})
               </div>
-              <ul className="text-[10px] text-gray-700 space-y-0.5 list-disc list-inside mb-3">
-                {videos.map((v, idx) => (
-                  <li key={v.id}>Video {idx + 1}: {v.description || "Sin descripción"} — <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver video</a></li>
-                ))}
-              </ul>
+              <table className="w-full border-collapse my-1.5">
+                <thead>
+                  <tr>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">N°</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Archivo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {videos.map((v, idx) => (
+                    <tr key={v.id}>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{v.metadata?.originalName || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{v.description || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </>
           )}
 
@@ -645,24 +658,29 @@ export default function ReportTab({
               <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Documentos Adjuntos ({docs.length})
               </div>
-              <table className="w-full border-collapse my-1.5">
-                <thead>
-                  <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">N°</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Referencia</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {docs.map((d, idx) => (
-                    <tr key={d.id}>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.description || "Sin descripción"}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]"><a href={d.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver documento</a></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {docs.map((d, idx) => {
+                const fileName = d.metadata?.originalName || `documento-${idx + 1}`;
+                const mimeType = d.metadata?.mimeType || "";
+                const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName);
+                return (
+                  <div key={d.id} className="border border-gray-300 p-2 mb-2 bg-gray-50">
+                    <p className="text-[10px] font-semibold text-gray-700 mb-1">
+                      Documento {idx + 1}: {fileName}
+                    </p>
+                    {d.description && (
+                      <p className="text-[9px] text-gray-600 mb-1">{d.description}</p>
+                    )}
+                    {isImage ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={d.url} alt={fileName} className="w-full max-h-48 object-contain border border-gray-200" crossOrigin="anonymous" />
+                    ) : (
+                      <p className="text-[9px] text-gray-500 italic">
+                        Documento {mimeType || "adjunto"} — {d.metadata?.fileSize ? `${(d.metadata.fileSize / 1024).toFixed(0)} KB` : ""}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </>
           )}
 
@@ -677,8 +695,8 @@ export default function ReportTab({
                   <tr>
                     <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">N°</th>
                     <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Tipo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Archivo</th>
                     <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Referencia</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -686,8 +704,8 @@ export default function ReportTab({
                     <tr key={d.id}>
                       <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
                       <td className="p-1.5 border border-gray-300 text-[9px] capitalize">{d.type}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.description || "Sin descripción"}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]"><a href={d.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver</a></td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.metadata?.originalName || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.description || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -705,7 +723,7 @@ export default function ReportTab({
                 {sketches.map((sk, idx) => (
                   <div key={sk.id}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sk.sketch_url} alt={`Croquis ${idx + 1}`} className="w-full h-36 object-contain border border-gray-300 bg-white" />
+                    <img src={sk.sketch_url} alt={`Croquis ${idx + 1}`} className="w-full h-36 object-contain border border-gray-300 bg-white" crossOrigin="anonymous" />
                     <p className="photo-label text-[8px] text-gray-600 text-center mt-0.5">
                       Croquis {idx + 1}{sk.label ? ` — ${sk.label}` : ""}
                     </p>
@@ -725,7 +743,7 @@ export default function ReportTab({
                 {uniqueSignatures.map((sig) => (
                   <div key={sig.id} className="sig-box text-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sig.signature_url} alt={`Firma ${sig.role}`} className="max-h-16 max-w-[180px] border-b border-gray-700 pb-1 mx-auto" />
+                    <img src={sig.signature_url} alt={`Firma ${sig.role}`} className="max-h-16 max-w-[180px] border-b border-gray-700 pb-1 mx-auto" crossOrigin="anonymous" />
                     <p className="name text-[10px] font-semibold mt-1">
                       {sig.role === "insured" ? "Asegurado" : "Inspector"}
                     </p>
