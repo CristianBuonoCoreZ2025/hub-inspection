@@ -1,13 +1,13 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getReport, createReport, updateReport } from "@/services/inspections";
 import { updateInspectionSession } from "@/services/inspections";
 import { issueClaimAction } from "@/services/claim-actions";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { FileText, Printer, CheckCircle2, RefreshCw, Lock } from "lucide-react";
+import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SessionDetail } from "@/services/inspections";
 
@@ -103,27 +103,89 @@ export default function ReportTab({
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Generar PDF del acta usando html2canvas + jsPDF
+  const generatePdf = useCallback(async (): Promise<Blob | null> => {
+    const content = printRef.current;
+    if (!content) return null;
+    const { jsPDF } = await import("jspdf");
+    const html2canvas = (await import("html2canvas")).default;
+
+    const canvas = await html2canvas(content, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+    });
+
+    const imgWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position -= pageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    return pdf.output("blob");
+  }, []);
+
+  // Subir PDF a R2
+  const uploadPdf = useCallback(async (pdfBlob: Blob): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append("file", pdfBlob, "acta-inspeccion.pdf");
+    formData.append("sessionId", sessionId);
+    const res = await fetch("/api/inspection/report/upload", { method: "POST", body: formData });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al subir PDF");
+    }
+    const data = await res.json();
+    return data.url as string;
+  }, [sessionId]);
+
   const finalizeMutation = useMutation({
     mutationFn: async () => {
+      // 1. Generar el PDF
+      const pdfBlob = await generatePdf();
+      let reportUrl: string | null = null;
+
+      // 2. Subir el PDF a R2
+      if (pdfBlob) {
+        reportUrl = await uploadPdf(pdfBlob);
+      }
+
+      // 3. Marcar el reporte como final con la URL del PDF
       if (report) {
-        await updateReport(report.id, { status: "final", generated_at: new Date().toISOString() });
+        await updateReport(report.id, { status: "final", generated_at: new Date().toISOString(), report_url: reportUrl });
       } else {
         await createReport({
           session_id: sessionId,
           claim_id: session.claim_id || null,
-          report_url: null,
+          report_url: reportUrl,
           generated_at: new Date().toISOString(),
           status: "final",
           report_type: isCancellation ? "cancellation" : "completion",
         } as Omit<import("@/types").InspectionReport, "id">);
       }
+      // 4. Marcar la sesión como completed
       await updateInspectionSession(session.id, { status: "completed", ended_at: new Date().toISOString() });
+      // 5. Emitir el claim_action INS
       if (session.claim_action_id) {
         await issueClaimAction(session.claim_action_id, profile?.id);
       }
     },
     onSuccess: () => {
-      toast.success("Inspección finalizada");
+      toast.success("Acta finalizada y PDF generado");
       queryClient.invalidateQueries({ queryKey: ["report", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
@@ -135,6 +197,23 @@ export default function ReportTab({
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  // Descargar PDF (para actas finales)
+  const handleDownload = useCallback(async () => {
+    if (report?.report_url) {
+      window.open(report.report_url, "_blank");
+      return;
+    }
+    // Si no hay URL guardada, generar el PDF al vuelo
+    const blob = await generatePdf();
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `acta-${claimLiquidationNumber || claimNumber || sessionId}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [report, generatePdf, claimLiquidationNumber, claimNumber, sessionId]);
 
   const handlePrint = () => {
     const content = printRef.current;
@@ -255,18 +334,33 @@ export default function ReportTab({
           </Button>
         )}
         {isFinal && (
-          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="h-5 w-5" />
-            <span className="text-sm font-semibold">Acta Definitiva</span>
-          </div>
+          <>
+            <Button variant="outline" onClick={handleDownload} className="pg-btn-platinum-icon">
+              <Download className="mr-2 h-4 w-4" /> Descargar
+            </Button>
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="text-sm font-semibold">Acta Definitiva</span>
+            </div>
+          </>
         )}
       </div>
 
-      {/* Preview del acta */}
+      {/* Preview del acta — vista tipo PDF con scroll */}
       {isLoading ? (
         <div className="app-panel text-center py-8 text-muted-foreground text-sm">Cargando...</div>
       ) : (
-        <div className="app-panel bg-white text-gray-900" ref={printRef} style={{ fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+        <div className="pdf-viewer bg-gray-200 dark:bg-gray-800 rounded-lg p-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
+          <div className="pdf-page bg-white shadow-lg mx-auto text-gray-900 relative" ref={printRef} style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: "800px", padding: "30px 40px" }}>
+
+          {/* Marca de agua BORRADOR */}
+          {!isFinal && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <span className="text-6xl font-bold text-gray-300 opacity-30 select-none" style={{ transform: "rotate(-30deg)", letterSpacing: "8px" }}>
+                BORRADOR
+              </span>
+            </div>
+          )}
 
           {/* ═══ HEADER ═══ */}
           <div className="acta-header flex items-start justify-between border-b-[3px] border-gray-900 pb-3 mb-4">
@@ -585,6 +679,7 @@ export default function ReportTab({
           <div className="footer mt-8 pt-2.5 border-t border-gray-300 text-center text-[8px] text-gray-400">
             Documento {isFinal ? "definitivo" : "en borrador"} emitido por {companyName} · {new Date().toLocaleDateString("es-CL")}
             {isFinal && report?.generated_at && ` · Finalizado el ${fmtDateTime(report.generated_at)}`}
+          </div>
           </div>
         </div>
       )}
