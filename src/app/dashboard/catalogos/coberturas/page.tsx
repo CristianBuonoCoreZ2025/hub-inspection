@@ -17,7 +17,7 @@ import {
  type SubcoverageCatalogItem,
 } from "@/services/coverage-catalog";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, ShieldCheck, ChevronRight, ChevronDown, Layers, Globe, ExternalLink } from "lucide-react";
+import { Plus, Search, Pencil, Ban, ShieldCheck, ChevronRight, ChevronDown, Layers, Globe, ExternalLink } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { getCountries } from "@/services/countries";
 
@@ -622,7 +622,7 @@ function CoberturaRow({
  )}
  {canDelete && (
  <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={onDelete}>
- <Trash2 className="h-3.5 w-3.5" />
+ <Ban className="h-3.5 w-3.5" />
  </Button>
  )}
  </div>
@@ -693,7 +693,7 @@ function CoberturaRow({
  className="btn-icon-xs btn-danger-hover"
  title="Desactivar"
  >
- <Trash2 className="h-3 w-3" />
+ <Ban className="h-3 w-3" />
  </button>
  )}
  </div>

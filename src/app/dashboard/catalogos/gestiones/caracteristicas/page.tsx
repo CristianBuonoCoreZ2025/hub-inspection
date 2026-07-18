@@ -12,7 +12,7 @@ import {
 import { getGestionScreens } from "@/services/gestion-screens";
 import type { GestionScreen } from "@/types";
 import { toast } from "sonner";
-import { Pencil, Trash2, Boxes, Layers, LayoutTemplate } from "lucide-react";
+import { Pencil, Ban, Boxes, Layers, LayoutTemplate } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -191,7 +191,7 @@ export default function CaracteristicasPage() {
  )}
  {canDelete("catalogos") && !featureHasGestions(f.id) && (
  <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta característica?")) deleteMut.mutate(f.id); }}>
- <Trash2 className="h-4 w-4" />
+ <Ban className="h-4 w-4" />
  </Button>
  )}
  </div>

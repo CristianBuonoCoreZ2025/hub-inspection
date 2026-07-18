@@ -789,7 +789,7 @@ export async function updateDamageSpace(id: string, input: Partial<DamageSpace>)
 }
 
 export async function deleteDamageSpace(id: string) {
-  await deleteRow("damage_spaces", id);
+  return updateRow("damage_spaces", id, { is_active: false }, "id");
 }
 
 export async function updateDamageSpaceClassifications(updates: { id: string; applicable_classifications: string[] }[]) {

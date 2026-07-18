@@ -16,7 +16,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, Controller } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, Upload, X, ImageIcon, Building2, Globe, Mail, Phone, Users } from "lucide-react";
+import { Search, Pencil, Ban, Upload, X, ImageIcon, Building2, Globe, Mail, Phone, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -424,8 +424,8 @@ export default function CompaniesPage() {
  }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("companies") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Eliminar esta empresa?")) deleteMutation.mutate(company.id); }}>
- <Trash2 className="h-4 w-4" />
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta empresa?")) deleteMutation.mutate(company.id); }}>
+ <Ban className="h-4 w-4" />
  </Button>
  )}
  </div>

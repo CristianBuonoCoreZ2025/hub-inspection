@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getBrokers, createBroker, updateBroker, deleteBroker, getCountries } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, Briefcase, Users } from "lucide-react";
+import { Search, Pencil, Ban, Briefcase, Users } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -140,7 +140,7 @@ export default function CorredoresPage() {
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(b.id); setFormData({ country_id: b.country_id || "", name: b.name, rut: b.rut || "", address: b.address || "", contact: b.contact || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este corredor?")) deleteMutation.mutate(b.id); }}><Trash2 className="h-4 w-4" /></Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este corredor?")) deleteMutation.mutate(b.id); }}><Ban className="h-4 w-4" /></Button>
  )}
  </div>
  </td>

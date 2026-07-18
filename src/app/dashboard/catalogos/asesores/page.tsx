@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getAdvisors, createAdvisor, updateAdvisor, deleteAdvisor, getCountries } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, UserCheck } from "lucide-react";
+import { Search, Pencil, Ban, UserCheck } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -139,7 +139,7 @@ export default function AsesoresPage() {
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(a.id); setFormData({ country_id: a.country_id || "", name: a.name, email: a.email || "", phone: a.phone || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este asesor?")) deleteMutation.mutate(a.id); }}><Trash2 className="h-4 w-4" /></Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este asesor?")) deleteMutation.mutate(a.id); }}><Ban className="h-4 w-4" /></Button>
  )}
  </div>
  </td>

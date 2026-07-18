@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
- Trash2,
+ Ban,
  ChevronUp,
  ChevronDown,
  LayoutTemplate,
@@ -646,7 +646,7 @@ function CanvasField({
  className="p-1 rounded hover:bg-rose-50 text-rose-600"
  title="Eliminar"
  >
- <Trash2 className="h-3.5 w-3.5" />
+ <Ban className="h-3.5 w-3.5" />
  </button>
  </div>
 

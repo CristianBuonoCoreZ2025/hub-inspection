@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getDamageClassifications, createDamageClassification, updateDamageClassification, deleteDamageClassification } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, FileWarning, Wrench } from "lucide-react";
+import { Search, Pencil, Ban, FileWarning, Wrench } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -155,7 +155,7 @@ export default function DamageClassificationPage() {
  )}
  {canDelete("catalogos") && (
  <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
- <Trash2 className="h-4 w-4" />
+ <Ban className="h-4 w-4" />
  </Button>
  )}
  </div>

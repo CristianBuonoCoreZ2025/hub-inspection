@@ -25,7 +25,7 @@ import { getInsuranceCompanies, getCountries, getEvents } from "@/services/catal
 import { getCompanies } from "@/services/companies";
 import { toast } from "sonner";
 import {
- Search, Pencil, Trash2, FileSpreadsheet, Check,
+ Search, Pencil, Ban, FileSpreadsheet, Check,
  Clock, ArrowLeft, X,
  ChevronRight, FileText, Send, CheckCircle2, Settings2,
  AlertTriangle, Shield,
@@ -982,7 +982,7 @@ export default function GestionesPage() {
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => startEdit(t)}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta gestión?")) deleteMut.mutate(t.id); }}><Trash2 className="h-4 w-4" /></Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta gestión?")) deleteMut.mutate(t.id); }}><Ban className="h-4 w-4" /></Button>
  )}
  </div>
  </td>

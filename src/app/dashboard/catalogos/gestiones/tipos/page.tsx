@@ -6,7 +6,7 @@ import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
 import { getActionTypes, createActionType, updateActionType, deleteActionType } from "@/services/actions";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, ListChecks } from "lucide-react";
+import { Search, Pencil, Ban, ListChecks } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -117,7 +117,7 @@ export default function TiposGestionPage() {
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(t.id); setFormData({ code: t.code, name: t.name, description: t.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este tipo?")) deleteMutation.mutate(t.id); }}><Trash2 className="h-4 w-4" /></Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este tipo?")) deleteMutation.mutate(t.id); }}><Ban className="h-4 w-4" /></Button>
  )}
  </div>
  </td>

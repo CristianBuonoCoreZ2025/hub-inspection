@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getDamageSpaces, getPropertyClassifications, updateDamageSpaceClassifications, createDamageSpace, updateDamageSpace, deleteDamageSpace } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, Grid3x3, Plus, Home } from "lucide-react";
+import { Search, Pencil, Ban, Grid3x3, Plus, Home } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import type { DamageSpace } from "@/types";
 
@@ -190,9 +190,9 @@ export default function DamageSpacesPage() {
  )}
  {canDelete("catalogos_inspeccion") && (
  <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => {
- if (confirm(`¿Eliminar "${item.name}"?`)) deleteMutation.mutate(item.id);
+ if (confirm(`¿Desactivar "${item.name}"?`)) deleteMutation.mutate(item.id);
  }}>
- <Trash2 className="h-4 w-4" />
+ <Ban className="h-4 w-4" />
  </Button>
  )}
  </div>

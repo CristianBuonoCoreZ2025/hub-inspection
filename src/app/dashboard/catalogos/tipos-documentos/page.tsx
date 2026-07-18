@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getDocumentTypes, createDocumentType, updateDocumentType, deleteDocumentType, getCountries } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, FileText } from "lucide-react";
+import { Search, Pencil, Ban, FileText } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -152,7 +152,7 @@ export default function TiposDocumentosPage() {
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(d.id); setFormData({ country_id: d.country_id || "", code: d.code || "", name: d.name, description: d.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este tipo de documento?")) deleteMutation.mutate(d.id); }}><Trash2 className="h-4 w-4" /></Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este tipo de documento?")) deleteMutation.mutate(d.id); }}><Ban className="h-4 w-4" /></Button>
  )}
  </div>
  </td>

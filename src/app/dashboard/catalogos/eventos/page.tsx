@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getEvents, createEvent, updateEvent, deleteEvent, getCountries } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, Zap } from "lucide-react";
+import { Search, Pencil, Ban, Zap } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -152,7 +152,7 @@ export default function EventosPage() {
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(e.id); setFormData({ country_id: e.country_id || "", code: e.code || "", name: e.name, description: e.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este evento?")) deleteMutation.mutate(e.id); }}><Trash2 className="h-4 w-4" /></Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este evento?")) deleteMutation.mutate(e.id); }}><Ban className="h-4 w-4" /></Button>
  )}
  </div>
  </td>

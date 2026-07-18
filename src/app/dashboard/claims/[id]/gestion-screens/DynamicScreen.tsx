@@ -2676,14 +2676,40 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  (r) => !thisRequestCodes.has(r.document_type_code) && !otherRequestCodes.has(r.document_type_code)
  );
 
+ // Documentos obligatorios disponibles (no solicitados/recibidos en ninguna solicitud)
+ const requiredAvailableDocs = availableDocs.filter((d) => d.is_required);
+ const requiredCodes = new Set(requiredAvailableDocs.map((d) => d.document_type_code));
+
+ // Mapa code → is_required para consultar si un ítem existente es obligatorio
+ const codeToRequired = new Map((requirements || []).map((r) => [r.document_type_code, r.is_required]));
+
  const [selected, setSelected] = useState<Set<string>>(new Set());
  const [notes, setNotes] = useState<string>(existingRequest?.notes || "");
+
+ // Pre-seleccionar docs obligatorios automáticamente (no se pueden deseleccionar)
+ useEffect(() => {
+ if (!existingRequest && requiredAvailableDocs.length > 0) {
+ setSelected((prev) => {
+ const next = new Set(prev);
+ let changed = false;
+ requiredAvailableDocs.forEach((d) => {
+ if (!next.has(d.document_type_code)) {
+ next.add(d.document_type_code);
+ changed = true;
+ }
+ });
+ return changed ? next : prev;
+ });
+ }
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [requiredAvailableDocs.length, existingRequest]);
 
  // ── Mutación: crear solicitud nueva ──
  const saveMut = useMutation({
  mutationFn: async () => {
+ // Siempre incluir docs obligatorios + los seleccionados por el usuario
  const items = availableDocs
- .filter((d) => selected.has(d.document_type_code))
+ .filter((d) => d.is_required || selected.has(d.document_type_code))
  .map((d, i) => ({
  document_type_code: d.document_type_code,
  document_name: d.document_name,
@@ -2710,8 +2736,9 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  const addItemsMut = useMutation({
  mutationFn: async () => {
  if (!existingRequest) return;
+ // Siempre incluir docs obligatorios disponibles + los seleccionados por el usuario
  const items = availableDocs
- .filter((d) => selected.has(d.document_type_code))
+ .filter((d) => d.is_required || selected.has(d.document_type_code))
  .map((d, i) => ({
  document_type_code: d.document_type_code,
  document_name: d.document_name,

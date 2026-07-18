@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaimTypes, createClaimType, updateClaimType, deleteClaimType } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, FileWarning, AlertCircle } from "lucide-react";
+import { Search, Pencil, Ban, FileWarning, AlertCircle } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { ICON_MAP, ICON_OPTIONS } from "@/lib/claim-type-icons";
 
@@ -170,7 +170,7 @@ export default function ClaimTypePage() {
  )}
  {canDelete("catalogos") && (
  <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
- <Trash2 className="h-4 w-4" />
+ <Ban className="h-4 w-4" />
  </Button>
  )}
  </div>

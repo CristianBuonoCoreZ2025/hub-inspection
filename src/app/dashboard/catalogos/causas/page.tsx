@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaimCauses, createClaimCause, updateClaimCause, deleteClaimCause, getCountries } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Search, Pencil, Ban, AlertTriangle } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -155,7 +155,7 @@ export default function CausasPage() {
  )}
  {canDelete("catalogos") && (
  <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta causa?")) deleteMutation.mutate(cause.id); }}>
- <Trash2 className="h-4 w-4" />
+ <Ban className="h-4 w-4" />
  </Button>
  )}
  </div>
