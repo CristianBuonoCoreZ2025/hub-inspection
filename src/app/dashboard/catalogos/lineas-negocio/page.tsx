@@ -15,7 +15,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import {
   Select,
   SelectContent,
@@ -350,65 +350,57 @@ function DocumentosModal({ lineId, lineName, onClose }: { lineId: string; lineNa
           </p>
           {isLoading ? (
             <p className="text-[11px] text-muted-foreground py-4 text-center">Cargando...</p>
+          ) : activeDocs.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground py-4 text-center">No hay tipos de documentos configurados.</p>
           ) : (
-            <div className="rounded-lg border border-border overflow-hidden">
-              <table className="app-data-table">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-3 py-2 w-20 text-center font-medium">Solicitar</th>
-                    <th className="px-3 py-2 text-left font-medium">Documento</th>
-                    <th className="px-3 py-2 w-24 text-center font-medium">Obligatorio</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeDocs.length === 0 ? (
-                    <tr><td colSpan={3} className="px-3 py-4 text-center text-[11px] text-muted-foreground">No hay tipos de documentos configurados.</td></tr>
-                  ) : activeDocs.map((dt) => {
-                    const code = dt.code || "";
-                    const isSelected = !!selection[code];
-                    const isRequired = selection[code]?.required || false;
-                    return (
-                      <tr key={dt.id} className={`border-t border-border transition-colors ${isSelected ? "bg-primary/5" : ""}`}>
-                        <td className="px-3 py-2.5 text-center">
-                          <Switch
-                            checked={isSelected}
-                            onCheckedChange={(checked: boolean) => {
-                              setSelection((prev) => {
-                                const next = { ...prev };
-                                if (checked) {
-                                  next[code] = { required: false };
-                                } else {
-                                  delete next[code];
-                                }
-                                return next;
-                              });
-                            }}
-                          />
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span className="font-medium text-[11px]">{dt.name}</span>
-                          {dt.description && <span className="text-[10px] text-muted-foreground ml-2">{dt.description}</span>}
-                        </td>
-                        <td className="px-3 py-2.5 text-center">
-                          <Switch
-                            checked={isRequired}
-                            disabled={!isSelected}
-                            onCheckedChange={(checked: boolean) => {
-                              setSelection((prev) => {
-                                const next = { ...prev };
-                                if (next[code]) {
-                                  next[code] = { ...next[code], required: checked };
-                                }
-                                return next;
-                              });
-                            }}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="space-y-2">
+              {activeDocs.map((dt) => {
+                const code = dt.code || "";
+                const isSelected = !!selection[code];
+                const isRequired = selection[code]?.required || false;
+                return (
+                  <div key={dt.id} className="flex items-center justify-between gap-2 p-2 rounded-lg border border-border">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <ToggleChip
+                        active={isSelected}
+                        onClick={(v) => {
+                          setSelection((prev) => {
+                            const next = { ...prev };
+                            if (v) {
+                              next[code] = { required: false };
+                            } else {
+                              delete next[code];
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        {dt.name}
+                      </ToggleChip>
+                      {dt.description && (
+                        <span className="text-[10px] text-muted-foreground truncate">{dt.description}</span>
+                      )}
+                    </div>
+                    {isSelected && (
+                      <ToggleChip
+                        active={isRequired}
+                        onClick={(v) => {
+                          setSelection((prev) => {
+                            const next = { ...prev };
+                            if (next[code]) {
+                              next[code] = { ...next[code], required: v };
+                            }
+                            return next;
+                          });
+                        }}
+                        className={isRequired ? "border-rose-400 bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400" : ""}
+                      >
+                        Obligatorio
+                      </ToggleChip>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           {Object.keys(selection).length > 0 && (
