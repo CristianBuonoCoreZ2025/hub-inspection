@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     const year = body.year as number | undefined;
     const month = body.month as number | undefined; // 0-11
     const currencyFilter = body.currency as string | undefined; // "USD" | "UF"
+    const force = body.force as boolean | undefined; // si true, actualiza registros existentes
 
     // Obtener el country_id de Chile
     const supabase = createAdminClient();
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
           // Insertar cada fecha de la serie
           for (const item of serie) {
             const date = item.fecha.split("T")[0];
-            await upsertRate(supabase, chile.id, ind.currencyCode, date, item.valor, results);
+            await upsertRate(supabase, chile.id, ind.currencyCode, date, item.valor, results, force);
           }
         } catch {
           results.push({ date: `${year}-01-01`, currency: ind.currencyCode, rate: 0, status: "error" });
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
           for (const item of serie) {
             const date = item.fecha.split("T")[0];
             if (date.split("-")[1] !== monthStr) continue;
-            await upsertRate(supabase, chile.id, ind.currencyCode, date, item.valor, results);
+            await upsertRate(supabase, chile.id, ind.currencyCode, date, item.valor, results, force);
           }
         } catch {
           results.push({ date: `${year}-${String(month + 1).padStart(2, "0")}-01`, currency: ind.currencyCode, rate: 0, status: "error" });
@@ -179,6 +180,7 @@ export async function POST(request: NextRequest) {
 
 /**
  * Inserta una tasa si no existe, o la marca como "exists" si ya está.
+ * Si force=true, actualiza el registro existente en vez de saltarlo.
  */
 async function upsertRate(
   supabase: ReturnType<typeof createAdminClient>,
@@ -186,7 +188,8 @@ async function upsertRate(
   currencyCode: string,
   date: string,
   rate: number,
-  results: Array<{ date: string; currency: string; rate: number; status: "inserted" | "exists" | "error" }>,
+  results: Array<{ date: string; currency: string; rate: number; status: "inserted" | "exists" | "error" | "updated" }>,
+  force = false,
 ) {
   // Verificar si ya existe
   const { data: existing } = await supabase
@@ -198,6 +201,19 @@ async function upsertRate(
     .maybeSingle();
 
   if (existing) {
+    if (force) {
+      // Actualizar el registro existente
+      const { error: updateErr } = await supabase
+        .from("exchange_rates")
+        .update({ rate_to_base: rate, source: "mindicador.cl" })
+        .eq("id", existing.id);
+      if (updateErr) {
+        results.push({ date, currency: currencyCode, rate, status: "error" });
+      } else {
+        results.push({ date, currency: currencyCode, rate, status: "updated" });
+      }
+      return;
+    }
     results.push({ date, currency: currencyCode, rate, status: "exists" });
     return;
   }

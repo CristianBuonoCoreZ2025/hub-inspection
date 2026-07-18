@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { uploadInspectionFile } from "@/lib/storage/inspection-upload";
+import { deleteFromR2 } from "@/lib/storage/r2-upload";
 import { logger } from "@/lib/logger";
 
 /**
  * API route para que el cliente (magic link) guarde su firma.
  * Recibe: { sessionId, role, signatureDataUrl (base64 PNG) }
- * 1. Sube la imagen a Cloudflare R2 con path estructurado del plan:
- *    claims/{L}/actions/{code}/images/{code}-FIR-NNNN.png
- * 2. Crea el registro en inspection_signatures
+ *
+ * 1. Si ya existe una firma para (session_id, role), la borra de R2 y de la BD
+ * 2. Sube la nueva imagen a R2: claims/{L}/actions/{code}/images/{code}-FIR-NNNN.png
+ * 3. Crea el registro en inspection_signatures
+ *
+ * Así nunca quedan firmas huérfanas en R2.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +22,36 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createAdminClient();
+
+    // 0. Si ya existe una firma para (session_id, role), borrarla de R2 y BD
+    const { data: existing } = await supabase
+      .from("inspection_signatures")
+      .select("id, signature_url")
+      .eq("session_id", sessionId)
+      .eq("role", role)
+      .maybeSingle();
+
+    if (existing) {
+      // Borrar el archivo antiguo de R2
+      try {
+        const publicUrl = process.env.R2_PUBLIC_URL || "";
+        const key = existing.signature_url.replace(`${publicUrl}/`, "");
+        if (key && key !== existing.signature_url) {
+          await deleteFromR2(key);
+        }
+      } catch (delErr) {
+        logger.warn("No se pudo borrar firma antigua de R2", {
+          component: "inspection-sign-route",
+          action: "delete.old_signature",
+          metadata: { error: delErr instanceof Error ? delErr.message : String(delErr) },
+        });
+      }
+      // Borrar el registro antiguo de la BD
+      await supabase
+        .from("inspection_signatures")
+        .delete()
+        .eq("id", existing.id);
+    }
 
     // 1. Convertir base64 a buffer y subir a R2 con path estructurado (FIR = firma)
     const base64Response = await fetch(signatureDataUrl);

@@ -634,7 +634,12 @@ export async function updateDamageSketch(id: string, input: Partial<Pick<DamageS
 }
 
 export async function deleteDamageSketch(id: string) {
-  await deleteRow("damage_sketches", id);
+  const res = await fetch(`/api/inspection/sketch/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Error al borrar croquis");
+  }
+  return res.json();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -719,7 +724,12 @@ export async function createEvidence(input: Omit<import("@/types").InspectionEvi
 }
 
 export async function deleteEvidence(id: string) {
-  await deleteRow("inspection_evidences", id);
+  const res = await fetch(`/api/inspection/evidences/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Error al borrar evidencia");
+  }
+  return res.json();
 }
 
 // ═══════════════════════════════════════════════════════════════

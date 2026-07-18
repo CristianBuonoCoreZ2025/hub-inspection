@@ -1,5 +1,5 @@
 import "server-only";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { r2Client, r2Bucket, r2PublicUrl } from "./r2-client";
 import { logger } from "@/lib/logger";
 
@@ -38,4 +38,28 @@ export async function uploadToR2(
   });
 
   return url;
+}
+
+/**
+ * Borra un archivo de Cloudflare R2 (server-side).
+ *
+ * @param key — path completo en R2 (ej: "claims/L-000000141/actions/.../file.png")
+ */
+export async function deleteFromR2(key: string): Promise<void> {
+  if (!r2Bucket) {
+    throw new Error("R2 no configurado. Faltan variables de entorno: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL");
+  }
+
+  const command = new DeleteObjectCommand({
+    Bucket: r2Bucket,
+    Key: key,
+  });
+
+  await r2Client.send(command);
+
+  logger.info("Archivo borrado de R2", {
+    component: "r2-upload",
+    action: "r2.delete",
+    metadata: { key },
+  });
 }
