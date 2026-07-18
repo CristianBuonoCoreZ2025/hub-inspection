@@ -240,12 +240,12 @@ export default function AgendaPage() {
             value={inspectorFilter || "all"}
             onValueChange={(v) => setInspectorFilter(v ?? "all")}
           >
-            <SelectTrigger className="app-input h-8 text-[12px] w-[280px]">
+            <SelectTrigger className="app-input h-8 text-[12px] w-[150px]">
               <User className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <SelectValue placeholder="Todos los inspectores" />
+              <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los inspectores</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {inspectorsWithCases.length > 0 && (
                 <SelectGroup>
                   <SelectLabel className="text-[10px] text-muted-foreground uppercase tracking-wide">
@@ -256,7 +256,11 @@ export default function AgendaPage() {
                       (s.inspector_id || s.claim?.inspector_id) === i.id
                     ).length;
                     return (
-                      <SelectItem key={i.id} value={i.id}>
+                      <SelectItem
+                        key={i.id}
+                        value={i.id}
+                        textValue={i.full_name || i.email}
+                      >
                         <span className="flex items-center gap-2">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                           {i.full_name || i.email}
@@ -276,7 +280,11 @@ export default function AgendaPage() {
                       Sin inspecciones esta semana
                     </SelectLabel>
                     {inspectorsWithoutCases.map((i) => (
-                      <SelectItem key={i.id} value={i.id}>
+                      <SelectItem
+                        key={i.id}
+                        value={i.id}
+                        textValue={i.full_name || i.email}
+                      >
                         <span className="flex items-center gap-2 text-muted-foreground">
                           <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
                           {i.full_name || i.email}
