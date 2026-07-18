@@ -311,7 +311,7 @@ export default function AgendaPage() {
                 <div
                   key={idx}
                   className={`flex flex-col border-r last:border-r-0 min-h-[280px] sm:min-h-[400px] shrink-0 w-[85%] sm:w-1/3 md:w-1/4 lg:w-auto lg:flex-1 ${
-                    isToday ? "bg-primary/[0.03]" : ""
+                    isToday ? "bg-primary/3" : ""
                   }`}
                 >
                   {/* Header del día */}
