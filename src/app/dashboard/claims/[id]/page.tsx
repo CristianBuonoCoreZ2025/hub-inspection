@@ -1197,7 +1197,18 @@ export default function ClaimDetailPage() {
  }
 
  return (
- <tr key={g.id}>
+ <tr
+ key={g.id}
+ className="cursor-pointer hover:bg-muted/30 transition-colors"
+ onClick={() => {
+ if (g.href) {
+ router.push(g.href);
+ } else if (g.esAccion && g.screenType && g.screenType !== "inspeccion") {
+ setEditingGestion(g);
+ setOpenEditGestionModal(true);
+ }
+ }}
+ >
  <td className="font-mono text-[10px] text-primary tabular-nums whitespace-nowrap">
  <span>{shortActionCode(g.codigo)}</span>
  <span className={`ml-1 inline-flex items-center justify-center rounded px-0.5 text-[8px] font-bold ${
@@ -1238,7 +1249,7 @@ export default function ClaimDetailPage() {
  </div>
  </td>
  <td>
- <div className="flex items-center gap-1">
+ <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
  {g.href && (
  <Button size="sm" className="btn-icon-sm" onClick={() => router.push(g.href!)}>
  <Eye className="h-3 w-3" />
