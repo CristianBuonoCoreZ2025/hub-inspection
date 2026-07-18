@@ -409,6 +409,98 @@ WHERE ca.is_active = true AND lc.code != 'rejected';
 
 ---
 
+## 0g. Sistema de Monedas y Tipos de Cambio
+
+### Concepto
+El sistema maneja un catálogo global de monedas, su asociación por país
+(incluyendo cuál es la moneda base de cada país), y los tipos de cambio
+históricos para convertir montos a la moneda base.
+
+### Tablas principales
+- `currencies` — catálogo global de monedas (code, name, symbol, decimals, is_active)
+- `country_currencies` — relación país ↔ moneda (is_base, sort_order, is_active)
+- `exchange_rates` — tipos de cambio históricos (country_id, currency_code, rate_to_base, effective_date, source)
+- `countries.reference_date_type` — define si la conversión usa `claim_date` o `execution_date`
+
+### Menú de navegación
+Dos items separados:
+1. **Monedas** (`/dashboard/catalogos/monedas`) — catálogo de monedas + asociación por país
+2. **Tipos de Cambio** (`/dashboard/catalogos/tipos-cambio`) — tabla pivote de tasas históricas
+
+### Página de Monedas
+- Grilla única (sin tabs) con todas las monedas
+- **ToggleChip "Solo activas"** — seleccionado = solo activas, deseleccionado = todas
+- **ToggleChip "Activa"/"Inactiva"** por fila — clic directo para activar/desactivar
+- Columna "Países" muestra cuántos países usan cada moneda
+- Botones por fila:
+  - **⇄ (ArrowRightLeft)** → navega a Tipos de Cambio filtrado por esa moneda
+  - **🌐 (Globe)** → abre modal de asociación de países
+  - **✏ (Pencil)** → editar moneda
+
+### Modal de asociación de países (botón 🌐)
+- Lista todos los países con:
+  - **ToggleChip "Sí"/"No"** — asocia o desasocia la moneda al país con un clic
+  - **Botón ★ Base** — marca/desmarca como moneda base del país
+    (al marcar base, automáticamente le quita el base a otra moneda que lo tuviera)
+  - **Selector de fecha de referencia** (Siniestro/Ejecución) — solo visible si está asociada
+- Todo en un solo modal, sin navegar a otra página
+
+### Página de Tipos de Cambio
+- **Filtros:** País + Moneda + Año + Modo (Año/Mes)
+- **Dropdown de País:** solo muestra países con monedas activas (no base)
+- **Dropdown de Moneda:** solo muestra monedas activas no-base del país seleccionado
+  (la moneda base nunca aparece porque su tasa siempre es 1)
+- **Vista Año:** tabla pivote días × meses (estilo SII)
+  - Filas = días (1-31), columnas = meses (Ene-Dic)
+  - Clic en celda para editar
+- **Vista Mes:** tabla simple, una fila por día
+  - Columnas: Día, Tasa → Base, Fecha (con día de semana), Origen
+  - Navegación ‹ mes anterior | mes siguiente ›
+- **Stats:** registros, mínimo, promedio, máximo del período
+- **Sincronizar BCCh:** botón que descarga USD y UF de los últimos 30 días
+  desde `mindicador.cl` (API gratuita del Banco Central de Chile, sin credenciales)
+- **Integración desde Monedas:** el botón ⇄ navega con `?currency=USD`
+  preseleccionando la moneda
+
+### Sincronización con Banco Central de Chile (BCCh)
+- **API:** `mindicador.cl` (gratuita, sin credenciales)
+- **Endpoint:** `POST /api/currencies/sync-chile`
+- **Funcionamiento:** descarga USD y UF de los últimos 30 días (o fecha específica)
+  e inserta en `exchange_rates` con `source='mindicador'`
+- **UI:** botón "Sincronizar" en la página de Tipos de Cambio
+
+### Fecha de referencia por país
+Cada país define si las conversiones usan la fecha del siniestro
+(`claim_date`) o la fecha de ejecución (`execution_date`):
+- `countries.reference_date_type = 'claim_date'` → usa fecha del siniestro
+- `countries.reference_date_type = 'execution_date'` → usa fecha de ejecución
+- Se configura desde el modal de asociación de países (selector por país)
+- Servicio: `getCountryReferenceDateType(countryId)`
+
+### Servicios principales (`src/services/catalogs.ts`)
+- `getCurrencies`, `createCurrency`, `updateCurrency` — CRUD monedas
+- `getCountryCurrenciesAll` — todas las relaciones país-moneda
+- `createCountryCurrency`, `updateCountryCurrency`, `deleteCountryCurrency` — CRUD relaciones
+- `getExchangeRates`, `createExchangeRate`, `updateExchangeRate`, `deleteExchangeRate` — CRUD tasas
+- `getExchangeRateForDate(countryId, currencyCode, date)` — tasa para una fecha específica
+- `convertToBaseCurrency(countryId, currencyCode, amount, date)` — conversión
+- `getBaseCurrencyCode(countryId)` — código de la moneda base del país
+- `getCountryReferenceDateType(countryId)` — tipo de fecha de referencia
+- `updateCountryReferenceDateType(countryId, type)` — actualizar tipo de fecha
+
+### Reglas
+```
+1. La moneda base del país NUNCA aparece en Tipos de Cambio (tasa = 1 siempre)
+2. Solo se muestran países con monedas activas no-base en el dropdown
+3. ToggleChip "Solo activas" = un solo toggle (como rechazos de gestiones)
+4. Activar/desactivar moneda = ToggleChip en la grilla, sin confirm()
+5. Asociar moneda a país = modal con ToggleChip, sin navegar a otra página
+6. Al marcar moneda base, se quita el base de otra moneda del mismo país
+7. Vista Año = pivote días×meses; Vista Mes = tabla simple día→tasa
+```
+
+---
+
 ## 1. Migraciones SQL en Nhost / Hasura
 
 ### Problema

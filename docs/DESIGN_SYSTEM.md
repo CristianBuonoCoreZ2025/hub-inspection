@@ -301,9 +301,33 @@ import { ... } from "lucide-react";
 
 ### Regla CRÍTICA
 - **NO USAR CHECKBOXES** en la interfaz. El usuario lo ha prohibido explícitamente.
-- Para toggles de visibilidad: usar iconos `Eye` / `EyeOff`.
+- Para toggles de visibilidad: usar `ToggleChip` (NO iconos Eye/EyeOff).
 - Para toggles booleanos: usar `ToggleChip`.
 - Para selección múltiple: usar chips o botones con estado visual.
+
+### ToggleChip — patrón de uso
+```tsx
+import { ToggleChip } from "@/components/ui/toggle-chip";
+
+// Toggle único (estilo "Solo activas"):
+<ToggleChip active={onlyActive} onClick={() => setOnlyActive(!onlyActive)}>
+  Solo activas
+</ToggleChip>
+// Seleccionado (azul) = filtra, deseleccionado (gris) = muestra todo
+
+// Toggle por fila (estilo "Activa"/"Inactiva"):
+<ToggleChip
+  active={item.is_active}
+  onClick={() => toggleMut.mutate({ id: item.id, isActive: !item.is_active })}
+  disabled={!canEdit("catalogos")}
+>
+  {item.is_active ? "Activa" : "Inactiva"}
+</ToggleChip>
+// Un clic activa/desactiva directamente, sin confirm()
+```
+
+**Regla:** NUNCA dos ToggleChip para un mismo filtro (ej: "Activas" + "Todas").
+Un solo ToggleChip que cuando está seleccionado filtra y cuando no, muestra todo.
 
 ---
 
