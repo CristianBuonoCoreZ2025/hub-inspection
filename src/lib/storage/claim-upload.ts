@@ -8,7 +8,7 @@ import { logger } from "@/lib/logger";
 /**
  * Sube un documento del siniestro a R2 con el path estructurado del plan.
  *
- * Path: siniestros/{L}/documentos/{L}-DOC-NNNNNN.ext
+ * Path: claims/{L}/documents/{L}-DOC-NNNNNN.ext
  *
  * 1. Resuelve claimId → liquidation_number
  * 2. Obtiene el siguiente correlativo DOC-NNNNNN atómico desde la BD

@@ -43,8 +43,8 @@ function TiposCambioContent() {
   const [form, setForm] = useState({ country_id: "", currency_code: "", rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" });
 
   // Estado de sincronización
-  const [syncState, setSyncState] = useState<{ active: boolean; done: boolean; inserted: number; exists: number; errors: number; total: number }>({
-    active: false, done: false, inserted: 0, exists: 0, errors: 0, total: 0,
+  const [syncState, setSyncState] = useState<{ active: boolean; done: boolean; inserted: number; exists: number; errors: number; total: number; current: number; totalMonths: number }>({
+    active: false, done: false, inserted: 0, exists: 0, errors: 0, total: 0, current: 0, totalMonths: 0,
   });
 
   // Filtros
@@ -75,48 +75,56 @@ function TiposCambioContent() {
     onSuccess: () => { toast.success("Tipo de cambio eliminado"); queryClient.invalidateQueries({ queryKey: ["exchange-rates"] }); setOpen(false); setEditingId(null); },
     onError: (e: Error) => toast.error(e.message),
   });
-  // Sincronización BCCh: 1 llamada para la moneda seleccionada
+  // Sincronización BCCh progresiva: mes a mes mostrando resultados
   const syncChile = async () => {
     if (!effectiveFilterCurrency) {
       toast.error("Selecciona una moneda para sincronizar");
       return;
     }
     const year = parseInt(filterYear);
-    const month = viewMode === "month" ? parseInt(filterMonth) : undefined;
 
-    setSyncState({ active: true, done: false, inserted: 0, exists: 0, errors: 0, total: 0 });
+    // En modo mes: 1 llamada. En modo año: 12 llamadas (una por mes)
+    const monthsToSync = viewMode === "month" ? [parseInt(filterMonth)] : Array.from({ length: 12 }, (_, i) => i);
 
-    try {
-      const resp = await fetch("/api/currencies/sync-chile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          year,
-          ...(month !== undefined ? { month } : {}),
-          currency: effectiveFilterCurrency,
-        }),
-      });
-      if (!resp.ok) throw new Error("Error al sincronizar");
-      const data = await resp.json() as { summary: { inserted: number; exists: number; errors: number; total: number } };
+    setSyncState({ active: true, done: false, inserted: 0, exists: 0, errors: 0, total: 0, current: 0, totalMonths: monthsToSync.length });
 
+    let totalInserted = 0, totalExists = 0, totalErrors = 0, totalProcessed = 0;
+
+    for (let i = 0; i < monthsToSync.length; i++) {
+      try {
+        const resp = await fetch("/api/currencies/sync-chile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ year, month: monthsToSync[i], currency: effectiveFilterCurrency }),
+        });
+        if (!resp.ok) throw new Error("Error en mes");
+        const data = await resp.json() as { summary: { inserted: number; exists: number; errors: number; total: number } };
+        totalInserted += data.summary.inserted;
+        totalExists += data.summary.exists;
+        totalErrors += data.summary.errors;
+        totalProcessed += data.summary.total;
+      } catch {
+        totalErrors += 1;
+      }
+      // Actualizar progreso después de cada mes
       setSyncState({
-        active: false,
-        done: true,
-        inserted: data.summary.inserted,
-        exists: data.summary.exists,
-        errors: data.summary.errors,
-        total: data.summary.total,
+        active: true,
+        done: false,
+        inserted: totalInserted,
+        exists: totalExists,
+        errors: totalErrors,
+        total: totalProcessed,
+        current: i + 1,
+        totalMonths: monthsToSync.length,
       });
-
-      queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
-    } catch (e) {
-      setSyncState({ active: false, done: true, inserted: 0, exists: 0, errors: 1, total: 0 });
-      toast.error(e instanceof Error ? e.message : "Error al sincronizar");
     }
+
+    setSyncState(s => ({ ...s, active: false, done: true }));
+    queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
   };
 
   const closeSyncModal = () => {
-    setSyncState({ active: false, done: false, inserted: 0, exists: 0, errors: 0, total: 0 });
+    setSyncState({ active: false, done: false, inserted: 0, exists: 0, errors: 0, total: 0, current: 0, totalMonths: 0 });
   };
 
   // Monedas del país seleccionado (excluyendo la base, que siempre es tasa 1)
@@ -174,14 +182,25 @@ function TiposCambioContent() {
     return Array.from(years).sort().reverse();
   }, [rates, currentYear]);
 
-  // Stats
-  const yearRates = filteredRates.map(r => r.rate_to_base);
-  const stats = yearRates.length > 0 ? {
-    min: Math.min(...yearRates),
-    max: Math.max(...yearRates),
-    avg: yearRates.reduce((a, b) => a + b, 0) / yearRates.length,
-    count: yearRates.length,
-  } : null;
+  // Stats con fecha del min/max
+  const stats = useMemo(() => {
+    if (filteredRates.length === 0) return null;
+    let minRate = filteredRates[0], maxRate = filteredRates[0];
+    let sum = 0;
+    for (const r of filteredRates) {
+      sum += r.rate_to_base;
+      if (r.rate_to_base < minRate.rate_to_base) minRate = r;
+      if (r.rate_to_base > maxRate.rate_to_base) maxRate = r;
+    }
+    return {
+      count: filteredRates.length,
+      min: minRate.rate_to_base,
+      minDate: minRate.effective_date,
+      max: maxRate.rate_to_base,
+      maxDate: maxRate.effective_date,
+      avg: sum / filteredRates.length,
+    };
+  }, [filteredRates]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,6 +374,9 @@ function TiposCambioContent() {
             <div className="app-panel py-3 px-4">
               <div className="text-[11px] text-muted-foreground">Mínimo</div>
               <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">{formatRate(stats.min)}</div>
+              <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                {new Date(stats.minDate + "T00:00:00").toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" })}
+              </div>
             </div>
             <div className="app-panel py-3 px-4">
               <div className="text-[11px] text-muted-foreground">Promedio</div>
@@ -363,6 +385,9 @@ function TiposCambioContent() {
             <div className="app-panel py-3 px-4">
               <div className="text-[11px] text-muted-foreground">Máximo</div>
               <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400">{formatRate(stats.max)}</div>
+              <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                {new Date(stats.maxDate + "T00:00:00").toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" })}
+              </div>
             </div>
           </div>
         )}
@@ -545,38 +570,42 @@ function TiposCambioContent() {
               </span>
             </p>
 
-            {syncState.active ? (
-              <>
-                {/* Barra de progreso indeterminada */}
+            {/* Barra de progreso real */}
+            {syncState.totalMonths > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[11px] text-muted-foreground">
+                  <span>{syncState.active ? "Progreso" : "Completado"}</span>
+                  <span className="font-mono">
+                    {syncState.current} / {syncState.totalMonths} {syncState.totalMonths > 1 ? "meses" : "mes"}
+                  </span>
+                </div>
                 <div className="h-2.5 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full w-1/3 rounded-full bg-linear-to-r from-emerald-500 to-teal-500 animate-pulse" />
+                  <div
+                    className="h-full rounded-full bg-linear-to-r from-emerald-500 to-teal-500 transition-all duration-300 ease-out"
+                    style={{ width: `${syncState.totalMonths > 0 ? (syncState.current / syncState.totalMonths) * 100 : 0}%` }}
+                  />
                 </div>
-                <p className="text-[11px] text-muted-foreground text-center">
-                  Descargando desde mindicador.cl...
-                </p>
-              </>
-            ) : (
-              <>
-                {/* Resultados */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="text-center rounded-lg bg-emerald-50 dark:bg-emerald-900/20 py-3">
-                    <div className="text-[10px] text-muted-foreground">Nuevas</div>
-                    <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">{syncState.inserted}</div>
-                  </div>
-                  <div className="text-center rounded-lg bg-blue-50 dark:bg-blue-900/20 py-3">
-                    <div className="text-[10px] text-muted-foreground">Ya existían</div>
-                    <div className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400">{syncState.exists}</div>
-                  </div>
-                  <div className="text-center rounded-lg bg-rose-50 dark:bg-rose-900/20 py-3">
-                    <div className="text-[10px] text-muted-foreground">Errores</div>
-                    <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400">{syncState.errors}</div>
-                  </div>
-                </div>
-                <div className="text-center text-[11px] text-muted-foreground">
-                  Total de registros procesados: <span className="font-mono font-semibold">{syncState.total}</span>
-                </div>
-              </>
+              </div>
             )}
+
+            {/* Stats en vivo (siempre visibles, se actualizan progresivamente) */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="text-center rounded-lg bg-emerald-50 dark:bg-emerald-900/20 py-2.5">
+                <div className="text-[10px] text-muted-foreground">Nuevas</div>
+                <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">{syncState.inserted}</div>
+              </div>
+              <div className="text-center rounded-lg bg-blue-50 dark:bg-blue-900/20 py-2.5">
+                <div className="text-[10px] text-muted-foreground">Ya existían</div>
+                <div className="text-lg font-bold font-mono text-blue-600 dark:text-blue-400">{syncState.exists}</div>
+              </div>
+              <div className="text-center rounded-lg bg-rose-50 dark:bg-rose-900/20 py-2.5">
+                <div className="text-[10px] text-muted-foreground">Errores</div>
+                <div className="text-lg font-bold font-mono text-rose-600 dark:text-rose-400">{syncState.errors}</div>
+              </div>
+            </div>
+            <div className="text-center text-[11px] text-muted-foreground">
+              Total procesados: <span className="font-mono font-semibold">{syncState.total}</span>
+            </div>
           </div>
           {!syncState.active && (
             <div className="modal-footer">

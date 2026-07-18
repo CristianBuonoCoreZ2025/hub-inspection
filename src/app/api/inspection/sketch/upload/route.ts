@@ -9,7 +9,7 @@ import { logger } from "@/lib/logger";
  * A diferencia de /api/inspection/sketch (que recibe base64 dibujado),
  * este endpoint recibe un File subido por el usuario.
  *
- * Path: siniestros/{L}/gestiones/{code}/documentos/{code}-CRO-NNNN.ext
+ * Path: claims/{L}/actions/{code}/documents/{code}-CRO-NNNN.ext
  *
  * Recibe multipart/form-data:
  *   - file: el archivo (png, jpg, pdf)

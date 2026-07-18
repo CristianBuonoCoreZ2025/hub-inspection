@@ -9,7 +9,7 @@ import { logger } from "@/lib/logger";
  * A diferencia de /api/inspection/sign (que recibe base64 dibujado),
  * este endpoint recibe un File subido por el usuario.
  *
- * Path: siniestros/{L}/gestiones/{code}/imagenes/{code}-FIR-NNNN.png
+ * Path: claims/{L}/actions/{code}/images/{code}-FIR-NNNN.png
  *
  * Recibe multipart/form-data:
  *   - file: el archivo (png, jpg)

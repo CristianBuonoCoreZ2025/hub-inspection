@@ -25,7 +25,7 @@ export function sanitizeCode(code: string): string {
  * @param compositeCode — Código compuesto (línea + característica), ej: "HILI", "PCA"
  * @param templateSeq — Correlativo del template (5 dígitos), ej: "00001"
  * @param ext — Extensión del archivo, ej: ".docx"
- * @returns ej: "configuracion/gestiones/HILI/HILI-00001.docx"
+ * @returns ej: "config/actions/HILI/HILI-00001.docx"
  */
 export function gestionTemplatePath(
   compositeCode: string,
@@ -35,7 +35,7 @@ export function gestionTemplatePath(
   const code = sanitizeCode(compositeCode);
   const seq = templateSeq.padStart(5, "0");
   const filename = `${code}-${seq}${ext.startsWith(".") ? ext : "." + ext}`;
-  return `configuracion/gestiones/${code}/${filename}`;
+  return `config/actions/${code}/${filename}`;
 }
 
 // ═══ Siniestros: documentos del siniestro ═══
@@ -46,7 +46,7 @@ export function gestionTemplatePath(
  * @param liquidationNumber — ej: "L-000000001"
  * @param docSeq — Correlativo de documento (6 dígitos), ej: "000001"
  * @param ext — Extensión, ej: ".pdf"
- * @returns ej: "siniestros/L-000000001/documentos/L-000000001-DOC-000001.pdf"
+ * @returns ej: "claims/L-000000001/documents/L-000000001-DOC-000001.pdf"
  */
 export function claimDocumentPath(
   liquidationNumber: string,
@@ -55,7 +55,7 @@ export function claimDocumentPath(
 ): string {
   const seq = docSeq.padStart(6, "0");
   const filename = `${liquidationNumber}-DOC-${seq}${ext.startsWith(".") ? ext : "." + ext}`;
-  return `siniestros/${liquidationNumber}/documentos/${filename}`;
+  return `claims/${liquidationNumber}/documents/${filename}`;
 }
 
 // ═══ Siniestros: gestiones ═══
@@ -84,7 +84,7 @@ export function gestionInstanceCode(
  * @param liquidationNumber — ej: "L-000000001"
  * @param compositeCode — ej: "HINS"
  * @param instanceSeq — ej: "0001"
- * @returns ej: "siniestros/L-000000001/gestiones/L-000000001-HINS-0001"
+ * @returns ej: "claims/L-000000001/actions/L-000000001-HINS-0001"
  */
 export function gestionInstanceBasePath(
   liquidationNumber: string,
@@ -92,7 +92,7 @@ export function gestionInstanceBasePath(
   instanceSeq: string
 ): string {
   const instanceCode = gestionInstanceCode(liquidationNumber, compositeCode, instanceSeq);
-  return `siniestros/${liquidationNumber}/gestiones/${instanceCode}`;
+  return `claims/${liquidationNumber}/actions/${instanceCode}`;
 }
 
 /**
@@ -102,7 +102,7 @@ export function gestionInstanceBasePath(
  * @param compositeCode — ej: "HILI"
  * @param instanceSeq — ej: "0001"
  * @param ext — ej: ".docx"
- * @returns ej: "siniestros/L-000000001/gestiones/L-000000001-HILI-0001/L-000000001-HILI-0001.docx"
+ * @returns ej: "claims/L-000000001/actions/L-000000001-HILI-0001/L-000000001-HILI-0001.docx"
  */
 export function gestionDocumentPath(
   liquidationNumber: string,
@@ -124,7 +124,7 @@ export function gestionDocumentPath(
  * @param instanceSeq — ej: "0001"
  * @param docSeq — Correlativo de doc extra (4 dígitos), ej: "0001"
  * @param ext — ej: ".pdf"
- * @returns ej: "siniestros/L-000000001/gestiones/L-000000001-HINS-0001/documentos/L-000000001-HINS-0001-DOC-0001.pdf"
+ * @returns ej: "claims/L-000000001/actions/L-000000001-HINS-0001/documents/L-000000001-HINS-0001-DOC-0001.pdf"
  */
 export function gestionExtraDocumentPath(
   liquidationNumber: string,
@@ -137,7 +137,7 @@ export function gestionExtraDocumentPath(
   const instanceCode = gestionInstanceCode(liquidationNumber, compositeCode, instanceSeq);
   const seq = docSeq.padStart(4, "0");
   const filename = `${instanceCode}-DOC-${seq}${ext.startsWith(".") ? ext : "." + ext}`;
-  return `${base}/documentos/${filename}`;
+  return `${base}/documents/${filename}`;
 }
 
 /**
@@ -149,7 +149,7 @@ export function gestionExtraDocumentPath(
  * @param type — Tipo de imagen: "EVI", "DAN", "FIR"
  * @param imgSeq — Correlativo (4 dígitos), ej: "0001"
  * @param ext — ej: ".jpg"
- * @returns ej: "siniestros/L-000000001/gestiones/L-000000001-HINS-0001/imagenes/L-000000001-HINS-0001-EVI-0001.jpg"
+ * @returns ej: "claims/L-000000001/actions/L-000000001-HINS-0001/images/L-000000001-HINS-0001-EVI-0001.jpg"
  */
 export function gestionImagePath(
   liquidationNumber: string,
@@ -163,7 +163,7 @@ export function gestionImagePath(
   const instanceCode = gestionInstanceCode(liquidationNumber, compositeCode, instanceSeq);
   const seq = imgSeq.padStart(4, "0");
   const filename = `${instanceCode}-${type}-${seq}${ext.startsWith(".") ? ext : "." + ext}`;
-  return `${base}/imagenes/${filename}`;
+  return `${base}/images/${filename}`;
 }
 
 // ═══ Pólizas: documentos ═══
@@ -174,7 +174,7 @@ export function gestionImagePath(
  * @param policyNumber — ej: "POL-2026-0001"
  * @param docSeq — Correlativo desde next_policy_doc_seq(), ej: 1
  * @param ext — ej: ".pdf"
- * @returns ej: "polizas/POL-2026-0001/documentos/POL-2026-0001-DOC-0001.pdf"
+ * @returns ej: "policies/POL-2026-0001/documents/POL-2026-0001-DOC-0001.pdf"
  */
 export function policyDocumentPath(
   policyNumber: string,
@@ -184,7 +184,7 @@ export function policyDocumentPath(
   const seq = String(docSeq).padStart(4, "0");
   const e = ext.startsWith(".") ? ext : "." + ext;
   const filename = `${policyNumber}-DOC-${seq}${e}`;
-  return `polizas/${policyNumber}/documentos/${filename}`;
+  return `policies/${policyNumber}/documents/${filename}`;
 }
 
 // ═══ Inspección: helpers que usan el actionCode completo del DB ═══
@@ -202,7 +202,7 @@ export function policyDocumentPath(
  * @param type — "EVI" | "DAN" | "FIR"
  * @param fileSeq — Correlativo desde next_file_seq(), ej: 1
  * @param ext — ej: ".jpg"
- * @returns ej: "siniestros/L-000000141/gestiones/L-000000141-HINS-001/imagenes/L-000000141-HINS-001-EVI-0001.jpg"
+ * @returns ej: "claims/L-000000141/actions/L-000000141-HINS-001/images/L-000000141-HINS-001-EVI-0001.jpg"
  */
 export function inspectionImagePath(
   actionCode: string,
@@ -214,7 +214,7 @@ export function inspectionImagePath(
   const seq = String(fileSeq).padStart(4, "0");
   const e = ext.startsWith(".") ? ext : "." + ext;
   const filename = `${actionCode}-${type}-${seq}${e}`;
-  return `siniestros/${liquidationNumber}/gestiones/${actionCode}/imagenes/${filename}`;
+  return `claims/${liquidationNumber}/actions/${actionCode}/images/${filename}`;
 }
 
 /**
@@ -225,8 +225,8 @@ export function inspectionImagePath(
  * @param docSeq — Correlativo desde next_file_seq(), ej: 1
  * @param ext — ej: ".png"
  * @param type — "DOC" (documento extra) o "CRO" (croquis). Default: "DOC"
- * @returns ej: "siniestros/L-000000141/gestiones/L-000000141-HINS-001/documentos/L-000000141-HINS-001-DOC-0001.png"
- *          o "siniestros/L-000000141/gestiones/L-000000141-HINS-001/documentos/L-000000141-HINS-001-CRO-0001.png"
+ * @returns ej: "claims/L-000000141/actions/L-000000141-HINS-001/documents/L-000000141-HINS-001-DOC-0001.png"
+ *          o "claims/L-000000141/actions/L-000000141-HINS-001/documents/L-000000141-HINS-001-CRO-0001.png"
  */
 export function inspectionDocumentPath(
   actionCode: string,
@@ -238,7 +238,7 @@ export function inspectionDocumentPath(
   const seq = String(docSeq).padStart(4, "0");
   const e = ext.startsWith(".") ? ext : "." + ext;
   const filename = `${actionCode}-${type}-${seq}${e}`;
-  return `siniestros/${liquidationNumber}/gestiones/${actionCode}/documentos/${filename}`;
+  return `claims/${liquidationNumber}/actions/${actionCode}/documents/${filename}`;
 }
 
 // ═══ Empresas ═══
@@ -248,5 +248,5 @@ export function inspectionDocumentPath(
  */
 export function companyLogoPath(companyId: string, ext: string): string {
   const e = ext.startsWith(".") ? ext : "." + ext;
-  return `empresas/${companyId}/logos/logo${e}`;
+  return `companies/${companyId}/logos/logo${e}`;
 }

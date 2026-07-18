@@ -13,7 +13,7 @@ import { logger } from "@/lib/logger";
  * Flujo:
  *  1. Resuelve claimId → claim.liquidation_number
  *  2. Obtiene el siguiente correlativo DOC-NNNNNN atómico desde la BD
- *  3. Sube a R2 con path: siniestros/{L}/documentos/{L}-DOC-NNNNNN.ext
+ *  3. Sube a R2 con path: claims/{L}/documents/{L}-DOC-NNNNNN.ext
  *  4. Inserta el registro en claim_documents
  *
  * Devuelve: { document: { id, document_name, document_url, ... } }

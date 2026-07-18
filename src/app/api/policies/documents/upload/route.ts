@@ -13,7 +13,7 @@ import { logger } from "@/lib/logger";
  * Flujo:
  *  1. Resuelve policyId → policy.policy_number
  *  2. Obtiene el siguiente correlativo DOC-NNNN atómico desde la BD
- *  3. Sube a R2 con path: polizas/{policy_number}/documentos/{policy_number}-DOC-NNNN.ext
+ *  3. Sube a R2 con path: policies/{policy_number}/documents/{policy_number}-DOC-NNNN.ext
  *  4. Inserta el registro en policy_documents
  *
  * Devuelve: { document: { id, document_name, document_url, ... } }

@@ -493,7 +493,7 @@ export async function issueClaimAction(actionId: string, userId?: string, action
   // ── Generar y subir documento desde template (fire-and-forget) ──
   // Si la gestión tiene un document_template asociado, se renderiza el .docx
   // con los datos del siniestro y se sube a R2 con el path del plan:
-  // siniestros/{L}/gestiones/{code}/{code}.docx
+  // claims/{L}/actions/{code}/{code}.docx
   // No bloquea la emisión — si falla, el documento se puede generar después.
   if (action?.action_template_id) {
     fetch(`/api/claims/actions/${actionId}/generate-document`, {

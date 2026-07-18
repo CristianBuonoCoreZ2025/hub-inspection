@@ -98,8 +98,8 @@ export async function nextFileSeq(
  * 1. Resuelve el contexto (actionCode + liquidationNumber) desde sessionId
  * 2. Obtiene el siguiente correlativo (EVI/DOC/CRO/FIR/DAN) atómico desde la BD
  * 3. Construye el path físico:
- *    - EVI, DAN, FIR → siniestros/{L}/gestiones/{code}/imagenes/{code}-TYPE-NNNN.ext
- *    - DOC, CRO      → siniestros/{L}/gestiones/{code}/documentos/{code}-TYPE-NNNN.ext
+ *    - EVI, DAN, FIR → claims/{L}/actions/{code}/images/{code}-TYPE-NNNN.ext
+ *    - DOC, CRO      → claims/{L}/actions/{code}/documents/{code}-TYPE-NNNN.ext
  * 4. Sube el buffer a R2
  *
  * @returns { url, key, seq, fileCode } — URL pública, key en R2, correlativo, y código del archivo

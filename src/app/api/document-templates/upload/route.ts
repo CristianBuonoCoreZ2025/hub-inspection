@@ -7,7 +7,7 @@ import { uploadGestionTemplate } from "@/lib/storage/template-upload";
  * POST /api/document-templates/upload
  *
  * Sube un .docx a Cloudflare R2 con el path estructurado del plan:
- *   configuracion/gestiones/{CODIGO_COMPUESTO}/{CODIGO_COMPUESTO}-NNNNN.docx
+ *   config/actions/{CODIGO_COMPUESTO}/{CODIGO_COMPUESTO}-NNNNN.docx
  *
  * Recibe multipart/form-data:
  *   - file: el archivo .docx

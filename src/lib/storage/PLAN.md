@@ -86,8 +86,8 @@ Si la gestión no tiene línea de negocios (aplica a todas), se omite el prefijo
 ### 1. Configuración (plantillas globales)
 
 ```
-configuracion/
-  gestiones/
+config/
+  actions/
     {CODIGO_COMPUESTO}/
       {CODIGO_COMPUESTO}-NNNNN.ext          — template renombrado al código
 ```
@@ -98,16 +98,16 @@ Los tipos 2 (pantalla sin template) y 4 (gestión muerta) NO tienen carpeta de c
 ### 2. Siniestros
 
 ```
-siniestros/
+claims/
   {L-NNNNNNNNN}/                               — ej: L-000000001
-    documentos/                              — documentos del siniestro (no de una gestión)
+    documents/                              — documentos del siniestro (no de una gestión)
       {L-NNNNNNNNN}-DOC-NNNNNN.ext             — ej: L-000000001-DOC-000001.pdf
-    gestiones/
+    actions/
       {L-NNNNNNNNN}-{CODIGO_COMPUESTO}-NNNN/   — ej: L-000000001-HINS-0001
         {L-NNNNNNNNN}-{CODIGO_COMPUESTO}-NNNN.ext  — documento generado desde template (tipos 1 y 3)
-        documentos/                          — documentos extra subidos manualmente
+        documents/                          — documentos extra subidos manualmente
           {L-NNNNNNNNN}-{CODIGO_COMPUESTO}-NNNN-DOC-NNNN.ext
-        imagenes/                            — fotos de la gestión (tipos 2 y 3)
+        images/                            — fotos de la gestión (tipos 2 y 3)
           {L-NNNNNNNNN}-{CODIGO_COMPUESTO}-NNNN-EVI-NNNN.ext   — evidencias
           {L-NNNNNNNNN}-{CODIGO_COMPUESTO}-NNNN-DAN-NNNN.ext   — daños
           {L-NNNNNNNNN}-{CODIGO_COMPUESTO}-NNNN-FIR-NNNN.ext   — firmas
@@ -116,7 +116,7 @@ siniestros/
 ### 3. Empresas
 
 ```
-empresas/
+companies/
   {company_id}/
     logos/
       {filename}
@@ -130,15 +130,15 @@ empresas/
 
 **Configuración (templates):**
 ```
-configuracion/gestiones/HILI/
+config/actions/HILI/
   HILI-00001.docx                            — template informe hogar
   HILI-00002.docx                            — template informe hogar (variante 2)
 ```
 
 **Siniestro L-000000001:**
 ```
-siniestros/L-000000001/
-  gestiones/
+claims/L-000000001/
+  actions/
     L-000000001-HILI-0001/                     — informe liquidación hogar #1
       L-000000001-HILI-0001.docx               — documento generado desde template
 ```
@@ -150,12 +150,12 @@ No tiene carpeta de configuración (no hay template).
 
 **Siniestro L-000000001:**
 ```
-siniestros/L-000000001/
-  gestiones/
+claims/L-000000001/
+  actions/
     L-000000001-HINS-0001/                     — inspección hogar #1
-      documentos/
+      documents/
         L-000000001-HINS-0001-DOC-0001.pdf      — croquis/dibujo de la casa
-      imagenes/
+      images/
         L-000000001-HINS-0001-EVI-0001.jpg      — evidencia foto 1
         L-000000001-HINS-0001-EVI-0002.jpg      — evidencia foto 2
         L-000000001-HINS-0001-DAN-0001.jpg      — daño foto 1
@@ -167,19 +167,19 @@ siniestros/L-000000001/
 
 **Configuración (template):**
 ```
-configuracion/gestiones/HRES/
+config/actions/HRES/
   HRES-00001.docx                            — template reporte de reserva
 ```
 
 **Siniestro L-000000001:**
 ```
-siniestros/L-000000001/
-  gestiones/
+claims/L-000000001/
+  actions/
     L-000000001-HRES-0001/                     — reserva hogar #1
       L-000000001-HRES-0001.docx               — reporte automático generado desde template
-      documentos/
+      documents/
         L-000000001-HRES-0001-DOC-0001.pdf      — documento extra de respaldo
-      imagenes/
+      images/
         L-000000001-HRES-0001-EVI-0001.jpg      — foto de evidencia
 ```
 
@@ -190,10 +190,10 @@ No tiene carpeta de configuración (no hay template).
 
 **Siniestro L-000000001:**
 ```
-siniestros/L-000000001/
-  gestiones/
+claims/L-000000001/
+  actions/
     L-000000001-RIM-0001/                      — recepción impugnación #1
-      documentos/
+      documents/
         L-000000001-RIM-0001-DOC-0001.pdf       — documento recibido del cliente
 ```
 
@@ -201,8 +201,8 @@ siniestros/L-000000001/
 
 **Siniestro L-000000001:**
 ```
-siniestros/L-000000001/
-  documentos/
+claims/L-000000001/
+  documents/
     L-000000001-DOC-000001.pdf                  — póliza
     L-000000001-DOC-000002.pdf                  — denuncia del siniestro
     L-000000001-DOC-000003.jpg                  — foto general del siniestro
@@ -217,18 +217,18 @@ porque se pidió como parte de la solicitud de documentos.
 ## Siniestro Completo (ejemplo con todos los tipos)
 
 ```
-siniestros/L-000000001/
-  documentos/
+claims/L-000000001/
+  documents/
     L-000000001-DOC-000001.pdf                  — póliza
     L-000000001-DOC-000002.pdf                  — denuncia
-  gestiones/
+  actions/
     L-000000001-CIN-0001/                       — coordinación inspección (tipo 2: pantalla)
-      documentos/
+      documents/
         L-000000001-CIN-0001-DOC-0001.pdf        — oficio de coordinación
     L-000000001-HINS-0001/                      — inspección hogar (tipo 2: pantalla)
-      documentos/
+      documents/
         L-000000001-HINS-0001-DOC-0001.pdf       — croquis
-      imagenes/
+      images/
         L-000000001-HINS-0001-EVI-0001.jpg       — evidencia 1
         L-000000001-HINS-0001-EVI-0002.jpg       — evidencia 2
         L-000000001-HINS-0001-DAN-0001.jpg       — daño 1
@@ -238,16 +238,16 @@ siniestros/L-000000001/
       L-000000001-HILI-0001.docx                — informe generado
     L-000000001-HRES-0001/                      — reserva hogar (tipo 3: híbrida)
       L-000000001-HRES-0001.docx                — reporte automático
-      imagenes/
+      images/
         L-000000001-HRES-0001-EVI-0001.jpg       — foto evidencia
     L-000000001-PCA-0001/                       — carta aceptación (tipo 1: template+workflow)
       L-000000001-PCA-0001.docx                 — carta generada
     L-000000001-RIM-0001/                       — recepción impugnación (tipo 4: gestión muerta)
-      documentos/
+      documents/
         L-000000001-RIM-0001-DOC-0001.pdf        — documento recibido
 
-configuracion/
-  gestiones/
+config/
+  actions/
     HILI/
       HILI-00001.docx                          — template informe liquidación hogar
       HILI-00002.docx                          — template variante 2

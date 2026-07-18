@@ -7,7 +7,7 @@ import { logger } from "@/lib/logger";
  * API route para que el cliente (magic link) guarde su firma.
  * Recibe: { sessionId, role, signatureDataUrl (base64 PNG) }
  * 1. Sube la imagen a Cloudflare R2 con path estructurado del plan:
- *    siniestros/{L}/gestiones/{code}/imagenes/{code}-FIR-NNNN.png
+ *    claims/{L}/actions/{code}/images/{code}-FIR-NNNN.png
  * 2. Crea el registro en inspection_signatures
  */
 export async function POST(request: NextRequest) {

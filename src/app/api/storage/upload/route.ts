@@ -8,7 +8,7 @@ import { logger } from "@/lib/logger";
  *
  * Recibe multipart/form-data:
  *   - file: el archivo a subir
- *   - path: la ruta completa en R2 (ej: "configuracion/gestiones/HILI/HILI-00001.docx")
+ *   - path: la ruta completa en R2 (ej: "config/actions/HILI/HILI-00001.docx")
  *
  * Devuelve:
  *   - url: URL pública del archivo

@@ -9,7 +9,7 @@ import { logger } from "@/lib/logger";
  *
  * Recibe: { sessionId, sketchDataUrl (base64 PNG), label }
  * 1. Sube la imagen a Cloudflare R2 con path estructurado del plan:
- *    siniestros/{L}/gestiones/{code}/documentos/{code}-CRO-NNNN.png
+ *    claims/{L}/actions/{code}/documents/{code}-CRO-NNNN.png
  * 2. Crea el registro en damage_sketches
  *
  * Si se envía sketchId, actualiza el croquis existente (editar).

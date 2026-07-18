@@ -213,8 +213,8 @@ export default function CompaniesPage() {
                           try {
                             const ext = file.name.includes(".") ? "." + file.name.split(".").pop()?.toLowerCase() : "";
                             const logoPath = editingId
-                              ? `empresas/${editingId}/logos/logo${ext}`
-                              : `empresas/_pending/${Date.now()}-${file.name}`;
+                              ? `companies/${editingId}/logos/logo${ext}`
+                              : `companies/_pending/${Date.now()}-${file.name}`;
                             const url = await uploadFileToStorage(file, logoPath);
                             form.setValue("logoUrl", url);
                             toast.success("Logo subido");

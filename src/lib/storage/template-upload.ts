@@ -45,7 +45,7 @@ export async function resolveCompositeCode(
 /**
  * Sube un template de gestión a R2 con el path estructurado del plan.
  *
- * Path: configuracion/gestiones/{CODIGO_COMPUESTO}/{CODIGO_COMPUESTO}-NNNNN.docx
+ * Path: config/actions/{CODIGO_COMPUESTO}/{CODIGO_COMPUESTO}-NNNNN.docx
  *
  * 1. Resuelve actionTemplateId → compositeCode
  * 2. Obtiene el siguiente correlativo NNNNN atómico desde la BD

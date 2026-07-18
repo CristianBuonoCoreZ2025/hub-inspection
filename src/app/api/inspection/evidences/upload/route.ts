@@ -21,7 +21,7 @@ import { logger } from "@/lib/logger";
  * Flujo:
  *  1. Resuelve sessionId → claim_action.code + claim.liquidation_number
  *  2. Obtiene el siguiente correlativo EVI-NNNN atómico desde la BD
- *  3. Sube a R2 con path: siniestros/{L}/gestiones/{code}/imagenes/{code}-EVI-NNNN.ext
+ *  3. Sube a R2 con path: claims/{L}/actions/{code}/images/{code}-EVI-NNNN.ext
  *  4. Inserta el registro en inspection_evidences con captured_by + metadata
  *
  * Devuelve: { evidence: { id, url, type, description, created_at } }

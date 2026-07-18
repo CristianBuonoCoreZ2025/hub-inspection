@@ -13,7 +13,7 @@ import { logger } from "@/lib/logger";
  *
  * Genera el documento .docx renderizado con los datos del siniestro y lo sube
  * a Cloudflare R2 con el path estructurado del plan:
- *   siniestros/{L}/gestiones/{L}-{CODIGO}-NNNN/{L}-{CODIGO}-NNNN.docx
+ *   claims/{L}/actions/{L}-{CODIGO}-NNNN/{L}-{CODIGO}-NNNN.docx
  *
  * Se llama después de emitir una gestión que tiene template asociado.
  * Si la gestión no tiene template, devuelve 204 (no content).

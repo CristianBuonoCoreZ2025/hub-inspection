@@ -8,7 +8,7 @@ import { logger } from "@/lib/logger";
 /**
  * Sube un documento de póliza a R2 con el path estructurado del plan.
  *
- * Path: polizas/{policy_number}/documentos/{policy_number}-DOC-NNNN.ext
+ * Path: policies/{policy_number}/documents/{policy_number}-DOC-NNNN.ext
  *
  * 1. Resuelve policyId → policy_number
  * 2. Obtiene el siguiente correlativo DOC-NNNN atómico desde la BD

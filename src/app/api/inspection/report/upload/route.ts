@@ -10,7 +10,7 @@ import { logger } from "@/lib/logger";
  *   - file: el PDF generado
  *   - sessionId: UUID de la inspection_session
  *
- * Sube el PDF a R2 con path: siniestros/{L}/gestiones/{code}/documentos/{code}-DOC-NNNN.pdf
+ * Sube el PDF a R2 con path: claims/{L}/actions/{code}/documents/{code}-DOC-NNNN.pdf
  * Actualiza inspection_reports.report_url con la URL pública.
  */
 export async function POST(request: NextRequest) {
