@@ -2140,9 +2140,9 @@
 
   /* Select de inspectores — ancho fijo */
   .agenda-toolbar [data-slot="select-trigger"] {
-    width: 280px !important;
-    min-width: 280px !important;
-    max-width: 280px !important;
+    width: 260px !important;
+    min-width: 260px !important;
+    max-width: 260px !important;
   }
 
   /* Panel principal del calendario — glass profundo */
