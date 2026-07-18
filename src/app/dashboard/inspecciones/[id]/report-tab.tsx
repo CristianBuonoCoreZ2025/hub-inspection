@@ -286,8 +286,8 @@ export default function ReportTab({
   const companyEmail = profile?.company?.email || null;
 
   // Estilos compartidos para campos
-  const fieldRow = (label: string, value: string | undefined | null) => (
-    <div className="field-row flex mb-0.5">
+  const fieldRow = (label: string, value: string | undefined | null, key?: string) => (
+    <div key={key} className="field-row flex mb-0.5">
       <span className="field-label font-semibold text-muted-foreground min-w-[200px] text-[10px] uppercase">{label}:</span>
       <span className="field-value flex-1 text-[10px]">{value || "—"}</span>
     </div>
@@ -480,7 +480,7 @@ export default function ReportTab({
                   cameras: "Cámaras", other_measures: "Otras",
                 };
                 const item = val as { has_it?: boolean; detail?: string };
-                return fieldRow(labels[key] || key, item.has_it ? `Sí${item.detail ? ` — ${item.detail}` : ""}` : "No");
+                return fieldRow(labels[key] || key, item.has_it ? `Sí${item.detail ? ` — ${item.detail}` : ""}` : "No", key);
               })}
             </>
           )}

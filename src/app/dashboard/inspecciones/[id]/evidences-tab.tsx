@@ -43,7 +43,7 @@ interface Evidence {
 // ─── Helpers ─────────────────────────────────────────────────────
 
 async function fetchEvidences(sessionId: string): Promise<Evidence[]> {
-  const res = await fetch(`/api/inspection/evidences/${sessionId}`, { cache: "no-store" });
+  const res = await fetch(`/api/inspection/evidences/session/${sessionId}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Error al cargar evidencias");
   const data = (await res.json()) as { evidences: Evidence[] };
   return data.evidences;

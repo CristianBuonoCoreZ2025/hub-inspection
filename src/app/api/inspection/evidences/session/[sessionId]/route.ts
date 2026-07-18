@@ -6,6 +6,9 @@ import { logger } from "@/lib/logger";
 /**
  * API route que devuelve las evidencias de una sesión de inspección
  * con signed URLs (accesibles sin auth en el navegador).
+ *
+ * Nota: se movió a /evidences/session/[sessionId] para evitar el conflicto
+ * de slugs dinámicos con /evidences/[evidenceId] (DELETE de una evidencia).
  */
 export async function GET(
   _request: NextRequest,
