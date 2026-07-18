@@ -2678,7 +2678,8 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
 
  // Documentos obligatorios disponibles (no solicitados/recibidos en ninguna solicitud)
  const requiredAvailableDocs = availableDocs.filter((d) => d.is_required);
- const requiredCodes = new Set(requiredAvailableDocs.map((d) => d.document_type_code));
+ // Clave estable para deps de useMemo/useAutoSave
+ const requiredCodesKey = requiredAvailableDocs.map((d) => d.document_type_code).join(",");
 
  // Mapa code → is_required para consultar si un ítem existente es obligatorio
  const codeToRequired = new Map((requirements || []).map((r) => [r.document_type_code, r.is_required]));
@@ -2686,23 +2687,13 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  const [selected, setSelected] = useState<Set<string>>(new Set());
  const [notes, setNotes] = useState<string>(existingRequest?.notes || "");
 
- // Pre-seleccionar docs obligatorios automáticamente (no se pueden deseleccionar)
- useEffect(() => {
- if (!existingRequest && requiredAvailableDocs.length > 0) {
- setSelected((prev) => {
- const next = new Set(prev);
- let changed = false;
- requiredAvailableDocs.forEach((d) => {
- if (!next.has(d.document_type_code)) {
- next.add(d.document_type_code);
- changed = true;
- }
- });
- return changed ? next : prev;
- });
- }
+ // Set derivado: seleccionados por el usuario + obligatorios (siempre checked)
+ const requiredCodesKey = requiredAvailableDocs.map((d) => d.document_type_code).join(",");
+ const checkedSet = useMemo(
+ () => new Set([...selected, ...requiredAvailableDocs.map((d) => d.document_type_code)]),
  // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [requiredAvailableDocs.length, existingRequest]);
+ [selected, requiredCodesKey]
+ );
 
  // ── Mutación: crear solicitud nueva ──
  const saveMut = useMutation({
@@ -2776,18 +2767,18 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  },
  });
 
- // Autoguardado: crear solicitud nueva cuando hay selección
+ // Autoguardado: crear solicitud nueva cuando hay selección o docs obligatorios
  useAutoSave(
  () => saveMut.mutate(),
- [selected, notes],
- !readOnly && !existingRequest && selected.size > 0
+ [selected, notes, requiredAvailableDocs.length],
+ !readOnly && !existingRequest && (selected.size > 0 || requiredAvailableDocs.length > 0)
  );
 
- // Autoguardado: agregar items a solicitud existente
+ // Autoguardado: agregar items a solicitud existente (seleccionados o docs obligatorios faltantes)
  useAutoSave(
  () => addItemsMut.mutate(),
- [selected],
- !readOnly && !!existingRequest && selected.size > 0
+ [selected, requiredAvailableDocs.length],
+ !readOnly && !!existingRequest && (selected.size > 0 || requiredAvailableDocs.length > 0)
  );
 
  // Autoguardado: notas (solo si cambió respecto al original)
@@ -2896,7 +2887,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  </Badge>
  </td>
  <td className="px-2 py-1.5 text-center">
- {item.status === "requested" && (
+ {item.status === "requested" && !codeToRequired.get(item.document_type_code) && (
  <button
  className="text-rose-500 hover:text-rose-700 text-[11px]"
  onClick={() => removeItemMut.mutate(item.id)}
@@ -2905,6 +2896,11 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  >
  ✕
  </button>
+ )}
+ {item.status === "requested" && codeToRequired.get(item.document_type_code) && (
+ <span className="text-[9px] text-rose-600 font-medium" title="Documento obligatorio — no se puede quitar">
+ Oblig.
+ </span>
  )}
  </td>
  </tr>
@@ -2928,13 +2924,17 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  </tr>
  </thead>
  <tbody>
- {availableDocs.map((doc) => (
+ {availableDocs.map((doc) => {
+ const isReq = doc.is_required;
+ return (
  <tr
  key={doc.id}
- className={`border-t border-border cursor-pointer transition-colors ${
- selected.has(doc.document_type_code) ? "bg-primary/5" : "hover:bg-muted/30"
+ className={`border-t border-border transition-colors ${
+ isReq ? "bg-primary/5 cursor-not-allowed" :
+ checkedSet.has(doc.document_type_code) ? "bg-primary/5 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
  }`}
  onClick={() => {
+ if (isReq) return; // no se puede deseleccionar un obligatorio
  setSelected((prev) => {
  const next = new Set(prev);
  if (next.has(doc.document_type_code)) next.delete(doc.document_type_code);
@@ -2946,8 +2946,9 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  <td className="px-2 py-1.5 text-center">
  <input
  type="checkbox"
- checked={selected.has(doc.document_type_code)}
+ checked={checkedSet.has(doc.document_type_code)}
  onChange={() => {}}
+ disabled={isReq}
  className="h-3.5 w-3.5 rounded border-border"
  />
  </td>
@@ -2958,7 +2959,8 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  )}
  </td>
  </tr>
- ))}
+ );
+ })}
  </tbody>
  </table>
  </div>
@@ -2996,6 +2998,8 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  }
 
  const toggle = (code: string) => {
+ const doc = availableDocs.find((d) => d.document_type_code === code);
+ if (doc?.is_required) return; // los obligatorios no se pueden deseleccionar
  setSelected((prev) => {
  const next = new Set(prev);
  if (next.has(code)) next.delete(code);
@@ -3019,19 +3023,23 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  </tr>
  </thead>
  <tbody>
- {availableDocs.map((doc) => (
+ {availableDocs.map((doc) => {
+ const isReq = doc.is_required;
+ return (
  <tr
  key={doc.id}
- className={`border-t border-border cursor-pointer transition-colors ${
- selected.has(doc.document_type_code) ? "bg-primary/5" : "hover:bg-muted/30"
+ className={`border-t border-border transition-colors ${
+ isReq ? "bg-primary/5 cursor-not-allowed" :
+ checkedSet.has(doc.document_type_code) ? "bg-primary/5 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
  }`}
  onClick={() => toggle(doc.document_type_code)}
  >
  <td className="px-2 py-1.5 text-center">
  <input
  type="checkbox"
- checked={selected.has(doc.document_type_code)}
+ checked={checkedSet.has(doc.document_type_code)}
  onChange={() => {}}
+ disabled={isReq}
  className="h-3.5 w-3.5 rounded border-border"
  />
  </td>
@@ -3042,7 +3050,8 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  )}
  </td>
  </tr>
- ))}
+ );
+ })}
  </tbody>
  </table>
  </div>
