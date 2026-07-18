@@ -304,6 +304,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
             <table className="app-data-table">
               <thead>
                 <tr>
+                  <th>Código</th>
                   <th>Nombre</th>
                   <th>Tamaño</th>
                   <th className="w-[80px]"></th>
@@ -317,6 +318,9 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                     doc.document_type || "—";
                   return (
                   <tr key={doc.id}>
+                    <td className="text-muted-foreground font-mono text-[11px] whitespace-nowrap">
+                      {doc.document_type || "—"}
+                    </td>
                     <td className="font-medium wrap-break-word">
                       <div>{docTypeName}</div>
                       {doc.original_filename && doc.original_filename !== docTypeName && (
