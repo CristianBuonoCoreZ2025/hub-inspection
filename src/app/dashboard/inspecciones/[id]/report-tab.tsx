@@ -302,11 +302,6 @@ export default function ReportTab({
             {generateMutation.isPending ? "Generando..." : report ? "Regenerar" : "Generar"}
           </Button>
         )}
-        {report && (
-          <Button variant="outline" onClick={handlePrint} className="pg-btn-platinum-icon">
-            <Printer className="mr-2 h-4 w-4" /> Imprimir
-          </Button>
-        )}
         {!isFinal && sessionStatus === "active" && (
           <Button
             onClick={() => {
@@ -335,6 +330,9 @@ export default function ReportTab({
         )}
         {isFinal && (
           <>
+            <Button variant="outline" onClick={handlePrint} className="pg-btn-platinum-icon">
+              <Printer className="mr-2 h-4 w-4" /> Imprimir
+            </Button>
             <Button variant="outline" onClick={handleDownload} className="pg-btn-platinum-icon">
               <Download className="mr-2 h-4 w-4" /> Descargar
             </Button>

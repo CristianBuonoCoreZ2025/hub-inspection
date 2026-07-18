@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -25,6 +25,14 @@ const MONTHS_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "S
 type ViewMode = "year" | "month";
 
 export default function TiposCambioPage() {
+  return (
+    <Suspense fallback={<div className="app-panel text-center py-8 text-muted-foreground text-sm">Cargando...</div>}>
+      <TiposCambioContent />
+    </Suspense>
+  );
+}
+
+function TiposCambioContent() {
   const searchParams = useSearchParams();
   const initialCurrency = searchParams.get("currency") || "";
 
