@@ -293,8 +293,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
           Inspección finalizada — el acta es de solo lectura
         </div>
       )}
-      <fieldset disabled={readOnly} className="contents">
-      {/* Stepper */}
+      {/* Stepper (siempre navegable, incluso en readOnly) */}
       <div className="flex items-center gap-1 overflow-x-auto pb-2">
         {steps.map((s) => {
           const Icon = s.icon;
@@ -319,6 +318,8 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
           );
         })}
       </div>
+
+      <fieldset disabled={readOnly} className="contents">
 
       {/* Paso 1: Datos Generales */}
       {step === 1 && (
@@ -699,18 +700,20 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
               <div key={idx} className="rounded-lg border border-border p-3 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[12px] font-medium">Tercero {idx + 1}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs pg-btn-platinum"
-                    onClick={() => {
-                      const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
-                      set("third_parties", current.filter((_, i) => i !== idx));
-                    }}
-                  >
-                    Eliminar
-                  </Button>
+                  {!readOnly && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs pg-btn-platinum"
+                      onClick={() => {
+                        const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
+                        set("third_parties", current.filter((_, i) => i !== idx));
+                      }}
+                    >
+                      Eliminar
+                    </Button>
+                  )}
                 </div>
                 <div className="modal-grid-3">
                   <div className="modal-field">
@@ -799,36 +802,40 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
                 </div>
               </div>
             ))}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="pg-btn-platinum"
-              onClick={() => {
-                const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
-                set("third_parties", [
-                  ...current,
-                  { party_type: "afectado", full_name: "", rut: "", address: "", commune: "", phone: "", email: "", company_name: "", has_insurance: false, insurance_company: "", claim_number: "", notes: "" },
-                ]);
-              }}
-            >
-              Agregar
-            </Button>
+            {!readOnly && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="pg-btn-platinum"
+                onClick={() => {
+                  const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
+                  set("third_parties", [
+                    ...current,
+                    { party_type: "afectado", full_name: "", rut: "", address: "", commune: "", phone: "", email: "", company_name: "", has_insurance: false, insurance_company: "", claim_number: "", notes: "" },
+                  ]);
+                }}
+              >
+                Agregar
+              </Button>
+            )}
           </div>
         </div>
       )}
 
-      {/* Guardar */}
-      <div className="flex items-center justify-end border-t border-border pt-4">
-        <Button
-          type="submit"
-          size="sm"
-          disabled={saveMutation.isPending || readOnly}
-          className="pg-btn-platinum"
-        >
-          {readOnly ? "Bloqueado" : saveMutation.isPending ? "Guardando..." : "Guardar"}
+      {/* Guardar (oculto en readOnly) */}
+      {!readOnly && (
+        <div className="flex items-center justify-end border-t border-border pt-4">
+          <Button
+            type="submit"
+            size="sm"
+            disabled={saveMutation.isPending}
+            className="pg-btn-platinum"
+          >
+            {saveMutation.isPending ? "Guardando..." : "Guardar"}
         </Button>
-      </div>
+        </div>
+      )}
       </fieldset>
     </form>
   );
