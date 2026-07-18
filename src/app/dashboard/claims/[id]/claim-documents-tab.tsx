@@ -234,7 +234,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="btn-danger btn-icon"
+                            className="btn-icon-sm btn-danger-hover"
                             onClick={() => {
                               if (confirm("¿Eliminar este documento?")) deleteMut.mutate(doc.id);
                             }}

@@ -669,7 +669,7 @@ export default function UsersPage() {
  </Button>
  )}
  {canDelete("users") && user.is_active && (
- <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar este usuario?")) deactivateMutation.mutate(user.id); }}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este usuario?")) deactivateMutation.mutate(user.id); }}>
  <UserX className="h-4 w-4" />
  </Button>
  )}

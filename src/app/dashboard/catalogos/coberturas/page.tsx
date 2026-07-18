@@ -621,7 +621,7 @@ function CoberturaRow({
  </Button>
  )}
  {canDelete && (
- <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={onDelete}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={onDelete}>
  <Trash2 className="h-3.5 w-3.5" />
  </Button>
  )}

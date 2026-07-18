@@ -2031,7 +2031,7 @@ function ClaimsPageContent() {
  <Button
  variant="ghost"
  size="icon"
- className="btn-danger btn-icon"
+ className="btn-icon-sm btn-danger-hover"
  onClick={() => removeDocument(doc.id)}
  >
  <Trash2 className="h-4 w-4" />

@@ -382,7 +382,7 @@ export default function UbicacionesPage() {
  </Button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => handleDelete(item.id)}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => handleDelete(item.id)}>
  <Trash2 className="h-4 w-4" />
  </Button>
  )}

@@ -275,7 +275,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  onClick={() => {
  if (confirm("¿Eliminar esta plantilla?")) deleteMut.mutate(tpl.id);
  }}
- className="btn-danger btn-icon shrink-0"
+ className="btn-icon-sm btn-danger-hover shrink-0"
  title="Eliminar"
  >
  <Trash2 className="h-3.5 w-3.5" />

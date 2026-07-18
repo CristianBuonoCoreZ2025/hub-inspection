@@ -143,7 +143,7 @@ export default function CompaniasPage() {
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(c.id); setFormData({ country_id: c.country_id || "", name: c.name, rut: c.rut || "", address: c.address || "", line_of_business: c.line_of_business || "", code: c.code || "", type: c.type || "Generales" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar esta compañia?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta compañia?")) deleteMutation.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
  )}
  </div>
  </td>

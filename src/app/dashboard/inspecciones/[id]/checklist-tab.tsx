@@ -180,7 +180,7 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
  <Button
  variant="ghost"
  size="icon"
- className="btn-danger btn-icon h-7 w-7"
+ className="btn-icon-sm btn-danger-hover h-7 w-7"
  onClick={() => { if (confirm("¿Eliminar este item?")) deleteMutation.mutate(item.id); }}
  >
  <Trash2 className="h-3.5 w-3.5" />

@@ -162,7 +162,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete(section) && (
- <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
  <Trash2 className="h-4 w-4" />
  </Button>
  )}

@@ -233,7 +233,7 @@ export default function DependenciasGestionPage() {
  <Button
  variant="ghost"
  size="icon"
- className="btn-danger btn-icon ml-1 h-6 w-6"
+ className="btn-icon-sm btn-danger-hover ml-1 h-6 w-6"
  onClick={() => {
  if (confirm(`¿Eliminar dependencia ${parentCodeForItem} → ${item.code}?`))
  deleteMutation.mutate(depId);

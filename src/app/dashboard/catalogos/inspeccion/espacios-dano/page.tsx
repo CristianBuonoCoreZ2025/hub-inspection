@@ -189,7 +189,7 @@ export default function DamageSpacesPage() {
  </Button>
  )}
  {canDelete("catalogos_inspeccion") && (
- <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => {
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => {
  if (confirm(`¿Eliminar "${item.name}"?`)) deleteMutation.mutate(item.id);
  }}>
  <Trash2 className="h-4 w-4" />

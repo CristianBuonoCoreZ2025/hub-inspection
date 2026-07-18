@@ -190,7 +190,7 @@ export default function CaracteristicasPage() {
  </Button>
  )}
  {canDelete("catalogos") && !featureHasGestions(f.id) && (
- <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Desactivar esta característica?")) deleteMut.mutate(f.id); }}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta característica?")) deleteMut.mutate(f.id); }}>
  <Trash2 className="h-4 w-4" />
  </Button>
  )}

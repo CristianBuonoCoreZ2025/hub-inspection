@@ -424,7 +424,7 @@ export default function CompaniesPage() {
  }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("companies") && (
- <Button variant="ghost" size="icon" className="btn-danger btn-icon" onClick={() => { if (confirm("¿Eliminar esta empresa?")) deleteMutation.mutate(company.id); }}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Eliminar esta empresa?")) deleteMutation.mutate(company.id); }}>
  <Trash2 className="h-4 w-4" />
  </Button>
  )}
