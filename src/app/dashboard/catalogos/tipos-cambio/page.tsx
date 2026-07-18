@@ -43,8 +43,8 @@ function TiposCambioContent() {
   const [form, setForm] = useState({ country_id: "", currency_code: "", rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" });
 
   // Estado de sincronización
-  const [syncState, setSyncState] = useState<{ active: boolean; current: number; total: number; inserted: number; exists: number; errors: number }>({
-    active: false, current: 0, total: 0, inserted: 0, exists: 0, errors: 0,
+  const [syncState, setSyncState] = useState<{ active: boolean; done: boolean; inserted: number; exists: number; errors: number; total: number }>({
+    active: false, done: false, inserted: 0, exists: 0, errors: 0, total: 0,
   });
 
   // Filtros
@@ -84,7 +84,7 @@ function TiposCambioContent() {
     const year = parseInt(filterYear);
     const month = viewMode === "month" ? parseInt(filterMonth) : undefined;
 
-    setSyncState({ active: true, current: 0, total: 1, inserted: 0, exists: 0, errors: 0 });
+    setSyncState({ active: true, done: false, inserted: 0, exists: 0, errors: 0, total: 0 });
 
     try {
       const resp = await fetch("/api/currencies/sync-chile", {
@@ -97,23 +97,26 @@ function TiposCambioContent() {
         }),
       });
       if (!resp.ok) throw new Error("Error al sincronizar");
-      const data = await resp.json() as { summary: { inserted: number; exists: number; errors: number } };
+      const data = await resp.json() as { summary: { inserted: number; exists: number; errors: number; total: number } };
 
       setSyncState({
         active: false,
-        current: 1,
-        total: 1,
+        done: true,
         inserted: data.summary.inserted,
         exists: data.summary.exists,
         errors: data.summary.errors,
+        total: data.summary.total,
       });
 
-      toast.success(`Sincronización BCCh: ${data.summary.inserted} nuevas, ${data.summary.exists} ya existían${data.summary.errors > 0 ? `, ${data.summary.errors} errores` : ""}`);
       queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
     } catch (e) {
-      setSyncState(s => ({ ...s, active: false }));
+      setSyncState({ active: false, done: true, inserted: 0, exists: 0, errors: 1, total: 0 });
       toast.error(e instanceof Error ? e.message : "Error al sincronizar");
     }
+  };
+
+  const closeSyncModal = () => {
+    setSyncState({ active: false, done: false, inserted: 0, exists: 0, errors: 0, total: 0 });
   };
 
   // Monedas del país seleccionado (excluyendo la base, que siempre es tasa 1)
@@ -520,37 +523,66 @@ function TiposCambioContent() {
         )}
       </div>
 
-      {/* ── Modal de sincronización (progreso) ── */}
-      <Dialog open={syncState.active} onOpenChange={() => {}} dismissible={false}>
+      {/* ── Modal de sincronización ── */}
+      <Dialog open={syncState.active || syncState.done} onOpenChange={(v) => { if (!v) closeSyncModal(); }} dismissible={false}>
         <DialogContent className="modal-sm" showCloseButton={false}>
           <div className="modal-header">
             <DialogTitle className="modal-title flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-emerald-500 to-teal-500 text-white shadow-sm">
-                <ArrowRightLeft className="h-4 w-4 animate-spin" />
+                <ArrowRightLeft className={`h-4 w-4 ${syncState.active ? "animate-spin" : ""}`} />
               </div>
-              Sincronizando BCCh
+              {syncState.active ? "Sincronizando BCCh" : "Sincronización Completada"}
             </DialogTitle>
           </div>
           <div className="modal-body space-y-3">
             <p className="text-[12px] text-muted-foreground">
-              Descargando{" "}
               <span className="font-mono font-medium text-foreground">{effectiveFilterCurrency}</span>
-              {" "}desde mindicador.cl para{" "}
+              {" "}—{" "}
               <span className="font-medium text-foreground">
                 {viewMode === "month"
                   ? `${MONTHS[parseInt(filterMonth)]} ${filterYear}`
-                  : `el año ${filterYear}`}
+                  : `Año ${filterYear}`}
               </span>
-              ...
             </p>
-            {/* Barra de progreso indeterminada (animación pulse) */}
-            <div className="h-2.5 rounded-full bg-muted overflow-hidden">
-              <div className="h-full w-1/3 rounded-full bg-linear-to-r from-emerald-500 to-teal-500 animate-pulse" />
-            </div>
-            <p className="text-[11px] text-muted-foreground text-center">
-              Esto puede tardar unos segundos...
-            </p>
+
+            {syncState.active ? (
+              <>
+                {/* Barra de progreso indeterminada */}
+                <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full w-1/3 rounded-full bg-linear-to-r from-emerald-500 to-teal-500 animate-pulse" />
+                </div>
+                <p className="text-[11px] text-muted-foreground text-center">
+                  Descargando desde mindicador.cl...
+                </p>
+              </>
+            ) : (
+              <>
+                {/* Resultados */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center rounded-lg bg-emerald-50 dark:bg-emerald-900/20 py-3">
+                    <div className="text-[10px] text-muted-foreground">Nuevas</div>
+                    <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">{syncState.inserted}</div>
+                  </div>
+                  <div className="text-center rounded-lg bg-blue-50 dark:bg-blue-900/20 py-3">
+                    <div className="text-[10px] text-muted-foreground">Ya existían</div>
+                    <div className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400">{syncState.exists}</div>
+                  </div>
+                  <div className="text-center rounded-lg bg-rose-50 dark:bg-rose-900/20 py-3">
+                    <div className="text-[10px] text-muted-foreground">Errores</div>
+                    <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400">{syncState.errors}</div>
+                  </div>
+                </div>
+                <div className="text-center text-[11px] text-muted-foreground">
+                  Total de registros procesados: <span className="font-mono font-semibold">{syncState.total}</span>
+                </div>
+              </>
+            )}
           </div>
+          {!syncState.active && (
+            <div className="modal-footer">
+              <button type="button" onClick={closeSyncModal} className="pg-btn-platinum ml-auto">Cerrar</button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
