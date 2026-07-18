@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getInspectionSessions, type SessionWithRelations } from "@/services/inspections";
-import { getUsers } from "@/services/users";
+import { getUsersByRoleForCompany } from "@/services/users";
 import {
   ChevronLeft,
   ChevronRight,
@@ -117,14 +117,14 @@ export default function AgendaPage() {
     queryFn: () => getInspectionSessions(),
   });
 
-  const { data: users } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => getUsers(),
+  const { data: inspectorCandidates } = useQuery({
+    queryKey: ["users-by-role", "inspector"],
+    queryFn: () => getUsersByRoleForCompany("inspector"),
   });
 
   const inspectors = useMemo(
-    () => users?.filter((u) => u.role === "inspector") || [],
-    [users]
+    () => inspectorCandidates || [],
+    [inspectorCandidates]
   );
   const weekDays = useMemo(() => getWeekDays(weekStart), [weekStart]);
   const weekStart_ = weekDays[0];
@@ -181,7 +181,7 @@ export default function AgendaPage() {
   // Mapa inspectorId → nombre
   const inspectorName = (id?: string) => {
     if (!id) return null;
-    const u = users?.find((u) => u.id === id);
+    const u = inspectors.find((u) => u.id === id);
     return u?.full_name || u?.email || null;
   };
 
@@ -260,6 +260,7 @@ export default function AgendaPage() {
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                           {i.full_name || i.email}
                           <span className="text-[10px] text-muted-foreground ml-1">({count})</span>
+                          {i.source === "internal" && <span className="text-[9px] text-amber-600 ml-1">· Interno</span>}
                         </span>
                       </SelectItem>
                     );
@@ -278,6 +279,7 @@ export default function AgendaPage() {
                         <span className="flex items-center gap-2 text-muted-foreground">
                           <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
                           {i.full_name || i.email}
+                          {i.source === "internal" && <span className="text-[9px] text-amber-600 ml-1">· Interno</span>}
                         </span>
                       </SelectItem>
                     ))}
