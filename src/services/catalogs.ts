@@ -595,28 +595,74 @@ export async function getLookupCatalog(category: string) {
 }
 
 /**
- * Obtiene las monedas asociadas a un país específico desde lookup_catalog.
+ * Obtiene las monedas asociadas a un país específico desde country_currencies.
  * Si el país no tiene monedas configuradas, devuelve todas las monedas
  * activas como fallback (para no bloquear al usuario).
+ *
+ * Devuelve objetos con: id (UUID de currencies), code (CLP), name, symbol
+ * compatibles con LookupCatalog para reusar en los forms existentes.
  */
 export async function getCountryCurrencies(countryId: string | null | undefined) {
   if (!countryId) {
     // Sin país → traer todas las monedas activas
-    return getLookupCatalog("currency");
+    return fetchAll<{ id: string; code: string; name: string; symbol: string | null }>("currencies", {
+      select: "id, code, name, symbol",
+      eq: { is_active: true },
+      order: { column: "code", ascending: true },
+    }).then((rows) => rows.map(r => ({
+      id: r.id,
+      country_id: null,
+      category: "currency",
+      code: r.code,
+      name: r.name,
+      description: r.symbol,
+      sort_order: 0,
+      is_active: true,
+      created_at: "",
+      updated_at: "",
+    })));
   }
-  const rows = await fetchAllSorted<LookupCatalog>("lookup_catalog", {
-    select: "id, country_id, category, code, name, description, sort_order, is_active",
-    eq: { category: "currency", is_active: true, country_id: countryId },
+  const rows = await fetchAll<CountryCurrency & { currency?: { id: string; code: string; name: string; symbol: string | null } }>("country_currencies", {
+    select: `
+      id, country_id, currency_code, is_base, sort_order, is_active, created_at, updated_at,
+      currency:currencies!country_currencies_currency_code_fkey(id, code, name, symbol)
+    `,
+    eq: { country_id: countryId, is_active: true },
     order: { column: "sort_order", ascending: true },
   });
   if (rows.length === 0) {
     // Fallback: si el país no tiene monedas, traer todas
-    return getLookupCatalog("currency");
+    return fetchAll<{ id: string; code: string; name: string; symbol: string | null }>("currencies", {
+      select: "id, code, name, symbol",
+      eq: { is_active: true },
+      order: { column: "code", ascending: true },
+    }).then((rows) => rows.map(r => ({
+      id: r.id,
+      country_id: null,
+      category: "currency",
+      code: r.code,
+      name: r.name,
+      description: r.symbol,
+      sort_order: 0,
+      is_active: true,
+      created_at: "",
+      updated_at: "",
+    })));
   }
-  return rows.sort((a, b) => {
-    if (a.sort_order === b.sort_order) return a.name.localeCompare(b.name);
-    return a.sort_order - b.sort_order;
-  });
+  // Mapear al formato que espera el damages-tab (LookupCatalog-like)
+  // Usar el id de currencies (no de country_currencies) para que el FK del claim apunte bien
+  return rows.map(r => ({
+    id: r.currency?.id || r.id,
+    country_id: r.country_id,
+    category: "currency",
+    code: r.currency?.code || r.currency_code,
+    name: r.currency?.name || r.currency_code,
+    description: r.currency?.symbol || null,
+    sort_order: r.sort_order,
+    is_active: r.is_active,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+  }));
 }
 
 export async function createLookupCatalogItem(input: { category: string; name: string; code?: string; sort_order?: number }) {

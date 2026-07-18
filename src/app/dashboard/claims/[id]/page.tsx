@@ -11,7 +11,7 @@ import { getGestionScreensForClaimAction } from "@/services/gestion-screens";
 import { getUsers } from "@/services/users";
 import { getCompanies } from "@/services/companies";
 import { getCountries } from "@/services/countries";
-import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getEvents, getCountryById, getRegionById, getCityById, getCommuneById } from "@/services/catalogs";
+import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getCurrencies, getEvents, getCountryById, getRegionById, getCityById, getCommuneById } from "@/services/catalogs";
 import type { ClaimsParticipant, ActionTemplate } from "@/types";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -465,8 +465,8 @@ export default function ClaimDetailPage() {
   });
 
   const { data: currencyCatalog } = useQuery({
-    queryKey: ["lookup-catalog", "currency"],
-    queryFn: () => getLookupCatalog("currency"),
+    queryKey: ["currencies"],
+    queryFn: () => getCurrencies(),
   });
 
   const { data: eventsCatalog } = useQuery({

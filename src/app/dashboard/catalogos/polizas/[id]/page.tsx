@@ -35,7 +35,7 @@ import {
   getSubcoveragesByCoverageId,
   getSubcoveragesByCoverageIds,
 } from "@/services/coverage-catalog";
-import { getInsuranceCompanies, getBusinessLines, getBrokers, getCountries } from "@/services/catalogs";
+import { getInsuranceCompanies, getBusinessLines, getBrokers, getCountries, getCountryCurrencies } from "@/services/catalogs";
 
 const statusLabels: Record<string, string> = {
   draft: "Borrador",
@@ -150,6 +150,12 @@ export default function PolicyDetailPage() {
   const { data: coverageCatalog } = useQuery({
     queryKey: ["coverage-catalog", selectedCompanyCountryId],
     queryFn: () => getCoverageCatalog(selectedCompanyCountryId),
+  });
+
+  // Monedas dinámicas según el país de la compañía
+  const { data: countryCurrencies } = useQuery({
+    queryKey: ["country-currencies-policy", selectedCompanyCountryId],
+    queryFn: () => getCountryCurrencies(selectedCompanyCountryId),
   });
 
   // Catálogo completo sin filtro de país (para buscar códigos en la grilla de coberturas existentes)
@@ -644,10 +650,10 @@ export default function PolicyDetailPage() {
                 value={form.currency}
                 onChange={(e) => setForm({ ...form, currency: e.target.value })}
               >
-                <option value="CLP">CLP — Peso Chileno</option>
-                <option value="USD">USD — Dólar</option>
-                <option value="EUR">EUR — Euro</option>
-                <option value="UF">UF — Unidad de Fomento</option>
+                <option value="">Seleccionar...</option>
+                {(countryCurrencies || []).map((c) => (
+                  <option key={c.code || c.id} value={c.code || c.id}>{c.code || ""} — {c.name}</option>
+                ))}
               </select>
             </div>
             <div className="lg:col-span-6">

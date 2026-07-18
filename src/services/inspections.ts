@@ -215,11 +215,11 @@ export async function getInspectionSessionById(id: string) {
     claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, issuer_id, issued_on, issued_by),
     action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
     claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, broker_executive, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone)),
-    inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description),
+    inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, created_at),
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
-    inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, description, severity),
-    inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role),
-    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id)
+    inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, description, severity, damage_type, dependency, sector, unit, quantity, estimated_amount, currency, observations, product, brand_model, created_at),
+    inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
+    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at)
   `);
   if (!session) return null;
 

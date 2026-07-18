@@ -32,7 +32,7 @@ import { SelectItem } from "@/components/ui/select";
 import { updateClaimFields, updateClaimStatus, updateClaimParticipant, createClaimParticipant } from "@/services/claims";
 import { findPerson, upsertPerson, addPersonAddress, type PersonWithAddresses } from "@/services/persons";
 import { formatRut, guessPersonType } from "@/lib/validations/rut";
-import { getCountries, getRegions, getCities, getCommunes } from "@/services/catalogs";
+import { getCountries, getRegions, getCities, getCommunes, getCountryCurrencies } from "@/services/catalogs";
 import { getPolicies, createPolicy } from "@/services/policies";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { useAuth } from "@/hooks/use-auth";
@@ -46,6 +46,7 @@ import type { Claim, ClaimsParticipant, UserOption as UserOptionType } from "@/t
 interface Catalog {
   id: string;
   name: string;
+  code?: string | null;
   country_id?: string | null;
   business_line_id?: string | null;
 }
@@ -739,7 +740,6 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
   const companyItems = catalogs.companies.map((c) => ({ value: c.id, label: c.name }));
   const countryIdItems = catalogs.countries.map((c) => ({ value: c.id, label: c.name }));
   const eventItems = catalogs.events.map((c) => ({ value: c.id, label: c.name }));
-  const currencyItems = catalogs.currencies.map((c) => ({ value: c.id, label: c.name }));
   const housingDestItems = catalogs.housingDestinations.map((c) => ({ value: c.id, label: c.name }));
   const damageClassItems = catalogs.damageClassifications.map((c) => ({ value: c.id, label: c.name }));
   const constructionTypeItems = catalogs.constructionTypes.map((c) => ({ value: c.id, label: c.name }));
@@ -813,6 +813,19 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
     queryKey: ["countries"],
     queryFn: () => getCountries(),
   });
+
+  // Monedas dinámicas según el país del siniestro
+  const { data: countryCurrencies } = useQuery({
+    queryKey: ["country-currencies-form", watchedCountryId],
+    queryFn: () => getCountryCurrencies(watchedCountryId),
+    enabled: !!watchedCountryId,
+  });
+
+  // Items de moneda: si hay país seleccionado con monedas, usar esas; si no, fallback a todas
+  const currencyItems = (countryCurrencies && countryCurrencies.length > 0
+    ? countryCurrencies
+    : catalogs.currencies
+  ).map((c) => ({ value: c.id, label: `${c.code || ""} — ${c.name}` }));
 
   const { data: policiesList } = useQuery({
     queryKey: ["policies"],
@@ -2233,10 +2246,13 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
                   value={newPolicy.currency}
                   onChange={(e) => setNewPolicy({ ...newPolicy, currency: e.target.value })}
                 >
-                  <option value="CLP">CLP</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="UF">UF</option>
+                  <option value="">Seleccionar...</option>
+                  {(countryCurrencies && countryCurrencies.length > 0
+                    ? countryCurrencies
+                    : catalogs.currencies
+                  ).map((c) => (
+                    <option key={c.code || c.id} value={c.code || c.id}>{c.code || ""} — {c.name}</option>
+                  ))}
                 </select>
               </div>
               <div>

@@ -733,40 +733,16 @@ export default function InspectionDetailPage() {
         {activeTab === "informe" && (
         <div className="mt-4">
           <ReportTab
-            sessionId={session.id}
-            claimId={session.claim_id}
+            session={session}
             claimNumber={claim?.claim_number ?? undefined}
-            sessionStatus={session.status}
+            claimLiquidationNumber={claim?.liquidation_number ?? undefined}
+            claimAddress={claim?.claim_address ?? undefined}
+            insuranceCompanyName={claim?.insurance_company?.name ?? undefined}
+            insuredName={claim?.claims_participants?.find(p => p.type === "insured")?.full_name ?? undefined}
             cancellationReason={cancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || null}
             cancellationNotes={session.cancellation_notes}
             cancelledAt={session.cancelled_at}
           />
-          {session.status === "active" && (
-            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-border">
-              <Button
-                size="sm"
-                className="pg-btn-platinum"
-                disabled={finalizeMutation.isPending}
-                onClick={() => {
-                  // Validar: al menos una evidencia o un daño o acta
-                  const hasEvidences = (session.inspection_evidences?.length ?? 0) > 0;
-                  const hasDamages = (session.inspection_damages?.length ?? 0) > 0;
-                  const hasActa = session.property_risk && Object.keys(session.property_risk).length > 0;
-                  if (!hasEvidences && !hasDamages && !hasActa) {
-                    toast.error("No se puede finalizar: la inspección no tiene datos.");
-                    return;
-                  }
-                  if (!hasEvidences) {
-                    toast.error("No se puede finalizar: suba al menos una foto o documento como evidencia.");
-                    return;
-                  }
-                  finalizeMutation.mutate();
-                }}
-              >
-                {finalizeMutation.isPending ? "Finalizando..." : "Finalizar"}
-              </Button>
-            </div>
-          )}
         </div>
         )}
 
