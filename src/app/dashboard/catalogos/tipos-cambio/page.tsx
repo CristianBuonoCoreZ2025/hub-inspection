@@ -76,21 +76,40 @@ function TiposCambioContent() {
     onError: (e: Error) => toast.error(e.message),
   });
   // Sincronización BCCh con progreso por batches
+  // Sincroniza según los filtros: vista mes = ese mes, vista año = ese año completo
   const syncChile = async () => {
-    const totalDays = 30;
     const batchSize = 5;
-    const today = new Date();
+    const year = parseInt(filterYear);
+
+    // Calcular rango de fechas según el modo
+    let startDateStr: string;
+    let endDateStr: string;
+
+    if (viewMode === "month") {
+      const month = parseInt(filterMonth);
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0); // día 0 del mes siguiente = último día del mes actual
+      startDateStr = firstDay.toISOString().split("T")[0];
+      endDateStr = lastDay.toISOString().split("T")[0];
+    } else {
+      // Vista año: 1 enero a 31 diciembre
+      startDateStr = `${year}-01-01`;
+      endDateStr = `${year}-12-31`;
+    }
+
+    // Generar todas las fechas del rango
     const allDates: string[] = [];
-    for (let i = 0; i < totalDays; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
+    const start = new Date(startDateStr + "T00:00:00");
+    const end = new Date(endDateStr + "T00:00:00");
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       allDates.push(d.toISOString().split("T")[0]);
     }
 
+    // Dividir en batches de 5 días
     const batches: Array<{ startDate: string; endDate: string }> = [];
     for (let i = 0; i < allDates.length; i += batchSize) {
       const batchDates = allDates.slice(i, i + batchSize);
-      batches.push({ startDate: batchDates[batchDates.length - 1], endDate: batchDates[0] });
+      batches.push({ startDate: batchDates[0], endDate: batchDates[batchDates.length - 1] });
     }
 
     setSyncState({ active: true, current: 0, total: batches.length, inserted: 0, exists: 0, errors: 0 });
@@ -324,7 +343,7 @@ function TiposCambioContent() {
                   onClick={syncChile}
                   disabled={syncState.active}
                   className="pg-btn-platinum-icon"
-                  title="Descarga USD y UF de los últimos 30 días desde mindicador.cl (Banco Central de Chile)"
+                  title="Descarga USD y UF del período seleccionado desde mindicador.cl (Banco Central de Chile)"
                 >
                   <ArrowRightLeft className={`mr-1.5 h-4 w-4 ${syncState.active ? "animate-spin" : ""}`} />
                   {syncState.active ? "Sincronizando" : "Sincronizar"}
@@ -535,7 +554,13 @@ function TiposCambioContent() {
           </div>
           <div className="modal-body space-y-3">
             <p className="text-[12px] text-muted-foreground">
-              Descargando USD y UF desde mindicador.cl (Banco Central de Chile)...
+              Descargando USD y UF desde mindicador.cl para{" "}
+              <span className="font-medium text-foreground">
+                {viewMode === "month"
+                  ? `${MONTHS[parseInt(filterMonth)]} ${filterYear}`
+                  : `el año ${filterYear}`}
+              </span>
+              ...
             </p>
             {/* Barra de progreso */}
             <div className="space-y-1.5">
