@@ -62,7 +62,6 @@ export const mainLinks: NavLink[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "dashboard" },
   { href: "/dashboard/catalogos/polizas", label: "Pólizas", icon: FileCheck, section: "claims" },
   { href: "/dashboard/claims", label: "Siniestros", icon: FileText, section: "claims" },
-  { href: "/dashboard/gestiones", label: "Gestiones", icon: ListChecks, section: "claims" },
   { href: "/dashboard/inspecciones", label: "Inspecciones", icon: ClipboardCheck, section: "inspecciones" },
   { href: "/dashboard/agenda", label: "Agenda", icon: Calendar, section: "agenda" },
 ];
