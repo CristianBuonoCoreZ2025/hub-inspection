@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getInspectionSessions, type SessionWithRelations } from "@/services/inspections";
 import { getUsersByRoleForCompany } from "@/services/users";
@@ -390,6 +391,7 @@ function EventCard({
   inspectorName: string | null;
   showInspector: boolean;
 }) {
+  const router = useRouter();
   const time = session.scheduled_at
     ? new Date(session.scheduled_at).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
     : "";
@@ -400,9 +402,17 @@ function EventCard({
   const insuredName = session.claim?.claims_participants?.[0]?.full_name;
 
   return (
-    <Link
-      href={`/dashboard/inspecciones/${session.id}`}
-      className={`agenda-event block border ${style.card} p-2 group`}
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(`/dashboard/inspecciones/${session.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          router.push(`/dashboard/inspecciones/${session.id}`);
+        }
+      }}
+      className={`agenda-event block border ${style.card} p-2 group cursor-pointer`}
     >
       {/* Barra de color superior (estilo macOS) */}
       <div className={`h-0.5 rounded-full ${style.bar} mb-1.5`} />
@@ -459,6 +469,6 @@ function EventCard({
           <span className="truncate">{inspectorName}</span>
         </div>
       )}
-    </Link>
+    </div>
   );
 }
