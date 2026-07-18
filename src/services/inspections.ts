@@ -2,7 +2,7 @@ import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient
 import type {
   InspectionSession, PropertyRisk, PropertyMateriality,
   SecurityMeasures, InsuredStatement, ThirdParty, DamageSketch,
-  InspectionDamage, InspectionEvidence,
+  InspectionDamage, InspectionEvidence, InspectionSignature,
 } from "@/types";
 
 const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, created_at, updated_at";
@@ -82,10 +82,10 @@ interface LiveSession {
 export interface SessionDetail extends Omit<InspectionSession, 'inspection_evidences' | 'inspection_checklists' | 'inspection_damages' | 'inspection_signatures' | 'damage_sketches'> {
   inspection_evidences?: InspectionEvidence[];
   inspection_checklists?: { id: string; area: string; item: string; status: string }[];
-  inspection_damages?: { id: string; description: string; severity: string }[];
-  inspection_signatures?: { id: string; role: string }[];
-  damage_sketches?: { id: string }[];
-  claim_action?: { code: string } | null;
+  inspection_damages?: InspectionDamage[];
+  inspection_signatures?: InspectionSignature[];
+  damage_sketches?: DamageSketch[];
+  claim_action?: { id: string; code: string; action_status_id: string | null; issuer_id: string | null; issued_on: string | null; issued_by: string | null } | null;
   claim?: SessionClaim;
 }
 

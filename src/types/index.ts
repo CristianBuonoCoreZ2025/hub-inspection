@@ -555,7 +555,7 @@ export interface InspectionReport {
   claim_id: string | null;
   report_url: string | null;
   generated_at: string | null;
-  status: "draft" | "generated" | "sent" | "cancellation";
+  status: "draft" | "generated" | "sent" | "cancellation" | "final";
   report_type?: "completion" | "cancellation";
   cancellation_reason_id?: string | null;
   cancellation_notes?: string | null;

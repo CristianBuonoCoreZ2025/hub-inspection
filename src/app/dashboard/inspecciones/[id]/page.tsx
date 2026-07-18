@@ -11,7 +11,6 @@ import {
   getInspectorSchedule,
 } from "@/services/inspections";
 import { updateClaimStatus } from "@/services/claims";
-import { issueClaimAction } from "@/services/claim-actions";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getUsers } from "@/services/users";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -267,30 +266,6 @@ export default function InspectionDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["claims"] });
           } catch {}
         }
-      }
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  // Mutation para finalizar la inspección + emitir el INS
-  const finalizeMutation = useMutation({
-    mutationFn: async () => {
-      if (!session) return;
-      // 1. Marcar la sesión como completed con ended_at
-      await updateInspectionSession(session.id, { status: "completed", ended_at: new Date().toISOString() });
-      // 2. Emitir el claim_action INS si tiene claim_action_id
-      if (session.claim_action_id) {
-        await issueClaimAction(session.claim_action_id, profile?.id);
-      }
-    },
-    onSuccess: async () => {
-      toast.success("Inspección finalizada y emitida");
-      queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
-      queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
-      if (session?.claim_id) {
-        queryClient.invalidateQueries({ queryKey: ["claim", session.claim_id] });
-        queryClient.invalidateQueries({ queryKey: ["claim-actions", session.claim_id] });
-        queryClient.invalidateQueries({ queryKey: ["claims"] });
       }
     },
     onError: (err: Error) => toast.error(err.message),

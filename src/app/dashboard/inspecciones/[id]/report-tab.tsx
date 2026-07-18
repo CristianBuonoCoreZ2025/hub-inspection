@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { FileText, Printer, CheckCircle2, RefreshCw, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { InspectionSession } from "@/types";
+import type { SessionDetail } from "@/services/inspections";
 
 const SEVERITY_LABELS: Record<string, string> = {
   low: "Leve",
@@ -50,7 +50,7 @@ export default function ReportTab({
   cancellationNotes,
   cancelledAt,
 }: {
-  session: InspectionSession;
+  session: SessionDetail;
   claimNumber?: string;
   claimLiquidationNumber?: string;
   claimAddress?: string;

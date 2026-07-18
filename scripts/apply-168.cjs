@@ -1,37 +1,21 @@
-const { Client } = require("pg");
+require('dotenv').config({ path: '.env.local' });
+const { Client } = require('pg');
+const fs = require('fs');
 
-const client = new Client({
-  connectionString: "postgres://postgres.uoqubwwimudywcpxyxdk:Paoloxvito099!@aws-1-us-west-2.pooler.supabase.com:5432/postgres",
-});
+async function main() {
+  const c = new Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  await c.connect();
+  await c.query(fs.readFileSync('migrations/168_currency_rls.sql', 'utf8'));
+  console.log('✅ Migration 168 aplicada — RLS policies para currencies, country_currencies, exchange_rates');
 
-async function run() {
-  await client.connect();
-  console.log("Connected to DB");
+  const r = await c.query(`
+    SELECT tablename, policyname, cmd FROM pg_policies
+    WHERE schemaname = 'public' AND tablename IN ('currencies','country_currencies','exchange_rates')
+    ORDER BY tablename, cmd
+  `);
+  console.log('\nPolíticas creadas:');
+  r.rows.forEach(p => console.log(`  ${p.tablename}: ${p.cmd} — ${p.policyname}`));
 
-  try {
-    await client.query("ALTER TABLE inspection_reports ALTER COLUMN report_url DROP NOT NULL;");
-    console.log("OK: report_url is now nullable");
-  } catch (e) {
-    if (e.message.includes("already")) {
-      console.log("report_url already nullable");
-    } else {
-      console.log("report_url:", e.message);
-    }
-  }
-
-  try {
-    await client.query("ALTER TABLE inspection_reports ALTER COLUMN claim_id DROP NOT NULL;");
-    console.log("OK: claim_id is now nullable");
-  } catch (e) {
-    if (e.message.includes("already")) {
-      console.log("claim_id already nullable");
-    } else {
-      console.log("claim_id:", e.message);
-    }
-  }
-
-  await client.end();
-  console.log("Done!");
+  await c.end();
 }
-
-run().catch(console.error);
+main().catch(e => { console.error(e.message); process.exit(1); });
