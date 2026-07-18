@@ -254,7 +254,7 @@ export default function AgendaPage() {
                 }}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="agenda-inspector-dropdown">
               <SelectItem value="all">Todos</SelectItem>
               {inspectorsWithCases.length > 0 && (
                 <SelectGroup>
