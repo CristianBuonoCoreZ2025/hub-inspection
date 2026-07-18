@@ -2138,17 +2138,17 @@
     );
   }
 
-  /* Select de inspectores — ancho fijo + fuente 10px (trigger + dropdown) */
+  /* Select de inspectores — ancho fijo + fuente 11px (trigger + dropdown) */
   .agenda-toolbar [data-slot="select-trigger"] {
     width: 260px !important;
     min-width: 260px !important;
     max-width: 260px !important;
-    font-size: 10px !important;
+    font-size: 11px !important;
   }
   .agenda-inspector-dropdown,
   .agenda-inspector-dropdown [data-slot="select-item"],
   .agenda-inspector-dropdown [data-slot="select-label"] {
-    font-size: 10px !important;
+    font-size: 11px !important;
   }
 
   /* Panel principal del calendario — glass profundo */
