@@ -9,7 +9,7 @@ import {
   getCountryCurrenciesAll,
 } from "@/services/catalogs";
 import { toast } from "sonner";
-import { ArrowRightLeft, Plus, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRightLeft, Plus, Calendar, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -165,11 +165,7 @@ function TiposCambioContent() {
     setFilterYear(String(y));
   };
 
-  // Columnas según modo
-  const columns = viewMode === "year"
-    ? MONTHS_SHORT
-    : Array.from({ length: 31 }, (_, i) => String(i + 1)); // días 1-31 para vista mensual
-
+  // Columnas según modo: año = meses, mes = no se usa pivote
   return (
     <div className="app-page">
       <div className="app-page-header">
@@ -379,27 +375,18 @@ function TiposCambioContent() {
               </h3>
             </div>
 
-            {/* Tabla pivote */}
+            {/* Tabla pivote (año) o tabla simple (mes) */}
             <div className="overflow-x-auto">
-              <table className="app-data-table text-[11px]">
-                <thead>
-                  <tr>
-                    {viewMode === "year" ? (
-                      <>
-                        <th className="sticky left-0 z-10 bg-background w-10 text-center">Día</th>
-                        {MONTHS_SHORT.map(m => <th key={m} className="text-center min-w-[70px]">{m}</th>)}
-                      </>
-                    ) : (
-                      <>
-                        <th className="sticky left-0 z-10 bg-background w-12 text-center">Día</th>
-                        {columns.map(d => <th key={d} className="text-center min-w-[55px]">{d}</th>)}
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {viewMode === "year" ? (
-                    Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
+              {viewMode === "year" ? (
+                <table className="app-data-table text-[11px]">
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 z-10 bg-background w-10 text-center">Día</th>
+                      {MONTHS_SHORT.map(m => <th key={m} className="text-center min-w-[70px]">{m}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
                       const hasAny = pivot[day] && Object.keys(pivot[day]).length > 0;
                       if (!hasAny) return null;
                       return (
@@ -421,39 +408,59 @@ function TiposCambioContent() {
                           })}
                         </tr>
                       );
-                    })
-                  ) : (
-                    // Vista mensual: filas = semanas? No, filas = solo los días que tienen datos
-                    // Pero es más simple: una fila por cada día del mes con datos
-                    Array.from({ length: 31 }, (_, i) => i + 1).map(day => {
-                      const monthIdx = parseInt(filterMonth);
-                      const cell = pivot[day]?.[monthIdx];
-                      if (!cell) return null;
-                      return (
-                        <tr key={day} className="hover:bg-muted/30">
-                          <td className="sticky left-0 z-10 bg-background text-center font-mono font-semibold text-muted-foreground">{day}</td>
-                          {columns.map((_, colIdx) => {
-                            // En vista mensual, solo mostramos el valor en la columna del día correspondiente
-                            if (colIdx !== day - 1) {
-                              return <td key={colIdx} className="text-center text-muted-foreground/10">·</td>;
-                            }
-                            return (
-                              <td
-                                key={colIdx}
-                                className="text-center font-mono font-semibold cursor-pointer hover:bg-primary/10 rounded transition-colors"
-                                title={`${day}/${String(monthIdx + 1).padStart(2, "0")}/${filterYear} — ${cell.source || "manual"}`}
-                                onClick={() => { if (canEdit("catalogos")) { setEditingId(cell.id); setForm({ country_id: filterCountry, currency_code: filterCurrency, rate_to_base: String(cell.rate), effective_date: `${filterYear}-${String(monthIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`, source: cell.source || "manual" }); setOpen(true); } }}
-                              >
-                                {formatRate(cell.rate)}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                // Vista mensual: tabla simple, una fila por día
+                <table className="app-data-table text-[12px]">
+                  <thead>
+                    <tr>
+                      <th className="w-16">Día</th>
+                      <th className="text-right">Tasa → Base</th>
+                      <th>Fecha</th>
+                      <th>Origen</th>
+                      <th className="w-[60px]"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRates
+                      .slice()
+                      .sort((a, b) => a.effective_date.localeCompare(b.effective_date))
+                      .map((r) => {
+                        const d = new Date(r.effective_date + "T00:00:00");
+                        const day = d.getDate();
+                        return (
+                          <tr key={r.id} className="hover:bg-muted/30">
+                            <td className="font-mono font-semibold text-muted-foreground">{day}</td>
+                            <td
+                              className="text-right font-mono font-semibold cursor-pointer hover:bg-primary/10 rounded px-2 transition-colors"
+                              onClick={() => { if (canEdit("catalogos")) { setEditingId(r.id); setForm({ country_id: r.country_id, currency_code: r.currency_code, rate_to_base: String(r.rate_to_base), effective_date: r.effective_date, source: r.source || "manual" }); setOpen(true); } }}
+                            >
+                              {formatRate(r.rate_to_base)}
+                            </td>
+                            <td className="text-muted-foreground text-[11px]">
+                              {d.toLocaleDateString("es-CL", { weekday: "short", day: "2-digit", month: "short" })}
+                            </td>
+                            <td className="text-muted-foreground text-[11px]">{r.source || "—"}</td>
+                            <td>
+                              {canEdit("catalogos") && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="btn-neutral btn-icon"
+                                  onClick={() => { setEditingId(r.id); setForm({ country_id: r.country_id, currency_code: r.currency_code, rate_to_base: String(r.rate_to_base), effective_date: r.effective_date, source: r.source || "manual" }); setOpen(true); }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              )}
             </div>
 
             {/* Leyenda */}
