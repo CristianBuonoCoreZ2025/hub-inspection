@@ -180,3 +180,50 @@ export async function removeItemFromClaimDocumentRequest(itemId: string): Promis
 export async function updateClaimDocumentRequestNotes(requestId: string, notes: string): Promise<void> {
   await updateRow("claim_document_requests", requestId, { notes: notes || null }, "id");
 }
+
+// ──────────────────────────────────────────────────────────────
+// CRUD: document_requirements (configuración por línea de negocio)
+// ──────────────────────────────────────────────────────────────
+
+export async function getDocumentRequirementsByBusinessLine(businessLineId: string): Promise<DocumentRequirement[]> {
+  return fetchAll<DocumentRequirement>("document_requirements", {
+    select: "id, business_line_id, document_type_code, document_name, description, is_required, is_active, sort_order",
+    eq: { business_line_id: businessLineId, is_active: true },
+    order: { column: "sort_order", ascending: true },
+  });
+}
+
+export async function createDocumentRequirement(input: {
+  business_line_id: string;
+  document_type_code: string;
+  document_name: string;
+  description?: string | null;
+  is_required: boolean;
+  sort_order: number;
+}): Promise<DocumentRequirement> {
+  return insertRow<DocumentRequirement>("document_requirements", {
+    business_line_id: input.business_line_id,
+    document_type_code: input.document_type_code,
+    document_name: input.document_name,
+    description: input.description || null,
+    is_required: input.is_required,
+    is_active: true,
+    sort_order: input.sort_order,
+  }, "id, business_line_id, document_type_code, document_name, description, is_required, is_active, sort_order");
+}
+
+export async function updateDocumentRequirement(id: string, input: {
+  is_required?: boolean;
+  is_active?: boolean;
+  sort_order?: number;
+}): Promise<void> {
+  const set: Record<string, unknown> = {};
+  if (input.is_required !== undefined) set.is_required = input.is_required;
+  if (input.is_active !== undefined) set.is_active = input.is_active;
+  if (input.sort_order !== undefined) set.sort_order = input.sort_order;
+  await updateRow("document_requirements", id, set, "id");
+}
+
+export async function deleteDocumentRequirement(id: string): Promise<void> {
+  await deleteRow("document_requirements", id, "id");
+}
