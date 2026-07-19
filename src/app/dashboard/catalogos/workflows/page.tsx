@@ -537,17 +537,18 @@ export default function WorkflowsPage() {
  </div>
  {lExp && selectedConfigId === config.id && (
  <div className="ml-2 mt-2 mb-3">
+ {/* Mensaje de status dentro de la linea de negocios */}
+ <div className={`mb-2 rounded-lg px-3 py-1.5 text-[11px] flex items-center gap-1.5 ${
+ isOnline
+ ? "bg-emerald-500/5 border border-emerald-500/10 text-emerald-400/80"
+ : "bg-amber-500/5 border border-amber-500/20 text-amber-400"
+ }`}>
  {isOnline ? (
- <div className="mb-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10 px-3 py-1.5 text-[11px] text-emerald-400/80 flex items-center gap-1.5">
- <Shield className="h-3 w-3" />
- Workflow en línea — no editable. Suspender para modificar.
- </div>
+ <><Shield className="h-3 w-3" /> Workflow en línea — no editable. Suspender para modificar.</>
  ) : (
- <div className="mb-2 rounded-lg bg-amber-500/5 border border-amber-500/20 px-3 py-1.5 text-[11px] text-amber-400 flex items-center gap-1.5 animate-pulse">
- <Settings2 className="h-3 w-3" />
- Modo edición — arrastra las gestiones de abajo al flujo
- </div>
+ <><Settings2 className="h-3 w-3" /> Modo edición — arrastra al nodo Raíz</>
  )}
+ </div>
  <DndContext
  sensors={dndSensors}
  collisionDetection={workflowCollisionDetection}
@@ -1031,14 +1032,11 @@ function StepsCanvas({
 
  if (steps.length === 0) {
  return (
- <DroppableCanvas isPaletteDrag={isPaletteDrag} businessLineName={businessLineName}>
- <div className="relative overflow-hidden rounded-xl border border-dashed border-white/10 dark:border-white/5
- bg-white/2 backdrop-blur-sm p-6 text-center">
- <div className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-violet-500/5 blur-2xl" />
- <Workflow className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
- <p className="text-[11px] text-muted-foreground italic">Sin gestiones — arrastra desde la paleta</p>
- </div>
- </DroppableCanvas>
+ <RootNode isPaletteDrag={isPaletteDrag} businessLineName={businessLineName}>
+ <p className="text-[11px] text-muted-foreground italic text-center py-4">
+ Sin gestiones — arrastra desde la paleta aquí
+ </p>
+ </RootNode>
  );
  }
 
@@ -1095,13 +1093,7 @@ function StepsCanvas({
  }
 
  return (
- <div className="relative overflow-hidden rounded-xl border border-white/10 dark:border-white/5
- bg-white/2 backdrop-blur-sm p-4">
- <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-violet-500/5 blur-3xl" />
- <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-sky-500/5 blur-3xl" />
-
- {/* Drop zone para el canvas completo (recibe drops de la paleta) */}
- <DroppableCanvas isPaletteDrag={isPaletteDrag} businessLineName={businessLineName}>
+ <RootNode isPaletteDrag={isPaletteDrag} businessLineName={businessLineName}>
  <div className="relative space-y-1">
  {roots.length === 0 ? (
  <p className="text-[11px] text-muted-foreground italic text-center py-4">
@@ -1113,8 +1105,7 @@ function StepsCanvas({
  </SortableContext>
  )}
  </div>
- </DroppableCanvas>
- </div>
+ </RootNode>
  );
 }
 
@@ -1340,11 +1331,11 @@ function SortableNode({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Componente: DroppableCanvas — zona de drop del canvas completo
-// Recibe drops de la paleta que no caen sobre un nodo especifico
+// Componente: RootNode — nodo raíz siempre visible (Nivel 1)
+// Es el drop target para crear gestiones de nivel 1 desde la paleta
 // ═══════════════════════════════════════════════════════════════════
 
-function DroppableCanvas({ children, isPaletteDrag, businessLineName }: {
+function RootNode({ children, isPaletteDrag, businessLineName }: {
  children: React.ReactNode;
  isPaletteDrag?: boolean;
  businessLineName?: string;
@@ -1359,27 +1350,37 @@ function DroppableCanvas({ children, isPaletteDrag, businessLineName }: {
  return (
  <div
  ref={setNodeRef}
- className={`relative transition-all duration-200 rounded-xl
+ className={`relative overflow-hidden rounded-xl border transition-all duration-200
  ${showDropIndicator
- ? "ring-2 ring-violet-500/50 bg-violet-500/5 border border-violet-500/30"
+ ? "ring-2 ring-violet-500/50 bg-violet-500/5 border-violet-500/30"
  : isPaletteDrag
- ? "ring-1 ring-violet-500/20 border border-violet-500/15 border-dashed"
- : ""
- }`}
+ ? "ring-1 ring-violet-500/20 border-violet-500/15 border-dashed"
+ : "border-white/10 dark:border-white/5"
+ }
+ bg-white/2 backdrop-blur-sm`}
  >
+ {/* Header del nodo raíz */}
+ <div className={`flex items-center gap-2 px-3 py-2 border-b transition-colors
+ ${showDropIndicator ? "border-violet-500/30 bg-violet-500/5" : "border-white/5"}`}>
+ <div className={`flex h-6 w-6 items-center justify-center rounded-lg border transition-colors
+ ${showDropIndicator
+ ? "bg-violet-500/20 border-violet-500/40"
+ : "bg-violet-500/10 border-violet-500/20"
+ }`}>
+ <Workflow className={`h-3.5 w-3.5 ${showDropIndicator ? "text-violet-300" : "text-violet-400"}`} />
+ </div>
+ <div className="flex flex-col">
+ <span className="text-[12px] font-semibold text-violet-400">Nivel 1 — Raíz</span>
+ <span className="text-[9px] text-muted-foreground">
+ {businessLineName || "Gestiones iniciales"}
+ {showDropIndicator && " · Soltar aquí"}
+ </span>
+ </div>
+ </div>
+ {/* Contenido — gestiones raíz */}
+ <div className="p-3">
  {children}
- {/* Indicador de drop para gestión raíz */}
- {showDropIndicator && (
- <div className="absolute inset-x-0 -bottom-8 flex items-center justify-center pointer-events-none">
- <div className="flex items-center gap-1.5 rounded-lg px-3 py-1
- bg-violet-500/20 border border-violet-500/40 backdrop-blur-sm
- text-violet-300 text-[10px] font-medium animate-pulse">
- <Plus className="h-2.5 w-2.5" />
- Soltar para gestión raíz (nivel 1)
- {businessLineName && <span className="text-violet-400/70">· {businessLineName}</span>}
  </div>
- </div>
- )}
  </div>
  );
 }
