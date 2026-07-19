@@ -280,7 +280,7 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         {imagesLoading ? (
           <p className="text-sm text-muted-foreground text-center py-6">Cargando...</p>
         ) : claimImages && claimImages.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {claimImages.map((img) => (
               <ClaimImageCard
                 key={img.id}
@@ -365,7 +365,7 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
                   {sessionLabel}
                   <span className="text-muted-foreground/60">({photos.length})</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {photos.map((photo) => (
                     <InspectionImageCard
                       key={photo.id}
@@ -405,7 +405,7 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
                   {sessionLabel}
                   <span className="text-muted-foreground/60">({sketches.length})</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                   {sketches.map((sketch) => (
                     <div
                       key={sketch.id}
@@ -495,62 +495,94 @@ function ClaimImageCard({
   claimId: string;
 }) {
   return (
-    <div className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20">
-      {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
-      <img
-        src={image.url}
-        alt={image.original_filename || image.img_code}
-        className="h-full w-full object-cover"
-        loading="lazy"
-      />
-      {/* Overlay de acciones */}
-      <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <button
-          onClick={onZoom}
-          className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
-          title="Ampliar"
-        >
-          <ZoomIn className="h-3 w-3" />
-        </button>
-        <a
-          href={image.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
-          title="Abrir"
-        >
-          <ExternalLink className="h-3 w-3" />
-        </a>
-        {canDelete && (
+    <div className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
+      {/* Imagen */}
+      <div className="relative aspect-video overflow-hidden bg-muted/30">
+        {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
+        <img
+          src={image.url}
+          alt={image.original_filename || image.img_code}
+          className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+          loading="lazy"
+        />
+        {/* Acciones sobre la imagen (hover) */}
+        <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <button
-            onClick={() => {
-              if (confirm("¿Eliminar esta imagen?")) onDelete();
-            }}
-            className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-red-500/80"
-            title="Eliminar"
+            onClick={onZoom}
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
+            title="Ampliar"
           >
-            <Trash2 className="h-3 w-3" />
+            <ZoomIn className="h-3.5 w-3.5" />
           </button>
-        )}
+          <a
+            href={image.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
+            title="Abrir"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+          {canDelete && (
+            <button
+              onClick={() => {
+                if (confirm("¿Eliminar esta imagen?")) onDelete();
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-red-500/80"
+              title="Eliminar"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
-      {/* Código + IA */}
-      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
-        <div className="text-[9px] font-mono text-white truncate">{image.img_code}</div>
-        {image.ai_summary && (
-          <div className="text-[8px] text-violet-200 truncate italic" title={image.ai_summary}>
-            {image.ai_summary}
+
+      {/* Info debajo de la imagen */}
+      <div className="flex flex-1 flex-col gap-1.5 p-2.5">
+        {/* Código + tamaño */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-[11px] font-medium text-foreground">
+            {image.img_code}
+          </span>
+          <span className="shrink-0 text-[10px] text-muted-foreground">
+            {formatFileSize(image.file_size)}
+          </span>
+        </div>
+
+        {/* Filename */}
+        {image.original_filename && (
+          <div className="truncate text-[10px] text-muted-foreground" title={image.original_filename}>
+            {image.original_filename}
           </div>
         )}
-      </div>
-      {/* Botón IA (esquina inferior derecha, sobre el overlay) */}
-      <div className="absolute bottom-1 right-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <AiAnalysisButton
-          table="claim_images"
-          id={image.id}
-          fileName={image.original_filename || image.img_code}
-          hasSummary={!!image.ai_summary}
-          queryKey={["claim-images", claimId]}
-        />
+
+        {/* Análisis IA */}
+        <div className="mt-1 flex items-start gap-1.5 rounded-md bg-violet-50/50 p-1.5 dark:bg-violet-950/20">
+          <span className="mt-0.5 shrink-0 text-[10px]">🤖</span>
+          {image.ai_summary ? (
+            <p
+              className="line-clamp-3 text-[10px] leading-relaxed text-violet-700 dark:text-violet-300"
+              title={image.ai_summary}
+            >
+              {image.ai_summary}
+            </p>
+          ) : (
+            <span className="text-[10px] italic text-muted-foreground">
+              Procesando análisis…
+            </span>
+          )}
+        </div>
+
+        {/* Botón IA */}
+        <div className="mt-auto pt-1">
+          <AiAnalysisButton
+            table="claim_images"
+            id={image.id}
+            fileName={image.original_filename || image.img_code}
+            hasSummary={!!image.ai_summary}
+            queryKey={["claim-images", claimId]}
+          />
+        </div>
       </div>
     </div>
   );
@@ -568,50 +600,80 @@ function InspectionImageCard({
   claimId: string;
 }) {
   return (
-    <div className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted/20">
-      {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
-      <img
-        src={photo.url}
-        alt={photo.description || "Evidencia"}
-        className="h-full w-full object-cover"
-        loading="lazy"
-      />
-      <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <button
-          onClick={onZoom}
-          className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
-          title="Ampliar"
-        >
-          <ZoomIn className="h-3 w-3" />
-        </button>
-        <a
-          href={photo.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
-          title="Abrir"
-        >
-          <ExternalLink className="h-3 w-3" />
-        </a>
+    <div className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
+      {/* Imagen */}
+      <div className="relative aspect-video overflow-hidden bg-muted/30">
+        {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
+        <img
+          src={photo.url}
+          alt={photo.description || "Evidencia"}
+          className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+          loading="lazy"
+        />
+        <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={onZoom}
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
+            title="Ampliar"
+          >
+            <ZoomIn className="h-3.5 w-3.5" />
+          </button>
+          <a
+            href={photo.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
+            title="Abrir"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
       </div>
-      {/* Badge "Inspección" — no se puede eliminar */}
-      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
-        <div className="text-[9px] font-mono text-white truncate">{photo.description || "EVI"}</div>
+
+      {/* Info debajo */}
+      <div className="flex flex-1 flex-col gap-1.5 p-2.5">
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-medium text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+            Inspección
+          </span>
+          <span className="truncate text-[10px] text-muted-foreground" title={photo.description || ""}>
+            {photo.description || "Evidencia"}
+          </span>
+        </div>
+
+        {/* Análisis IA */}
         {photo.ai_summary && (
-          <div className="text-[8px] text-violet-200 truncate italic" title={photo.ai_summary}>
-            {photo.ai_summary}
+          <div className="mt-1 flex items-start gap-1.5 rounded-md bg-violet-50/50 p-1.5 dark:bg-violet-950/20">
+            <span className="mt-0.5 shrink-0 text-[10px]">🤖</span>
+            <p
+              className="line-clamp-3 text-[10px] leading-relaxed text-violet-700 dark:text-violet-300"
+              title={photo.ai_summary}
+            >
+              {photo.ai_summary}
+            </p>
           </div>
         )}
-      </div>
-      <div className="absolute bottom-1 right-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <AiAnalysisButton
-          table="inspection_evidences"
-          id={photo.id}
-          fileName={photo.metadata?.originalName || photo.description || "Evidencia"}
-          hasSummary={!!photo.ai_summary}
-          queryKey={["inspection-photos-by-claim", claimId]}
-        />
+
+        {/* Botón IA */}
+        <div className="mt-auto pt-1">
+          <AiAnalysisButton
+            table="inspection_evidences"
+            id={photo.id}
+            fileName={photo.metadata?.originalName || photo.description || "Evidencia"}
+            hasSummary={!!photo.ai_summary}
+            queryKey={["inspection-photos-by-claim", claimId]}
+          />
+        </div>
       </div>
     </div>
   );
+}
+
+// ─── Util: formatear tamaño de archivo ──────────────────────────
+
+function formatFileSize(bytes?: number | null): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
