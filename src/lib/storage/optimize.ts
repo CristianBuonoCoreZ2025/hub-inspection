@@ -1,4 +1,5 @@
 import "server-only";
+import type sharp from "sharp";
 import { logger } from "@/lib/logger";
 
 /**
@@ -65,9 +66,10 @@ export function isOptimizable(mimeType: string, ext: string): boolean {
 /**
  * Carga sharp dinámicamente. Retorna null si no está disponible.
  */
-async function loadSharp(): Promise<typeof import("sharp") | null> {
+async function loadSharp(): Promise<typeof import("sharp")["default"] | null> {
   try {
-    return await import("sharp");
+    const sharpModule = await import("sharp");
+    return sharpModule.default;
   } catch (err) {
     logger.warn("sharp no disponible — optimización deshabilitada", {
       component: "optimize",
