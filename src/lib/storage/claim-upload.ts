@@ -79,19 +79,18 @@ export async function uploadClaimDocument(
 }
 
 /**
- * Sube una imagen del siniestro a R2 con el path estructurado del plan.
+ * Sube una imagen del siniestro a R2 SIN optimizar (raw, rápido).
  *
  * Path: claims/{L}/images/{L}-IMG-NNNNNN.ext
  *
  * 1. Resuelve claimId → liquidation_number
  * 2. Obtiene el siguiente correlativo IMG-NNNNNN atómico desde la BD
- * 3. Optimiza la imagen (redimensiona + comprime con sharp)
- * 4. Construye el path físico
- * 5. Sube el buffer a R2
+ * 3. Construye el path físico
+ * 4. Sube el buffer original a R2 (sin optimizar)
  *
  * @returns { url, key, seq, imgCode } — URL pública, key en R2, correlativo, código de la imagen
  */
-export async function uploadClaimImage(
+export async function uploadClaimImageRaw(
   claimId: string,
   buffer: Buffer,
   contentType: string,
@@ -125,29 +124,68 @@ export async function uploadClaimImage(
 
   const seqNum = seq as number;
 
-  // 3. Optimizar la imagen antes de subir (redimensiona + comprime)
-  const optimized = await optimizeFile(buffer, contentType, ext);
-
-  // 4. Construir path
-  const key = claimImagePath(liquidationNumber, String(seqNum), optimized.ext);
+  // 3. Construir path (sin optimizar — usa la extensión original)
+  const key = claimImagePath(liquidationNumber, String(seqNum), ext);
   const imgCode = `${liquidationNumber}-IMG-${String(seqNum).padStart(6, "0")}`;
 
-  // 5. Subir a R2
+  // 4. Subir a R2 (buffer original, sin optimizar)
+  const url = await uploadToR2(buffer, key, contentType);
+
+  logger.info("Imagen de siniestro subida (raw)", {
+    component: "claim-upload",
+    action: "claim.image.upload.raw",
+    metadata: { claimId, liquidationNumber, imgCode, seq: seqNum, key, size: buffer.length },
+  });
+
+  return { url, key, seq: seqNum, imgCode };
+}
+
+/**
+ * Re-sube una imagen optimizada a R2, reemplazando la versión raw.
+ * Se usa después de la subida inicial para optimizar en background.
+ *
+ * @returns { url, key } — nueva URL y key en R2 (puede cambiar la extensión)
+ */
+export async function reuploadClaimImageOptimized(
+  claimId: string,
+  seq: number,
+  buffer: Buffer,
+  contentType: string,
+  ext: string
+): Promise<{ url: string; key: string }> {
+  const supabase = createAdminClient();
+
+  // Resolver liquidation_number
+  const { data: claim } = await supabase
+    .from("claims")
+    .select("liquidation_number")
+    .eq("id", claimId)
+    .single();
+
+  if (!claim?.liquidation_number) {
+    throw new Error(`No se pudo resolver el siniestro ${claimId}`);
+  }
+
+  // Optimizar
+  const optimized = await optimizeFile(buffer, contentType, ext);
+
+  // Construir path con la extensión optimizada
+  const key = claimImagePath(claim.liquidation_number, String(seq), optimized.ext);
+
+  // Subir a R2 (reemplaza el archivo anterior si la key es la misma)
   const url = await uploadToR2(optimized.buffer, key, optimized.mimeType);
 
-  logger.info("Imagen de siniestro subida", {
+  logger.info("Imagen de siniestro optimizada y re-subida", {
     component: "claim-upload",
-    action: "claim.image.upload",
+    action: "claim.image.optimize",
     metadata: {
       claimId,
-      liquidationNumber,
-      imgCode,
-      seq: seqNum,
+      seq,
       key,
       originalSize: buffer.length,
       optimizedSize: optimized.buffer.length,
     },
   });
 
-  return { url, key, seq: seqNum, imgCode };
+  return { url, key };
 }

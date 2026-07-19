@@ -1,6 +1,7 @@
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
-import { uploadClaimImage } from "@/lib/storage/claim-upload";
+import { uploadClaimImageRaw, reuploadClaimImageOptimized } from "@/lib/storage/claim-upload";
 import { summarizeFile } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logger";
 
@@ -11,15 +12,17 @@ import { logger } from "@/lib/logger";
  *   - file: la imagen (jpg, png, webp, etc.)
  *   - claimId: UUID del siniestro
  *
- * Flujo:
- *  1. Resuelve claimId → claim.liquidation_number
- *  2. Obtiene el siguiente correlativo IMG-NNNNNN atómico desde la BD
- *  3. Optimiza la imagen (redimensiona a max 1920px + comprime quality 80)
- *  4. Sube a R2 con path: claims/{L}/images/{L}-IMG-NNNNNN.ext
- *  5. Genera resumen con IA (visión — describe la imagen)
- *  6. Inserta el registro en claim_images
+ * Flujo (rápido — responde al cliente en ~1s):
+ *  1. Sube el archivo original a R2 (sin optimizar)
+ *  2. Inserta el registro en claim_images
+ *  3. Devuelve éxito al cliente
  *
- * Devuelve: { image: { id, url, img_code, ai_summary, ... } }
+ * Flujo paralelo (background, después de responder):
+ *  4. Optimiza la imagen (sharp: max 1920px, quality 80)
+ *  5. Re-sube la versión optimizada a R2
+ *  6. Actualiza url + file_path en claim_images
+ *  7. Genera descripción con IA (visión)
+ *  8. Actualiza ai_summary + ai_model en claim_images
  */
 export async function POST(request: NextRequest) {
   try {
@@ -60,38 +63,15 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Subir a R2 con path estructurado + optimización
-    const { url, key, imgCode } = await uploadClaimImage(claimId, buffer, mimeType, ext);
+    // ── PASO 1: Subir original a R2 (sin optimizar — rápido) ──
+    const { url, key, seq, imgCode } = await uploadClaimImageRaw(
+      claimId,
+      buffer,
+      mimeType,
+      ext
+    );
 
-    // ── IA: descripción automática de la imagen (free → paid) ──
-    let aiSummary: string | null = null;
-    let aiModel: string | null = null;
-    try {
-      const ai = await summarizeFile(buffer, mimeType, file.name);
-      if (ai.ok) {
-        aiSummary = ai.summary;
-        aiModel = ai.model;
-        logger.info("IA: descripción de imagen generada", {
-          component: "claim-image-upload",
-          action: "ai.summary",
-          metadata: { model: ai.model, summaryLength: ai.summary.length },
-        });
-      } else {
-        logger.warn("IA: no se pudo generar descripción de imagen", {
-          component: "claim-image-upload",
-          action: "ai.summary.skipped",
-          metadata: { reason: ai.reason },
-        });
-      }
-    } catch (aiErr) {
-      logger.warn("IA: error generando descripción de imagen", {
-        component: "claim-image-upload",
-        action: "ai.summary.error",
-        metadata: { error: aiErr instanceof Error ? aiErr.message : String(aiErr) },
-      });
-    }
-
-    // Insertar en claim_images
+    // ── PASO 2: Insertar registro en claim_images ──
     const supabase = createAdminClient();
     const { data: image, error } = await supabase
       .from("claim_images")
@@ -104,17 +84,18 @@ export async function POST(request: NextRequest) {
         mime_type: mimeType,
         file_size: file.size,
         uploaded_by: userId,
-        ai_summary: aiSummary,
-        ai_model: aiModel,
         is_active: true,
       })
-      .select("id, claim_id, img_code, url, original_filename, mime_type, file_size, uploaded_by, ai_summary, ai_model, is_active, created_at, updated_at")
+      .select(
+        "id, claim_id, img_code, url, original_filename, mime_type, file_size, uploaded_by, ai_summary, ai_model, is_active, created_at, updated_at"
+      )
       .single();
 
     if (error) {
       logger.error("Claim image upload: insert falló", new Error(error.message), {
         component: "claim-image-upload",
         action: "insert.claim_image",
+        metadata: { error: error.message, code: error.code, details: error.details },
       });
       return NextResponse.json({ error: "Error al registrar imagen" }, { status: 500 });
     }
@@ -125,7 +106,94 @@ export async function POST(request: NextRequest) {
       metadata: { claimId, imgCode, imageId: image.id },
     });
 
-    return NextResponse.json({ image });
+    // ── PASO 3: Devolver éxito al cliente ──
+    const response = NextResponse.json({ image });
+
+    // ── PASO 4-8: Procesamiento en background (optimización + IA) ──
+    // after() ejecuta después de que la respuesta se envía al cliente.
+    // Si falla, no afecta al usuario — la imagen ya está subida y registrada.
+    after(async () => {
+      const imageId = image.id;
+      try {
+        // ── Optimización: re-subir versión optimizada ──
+        try {
+          const optimized = await reuploadClaimImageOptimized(
+            claimId,
+            seq,
+            buffer,
+            mimeType,
+            ext
+          );
+
+          // Actualizar url + file_path en la BD
+          await supabase
+            .from("claim_images")
+            .update({
+              url: optimized.url,
+              file_path: optimized.key,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", imageId);
+
+          logger.info("Imagen optimizada y actualizada en BD", {
+            component: "claim-image-upload",
+            action: "optimize.success",
+            metadata: { imageId, newKey: optimized.key },
+          });
+        } catch (optErr) {
+          logger.warn("Optimización de imagen falló (no crítico)", {
+            component: "claim-image-upload",
+            action: "optimize.error",
+            metadata: {
+              error: optErr instanceof Error ? optErr.message : String(optErr),
+            },
+          });
+        }
+
+        // ── IA: descripción automática de la imagen ──
+        try {
+          const ai = await summarizeFile(buffer, mimeType, file.name);
+          if (ai.ok) {
+            await supabase
+              .from("claim_images")
+              .update({
+                ai_summary: ai.summary,
+                ai_model: ai.model,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", imageId);
+
+            logger.info("IA: descripción de imagen generada y guardada", {
+              component: "claim-image-upload",
+              action: "ai.summary.success",
+              metadata: { imageId, model: ai.model },
+            });
+          } else {
+            logger.warn("IA: no se pudo generar descripción", {
+              component: "claim-image-upload",
+              action: "ai.summary.skipped",
+              metadata: { imageId, reason: ai.reason },
+            });
+          }
+        } catch (aiErr) {
+          logger.warn("IA: error generando descripción (no crítico)", {
+            component: "claim-image-upload",
+            action: "ai.summary.error",
+            metadata: {
+              error: aiErr instanceof Error ? aiErr.message : String(aiErr),
+            },
+          });
+        }
+      } catch (bgErr) {
+        logger.error("Background processing falló", bgErr as Error, {
+          component: "claim-image-upload",
+          action: "background.error",
+          metadata: { imageId },
+        });
+      }
+    });
+
+    return response;
   } catch (err) {
     logger.error("API /api/claims/images/upload error", err as Error, {
       component: "claim-image-upload",
