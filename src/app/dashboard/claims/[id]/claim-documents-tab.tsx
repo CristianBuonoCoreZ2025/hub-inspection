@@ -196,9 +196,11 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     fileName: string;
     fileSize: number;
     loaded: number;
+    speed: number; // KB/s
+    elapsed: number; // ms
     status: "uploading" | "processing" | "done" | "error";
     errorMsg?: string;
-  }>({ visible: false, fileName: "", fileSize: 0, loaded: 0, status: "uploading" });
+  }>({ visible: false, fileName: "", fileSize: 0, loaded: 0, speed: 0, elapsed: 0, status: "uploading" });
 
   // Estado del modal de eliminación
   const [deleteModal, setDeleteModal] = useState<{
@@ -222,22 +224,39 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
         if (docTypeCode) formData.append("documentTypeCode", docTypeCode);
 
         const xhr = new XMLHttpRequest();
+        const startTime = Date.now();
 
-        // Progreso de subida (bytes)
+        // Progreso de subida (bytes + velocidad)
         xhr.upload.addEventListener("progress", (e) => {
           if (e.lengthComputable) {
+            const elapsed = Date.now() - startTime;
+            const speed = elapsed > 0 ? (e.loaded / 1024) / (elapsed / 1000) : 0;
             setUploadProgress((p) => ({
               ...p,
               loaded: e.loaded,
               fileSize: e.total,
+              speed,
+              elapsed,
               status: "uploading",
             }));
           }
         });
 
         // Cuando se completa la subida → pasa a "procesando" (server-side)
+        // Delay mínimo de 400ms para que se vea la barra al 100% antes de cambiar
         xhr.upload.addEventListener("load", () => {
-          setUploadProgress((p) => ({ ...p, status: "processing", loaded: p.fileSize }));
+          const elapsed = Date.now() - startTime;
+          const finalSpeed = elapsed > 0 ? (file.size / 1024) / (elapsed / 1000) : 0;
+          setUploadProgress((p) => ({
+            ...p,
+            status: "uploading",
+            loaded: p.fileSize,
+            speed: finalSpeed,
+            elapsed,
+          }));
+          setTimeout(() => {
+            setUploadProgress((p) => ({ ...p, status: "processing" }));
+          }, 400);
         });
 
         xhr.addEventListener("load", () => {
@@ -280,6 +299,8 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
         fileName: file.name,
         fileSize: file.size,
         loaded: 0,
+        speed: 0,
+        elapsed: 0,
         status: "uploading",
       });
     },
@@ -290,17 +311,16 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
       queryClient.invalidateQueries({ queryKey: ["claim-action"] });
       queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
       queryClient.invalidateQueries({ queryKey: ["gestion-screens"] });
-      // Cerrar modal después de 1.2s para que se vea el check verde
+      // Cerrar modal después de 1.5s para que se vea el check verde
       setTimeout(() => {
         setUploadProgress((p) => ({ ...p, visible: false }));
-      }, 1200);
+      }, 1500);
     },
     onError: (e: Error) => {
       toast.error(e.message);
-      // Cerrar modal de error después de 2.5s
       setTimeout(() => {
         setUploadProgress((p) => ({ ...p, visible: false }));
-      }, 2500);
+      }, 3000);
     },
   });
 
@@ -750,21 +770,40 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 {/* % grande + velocidad */}
                 <div className="flex items-end justify-between">
                   <span className="text-[11px] text-muted-foreground">Subiendo...</span>
-                  <span className="text-lg font-bold tabular-nums text-primary leading-none">
-                    {Math.round((uploadProgress.loaded / uploadProgress.fileSize) * 100)}%
-                  </span>
+                  <div className="flex items-end gap-3">
+                    {uploadProgress.speed > 0 && (
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {uploadProgress.speed < 1024
+                          ? `${uploadProgress.speed.toFixed(0)} KB/s`
+                          : `${(uploadProgress.speed / 1024).toFixed(1)} MB/s`}
+                      </span>
+                    )}
+                    <span className="text-lg font-bold tabular-nums text-primary leading-none">
+                      {uploadProgress.fileSize > 0
+                        ? Math.round((uploadProgress.loaded / uploadProgress.fileSize) * 100)
+                        : 0}%
+                    </span>
+                  </div>
                 </div>
                 {/* Barra */}
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full bg-primary transition-all duration-200 ease-out rounded-full"
-                    style={{ width: `${(uploadProgress.loaded / uploadProgress.fileSize) * 100}%` }}
+                    style={{
+                      width: `${uploadProgress.fileSize > 0 ? (uploadProgress.loaded / uploadProgress.fileSize) * 100 : 0}%`,
+                    }}
                   />
                 </div>
-                {/* Bytes subidos / total */}
+                {/* Bytes subidos / total + tiempo */}
                 <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
-                  <span>{formatFileSize(uploadProgress.loaded)} transferido</span>
-                  <span>{formatFileSize(uploadProgress.fileSize - uploadProgress.loaded)} restante</span>
+                  <span>
+                    {formatFileSize(uploadProgress.loaded)} / {formatFileSize(uploadProgress.fileSize)}
+                  </span>
+                  <span>
+                    {uploadProgress.elapsed > 0
+                      ? `${(uploadProgress.elapsed / 1000).toFixed(1)}s`
+                      : ""}
+                  </span>
                 </div>
               </div>
             )}
