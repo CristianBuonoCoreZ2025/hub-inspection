@@ -201,7 +201,7 @@ export async function DELETE(
         await deleteFromR2(doc.file_path);
       } catch (r2Err) {
         // Si R2 falla, igual borramos el registro de la BD
-        logger.error("Error borrando archivo de R2 (continuando con BD)", {
+        logger.error("Error borrando archivo de R2 (continuando con BD)", r2Err as Error, {
           component: "claim-documents",
           action: "r2.delete.error",
           metadata: { file_path: doc.file_path, error: String(r2Err) },
@@ -229,7 +229,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    logger.error("Error eliminando documento", {
+    logger.error("Error eliminando documento", err as Error, {
       component: "claim-documents",
       action: "document.delete.error",
       metadata: { error: String(err) },
