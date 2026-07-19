@@ -20,13 +20,22 @@ import { logger } from "@/lib/logger";
  *        desvincularlo (limpiar received_file_url, received_at, etc.)
  */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
     const { documentId } = await params;
     if (!documentId) {
       return NextResponse.json({ error: "Falta documentId" }, { status: 400 });
+    }
+
+    // Motivo de eliminación (opcional, para el historial)
+    let reason: string | null = null;
+    try {
+      const body = await request.json();
+      reason = body?.reason || null;
+    } catch {
+      // Body vacío o no JSON — sin motivo
     }
 
     const supabase = createAdminClient();
@@ -175,6 +184,9 @@ export async function DELETE(
                 performerName = profile.full_name;
               }
             }
+            const reverseComment = reason
+              ? `Reversada por eliminación del documento ${doc.doc_code} (${doc.document_type}). Motivo: ${reason}`
+              : `Reversada por eliminación del documento ${doc.doc_code} (${doc.document_type})`;
             await logActionHistory({
               claim_action_id: rta.id,
               event_type: "reversed",
@@ -183,9 +195,10 @@ export async function DELETE(
               performed_by: validUserId,
               performed_by_name: performerName,
               level: "issue",
-              comment: `Reversada por eliminación del documento ${doc.doc_code} (${doc.document_type})`,
+              comment: reverseComment,
               metadata: {
                 reason: "document_deleted",
+                deletion_reason: reason,
                 document_id: documentId,
                 doc_code: doc.doc_code,
                 document_type: doc.document_type,

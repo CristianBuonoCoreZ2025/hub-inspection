@@ -52,8 +52,12 @@ export async function createClaimDocument(input: {
   );
 }
 
-export async function deleteClaimDocument(id: string): Promise<void> {
-  const res = await fetch(`/api/claims/documents/${id}`, { method: "DELETE" });
+export async function deleteClaimDocument(id: string, reason?: string): Promise<void> {
+  const res = await fetch(`/api/claims/documents/${id}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason: reason || null }),
+  });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || "Error al eliminar documento");

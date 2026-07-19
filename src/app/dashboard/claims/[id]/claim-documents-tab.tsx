@@ -200,6 +200,18 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     errorMsg?: string;
   }>({ visible: false, fileName: "", fileSize: 0, loaded: 0, status: "uploading" });
 
+  // Estado del modal de eliminación
+  const [deleteModal, setDeleteModal] = useState<{
+    visible: boolean;
+    docId: string;
+    docCode: string;
+    docType: string;
+    fileName: string;
+    reason: string;
+    status: "confirming" | "deleting" | "done" | "error";
+    errorMsg?: string;
+  }>({ visible: false, docId: "", docCode: "", docType: "", fileName: "", reason: "", status: "confirming" });
+
   // Mutation: subir documento del siniestro (con progreso via XMLHttpRequest)
   const uploadMut = useMutation({
     mutationFn: async ({ file, docTypeCode }: { file: File; docTypeCode: string }) => {
@@ -293,16 +305,27 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
   });
 
   const deleteMut = useMutation({
-    mutationFn: deleteClaimDocument,
+    mutationFn: async ({ docId, reason }: { docId: string; reason: string }) => {
+      return deleteClaimDocument(docId, reason || undefined);
+    },
+    onMutate: () => {
+      setDeleteModal((p) => ({ ...p, status: "deleting" }));
+    },
     onSuccess: () => {
       toast.success("Documento eliminado");
+      setDeleteModal((p) => ({ ...p, status: "done" }));
       queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
       queryClient.invalidateQueries({ queryKey: ["claim-doc-requests"] });
       queryClient.invalidateQueries({ queryKey: ["claim-action"] });
       queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
       queryClient.invalidateQueries({ queryKey: ["gestion-screens"] });
+      setTimeout(() => setDeleteModal((p) => ({ ...p, visible: false })), 1200);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      toast.error(e.message);
+      setDeleteModal((p) => ({ ...p, status: "error", errorMsg: e.message }));
+      setTimeout(() => setDeleteModal((p) => ({ ...p, visible: false, status: "confirming" })), 2500);
+    },
   });
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -446,7 +469,15 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             size="icon"
                             className="btn-icon-sm btn-danger-hover"
                             onClick={() => {
-                              if (confirm("¿Eliminar este documento? Se borrará el archivo físico. Si la Recepción Total de Antecedentes estaba emitida, se reversará.")) deleteMut.mutate(doc.id);
+                              setDeleteModal({
+                                visible: true,
+                                docId: doc.id,
+                                docCode: doc.doc_code || "",
+                                docType: doc.document_type || "",
+                                fileName: doc.original_filename || "",
+                                reason: "",
+                                status: "confirming",
+                              });
                             }}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -586,6 +617,101 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
           </p>
         )}
       </div>
+
+      {/* ═══ MODAL: Eliminar documento ═══ */}
+      <Dialog
+        open={deleteModal.visible}
+        onOpenChange={(open) => {
+          if (!open && deleteModal.status === "deleting") return;
+          setDeleteModal((p) => ({ ...p, visible: open, status: "confirming" }));
+        }}
+      >
+        <DialogContent className="modal-sm" showCloseButton={false}>
+          <div className="modal-header">
+            <DialogTitle className="modal-title">
+              {deleteModal.status === "done"
+                ? "Documento eliminado"
+                : deleteModal.status === "error"
+                ? "Error"
+                : "Eliminar documento"}
+            </DialogTitle>
+          </div>
+
+          <div className="modal-body space-y-3">
+            {/* Info del documento */}
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <div className="min-w-0">
+                <div className="truncate font-medium text-foreground">{deleteModal.fileName}</div>
+                <div className="text-[10px]">{deleteModal.docCode} · {deleteModal.docType}</div>
+              </div>
+            </div>
+
+            {/* Fase confirmación: campo motivo + botones */}
+            {deleteModal.status === "confirming" && (
+              <>
+                <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 p-2.5 text-[11px] text-amber-700 dark:text-amber-400">
+                  Se borrará el archivo físico. Si la RTA estaba emitida, se reversará automáticamente.
+                </div>
+                <div className="space-y-1.5">
+                  <label className="app-field-label">Motivo de eliminación (opcional)</label>
+                  <textarea
+                    className="app-input resize-none"
+                    rows={2}
+                    placeholder="Ej: documento incorrecto, duplicado..."
+                    value={deleteModal.reason}
+                    onChange={(e) => setDeleteModal((p) => ({ ...p, reason: e.target.value }))}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Fase eliminando: spinner */}
+            {deleteModal.status === "deleting" && (
+              <div className="flex items-center gap-2 py-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                <span className="text-[11px] text-muted-foreground">Eliminando...</span>
+              </div>
+            )}
+
+            {/* Fase done: check */}
+            {deleteModal.status === "done" && (
+              <div className="flex items-center gap-2 py-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <span className="text-[11px] font-medium text-emerald-600">Documento eliminado correctamente</span>
+              </div>
+            )}
+
+            {/* Fase error: X */}
+            {deleteModal.status === "error" && (
+              <div className="flex items-center gap-2 py-2">
+                <XCircle className="h-4 w-4 text-rose-500" />
+                <span className="text-[11px] font-medium text-rose-600">{deleteModal.errorMsg || "Error al eliminar"}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Footer: solo en confirmación */}
+          {deleteModal.status === "confirming" && (
+            <div className="modal-footer">
+              <Button
+                className="pg-btn-platinum"
+                onClick={() => setDeleteModal((p) => ({ ...p, visible: false }))}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="pg-btn-platinum"
+                onClick={() => {
+                  deleteMut.mutate({ docId: deleteModal.docId, reason: deleteModal.reason });
+                }}
+              >
+                Eliminar
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ═══ MODAL: Progreso de subida ═══ */}
       <Dialog
