@@ -12,7 +12,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import {
  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
- closestCenter, type DragStartEvent, type DragEndEvent,
+ closestCenter, pointerWithin, type DragStartEvent, type DragEndEvent,
  type CollisionDetection, type Modifier,
 } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
@@ -56,9 +56,18 @@ function createWorkflowCollisionDetection(steps: WorkflowStep[]): CollisionDetec
  const activeId = args.active.id as string;
  const activeData = args.active.data.current;
 
- // Si es un item de paleta, usar closestCenter normal (considera canvas + nodos)
+ // Si es un item de paleta: usar pointerWithin para que SOLO caiga sobre un nodo
+ // si el cursor está directamente encima. Si está sobre espacio vacío del canvas,
+ // cae en canvas-root (crea raíz nivel 1). closestCenter siempre prefería el nodo
+ // más cercano aunque el cursor estuviera lejos, impidiendo crear raíces cuando ya
+ // hay nodos existentes.
  if (activeData?.source === "palette") {
- return closestCenter(args);
+ const pointerCollisions = pointerWithin(args);
+ // Priorizar nodos sobre canvas-root: si el cursor está sobre un nodo, crear dependiente
+ const nodeCollision = pointerCollisions.find(c => c.id !== "canvas-root");
+ if (nodeCollision) return [nodeCollision];
+ // Si no hay nodo bajo el cursor, devolver lo que sea (canvas-root o closestCenter)
+ return pointerCollisions.length > 0 ? pointerCollisions : closestCenter(args);
  }
 
  // Si es un nodo del arbol, filtrar droppables a solo hermanos + canvas-root
