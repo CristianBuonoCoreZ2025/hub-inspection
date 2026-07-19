@@ -124,25 +124,32 @@ export async function DELETE(
         .eq("code", "RTA")
     ).data?.map((t: { id: string }) => t.id) || [];
 
-    if (rtaTemplateIds.length > 0) {
+    // Obtener el status_id de "issued" y "todo"
+    const { data: issuedStatus } = await supabase
+      .from("lookup_catalog")
+      .select("id")
+      .eq("category", "action_status")
+      .eq("code", "issued")
+      .maybeSingle();
+
+    const { data: todoStatus } = await supabase
+      .from("lookup_catalog")
+      .select("id")
+      .eq("category", "action_status")
+      .eq("code", "todo")
+      .maybeSingle();
+
+    if (rtaTemplateIds.length > 0 && issuedStatus && todoStatus) {
+      // Buscar RTAs que estén en estado "issued" (no por issued_on, que puede ser null)
       const { data: rtaActions } = await supabase
         .from("claim_actions")
         .select("id, action_status_id, issued_on, issued_by")
         .eq("claim_id", doc.claim_id)
         .in("action_template_id", rtaTemplateIds)
-        .not("issued_on", "is", null);
+        .eq("action_status_id", issuedStatus.id);
 
       if (rtaActions && rtaActions.length > 0) {
-        // Obtener el status_id de "todo"
-        const { data: todoStatus } = await supabase
-          .from("lookup_catalog")
-          .select("id")
-          .eq("category", "action_status")
-          .eq("code", "todo")
-          .maybeSingle();
-
-        if (todoStatus) {
-          for (const rta of rtaActions) {
+        for (const rta of rtaActions) {
             await supabase
               .from("claim_actions")
               .update({
@@ -185,7 +192,6 @@ export async function DELETE(
               rta_count: rtaActions.length,
             },
           });
-        }
       }
     }
 
