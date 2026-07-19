@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient, createServerClient } from "@/lib/supabase/server";
 import { deleteFromR2 } from "@/lib/storage/r2-upload";
+import { logActionHistory } from "@/services/claim-action-history";
 import { logger } from "@/lib/logger";
 
 /**
@@ -29,6 +30,11 @@ export async function DELETE(
     }
 
     const supabase = createAdminClient();
+
+    // Obtener usuario actual (para registrar quién eliminó)
+    const serverClient = await createServerClient();
+    const { data: { user } } = await serverClient.auth.getUser();
+    const userId = user?.id || null;
 
     // 1. Obtener el documento
     const { data: doc, error: docErr } = await supabase
@@ -145,6 +151,24 @@ export async function DELETE(
                 updated_on: new Date().toISOString(),
               })
               .eq("id", rta.id);
+
+            // Registrar en historial: reversión de emisión
+            await logActionHistory({
+              claim_action_id: rta.id,
+              event_type: "reversed",
+              from_status_code: "issued",
+              to_status_code: "todo",
+              performed_by: userId,
+              performed_by_name: user?.email || null,
+              level: "issue",
+              comment: `Reversada por eliminación del documento ${doc.doc_code}`,
+              metadata: {
+                reason: "document_deleted",
+                document_id: documentId,
+                doc_code: doc.doc_code,
+                document_type: doc.document_type,
+              },
+            });
           }
           logger.info("RTA reversada por eliminación de documento", {
             component: "claim-documents",

@@ -36,6 +36,7 @@ import {
  AlertTriangle,
  Trash2,
  XCircle,
+ Undo2,
  Send,
 } from "lucide-react";
 
@@ -1534,6 +1535,7 @@ const EVENT_LABELS: Record<string, { label: string; icon: typeof CheckCircle; co
  rejected_review: { label: "Revisión rechazada", icon: XCircle, color: "text-rose-500" },
  rejected_approve: { label: "Aprobación rechazada", icon: XCircle, color: "text-rose-500" },
  rejected_dispatch: { label: "Despacho rechazado", icon: XCircle, color: "text-rose-500" },
+ reversed: { label: "Reversada", icon: Undo2, color: "text-amber-500" },
  reassigned_issuer: { label: "Emisor reasignado", icon: User, color: "text-amber-500" },
  reassigned_reviewer: { label: "Revisor reasignado", icon: User, color: "text-amber-500" },
  reassigned_approver: { label: "Aprobador reasignado", icon: User, color: "text-amber-500" },

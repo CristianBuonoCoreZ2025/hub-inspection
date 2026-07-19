@@ -470,11 +470,14 @@ function ReviewLevelsView({ action, onAdvance, onReject, receiptFieldConfig }: {
  // blockEmitUntilAllResolved=true, no se puede emitir hasta que todos
  // los documentos estén resueltos (received o not_needed). ──
  const blockEmit = receiptFieldConfig?.blockEmitUntilAllResolved === true;
- const { data: rtaRequest } = useQuery({
- queryKey: ["claim-doc-request-by-action", action.id],
- queryFn: () => getClaimDocumentRequestByAction(action.id),
- enabled: blockEmit && !!feature,
+ // RTA necesita ver los items del request del claim (no de la acción RTA,
+ // porque el request está asociado a la NSA que lo creó)
+ const { data: rtaRequests } = useQuery({
+ queryKey: ["claim-doc-requests", action.claim_id],
+ queryFn: () => getClaimDocumentRequests(action.claim_id),
+ enabled: blockEmit && !!feature && !!action.claim_id,
  });
+ const rtaRequest = rtaRequests?.[0];
  const rtaItems = rtaRequest?.claim_document_request_items || [];
  const rtaAllResolved = blockEmit
  ? rtaItems.length > 0 && rtaItems.every((it) => it.status === "received" || it.status === "not_needed")
