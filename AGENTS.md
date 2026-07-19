@@ -8,33 +8,42 @@
 >
 > **Documentación completa:** [`docs/README.md`](docs/README.md)
 
-## ⚠️ REGLA #1 — NUNCA eliminar configuración existente (MÁXIMA PRIORIDAD)
+## ⚠️ REGLA #1 — NUNCA eliminar datos sin autorización explícita (MÁXIMA PRIORIDAD)
 
 **Esta es la regla más importante del proyecto. Tiene prioridad sobre todas las demás.**
+**Borrar datos de producción es como borrar la tabla de claims con todas las gestiones — mata la empresa.**
 
 ### Prohibido
-- **NUNCA** hacer `DELETE FROM` en tablas de configuración (workflows, catálogos, gestiones, plantillas, permisos, etc.)
-- **NUNCA** hacer `DROP TABLE`, `DROP COLUMN`, `TRUNCATE` en migraciones sin antes respaldar y recuperar los datos
-- **NUNCA** escribir migraciones con "fresh start" que borren datos existentes
-- **NUNCA** eliminar configuración del usuario por conveniencia técnica
+- **NUNCA** hacer `DELETE FROM`, `DROP TABLE`, `DROP COLUMN`, `TRUNCATE` en NINGUNA tabla
+  a menos que el usuario lo diga explícitamente, con nombre de tabla y motivo.
+- **NUNCA** escribir migraciones con "fresh start" que borren datos existentes.
+- **NUNCA** eliminar, sobreescribir o "limpiar" datos por conveniencia técnica,
+  aunque parezca que "no se usan" o "están mal".
+- **NUNCA** asumir que se puede borrar. Siempre preguntar primero.
 
 ### Obligatorio
-- Toda migración que cambie estructura de tablas de configuración **DEBE** preservar los datos existentes
-- Si una columna cambia de tipo o nombre: hacer `ALTER TABLE ... ALTER COLUMN` o migrar los datos con `UPDATE`
-- Si una tabla se reestructura: crear la nueva, copiar los datos con `INSERT INTO nueva SELECT FROM vieja`, y al final dropear la vieja
-- Si se necesita un "fresh start" por motivos técnicos: **preguntar primero al usuario** y respaldar los datos antes
+- La única forma de borrar datos es si el usuario dice explícitamente:
+  *"Borra los datos de la tabla X"* o *"Elimina los registros de Y"*.
+- Ante la duda: NO borrar. Preguntar.
+- Toda migración que cambie estructura **DEBE** preservar los datos existentes:
+  - Cambiar tipo de columna: `ALTER TABLE ... ALTER COLUMN ... TYPE ... USING ...`
+  - Renombrar columna: `ALTER TABLE ... RENAME COLUMN ...`
+  - Reestructurar tabla: crear nueva → `INSERT INTO nueva SELECT FROM vieja` → verificar → recién ahí dropear vieja (con autorización)
+- Si una migración anterior borró datos, documentarlo en el changelog para que no se repita.
+
+### Lo que está en juego
+La configuración de workflows, catálogos, gestiones, siniestros, pólizas y permisos
+representa **horas, días o semanas** de trabajo del usuario. Borrar una tabla de
+configuración es equivalente a borrar la tabla de claims con todas las gestiones:
+**mata la empresa.** No se puede recuperar sin respaldo.
 
 ### Contexto
-La configuración de workflows, catálogos y gestiones lleva mucho tiempo construir manualmente.
-Una migración que borre estos datos puede perder horas o días de trabajo del usuario.
 La migración 137 (`DELETE FROM workflow_steps; DELETE FROM workflow_configs;`) fue un error
-que costó toda la configuración de workflows. Esto no debe volver a ocurrir.
+que borró toda la configuración de workflows con un "fresh start". Esto costó reconstruir
+todo manualmente. **Esto no debe volver a ocurrir con ninguna tabla, nunca.**
 
-### Aplica a estas tablas (entre otras)
-`workflow_configs`, `workflow_steps`, `action_template`, `action_template_dependencies`,
-`action_template_claim_status`, `action_features`, `gestion_screens`, `gestion_screen_fields`,
-`lookup_catalog`, `companies`, `profiles`, `policies`, `policy_coverages`, `coverage_catalog`,
-y cualquier tabla que contenga configuración definida por el usuario.
+### Aplica a TODAS las tablas de la base de datos
+Sin excepciones. Configuración, catálogos, transacciones, auditoría, todo.
 
 ## Stack Tecnológico
 - **Framework:** Next.js 16 (App Router)
