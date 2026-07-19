@@ -75,13 +75,6 @@ const stats = [
   { icon: Globe, value: "0", label: "Papel utilizado", sub: "100% digital" },
 ];
 
-const flow = [
-  { step: "01", icon: FileText, title: "Apertura", desc: "Registro del siniestro y creación automática del workflow de gestiones" },
-  { step: "02", icon: Workflow, title: "Gestiones", desc: "Cobertura, reserva, NSA y RTA se encadenan automáticamente según el tipo" },
-  { step: "03", icon: Video, title: "Inspección", desc: "Videollamada con evidencias, croquis y firma digital del asegurado" },
-  { step: "04", icon: CheckCircle2, title: "Liquidación", desc: "Informe final generado, expediente cerrado y trazabilidad completa" },
-];
-
 const modules = [
   "Siniestros", "Coberturas", "Reservas", "Ajuste", "Inspección remota",
   "Evidencias", "Croquis", "Firma digital", "Informes PDF", "Workflow automático",
@@ -172,66 +165,92 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Right: glass mock dashboard */}
+              {/* Right: glass mock dashboard — full app preview */}
               <div className="relative hidden lg:block">
                 <div className="rounded-2xl border border-white/20 bg-card/40 p-1.5 shadow-2xl backdrop-blur-xl">
                   <div className="rounded-xl border border-white/10 bg-background/60 overflow-hidden backdrop-blur-md">
-                    {/* Mock header */}
+                    {/* App header */}
                     <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2.5">
                       <div className="flex gap-1.5">
                         <span className="size-2.5 rounded-full bg-red-400/70" />
                         <span className="size-2.5 rounded-full bg-amber-400/70" />
                         <span className="size-2.5 rounded-full bg-emerald-400/70" />
                       </div>
-                      <span className="ml-1 text-[10px] text-muted-foreground">L-000000141 · Siniestro · Hogar</span>
-                      <span className="ml-auto rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] font-medium text-amber-600">En curso</span>
+                      <span className="ml-1 text-[10px] text-muted-foreground">app.claimshub.com/dashboard</span>
                     </div>
-                    {/* Mock body */}
-                    <div className="p-3 space-y-2">
-                      {[
-                        { code: "COB", name: "Coberturas", status: "Emitida", color: "emerald" },
-                        { code: "RES", name: "Reserva", status: "Emitida", color: "emerald" },
-                        { code: "RTA", name: "Recepción Antecedentes", status: "Auto-emitida", color: "primary", highlight: true },
-                        { code: "INS", name: "Inspección", status: "En curso", color: "amber" },
-                        { code: "PCA", name: "Ajuste", status: "Pendiente", color: "muted", dim: true },
-                      ].map((g) => (
-                        <div
-                          key={g.code}
-                          className={`flex items-center justify-between rounded-lg px-3 py-2 ${
-                            g.highlight
-                              ? "border border-primary/30 bg-primary/5"
-                              : g.dim
-                              ? "bg-muted/20 opacity-50"
-                              : "bg-muted/40"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-muted-foreground">{g.code}</span>
-                            <span className="text-[11px] font-medium">{g.name}</span>
-                          </div>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${
-                              g.color === "emerald"
-                                ? "bg-emerald-500/15 text-emerald-600"
-                                : g.color === "primary"
-                                ? "bg-primary/15 text-primary"
-                                : g.color === "amber"
-                                ? "bg-amber-500/15 text-amber-600"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {g.status}
-                          </span>
+                    {/* App body: sidebar + content */}
+                    <div className="flex">
+                      {/* Mini sidebar */}
+                      <div className="w-12 border-r border-border/50 p-2 space-y-2">
+                        <div className="size-7 rounded-lg bg-primary/15 flex items-center justify-center">
+                          <ShieldCheck className="size-3.5 text-primary" />
                         </div>
-                      ))}
-                    </div>
-                    {/* Mock footer */}
-                    <div className="border-t border-border/50 px-3 py-2">
-                      <div className="flex items-center justify-between text-[9px] text-muted-foreground">
-                        <span>5 gestiones · 3 emitidas · 1 en curso</span>
-                        <span className="flex items-center gap-1">
-                          <CheckCircle2 className="size-2.5 text-emerald-500" /> Actualizado ahora
-                        </span>
+                        <div className="size-7 rounded-lg bg-muted/40" />
+                        <div className="size-7 rounded-lg bg-muted/40" />
+                        <div className="size-7 rounded-lg bg-primary/10" />
+                        <div className="size-7 rounded-lg bg-muted/40" />
+                        <div className="size-7 rounded-lg bg-muted/40" />
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 p-3 space-y-2.5">
+                        {/* KPIs row */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="rounded-lg bg-muted/40 p-2">
+                            <div className="text-[8px] text-muted-foreground">Activos</div>
+                            <div className="text-[14px] font-bold">47</div>
+                          </div>
+                          <div className="rounded-lg bg-muted/40 p-2">
+                            <div className="text-[8px] text-muted-foreground">Pendientes</div>
+                            <div className="text-[14px] font-bold text-amber-500">12</div>
+                          </div>
+                          <div className="rounded-lg bg-muted/40 p-2">
+                            <div className="text-[8px] text-muted-foreground">Cerrados</div>
+                            <div className="text-[14px] font-bold text-emerald-500">183</div>
+                          </div>
+                        </div>
+                        {/* Claims table */}
+                        <div className="rounded-lg border border-border/40 overflow-hidden">
+                          <div className="bg-muted/30 px-2 py-1.5 text-[8px] font-semibold text-muted-foreground uppercase tracking-wide">
+                            Siniestros recientes
+                          </div>
+                          {[
+                            { num: "L-000000141", type: "Hogar", status: "En curso", color: "amber", gestiones: "5/6" },
+                            { num: "L-000000138", type: "Auto", status: "Emitida", color: "emerald", gestiones: "4/4" },
+                            { num: "L-000000135", type: "Hogar", status: "Pendiente", color: "muted", gestiones: "2/5" },
+                          ].map((c) => (
+                            <div key={c.num} className="flex items-center justify-between border-t border-border/30 px-2 py-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-mono font-medium">{c.num}</span>
+                                <span className="text-[8px] text-muted-foreground">{c.type}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[8px] text-muted-foreground">{c.gestiones}</span>
+                                <span className={`rounded-full px-1.5 py-0.5 text-[7px] font-medium ${
+                                  c.color === "emerald" ? "bg-emerald-500/15 text-emerald-600"
+                                  : c.color === "amber" ? "bg-amber-500/15 text-amber-600"
+                                  : "bg-muted text-muted-foreground"
+                                }`}>{c.status}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Workflow mini-preview */}
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-2">
+                          <div className="text-[8px] font-semibold text-primary mb-1.5">Workflow · L-000000141</div>
+                          <div className="flex items-center gap-1">
+                            {["COB", "RES", "NSA", "RTA", "INS", "PCA"].map((code, i) => (
+                              <div key={code} className="flex items-center">
+                                <div className={`size-5 rounded flex items-center justify-center text-[7px] font-bold ${
+                                  i < 3 ? "bg-emerald-500/20 text-emerald-600"
+                                  : i === 3 ? "bg-primary/20 text-primary ring-1 ring-primary/40"
+                                  : i === 4 ? "bg-amber-500/20 text-amber-600"
+                                  : "bg-muted/40 text-muted-foreground/50"
+                                }`}>{code}</div>
+                                {i < 5 && <div className={`w-2 h-px ${i < 3 ? "bg-emerald-500/40" : "bg-border/50"}`} />}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -301,41 +320,150 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ═══ Flow ═══ */}
+        {/* ═══ Workflow diagram ═══ */}
         <section id="flujo" className="border-y border-border/50 bg-background/40 px-4 py-16 backdrop-blur-sm lg:px-6 lg:py-24">
           <div className="mx-auto max-w-6xl">
             <div className="mb-12 text-center">
               <div className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-[11px] font-medium backdrop-blur-md">
-                <Workflow className="size-3 text-primary" /> Flujo end-to-end
+                <Workflow className="size-3 text-primary" /> Workflow automático
               </div>
               <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
-                Del siniestro a la liquidación
+                El workflow que se encadena solo
               </h2>
               <p className="mt-3 text-[14px] text-muted-foreground">
-                Un flujo que se automatiza solo. Sin pasos manuales innecesarios.
+                Cada gestión dispara la siguiente automáticamente. Sin intervención manual.
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {flow.map((step, i) => {
-                const Icon = step.icon;
-                return (
-                  <div key={step.title} className="relative">
-                    {i < flow.length - 1 && (
-                      <div className="absolute left-full top-1/2 z-10 hidden -translate-y-1/2 lg:block">
-                        <ArrowRight className="size-4 text-muted-foreground/30" />
+
+            {/* Workflow visual diagram */}
+            <div className="rounded-2xl border border-border/50 bg-card/30 p-6 backdrop-blur-md lg:p-8">
+              {/* Desktop: horizontal flow with connectors */}
+              <div className="hidden lg:flex items-start justify-between gap-1">
+                {[
+                  { code: "COB", name: "Coberturas", desc: "Verificación de cobertura de la póliza", status: "emitida", icon: ShieldCheck },
+                  { code: "RES", name: "Reserva", desc: "Cálculo y emisión de reserva inicial", status: "emitida", icon: FileText },
+                  { code: "NSA", name: "Notificación", desc: "Aviso al asegurado y registro de contacto", status: "emitida", icon: Users },
+                  { code: "RTA", name: "Recepción Antecedentes", desc: "Auto-emisión al subir el último documento", status: "auto", icon: CheckCircle2 },
+                  { code: "INS", name: "Inspección", desc: "Videollamada, evidencias y firma digital", status: "curso", icon: Video },
+                  { code: "PCA", name: "Ajuste", desc: "Liquidación final y cierre del expediente", status: "pendiente", icon: Workflow },
+                ].map((g, i) => {
+                  const Icon = g.icon;
+                  const isDone = g.status === "emitida";
+                  const isAuto = g.status === "auto";
+                  const isCurso = g.status === "curso";
+                  return (
+                    <div key={g.code} className="flex flex-1 flex-col items-center">
+                      {/* Node */}
+                      <div className={`relative flex size-14 items-center justify-center rounded-2xl border-2 transition-all ${
+                        isDone ? "border-emerald-500/40 bg-emerald-500/10"
+                        : isAuto ? "border-primary/50 bg-primary/10 ring-4 ring-primary/10"
+                        : isCurso ? "border-amber-500/40 bg-amber-500/10"
+                        : "border-border bg-muted/20"
+                      }`}>
+                        <Icon className={`size-6 ${
+                          isDone ? "text-emerald-500"
+                          : isAuto ? "text-primary"
+                          : isCurso ? "text-amber-500"
+                          : "text-muted-foreground/50"
+                        }`} />
+                        {/* Auto badge */}
+                        {isAuto && (
+                          <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-primary px-1.5 py-0.5 text-[7px] font-bold text-primary-foreground whitespace-nowrap">
+                            AUTO
+                          </span>
+                        )}
                       </div>
-                    )}
-                    <div className="rounded-2xl border border-border/50 bg-card/40 p-5 text-center backdrop-blur-md">
-                      <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/5 text-primary">
-                        <Icon className="size-6" />
-                      </div>
-                      <div className="text-[10px] font-bold text-muted-foreground/60">{step.step}</div>
-                      <h3 className="mt-1 text-[14px] font-semibold">{step.title}</h3>
-                      <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">{step.desc}</p>
+                      {/* Code */}
+                      <span className={`mt-2 text-[11px] font-bold ${
+                        isDone ? "text-emerald-500"
+                        : isAuto ? "text-primary"
+                        : isCurso ? "text-amber-500"
+                        : "text-muted-foreground/50"
+                      }`}>{g.code}</span>
+                      {/* Name */}
+                      <span className="mt-0.5 text-[10px] font-medium text-center">{g.name}</span>
+                      {/* Desc */}
+                      <span className="mt-1 text-[9px] text-muted-foreground text-center leading-tight max-w-[120px]">{g.desc}</span>
+                      {/* Connector */}
+                      {i < 5 && (
+                        <div className="absolute top-7 left-[calc(50%+28px)] h-0.5 w-[calc(100%-56px)]">
+                          <div className={`h-full ${isDone ? "bg-emerald-500/40" : "bg-border/50"}`} />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+
+              {/* Mobile: vertical flow */}
+              <div className="space-y-3 lg:hidden">
+                {[
+                  { code: "COB", name: "Coberturas", desc: "Verificación de cobertura de la póliza", status: "emitida", icon: ShieldCheck },
+                  { code: "RES", name: "Reserva", desc: "Cálculo y emisión de reserva inicial", status: "emitida", icon: FileText },
+                  { code: "NSA", name: "Notificación", desc: "Aviso al asegurado y registro de contacto", status: "emitida", icon: Users },
+                  { code: "RTA", name: "Recepción Antecedentes", desc: "Auto-emisión al subir el último documento", status: "auto", icon: CheckCircle2 },
+                  { code: "INS", name: "Inspección", desc: "Videollamada, evidencias y firma digital", status: "curso", icon: Video },
+                  { code: "PCA", name: "Ajuste", desc: "Liquidación final y cierre del expediente", status: "pendiente", icon: Workflow },
+                ].map((g, i) => {
+                  const Icon = g.icon;
+                  const isDone = g.status === "emitida";
+                  const isAuto = g.status === "auto";
+                  const isCurso = g.status === "curso";
+                  return (
+                    <div key={g.code} className="flex items-center gap-3">
+                      <div className={`relative flex size-10 shrink-0 items-center justify-center rounded-xl border-2 ${
+                        isDone ? "border-emerald-500/40 bg-emerald-500/10"
+                        : isAuto ? "border-primary/50 bg-primary/10"
+                        : isCurso ? "border-amber-500/40 bg-amber-500/10"
+                        : "border-border bg-muted/20"
+                      }`}>
+                        <Icon className={`size-5 ${
+                          isDone ? "text-emerald-500"
+                          : isAuto ? "text-primary"
+                          : isCurso ? "text-amber-500"
+                          : "text-muted-foreground/50"
+                        }`} />
+                        {isAuto && (
+                          <span className="absolute -top-1.5 -right-1.5 rounded-full bg-primary px-1 py-0.5 text-[6px] font-bold text-primary-foreground">
+                            AUTO
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[12px] font-bold ${
+                            isDone ? "text-emerald-500"
+                            : isAuto ? "text-primary"
+                            : isCurso ? "text-amber-500"
+                            : "text-muted-foreground/50"
+                          }`}>{g.code}</span>
+                          <span className="text-[12px] font-medium">{g.name}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">{g.desc}</p>
+                      </div>
+                      {i < 5 && (
+                        <div className="absolute left-5 mt-12 h-3 w-0.5 bg-border/50" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-4 border-t border-border/30 pt-4">
+                <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <span className="size-2.5 rounded-full bg-emerald-500/40" /> Emitida
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <span className="size-2.5 rounded-full bg-primary/50 ring-2 ring-primary/20" /> Auto-emitida
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <span className="size-2.5 rounded-full bg-amber-500/40" /> En curso
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <span className="size-2.5 rounded-full bg-muted" /> Pendiente
+                </span>
+              </div>
             </div>
           </div>
         </section>
