@@ -352,7 +352,7 @@ export default function LandingPage() {
                   const isAuto = g.status === "auto";
                   const isCurso = g.status === "curso";
                   return (
-                    <div key={g.code} className="flex flex-1 flex-col items-center">
+                    <div key={g.code} className="relative flex flex-1 flex-col items-center">
                       {/* Node */}
                       <div className={`relative flex size-14 items-center justify-center rounded-2xl border-2 transition-all ${
                         isDone ? "border-emerald-500/40 bg-emerald-500/10"
@@ -384,7 +384,7 @@ export default function LandingPage() {
                       <span className="mt-0.5 text-[10px] font-medium text-center">{g.name}</span>
                       {/* Desc */}
                       <span className="mt-1 text-[9px] text-muted-foreground text-center leading-tight max-w-[120px]">{g.desc}</span>
-                      {/* Connector */}
+                      {/* Connector — positioned relative to this node's wrapper */}
                       {i < 5 && (
                         <div className="absolute top-7 left-[calc(50%+28px)] h-0.5 w-[calc(100%-56px)]">
                           <div className={`h-full ${isDone ? "bg-emerald-500/40" : "bg-border/50"}`} />
@@ -404,13 +404,13 @@ export default function LandingPage() {
                   { code: "RTA", name: "Recepción Antecedentes", desc: "Auto-emisión al subir el último documento", status: "auto", icon: CheckCircle2 },
                   { code: "INS", name: "Inspección", desc: "Videollamada, evidencias y firma digital", status: "curso", icon: Video },
                   { code: "PCA", name: "Ajuste", desc: "Liquidación final y cierre del expediente", status: "pendiente", icon: Workflow },
-                ].map((g, i) => {
+                ].map((g) => {
                   const Icon = g.icon;
                   const isDone = g.status === "emitida";
                   const isAuto = g.status === "auto";
                   const isCurso = g.status === "curso";
                   return (
-                    <div key={g.code} className="flex items-center gap-3">
+                    <div key={g.code} className="relative flex items-center gap-3">
                       <div className={`relative flex size-10 shrink-0 items-center justify-center rounded-xl border-2 ${
                         isDone ? "border-emerald-500/40 bg-emerald-500/10"
                         : isAuto ? "border-primary/50 bg-primary/10"
@@ -441,9 +441,6 @@ export default function LandingPage() {
                         </div>
                         <p className="text-[11px] text-muted-foreground">{g.desc}</p>
                       </div>
-                      {i < 5 && (
-                        <div className="absolute left-5 mt-12 h-3 w-0.5 bg-border/50" />
-                      )}
                     </div>
                   );
                 })}
