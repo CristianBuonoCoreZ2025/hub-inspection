@@ -30,6 +30,18 @@ export async function POST(request: NextRequest) {
     const claimId = formData.get("claimId");
     const documentTypeCode = formData.get("documentTypeCode");
 
+    logger.info("Upload request received", {
+      component: "claim-doc-upload",
+      action: "upload.start",
+      metadata: {
+        hasFile: !!file,
+        fileName: file instanceof File ? file.name : "not-a-file",
+        fileSize: file instanceof File ? file.size : 0,
+        claimId: String(claimId),
+        documentTypeCode: String(documentTypeCode),
+      },
+    });
+
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "No se encontró el archivo" }, { status: 400 });
     }
@@ -38,9 +50,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Obtener usuario actual (para registrar quién subió)
-    const serverClient = await createServerClient();
-    const { data: { user } } = await serverClient.auth.getUser();
-    const userId = user?.id || null;
+    let userId: string | null = null;
+    try {
+      const serverClient = await createServerClient();
+      const { data: { user } } = await serverClient.auth.getUser();
+      userId = user?.id || null;
+      logger.info("User from session", {
+        component: "claim-doc-upload",
+        action: "auth.user",
+        metadata: { userId },
+      });
+    } catch (authErr) {
+      logger.error("Error getting user session", authErr as Error, {
+        component: "claim-doc-upload",
+        action: "auth.error",
+      });
+    }
 
     const mimeType = file.type || "application/octet-stream";
     const ext = file.name.includes(".")

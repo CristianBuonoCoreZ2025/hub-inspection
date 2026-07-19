@@ -273,7 +273,14 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
             try {
               const body = JSON.parse(xhr.responseText);
               if (body.error) msg = body.error;
-            } catch {}
+            } catch {
+              // Si no es JSON, podría ser una página HTML de error de Vercel
+              if (xhr.responseText) {
+                msg = `Error ${xhr.status}: ${xhr.responseText.substring(0, 200)}`;
+              } else {
+                msg = `Error ${xhr.status}`;
+              }
+            }
             setUploadProgress((p) => ({ ...p, status: "error", errorMsg: msg }));
             reject(new Error(msg));
           }
