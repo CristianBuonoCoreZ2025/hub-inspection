@@ -41,9 +41,7 @@ export function FormSelect<TFieldValues extends FieldValues = FieldValues>({ con
           items={allItems}
         >
           <SelectTrigger className={className}>
-            <SelectValue placeholder={placeholder}>
-              {allItems.find((i) => i.value === field.value)?.label ?? (placeholder || "")}
-            </SelectValue>
+            <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
             {clearable && (
