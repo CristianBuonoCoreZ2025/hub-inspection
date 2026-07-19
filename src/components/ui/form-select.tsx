@@ -42,10 +42,7 @@ export function FormSelect<TFieldValues extends FieldValues = FieldValues>({ con
         >
           <SelectTrigger className={className}>
             <SelectValue placeholder={placeholder}>
-              {(val: string) => {
-                const item = allItems.find((i) => i.value === val);
-                return item ? item.label : (placeholder || "");
-              }}
+              {allItems.find((i) => i.value === field.value)?.label ?? (placeholder || "")}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
