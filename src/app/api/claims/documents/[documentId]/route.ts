@@ -73,26 +73,40 @@ export async function DELETE(
     // }
 
     // 4. Desvincular de claim_document_request_items si estaba linkeado
+    //    + reabrir el request si estaba cerrado (status="received")
     if (doc.document_type) {
-      await supabase
-        .from("claim_document_request_items")
-        .update({
-          received_file_url: null,
-          received_file_id: null,
-          received_at: null,
-          received_by: null,
-          status: "requested",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("document_type_code", doc.document_type)
-        .in(
-          "request_id",
-          (await supabase
-            .from("claim_document_requests")
-            .select("id")
-            .eq("claim_id", doc.claim_id)
-          ).data?.map((r: { id: string }) => r.id) || []
-        );
+      const affectedRequestIds = (
+        await supabase
+          .from("claim_document_requests")
+          .select("id")
+          .eq("claim_id", doc.claim_id)
+      ).data?.map((r: { id: string }) => r.id) || [];
+
+      if (affectedRequestIds.length > 0) {
+        await supabase
+          .from("claim_document_request_items")
+          .update({
+            received_file_url: null,
+            received_file_id: null,
+            received_at: null,
+            received_by: null,
+            status: "requested",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("document_type_code", doc.document_type)
+          .in("request_id", affectedRequestIds);
+
+        // Reabrir requests que estaban cerrados (status="received" → "requested")
+        // porque al eliminar un documento, ya no están completos
+        await supabase
+          .from("claim_document_requests")
+          .update({
+            status: "requested",
+            updated_at: new Date().toISOString(),
+          })
+          .in("id", affectedRequestIds)
+          .eq("status", "received");
+      }
     }
 
     // 5. Verificar si RTA está emitida → reversar
