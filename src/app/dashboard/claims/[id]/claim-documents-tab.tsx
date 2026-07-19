@@ -293,8 +293,10 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
   const deleteMut = useMutation({
     mutationFn: deleteClaimDocument,
     onSuccess: () => {
-      toast.success("Documento desactivado");
+      toast.success("Documento eliminado");
       queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
+      queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
+      queryClient.invalidateQueries({ queryKey: ["claim-actions", claimId] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
