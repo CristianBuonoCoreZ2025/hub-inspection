@@ -102,7 +102,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/60 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 lg:px-6">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/20">
+            <div className="flex size-8 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/20">
               <ShieldCheck className="size-4.5" />
             </div>
             <span className="font-heading text-base font-semibold tracking-tight">Claims Hub</span>
@@ -142,7 +142,7 @@ export default function LandingPage() {
                 </div>
                 <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
                   Liquidación de siniestros{" "}
-                  <span className="bg-gradient-to-r from-primary via-violet-500 to-cyan-500 bg-clip-text text-transparent">
+                  <span className="bg-linear-to-r from-primary via-violet-500 to-cyan-500 bg-clip-text text-transparent">
                     digital y automática
                   </span>
                 </h1>
@@ -286,9 +286,9 @@ export default function LandingPage() {
                     className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card/40 p-5 backdrop-blur-md transition-all hover:border-primary/30 hover:bg-card/60"
                   >
                     {/* Gradient glow on hover */}
-                    <div className={`absolute -top-12 -right-12 size-32 rounded-full bg-gradient-to-br ${f.gradient} opacity-0 blur-2xl transition-opacity group-hover:opacity-100`} />
+                    <div className={`absolute -top-12 -right-12 size-32 rounded-full bg-linear-to-br ${f.gradient} opacity-0 blur-2xl transition-opacity group-hover:opacity-100`} />
                     <div className="relative">
-                      <div className={`mb-3 flex size-10 items-center justify-center rounded-xl bg-gradient-to-br ${f.gradient} ${f.iconColor}`}>
+                      <div className={`mb-3 flex size-10 items-center justify-center rounded-xl bg-linear-to-br ${f.gradient} ${f.iconColor}`}>
                         <Icon className="size-5" />
                       </div>
                       <h3 className="text-[14px] font-semibold">{f.title}</h3>
@@ -326,7 +326,7 @@ export default function LandingPage() {
                       </div>
                     )}
                     <div className="rounded-2xl border border-border/50 bg-card/40 p-5 text-center backdrop-blur-md">
-                      <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary">
+                      <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/5 text-primary">
                         <Icon className="size-6" />
                       </div>
                       <div className="text-[10px] font-bold text-muted-foreground/60">{step.step}</div>
@@ -395,7 +395,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+              <div className="flex size-6 items-center justify-center rounded-md bg-linear-to-br from-primary to-primary/70 text-primary-foreground">
                 <ShieldCheck className="size-3.5" />
               </div>
               <span className="font-heading text-[13px] font-semibold">Claims Hub</span>
