@@ -485,9 +485,19 @@ export default function WorkflowsPage() {
  label={getName(lineId)}
  bold
  active={isSelected}
+ alwaysShowActions={lExp && selectedConfigId === config.id}
  count={selectedConfigId === config.id ? (steps?.length || 0) : undefined}
  actions={
  <div className="flex items-center gap-1.5">
+ {/* Mensaje de status en la misma fila de la linea de negocios */}
+ {lExp && selectedConfigId === config.id && (
+ <span className={`flex items-center gap-1 text-[9px] ${isOnline ? "text-emerald-400/70" : "text-amber-400"}`}>
+ {isOnline
+ ? <><Shield className="h-2.5 w-2.5" /> No editable</>
+ : <><Settings2 className="h-2.5 w-2.5" /> Modo edición</>
+ }
+ </span>
+ )}
  <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${statusBadge.cls}`}>
  {statusBadge.label}
  </span>
@@ -537,18 +547,6 @@ export default function WorkflowsPage() {
  </div>
  {lExp && selectedConfigId === config.id && (
  <div className="ml-2 mt-2 mb-3">
- {/* Mensaje de status dentro de la linea de negocios */}
- <div className={`mb-2 rounded-lg px-3 py-1.5 text-[11px] flex items-center gap-1.5 ${
- isOnline
- ? "bg-emerald-500/5 border border-emerald-500/10 text-emerald-400/80"
- : "bg-amber-500/5 border border-amber-500/20 text-amber-400"
- }`}>
- {isOnline ? (
- <><Shield className="h-3 w-3" /> Workflow en línea — no editable. Suspender para modificar.</>
- ) : (
- <><Settings2 className="h-3 w-3" /> Modo edición — arrastra al nodo Raíz</>
- )}
- </div>
  <DndContext
  sensors={dndSensors}
  collisionDetection={workflowCollisionDetection}
@@ -957,7 +955,7 @@ function CreateWorkflowModal({
 // ═══════════════════════════════════════════════════════════════════
 
 function GlassTreeNode({
- isExpanded, onToggle, icon, label, bold, active, count, actions, gradient,
+ isExpanded, onToggle, icon, label, bold, active, count, actions, gradient, alwaysShowActions,
 }: {
  isExpanded: boolean;
  onToggle: () => void;
@@ -968,6 +966,7 @@ function GlassTreeNode({
  count?: number;
  actions?: React.ReactNode;
  gradient?: string;
+ alwaysShowActions?: boolean;
 }) {
  return (
  <div
@@ -993,7 +992,7 @@ function GlassTreeNode({
  </span>
  )}
  {actions && (
- <span className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">{actions}</span>
+ <span className={`ml-auto transition-opacity ${alwaysShowActions ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>{actions}</span>
  )}
  </div>
  );
