@@ -76,7 +76,8 @@ export default function InformesPage() {
           c.claim_number?.toLowerCase().includes(s) ||
           c.liquidation_number?.toLowerCase().includes(s) ||
           c.insurance_company?.name?.toLowerCase().includes(s) ||
-          c.assigned_adjuster?.full_name?.toLowerCase().includes(s);
+          c.adjuster?.full_name?.toLowerCase().includes(s) ||
+          c.inspector?.full_name?.toLowerCase().includes(s);
         if (!match) return false;
       }
       return true;
@@ -131,8 +132,8 @@ export default function InformesPage() {
   const byAdjuster = useMemo(() => {
     const map: Record<string, { name: string; total: number; closed: number; open: number }> = {};
     filteredClaims.forEach((c) => {
-      const id = c.assigned_adjuster_id || "unassigned";
-      const name = c.assigned_adjuster?.full_name || "Sin asignar";
+      const id = c.adjuster_id || "unassigned";
+      const name = c.adjuster?.full_name || "Sin asignar";
       if (!map[id]) map[id] = { name, total: 0, closed: 0, open: 0 };
       map[id].total++;
       if (c.status?.code === "closed") map[id].closed++;
@@ -167,12 +168,13 @@ export default function InformesPage() {
 
   // ── Export CSV ──
   const exportCSV = () => {
-    const headers = ["N° Liquidación", "N° Siniestro", "Compañía", "Liquidador", "Estado", "Fecha Creación", "Fecha Cierre"];
+    const headers = ["N° Liquidación", "N° Siniestro", "Compañía", "Liquidador", "Inspector", "Estado", "Fecha Creación", "Fecha Cierre"];
     const rows = filteredClaims.map((c) => [
       c.liquidation_number || "",
       c.claim_number || "",
       c.insurance_company?.name || "",
-      c.assigned_adjuster?.full_name || "",
+      c.adjuster?.full_name || "",
+      c.inspector?.full_name || "",
       STATUS_LABELS[c.status?.code || ""] || c.status?.code || "",
       c.created_at?.slice(0, 10) || "",
       c.status?.code === "closed" ? c.updated_at?.slice(0, 10) || "" : "",
@@ -406,6 +408,7 @@ export default function InformesPage() {
                     <th className="text-left">N° Siniestro</th>
                     <th className="text-left">Compañía</th>
                     <th className="text-left">Liquidador</th>
+                    <th className="text-left">Inspector</th>
                     <th className="text-left">Estado</th>
                     <th className="text-left">Creación</th>
                   </tr>
@@ -416,7 +419,8 @@ export default function InformesPage() {
                       <td className="font-mono text-[11px]">{c.liquidation_number || "—"}</td>
                       <td className="font-mono text-[11px]">{c.claim_number || "—"}</td>
                       <td>{c.insurance_company?.name || "—"}</td>
-                      <td>{c.assigned_adjuster?.full_name || "—"}</td>
+                      <td>{c.adjuster?.full_name || "—"}</td>
+                      <td>{c.inspector?.full_name || "—"}</td>
                       <td>
                         <span
                           className="rounded-full px-2 py-0.5 text-[10px] font-medium"
