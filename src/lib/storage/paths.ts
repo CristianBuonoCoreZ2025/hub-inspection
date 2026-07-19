@@ -58,6 +58,24 @@ export function claimDocumentPath(
   return `claims/${liquidationNumber}/documents/${filename}`;
 }
 
+/**
+ * Path físico de una imagen del siniestro (subida al tab Imágenes).
+ *
+ * @param liquidationNumber — ej: "L-000000001"
+ * @param imgSeq — correlativo, ej: "000001"
+ * @param ext — extensión con punto, ej: ".jpg"
+ * @returns ej: "claims/L-000000001/images/L-000000001-IMG-000001.jpg"
+ */
+export function claimImagePath(
+  liquidationNumber: string,
+  imgSeq: string,
+  ext: string
+): string {
+  const seq = imgSeq.padStart(6, "0");
+  const filename = `${liquidationNumber}-IMG-${seq}${ext.startsWith(".") ? ext : "." + ext}`;
+  return `claims/${liquidationNumber}/images/${filename}`;
+}
+
 // ═══ Siniestros: gestiones ═══
 
 /**

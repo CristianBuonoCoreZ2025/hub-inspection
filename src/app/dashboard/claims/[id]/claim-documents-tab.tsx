@@ -29,7 +29,7 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  Sparkles,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +37,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
 import { usePermissions } from "@/hooks/use-permissions";
 import {
   Select,
@@ -338,28 +339,6 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     },
   });
 
-  const analyzeMut = useMutation({
-    mutationFn: async ({ docId, force }: { docId: string; force?: boolean }) => {
-      const res = await fetch("/api/ai/analyze-document", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ table: "claim_documents", id: docId, force }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "No se pudo analizar el documento");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      toast.success("Análisis IA generado");
-      queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || "No se pudo analizar el documento");
-    },
-  });
-
   const deleteMut = useMutation({
     mutationFn: async ({ docId, reason }: { docId: string; reason: string }) => {
       return deleteClaimDocument(docId, reason || undefined);
@@ -476,10 +455,10 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
             <table className="app-data-table">
               <thead>
                 <tr>
-                  <th>Código</th>
-                  <th>Tipo</th>
-                  <th>Ext.</th>
-                  <th>Tamaño</th>
+                  <th className="w-[90px]">Código</th>
+                  <th className="w-[min(55vw,520px)]">Tipo</th>
+                  <th className="w-[60px]">Ext.</th>
+                  <th className="w-[90px]">Tamaño</th>
                   <th className="w-[80px]"></th>
                 </tr>
               </thead>
@@ -497,14 +476,14 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                     <td className="font-medium wrap-break-word">
                       <div>{docTypeName}</div>
                       {doc.original_filename && (
-                        <div className="text-[10px] text-muted-foreground/70 truncate max-w-[220px]">
+                        <div className="text-[10px] text-muted-foreground/70 truncate">
                           {doc.original_filename}
                         </div>
                       )}
                       {doc.ai_summary && (
-                        <div className="mt-1 flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400 max-w-[280px]">
-                          <Sparkles className="h-3 w-3 shrink-0 mt-0.5" />
-                          <span className="italic">{doc.ai_summary}</span>
+                        <div className="mt-1 flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400">
+                          <Zap className="h-3 w-3 shrink-0 mt-0.5" />
+                          <span className="italic line-clamp-3 wrap-break-word">{doc.ai_summary}</span>
                         </div>
                       )}
                     </td>
@@ -525,16 +504,13 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="btn-icon-sm hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30"
-                          title={doc.ai_summary ? "Re-analizar con IA" : "Analizar con IA"}
-                          disabled={analyzeMut.isPending}
-                          onClick={() => analyzeMut.mutate({ docId: doc.id, force: true })}
-                        >
-                          <Sparkles className="h-3.5 w-3.5" />
-                        </Button>
+                        <AiAnalysisButton
+                          table="claim_documents"
+                          id={doc.id}
+                          fileName={doc.original_filename || doc.document_name}
+                          hasSummary={!!doc.ai_summary}
+                          queryKey={["claim-documents", claimId]}
+                        />
                         {canDeleteDocs && (
                           <Button
                             variant="ghost"

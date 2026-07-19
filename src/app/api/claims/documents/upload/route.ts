@@ -83,14 +83,20 @@ export async function POST(request: NextRequest) {
     let aiSummary: string | null = null;
     let aiModel: string | null = null;
     try {
-      const ai = await summarizeFile(buffer, mimeType);
-      if (ai) {
+      const ai = await summarizeFile(buffer, mimeType, file.name);
+      if (ai.ok) {
         aiSummary = ai.summary;
         aiModel = ai.model;
         logger.info("IA: resumen generado", {
           component: "claim-doc-upload",
           action: "ai.summary",
           metadata: { model: ai.model, summaryLength: ai.summary.length },
+        });
+      } else {
+        logger.warn("IA: documento no procesado", {
+          component: "claim-doc-upload",
+          action: "ai.summary.skipped",
+          metadata: { mimeType, reason: ai.reason },
         });
       }
     } catch (aiErr) {

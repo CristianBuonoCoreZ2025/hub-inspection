@@ -6,8 +6,9 @@ import { deleteEvidence } from "@/services/inspections";
 import { toast } from "sonner";
 import {
   Upload, Trash2, ImageIcon, Video, FileText, ExternalLink,
-  MapPin, Clock, User, Camera, Lock, X, ZoomIn, Sparkles,
+  MapPin, Clock, User, Camera, Lock, X, ZoomIn, Zap,
 } from "lucide-react";
+import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
 
 // ─── Tipos ───────────────────────────────────────────────────────
 
@@ -169,31 +170,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const analyzeMut = useMutation({
-    mutationFn: async ({ evidenceId, force }: { evidenceId: string; force?: boolean }) => {
-      const res = await fetch("/api/ai/analyze-document", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ table: "inspection_evidences", id: evidenceId, force }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "No se pudo analizar la evidencia");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      toast.success("Análisis IA generado");
-      queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const handleAnalyze = useCallback(
-    (id: string) => analyzeMut.mutate({ evidenceId: id, force: true }),
-    [analyzeMut]
-  );
-
   const handleFile = useCallback(
     async (file: File) => {
       setUploadingCount((c) => c + 1);
@@ -302,9 +278,9 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
               icon={<ImageIcon className="h-3.5 w-3.5" />}
               items={photos}
               onDelete={deleteMutation.mutate}
-              onAnalyze={handleAnalyze}
               readOnly={readOnly}
               onImageClick={setZoomImage}
+              sessionId={sessionId}
             />
           )}
           {videos.length > 0 && (
@@ -314,8 +290,8 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
               icon={<Video className="h-3.5 w-3.5" />}
               items={videos}
               onDelete={deleteMutation.mutate}
-              onAnalyze={handleAnalyze}
               readOnly={readOnly}
+              sessionId={sessionId}
             />
           )}
           {documents.length > 0 && (
@@ -325,8 +301,8 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
               icon={<FileText className="h-3.5 w-3.5" />}
               items={documents}
               onDelete={deleteMutation.mutate}
-              onAnalyze={handleAnalyze}
               readOnly={readOnly}
+              sessionId={sessionId}
             />
           )}
         </div>
@@ -361,16 +337,16 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 // ─── Sección por tipo ────────────────────────────────────────────
 
 function EvidenceSection({
-  title, count, icon, items, onDelete, onAnalyze, readOnly, onImageClick,
+  title, count, icon, items, onDelete, readOnly, onImageClick, sessionId,
 }: {
   title: string;
   count: number;
   icon: React.ReactNode;
   items: Evidence[];
   onDelete: (id: string) => void;
-  onAnalyze: (id: string) => void;
   readOnly?: boolean;
   onImageClick?: (url: string) => void;
+  sessionId: string;
 }) {
   return (
     <div className="app-panel">
@@ -385,9 +361,9 @@ function EvidenceSection({
             key={ev.id}
             evidence={ev}
             onDelete={onDelete}
-            onAnalyze={onAnalyze}
             readOnly={readOnly}
             onImageClick={onImageClick}
+            sessionId={sessionId}
           />
         ))}
       </div>
@@ -397,12 +373,12 @@ function EvidenceSection({
 
 // ─── Card individual (miniatura) ─────────────────────────────────
 
-function EvidenceCard({ evidence, onDelete, onAnalyze, readOnly, onImageClick }: {
+function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId }: {
   evidence: Evidence;
   onDelete: (id: string) => void;
-  onAnalyze: (id: string) => void;
   readOnly?: boolean;
   onImageClick?: (url: string) => void;
+  sessionId: string;
 }) {
   const [showActions, setShowActions] = useState(false);
   const isDoc = evidence.type === "pdf" || evidence.type === "document";
@@ -484,13 +460,13 @@ function EvidenceCard({ evidence, onDelete, onAnalyze, readOnly, onImageClick }:
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
-            <button
-              onClick={() => onAnalyze(evidence.id)}
-              className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-violet-600/80"
-              title={evidence.ai_summary ? "Re-analizar con IA" : "Analizar con IA"}
-            >
-              <Sparkles className="h-3 w-3" />
-            </button>
+            <AiAnalysisButton
+              table="inspection_evidences"
+              id={evidence.id}
+              fileName={evidence.description || evidence.type}
+              hasSummary={!!evidence.ai_summary}
+              queryKey={["evidences", sessionId]}
+            />
             <button
               onClick={() => { if (confirm("¿Eliminar esta evidencia?")) onDelete(evidence.id); }}
               className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-red-500/80"
@@ -600,7 +576,7 @@ function EvidenceCard({ evidence, onDelete, onAnalyze, readOnly, onImageClick }:
         {/* Resumen IA */}
         {evidence.ai_summary && (
           <div className="flex items-start gap-1 text-[9px] text-violet-600 dark:text-violet-400 pt-1">
-            <Sparkles className="h-2.5 w-2.5 shrink-0 mt-0.5" />
+            <Zap className="h-2.5 w-2.5 shrink-0 mt-0.5" />
             <span className="italic line-clamp-2">{evidence.ai_summary}</span>
           </div>
         )}

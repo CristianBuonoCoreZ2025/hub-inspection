@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { ArrowLeft, Trash2, FileCheck, Search, ChevronDown, ShieldCheck, Check, FileText, Upload, ExternalLink, File, GripVertical, X, Sparkles } from "lucide-react";
+import { ArrowLeft, Trash2, FileCheck, Search, ChevronDown, ShieldCheck, Check, FileText, Upload, ExternalLink, File, GripVertical, X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,7 @@ import {
  getSubcoveragesByCoverageIds,
 } from "@/services/coverage-catalog";
 import { getInsuranceCompanies, getBusinessLines, getBrokers, getCountries, getCountryCurrencies } from "@/services/catalogs";
+import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
 
 const statusLabels: Record<string, string> = {
  draft: "Borrador",
@@ -407,26 +408,6 @@ export default function PolicyDetailPage() {
  onSuccess: () => {
  queryClient.invalidateQueries({ queryKey: ["policy-documents", policyId] });
  toast.success("Documento eliminado");
- },
- onError: (e: Error) => toast.error(e.message),
- });
-
- const analyzeDocMut = useMutation({
- mutationFn: async ({ docId, force }: { docId: string; force?: boolean }) => {
- const res = await fetch("/api/ai/analyze-document", {
- method: "POST",
- headers: { "Content-Type": "application/json" },
- body: JSON.stringify({ table: "policy_documents", id: docId, force }),
- });
- if (!res.ok) {
- const data = await res.json().catch(() => ({}));
- throw new Error(data.error || "No se pudo analizar el documento");
- }
- return res.json();
- },
- onSuccess: () => {
- toast.success("Análisis IA generado");
- queryClient.invalidateQueries({ queryKey: ["policy-documents", policyId] });
  },
  onError: (e: Error) => toast.error(e.message),
  });
@@ -1290,10 +1271,10 @@ export default function PolicyDetailPage() {
  <table className="app-data-table">
  <thead className="bg-muted/50">
  <tr>
- <th className="px-3 py-2 text-left font-medium">Documento</th>
- <th className="px-3 py-2 text-left font-medium">Tipo</th>
- <th className="px-3 py-2 text-right font-medium">Tamaño</th>
- <th className="px-3 py-2 text-left font-medium">Fecha</th>
+ <th className="px-3 py-2 text-left font-medium w-[min(60vw,560px)]">Documento</th>
+ <th className="px-3 py-2 text-left font-medium w-[120px]">Tipo</th>
+ <th className="px-3 py-2 text-right font-medium w-[90px]">Tamaño</th>
+ <th className="px-3 py-2 text-left font-medium w-[110px]">Fecha</th>
  <th className="w-20" />
  </tr>
  </thead>
@@ -1314,8 +1295,8 @@ export default function PolicyDetailPage() {
  </div>
  {doc.ai_summary && (
  <div className="flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400 mt-1 pl-5">
- <Sparkles className="h-3 w-3 shrink-0 mt-0.5" />
- <span className="italic line-clamp-2">{doc.ai_summary}</span>
+ <Zap className="h-3 w-3 shrink-0 mt-0.5" />
+ <span className="italic line-clamp-3 wrap-break-word">{doc.ai_summary}</span>
  </div>
  )}
  </td>
@@ -1330,15 +1311,13 @@ export default function PolicyDetailPage() {
  </td>
  <td className="px-3 py-2 text-right">
  <div className="app-row-actions justify-end">
- <button
- type="button"
- onClick={() => analyzeDocMut.mutate({ docId: doc.id, force: true })}
- className="btn-icon-sm hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30"
- title={doc.ai_summary ? "Re-analizar con IA" : "Analizar con IA"}
- disabled={analyzeDocMut.isPending}
- >
- <Sparkles className="h-3 w-3" />
- </button>
+ <AiAnalysisButton
+ table="policy_documents"
+ id={doc.id}
+ fileName={doc.document_name}
+ hasSummary={!!doc.ai_summary}
+ queryKey={["policy-documents", policyId]}
+ />
  <button
  type="button"
  onClick={() => removeDocMut.mutate(doc.id)}

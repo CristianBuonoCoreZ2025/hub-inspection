@@ -39,6 +39,7 @@ import {
  XCircle,
  Undo2,
  Send,
+ Image as ImageIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ import {
 } from "@/components/ui/dialog";
 import AuditLogSection from "./audit-log-section";
 import ClaimDocumentsTab from "./claim-documents-tab";
+import ClaimImagesTab from "./claim-images-tab";
 import EditClaimForm from "./edit-claim-form";
 import GestionScreenSwitcher from "./gestion-screens";
 import WorkflowView from "./workflow-view";
@@ -122,6 +124,7 @@ const allTabs = [
  { id: "incidente", label: "Incidente", icon: MapPin, section: "claims_incidente" },
  { id: "gestiones", label: "Gestiones", icon: ClipboardList, section: "claims_gestiones" },
  { id: "documentos", label: "Documentos", icon: FolderOpen, section: "claims_documentos" },
+ { id: "imagenes", label: "Imágenes", icon: ImageIcon, section: "claims_imagenes" },
  { id: "log", label: "Log", icon: History, section: "claims_log" },
 ];
 
@@ -936,6 +939,11 @@ export default function ClaimDetailPage() {
  {/* ═══ TAB: DOCUMENTOS ═══ */}
  {activeTab === "documentos" && (
  <ClaimDocumentsTab claimId={id} policyId={claim?.policy_id ?? null} />
+ )}
+
+ {/* ═══ TAB: IMÁGENES ═══ */}
+ {activeTab === "imagenes" && (
+ <ClaimImagesTab claimId={id} claimStatusId={claim?.status_id ?? null} />
  )}
 
  {/* ═══ TAB: GESTIONES ═══ */}

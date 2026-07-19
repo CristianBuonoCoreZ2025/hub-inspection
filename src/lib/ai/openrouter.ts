@@ -187,10 +187,17 @@ export async function describeImage(
     {
       role: "system",
       content:
-        "Eres un asistente experto en inspecciones de seguros. " +
-        "Describe la imagen de forma breve y objetiva en máximo 2-3 líneas. " +
-        "Menciona: tipo de espacio/objeto, estado visible, daños evidentes si los hay. " +
-        "Responde en español. No inventes información que no se vea.",
+        "Eres un inspector de seguros experto analizando fotos de siniestros. " +
+        "Describe la imagen de forma objetiva y útil para el liquidador, en máximo 3 líneas:\n" +
+        "1. Qué se ve (tipo de espacio/objeto/vehículo, ubicación aparente).\n" +
+        "2. Estado visible y daños evidentes (abolladuras, grietas, humedad, rotos, etc.). " +
+        "Si no hay daños visibles, dilo explícitamente.\n" +
+        "3. Detalle relevante: matrícula visible, marca/modelo si se reconoce, " +
+        "ubicación GPS inferible, hora/fecha si aparece en metadata visual.\n\n" +
+        "Reglas:\n" +
+        "- NO inventes información que no se vea en la imagen.\n" +
+        "- Si la imagen está borrosa o es de mala calidad, dilo.\n" +
+        "- Responde en español de Chile.",
     },
     {
       role: "user",
@@ -201,7 +208,7 @@ export async function describeImage(
         },
         {
           type: "text",
-          text: "Describe brevemente esta imagen (inspección de siniestro).",
+          text: "Analiza esta foto de inspección de siniestro y extrae información útil para el liquidador.",
         },
       ],
     },
@@ -240,35 +247,43 @@ export async function describeImage(
 export async function summarizeDocument(
   buffer: Buffer,
   maxPages = 5
-): Promise<{ summary: string; model: string; pageCount: number } | null> {
-  // Extraer texto del PDF
+): Promise<{ ok: true; summary: string; model: string; pageCount: number } | { ok: false; reason: string }> {
+  // Extraer texto del PDF usando unpdf (server-side, sin workers)
   let pdfText = "";
   let pageCount = 0;
 
   try {
-    const { PDFParse } = await import("pdf-parse");
-    const uint8 = new Uint8Array(buffer);
-    const parser = new PDFParse(uint8);
-    const result = await parser.getText();
-
-    pageCount = result.total || 0;
-    const pages = result.pages || [];
-    const analyzedPages = pages.slice(0, maxPages);
-    pdfText = analyzedPages.map((p: { text: string }) => p.text).join("\n\n");
+    const { extractText, getDocumentProxy } = await import("unpdf");
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    // extractText con mergePages: false devuelve { totalPages, text: string[] } (una por página)
+    const result = await extractText(pdf, { mergePages: false });
+    pageCount = result.totalPages || 0;
+    const pageTexts = (result.text as string[]) || [];
+    // Limitar a las primeras maxPages páginas
+    const analyzedPages = pageTexts.slice(0, maxPages);
+    pdfText = analyzedPages.join("\n\n");
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     logger.warn("summarizeDocument: no se pudo extraer texto del PDF", {
       component: "openrouter",
       action: "summarize.document",
-      metadata: { error: err instanceof Error ? err.message : String(err) },
+      metadata: { error: errMsg, errorName: err instanceof Error ? err.name : "unknown" },
     });
-    return null;
+    return { ok: false, reason: `unpdf falló al extraer texto: ${errMsg}` };
   }
 
   if (!pdfText.trim()) {
+    // PDF escaneado (sin texto extraíble) — renderizar primera página a imagen y enviar a visión
+    logger.info("summarizeDocument: PDF sin texto, intentando visión", {
+      component: "openrouter",
+      action: "summarize.document.scanned",
+      metadata: { pageCount },
+    });
+    const scanned = await summarizeScannedPdf(buffer, pageCount);
+    if (scanned) return { ok: true, summary: scanned.summary, model: scanned.model, pageCount };
     return {
-      summary: "Documento sin texto extraíble (posiblemente escaneado).",
-      model: "none",
-      pageCount,
+      ok: false,
+      reason: `PDF escaneado sin texto extraíble (${pageCount} páginas). Los modelos de visión tampoco pudieron procesarlo.`,
     };
   }
 
@@ -279,15 +294,271 @@ export async function summarizeDocument(
     {
       role: "system",
       content:
-        "Eres un asistente experto en documentos de seguros. " +
-        "Genera un resumen breve (máximo 3-4 líneas) del documento. " +
-        "Menciona: tipo de documento, partes relevantes (póliza, cobertura, montos, fechas), " +
-        "y cualquier dato clave para un siniestro. " +
-        "Responde en español. No inventes información.",
+        "Eres un liquidador de seguros experto analizando documentos de siniestros. " +
+        "Lee cuidadosamente el documento y extrae INFORMACIÓN QUE APORTE al liquidador, " +
+        "no un resumen genérico. Estructura tu respuesta en máximo 4 líneas así:\n" +
+        "1. Tipo de documento + entidad emisora + fecha (si se ve).\n" +
+        "2. Datos clave: número de póliza/liquidación, monto asegurado, cobertura, deducible (si aplica).\n" +
+        "3. Hechos relevantes: qué ocurrió, partes involucradas, vehículos/bienes afectados.\n" +
+        "4. Acción sugerida o dato crítico para el siniestro.\n\n" +
+        "Reglas:\n" +
+        "- Si NO encuentras un dato, NO lo inventes. Omítelo.\n" +
+        "- Usa números exactos cuando estén en el documento.\n" +
+        "- Responde en español de Chile.\n" +
+        "- Máximo 4 líneas, separadas por ' | '.",
     },
     {
       role: "user",
-      content: `Resume el siguiente documento (primeras ${maxPages} páginas de ${pageCount}):\n\n${truncated}`,
+      content: `Analiza el siguiente documento (primeras ${maxPages} páginas de ${pageCount}) y extrae la información útil para un liquidador de seguros:\n\n${truncated}`,
+    },
+  ];
+
+  const result = await callWithFallback(
+    messages,
+    "OPENROUTER_DOCUMENT_MODEL_FREE",
+    "OPENROUTER_DOCUMENT_MODEL",
+    { maxTokens: 300, temperature: 0.3 }
+  );
+
+  if (!result) {
+    return { ok: false, reason: "Texto extraído del PDF pero todos los modelos de IA fallaron (sin crédito, rate limit o error de OpenRouter)" };
+  }
+
+  const summary = result.text.length > 500 ? result.text.slice(0, 497) + "..." : result.text;
+
+  return { ok: true, summary, model: result.model, pageCount };
+}
+
+/**
+ * Para PDFs escaneados (sin texto extraíble): renderiza la primera página a imagen
+ * con unpdf (renderPageAsImage) y la envía a un modelo de visión.
+ */
+async function summarizeScannedPdf(
+  buffer: Buffer,
+  pageCount: number
+): Promise<{ summary: string; model: string } | null> {
+  try {
+    const { renderPageAsImage, getDocumentProxy } = await import("unpdf");
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const pagesToRender = Math.min(3, pageCount || 1);
+    const dataUrls: string[] = [];
+
+    for (let pageNum = 1; pageNum <= pagesToRender; pageNum++) {
+      try {
+        const dataUrl = await renderPageAsImage(pdf, pageNum, { scale: 1.5, toDataURL: true });
+        if (dataUrl) dataUrls.push(dataUrl);
+      } catch (pageErr) {
+        logger.warn("summarizeScannedPdf: falló render de página", {
+          component: "openrouter",
+          action: "summarize.scanned.page",
+          metadata: { pageNum, error: pageErr instanceof Error ? pageErr.message : String(pageErr) },
+        });
+      }
+    }
+
+    if (dataUrls.length === 0) return null;
+
+    // Construir mensaje con hasta 3 imágenes (la primera es la más importante)
+    const imageContent = dataUrls.slice(0, 3).map((url) => ({
+      type: "image_url" as const,
+      image_url: { url },
+    }));
+
+    const messages: OpenRouterMessage[] = [
+      {
+        role: "system",
+        content:
+          "Eres un liquidador de seguros experto analizando un documento escaneado. " +
+          "Extrae INFORMACIÓN QUE APORTE al liquidador, no un resumen genérico. " +
+          "Estructura tu respuesta en máximo 4 líneas:\n" +
+          "1. Tipo de documento + entidad emisora + fecha (si se lee).\n" +
+          "2. Datos clave: número de póliza/liquidación, monto, cobertura, deducible (si se lee).\n" +
+          "3. Hechos relevantes: qué ocurrió, partes involucradas, bienes afectados.\n" +
+          "4. Acción sugerida o dato crítico.\n\n" +
+          "Reglas:\n" +
+          "- Si NO se lee un dato, NO lo inventes. Omítelo.\n" +
+          "- Si la imagen es ilegible, dilo claramente.\n" +
+          "- Responde en español de Chile.\n" +
+          "- Máximo 4 líneas, separadas por ' | '.",
+      },
+      {
+        role: "user",
+        content: [
+          ...imageContent,
+          { type: "text", text: `Analiza estas ${dataUrls.length} página(s) de un PDF escaneado y extrae información útil para un liquidador.` },
+        ],
+      },
+    ];
+
+    const result = await callWithFallback(
+      messages,
+      "OPENROUTER_VISION_MODEL_FREE",
+      "OPENROUTER_VISION_MODEL",
+      { maxTokens: 300, temperature: 0.3 }
+    );
+
+    if (!result) return null;
+    const summary = result.text.length > 500 ? result.text.slice(0, 497) + "..." : result.text;
+    return { summary, model: result.model };
+  } catch (err) {
+    logger.warn("summarizeScannedPdf: falló el render/visión", {
+      component: "openrouter",
+      action: "summarize.scanned",
+      metadata: { error: err instanceof Error ? err.message : String(err) },
+    });
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Helper unificado: detecta tipo y llama al servicio correspondiente
+// ═══════════════════════════════════════════════════════════════════
+
+export type SummarizeResult =
+  | { ok: true; summary: string; model: string; pageCount?: number }
+  | { ok: false; reason: string };
+
+/**
+ * Genera un resumen/descripción automático según el tipo de archivo.
+ * - Imágenes → describeImage (visión)
+ * - PDFs → summarizeDocument (texto + IA)
+ * - Texto/Office → extracción de texto + IA
+ * - Otros → { ok: false, reason } con explicación
+ *
+ * @param buffer  Buffer del archivo
+ * @param mimeType  MIME type
+ * @param fileName  Nombre del archivo (para fallback de detección)
+ */
+export async function summarizeFile(
+  buffer: Buffer,
+  mimeType: string,
+  fileName?: string
+): Promise<SummarizeResult> {
+  // Normalizar mimeType: si es octet-stream, intentar adivinar desde el nombre
+  let effectiveMime = mimeType;
+  if (effectiveMime === "application/octet-stream" && fileName) {
+    const guessed = guessMimeFromName(fileName);
+    if (guessed) effectiveMime = guessed;
+  }
+
+  if (effectiveMime.startsWith("image/")) {
+    const result = await describeImage(buffer, effectiveMime);
+    if (!result) return { ok: false, reason: "Todos los modelos de visión fallaron (sin crédito, rate limit o error de OpenRouter)" };
+    return { ok: true, summary: result.description, model: result.model };
+  }
+
+  if (effectiveMime === "application/pdf") {
+    const result = await summarizeDocument(buffer, 5);
+    if (!result.ok) return { ok: false, reason: result.reason };
+    return { ok: true, summary: result.summary, model: result.model, pageCount: result.pageCount };
+  }
+
+  // Texto plano y similares: enviar directamente a IA
+  if (
+    effectiveMime.startsWith("text/") ||
+    effectiveMime === "application/json" ||
+    effectiveMime === "application/xml" ||
+    effectiveMime === "application/csv"
+  ) {
+    const text = buffer.toString("utf-8");
+    if (!text.trim()) return { ok: false, reason: "El archivo de texto está vacío" };
+    const result = await summarizeText(text, fileName || "archivo de texto");
+    if (!result) return { ok: false, reason: "Todos los modelos fallaron al resumir el texto" };
+    return { ok: true, summary: result.summary, model: result.model };
+  }
+
+  // Word .docx
+  if (
+    effectiveMime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    (fileName?.toLowerCase().endsWith(".docx") ?? false)
+  ) {
+    const text = await extractDocxText(buffer);
+    if (!text || !text.trim()) return { ok: false, reason: "No se pudo extraer texto del .docx (posiblemente es solo imágenes)" };
+    const result = await summarizeText(text, fileName || "documento Word");
+    if (!result) return { ok: false, reason: "Texto extraído del .docx pero todos los modelos fallaron" };
+    return { ok: true, summary: result.summary, model: result.model };
+  }
+
+  // Tipos no soportados
+  return {
+    ok: false,
+    reason: `Tipo no soportado: ${effectiveMime}${fileName ? ` (${fileName})` : ""}. Soportados: imágenes (jpg, png, webp, gif), PDF, texto, .docx`,
+  };
+}
+
+/** Adivina el MIME type desde el nombre del archivo. */
+function guessMimeFromName(name: string): string | null {
+  const lower = name.toLowerCase();
+  if (lower.match(/\.(jpg|jpeg)$/)) return "image/jpeg";
+  if (lower.match(/\.png$/)) return "image/png";
+  if (lower.match(/\.webp$/)) return "image/webp";
+  if (lower.match(/\.gif$/)) return "image/gif";
+  if (lower.match(/\.pdf$/)) return "application/pdf";
+  if (lower.match(/\.txt$/)) return "text/plain";
+  if (lower.match(/\.csv$/)) return "text/csv";
+  if (lower.match(/\.json$/)) return "application/json";
+  if (lower.match(/\.xml$/)) return "application/xml";
+  if (lower.match(/\.docx$/)) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  return null;
+}
+
+/**
+ * Extrae texto de un .docx (formato Office Open XML = ZIP con XML dentro).
+ */
+async function extractDocxText(buffer: Buffer): Promise<string | null> {
+  try {
+    // Usar fflate (ligero, sin dependencias nativas) para descomprimir
+    const { unzipSync } = await import("fflate");
+    const uint8 = new Uint8Array(buffer);
+    const files = unzipSync(uint8);
+    // El contenido principal está en word/document.xml
+    const docXml = files["word/document.xml"];
+    if (!docXml) return null;
+    const xml = new TextDecoder().decode(docXml);
+    // Extraer texto de los nodos <w:t>...</w:t>
+    const matches = xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g);
+    let text = "";
+    for (const m of matches) text += m[1];
+    return text.trim() || null;
+  } catch (err) {
+    logger.warn("extractDocxText: error", {
+      component: "openrouter",
+      action: "extract.docx",
+      metadata: { error: err instanceof Error ? err.message : String(err) },
+    });
+    return null;
+  }
+}
+
+/**
+ * Resume un texto plano usando la cadena de modelos de documentos.
+ */
+async function summarizeText(
+  text: string,
+  label: string
+): Promise<{ summary: string; model: string } | null> {
+  const truncated = text.length > 8000 ? text.slice(0, 8000) + "\n[...texto truncado...]" : text;
+
+  const messages: OpenRouterMessage[] = [
+    {
+      role: "system",
+      content:
+        "Eres un liquidador de seguros experto analizando documentos de siniestros. " +
+        "Lee cuidadosamente el documento y extrae INFORMACIÓN QUE APORTE al liquidador, " +
+        "no un resumen genérico. Estructura tu respuesta en máximo 4 líneas:\n" +
+        "1. Tipo de documento + entidad emisora + fecha (si se ve).\n" +
+        "2. Datos clave: número de póliza/liquidación, monto, cobertura, deducible (si aplica).\n" +
+        "3. Hechos relevantes: qué ocurrió, partes involucradas, bienes afectados.\n" +
+        "4. Acción sugerida o dato crítico.\n\n" +
+        "Reglas:\n" +
+        "- Si NO encuentras un dato, NO lo inventes. Omítelo.\n" +
+        "- Usa números exactos cuando estén en el documento.\n" +
+        "- Responde en español de Chile.\n" +
+        "- Máximo 4 líneas, separadas por ' | '.",
+    },
+    {
+      role: "user",
+      content: `Analiza el siguiente documento (${label}) y extrae información útil para un liquidador de seguros:\n\n${truncated}`,
     },
   ];
 
@@ -301,40 +572,5 @@ export async function summarizeDocument(
   if (!result) return null;
 
   const summary = result.text.length > 500 ? result.text.slice(0, 497) + "..." : result.text;
-
-  return { summary, model: result.model, pageCount };
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Helper unificado: detecta tipo y llama al servicio correspondiente
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Genera un resumen/descripción automático según el tipo de archivo.
- * - Imágenes → describeImage (visión)
- * - PDFs → summarizeDocument (texto + IA)
- * - Otros → null (no se procesa)
- *
- * @param buffer  Buffer del archivo
- * @param mimeType  MIME type
- * @returns { summary, model } o null
- */
-export async function summarizeFile(
-  buffer: Buffer,
-  mimeType: string
-): Promise<{ summary: string; model: string; pageCount?: number } | null> {
-  if (mimeType.startsWith("image/")) {
-    const result = await describeImage(buffer, mimeType);
-    if (!result) return null;
-    return { summary: result.description, model: result.model };
-  }
-
-  if (mimeType === "application/pdf") {
-    const result = await summarizeDocument(buffer, 5);
-    if (!result) return null;
-    return { summary: result.summary, model: result.model, pageCount: result.pageCount };
-  }
-
-  // Otros tipos: no se procesan con IA
-  return null;
+  return { summary, model: result.model };
 }
