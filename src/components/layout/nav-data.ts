@@ -40,6 +40,7 @@ import {
   Grid3x3,
   Coins,
   ArrowRightLeft,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -64,6 +65,7 @@ export const mainLinks: NavLink[] = [
   { href: "/dashboard/claims", label: "Siniestros", icon: FileText, section: "claims" },
   { href: "/dashboard/inspecciones", label: "Inspecciones", icon: ClipboardCheck, section: "inspecciones" },
   { href: "/dashboard/agenda", label: "Agenda", icon: Calendar, section: "agenda" },
+  { href: "/dashboard/informes", label: "Informes", icon: BarChart3, section: "informes" },
 ];
 
 // ── Catálogos ──
