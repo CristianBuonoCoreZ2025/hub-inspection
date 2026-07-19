@@ -524,12 +524,12 @@ export async function issueClaimAction(actionId: string, userId?: string, action
 
   // El usuario que emite pasa a ser el issuer_id (siempre, para todas las gestiones)
   // Validar que el userId exista en profiles (FK constraint)
-  let validUserId = userId;
+  let validUserId: string | null = userId || null;
   if (userId) {
     const profile = await fetchById<{ id: string }>("profiles", userId, "id");
     if (!profile) {
       // El usuario de auth no tiene profile — usar issued_by sin issuer_id
-      validUserId = undefined;
+      validUserId = null;
     }
   }
 
