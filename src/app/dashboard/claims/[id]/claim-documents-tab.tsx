@@ -34,9 +34,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { usePermissions } from "@/hooks/use-permissions";
 import {
@@ -587,63 +585,73 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
       <Dialog
         open={uploadProgress.visible}
         onOpenChange={(open) => {
-          // No permitir cerrar mientras sube o procesa
           if (!open && (uploadProgress.status === "uploading" || uploadProgress.status === "processing")) return;
           setUploadProgress((p) => ({ ...p, visible: open }));
         }}
       >
-        <DialogContent className="sm:max-w-[400px]" showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle className="text-sm">Subiendo documento</DialogTitle>
-            <DialogDescription className="text-[11px]">
-              {uploadProgress.fileName}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="modal-sm" showCloseButton={false}>
+          <div className="modal-header">
+            <DialogTitle className="modal-title">
+              {uploadProgress.status === "done"
+                ? "Documento subido"
+                : uploadProgress.status === "error"
+                ? "Error"
+                : "Subiendo documento"}
+            </DialogTitle>
+          </div>
 
-          <div className="py-4">
+          <div className="modal-body space-y-3">
+            {/* Nombre del archivo */}
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{uploadProgress.fileName}</span>
+            </div>
+
+            {/* Subiendo: barra de progreso */}
             {uploadProgress.status === "uploading" && (
-              <>
-                <div className="flex items-center gap-2 mb-3">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-[12px] text-muted-foreground">
-                    Subiendo... {Math.round((uploadProgress.loaded / uploadProgress.fileSize) * 100)}%
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground">Subiendo...</span>
+                  <span className="font-medium text-foreground">
+                    {Math.round((uploadProgress.loaded / uploadProgress.fileSize) * 100)}%
                   </span>
                 </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
-                    className="h-full bg-primary transition-all duration-200 ease-out"
+                    className="h-full bg-primary transition-all duration-200 ease-out rounded-full"
                     style={{ width: `${(uploadProgress.loaded / uploadProgress.fileSize) * 100}%` }}
                   />
                 </div>
-                <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
                   <span>{formatFileSize(uploadProgress.loaded)}</span>
                   <span>{formatFileSize(uploadProgress.fileSize)}</span>
                 </div>
-              </>
-            )}
-
-            {uploadProgress.status === "processing" && (
-              <div className="flex items-center gap-2 py-2">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="text-[12px] text-muted-foreground">
-                  Procesando documento...
-                </span>
               </div>
             )}
 
+            {/* Procesando: spinner */}
+            {uploadProgress.status === "processing" && (
+              <div className="flex items-center gap-2 py-1">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                <span className="text-[11px] text-muted-foreground">Procesando...</span>
+              </div>
+            )}
+
+            {/* Done: check */}
             {uploadProgress.status === "done" && (
-              <div className="flex items-center gap-2 py-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                <span className="text-[12px] font-medium text-emerald-600">
+              <div className="flex items-center gap-2 py-1">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <span className="text-[11px] font-medium text-emerald-600">
                   Documento subido correctamente
                 </span>
               </div>
             )}
 
+            {/* Error: X */}
             {uploadProgress.status === "error" && (
-              <div className="flex items-center gap-2 py-2">
-                <XCircle className="h-5 w-5 text-rose-500" />
-                <span className="text-[12px] font-medium text-rose-600">
+              <div className="flex items-center gap-2 py-1">
+                <XCircle className="h-4 w-4 text-rose-500" />
+                <span className="text-[11px] font-medium text-rose-600">
                   {uploadProgress.errorMsg || "Error al subir"}
                 </span>
               </div>

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
 import { deleteFromR2 } from "@/lib/storage/r2-upload";
 import { logActionHistory } from "@/services/claim-action-history";
-import { getProfileName } from "@/services/claim-actions";
 import { logger } from "@/lib/logger";
 
 /**
@@ -161,13 +160,27 @@ export async function DELETE(
               .eq("id", rta.id);
 
             // Registrar en historial: reversión de emisión
-            const performerName = userId ? await getProfileName(userId) : null;
+            // Obtener nombre del performer con admin client (no getProfileName que usa anon)
+            let performerName: string | null = null;
+            let validUserId = userId;
+            if (userId) {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("id, full_name")
+                .eq("id", userId)
+                .maybeSingle();
+              if (!profile) {
+                validUserId = null;
+              } else {
+                performerName = profile.full_name;
+              }
+            }
             await logActionHistory({
               claim_action_id: rta.id,
               event_type: "reversed",
               from_status_code: "issued",
               to_status_code: "todo",
-              performed_by: userId,
+              performed_by: validUserId,
               performed_by_name: performerName,
               level: "issue",
               comment: `Reversada por eliminación del documento ${doc.doc_code} (${doc.document_type})`,

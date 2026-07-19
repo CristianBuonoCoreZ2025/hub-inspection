@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
 import { uploadClaimDocument } from "@/lib/storage/claim-upload";
-import { issueClaimAction } from "@/services/claim-actions";
-import { getProfileName } from "@/services/claim-actions";
 import { logActionHistory } from "@/services/claim-action-history";
 import { logger } from "@/lib/logger";
 
@@ -180,7 +178,7 @@ export async function POST(request: NextRequest) {
 
           if (!rtaActions || rtaActions.length === 0) continue;
 
-          // Obtener status_id de "todo"
+          // Obtener status_id de "todo" y "issued"
           const { data: todoStatus } = await supabase
             .from("lookup_catalog")
             .select("id")
@@ -188,7 +186,14 @@ export async function POST(request: NextRequest) {
             .eq("code", "todo")
             .maybeSingle();
 
-          if (!todoStatus) continue;
+          const { data: issuedStatus } = await supabase
+            .from("lookup_catalog")
+            .select("id")
+            .eq("category", "action_status")
+            .eq("code", "issued")
+            .maybeSingle();
+
+          if (!todoStatus || !issuedStatus) continue;
 
           const pendingRta = rtaActions.find(
             (a: { id: string; action_status_id: string }) =>
@@ -198,14 +203,56 @@ export async function POST(request: NextRequest) {
           if (!pendingRta) continue;
 
           try {
-            await issueClaimAction(pendingRta.id, userId || undefined);
-            const performerName = userId ? await getProfileName(userId) : null;
+            // Validar que el userId exista en profiles (FK constraint)
+            let validUserId = userId;
+            if (userId) {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("id, full_name")
+                .eq("id", userId)
+                .maybeSingle();
+              if (!profile) {
+                validUserId = null;
+              }
+            }
+
+            const nowIso = new Date().toISOString();
+            const updateFields: Record<string, unknown> = {
+              action_status_id: issuedStatus.id,
+              issued_on: nowIso,
+              issued_by: userId,
+              updated_on: nowIso,
+            };
+            if (validUserId) {
+              updateFields.issuer_id = validUserId;
+            }
+
+            // Emitir RTA directamente con admin client (sin issueClaimAction)
+            const { error: issueErr } = await supabase
+              .from("claim_actions")
+              .update(updateFields)
+              .eq("id", pendingRta.id);
+
+            if (issueErr) throw new Error(issueErr.message);
+
+            // Obtener nombre del performer
+            let performerName: string | null = null;
+            if (validUserId) {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("id", validUserId)
+                .maybeSingle();
+              performerName = profile?.full_name || null;
+            }
+
+            // Registrar en historial
             await logActionHistory({
               claim_action_id: pendingRta.id,
               event_type: "issued",
               from_status_code: "todo",
               to_status_code: "issued",
-              performed_by: userId,
+              performed_by: validUserId || null,
               performed_by_name: performerName,
               level: "issue",
               comment: `Autoemitida por recepción completa (último documento: ${docCode})`,
@@ -215,9 +262,10 @@ export async function POST(request: NextRequest) {
                 triggered_by_document: docCode,
                 triggered_by_user: userId,
                 triggered_by_user_name: performerName,
-                triggered_at: new Date().toISOString(),
+                triggered_at: nowIso,
               },
             });
+
             logger.info("RTA autoemitida por recepción completa de documentos", {
               component: "claim-doc-upload",
               action: "auto_issue.rta",
