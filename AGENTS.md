@@ -8,6 +8,34 @@
 >
 > **Documentación completa:** [`docs/README.md`](docs/README.md)
 
+## ⚠️ REGLA #1 — NUNCA eliminar configuración existente (MÁXIMA PRIORIDAD)
+
+**Esta es la regla más importante del proyecto. Tiene prioridad sobre todas las demás.**
+
+### Prohibido
+- **NUNCA** hacer `DELETE FROM` en tablas de configuración (workflows, catálogos, gestiones, plantillas, permisos, etc.)
+- **NUNCA** hacer `DROP TABLE`, `DROP COLUMN`, `TRUNCATE` en migraciones sin antes respaldar y recuperar los datos
+- **NUNCA** escribir migraciones con "fresh start" que borren datos existentes
+- **NUNCA** eliminar configuración del usuario por conveniencia técnica
+
+### Obligatorio
+- Toda migración que cambie estructura de tablas de configuración **DEBE** preservar los datos existentes
+- Si una columna cambia de tipo o nombre: hacer `ALTER TABLE ... ALTER COLUMN` o migrar los datos con `UPDATE`
+- Si una tabla se reestructura: crear la nueva, copiar los datos con `INSERT INTO nueva SELECT FROM vieja`, y al final dropear la vieja
+- Si se necesita un "fresh start" por motivos técnicos: **preguntar primero al usuario** y respaldar los datos antes
+
+### Contexto
+La configuración de workflows, catálogos y gestiones lleva mucho tiempo construir manualmente.
+Una migración que borre estos datos puede perder horas o días de trabajo del usuario.
+La migración 137 (`DELETE FROM workflow_steps; DELETE FROM workflow_configs;`) fue un error
+que costó toda la configuración de workflows. Esto no debe volver a ocurrir.
+
+### Aplica a estas tablas (entre otras)
+`workflow_configs`, `workflow_steps`, `action_template`, `action_template_dependencies`,
+`action_template_claim_status`, `action_features`, `gestion_screens`, `gestion_screen_fields`,
+`lookup_catalog`, `companies`, `profiles`, `policies`, `policy_coverages`, `coverage_catalog`,
+y cualquier tabla que contenga configuración definida por el usuario.
+
 ## Stack Tecnológico
 - **Framework:** Next.js 16 (App Router)
 - **Lenguaje:** TypeScript (estricto)
