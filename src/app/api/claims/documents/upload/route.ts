@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
 import { uploadClaimDocument } from "@/lib/storage/claim-upload";
 import { issueClaimAction } from "@/services/claim-actions";
+import { getProfileName } from "@/services/claim-actions";
 import { logActionHistory } from "@/services/claim-action-history";
 import { logger } from "@/lib/logger";
 
@@ -193,19 +194,23 @@ export async function POST(request: NextRequest) {
                         try {
                           await issueClaimAction(pendingRta.id, userId || undefined);
                           // Registrar metadata adicional: autoemitida por recepción completa
+                          const performerName = userId ? await getProfileName(userId) : null;
                           await logActionHistory({
                             claim_action_id: pendingRta.id,
                             event_type: "issued",
                             from_status_code: "todo",
                             to_status_code: "issued",
                             performed_by: userId,
-                            performed_by_name: user?.email || null,
+                            performed_by_name: performerName,
                             level: "issue",
-                            comment: "Autoemitida por recepción completa de documentos",
+                            comment: `Autoemitida por recepción completa (último documento: ${docCode})`,
                             metadata: {
                               auto_issued: true,
                               reason: "all_documents_received",
                               triggered_by_document: docCode,
+                              triggered_by_user: userId,
+                              triggered_by_user_name: performerName,
+                              triggered_at: new Date().toISOString(),
                             },
                           });
                           logger.info("RTA autoemitida por recepción completa de documentos", {

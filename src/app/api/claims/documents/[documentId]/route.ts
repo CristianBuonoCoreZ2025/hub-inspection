@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
 import { deleteFromR2 } from "@/lib/storage/r2-upload";
 import { logActionHistory } from "@/services/claim-action-history";
+import { getProfileName } from "@/services/claim-actions";
 import { logger } from "@/lib/logger";
 
 /**
@@ -153,20 +154,25 @@ export async function DELETE(
               .eq("id", rta.id);
 
             // Registrar en historial: reversión de emisión
+            const performerName = userId ? await getProfileName(userId) : null;
             await logActionHistory({
               claim_action_id: rta.id,
               event_type: "reversed",
               from_status_code: "issued",
               to_status_code: "todo",
               performed_by: userId,
-              performed_by_name: user?.email || null,
+              performed_by_name: performerName,
               level: "issue",
-              comment: `Reversada por eliminación del documento ${doc.doc_code}`,
+              comment: `Reversada por eliminación del documento ${doc.doc_code} (${doc.document_type})`,
               metadata: {
                 reason: "document_deleted",
                 document_id: documentId,
                 doc_code: doc.doc_code,
                 document_type: doc.document_type,
+                original_filename: doc.original_filename,
+                deleted_by: userId,
+                deleted_by_name: performerName,
+                deleted_at: new Date().toISOString(),
               },
             });
           }
