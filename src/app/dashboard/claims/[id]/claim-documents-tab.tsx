@@ -274,9 +274,10 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     onSuccess: () => {
       toast.success("Documento subido");
       queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
-      queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
-      // Invalidar tanto la lista de acciones como la acción individual del modal
+      queryClient.invalidateQueries({ queryKey: ["claim-doc-requests"] });
       queryClient.invalidateQueries({ queryKey: ["claim-action"] });
+      queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
+      queryClient.invalidateQueries({ queryKey: ["gestion-screens"] });
       // Cerrar modal después de 1.2s para que se vea el check verde
       setTimeout(() => {
         setUploadProgress((p) => ({ ...p, visible: false }));
@@ -296,9 +297,10 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     onSuccess: () => {
       toast.success("Documento eliminado");
       queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
-      queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
-      // Invalidar tanto la lista de acciones como la acción individual del modal
+      queryClient.invalidateQueries({ queryKey: ["claim-doc-requests"] });
       queryClient.invalidateQueries({ queryKey: ["claim-action"] });
+      queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
+      queryClient.invalidateQueries({ queryKey: ["gestion-screens"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
