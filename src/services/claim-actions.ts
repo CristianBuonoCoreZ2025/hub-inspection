@@ -523,14 +523,27 @@ export async function issueClaimAction(actionId: string, userId?: string, action
   if (!issuedStatusId) throw new Error("No se encontró el estado de acción 'issued'");
 
   // El usuario que emite pasa a ser el issuer_id (siempre, para todas las gestiones)
+  // Validar que el userId exista en profiles (FK constraint)
+  let validUserId = userId;
+  if (userId) {
+    const profile = await fetchById<{ id: string }>("profiles", userId, "id");
+    if (!profile) {
+      // El usuario de auth no tiene profile — usar issued_by sin issuer_id
+      validUserId = undefined;
+    }
+  }
+
   const setFields: Record<string, unknown> = {
     action_status_id: issuedStatusId,
     issued_on: new Date().toISOString(),
     issued_by: userId,
-    issuer_id: userId,
     updated_on: new Date().toISOString(),
     updated_by: userId,
   };
+  // Solo asignar issuer_id si el usuario existe en profiles
+  if (validUserId) {
+    setFields.issuer_id = validUserId;
+  }
   if (actionData) {
     setFields.action_data = actionData;
   }
