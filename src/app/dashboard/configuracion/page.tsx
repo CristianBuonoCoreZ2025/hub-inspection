@@ -520,7 +520,7 @@ function PerfilesTab() {
         {profiles.map((p) => (
           <div
             key={p.role}
-            className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)]"
+            className="rounded-xl border border-border bg-card p-4 shadow-(--shadow-card)"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-[14px] font-semibold text-foreground">{p.role}</h3>
