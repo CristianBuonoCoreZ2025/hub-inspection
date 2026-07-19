@@ -23,7 +23,6 @@ import {
   ExternalLink,
   Upload,
   Trash2,
-  Layers,
   Shield,
   Globe,
   Loader2,
@@ -39,6 +38,8 @@ import {
 } from "@/components/ui/dialog";
 import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
 import { usePermissions } from "@/hooks/use-permissions";
+import { usePagination } from "@/hooks/use-pagination";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -386,14 +387,123 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
   const canCreateDocs = canCreate("claims_documentos");
   const canDeleteDocs = canDelete("claims_documentos");
 
+  // ─── Unificar todos los documentos en una sola lista ───
+  type UnifiedDoc = {
+    id: string;
+    origen: "siniestro" | "poliza" | "cmf";
+    codigo: string;
+    nombre: string;
+    subnombre?: string | null;
+    ext: string;
+    tamano: string;
+    url: string;
+    aiSummary?: string | null;
+    docTypeCode?: string;
+    canDelete?: boolean;
+    docId?: string; // para delete (solo siniestro)
+  };
+
+  const allDocuments = useMemo<UnifiedDoc[]>(() => {
+    const docs: UnifiedDoc[] = [];
+
+    // 1. Documentos del siniestro
+    for (const doc of claimDocs || []) {
+      const docTypeName =
+        docOptions.lineDocs.find((d) => d.code === doc.document_type)?.name ||
+        docOptions.restDocs.find((d) => d.code === doc.document_type)?.name ||
+        doc.document_type || "—";
+      docs.push({
+        id: doc.id,
+        origen: "siniestro",
+        codigo: doc.doc_code || "—",
+        nombre: docTypeName,
+        subnombre: doc.original_filename,
+        ext: doc.original_filename?.split(".").pop()?.toUpperCase() || "—",
+        tamano: formatFileSize(doc.file_size),
+        url: doc.document_url || "",
+        aiSummary: doc.ai_summary,
+        docTypeCode: doc.document_type || undefined,
+        canDelete: canDeleteDocs,
+        docId: doc.id,
+      });
+    }
+
+    // 2. Documentos de la póliza
+    for (const doc of policyDocs || []) {
+      const docTypeName =
+        docOptions.lineDocs.find((d) => d.code === doc.document_type)?.name ||
+        docOptions.restDocs.find((d) => d.code === doc.document_type)?.name ||
+        doc.document_type || "—";
+      docs.push({
+        id: doc.id,
+        origen: "poliza",
+        codigo: doc.document_type || "—",
+        nombre: doc.document_name,
+        subnombre: null,
+        ext: doc.document_url?.split(".").pop()?.toUpperCase() || "—",
+        tamano: formatFileSize(doc.file_size),
+        url: doc.document_url || "",
+      });
+    }
+
+    // 3. Documentos online (CMF)
+    for (const doc of onlineDocuments) {
+      docs.push({
+        id: `cmf-${doc.code}-${doc.url}`,
+        origen: "cmf",
+        codigo: doc.code,
+        nombre: doc.coverage_name,
+        subnombre: doc.subcoverage_name,
+        ext: doc.type,
+        tamano: "—",
+        url: doc.url,
+      });
+    }
+
+    return docs;
+  }, [claimDocs, policyDocs, onlineDocuments, docOptions, canDeleteDocs]);
+
+  // ─── Paginación ───
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } =
+    usePagination(allDocuments, 10);
+
+  // Badge de origen
+  function OrigenBadge({ origen }: { origen: UnifiedDoc["origen"] }) {
+    if (origen === "siniestro") {
+      return (
+        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-700 bg-blue-100 dark:bg-blue-900/50 dark:text-blue-300">
+          <FolderOpen className="h-3 w-3" />
+          Siniestro
+        </span>
+      );
+    }
+    if (origen === "poliza") {
+      return (
+        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-300">
+          <Shield className="h-3 w-3" />
+          Póliza
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-violet-700 bg-violet-100 dark:bg-violet-900/50 dark:text-violet-300">
+        <Globe className="h-3 w-3" />
+        CMF
+      </span>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {/* ═══ SECCIÓN 1: Documentos físicos del siniestro ═══ */}
+      {/* ═══ GRILLA UNIFICADA: todos los documentos ═══ */}
       <div className="app-panel">
         <div className="flex items-center justify-between mb-3">
           <h3 className="app-section-title">
             <FolderOpen className="h-4 w-4" />
-            Documentos del Siniestro
+            Documentos
+            {total > 0 && (
+              <span className="text-[11px] text-muted-foreground">({total})</span>
+            )}
           </h3>
           {canCreateDocs && (
             <>
@@ -448,54 +558,65 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
           )}
         </div>
 
+        {/* Paginación arriba */}
+        {total > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        )}
+
         {claimDocsLoading ? (
           <p className="text-sm text-muted-foreground text-center py-6">Cargando...</p>
-        ) : claimDocs && claimDocs.length > 0 ? (
+        ) : paginatedData.length > 0 ? (
           <div className="app-data-table-wrap">
             <table className="app-data-table">
               <thead>
                 <tr>
+                  <th className="w-[100px]">Origen</th>
                   <th className="w-[90px]">Código</th>
-                  <th className="w-[min(55vw,520px)]">Tipo</th>
+                  <th className="w-[min(45vw,420px)]">Tipo / Nombre</th>
                   <th className="w-[60px]">Ext.</th>
-                  <th className="w-[90px]">Tamaño</th>
+                  <th className="w-[80px]">Tamaño</th>
                   <th className="w-[80px]"></th>
                 </tr>
               </thead>
               <tbody>
-                {claimDocs.map((doc) => {
-                  const docTypeName =
-                    docOptions.lineDocs.find((d) => d.code === doc.document_type)?.name ||
-                    docOptions.restDocs.find((d) => d.code === doc.document_type)?.name ||
-                    doc.document_type || "—";
-                  return (
+                {paginatedData.map((doc) => (
                   <tr key={doc.id}>
+                    <td>
+                      <OrigenBadge origen={doc.origen} />
+                    </td>
                     <td className="font-mono text-[11px] whitespace-nowrap text-muted-foreground">
-                      {doc.doc_code || "—"}
+                      {doc.codigo}
                     </td>
                     <td className="font-medium wrap-break-word">
-                      <div>{docTypeName}</div>
-                      {doc.original_filename && (
+                      <div>{doc.nombre}</div>
+                      {doc.subnombre && (
                         <div className="text-[10px] text-muted-foreground/70 truncate">
-                          {doc.original_filename}
+                          {doc.subnombre}
                         </div>
                       )}
-                      {doc.ai_summary && (
+                      {doc.aiSummary && (
                         <div className="mt-1 flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400">
                           <Zap className="h-3 w-3 shrink-0 mt-0.5" />
-                          <span className="italic line-clamp-3 wrap-break-word">{doc.ai_summary}</span>
+                          <span className="italic line-clamp-2 wrap-break-word">{doc.aiSummary}</span>
                         </div>
                       )}
                     </td>
                     <td className="text-muted-foreground uppercase text-[11px]">
-                      {(doc.original_filename?.split(".").pop() || "—")}
+                      {doc.ext}
                     </td>
-                    <td className="text-muted-foreground">{formatFileSize(doc.file_size)}</td>
+                    <td className="text-muted-foreground">{doc.tamano}</td>
                     <td>
                       <div className="app-row-actions">
-                        {doc.document_url && (
+                        {doc.url && (
                           <a
-                            href={doc.document_url}
+                            href={doc.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"
@@ -504,14 +625,16 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         )}
-                        <AiAnalysisButton
-                          table="claim_documents"
-                          id={doc.id}
-                          fileName={doc.original_filename || doc.document_name}
-                          hasSummary={!!doc.ai_summary}
-                          queryKey={["claim-documents", claimId]}
-                        />
-                        {canDeleteDocs && (
+                        {doc.origen === "siniestro" && doc.docId && (
+                          <AiAnalysisButton
+                            table="claim_documents"
+                            id={doc.docId}
+                            fileName={doc.subnombre || doc.nombre}
+                            hasSummary={!!doc.aiSummary}
+                            queryKey={["claim-documents", claimId]}
+                          />
+                        )}
+                        {doc.canDelete && doc.docId && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -519,10 +642,10 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             onClick={() => {
                               setDeleteModal({
                                 visible: true,
-                                docId: doc.id,
-                                docCode: doc.doc_code || "",
-                                docType: doc.document_type || "",
-                                fileName: doc.original_filename || "",
+                                docId: doc.docId!,
+                                docCode: doc.codigo,
+                                docType: doc.docTypeCode || "",
+                                fileName: doc.subnombre || doc.nombre,
                                 reason: "",
                                 status: "confirming",
                               });
@@ -534,135 +657,26 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                       </div>
                     </td>
                   </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            No hay documentos del siniestro.
-          </p>
-        )}
-      </div>
-
-      {/* ═══ SECCIÓN 2: Documentos físicos de la póliza asociada ═══ */}
-      <div className="app-panel">
-        <h3 className="app-section-title mb-3">
-          <Shield className="h-4 w-4" />
-          Documentos de la Póliza
-        </h3>
-
-        {!policyId ? (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            El siniestro no tiene póliza asociada.
-          </p>
-        ) : policyDocs && policyDocs.length > 0 ? (
-          <div className="app-data-table-wrap">
-            <table className="app-data-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Tipo</th>
-                  <th>Tamaño</th>
-                  <th className="w-[60px]"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {policyDocs.map((doc) => (
-                  <tr key={doc.id}>
-                    <td className="font-medium wrap-break-word">{doc.document_name}</td>
-                    <td className="text-muted-foreground">
-                      {docOptions.lineDocs.find((d) => d.code === doc.document_type)?.name ||
-                       docOptions.restDocs.find((d) => d.code === doc.document_type)?.name ||
-                       doc.document_type || "—"}
-                    </td>
-                    <td className="text-muted-foreground">{formatFileSize(doc.file_size)}</td>
-                    <td>
-                      {doc.document_url && (
-                        <a
-                          href={doc.document_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"
-                          title="Ver documento"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      )}
-                    </td>
-                  </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-6">
-            La póliza no tiene documentos físicos.
+            No hay documentos para este siniestro.
           </p>
         )}
-      </div>
 
-      {/* ═══ SECCIÓN 3: Documentos online de coberturas (CMF) ═══ */}
-      <div className="app-panel">
-        <h3 className="app-section-title mb-3">
-          <Globe className="h-4 w-4" />
-          Documentos Online (CMF)
-        </h3>
-
-        {!policyId ? (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            El siniestro no tiene póliza asociada.
-          </p>
-        ) : onlineDocuments.length > 0 ? (
-          <div className="app-data-table-wrap">
-            <table className="app-data-table">
-              <thead>
-                <tr>
-                  <th className="w-[50px]">Tipo</th>
-                  <th className="w-[130px]">Código</th>
-                  <th>Cobertura</th>
-                  <th>Subcobertura</th>
-                  <th className="w-[60px]"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {onlineDocuments.map((doc, i) => (
-                  <tr key={i}>
-                    <td>
-                      {doc.type === "POL" ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-600">
-                          <FileText className="h-3 w-3" /> POL
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-600">
-                          <Layers className="h-3 w-3" /> CAD
-                        </span>
-                      )}
-                    </td>
-                    <td className="font-mono text-[11px] whitespace-nowrap">{doc.code}</td>
-                    <td className="wrap-break-word">{doc.coverage_name}</td>
-                    <td className="text-muted-foreground wrap-break-word">{doc.subcoverage_name || "-"}</td>
-                    <td>
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"
-                        title="Ver documento CMF"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            La póliza no tiene coberturas con documentos online.
-          </p>
+        {/* Paginación abajo */}
+        {total > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         )}
       </div>
 
