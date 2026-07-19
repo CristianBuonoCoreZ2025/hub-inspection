@@ -134,19 +134,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Vincular con claim_document_request_items pendientes del mismo tipo
+    // Solo si el documento coincide con un item pendiente de un request RTA
     if (documentTypeCode && typeof documentTypeCode === "string") {
       const now = new Date().toISOString();
 
-      // Buscar TODOS los requests del claim (sin importar status)
-      const { data: allClaimRequests } = await supabase
+      // Buscar requests del claim que estén pendientes (status != received)
+      const { data: openRequests } = await supabase
         .from("claim_document_requests")
         .select("id")
-        .eq("claim_id", claimId);
+        .eq("claim_id", claimId)
+        .neq("status", "received");
 
-      if (allClaimRequests && allClaimRequests.length > 0) {
-        const requestIds = allClaimRequests.map((r: { id: string }) => r.id);
+      if (openRequests && openRequests.length > 0) {
+        const requestIds = openRequests.map((r: { id: string }) => r.id);
 
-        // 1. Marcar items pendientes (status="requested") del mismo tipo como "received"
+        // Buscar items pendientes (status="requested") del mismo tipo
         const { data: pendingItems, error: itemsErr } = await supabase
           .from("claim_document_request_items")
           .select("id, request_id, document_type_code, status")
@@ -154,7 +156,9 @@ export async function POST(request: NextRequest) {
           .eq("document_type_code", documentTypeCode)
           .eq("status", "requested");
 
+        // Si NO hay items pendientes de este tipo, no vincular ni tocar RTA
         if (!itemsErr && pendingItems && pendingItems.length > 0) {
+          // 1. Marcar items como received
           for (const item of pendingItems) {
             await supabase
               .from("claim_document_request_items")
@@ -178,12 +182,12 @@ export async function POST(request: NextRequest) {
               items_count: pendingItems.length,
             },
           });
-        }
 
-        // 2. Verificar si todos los items de cada request están resueltos
-        //    → cerrar el request + autoemitir RTA
-        //    (esto se hace SIEMPRE, sin importar si había items pendientes o no)
-        for (const reqId of requestIds) {
+          // 2. Verificar si todos los items del request están resueltos
+          //    → cerrar el request + autoemitir RTA
+          const affectedRequestIds = [...new Set(pendingItems.map((i: { request_id: string }) => i.request_id))];
+
+          for (const reqId of affectedRequestIds) {
           const { data: allItems } = await supabase
             .from("claim_document_request_items")
             .select("status")
@@ -332,10 +336,11 @@ export async function POST(request: NextRequest) {
               action: "auto_issue.rta.error",
               metadata: { error: String(issueErr) },
             });
-          }
-        }
-      }
-    }
+          } // cierra try/catch issueErr
+        } // cierra for (reqId)
+      } // cierra if (pendingItems)
+    } // cierra if (openRequests)
+    } // cierra if (documentTypeCode)
 
     return NextResponse.json({ document });
   } catch (err) {

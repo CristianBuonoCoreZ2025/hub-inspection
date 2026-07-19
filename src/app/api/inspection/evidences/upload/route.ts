@@ -98,14 +98,13 @@ export async function POST(request: NextRequest) {
     }
 
     // ── IA: resumen/descripción automático (free → paid) ──
-    // Para imágenes: descripción breve del contenido
-    // Para PDFs: resumen de las primeras 5 páginas
+    let aiSummary: string | null = null;
+    let aiModel: string | null = null;
     try {
       const ai = await summarizeFile(buffer, mimeType);
       if (ai) {
-        metadata.aiSummary = ai.summary;
-        metadata.aiModel = ai.model;
-        if (ai.pageCount !== undefined) metadata.aiPageCount = ai.pageCount;
+        aiSummary = ai.summary;
+        aiModel = ai.model;
         logger.info("IA: resumen de evidencia generado", {
           component: "inspection-evidences-upload",
           action: "ai.summary",
@@ -119,12 +118,12 @@ export async function POST(request: NextRequest) {
         metadata: { error: aiErr instanceof Error ? aiErr.message : String(aiErr) },
       });
     }
+
     // Geo del navegador → columnas lat/lng
     const deviceLat = lat && typeof lat === "string" ? parseFloat(lat) : null;
     const deviceLng = lng && typeof lng === "string" ? parseFloat(lng) : null;
 
-    // Insertar en inspection_evidences — el description es el código del archivo
-    // Geo del dispositivo en columnas lat/lng, geo EXIF en exif_lat/exif_lng
+    // Insertar en inspection_evidences
     const { data: evidence, error } = await supabase
       .from("inspection_evidences")
       .insert({
@@ -139,8 +138,10 @@ export async function POST(request: NextRequest) {
         lng: deviceLng,
         exif_lat: exifGps?.lat ?? null,
         exif_lng: exifGps?.lng ?? null,
+        ai_summary: aiSummary,
+        ai_model: aiModel,
       })
-      .select("id, url, type, description, created_at, lat, lng, exif_lat, exif_lng")
+      .select("id, url, type, description, created_at, lat, lng, exif_lat, exif_lng, ai_summary, ai_model")
       .single();
 
     if (error) {

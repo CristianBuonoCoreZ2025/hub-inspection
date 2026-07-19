@@ -22,10 +22,6 @@ interface EvidenceMetadata {
   fileSize?: number;
   mimeType?: string;
   userAgent?: string | null;
-  aiSummary?: string;
-  aiModel?: string;
-  pdfSummary?: string;
-  pdfPageCount?: number;
 }
 
 interface Evidence {
@@ -41,6 +37,8 @@ interface Evidence {
   lng: number | null;
   exif_lat: number | null;
   exif_lng: number | null;
+  ai_summary: string | null;
+  ai_model: string | null;
   uploader: EvidenceUploader | null;
 }
 
@@ -562,10 +560,10 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick }: {
         </div>
 
         {/* Resumen IA */}
-        {meta?.aiSummary && (
+        {evidence.ai_summary && (
           <div className="flex items-start gap-1 text-[9px] text-violet-600 dark:text-violet-400 pt-1">
             <Sparkles className="h-2.5 w-2.5 shrink-0 mt-0.5" />
-            <span className="italic line-clamp-2">{meta.aiSummary}</span>
+            <span className="italic line-clamp-2">{evidence.ai_summary}</span>
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { uploadPolicyDocument } from "@/lib/storage/policy-upload";
+import { summarizeFile } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logger";
 
 /**
@@ -42,6 +43,28 @@ export async function POST(request: NextRequest) {
     // Subir a R2 con path estructurado del plan
     const { url } = await uploadPolicyDocument(policyId, buffer, mimeType, ext || ".bin");
 
+    // ── IA: resumen automático (free → paid) ──
+    let aiSummary: string | null = null;
+    let aiModel: string | null = null;
+    try {
+      const ai = await summarizeFile(buffer, mimeType);
+      if (ai) {
+        aiSummary = ai.summary;
+        aiModel = ai.model;
+        logger.info("IA: resumen de documento de póliza generado", {
+          component: "policy-doc-upload",
+          action: "ai.summary",
+          metadata: { model: ai.model, summaryLength: ai.summary.length },
+        });
+      }
+    } catch (aiErr) {
+      logger.warn("IA: no se pudo generar resumen de póliza", {
+        component: "policy-doc-upload",
+        action: "ai.summary.error",
+        metadata: { error: aiErr instanceof Error ? aiErr.message : String(aiErr) },
+      });
+    }
+
     // Insertar en policy_documents
     const supabase = createAdminClient();
     const { data: document, error } = await supabase
@@ -53,8 +76,10 @@ export async function POST(request: NextRequest) {
         document_type: mimeType,
         file_size: file.size,
         is_active: true,
+        ai_summary: aiSummary,
+        ai_model: aiModel,
       })
-      .select("id, policy_id, document_name, document_url, document_type, file_size, is_active, created_at, updated_at")
+      .select("id, policy_id, document_name, document_url, document_type, file_size, is_active, ai_summary, ai_model, created_at, updated_at")
       .single();
 
     if (error) {
