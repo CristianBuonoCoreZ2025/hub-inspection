@@ -11,6 +11,7 @@ import {
 } from "@/services/inspections";
 import { getUsers } from "@/services/users";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import {
  Search,
@@ -57,6 +58,7 @@ function InspectionsPageContent() {
  const router = useRouter();
  const searchParams = useSearchParams();
  const { canEdit } = usePermissions();
+ useRealtime("inspection_sessions", [["inspection-sessions"], ["inspection-sessions-all"]]);
  const [search, setSearch] = useState("");
  const [statusFilter, setStatusFilter] = useState<string>(() => {
  const s = searchParams.get("status");

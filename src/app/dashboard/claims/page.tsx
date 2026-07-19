@@ -29,8 +29,9 @@ import { claimCreateMinimalSchema, type ClaimCreateMinimalInput } from "@/lib/va
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
-import { Search, Trash2, FileText, ClipboardCheck, Download, X, Check, Upload, ChevronDown, Shield } from "lucide-react";
+import { Search, Trash2, FileText, ClipboardCheck, Download, Check, Upload, ChevronDown, Shield } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { getClaimTypeIcon } from "@/lib/claim-type-icons";
@@ -110,6 +111,7 @@ function ClaimsPageContent() {
  const searchParams = useSearchParams();
  const { canCreate } = usePermissions();
  const { statusCode, statusLabel, codeToId } = useClaimStatuses();
+ useRealtime("claims", [["claims"], ["claims-participants"]]);
  const [search, setSearch] = useState("");
  const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") || "");
  const [dateFrom, setDateFrom] = useState("");

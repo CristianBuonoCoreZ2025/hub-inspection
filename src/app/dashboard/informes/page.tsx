@@ -19,6 +19,7 @@ import {
 
 import { getClaims } from "@/services/claims";
 import { getInspectionSessions } from "@/services/inspections";
+import { useRealtime } from "@/hooks/use-realtime";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,8 @@ export default function InformesPage() {
   const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
+  useRealtime("claims", [["claims-all"]]);
+  useRealtime("inspection_sessions", [["inspection-sessions-all"]]);
 
   // ── Data ──
   const { data: claims = [] } = useQuery({

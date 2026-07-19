@@ -8,6 +8,7 @@ import { getRecentAuditLogs } from "@/services/audit-logs";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
 import { useAuth } from "@/hooks/use-auth";
+import { useRealtime } from "@/hooks/use-realtime";
 import {
   FileText,
   CheckCircle,
@@ -132,6 +133,9 @@ function filterClaimsForUser(
 export default function DashboardPage() {
   const { profile } = useAuth();
   const { statusCode } = useClaimStatuses();
+  useRealtime("claims", [["claims"], ["claims-all"]]);
+  useRealtime("inspection_sessions", [["inspection-sessions"], ["inspection-sessions-all"]]);
+  useRealtime("audit_logs", [["recent-activity"]]);
 
   const isInternal = profile?.role === "internal";
   const roleLabel = profile ? ROLE_LABELS[profile.role] : "";

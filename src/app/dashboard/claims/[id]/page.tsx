@@ -17,6 +17,7 @@ import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { useRecentClaims } from "@/hooks/use-recent-claims";
+import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import {
  ArrowLeft,
@@ -142,6 +143,9 @@ export default function ClaimDetailPage() {
  const id = params.id as string;
  const queryClient = useQueryClient();
  const { canEdit, canView } = usePermissions();
+ useRealtime("claims", [["claim", id], ["claims"]]);
+ useRealtime("claim_actions", [["claim-actions", id], ["claim-action"]]);
+ useRealtime("claims_participants", [["claim-participants", id]]);
  const [activeTab, setActiveTab] = useState("siniestro");
  const [isEditing, setIsEditing] = useState(false);
  const [openGestionModal, setOpenGestionModal] = useState(false);
