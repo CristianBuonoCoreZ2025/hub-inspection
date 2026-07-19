@@ -511,6 +511,40 @@ const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
 
 ---
 
+## 18. Proporción y Ancho Uniforme de Elementos Similares
+
+### Regla OBLIGATORIA
+Cuando hay elementos similares agrupados (botones, tabs, sub-tabs, cards,
+KPIs, chips de filtro), **todos deben tener el mismo ancho** para mantener
+la proporción visual. Nada debe "salir" de la proporción del grupo.
+
+### Cómo implementar
+- **Sub-tabs / botones de filtro en fila:** usar `flex` con `flex-1` en cada
+  hijo para que ocupen el mismo ancho, ajustándose automáticamente al más largo.
+  ```tsx
+  <div className="flex gap-1.5">
+    {items.map((item) => (
+      <button className="flex-1 ...">...</button>
+    ))}
+  </div>
+  ```
+- **KPIs / cards en grid:** usar `grid` con columnas equilibradas
+  (`grid-cols-2 lg:grid-cols-4`), nunca anchos fijos distintos por card.
+- **Botones de acción en fila:** si son del mismo tipo (ej: 3 botones de
+  estado), usar `flex-1` para que tengan el mismo ancho.
+
+### Lo que NO se hace
+- ❌ Botones con `w-auto` donde unos quedan más anchos que otros
+- ❌ Tabs con texto largo que desbordan el contenedor
+- ❌ Cards con anchos arbitrarios (`w-[180px]` mezclado con `w-[220px]`)
+
+### Excepción
+Si los elementos son de tipos distintos (ej: un botón "Guardar" + un botón
+"Cancelar" + un icono "Eliminar"), no necesitan el mismo ancho. La regla
+aplica solo a **elementos del mismo tipo agrupados**.
+
+---
+
 ## CHECKLIST ANTES DE MODIFICAR CUALQUIER PÁGINA
 
 ```
@@ -527,6 +561,7 @@ const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
 □ ¿Los permisos están verificados?
 □ ¿npx tsc --noEmit pasa sin errores?
 □ ¿npx eslint pasa sin errores ni warnings?
+□ ¿Los elementos similares agrupados tienen el mismo ancho (flex-1)?
 ```
 
 **Si cualquier item del checklist falla, NO se considera terminado.**
