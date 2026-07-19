@@ -26,8 +26,18 @@ import {
   Layers,
   Shield,
   Globe,
+  Loader2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { usePermissions } from "@/hooks/use-permissions";
 import {
   Select,
@@ -182,25 +192,104 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     return docs;
   }, [policyCoverages, coverageCatalog, policySubcoverages]);
 
-  // Mutation: subir documento del siniestro
+  // Estado del modal de progreso de subida
+  const [uploadProgress, setUploadProgress] = useState<{
+    visible: boolean;
+    fileName: string;
+    fileSize: number;
+    loaded: number;
+    status: "uploading" | "processing" | "done" | "error";
+    errorMsg?: string;
+  }>({ visible: false, fileName: "", fileSize: 0, loaded: 0, status: "uploading" });
+
+  // Mutation: subir documento del siniestro (con progreso via XMLHttpRequest)
   const uploadMut = useMutation({
     mutationFn: async ({ file, docTypeCode }: { file: File; docTypeCode: string }) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("claimId", claimId);
-      if (docTypeCode) formData.append("documentTypeCode", docTypeCode);
-      const res = await fetch("/api/claims/documents/upload", { method: "POST", body: formData });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || "Error al subir archivo");
-      }
-      return res.json();
+      return new Promise<{ document: unknown }>((resolve, reject) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("claimId", claimId);
+        if (docTypeCode) formData.append("documentTypeCode", docTypeCode);
+
+        const xhr = new XMLHttpRequest();
+
+        // Progreso de subida (bytes)
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress((p) => ({
+              ...p,
+              loaded: e.loaded,
+              fileSize: e.total,
+              status: "uploading",
+            }));
+          }
+        });
+
+        // Cuando se completa la subida → pasa a "procesando" (server-side)
+        xhr.upload.addEventListener("load", () => {
+          setUploadProgress((p) => ({ ...p, status: "processing", loaded: p.fileSize }));
+        });
+
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              setUploadProgress((p) => ({ ...p, status: "done" }));
+              resolve(data);
+            } catch {
+              reject(new Error("Respuesta inválida del servidor"));
+            }
+          } else {
+            let msg = "Error al subir archivo";
+            try {
+              const body = JSON.parse(xhr.responseText);
+              if (body.error) msg = body.error;
+            } catch {}
+            setUploadProgress((p) => ({ ...p, status: "error", errorMsg: msg }));
+            reject(new Error(msg));
+          }
+        });
+
+        xhr.addEventListener("error", () => {
+          setUploadProgress((p) => ({ ...p, status: "error", errorMsg: "Error de red" }));
+          reject(new Error("Error de red al subir archivo"));
+        });
+
+        xhr.addEventListener("abort", () => {
+          setUploadProgress((p) => ({ ...p, status: "error", errorMsg: "Subida cancelada" }));
+          reject(new Error("Subida cancelada"));
+        });
+
+        xhr.open("POST", "/api/claims/documents/upload");
+        xhr.send(formData);
+      });
+    },
+    onMutate: ({ file }) => {
+      setUploadProgress({
+        visible: true,
+        fileName: file.name,
+        fileSize: file.size,
+        loaded: 0,
+        status: "uploading",
+      });
     },
     onSuccess: () => {
       toast.success("Documento subido");
       queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
+      queryClient.invalidateQueries({ queryKey: ["claim-doc-requests", claimId] });
+      queryClient.invalidateQueries({ queryKey: ["claim-actions", claimId] });
+      // Cerrar modal después de 1.2s para que se vea el check verde
+      setTimeout(() => {
+        setUploadProgress((p) => ({ ...p, visible: false }));
+      }, 1200);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      toast.error(e.message);
+      // Cerrar modal de error después de 2.5s
+      setTimeout(() => {
+        setUploadProgress((p) => ({ ...p, visible: false }));
+      }, 2500);
+    },
   });
 
   const deleteMut = useMutation({
@@ -493,6 +582,75 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
           </p>
         )}
       </div>
+
+      {/* ═══ MODAL: Progreso de subida ═══ */}
+      <Dialog
+        open={uploadProgress.visible}
+        onOpenChange={(open) => {
+          // No permitir cerrar mientras sube o procesa
+          if (!open && (uploadProgress.status === "uploading" || uploadProgress.status === "processing")) return;
+          setUploadProgress((p) => ({ ...p, visible: open }));
+        }}
+      >
+        <DialogContent className="sm:max-w-[400px]" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-sm">Subiendo documento</DialogTitle>
+            <DialogDescription className="text-[11px]">
+              {uploadProgress.fileName}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            {uploadProgress.status === "uploading" && (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-[12px] text-muted-foreground">
+                    Subiendo... {Math.round((uploadProgress.loaded / uploadProgress.fileSize) * 100)}%
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-200 ease-out"
+                    style={{ width: `${(uploadProgress.loaded / uploadProgress.fileSize) * 100}%` }}
+                  />
+                </div>
+                <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
+                  <span>{formatFileSize(uploadProgress.loaded)}</span>
+                  <span>{formatFileSize(uploadProgress.fileSize)}</span>
+                </div>
+              </>
+            )}
+
+            {uploadProgress.status === "processing" && (
+              <div className="flex items-center gap-2 py-2">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-[12px] text-muted-foreground">
+                  Procesando documento...
+                </span>
+              </div>
+            )}
+
+            {uploadProgress.status === "done" && (
+              <div className="flex items-center gap-2 py-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                <span className="text-[12px] font-medium text-emerald-600">
+                  Documento subido correctamente
+                </span>
+              </div>
+            )}
+
+            {uploadProgress.status === "error" && (
+              <div className="flex items-center gap-2 py-2">
+                <XCircle className="h-5 w-5 text-rose-500" />
+                <span className="text-[12px] font-medium text-rose-600">
+                  {uploadProgress.errorMsg || "Error al subir"}
+                </span>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
