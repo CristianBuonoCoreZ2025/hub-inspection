@@ -1,5 +1,4 @@
 import "server-only";
-import sharp from "sharp";
 import { logger } from "@/lib/logger";
 
 /**
@@ -13,6 +12,10 @@ import { logger } from "@/lib/logger";
  *
  * Regla del sistema: todo archivo subido pasa por este proceso.
  * Si es una imagen, se optimiza. Si no, pasa sin cambios.
+ *
+ * NOTA: sharp se importa dinámicamente para evitar errores en entornos
+ * donde no está disponible (ej: Vercel serverless sin el binary correcto).
+ * Si sharp no carga, se devuelve el archivo original sin optimizar.
  */
 
 /** Tamaño máximo del lado más largo de una imagen (px). */
@@ -60,10 +63,27 @@ export function isOptimizable(mimeType: string, ext: string): boolean {
 }
 
 /**
+ * Carga sharp dinámicamente. Retorna null si no está disponible.
+ */
+async function loadSharp(): Promise<typeof import("sharp") | null> {
+  try {
+    return await import("sharp");
+  } catch (err) {
+    logger.warn("sharp no disponible — optimización deshabilitada", {
+      component: "optimize",
+      action: "sharp.load.error",
+      metadata: { error: (err as Error).message },
+    });
+    return null;
+  }
+}
+
+/**
  * Optimiza un archivo antes de subirlo a R2.
  *
  * Si es una imagen: la redimensiona (max 1920px) y comprime con sharp.
  * Si no es imagen: la devuelve sin cambios.
+ * Si sharp no está disponible: la devuelve sin cambios.
  *
  * @param buffer — contenido original del archivo
  * @param mimeType — tipo MIME del archivo
@@ -83,6 +103,12 @@ export async function optimizeFile(
   const normalizedExt = ext.toLowerCase().startsWith(".")
     ? ext.toLowerCase()
     : "." + ext.toLowerCase();
+
+  // Cargar sharp dinámicamente
+  const sharp = await loadSharp();
+  if (!sharp) {
+    return { buffer, mimeType, ext };
+  }
 
   try {
     let pipeline = sharp(buffer).rotate(); // Rotar según EXIF (fotos de móvil)
