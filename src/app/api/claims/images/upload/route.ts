@@ -51,7 +51,24 @@ export async function POST(request: NextRequest) {
     try {
       const serverClient = await createServerClient();
       const { data: { user } } = await serverClient.auth.getUser();
-      userId = user?.id || null;
+      if (user?.id) {
+        // Validar que el usuario exista en profiles antes de usarlo como FK
+        const admin = createAdminClient();
+        const { data: profile } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (profile) {
+          userId = user.id;
+        } else {
+          logger.warn("Usuario autenticado no existe en profiles", {
+            component: "claim-image-upload",
+            action: "auth.profile_missing",
+            metadata: { userId: user.id },
+          });
+        }
+      }
     } catch {
       // sin sesión — continúa sin userId
     }
@@ -95,9 +112,12 @@ export async function POST(request: NextRequest) {
       logger.error("Claim image upload: insert falló", new Error(error.message), {
         component: "claim-image-upload",
         action: "insert.claim_image",
-        metadata: { error: error.message, code: error.code, details: error.details },
+        metadata: { error: error.message, code: error.code, details: error.details, hint: error.hint },
       });
-      return NextResponse.json({ error: "Error al registrar imagen" }, { status: 500 });
+      return NextResponse.json(
+        { error: `Error al registrar imagen: ${error.message} (code: ${error.code})` },
+        { status: 500 }
+      );
     }
 
     logger.info("Imagen de siniestro registrada", {
