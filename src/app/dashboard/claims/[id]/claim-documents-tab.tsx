@@ -338,6 +338,28 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     },
   });
 
+  const analyzeMut = useMutation({
+    mutationFn: async ({ docId, force }: { docId: string; force?: boolean }) => {
+      const res = await fetch("/api/ai/analyze-document", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "claim_documents", id: docId, force }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "No se pudo analizar el documento");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Análisis IA generado");
+      queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "No se pudo analizar el documento");
+    },
+  });
+
   const deleteMut = useMutation({
     mutationFn: async ({ docId, reason }: { docId: string; reason: string }) => {
       return deleteClaimDocument(docId, reason || undefined);
@@ -503,6 +525,16 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="btn-icon-sm hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                          title={doc.ai_summary ? "Re-analizar con IA" : "Analizar con IA"}
+                          disabled={analyzeMut.isPending}
+                          onClick={() => analyzeMut.mutate({ docId: doc.id, force: true })}
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                        </Button>
                         {canDeleteDocs && (
                           <Button
                             variant="ghost"

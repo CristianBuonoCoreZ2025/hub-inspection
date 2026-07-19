@@ -446,13 +446,15 @@ export interface PolicyDocument {
   document_type: string | null;
   file_size: number | null;
   is_active: boolean;
+  ai_summary: string | null;
+  ai_model: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export async function getPolicyDocuments(policyId: string): Promise<PolicyDocument[]> {
   return fetchAll<PolicyDocument>("policy_documents", {
-    select: "id, policy_id, document_name, document_url, document_type, file_size, is_active, created_at, updated_at",
+    select: "id, policy_id, document_name, document_url, document_type, file_size, is_active, ai_summary, ai_model, created_at, updated_at",
     eq: { policy_id: policyId, is_active: true },
     order: { column: "created_at", ascending: false },
   });
