@@ -196,6 +196,8 @@ export interface Claim {
   assigned_adjuster?: { id: string; full_name: string; email: string } | null;
   adjuster?: { id: string; full_name: string; email: string } | null;
   inspector?: { id: string; full_name: string; email: string } | null;
+  auditor?: { id: string; full_name: string; email: string } | null;
+  dispatcher?: { id: string; full_name: string; email: string } | null;
   assistant?: { id: string; full_name: string; email: string } | null;
   broker?: { id: string; name: string } | null;
   insurance_company?: { id: string; name: string } | null;

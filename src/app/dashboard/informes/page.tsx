@@ -42,10 +42,20 @@ const STATUS_COLORS: Record<string, string> = {
   reopened: "#ef4444",
 };
 
-type ReportTab = "resumen" | "liquidadores" | "companias" | "inspecciones" | "siniestros";
+type ReportTab = "resumen" | "responsables" | "companias" | "inspecciones" | "siniestros";
+type RoleSubTab = "liquidador" | "inspector" | "auditor" | "despachador" | "asistente";
+
+const ROLE_CONFIG: Record<RoleSubTab, { field: string; label: string }> = {
+  liquidador: { field: "adjuster_id", label: "Liquidador" },
+  inspector: { field: "inspector_id", label: "Inspector" },
+  auditor: { field: "auditor_id", label: "Auditor" },
+  despachador: { field: "dispatcher_id", label: "Despachador" },
+  asistente: { field: "assistant_id", label: "Asistente" },
+};
 
 export default function InformesPage() {
   const [tab, setTab] = useState<ReportTab>("resumen");
+  const [roleSubTab, setRoleSubTab] = useState<RoleSubTab>("liquidador");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -128,19 +138,23 @@ export default function InformesPage() {
     }));
   }, [filteredClaims]);
 
-  // ── Por liquidador ──
-  const byAdjuster = useMemo(() => {
+  // ── Por responsable (rol configurable) ──
+  const byRole = useMemo(() => {
+    const cfg = ROLE_CONFIG[roleSubTab];
     const map: Record<string, { name: string; total: number; closed: number; open: number }> = {};
     filteredClaims.forEach((c) => {
-      const id = c.adjuster_id || "unassigned";
-      const name = c.adjuster?.full_name || "Sin asignar";
-      if (!map[id]) map[id] = { name, total: 0, closed: 0, open: 0 };
-      map[id].total++;
-      if (c.status?.code === "closed") map[id].closed++;
-      else if (!c.disabled) map[id].open++;
+      const row = c as unknown as Record<string, unknown>;
+      const id = row[cfg.field] as string | null;
+      const profileKey = cfg.field.replace("_id", "");
+      const profile = row[profileKey] as { full_name: string } | null | undefined;
+      const name = profile?.full_name || "Sin asignar";
+      if (!map[id || "unassigned"]) map[id || "unassigned"] = { name, total: 0, closed: 0, open: 0 };
+      map[id || "unassigned"].total++;
+      if (c.status?.code === "closed") map[id || "unassigned"].closed++;
+      else if (!c.disabled) map[id || "unassigned"].open++;
     });
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [filteredClaims]);
+  }, [filteredClaims, roleSubTab]);
 
   // ── Por compañía ──
   const byCompany = useMemo(() => {
@@ -168,13 +182,16 @@ export default function InformesPage() {
 
   // ── Export CSV ──
   const exportCSV = () => {
-    const headers = ["N° Liquidación", "N° Siniestro", "Compañía", "Liquidador", "Inspector", "Estado", "Fecha Creación", "Fecha Cierre"];
+    const headers = ["N° Liquidación", "N° Siniestro", "Compañía", "Liquidador", "Inspector", "Auditor", "Despachador", "Asistente", "Estado", "Fecha Creación", "Fecha Cierre"];
     const rows = filteredClaims.map((c) => [
       c.liquidation_number || "",
       c.claim_number || "",
       c.insurance_company?.name || "",
       c.adjuster?.full_name || "",
       c.inspector?.full_name || "",
+      c.auditor?.full_name || "",
+      c.dispatcher?.full_name || "",
+      c.assistant?.full_name || "",
       STATUS_LABELS[c.status?.code || ""] || c.status?.code || "",
       c.created_at?.slice(0, 10) || "",
       c.status?.code === "closed" ? c.updated_at?.slice(0, 10) || "" : "",
@@ -191,7 +208,7 @@ export default function InformesPage() {
 
   const tabs: { id: ReportTab; label: string; icon: typeof BarChart3 }[] = [
     { id: "resumen", label: "Resumen", icon: BarChart3 },
-    { id: "liquidadores", label: "Por Liquidador", icon: Users },
+    { id: "responsables", label: "Por Responsable", icon: Users },
     { id: "companias", label: "Por Compañía", icon: Building2 },
     { id: "inspecciones", label: "Inspecciones", icon: ClipboardCheck },
     { id: "siniestros", label: "Detalle Siniestros", icon: FileText },
@@ -312,14 +329,30 @@ export default function InformesPage() {
           </div>
         )}
 
-        {tab === "liquidadores" && (
+        {tab === "responsables" && (
           <div className="p-4">
-            <h3 className="text-[13px] font-semibold mb-3">Productividad por Liquidador</h3>
+            {/* Sub-tabs de rol */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {(Object.keys(ROLE_CONFIG) as RoleSubTab[]).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRoleSubTab(r)}
+                  className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                    roleSubTab === r
+                      ? "bg-primary/15 text-primary border border-primary/30"
+                      : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent"
+                  }`}
+                >
+                  {ROLE_CONFIG[r].label}
+                </button>
+              ))}
+            </div>
+            <h3 className="text-[13px] font-semibold mb-3">Productividad por {ROLE_CONFIG[roleSubTab].label}</h3>
             <div className="app-data-table-wrap">
               <table className="app-data-table">
                 <thead>
                   <tr>
-                    <th className="text-left">Liquidador</th>
+                    <th className="text-left">{ROLE_CONFIG[roleSubTab].label}</th>
                     <th className="text-right">Total</th>
                     <th className="text-right">Abiertos</th>
                     <th className="text-right">Cerrados</th>
@@ -327,7 +360,7 @@ export default function InformesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {byAdjuster.map((a) => (
+                  {byRole.map((a) => (
                     <tr key={a.name}>
                       <td className="font-medium">{a.name}</td>
                       <td className="text-right">{a.total}</td>
@@ -338,7 +371,7 @@ export default function InformesPage() {
                       </td>
                     </tr>
                   ))}
-                  {byAdjuster.length === 0 && (
+                  {byRole.length === 0 && (
                     <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Sin datos</td></tr>
                   )}
                 </tbody>
