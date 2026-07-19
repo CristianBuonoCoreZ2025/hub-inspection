@@ -194,6 +194,7 @@ export async function DELETE(
                 deleted_by_name: performerName,
                 deleted_at: new Date().toISOString(),
               },
+              supabase,
             });
           }
           logger.info("RTA reversada por eliminación de documento", {

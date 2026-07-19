@@ -264,6 +264,7 @@ export async function POST(request: NextRequest) {
                 triggered_by_user_name: performerName,
                 triggered_at: nowIso,
               },
+              supabase,
             });
 
             logger.info("RTA autoemitida por recepción completa de documentos", {

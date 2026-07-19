@@ -1,4 +1,5 @@
 import { fetchAll, insertRow } from "@/lib/supabase/db";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface ClaimActionHistoryEntry {
   id: string;
@@ -24,7 +25,8 @@ const HISTORY_FIELDS =
 
 /**
  * Registra un evento en el historial de una gestión.
- * Función interna — no exportar.
+ * Si se pasa `supabase` (admin client), lo usa directamente (para API routes
+ * donde no hay sesión del navegador y RLS bloquea el anon client).
  */
 export async function logActionHistory(input: {
   claim_action_id: string;
@@ -40,9 +42,10 @@ export async function logActionHistory(input: {
   new_responsible?: string | null;
   new_responsible_name?: string | null;
   metadata?: Record<string, unknown> | null;
+  supabase?: SupabaseClient;
 }): Promise<void> {
   try {
-    await insertRow("claim_action_history", {
+    const row = {
       claim_action_id: input.claim_action_id,
       event_type: input.event_type,
       from_status_code: input.from_status_code || null,
@@ -56,7 +59,16 @@ export async function logActionHistory(input: {
       new_responsible: input.new_responsible || null,
       new_responsible_name: input.new_responsible_name || null,
       metadata: input.metadata || null,
-    });
+    };
+
+    if (input.supabase) {
+      // Usar el client pasado (admin client en API routes)
+      const { error } = await input.supabase.from("claim_action_history").insert(row);
+      if (error) throw new Error(error.message);
+    } else {
+      // Usar el client por defecto (anon, con sesión del navegador)
+      await insertRow("claim_action_history", row);
+    }
   } catch (err) {
     // No lanzar error — el historial es best-effort, no debe bloquear la operación principal
     console.error("Error logging action history:", err);
