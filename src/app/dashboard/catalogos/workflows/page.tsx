@@ -501,7 +501,7 @@ export default function WorkflowsPage() {
  <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${statusBadge.cls}`}>
  {statusBadge.label}
  </span>
- {/* Botones de status */}
+ {/* Botones de status — cuando esta online no se ofrece nada, es intocable */}
  {isDraft && canEdit("catalogos") && (
  <button
  className="text-emerald-400/70 hover:text-emerald-400 transition-colors"
@@ -509,15 +509,6 @@ export default function WorkflowsPage() {
  onClick={(e) => { e.stopPropagation(); statusMut.mutate({ id: config.id, status: "online" }); }}
  >
  <Shield className="h-3 w-3" />
- </button>
- )}
- {isOnline && canEdit("catalogos") && (
- <button
- className="text-amber-400/70 hover:text-amber-400 transition-colors"
- title="Suspender"
- onClick={(e) => { e.stopPropagation(); statusMut.mutate({ id: config.id, status: "suspended" }); }}
- >
- <Ban className="h-3 w-3" />
  </button>
  )}
  {isSuspended && canEdit("catalogos") && (
