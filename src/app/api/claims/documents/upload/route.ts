@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
 import { uploadClaimDocument } from "@/lib/storage/claim-upload";
+import { issueClaimAction } from "@/services/claim-actions";
 import { logger } from "@/lib/logger";
 
 /**
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
           });
 
           // Verificar si todos los items del request están recibidos/no_necesarios
-          // → cerrar el request automáticamente
+          // → cerrar el request + autoemitir RTA
           for (const reqId of requestIds) {
             const { data: allItems } = await supabase
               .from("claim_document_request_items")
@@ -156,6 +157,59 @@ export async function POST(request: NextRequest) {
                   action: "auto_close.request",
                   metadata: { request_id: reqId },
                 });
+
+                // Autoemitir RTA si está pendiente (status = "todo")
+                const rtaTemplateIds = (
+                  await supabase
+                    .from("action_template")
+                    .select("id")
+                    .eq("code", "RTA")
+                ).data?.map((t: { id: string }) => t.id) || [];
+
+                if (rtaTemplateIds.length > 0) {
+                  const { data: rtaActions } = await supabase
+                    .from("claim_actions")
+                    .select("id, action_status_id")
+                    .eq("claim_id", claimId)
+                    .in("action_template_id", rtaTemplateIds);
+
+                  if (rtaActions && rtaActions.length > 0) {
+                    // Obtener status_id de "todo"
+                    const { data: todoStatus } = await supabase
+                      .from("lookup_catalog")
+                      .select("id")
+                      .eq("category", "action_status")
+                      .eq("code", "todo")
+                      .maybeSingle();
+
+                    if (todoStatus) {
+                      const pendingRta = rtaActions.find(
+                        (a: { id: string; action_status_id: string }) =>
+                          a.action_status_id === todoStatus.id
+                      );
+
+                      if (pendingRta) {
+                        try {
+                          await issueClaimAction(pendingRta.id, userId || undefined);
+                          logger.info("RTA autoemitida por recepción completa de documentos", {
+                            component: "claim-doc-upload",
+                            action: "auto_issue.rta",
+                            metadata: {
+                              claim_id: claimId,
+                              rta_action_id: pendingRta.id,
+                              issued_by: userId,
+                            },
+                          });
+                        } catch (issueErr) {
+                          logger.error("Error autoemitiendo RTA", issueErr as Error, {
+                            component: "claim-doc-upload",
+                            action: "auto_issue.rta.error",
+                          });
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
