@@ -20,6 +20,8 @@ import {
 import { getClaims } from "@/services/claims";
 import { getInspectionSessions } from "@/services/inspections";
 import { useRealtime } from "@/hooks/use-realtime";
+import { usePagination } from "@/hooks/use-pagination";
+import { Pagination } from "@/components/ui/pagination";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -180,6 +182,11 @@ export default function InformesPage() {
     return { total, completed, active, scheduled, cancelled };
   }, [filteredInspections]);
 
+  // ── Paginación de grillas (max 20 por página) ──
+  const rolePagination = usePagination(byRole, 20);
+  const companyPagination = usePagination(byCompany, 20);
+  const claimsPagination = usePagination(filteredClaims, 20);
+
   // ── Export CSV ──
   const exportCSV = () => {
     const headers = ["N° Liquidación", "N° Siniestro", "Compañía", "Liquidador", "Inspector", "Auditor", "Despachador", "Asistente", "Estado", "Fecha Creación", "Fecha Cierre"];
@@ -331,13 +338,13 @@ export default function InformesPage() {
 
         {tab === "responsables" && (
           <div className="p-4">
-            {/* Sub-tabs de rol */}
-            <div className="flex flex-wrap gap-1.5 mb-4">
+            {/* Sub-tabs de rol — todos del mismo ancho */}
+            <div className="flex gap-1.5 mb-4">
               {(Object.keys(ROLE_CONFIG) as RoleSubTab[]).map((r) => (
                 <button
                   key={r}
-                  onClick={() => setRoleSubTab(r)}
-                  className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                  onClick={() => { setRoleSubTab(r); rolePagination.setPage(1); }}
+                  className={`flex-1 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors text-center ${
                     roleSubTab === r
                       ? "bg-primary/15 text-primary border border-primary/30"
                       : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent"
@@ -360,7 +367,7 @@ export default function InformesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {byRole.map((a) => (
+                  {rolePagination.paginatedData.map((a) => (
                     <tr key={a.name}>
                       <td className="font-medium">{a.name}</td>
                       <td className="text-right">{a.total}</td>
@@ -376,6 +383,14 @@ export default function InformesPage() {
                   )}
                 </tbody>
               </table>
+              <Pagination
+                page={rolePagination.page}
+                totalPages={rolePagination.totalPages}
+                total={rolePagination.total}
+                pageSize={rolePagination.pageSize}
+                onPageChange={rolePagination.setPage}
+                onPageSizeChange={rolePagination.setPageSize}
+              />
             </div>
           </div>
         )}
@@ -395,7 +410,7 @@ export default function InformesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {byCompany.map((c) => (
+                  {companyPagination.paginatedData.map((c) => (
                     <tr key={c.name}>
                       <td className="font-medium">{c.name}</td>
                       <td className="text-right">{c.total}</td>
@@ -411,6 +426,14 @@ export default function InformesPage() {
                   )}
                 </tbody>
               </table>
+              <Pagination
+                page={companyPagination.page}
+                totalPages={companyPagination.totalPages}
+                total={companyPagination.total}
+                pageSize={companyPagination.pageSize}
+                onPageChange={companyPagination.setPage}
+                onPageSizeChange={companyPagination.setPageSize}
+              />
             </div>
           </div>
         )}
@@ -447,7 +470,7 @@ export default function InformesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredClaims.slice(0, 100).map((c) => (
+                  {claimsPagination.paginatedData.map((c) => (
                     <tr key={c.id}>
                       <td className="font-mono text-[11px]">{c.liquidation_number || "—"}</td>
                       <td className="font-mono text-[11px]">{c.claim_number || "—"}</td>
@@ -469,16 +492,19 @@ export default function InformesPage() {
                     </tr>
                   ))}
                   {filteredClaims.length === 0 && (
-                    <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Sin datos</td></tr>
+                    <tr><td colSpan={7} className="text-center text-muted-foreground py-4">Sin datos</td></tr>
                   )}
                 </tbody>
               </table>
+              <Pagination
+                page={claimsPagination.page}
+                totalPages={claimsPagination.totalPages}
+                total={claimsPagination.total}
+                pageSize={claimsPagination.pageSize}
+                onPageChange={claimsPagination.setPage}
+                onPageSizeChange={claimsPagination.setPageSize}
+              />
             </div>
-            {filteredClaims.length > 100 && (
-              <p className="mt-2 text-[11px] text-muted-foreground text-center">
-                Mostrando 100 de {filteredClaims.length} registros. Usa &quot;Exportar CSV&quot; para ver todos.
-              </p>
-            )}
           </div>
         )}
       </div>
