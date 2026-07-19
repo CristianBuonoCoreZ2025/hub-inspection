@@ -47,6 +47,7 @@ import { getClaimTypeIcon } from "@/lib/claim-type-icons";
 import { useRecentClaims } from "@/hooks/use-recent-claims";
 import { useDockMagnification } from "@/hooks/use-dock-magnification";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { HelpButton } from "@/components/layout/help-panel";
 
 function getInitials(email?: string | null) {
   if (!email) return "U";
@@ -347,6 +348,7 @@ export function TopBar() {
           <RecentClaimsButton />
           <ThemeToggleCompact />
           <SkinToggleCompact />
+          <HelpButton />
           <button
             type="button"
             onClick={() => signOut()}
