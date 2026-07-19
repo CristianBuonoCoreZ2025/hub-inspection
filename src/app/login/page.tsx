@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
+import { ShieldCheck, ArrowRight } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { loginSchema, LoginInput } from "@/lib/validations";
 import { logger } from "@/lib/logger";
@@ -44,7 +45,6 @@ export default function LoginPage() {
       });
 
       if (error) {
-        // Supabase Auth errors sometimes have empty .message — extract from the object
         const errMsg =
           error.message ||
           (error as { msg?: string })?.msg ||
@@ -83,16 +83,21 @@ export default function LoginPage() {
   return (
     <div className="auth-shell premium-bg-base">
       <div className="auth-card">
+        {/* Brand */}
         <div className="text-center">
+          <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <ShieldCheck className="size-5" />
+          </div>
           <p className="auth-brand">Claims Hub</p>
           <h1 className="auth-title">Iniciar Sesión</h1>
           <p className="auth-subtitle">
             Ingresa tus credenciales para acceder a tu cuenta
           </p>
         </div>
+
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Correo electrónico</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="app-field-label">Correo electrónico</Label>
             <Input
               id="email"
               type="email"
@@ -101,11 +106,12 @@ export default function LoginPage() {
               aria-invalid={errors.email ? "true" : "false"}
             />
             {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
+              <p className="text-[11px] text-destructive">{errors.email.message}</p>
             )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="app-field-label">Contraseña</Label>
             <Input
               id="password"
               type="password"
@@ -114,37 +120,48 @@ export default function LoginPage() {
               aria-invalid={errors.password ? "true" : "false"}
             />
             {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
+              <p className="text-[11px] text-destructive">{errors.password.message}</p>
             )}
           </div>
+
           <div className="flex items-center">
             <ToggleChip
-              active={
-                // eslint-disable-next-line react-hooks/incompatible-library -- react-hook-form watch() is incompatible with React Compiler memoization
-                Boolean(watch("remember"))
-              }
+              // eslint-disable-next-line react-hooks/incompatible-library -- React Compiler + react-hook-form watch() es una excepción permitida
+              active={Boolean(watch("remember"))}
               onClick={(v) => setValue("remember", v)}
             >
               Recordar sesión
             </ToggleChip>
           </div>
-          <div className="flex flex-col gap-4 pt-2">
+
+          <div className="flex flex-col gap-3 pt-1">
             <Button type="submit" className="w-full pg-btn-platinum" disabled={isLoading}>
               {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              {!isLoading && <ArrowRight className="ml-1.5 size-3.5" />}
             </Button>
-            <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex flex-col items-center gap-2 text-[12px] text-muted-foreground">
               <Link
                 href="/forgot-password"
                 className="hover:text-foreground underline-offset-4 hover:underline transition-colors"
               >
                 ¿Olvidaste tu contraseña?
               </Link>
-              <span className="text-muted-foreground">
+              <span className="text-[11px]">
                 Acceso solo por invitación. Contacta a tu administrador.
               </span>
             </div>
           </div>
         </form>
+
+        {/* Back to landing */}
+        <div className="mt-6 border-t border-border pt-4 text-center">
+          <Link
+            href="/"
+            className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Volver al inicio
+          </Link>
+        </div>
       </div>
     </div>
   );

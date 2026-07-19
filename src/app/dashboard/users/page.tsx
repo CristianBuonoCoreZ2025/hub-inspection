@@ -7,7 +7,7 @@ import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getUsers, inviteUser, updateUser, deactivateUser, addSecondaryRole, removeSecondaryRole } from "@/services/users";
+import { getUsers, updateUser, deactivateUser, addSecondaryRole, removeSecondaryRole } from "@/services/users";
 import { getCompanies } from "@/services/companies";
 import { getCountries } from "@/services/countries";
 import { setUserClients } from "@/services/user-clients";
@@ -123,7 +123,13 @@ export default function UsersPage() {
 
  const inviteMutation = useMutation({
  mutationFn: async (input: InviteUserInput & { company_id: string }) => {
- const result = await inviteUser(input);
+ const res = await fetch("/api/users/invite", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify(input),
+ });
+ const result = await res.json();
+ if (!res.ok) throw new Error(result.error || "Error al invitar usuario");
  // After invite, set user_clients if clientIds provided
  if (input.clientIds && input.clientIds.length > 0 && result.user?.id) {
  await setUserClients(result.user.id, input.clientIds);
