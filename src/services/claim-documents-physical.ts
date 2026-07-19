@@ -1,4 +1,4 @@
-import { fetchAll, insertRow, updateRow } from "@/lib/supabase/db";
+import { fetchAll, insertRow } from "@/lib/supabase/db";
 
 // ═══════════════════════════════════════════════════════════════
 // Documentos físicos del siniestro (claim_documents)
@@ -7,17 +7,21 @@ import { fetchAll, insertRow, updateRow } from "@/lib/supabase/db";
 export interface ClaimDocument {
   id: string;
   claim_id: string;
+  doc_code: string | null;
   document_name: string;
   document_url: string | null;
   document_type: string | null;
+  original_filename: string | null;
+  mime_type: string | null;
   file_size: number | null;
+  file_path: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 const DOCUMENT_FIELDS =
-  "id, claim_id, document_name, document_url, document_type, file_size, is_active, created_at, updated_at";
+  "id, claim_id, doc_code, document_name, document_url, document_type, original_filename, mime_type, file_size, file_path, is_active, created_at, updated_at";
 
 export async function getClaimDocuments(claimId: string): Promise<ClaimDocument[]> {
   return fetchAll<ClaimDocument>("claim_documents", {
@@ -48,6 +52,10 @@ export async function createClaimDocument(input: {
   );
 }
 
-export async function deactivateClaimDocument(id: string): Promise<void> {
-  await updateRow("claim_documents", id, { is_active: false });
+export async function deleteClaimDocument(id: string): Promise<void> {
+  const res = await fetch(`/api/claims/documents/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Error al eliminar documento");
+  }
 }

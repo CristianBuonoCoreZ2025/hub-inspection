@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getClaimDocuments,
-  deactivateClaimDocument,
+  deleteClaimDocument,
 } from "@/services/claim-documents-physical";
 import { getDocumentRequirements } from "@/services/claim-documents";
 import {
@@ -22,7 +22,7 @@ import {
   FileText,
   ExternalLink,
   Upload,
-  Ban,
+  Trash2,
   Layers,
   Shield,
   Globe,
@@ -204,7 +204,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
   });
 
   const deleteMut = useMutation({
-    mutationFn: deactivateClaimDocument,
+    mutationFn: deleteClaimDocument,
     onSuccess: () => {
       toast.success("Documento desactivado");
       queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
@@ -353,10 +353,10 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             size="icon"
                             className="btn-icon-sm btn-danger-hover"
                             onClick={() => {
-                              if (confirm("¿Desactivar este documento?")) deleteMut.mutate(doc.id);
+                              if (confirm("¿Eliminar este documento? Se borrará el archivo físico. Si la Recepción Total de Antecedentes estaba emitida, se reversará.")) deleteMut.mutate(doc.id);
                             }}
                           >
-                            <Ban className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         )}
                       </div>
