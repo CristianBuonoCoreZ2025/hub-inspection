@@ -698,7 +698,7 @@ export default function WorkflowsPage() {
  />
  </div>
 
- {canDelete("catalogos") && (
+ {canDelete("catalogos") && selectedConfig?.status !== "online" && (
  <button
  className="mt-6 w-full flex items-center justify-center gap-2 rounded-lg
  px-3 h-8 text-[12px] font-medium
@@ -1236,6 +1236,7 @@ function SortableNode({
  } = useSortable({
  id: step.id,
  data: { source: "node", stepId: step.id },
+ disabled: !canEdit,
  });
 
  const style = {
@@ -1258,8 +1259,9 @@ function SortableNode({
  className={`relative flex items-center gap-1.5 rounded-lg px-2 py-1
  bg-linear-to-br ${lc.bg} backdrop-blur-sm
  border ${lc.border}
- cursor-grab active:cursor-grabbing transition-all duration-150 active:scale-95
- ${isSelected ? "ring-1 ring-offset-0 ring-violet-500/40 " : "hover:scale-[1.02]"}
+ ${canEdit ? "cursor-grab active:cursor-grabbing active:scale-95" : "cursor-default"}
+ transition-all duration-150
+ ${isSelected ? "ring-1 ring-offset-0 ring-violet-500/40 " : canEdit ? "hover:scale-[1.02]" : ""}
  ${isDropTarget ? "ring-2 ring-violet-500/60 scale-105 " : ""}`}
  onClick={onSelect}
  >
