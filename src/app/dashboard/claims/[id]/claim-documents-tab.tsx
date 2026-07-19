@@ -270,15 +270,21 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
             }
           } else {
             let msg = "Error al subir archivo";
+            console.error("[upload] xhr error:", {
+              status: xhr.status,
+              statusText: xhr.statusText,
+              responseText: xhr.responseText?.substring(0, 500),
+            });
             try {
               const body = JSON.parse(xhr.responseText);
               if (body.error) msg = body.error;
+              else msg = `Error ${xhr.status}: ${JSON.stringify(body).substring(0, 200)}`;
             } catch {
               // Si no es JSON, podría ser una página HTML de error de Vercel
               if (xhr.responseText) {
                 msg = `Error ${xhr.status}: ${xhr.responseText.substring(0, 200)}`;
               } else {
-                msg = `Error ${xhr.status}`;
+                msg = `Error ${xhr.status}: ${xhr.statusText}`;
               }
             }
             setUploadProgress((p) => ({ ...p, status: "error", errorMsg: msg }));
