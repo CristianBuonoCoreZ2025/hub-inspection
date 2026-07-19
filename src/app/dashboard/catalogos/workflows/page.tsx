@@ -1022,12 +1022,14 @@ function StepsCanvas({
 
  if (steps.length === 0) {
  return (
+ <DroppableCanvas isPaletteDrag={isPaletteDrag} businessLineName={businessLineName}>
  <div className="relative overflow-hidden rounded-xl border border-dashed border-white/10 dark:border-white/5
  bg-white/2 backdrop-blur-sm p-6 text-center">
  <div className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-violet-500/5 blur-2xl" />
  <Workflow className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
  <p className="text-[11px] text-muted-foreground italic">Sin gestiones — arrastra desde la paleta</p>
  </div>
+ </DroppableCanvas>
  );
  }
 
