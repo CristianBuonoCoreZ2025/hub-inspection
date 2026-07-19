@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { uploadInspectionFile } from "@/lib/storage/inspection-upload";
 import { extractGpsFromExif } from "@/lib/storage/exif";
 import { summarizePdf } from "@/lib/storage/pdf-summary";
+import { summarizeFile } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logger";
 
 /**
@@ -94,6 +95,29 @@ export async function POST(request: NextRequest) {
         metadata.pdfSummary = pdfSummary.summary;
         metadata.pdfPageCount = pdfSummary.pageCount;
       }
+    }
+
+    // ── IA: resumen/descripción automático (free → paid) ──
+    // Para imágenes: descripción breve del contenido
+    // Para PDFs: resumen de las primeras 5 páginas
+    try {
+      const ai = await summarizeFile(buffer, mimeType);
+      if (ai) {
+        metadata.aiSummary = ai.summary;
+        metadata.aiModel = ai.model;
+        if (ai.pageCount !== undefined) metadata.aiPageCount = ai.pageCount;
+        logger.info("IA: resumen de evidencia generado", {
+          component: "inspection-evidences-upload",
+          action: "ai.summary",
+          metadata: { model: ai.model, type: fileType, summaryLength: ai.summary.length },
+        });
+      }
+    } catch (aiErr) {
+      logger.warn("IA: no se pudo generar resumen de evidencia", {
+        component: "inspection-evidences-upload",
+        action: "ai.summary.error",
+        metadata: { error: aiErr instanceof Error ? aiErr.message : String(aiErr) },
+      });
     }
     // Geo del navegador → columnas lat/lng
     const deviceLat = lat && typeof lat === "string" ? parseFloat(lat) : null;

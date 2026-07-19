@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
 import { uploadClaimDocument } from "@/lib/storage/claim-upload";
 import { logActionHistory } from "@/services/claim-action-history";
+import { summarizeFile } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logger";
 
 /**
@@ -78,6 +79,28 @@ export async function POST(request: NextRequest) {
     // Subir a R2 con path estructurado del plan
     const { url, key, docCode } = await uploadClaimDocument(claimId, buffer, mimeType, ext || ".bin");
 
+    // ── IA: resumen automático del archivo (free → paid) ──
+    let aiSummary: string | null = null;
+    let aiModel: string | null = null;
+    try {
+      const ai = await summarizeFile(buffer, mimeType);
+      if (ai) {
+        aiSummary = ai.summary;
+        aiModel = ai.model;
+        logger.info("IA: resumen generado", {
+          component: "claim-doc-upload",
+          action: "ai.summary",
+          metadata: { model: ai.model, summaryLength: ai.summary.length },
+        });
+      }
+    } catch (aiErr) {
+      logger.warn("IA: no se pudo generar resumen", {
+        component: "claim-doc-upload",
+        action: "ai.summary.error",
+        metadata: { error: aiErr instanceof Error ? aiErr.message : String(aiErr) },
+      });
+    }
+
     // Insertar en claim_documents — llenar columnas NOT NULL del schema original
     const supabase = createAdminClient();
     const { data: document, error } = await supabase
@@ -96,6 +119,8 @@ export async function POST(request: NextRequest) {
         is_active: true,
         uploaded_by: userId,
         created_by: userId,
+        ai_summary: aiSummary,
+        ai_model: aiModel,
       })
       .select("id, claim_id, doc_code, document_name, document_url, document_type, original_filename, mime_type, file_size, file_path, is_active, created_at, updated_at")
       .single();

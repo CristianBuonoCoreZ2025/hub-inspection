@@ -6,7 +6,7 @@ import { deleteEvidence } from "@/services/inspections";
 import { toast } from "sonner";
 import {
   Upload, Trash2, ImageIcon, Video, FileText, ExternalLink,
-  MapPin, Clock, User, Camera, Lock, X, ZoomIn,
+  MapPin, Clock, User, Camera, Lock, X, ZoomIn, Sparkles,
 } from "lucide-react";
 
 // ─── Tipos ───────────────────────────────────────────────────────
@@ -22,6 +22,10 @@ interface EvidenceMetadata {
   fileSize?: number;
   mimeType?: string;
   userAgent?: string | null;
+  aiSummary?: string;
+  aiModel?: string;
+  pdfSummary?: string;
+  pdfPageCount?: number;
 }
 
 interface Evidence {
@@ -556,6 +560,14 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick }: {
             )}
           </div>
         </div>
+
+        {/* Resumen IA */}
+        {meta?.aiSummary && (
+          <div className="flex items-start gap-1 text-[9px] text-violet-600 dark:text-violet-400 pt-1">
+            <Sparkles className="h-2.5 w-2.5 shrink-0 mt-0.5" />
+            <span className="italic line-clamp-2">{meta.aiSummary}</span>
+          </div>
+        )}
       </div>
     </div>
   );

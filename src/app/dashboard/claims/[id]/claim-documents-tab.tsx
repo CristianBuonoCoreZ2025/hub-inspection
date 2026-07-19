@@ -29,6 +29,7 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -476,6 +477,12 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                       {doc.original_filename && (
                         <div className="text-[10px] text-muted-foreground/70 truncate max-w-[220px]">
                           {doc.original_filename}
+                        </div>
+                      )}
+                      {doc.ai_summary && (
+                        <div className="mt-1 flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400 max-w-[280px]">
+                          <Sparkles className="h-3 w-3 shrink-0 mt-0.5" />
+                          <span className="italic">{doc.ai_summary}</span>
                         </div>
                       )}
                     </td>

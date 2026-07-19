@@ -16,12 +16,14 @@ export interface ClaimDocument {
   file_size: number | null;
   file_path: string | null;
   is_active: boolean;
+  ai_summary: string | null;
+  ai_model: string | null;
   created_at: string;
   updated_at: string;
 }
 
 const DOCUMENT_FIELDS =
-  "id, claim_id, doc_code, document_name, document_url, document_type, original_filename, mime_type, file_size, file_path, is_active, created_at, updated_at";
+  "id, claim_id, doc_code, document_name, document_url, document_type, original_filename, mime_type, file_size, file_path, is_active, ai_summary, ai_model, created_at, updated_at";
 
 export async function getClaimDocuments(claimId: string): Promise<ClaimDocument[]> {
   return fetchAll<ClaimDocument>("claim_documents", {
