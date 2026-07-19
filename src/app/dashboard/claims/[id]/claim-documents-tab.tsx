@@ -733,53 +733,64 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
           </div>
 
           <div className="modal-body space-y-3">
-            {/* Nombre del archivo */}
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <FileText className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{uploadProgress.fileName}</span>
+            {/* Info del archivo: icono + nombre + tamaño total */}
+            <div className="flex items-center gap-2.5 rounded-md bg-muted/40 p-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[11px] font-medium text-foreground">{uploadProgress.fileName}</div>
+                <div className="text-[10px] text-muted-foreground">{formatFileSize(uploadProgress.fileSize)}</div>
+              </div>
             </div>
 
-            {/* Subiendo: barra de progreso */}
+            {/* Subiendo: barra de progreso con detalle completo */}
             {uploadProgress.status === "uploading" && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground">Subiendo...</span>
-                  <span className="font-medium text-foreground">
+              <div className="space-y-2">
+                {/* % grande + velocidad */}
+                <div className="flex items-end justify-between">
+                  <span className="text-[11px] text-muted-foreground">Subiendo...</span>
+                  <span className="text-lg font-bold tabular-nums text-primary leading-none">
                     {Math.round((uploadProgress.loaded / uploadProgress.fileSize) * 100)}%
                   </span>
                 </div>
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                {/* Barra */}
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full bg-primary transition-all duration-200 ease-out rounded-full"
                     style={{ width: `${(uploadProgress.loaded / uploadProgress.fileSize) * 100}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>{formatFileSize(uploadProgress.loaded)}</span>
-                  <span>{formatFileSize(uploadProgress.fileSize)}</span>
+                {/* Bytes subidos / total */}
+                <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
+                  <span>{formatFileSize(uploadProgress.loaded)} transferido</span>
+                  <span>{formatFileSize(uploadProgress.fileSize - uploadProgress.loaded)} restante</span>
                 </div>
               </div>
             )}
 
-            {/* Procesando: spinner */}
+            {/* Procesando: spinner con detalle */}
             {uploadProgress.status === "processing" && (
               <div className="flex items-center gap-2 py-1">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                <span className="text-[11px] text-muted-foreground">Procesando...</span>
+                <span className="text-[11px] text-muted-foreground">Vinculando documento y verificando RTA...</span>
               </div>
             )}
 
-            {/* Done: check */}
+            {/* Done: check + resumen */}
             {uploadProgress.status === "done" && (
-              <div className="flex items-center gap-2 py-1">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <span className="text-[11px] font-medium text-emerald-600">
-                  Documento subido correctamente
-                </span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 py-1">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span className="text-[11px] font-medium text-emerald-600">Documento subido correctamente</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground pl-6">
+                  {formatFileSize(uploadProgress.fileSize)} · {uploadProgress.fileName}
+                </div>
               </div>
             )}
 
-            {/* Error: X */}
+            {/* Error: X + mensaje */}
             {uploadProgress.status === "error" && (
               <div className="flex items-center gap-2 py-1">
                 <XCircle className="h-4 w-4 text-rose-500" />
