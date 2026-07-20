@@ -747,7 +747,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 <div className="space-y-1.5">
                   <label className="app-field-label">Tipo de documento</label>
                   <Select
-                    value={selectedDocType || undefined}
+                    value={selectedDocType}
                     onValueChange={(v) => setSelectedDocType(v ?? "")}
                   >
                     <SelectTrigger className="app-input h-7">
