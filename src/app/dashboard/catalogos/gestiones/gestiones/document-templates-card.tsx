@@ -5,8 +5,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
  FileText, Upload, Trash2, Loader2, FileUp, Check,
- ChevronDown, ChevronRight, Tag, Download, Power,
+ ChevronDown, ChevronRight, Tag, Download,
 } from "lucide-react";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 
 import {
  getDocumentTemplates,
@@ -234,14 +235,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  )}
  <FileText className="h-4 w-4 text-[#0095DA] shrink-0" />
  <span className="flex flex-col leading-tight min-w-0">
- <span className="text-[12px] font-medium truncate flex items-center gap-1.5">
- {tpl.file_name}
- {!tpl.is_active && (
- <span className="inline-flex items-center rounded-full bg-muted-foreground/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
- Inactiva
- </span>
- )}
- </span>
+ <span className="text-[12px] font-medium truncate">{tpl.file_name}</span>
  {tpl.original_filename && tpl.original_filename !== tpl.file_name && (
  <span className="text-[10px] text-muted-foreground/70 truncate">{tpl.original_filename.replace(/\.docx$/i, "")}</span>
  )}
@@ -304,22 +298,14 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  )}
  {/* Toggle activo/inactivo — define si la plantilla se usa al generar documentos.
      Las plantillas inactivas NO se pierden: siguen visibles aquí, solo no se usan. */}
- <button
- type="button"
- onClick={(e) => {
- e.stopPropagation();
- updateMut.mutate({ id: tpl.id, data: { is_active: !tpl.is_active } });
- }}
- title={tpl.is_active ? "Activa — click para desactivar (no se usará al generar documentos, pero no se pierde)" : "Inactiva — click para activar"}
- className={`btn-icon-sm shrink-0 ${
- tpl.is_active
- ? "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
- : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted"
- }`}
- aria-label={tpl.is_active ? "Desactivar plantilla" : "Activar plantilla"}
+ <ToggleChip
+ active={tpl.is_active}
+ onClick={(v) => updateMut.mutate({ id: tpl.id, data: { is_active: v } })}
+ icon={<Check className="h-3 w-3" />}
+ className="shrink-0"
  >
- <Power className="h-3.5 w-3.5" />
- </button>
+ {tpl.is_active ? "Activa" : "Inactiva"}
+ </ToggleChip>
  <button
  type="button"
  onClick={() => {
