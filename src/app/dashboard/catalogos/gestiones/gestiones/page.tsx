@@ -618,10 +618,7 @@ export default function GestionesPage() {
  {(() => {
  const feat = features?.find(f => f.id === form.action_features_id);
  if (!feat) return null;
- const tipo = !feat.has_specific_screen && !feat.has_template ? "Genérica"
- : feat.has_specific_screen && !feat.has_template ? "Pantalla"
- : feat.has_specific_screen && feat.has_template ? "Pantalla + Templates"
- : "Templates";
+ const tipo = feat.has_template ? "Pantalla + Documentos" : "Pantalla";
  return (
  <div className="flex flex-wrap items-center gap-1 mt-1">
  <span className="app-badge app-badge-active">{tipo}</span>
@@ -848,14 +845,7 @@ export default function GestionesPage() {
  <AlertTriangle className="h-5 w-5 text-amber-500" />
  <span>Esta característica no soporta plantillas de documento.</span>
  <span className="text-[10px]">
- La característica seleccionada es de tipo &laquo;{(() => {
- const f = features?.find(x => x.id === form.action_features_id);
- if (!f) return "—";
- return !f.has_specific_screen && !f.has_template ? "Genérica"
- : f.has_specific_screen && !f.has_template ? "Pantalla"
- : f.has_specific_screen && f.has_template ? "Pantalla + Templates"
- : "Templates";
- })()}&raquo; sin templates.
+ Activá &laquo;Con plantillas de documento&raquo; en la característica para habilitar esta sección.
  </span>
  </div>
  </section>

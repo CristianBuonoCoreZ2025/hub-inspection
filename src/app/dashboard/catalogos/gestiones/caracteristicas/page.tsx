@@ -12,10 +12,11 @@ import {
 import { getGestionScreens } from "@/services/gestion-screens";
 import type { GestionScreen } from "@/types";
 import { toast } from "sonner";
-import { Pencil, Ban, Boxes, Layers, LayoutTemplate } from "lucide-react";
+import { Pencil, Ban, Boxes, Layers, LayoutTemplate, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTableSort } from "@/hooks/use-table-sort";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,8 +54,6 @@ export default function CaracteristicasPage() {
  code: (f: ActionFeature) => f.code || "",
  name: (f: ActionFeature) => f.name,
  max_review_levels: (f: ActionFeature) => f.max_review_levels,
- has_specific_screen: (f: ActionFeature) => f.has_specific_screen,
- has_template: (f: ActionFeature) => f.has_template,
  }, "name");
 
  // Gestiones existentes — para saber si una característica tiene gestiones asociadas
@@ -98,19 +97,15 @@ export default function CaracteristicasPage() {
  else { createMut.mutate(formData); }
  };
 
- // Tipo de gestión derivado
- const getTipo = (f: { has_specific_screen: boolean; has_template: boolean; max_review_levels: number }) => {
- if (!f.has_specific_screen && !f.has_template && f.max_review_levels === 0) return "Genérica";
- if (f.has_specific_screen && !f.has_template) return "Pantalla";
- if (f.has_specific_screen && f.has_template) return "Pantalla + Templates";
- return "Templates";
+ // Tipo de gestión derivado — ahora siempre es una pantalla, el tipo indica
+ // si además genera documentos
+ const getTipo = (f: { has_template: boolean }) => {
+ return f.has_template ? "Pantalla + Documentos" : "Pantalla";
  };
 
  const tipoColor: Record<string, string> = {
- "Genérica": "bg-zinc-100 text-zinc-600 dark:bg-zinc-900/40 dark:text-zinc-400",
  "Pantalla": "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
- "Pantalla + Templates": "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
- "Templates": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+ "Pantalla + Documentos": "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
  };
 
  return (
@@ -136,17 +131,15 @@ export default function CaracteristicasPage() {
  <SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Código</SortableTh>
  <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
  <th>Tipo</th>
- <SortableTh sortKey="has_specific_screen" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Pantalla</SortableTh>
- <SortableTh sortKey="has_template" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Template</SortableTh>
  <th>Pantalla Asociada</th>
  <SortableTh sortKey="max_review_levels" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Max. niveles</SortableTh>
  <th className="w-[80px]"></th>
  </tr>
  </thead>
  <tbody>
- {isLoading ? <tr><td colSpan={8} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
- : error ? <tr><td colSpan={8} className="text-center text-red-500 py-4">Error al cargar características: {error instanceof Error ? error.message : "Error desconocido"}</td></tr>
- : sortedFeatures.length === 0 ? <tr><td colSpan={8} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
+ {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+ : error ? <tr><td colSpan={6} className="text-center text-red-500 py-4">Error al cargar características: {error instanceof Error ? error.message : "Error desconocido"}</td></tr>
+ : sortedFeatures.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
  : sortedFeatures.map((f) => (
  <tr key={f.id}>
  <td className="font-mono font-semibold text-primary">{f.code || "—"}</td>
@@ -156,8 +149,6 @@ export default function CaracteristicasPage() {
  {getTipo(f)}
  </span>
  </td>
- <td className="text-center">{f.has_specific_screen ? "✓" : "—"}</td>
- <td className="text-center">{f.has_template ? "✓" : "—"}</td>
  <td className="text-muted-foreground">{f.screen?.name || "Genérica"}</td>
  <td className="text-center font-mono">{f.max_review_levels}</td>
  <td>
@@ -235,44 +226,14 @@ export default function CaracteristicasPage() {
  </div>
  </div>
 
- {/* Tipo de gestión */}
+ {/* Pantalla asociada — siempre visible (toda gestión usa una pantalla) */}
  <div className="flex flex-col gap-1.5">
- <Label className="app-field-label">Tipo de gestión</Label>
- <div className="grid grid-cols-4 gap-2">
- {[
- { key: "muerta", label: "Genérica", screen: false, template: false },
- { key: "pantalla", label: "Pantalla", screen: true, template: false },
- { key: "documentos", label: "Templates", screen: false, template: true },
- { key: "hibrida", label: "Pantalla + Templates", screen: true, template: true },
- ].map(t => {
- const active = formData.has_specific_screen === t.screen && formData.has_template === t.template;
- return (
- <button
- key={t.key}
- type="button"
- onClick={() => setFormData({ ...formData, has_specific_screen: t.screen, has_template: t.template })}
- className={`rounded-lg border p-2 text-center transition-colors ${
- active
- ? "border-primary bg-primary/10 text-primary font-semibold"
- : "border-border text-muted-foreground hover:bg-muted/50"
- }`}
- >
- <div className="text-[11px]">{t.label}</div>
- </button>
- );
- })}
- </div>
- </div>
-
- {/* Pantalla asociada */}
- {formData.has_specific_screen && (
- <div className="flex flex-col gap-1.5">
- <Label className="app-field-label">Pantalla asociada</Label>
+ <Label className="app-field-label">Pantalla asociada <span className="text-red-500">*</span></Label>
  <Select
  value={formData.screen_id || "__none"}
- onValueChange={(v) => setFormData({ ...formData, screen_id: v === "__none" ? "" : (v ?? "") })}
+ onValueChange={(v) => setFormData({ ...formData, screen_id: v === "__none" ? "" : (v ?? ""), has_specific_screen: true })}
  items={[
- { value: "__none", label: "Pantalla genérica" },
+ { value: "__none", label: "Pantalla genérica (JSON libre)" },
  ...(screens?.map((s) => {
  const fields = Array.isArray(s.form_schema?.fields) ? s.form_schema.fields as string[] : [];
  const label = s.is_dynamic === false
@@ -283,10 +244,10 @@ export default function CaracteristicasPage() {
  ]}
  >
  <SelectTrigger className="app-input h-7 w-full">
- <SelectValue placeholder="Pantalla genérica" />
+ <SelectValue placeholder="Pantalla genérica (JSON libre)" />
  </SelectTrigger>
  <SelectContent>
- <SelectItem value="__none">Pantalla genérica</SelectItem>
+ <SelectItem value="__none">Pantalla genérica (JSON libre)</SelectItem>
  {screens?.map((s) => {
  const fields = Array.isArray(s.form_schema?.fields) ? s.form_schema.fields as string[] : [];
  const label = s.is_dynamic === false
@@ -302,7 +263,25 @@ export default function CaracteristicasPage() {
  </Select>
  <ScreenHelpPanel screen={screens?.find(s => s.id === formData.screen_id)} />
  </div>
+
+ {/* ¿Genera documentos? — toggle independiente */}
+ <div className="flex flex-col gap-1.5">
+ <Label className="app-field-label">Generación de documentos</Label>
+ <div className="flex items-center gap-2 flex-wrap">
+ <ToggleChip
+ active={formData.has_template}
+ onClick={(v) => setFormData({ ...formData, has_template: v, has_specific_screen: true })}
+ icon={<FileText className="h-3 w-3" />}
+ >
+ Con plantillas de documento
+ </ToggleChip>
+ {formData.has_template && (
+ <span className="text-[10px] text-muted-foreground">
+ Permite asociar .docx que se rellenan con datos del siniestro al emitir
+ </span>
  )}
+ </div>
+ </div>
 
  {/* Max niveles de revisión */}
  <div className="flex flex-col gap-1.5">
