@@ -539,17 +539,28 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  <summary className="cursor-pointer text-muted-foreground hover:text-foreground select-none">
  Ver catálogo de campos disponibles ({DOCUMENT_FIELDS.length} campos)
  </summary>
- <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-1 pt-2 border-t border-border/40">
- {FIELD_GROUPS.map((group) => (
- <div key={group} className="contents">
- {DOCUMENT_FIELDS.filter((f) => f.group === group).map((f) => (
+ <div className="mt-2 space-y-2 pt-2 border-t border-border/40">
+ {FIELD_GROUPS.map((group) => {
+ const style = GROUP_STYLES[group] ?? { color: "text-muted-foreground", bg: "bg-muted/30", border: "border-border", icon: "•" };
+ const fields = DOCUMENT_FIELDS.filter((f) => f.group === group);
+ return (
+ <div key={group} className={`rounded-md border ${style.border} ${style.bg} px-2 py-1.5`}>
+ <div className={`text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 mb-1 ${style.color}`}>
+ <span className="text-[11px]">{style.icon}</span>
+ <span>{group}</span>
+ <span className="ml-auto opacity-60 font-normal normal-case">{fields.length}</span>
+ </div>
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0.5">
+ {fields.map((f) => (
  <div key={f.key} className="flex items-center gap-1.5">
- <code className="text-[10px] font-mono text-primary">{"<" + f.key + ">"}</code>
- <span className="text-[10px] text-muted-foreground">— {f.label}</span>
+ <code className="text-[10px] font-mono text-primary shrink-0">{"<" + f.key + ">"}</code>
+ <span className="text-[10px] text-muted-foreground truncate">— {f.label}</span>
  </div>
  ))}
  </div>
- ))}
+ </div>
+ );
+ })}
  </div>
  </details>
  </div>
@@ -564,13 +575,37 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
 }
 
 // SelectGroup wrapper (algunas UIs de select no exponen SelectGroup, lo emulamos)
+// Cabeceras con distintivo visual: color + borde superior + badge
+const GROUP_STYLES: Record<string, { color: string; bg: string; border: string; icon: string }> = {
+ "Siniestro": { color: "text-blue-700 dark:text-blue-300", bg: "bg-blue-50 dark:bg-blue-950/40", border: "border-blue-200 dark:border-blue-900", icon: "📋" },
+ "Clasificación": { color: "text-violet-700 dark:text-violet-300", bg: "bg-violet-50 dark:bg-violet-950/40", border: "border-violet-200 dark:border-violet-900", icon: "🏷️" },
+ "Póliza": { color: "text-emerald-700 dark:text-emerald-300", bg: "bg-emerald-50 dark:bg-emerald-950/40", border: "border-emerald-200 dark:border-emerald-900", icon: "📄" },
+ "Recovery": { color: "text-amber-700 dark:text-amber-300", bg: "bg-amber-50 dark:bg-amber-950/40", border: "border-amber-200 dark:border-amber-900", icon: "♻️" },
+ "Empresas": { color: "text-cyan-700 dark:text-cyan-300", bg: "bg-cyan-50 dark:bg-cyan-950/40", border: "border-cyan-200 dark:border-cyan-900", icon: "🏢" },
+ "Geografía Siniestro": { color: "text-orange-700 dark:text-orange-300", bg: "bg-orange-50 dark:bg-orange-950/40", border: "border-orange-200 dark:border-orange-900", icon: "📍" },
+ "Asegurado": { color: "text-rose-700 dark:text-rose-300", bg: "bg-rose-50 dark:bg-rose-950/40", border: "border-rose-200 dark:border-rose-900", icon: "👤" },
+ "Contratista": { color: "text-lime-700 dark:text-lime-300", bg: "bg-lime-50 dark:bg-lime-950/40", border: "border-lime-200 dark:border-lime-900", icon: "👷" },
+ "Beneficiario": { color: "text-pink-700 dark:text-pink-300", bg: "bg-pink-50 dark:bg-pink-950/40", border: "border-pink-200 dark:border-pink-900", icon: "💝" },
+ "Ejecutivo": { color: "text-teal-700 dark:text-teal-300", bg: "bg-teal-50 dark:bg-teal-950/40", border: "border-teal-200 dark:border-teal-900", icon: "👔" },
+ "Contacto": { color: "text-indigo-700 dark:text-indigo-300", bg: "bg-indigo-50 dark:bg-indigo-950/40", border: "border-indigo-200 dark:border-indigo-900", icon: "📞" },
+ "Asignaciones": { color: "text-sky-700 dark:text-sky-300", bg: "bg-sky-50 dark:bg-sky-950/40", border: "border-sky-200 dark:border-sky-900", icon: "👥" },
+ "Gestiones: Fechas": { color: "text-fuchsia-700 dark:text-fuchsia-300", bg: "bg-fuchsia-50 dark:bg-fuchsia-950/40", border: "border-fuchsia-200 dark:border-fuchsia-900", icon: "📅" },
+ "Gestiones: Reserva": { color: "text-red-700 dark:text-red-300", bg: "bg-red-50 dark:bg-red-950/40", border: "border-red-200 dark:border-red-900", icon: "💰" },
+ "Gestiones: Ajuste": { color: "text-yellow-700 dark:text-yellow-300", bg: "bg-yellow-50 dark:bg-yellow-950/40", border: "border-yellow-200 dark:border-yellow-900", icon: "🔧" },
+ "Gestiones: Coberturas": { color: "text-green-700 dark:text-green-300", bg: "bg-green-50 dark:bg-green-950/40", border: "border-green-200 dark:border-green-900", icon: "🛡️" },
+ "Gestiones: Coordinación": { color: "text-purple-700 dark:text-purple-300", bg: "bg-purple-50 dark:bg-purple-950/40", border: "border-purple-200 dark:border-purple-900", icon: "📆" },
+ "Gestiones: Aviso Asignación": { color: "text-stone-700 dark:text-stone-300", bg: "bg-stone-50 dark:bg-stone-950/40", border: "border-stone-200 dark:border-stone-900", icon: "✉️" },
+};
+
 function SelectGroup({ label, children }: { label: string; children: React.ReactNode }) {
+ const style = GROUP_STYLES[label] ?? { color: "text-muted-foreground", bg: "bg-muted/30", border: "border-border", icon: "•" };
  return (
- <div className="py-1">
- <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
- {label}
+ <div className={`py-1.5 border-t first:border-t-0 ${style.border}`}>
+ <div className={`mx-1 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 ${style.color} ${style.bg}`}>
+ <span className="text-[11px]">{style.icon}</span>
+ <span>{label}</span>
  </div>
- {children}
+ <div className="mt-0.5">{children}</div>
  </div>
  );
 }
