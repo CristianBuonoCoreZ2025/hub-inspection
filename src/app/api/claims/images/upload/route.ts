@@ -102,9 +102,10 @@ export async function POST(request: NextRequest) {
         file_size: file.size,
         uploaded_by: userId,
         is_active: true,
+        ai_status: "pending",
       })
       .select(
-        "id, claim_id, img_code, url, original_filename, mime_type, file_size, uploaded_by, ai_summary, ai_model, is_active, created_at, updated_at"
+        "id, claim_id, img_code, url, original_filename, mime_type, file_size, uploaded_by, ai_summary, ai_model, ai_status, is_active, created_at, updated_at"
       )
       .single();
 
@@ -171,14 +172,17 @@ export async function POST(request: NextRequest) {
         }
 
         // ── IA: descripción automática de la imagen ──
+        let aiStatus: "done" | "error" | "skipped" = "error";
         try {
           const ai = await summarizeFile(buffer, mimeType, file.name);
           if (ai.ok) {
+            aiStatus = "done";
             await supabase
               .from("claim_images")
               .update({
                 ai_summary: ai.summary,
                 ai_model: ai.model,
+                ai_status: aiStatus,
                 updated_at: new Date().toISOString(),
               })
               .eq("id", imageId);
@@ -189,6 +193,11 @@ export async function POST(request: NextRequest) {
               metadata: { imageId, model: ai.model },
             });
           } else {
+            aiStatus = "skipped";
+            await supabase
+              .from("claim_images")
+              .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
+              .eq("id", imageId);
             logger.warn("IA: no se pudo generar descripción", {
               component: "claim-image-upload",
               action: "ai.summary.skipped",
@@ -196,6 +205,10 @@ export async function POST(request: NextRequest) {
             });
           }
         } catch (aiErr) {
+          await supabase
+            .from("claim_images")
+            .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
+            .eq("id", imageId);
           logger.warn("IA: error generando descripción (no crítico)", {
             component: "claim-image-upload",
             action: "ai.summary.error",

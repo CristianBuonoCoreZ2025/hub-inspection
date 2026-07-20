@@ -20,13 +20,14 @@ export interface ClaimImage {
   uploaded_by: string | null;
   ai_summary: string | null;
   ai_model: string | null;
+  ai_status: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 const IMAGE_FIELDS =
-  "id, claim_id, img_code, url, original_filename, mime_type, file_size, file_path, uploaded_by, ai_summary, ai_model, is_active, created_at, updated_at";
+  "id, claim_id, img_code, url, original_filename, mime_type, file_size, file_path, uploaded_by, ai_summary, ai_model, ai_status, is_active, created_at, updated_at";
 
 export async function getClaimImages(claimId: string): Promise<ClaimImage[]> {
   return fetchAll<ClaimImage>("claim_images", {
