@@ -54,7 +54,10 @@ async function callOpenRouter(
   apiKey: string,
   options?: { maxTokens?: number; temperature?: number }
 ): Promise<string | null> {
-  const referer = process.env.OPENROUTER_HTTP_REFERER || "http://localhost:3000";
+  const referer = process.env.OPENROUTER_HTTP_REFERER ||
+    process.env.NEXT_PUBLIC_VERCEL_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "http://localhost:3000";
 
   try {
     const res = await fetch(OPENROUTER_URL, {
@@ -128,7 +131,11 @@ async function callWithFallback(
 
   const freeModels = getFreeModels(freeModelsEnv);
   const paidModels = getPaidModels(paidModelsEnv);
+  // Siempre agregar openrouter/free al final como último recurso (auto-selecciona free disponibles)
   const chain = [...freeModels, ...paidModels];
+  if (!chain.includes("openrouter/free")) {
+    chain.push("openrouter/free");
+  }
 
   if (chain.length === 0) {
     logger.warn("OpenRouter: no hay modelos configurados", {
@@ -139,6 +146,7 @@ async function callWithFallback(
     return null;
   }
 
+  const failedModels: string[] = [];
   for (const model of chain) {
     // Rotar keys: usar la primera key para el primer modelo, etc.
     const keyIndex = chain.indexOf(model) % keys.length;
@@ -153,12 +161,13 @@ async function callWithFallback(
       });
       return { text, model };
     }
+    failedModels.push(model);
   }
 
   logger.warn("OpenRouter: todos los modelos fallaron", {
     component: "openrouter",
     action: "call.fallback",
-    metadata: { chain },
+    metadata: { chain, failedModels, keysCount: keys.length },
   });
   return null;
 }
