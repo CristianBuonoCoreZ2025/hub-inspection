@@ -595,26 +595,6 @@ export async function getLookupCatalog(category: string) {
 }
 
 /**
- * Obtiene las monedas de un país desde lookup_catalog (category='currency').
- * Los claims guardan currency_id apuntando a lookup_catalog, no a currencies.
- * Si el país no tiene monedas en lookup_catalog, trae todas las activas.
- */
-export async function getCountryLookupCurrencies(countryId: string | null | undefined) {
-  if (!countryId) {
-    return getLookupCatalog("currency");
-  }
-  const rows = await fetchAllSorted<LookupCatalog>("lookup_catalog", {
-    select: "id, country_id, category, code, name, description, sort_order, is_active",
-    eq: { category: "currency", country_id: countryId, is_active: true },
-    order: { column: "sort_order", ascending: true },
-  });
-  if (rows.length === 0) {
-    return getLookupCatalog("currency");
-  }
-  return rows;
-}
-
-/**
  * Obtiene las monedas asociadas a un país específico desde country_currencies.
  * Si el país no tiene monedas configuradas, devuelve todas las monedas
  * activas como fallback (para no bloquear al usuario).

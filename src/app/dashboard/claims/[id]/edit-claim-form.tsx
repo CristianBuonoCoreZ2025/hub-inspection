@@ -32,7 +32,7 @@ import { SelectItem } from "@/components/ui/select";
 import { updateClaimFields, updateClaimStatus, updateClaimParticipant, createClaimParticipant } from "@/services/claims";
 import { findPerson, upsertPerson, addPersonAddress, type PersonWithAddresses } from "@/services/persons";
 import { formatRut, guessPersonType } from "@/lib/validations/rut";
-import { getCountries, getRegions, getCities, getCommunes, getCountryLookupCurrencies } from "@/services/catalogs";
+import { getCountries, getRegions, getCities, getCommunes, getCountryCurrencies } from "@/services/catalogs";
 import { getPolicies, createPolicy } from "@/services/policies";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { useAuth } from "@/hooks/use-auth";
@@ -817,7 +817,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  // Monedas dinámicas según el país del siniestro
  const { data: countryCurrencies } = useQuery({
  queryKey: ["country-currencies-form", watchedCountryId],
- queryFn: () => getCountryLookupCurrencies(watchedCountryId),
+ queryFn: () => getCountryCurrencies(watchedCountryId),
  enabled: !!watchedCountryId,
  });
 
