@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
-import { uploadClaimDocument } from "@/lib/storage/claim-upload";
+import { uploadClaimDocumentRaw, reuploadClaimDocumentOptimized } from "@/lib/storage/claim-upload";
 import { logActionHistory } from "@/services/claim-action-history";
 import { summarizeFile } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logger";
@@ -76,38 +77,10 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Subir a R2 con path estructurado del plan
-    const { url, key, docCode } = await uploadClaimDocument(claimId, buffer, mimeType, ext || ".bin");
+    // Subir a R2 SIN optimizar (raw, rápido) — la optimización va en background
+    const { url, key, seq, docCode } = await uploadClaimDocumentRaw(claimId, buffer, mimeType, ext || ".bin");
 
-    // ── IA: resumen automático del archivo (free → paid) ──
-    let aiSummary: string | null = null;
-    let aiModel: string | null = null;
-    try {
-      const ai = await summarizeFile(buffer, mimeType, file.name);
-      if (ai.ok) {
-        aiSummary = ai.summary;
-        aiModel = ai.model;
-        logger.info("IA: resumen generado", {
-          component: "claim-doc-upload",
-          action: "ai.summary",
-          metadata: { model: ai.model, summaryLength: ai.summary.length },
-        });
-      } else {
-        logger.warn("IA: documento no procesado", {
-          component: "claim-doc-upload",
-          action: "ai.summary.skipped",
-          metadata: { mimeType, reason: ai.reason },
-        });
-      }
-    } catch (aiErr) {
-      logger.warn("IA: no se pudo generar resumen", {
-        component: "claim-doc-upload",
-        action: "ai.summary.error",
-        metadata: { error: aiErr instanceof Error ? aiErr.message : String(aiErr) },
-      });
-    }
-
-    // Insertar en claim_documents — llenar columnas NOT NULL del schema original
+    // Insertar en claim_documents (sin IA aún — se hace en background)
     const supabase = createAdminClient();
     const { data: document, error } = await supabase
       .from("claim_documents")
@@ -125,8 +98,8 @@ export async function POST(request: NextRequest) {
         is_active: true,
         uploaded_by: userId,
         created_by: userId,
-        ai_summary: aiSummary,
-        ai_model: aiModel,
+        ai_summary: null,
+        ai_model: null,
       })
       .select("id, claim_id, doc_code, document_name, document_url, document_type, original_filename, mime_type, file_size, file_path, is_active, created_at, updated_at")
       .single();
@@ -347,6 +320,98 @@ export async function POST(request: NextRequest) {
       } // cierra if (pendingItems)
     } // cierra if (openRequests)
     } // cierra if (documentTypeCode)
+
+    // ── Background: IA + optimización del archivo ──
+    // Se ejecuta después de responder al cliente para no bloquear la subida
+    const docId = document.id;
+    const docBuffer = buffer;
+    const docMimeType = mimeType;
+    const docFileName = file.name;
+    const docExt = ext || ".bin";
+    const docSeq = seq;
+
+    after(async () => {
+      // 1. IA: resumen automático
+      let aiSummary: string | null = null;
+      let aiModel: string | null = null;
+      try {
+        const ai = await summarizeFile(docBuffer, docMimeType, docFileName);
+        if (ai.ok) {
+          aiSummary = ai.summary;
+          aiModel = ai.model;
+          logger.info("IA (bg): resumen generado", {
+            component: "claim-doc-upload",
+            action: "ai.summary.bg",
+            metadata: { docId, model: ai.model, summaryLength: ai.summary.length },
+          });
+        } else {
+          logger.warn("IA (bg): documento no procesado", {
+            component: "claim-doc-upload",
+            action: "ai.summary.skipped.bg",
+            metadata: { docId, mimeType: docMimeType, reason: ai.reason },
+          });
+        }
+      } catch (aiErr) {
+        logger.warn("IA (bg): no se pudo generar resumen", {
+          component: "claim-doc-upload",
+          action: "ai.summary.error.bg",
+          metadata: { docId, error: aiErr instanceof Error ? aiErr.message : String(aiErr) },
+        });
+      }
+
+      // 2. Optimización del archivo (re-subir versión optimizada a R2)
+      let optimizedUrl: string | null = null;
+      let optimizedKey: string | null = null;
+      try {
+        const result = await reuploadClaimDocumentOptimized(
+          claimId, docSeq, docBuffer, docMimeType, docExt
+        );
+        optimizedUrl = result.url;
+        optimizedKey = result.key;
+        logger.info("Optimización (bg): documento optimizado", {
+          component: "claim-doc-upload",
+          action: "optimize.bg",
+          metadata: { docId, originalSize: docBuffer.length, optimizedKey },
+        });
+      } catch (optErr) {
+        logger.warn("Optimización (bg): no se pudo optimizar", {
+          component: "claim-doc-upload",
+          action: "optimize.error.bg",
+          metadata: { docId, error: optErr instanceof Error ? optErr.message : String(optErr) },
+        });
+      }
+
+      // 3. Actualizar el registro con IA + URL optimizada
+      try {
+        const updateFields: Record<string, unknown> = {};
+        if (aiSummary) {
+          updateFields.ai_summary = aiSummary;
+          updateFields.ai_model = aiModel;
+        }
+        if (optimizedUrl && optimizedKey) {
+          updateFields.file_url = optimizedUrl;
+          updateFields.file_path = optimizedKey;
+          updateFields.document_url = optimizedUrl;
+        }
+        if (Object.keys(updateFields).length > 0) {
+          await createAdminClient()
+            .from("claim_documents")
+            .update(updateFields)
+            .eq("id", docId);
+          logger.info("Background: documento actualizado", {
+            component: "claim-doc-upload",
+            action: "bg.update",
+            metadata: { docId, fields: Object.keys(updateFields) },
+          });
+        }
+      } catch (updErr) {
+        logger.error("Background: error actualizando documento", updErr as Error, {
+          component: "claim-doc-upload",
+          action: "bg.update.error",
+          metadata: { docId },
+        });
+      }
+    });
 
     return NextResponse.json({ document });
   } catch (err) {
