@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
- FileText, Upload, Trash2, Loader2, FileUp, Check,
+ FileText, Upload, Loader2, FileUp, Check,
  ChevronDown, ChevronRight, Tag, Download,
 } from "lucide-react";
 import { ToggleChip } from "@/components/ui/toggle-chip";
@@ -13,7 +13,6 @@ import {
  getDocumentTemplates,
  createDocumentTemplate,
  updateDocumentTemplate,
- deleteDocumentTemplate,
  type DocumentTemplateInput,
 } from "@/services/document-templates";
 import { DOCUMENT_FIELDS, FIELD_GROUPS, findFieldByKeyInsensitive } from "@/lib/document-fields";
@@ -99,15 +98,6 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  updateDocumentTemplate(id, data),
  onSuccess: () => {
  toast.success("Plantilla actualizada");
- queryClient.invalidateQueries({ queryKey: ["document-templates", actionTemplateId] });
- },
- onError: (e: Error) => toast.error(e.message),
- });
-
- const deleteMut = useMutation({
- mutationFn: deleteDocumentTemplate,
- onSuccess: () => {
- toast.success("Plantilla eliminada");
  queryClient.invalidateQueries({ queryKey: ["document-templates", actionTemplateId] });
  },
  onError: (e: Error) => toast.error(e.message),
@@ -306,16 +296,6 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  >
  {tpl.is_active ? "Activa" : "Inactiva"}
  </ToggleChip>
- <button
- type="button"
- onClick={() => {
- if (confirm("¿Eliminar esta plantilla?")) deleteMut.mutate(tpl.id);
- }}
- className="btn-icon-sm btn-danger-hover shrink-0"
- title="Eliminar"
- >
- <Trash2 className="h-3.5 w-3.5" />
- </button>
  </div>
 
  {/* Detalle expandido: asociaciones + mapeo de placeholders */}
