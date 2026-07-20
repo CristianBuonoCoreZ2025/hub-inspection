@@ -407,40 +407,69 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
 
  {/* Placeholders detectados + mapeo */}
  {tpl.detected_placeholders.length > 0 ? (
- <div>
- <Label className="text-[10px] text-muted-foreground mb-2 block">
- Placeholders detectados y mapeo a campos del siniestro
- </Label>
- <div className="space-y-1.5">
- {tpl.detected_placeholders.map((ph) => {
+ (() => {
+ // Clasificar placeholders en 3 grupos
+ const toFix: string[] = [];   // sin mapeo ni campo canónico → requieren atención
+ const auto: string[] = [];    // campo canónico (mapeo automático)
+ const manual: string[] = [];  // mapeo manual ya asignado
+ for (const ph of tpl.detected_placeholders) {
  const mapped = tpl.placeholder_mapping[ph];
  const isCanonical = !!findFieldByKeyInsensitive(ph);
- const resolved = mapped || (isCanonical ? (findFieldByKeyInsensitive(ph)?.key ?? "") : "");
- // Mostrar [ph] si está en MAYÚSCULAS (formato corchetes), <ph> si no
+ if (mapped) manual.push(ph);
+ else if (isCanonical) auto.push(ph);
+ else toFix.push(ph);
+ }
+ return (
+ <div>
+ {/* Resumen */}
+ <div className="flex items-center gap-2 mb-2 flex-wrap">
+ <Label className="text-[10px] text-muted-foreground">
+ Placeholders detectados: {tpl.detected_placeholders.length}
+ </Label>
+ {auto.length > 0 && (
+ <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+ <Check className="h-2.5 w-2.5" />
+ {auto.length} auto
+ </span>
+ )}
+ {manual.length > 0 && (
+ <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+ {manual.length} mapeados
+ </span>
+ )}
+ {toFix.length > 0 && (
+ <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+ {toFix.length} sin mapear
+ </span>
+ )}
+ </div>
+
+ {/* Solo los que requieren corrección */}
+ {toFix.length > 0 && (
+ <div className="space-y-1.5">
+ <Label className="text-[10px] text-amber-700 dark:text-amber-400 block">
+ Requieren mapeo — asigná cada placeholder a un campo del sistema
+ </Label>
+ {toFix.map((ph) => {
+ const mapped = tpl.placeholder_mapping[ph];
  const isBracketFormat = ph === ph.toUpperCase() && ph !== ph.toLowerCase();
  const phDisplay = isBracketFormat ? `[${ph}]` : `<${ph}>`;
  return (
  <div
  key={ph}
- className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5 bg-card"
+ className="flex items-center gap-2 rounded-md border border-amber-300/50 dark:border-amber-700/50 px-2 py-1.5 bg-amber-50/50 dark:bg-amber-950/10"
  >
- <code className="text-[11px] font-mono text-primary shrink-0 min-w-[120px]">
+ <code className="text-[11px] font-mono text-amber-700 dark:text-amber-400 shrink-0 min-w-[120px]">
  {phDisplay}
  </code>
- {isCanonical && !mapped && (
- <span className="text-[10px] text-emerald-600 dark:text-emerald-400 shrink-0">
- <Check className="h-3 w-3 inline mr-1" />
- auto
- </span>
- )}
  <span className="text-[10px] text-muted-foreground shrink-0">→</span>
  <Select
- value={resolved || "__none"}
+ value={mapped || "__none"}
  onValueChange={(v) => handleMappingChange(tpl.id, ph, v === "__none" ? null : v)}
  items={[{ value: "__none", label: "— Sin mapeo —" }, ...DOCUMENT_FIELDS.map((f) => ({ value: f.key, label: f.label }))]}
  >
  <SelectTrigger className="app-input h-6 text-[11px] flex-1">
- <SelectValue placeholder="Sin mapeo (vacío)" />
+ <SelectValue placeholder="Asignar a campo…" />
  </SelectTrigger>
  <SelectContent>
  <SelectItem value="__none">— Sin mapeo —</SelectItem>
@@ -459,11 +488,48 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  );
  })}
  </div>
+ )}
+
+ {/* Ya mapeados (colapsable, solo referencia) */}
+ {(auto.length > 0 || manual.length > 0) && (
+ <details className="text-[11px] mt-2">
+ <summary className="cursor-pointer text-muted-foreground hover:text-foreground select-none">
+ Ver mapeos ya resueltos ({auto.length + manual.length})
+ </summary>
+ <div className="mt-2 space-y-1 pt-2 border-t border-border/40">
+ {[...auto, ...manual].map((ph) => {
+ const mapped = tpl.placeholder_mapping[ph];
+ const field = mapped ? findFieldByKeyInsensitive(mapped) : findFieldByKeyInsensitive(ph);
+ const isBracketFormat = ph === ph.toUpperCase() && ph !== ph.toLowerCase();
+ const phDisplay = isBracketFormat ? `[${ph}]` : `<${ph}>`;
+ const label = field?.label ?? (mapped ?? "—");
+ return (
+ <div key={ph} className="flex items-center gap-2 px-2 py-1">
+ <code className="text-[11px] font-mono text-primary shrink-0 min-w-[120px]">
+ {phDisplay}
+ </code>
+ <span className="text-[10px] text-muted-foreground shrink-0">→</span>
+ <span className="text-[11px] text-foreground/80 truncate">{label}</span>
+ {auto.includes(ph) && (
+ <span className="text-[10px] text-emerald-600 dark:text-emerald-400 shrink-0 ml-auto">
+ auto
+ </span>
+ )}
  </div>
+ );
+ })}
+ </div>
+ </details>
+ )}
+ </div>
+ );
+ })()
  ) : (
  <p className="text-[11px] text-muted-foreground">
  No se detectaron placeholders en este documento. Usa la sintaxis
  <code className="app-inline-code mx-1">{"<campo>"}</code>
+ o
+ <code className="app-inline-code mx-1">{"[CAMPO]"}</code>
  en el Word para que se rellene automáticamente.
  </p>
  )}
