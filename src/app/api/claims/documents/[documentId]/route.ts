@@ -89,15 +89,20 @@ export async function DELETE(
 
     // 4. Desvincular de claim_document_request_items si estaba linkeado
     //    + reabrir el request si estaba cerrado (status="received")
-    if (doc.document_type) {
-      const affectedRequestIds = (
-        await supabase
-          .from("claim_document_requests")
-          .select("id")
-          .eq("claim_id", doc.claim_id)
-      ).data?.map((r: { id: string }) => r.id) || [];
+    //    IMPORTANTE: solo desvincular el item cuyo received_file_id === documentId
+    //    (no todos los items del mismo document_type_code, que puede haber varios)
+    let wasLinkedToRequest = false;
+    let affectedRequestIds: string[] = [];
+    {
+      const { data: linkedItems } = await supabase
+        .from("claim_document_request_items")
+        .select("id, request_id")
+        .eq("received_file_id", documentId);
 
-      if (affectedRequestIds.length > 0) {
+      if (linkedItems && linkedItems.length > 0) {
+        wasLinkedToRequest = true;
+        affectedRequestIds = [...new Set(linkedItems.map((i: { request_id: string }) => i.request_id))];
+
         await supabase
           .from("claim_document_request_items")
           .update({
@@ -108,11 +113,10 @@ export async function DELETE(
             status: "requested",
             updated_at: new Date().toISOString(),
           })
-          .eq("document_type_code", doc.document_type)
-          .in("request_id", affectedRequestIds);
+          .in("id", linkedItems.map((i: { id: string }) => i.id));
 
         // Reabrir requests que estaban cerrados (status="received" → "requested")
-        // porque al eliminar un documento, ya no están completos
+        // porque al eliminar un documento vinculado, ya no están completos
         await supabase
           .from("claim_document_requests")
           .update({
@@ -125,6 +129,21 @@ export async function DELETE(
     }
 
     // 5. Verificar si RTA está emitida → reversar
+    //    SOLO si el documento eliminado estaba vinculado a un request item.
+    //    Si se elimina un documento no relacionado (ej: "acta" cuando la RTA
+    //    pide denuncio+poliza), NO se debe tocar la RTA.
+    if (!wasLinkedToRequest) {
+      logger.info("Documento eliminado no estaba vinculado a request items — RTA no se toca", {
+        component: "claim-documents",
+        action: "delete.skip_rta_reversal",
+        metadata: {
+          claim_id: doc.claim_id,
+          document_id: documentId,
+          doc_code: doc.doc_code,
+          document_type: doc.document_type,
+        },
+      });
+    } else {
     const rtaTemplateIds = (
       await supabase
         .from("action_template")
@@ -221,6 +240,7 @@ export async function DELETE(
           });
       }
     }
+    } // cierra else (wasLinkedToRequest)
 
     // 6. Borrar el archivo físico de R2
     if (doc.file_path) {
