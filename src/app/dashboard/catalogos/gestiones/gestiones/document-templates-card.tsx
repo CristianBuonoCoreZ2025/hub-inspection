@@ -15,7 +15,7 @@ import {
  deleteDocumentTemplate,
  type DocumentTemplateInput,
 } from "@/services/document-templates";
-import { DOCUMENT_FIELDS, FIELD_GROUPS, FIELD_BY_KEY } from "@/lib/document-fields";
+import { DOCUMENT_FIELDS, FIELD_GROUPS, findFieldByKeyInsensitive } from "@/lib/document-fields";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -211,7 +211,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  {templates.map((tpl) => {
  const expanded = showMapping === tpl.id;
  const unmapped = tpl.detected_placeholders.filter(
- (p) => !tpl.placeholder_mapping[p] && !FIELD_BY_KEY[p]
+ (p) => !tpl.placeholder_mapping[p] && !findFieldByKeyInsensitive(p)
  );
  return (
  <div
@@ -414,15 +414,18 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  <div className="space-y-1.5">
  {tpl.detected_placeholders.map((ph) => {
  const mapped = tpl.placeholder_mapping[ph];
- const isCanonical = !!FIELD_BY_KEY[ph];
- const resolved = mapped || (isCanonical ? ph : "");
+ const isCanonical = !!findFieldByKeyInsensitive(ph);
+ const resolved = mapped || (isCanonical ? (findFieldByKeyInsensitive(ph)?.key ?? "") : "");
+ // Mostrar [ph] si está en MAYÚSCULAS (formato corchetes), <ph> si no
+ const isBracketFormat = ph === ph.toUpperCase() && ph !== ph.toLowerCase();
+ const phDisplay = isBracketFormat ? `[${ph}]` : `<${ph}>`;
  return (
  <div
  key={ph}
  className="flex items-center gap-2 rounded-md border border-border/50 px-2 py-1.5 bg-card"
  >
  <code className="text-[11px] font-mono text-primary shrink-0 min-w-[120px]">
- {"<" + ph + ">"}
+ {phDisplay}
  </code>
  {isCanonical && !mapped && (
  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 shrink-0">

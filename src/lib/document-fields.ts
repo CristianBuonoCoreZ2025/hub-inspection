@@ -266,6 +266,21 @@ export const FIELD_BY_KEY: Record<string, DocumentField> = Object.fromEntries(
   DOCUMENT_FIELDS.map((f) => [f.key, f])
 );
 
+/** Mapa UPPER(key) -> DocumentField para lookup case-insensitive */
+export const FIELD_BY_KEY_UPPER: Record<string, DocumentField> = Object.fromEntries(
+  DOCUMENT_FIELDS.map((f) => [f.key.toUpperCase(), f])
+);
+
+/**
+ * Busca un campo canónico por key, case-insensitive.
+ * Ej: "LIQUIDATION_NUMBER" → field con key "liquidation_number"
+ *     "liquidation_number" → field con key "liquidation_number"
+ *     "DEDUCIBLE" → undefined (no es canónico)
+ */
+export function findFieldByKeyInsensitive(key: string): DocumentField | undefined {
+  return FIELD_BY_KEY[key] ?? FIELD_BY_KEY_UPPER[key.toUpperCase()];
+}
+
 /**
  * Construye el objeto de datos plano que se pasa a docxtemplater.
  * Resuelve todos los campos canónicos + aplica el mapeo manual del usuario.
@@ -284,11 +299,14 @@ export function buildTemplateData(
     result[field.key] = field.resolve(data);
   }
 
-  // 2. Aplicar mapeo manual: el usuario escribió <N_Siniestro> en el Word
-  //    y lo mapeó a "claim_number" → añadimos N_Siniestro = result.claim_number
+  // 2. Aplicar mapeo manual: el usuario escribió <N_Siniestro> o [N_SINIESTRO]
+  //    en el Word y lo mapeó a "claim_number" → añadimos N_Siniestro = result.claim_number
+  //    El mapeo es case-insensitive: si mapeó "DEDUCIBLE" → "policy_amount",
+  //    añadimos DEDUCIBLE = result.policy_amount
   for (const [placeholder, canonicalKey] of Object.entries(mapping)) {
-    if (FIELD_BY_KEY[canonicalKey]) {
-      result[placeholder] = result[canonicalKey] ?? "";
+    const field = findFieldByKeyInsensitive(canonicalKey);
+    if (field) {
+      result[placeholder] = result[field.key] ?? "";
     }
   }
 
