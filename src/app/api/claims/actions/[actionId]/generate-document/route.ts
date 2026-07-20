@@ -1,24 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { uploadToR2 } from "@/lib/storage/r2-upload";
-import { gestionDocumentPath } from "@/lib/storage/paths";
+import { gestionDocumentVersionPath } from "@/lib/storage/paths";
 import { getDocumentTemplateById } from "@/services/document-templates";
-import { renderDocx } from "@/services/document-templates-docx";
+import { renderDocument } from "@/services/document-render";
 import { buildDocumentDataForClaim, fetchTemplateBuffer } from "@/services/document-data";
 import { buildTemplateData } from "@/lib/document-fields";
+import { createDocumentVersion, detectFileType, mimeTypeFor, type WorkflowLevel } from "@/services/claim-action-documents";
+import { actionSupportsDocumentTemplates } from "@/server/lib/screen-templates";
 import { logger } from "@/lib/logger";
 
 /**
  * POST /api/claims/actions/[actionId]/generate-document
  *
- * Genera el documento .docx renderizado con los datos del siniestro y lo sube
- * a Cloudflare R2 con el path estructurado del plan:
- *   claims/{L}/actions/{L}-{CODIGO}-NNNN/{L}-{CODIGO}-NNNN.docx
+ * Genera un documento (Word/Excel/PowerPoint) renderizado con los datos del siniestro
+ * a partir de una plantilla del sistema, lo sube a R2 y crea una nueva versión en
+ * claim_action_documents.
  *
- * Se llama después de emitir una gestión que tiene template asociado.
- * Si la gestión no tiene template, devuelve 204 (no content).
+ * Body: { templateId: string }
  *
- * Devuelve: { url } — URL pública del documento en R2, o null si no hay template
+ * Devuelve: { document } — el registro de claim_action_documents creado
  */
 export async function POST(
   request: NextRequest,
@@ -32,7 +33,7 @@ export async function POST(
     const { data: action, error: actionError } = await supabase
       .from("claim_actions")
       .select(
-        "id, code, claim_id, action_template_id, action_template:action_template!claim_actions_action_template_id_fkey(id, code)"
+        "id, code, claim_id, action_template_id, status, issuer_id, issued_by, action_template:action_template!claim_actions_action_template_id_fkey(id, code)"
       )
       .eq("id", actionId)
       .single();
@@ -45,57 +46,44 @@ export async function POST(
       return NextResponse.json({ error: "La gestión no tiene code o claim_id" }, { status: 400 });
     }
 
-    // 2. Buscar el document_template asociado a este action_template
-    const actionTemplateId = action.action_template_id;
-    if (!actionTemplateId) {
-      // Sin template → no hay documento que generar
-      return NextResponse.json({ url: null, message: "Sin template asociado" }, { status: 200 });
+    // 1b. Validar que la pantalla de la gestión soporte flujo de plantillas.
+    // Si la pantalla no tiene un campo "document_templates" en su form_schema,
+    // no se puede generar un documento desde plantilla.
+    const supportsTemplates = await actionSupportsDocumentTemplates(actionId);
+    if (!supportsTemplates) {
+      return NextResponse.json(
+        {
+          error:
+            "La pantalla asociada a esta gestión no soporta plantillas de documento. Solo las gestiones con pantalla «Pantalla + Documentos» pueden generar documentos desde plantilla.",
+        },
+        { status: 400 }
+      );
     }
 
-    // Si el body trae templateId, usar esa plantilla específica (selección desde la UI).
-    // Si no, tomar la primera activa del action_template (comportamiento anterior).
-    let body: { templateId?: string } = {};
-    try {
-      body = await request.json().catch(() => ({})) as { templateId?: string };
-    } catch {
-      body = {};
+    // 2. Obtener templateId del body
+    const body = (await request.json().catch(() => ({}))) as { templateId?: string };
+    if (!body.templateId) {
+      return NextResponse.json({ error: "Falta templateId en el body" }, { status: 400 });
     }
 
-    let templateRow: { id: string; file_url: string; file_name: string; placeholder_mapping: unknown; is_active: boolean } | null = null;
-    if (body.templateId) {
-      const { data: tpl, error: tplError } = await supabase
-        .from("document_templates")
-        .select("id, file_url, file_name, placeholder_mapping, is_active")
-        .eq("id", body.templateId)
-        .maybeSingle();
-      if (tplError || !tpl) {
-        return NextResponse.json({ error: "Plantilla no encontrada" }, { status: 404 });
-      }
-      if (!tpl.is_active) {
-        return NextResponse.json({ error: "La plantilla está inactiva" }, { status: 400 });
-      }
-      templateRow = tpl;
-    } else {
-      const { data: templates, error: templatesError } = await supabase
-        .from("document_templates")
-        .select("id, file_url, file_name, placeholder_mapping, is_active")
-        .eq("action_template_id", actionTemplateId)
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true })
-        .limit(1);
-
-      if (templatesError || !templates || templates.length === 0) {
-        // Sin document_template → no hay documento que generar
-        return NextResponse.json({ url: null, message: "Sin document_template activo" }, { status: 200 });
-      }
-      templateRow = templates[0];
-    }
-    const template = await getDocumentTemplateById(templateRow.id);
+    const template = await getDocumentTemplateById(body.templateId);
     if (!template) {
-      return NextResponse.json({ url: null, message: "Template no encontrado" }, { status: 200 });
+      return NextResponse.json({ error: "Plantilla no encontrada" }, { status: 404 });
+    }
+    if (!template.is_active) {
+      return NextResponse.json({ error: "La plantilla está inactiva" }, { status: 400 });
     }
 
-    // 3. Resolver liquidation_number del claim
+    // 3. Detectar tipo de archivo
+    const fileType = template.file_type || detectFileType(template.file_name, template.mime_type || undefined);
+    if (fileType === "pdf") {
+      return NextResponse.json(
+        { error: "No se puede generar un PDF desde plantilla — los PDFs se generan por conversión" },
+        { status: 400 }
+      );
+    }
+
+    // 4. Resolver liquidation_number del claim
     const { data: claim, error: claimError } = await supabase
       .from("claims")
       .select("liquidation_number")
@@ -107,42 +95,64 @@ export async function POST(
     }
 
     const liquidationNumber = claim.liquidation_number;
-    const actionCode = action.code; // ej: "L-000000141-HILI-001"
+    const actionCode = action.code;
+    const parts = actionCode.split("-");
+    if (parts.length < 4) {
+      return NextResponse.json({ error: `Código de gestión inválido: ${actionCode}` }, { status: 400 });
+    }
+    const compositeCode = parts[2];
+    const instanceSeq = parts[3];
 
-    // 4. Construir los datos del siniestro y renderizar
+    // 5. Construir los datos del siniestro y renderizar
     const docData = await buildDocumentDataForClaim(action.claim_id);
     const templateData = buildTemplateData(docData, template.placeholder_mapping);
     const templateBuffer = await fetchTemplateBuffer(template.file_url);
-    const rendered = renderDocx(templateBuffer, templateData);
+    const rendered = await renderDocument(templateBuffer, templateData, fileType);
 
-    // 5. Subir a R2 con path estructurado del plan
-    // El actionCode ya tiene el formato "L-000000141-HILI-001" (3 dígitos de instancia)
-    // Necesito separar el compositeCode del actionCode para gestionDocumentPath
-    // actionCode = liquidationNumber + "-" + compositeCode + "-" + instanceSeq
-    // Ej: "L-000000141-HILI-001" → liquidation="L-000000141", composite="HILI", seq="001"
-    const parts = actionCode.split("-");
-    if (parts.length < 3) {
-      return NextResponse.json({ error: `Código de gestión inválido: ${actionCode}` }, { status: 400 });
-    }
-    // parts[0] = "L", parts[1] = "000000141", parts[2] = "HILI", parts[3] = "001"
-    // Pero liquidationNumber ya lo tenemos. compositeCode = parts[2], instanceSeq = parts[3]
-    const compositeCode = parts[2];
-    const instanceSeq = parts[3] || "0001";
+    // 6. Determinar workflow_level según el estado de la gestión
+    const workflowLevel = determineWorkflowLevel(action.status);
 
-    const key = gestionDocumentPath(liquidationNumber, compositeCode, instanceSeq, ".docx");
-    const url = await uploadToR2(
-      Buffer.from(rendered),
-      key,
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    );
+    // 7. Crear versión (esto calcula el número de versión automáticamente)
+    // Necesitamos pre-calcular el path, pero el número de versión lo calcula createDocumentVersion.
+    // Para evitar una doble query, primero obtenemos el próximo número de versión.
+    const { data: existingVersions } = await supabase
+      .from("claim_action_documents")
+      .select("version")
+      .eq("claim_action_id", actionId)
+      .eq("is_active", true)
+      .order("version", { ascending: false })
+      .limit(1);
 
-    logger.info("Documento de gestión generado y subido", {
-      component: "generate-document",
-      action: "generate.upload",
-      metadata: { actionId, actionCode, key, size: rendered.byteLength },
+    const nextVersion = existingVersions && existingVersions.length > 0 ? existingVersions[0].version + 1 : 1;
+    const ext = `.${fileType}`;
+    const key = gestionDocumentVersionPath(liquidationNumber, compositeCode, instanceSeq, nextVersion, ext);
+    const mimeType = mimeTypeFor(fileType);
+    const url = await uploadToR2(Buffer.from(rendered), key, mimeType);
+
+    // 8. Crear el registro de versión
+    const document = await createDocumentVersion({
+      claim_action_id: actionId,
+      claim_id: action.claim_id,
+      source: "template",
+      document_template_id: template.id,
+      file_url: url,
+      file_path: key,
+      file_name: `${actionCode}-v${nextVersion}.${fileType}`,
+      original_filename: template.original_filename || template.file_name,
+      mime_type: mimeType,
+      file_size: rendered.byteLength,
+      file_type: fileType,
+      workflow_level: workflowLevel,
+      created_by: action.issued_by || action.issuer_id,
     });
 
-    return NextResponse.json({ url, key });
+    logger.info("Documento de gestión generado y versionado", {
+      component: "generate-document",
+      action: "generate.version",
+      metadata: { actionId, actionCode, version: nextVersion, fileType, key, size: rendered.byteLength },
+    });
+
+    return NextResponse.json({ document });
   } catch (err) {
     logger.error("API /api/claims/actions/[id]/generate-document error", err as Error, {
       component: "generate-document",
@@ -153,4 +163,14 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+/** Determina el workflow_level según el estado de la gestión */
+function determineWorkflowLevel(status: string | null): WorkflowLevel {
+  if (!status) return "issuer";
+  if (status === "todo" || status === "rejected") return "issuer";
+  if (status === "issued" || status === "review") return "reviewer";
+  if (status === "reviewed" || status === "approval") return "approver";
+  if (status === "approved" || status === "dispatched") return "dispatcher";
+  return "issuer";
 }

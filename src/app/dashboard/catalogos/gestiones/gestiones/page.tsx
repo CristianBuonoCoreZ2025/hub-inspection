@@ -845,7 +845,7 @@ export default function GestionesPage() {
  <AlertTriangle className="h-5 w-5 text-amber-500" />
  <span>Esta característica no soporta plantillas de documento.</span>
  <span className="text-[10px]">
- Activá &laquo;Con plantillas de documento&raquo; en la característica para habilitar esta sección.
+ La pantalla asociada no tiene flujo de plantillas. Asigná una pantalla con campo &laquo;Plantillas de documento&raquo; en el catálogo de pantallas para habilitar esta sección.
  </span>
  </div>
  </section>

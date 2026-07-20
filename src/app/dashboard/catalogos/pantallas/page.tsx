@@ -7,17 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Pencil, Ban, LayoutTemplate, Monitor } from "lucide-react";
+import { Pencil, Ban, LayoutTemplate, Monitor, Trash2, RotateCcw, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableTh } from "@/components/ui/sortable-th";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import {
  getGestionScreens,
  createGestionScreen,
  updateGestionScreenBase,
  deactivateGestionScreen,
+ reactivateGestionScreen,
+ deleteGestionScreen,
 } from "@/services/gestion-screens";
+import { getActionFeatures, type ActionFeature } from "@/services/actions";
 import type { GestionScreen } from "@/types";
 import { toast } from "sonner";
 
@@ -26,6 +30,7 @@ export default function PantallasPage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
  const [open, setOpen] = useState(false);
+ const [showInactive, setShowInactive] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
  const [formData, setFormData] = useState({
  code: "",
@@ -36,9 +41,25 @@ export default function PantallasPage() {
  });
 
  const { data: screens, isLoading } = useQuery({
- queryKey: ["gestion-screens"],
- queryFn: () => getGestionScreens(),
+ queryKey: ["gestion-screens", { includeInactive: showInactive }],
+ queryFn: () => getGestionScreens({ includeInactive: showInactive }),
  });
+
+ // Cargar características para contar cuántas usan cada pantalla
+ const { data: features } = useQuery({
+ queryKey: ["action-features"],
+ queryFn: getActionFeatures,
+ });
+
+ // Mapa screen_id → lista de características que la usan
+ const usageByScreen = new Map<string, ActionFeature[]>();
+ for (const f of features ?? []) {
+ if (!f.screen_id) continue;
+ const list = usageByScreen.get(f.screen_id);
+ if (list) list.push(f);
+ else usageByScreen.set(f.screen_id, [f]);
+ }
+ const getUsage = (screenId: string): ActionFeature[] => usageByScreen.get(screenId) ?? [];
 
  const { sorted: sortedScreens, sortKey, sortDir, toggleSort } = useTableSort(screens, {
  code: (s: GestionScreen) => s.code,
@@ -61,6 +82,18 @@ export default function PantallasPage() {
  const deactivateMut = useMutation({
  mutationFn: deactivateGestionScreen,
  onSuccess: () => { toast.success("Pantalla desactivada"); queryClient.invalidateQueries({ queryKey: ["gestion-screens"] }); },
+ onError: (e: Error) => toast.error(e.message),
+ });
+
+ const reactivateMut = useMutation({
+ mutationFn: reactivateGestionScreen,
+ onSuccess: () => { toast.success("Pantalla reactivada"); queryClient.invalidateQueries({ queryKey: ["gestion-screens"] }); },
+ onError: (e: Error) => toast.error(e.message),
+ });
+
+ const deleteMut = useMutation({
+ mutationFn: deleteGestionScreen,
+ onSuccess: () => { toast.success("Pantalla eliminada"); queryClient.invalidateQueries({ queryKey: ["gestion-screens"] }); },
  onError: (e: Error) => toast.error(e.message),
  });
 
@@ -92,6 +125,18 @@ export default function PantallasPage() {
  Pantallas
  </h1>
  <div className="flex-1" />
+ {screens && screens.length > 0 && (
+ <span className="text-[11px] text-muted-foreground">
+ {screens.filter((s) => s.is_active && getUsage(s.id).length > 0).length} en uso · {screens.filter((s) => s.is_active).length} activas · {screens.filter((s) => !s.is_active).length} inactivas
+ </span>
+ )}
+ <ToggleChip
+ active={showInactive}
+ onClick={setShowInactive}
+ icon={<EyeOff className="h-3 w-3" />}
+ >
+ Inactivas
+ </ToggleChip>
  {canCreate("catalogos") && (
  <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="pg-btn-platinum">
  Nueva
@@ -107,19 +152,27 @@ export default function PantallasPage() {
  <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
  <th>Descripción</th>
  <th>Campos</th>
+ <th>Uso</th>
  <SortableTh sortKey="sort_order" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Orden</SortableTh>
  <th className="w-[100px]"></th>
  </tr>
  </thead>
  <tbody>
- {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
- : sortedScreens.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron pantallas.</td></tr>
- : sortedScreens.map((s) => (
- <tr key={s.id}>
+ {isLoading ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+ : sortedScreens.length === 0 ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">No se encontraron pantallas.</td></tr>
+ : sortedScreens.map((s) => {
+ const usage = getUsage(s.id);
+ const inUse = usage.length > 0;
+ const isInactive = !s.is_active;
+ return (
+ <tr key={s.id} className={isInactive ? "opacity-50" : ""}>
  <td className="font-mono font-semibold text-primary">
  {s.code}
  {!s.is_dynamic && (
  <span className="ml-2 text-[10px] text-amber-600 font-normal">(fija)</span>
+ )}
+ {isInactive && (
+ <span className="ml-2 text-[10px] text-muted-foreground font-normal">(inactiva)</span>
  )}
  </td>
  <td className="font-medium">{s.name}</td>
@@ -131,10 +184,22 @@ export default function PantallasPage() {
  <span className="text-amber-600">Componente fijo</span>
  )}
  </td>
+ <td className="text-muted-foreground">
+ {usage.length > 0 ? (
+ <div className="flex flex-col gap-0.5">
+ <span className="font-mono text-primary font-semibold">{usage.length} {usage.length === 1 ? "característica" : "características"}</span>
+ <span className="block truncate max-w-[240px]" title={usage.map((f) => f.name).join(", ")}>
+ {usage.map((f) => f.name).join(", ")}
+ </span>
+ </div>
+ ) : (
+ <span className="text-muted-foreground/60">— sin uso —</span>
+ )}
+ </td>
  <td className="text-center font-mono">{s.sort_order}</td>
  <td>
  <div className="app-row-actions">
- {s.is_dynamic && canEdit("catalogos") && (
+ {s.is_dynamic && !isInactive && canEdit("catalogos") && (
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
  setEditingId(s.id);
  setFormData({
@@ -149,20 +214,36 @@ export default function PantallasPage() {
  <Pencil className="h-4 w-4" />
  </Button>
  )}
- {s.is_dynamic && canEdit("catalogos") && (
+ {s.is_dynamic && !isInactive && canEdit("catalogos") && (
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => router.push(`/dashboard/catalogos/pantallas/${s.id}`)} title="Diseñar pantalla">
  <LayoutTemplate className="h-4 w-4" />
  </Button>
  )}
- {s.is_dynamic && canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta pantalla?")) deactivateMut.mutate(s.id); }}>
+ {isInactive && canEdit("catalogos") && (
+ <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => reactivateMut.mutate(s.id)} title="Reactivar">
+ <RotateCcw className="h-4 w-4" />
+ </Button>
+ )}
+ {!isInactive && s.is_dynamic && canDelete("catalogos") && inUse && (
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta pantalla? Está en uso por características.")) deactivateMut.mutate(s.id); }} title="Desactivar">
  <Ban className="h-4 w-4" />
+ </Button>
+ )}
+ {!isInactive && s.is_dynamic && canDelete("catalogos") && !inUse && (
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Eliminar definitivamente esta pantalla? No está asociada a ninguna característica.")) deleteMut.mutate(s.id); }} title="Eliminar">
+ <Trash2 className="h-4 w-4" />
+ </Button>
+ )}
+ {isInactive && s.is_dynamic && canDelete("catalogos") && !inUse && (
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Eliminar definitivamente esta pantalla? No está asociada a ninguna característica.")) deleteMut.mutate(s.id); }} title="Eliminar">
+ <Trash2 className="h-4 w-4" />
  </Button>
  )}
  </div>
  </td>
  </tr>
- ))}
+ );
+ })}
  </tbody>
  </table>
  </div>

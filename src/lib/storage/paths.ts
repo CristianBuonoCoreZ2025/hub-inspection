@@ -159,6 +159,29 @@ export function gestionExtraDocumentPath(
 }
 
 /**
+ * Path para una versión de documento de gestión (sistema de versionado).
+ *
+ * @param liquidationNumber — ej: "L-000000001"
+ * @param compositeCode — ej: "HINS"
+ * @param instanceSeq — ej: "0001"
+ * @param version — Número de versión (1, 2, 3...)
+ * @param ext — ej: ".docx", ".xlsx", ".pptx", ".pdf"
+ * @returns ej: "claims/L-000000001/actions/L-000000001-HINS-0001/versions/v0001.docx"
+ */
+export function gestionDocumentVersionPath(
+  liquidationNumber: string,
+  compositeCode: string,
+  instanceSeq: string,
+  version: number,
+  ext: string
+): string {
+  const base = gestionInstanceBasePath(liquidationNumber, compositeCode, instanceSeq);
+  const v = String(version).padStart(4, "0");
+  const filename = `v${v}${ext.startsWith(".") ? ext : "." + ext}`;
+  return `${base}/versions/${filename}`;
+}
+
+/**
  * Path para una imagen de una gestión (evidencia, daño, firma).
  *
  * @param liquidationNumber — ej: "L-000000001"

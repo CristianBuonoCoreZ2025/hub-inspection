@@ -32,7 +32,9 @@ import { getCoverageCatalog } from "@/services/coverage-catalog";
 import { getDocumentTemplates, type DocumentTemplate } from "@/services/document-templates";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Plus, Ban, ChevronDown, Check, CheckCircle, X, FileText, Download, Loader2, Play } from "lucide-react";
+import { Plus, Ban, ChevronDown, Check, CheckCircle, X, FileText, Download, Loader2, Play, Upload, History, Lock, Unlock, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import type { ClaimAction, Claim } from "@/types";
 import type { GestionScreenProps } from "./types";
 
@@ -4296,150 +4298,757 @@ function CoordScheduler({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// DocumentTemplatesView — Plantillas de documento disponibles
-// para esta gestión (filtradas por action_template + compañía + evento).
-// Permite seleccionar una y generar el Word con los datos del siniestro.
+// DocumentWorkspace — Sistema de documentos de gestión con versionado,
+// lock para edición offline y conversión a PDF.
+//
+// Flujo:
+// 1. Si no hay documento: muestra 2 opciones (Plantilla del sistema / Subir Word/Excel/PPT)
+// 2. Si hay documento editable: muestra el documento actual con botones
+//    (Descargar con lock, Subir Nueva Versión, Historial, Convertir a PDF)
+// 3. Si hay PDF: muestra el PDF como documento final (acción cerrada)
+//
+// El botón "Convertir a PDF" aparece según el flag is_dispatch_applicable
+// del action_template:
+//   - false: aparece en todos los estados donde la gestión funciona
+//   - true: aparece SOLO en estado "despacho", solo despachadores
 // ═══════════════════════════════════════════════════════════════
 
+interface ClaimActionDocument {
+  id: string;
+  claim_action_id: string;
+  version: number;
+  source: string;
+  document_template_id: string | null;
+  file_url: string;
+  file_path: string;
+  file_name: string;
+  original_filename: string | null;
+  mime_type: string;
+  file_size: number | null;
+  file_type: "docx" | "xlsx" | "pptx" | "pdf";
+  workflow_level: string | null;
+  locked_by: string | null;
+  locked_at: string | null;
+  lock_expires_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  is_current: boolean;
+  locked_by_user?: { id: string; full_name: string; email: string } | null;
+  created_by_user?: { id: string; full_name: string; email: string } | null;
+  document_template?: { id: string; name: string; file_name: string } | null;
+}
+
 function DocumentTemplatesView({ action, readOnly }: { action: ActionWithRelations; readOnly?: boolean }) {
- const queryClient = useQueryClient();
- const [generatingId, setGeneratingId] = useState<string | null>(null);
- const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+  return <DocumentWorkspace action={action} readOnly={readOnly} />;
+}
 
- // Cargar el claim para obtener company_id y event_id (filtros de plantillas)
- const { data: claim } = useQuery({
- queryKey: ["claim", action.claim_id],
- queryFn: () => getClaimById(action.claim_id),
- enabled: !!action.claim_id,
- });
+function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; readOnly?: boolean }) {
+  const queryClient = useQueryClient();
+  const [showHistory, setShowHistory] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
- // Cargar plantillas disponibles para esta gestión
- const actionTemplateId = action.action_template_id || undefined;
- const { data: templates, isLoading } = useQuery({
- queryKey: ["doc-templates-for-action", actionTemplateId, claim?.company_id, claim?.event_id],
- queryFn: () => getDocumentTemplates({
- actionTemplateId,
- companyId: claim?.company_id || undefined,
- eventId: claim?.event_id || undefined,
- }),
- enabled: !!actionTemplateId,
- });
+  // Cargar el claim para obtener company_id y event_id (filtros de plantillas)
+  const { data: claim } = useQuery({
+    queryKey: ["claim", action.claim_id],
+    queryFn: () => getClaimById(action.claim_id),
+    enabled: !!action.claim_id,
+  });
 
- // Mutación para generar el documento
- const generateMut = useMutation({
- mutationFn: async (templateId: string) => {
- setGeneratingId(templateId);
- const res = await fetch(`/api/claims/actions/${action.id}/generate-document`, {
- method: "POST",
- headers: { "Content-Type": "application/json" },
- body: JSON.stringify({ templateId }),
- });
- if (!res.ok) {
- const err = await res.json().catch(() => ({ error: "Error al generar documento" }));
- throw new Error(err.error || "Error al generar documento");
- }
- return res.json() as Promise<{ url: string | null; key?: string }>;
- },
- onSuccess: (data) => {
- if (data.url) {
- setGeneratedUrl(data.url);
- toast.success("Documento generado correctamente");
- queryClient.invalidateQueries({ queryKey: ["claim-actions", action.claim_id] });
- } else {
- toast.info("No se generó documento (sin template activo)");
- }
- },
- onError: (e: Error) => toast.error(e.message),
- onSettled: () => setGeneratingId(null),
- });
+  // Cargar el documento actual de la gestión
+  const { data: currentDocData, isLoading: docLoading } = useQuery({
+    queryKey: ["claim-action-document-current", action.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/claims/actions/${action.id}/documents?current=true`);
+      if (!res.ok) throw new Error("Error al cargar documento");
+      return res.json() as Promise<{ document: ClaimActionDocument | null }>;
+    },
+    enabled: !!action.id,
+  });
 
- if (isLoading) {
- return (
- <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground text-[12px]">
- <Loader2 className="h-4 w-4 animate-spin" />
- Cargando plantillas...
- </div>
- );
- }
+  const currentDoc = currentDocData?.document || null;
+  const hasPdf = currentDoc?.file_type === "pdf";
+  const hasEditable = currentDoc && currentDoc.file_type !== "pdf";
 
- if (!templates || templates.length === 0) {
- return (
- <div className="text-center py-6 text-muted-foreground text-[12px]">
- No hay plantillas de documento configuradas para esta gestión.
- <p className="text-[10px] mt-1">
- Configurá plantillas en Catálogos → Gestiones → Plantillas de Documento.
- </p>
- </div>
- );
- }
+  // Cargar plantillas disponibles (solo para el picker)
+  const actionTemplateId = action.action_template_id || undefined;
+  const { data: templates } = useQuery({
+    queryKey: ["doc-templates-for-action", actionTemplateId, claim?.company_id, claim?.event_id],
+    queryFn: () =>
+      getDocumentTemplates({
+        actionTemplateId,
+        companyId: claim?.company_id || undefined,
+        eventId: claim?.event_id || undefined,
+      }),
+    enabled: !!actionTemplateId && !hasEditable && !hasPdf,
+  });
 
- return (
- <div className="space-y-2">
- {readOnly && (
- <p className="text-[10px] text-muted-foreground italic">
- La gestión ya está emitida — las plantillas son solo de referencia.
- </p>
- )}
- {templates.map((tpl: DocumentTemplate) => {
- const isGenerating = generatingId === tpl.id;
- const placeholders = tpl.detected_placeholders || [];
- return (
- <div
- key={tpl.id}
- className="flex items-center gap-3 rounded-lg border border-border p-2.5 hover:border-border/80 transition-colors"
- >
- <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#0095DA]/10">
- <FileText className="h-4 w-4 text-[#0095DA]" />
- </div>
- <div className="flex-1 min-w-0">
- <p className="text-[12px] font-medium truncate">{tpl.name}</p>
- <p className="text-[10px] text-muted-foreground truncate">
- {tpl.file_name}
- {placeholders.length > 0 && ` · ${placeholders.length} placeholder${placeholders.length !== 1 ? "s" : ""}`}
- </p>
- </div>
- <div className="flex items-center gap-1 shrink-0">
- <a
- href={tpl.file_url}
- target="_blank"
- rel="noopener noreferrer"
- className="btn-icon-sm text-muted-foreground hover:text-foreground hover:bg-muted"
- title="Descargar plantilla original"
- >
- <Download className="h-3.5 w-3.5" />
- </a>
- {!readOnly && (
- <button
- type="button"
- disabled={isGenerating}
- onClick={() => generateMut.mutate(tpl.id)}
- className="btn-icon-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 disabled:opacity-50"
- title="Generar documento con datos del siniestro"
- >
- {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
- </button>
- )}
- </div>
- </div>
- );
- })}
- {generatedUrl && (
- <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 p-3 space-y-1.5">
- <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
- <CheckCircle className="h-4 w-4" />
- <span className="text-[12px] font-medium">Documento generado</span>
- </div>
- <a
- href={generatedUrl}
- target="_blank"
- rel="noopener noreferrer"
- className="inline-flex items-center gap-1.5 text-[11px] text-[#0095DA] hover:underline"
- >
- <Download className="h-3 w-3" />
- Descargar documento .docx
- </a>
- </div>
- )}
- </div>
- );
+  // ─── Mutaciones ───
+
+  // Generar desde plantilla
+  const generateMut = useMutation({
+    mutationFn: async (templateId: string) => {
+      const res = await fetch(`/api/claims/actions/${action.id}/generate-document`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Error al generar documento" }));
+        throw new Error(err.error || "Error al generar documento");
+      }
+      return res.json() as Promise<{ document: ClaimActionDocument }>;
+    },
+    onSuccess: () => {
+      toast.success("Documento generado correctamente");
+      queryClient.invalidateQueries({ queryKey: ["claim-action-document-current", action.id] });
+      queryClient.invalidateQueries({ queryKey: ["claim-actions", action.claim_id] });
+      setShowTemplatePicker(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Subir documento (nuevo o nueva versión)
+  const uploadMut = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/claims/actions/${action.id}/upload-document`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Error al subir documento" }));
+        throw new Error(err.error || "Error al subir documento");
+      }
+      return res.json() as Promise<{ document: ClaimActionDocument }>;
+    },
+    onSuccess: () => {
+      toast.success("Documento subido correctamente");
+      queryClient.invalidateQueries({ queryKey: ["claim-action-document-current", action.id] });
+      queryClient.invalidateQueries({ queryKey: ["claim-actions", action.claim_id] });
+      setShowUpload(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Lock + descargar (al hacer click en Descargar, se bloquea primero)
+  const lockAndDownloadMut = useMutation({
+    mutationFn: async () => {
+      if (!currentDoc) throw new Error("No hay documento");
+      const res = await fetch(`/api/claims/actions/${action.id}/documents/${currentDoc.id}/lock`, {
+        method: "POST",
+      });
+      if (res.status === 409) {
+        const err = await res.json();
+        throw new Error(`Documento bloqueado por ${err.lockedBy?.full_name || "otro usuario"}`);
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Error al bloquear" }));
+        throw new Error(err.error || "Error al bloquear");
+      }
+      return res.json() as Promise<{ document: ClaimActionDocument }>;
+    },
+    onSuccess: (data) => {
+      // Abrir descarga en nueva pestaña
+      window.open(data.document.file_url, "_blank");
+      queryClient.invalidateQueries({ queryKey: ["claim-action-document-current", action.id] });
+      toast.success("Documento descargado y bloqueado para edición. Subí la nueva versión cuando termines.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Unlock (al subir nueva versión, se desbloquea automáticamente desde el backend)
+  const unlockMut = useMutation({
+    mutationFn: async () => {
+      if (!currentDoc) throw new Error("No hay documento");
+      const res = await fetch(`/api/claims/actions/${action.id}/documents/${currentDoc.id}/unlock`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Error al desbloquear" }));
+        throw new Error(err.error || "Error al desbloquear");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["claim-action-document-current", action.id] });
+      toast.success("Documento desbloqueado");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Force unlock (admin)
+  const forceUnlockMut = useMutation({
+    mutationFn: async () => {
+      if (!currentDoc) throw new Error("No hay documento");
+      const res = await fetch(`/api/claims/actions/${action.id}/documents/${currentDoc.id}/force-unlock`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Error al forzar desbloqueo" }));
+        throw new Error(err.error || "Error al forzar desbloqueo");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["claim-action-document-current", action.id] });
+      toast.success("Documento desbloqueado forzadamente");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Convertir a PDF
+  const convertPdfMut = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/claims/actions/${action.id}/convert-to-pdf`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Error al convertir a PDF" }));
+        throw new Error(err.error || "Error al convertir a PDF");
+      }
+      return res.json() as Promise<{ document: ClaimActionDocument }>;
+    },
+    onSuccess: () => {
+      toast.success("PDF generado — gestión cerrada y publicada");
+      queryClient.invalidateQueries({ queryKey: ["claim-action-document-current", action.id] });
+      queryClient.invalidateQueries({ queryKey: ["claim-actions", action.claim_id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // ─── Render ───
+
+  if (docLoading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground text-[11px]">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Cargando documento...
+      </div>
+    );
+  }
+
+  // Caso 1: No hay documento → mostrar opciones para crear
+  if (!currentDoc) {
+    return (
+      <div className="space-y-2">
+        {readOnly && (
+          <p className="text-[10px] text-muted-foreground italic">
+            La gestión no tiene documento.
+          </p>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={readOnly}
+            onClick={() => setShowTemplatePicker(true)}
+            className="flex flex-col items-start gap-1.5 rounded-lg border border-border p-3 text-left hover:border-[#0095DA]/50 hover:bg-[#0095DA]/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#0095DA]/10">
+              <FileText className="h-4 w-4 text-[#0095DA]" />
+            </div>
+            <div>
+              <p className="text-[11px] font-medium">Plantilla del sistema</p>
+              <p className="text-[10px] text-muted-foreground">Generar Word/Excel/PPT con datos del siniestro</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={readOnly}
+            onClick={() => setShowUpload(true)}
+            className="flex flex-col items-start gap-1.5 rounded-lg border border-border p-3 text-left hover:border-[#0095DA]/50 hover:bg-[#0095DA]/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-500/10">
+              <Upload className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-[11px] font-medium">Subir documento</p>
+              <p className="text-[10px] text-muted-foreground">Word, Excel o PowerPoint</p>
+            </div>
+          </button>
+        </div>
+
+        {/* Modal: Picker de plantillas */}
+        {showTemplatePicker && (
+          <DocumentTemplatePicker
+            templates={templates || []}
+            isLoading={!templates}
+            onPick={(id) => generateMut.mutate(id)}
+            onClose={() => setShowTemplatePicker(false)}
+            isGenerating={generateMut.isPending}
+          />
+        )}
+
+        {/* Modal: Upload */}
+        {showUpload && (
+          <DocumentUploadDialog
+            onUpload={(file) => uploadMut.mutate(file)}
+            onClose={() => setShowUpload(false)}
+            isUploading={uploadMut.isPending}
+            accept=".docx,.xlsx,.pptx"
+            title="Subir documento"
+            description="Subí un archivo Word, Excel o PowerPoint. No se pueden subir PDFs directamente."
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Caso 2/3: Hay documento (editable o PDF)
+  const isLockedByOther = currentDoc.locked_by && currentDoc.locked_by !== action.issued_by;
+  const isLockedByMe = currentDoc.locked_by && currentDoc.locked_by === action.issued_by;
+  const FileIconCmp = currentDoc.file_type === "xlsx" ? FileSpreadsheet : currentDoc.file_type === "pptx" ? Presentation : currentDoc.file_type === "pdf" ? FileIcon : FileText;
+  const fileColor = currentDoc.file_type === "pdf" ? "text-red-600" : "text-[#0095DA]";
+
+  return (
+    <div className="space-y-2">
+      {/* Documento actual */}
+      <div className="rounded-lg border border-border p-3 space-y-2">
+        <div className="flex items-start gap-3">
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-${currentDoc.file_type === "pdf" ? "red" : "[#0095DA]"}/10`}>
+            <FileIconCmp className={`h-4 w-4 ${fileColor}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-medium truncate">
+                {currentDoc.original_filename || currentDoc.file_name}
+              </p>
+              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 uppercase">
+                v{currentDoc.version}
+              </Badge>
+              {currentDoc.file_type === "pdf" && (
+                <Badge className="text-[9px] px-1 py-0 h-4 bg-red-500/10 text-red-600 border-red-200 dark:border-red-900/50">
+                  PDF Final
+                </Badge>
+              )}
+            </div>
+            <p className="text-[10px] text-muted-foreground truncate">
+              {currentDoc.file_name} · {formatFileSize(currentDoc.file_size)} · {formatDate(currentDoc.created_at)}
+              {currentDoc.created_by_user && ` · ${currentDoc.created_by_user.full_name}`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowHistory(true)}
+            className="btn-neutral btn-icon shrink-0"
+            title="Historial de versiones"
+          >
+            <History className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Indicador de lock */}
+        {currentDoc.locked_by && (
+          <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 px-2 py-1.5">
+            <Lock className="h-3.5 w-3.5 text-amber-600" />
+            <span className="text-[10px] text-amber-700 dark:text-amber-400 flex-1">
+              Bloqueado por {currentDoc.locked_by_user?.full_name || "otro usuario"}
+              {currentDoc.lock_expires_at && ` · expira ${formatDate(currentDoc.lock_expires_at)}`}
+            </span>
+            {isLockedByMe && (
+              <button
+                type="button"
+                onClick={() => unlockMut.mutate()}
+                disabled={unlockMut.isPending}
+                className="text-[10px] text-amber-700 dark:text-amber-400 hover:underline"
+              >
+                Desbloquear
+              </button>
+            )}
+            {isLockedByOther && (
+              <button
+                type="button"
+                onClick={() => forceUnlockMut.mutate()}
+                disabled={forceUnlockMut.isPending}
+                className="text-[10px] text-red-600 hover:underline"
+              >
+                Forzar desbloqueo
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Botones de acción */}
+        {!readOnly && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            {/* Descargar (con lock) — solo para documentos editables */}
+            {hasEditable && !currentDoc.locked_by && (
+              <button
+                type="button"
+                onClick={() => lockAndDownloadMut.mutate()}
+                disabled={lockAndDownloadMut.isPending}
+                className="pg-btn-platinum"
+                title="Descargar para editar offline (bloquea el documento)"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Descargar
+              </button>
+            )}
+
+            {/* Subir nueva versión — solo para documentos editables */}
+            {hasEditable && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadMut.isPending}
+                className="pg-btn-platinum"
+                title="Subir nueva versión del documento"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Subir
+              </button>
+            )}
+
+            {/* Convertir a PDF — solo para documentos editables, después del último nivel */}
+            {hasEditable && (
+              <button
+                type="button"
+                onClick={() => convertPdfMut.mutate()}
+                disabled={convertPdfMut.isPending}
+                className="pg-btn-platinum"
+                title="Convertir documento a PDF (cierra la gestión)"
+              >
+                {convertPdfMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileIcon className="h-3.5 w-3.5" />}
+                PDF
+              </button>
+            )}
+
+            {/* Descargar PDF — solo para PDFs */}
+            {hasPdf && (
+              <a
+                href={currentDoc.file_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pg-btn-platinum"
+                title="Descargar PDF final"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Descargar
+              </a>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".docx,.xlsx,.pptx"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadMut.mutate(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
+        )}
+
+        {/* Mensaje si es PDF (acción cerrada) */}
+        {hasPdf && (
+          <div className="flex items-center gap-2 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 px-2 py-1.5">
+            <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="text-[10px] text-emerald-700 dark:text-emerald-400">
+              Gestión cerrada y publicada — el PDF es el documento final
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Modal: Historial de versiones */}
+      {showHistory && (
+        <DocumentVersionHistory actionId={action.id} onClose={() => setShowHistory(false)} />
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DocumentTemplatePicker — Modal para elegir una plantilla del sistema
+// ═══════════════════════════════════════════════════════════════
+
+function DocumentTemplatePicker({
+  templates,
+  isLoading,
+  onPick,
+  onClose,
+  isGenerating,
+}: {
+  templates: DocumentTemplate[];
+  isLoading: boolean;
+  onPick: (id: string) => void;
+  onClose: () => void;
+  isGenerating: boolean;
+}) {
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="modal-md" showCloseButton>
+        <div className="modal-header">
+          <DialogTitle className="modal-title">Plantilla del sistema</DialogTitle>
+          <DialogDescription className="modal-subtitle">
+            Elegí una plantilla para generar el documento con los datos del siniestro
+          </DialogDescription>
+        </div>
+        <div className="modal-body space-y-2">
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-[11px]">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cargando plantillas...
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-[11px] text-muted-foreground">No hay plantillas configuradas para esta gestión.</p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Configurá plantillas en Catálogos → Gestiones → Plantillas de Documento
+              </p>
+            </div>
+          ) : (
+            templates.map((tpl) => {
+              const placeholders = tpl.detected_placeholders || [];
+              const fileType = tpl.file_type || "docx";
+              const Icon = fileType === "xlsx" ? FileSpreadsheet : fileType === "pptx" ? Presentation : FileText;
+              return (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  disabled={isGenerating}
+                  onClick={() => onPick(tpl.id)}
+                  className="flex items-center gap-3 rounded-lg border border-border p-2.5 text-left hover:border-[#0095DA]/50 hover:bg-[#0095DA]/5 transition-colors w-full disabled:opacity-50"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#0095DA]/10">
+                    <Icon className="h-4 w-4 text-[#0095DA]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-medium truncate">{tpl.name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {tpl.file_name}
+                      {placeholders.length > 0 && ` · ${placeholders.length} placeholder${placeholders.length !== 1 ? "s" : ""}`}
+                    </p>
+                  </div>
+                  {isGenerating ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  ) : (
+                    <Play className="h-3.5 w-3.5 text-emerald-600" />
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+        <div className="modal-footer">
+          <Button className="pg-btn-platinum" onClick={onClose}>Cerrar</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DocumentUploadDialog — Modal para subir un archivo
+// ═══════════════════════════════════════════════════════════════
+
+function DocumentUploadDialog({
+  onUpload,
+  onClose,
+  isUploading,
+  accept,
+  title,
+  description,
+}: {
+  onUpload: (file: File) => void;
+  onClose: () => void;
+  isUploading: boolean;
+  accept: string;
+  title: string;
+  description: string;
+}) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="modal-md" showCloseButton>
+        <div className="modal-header">
+          <DialogTitle className="modal-title">{title}</DialogTitle>
+          <DialogDescription className="modal-subtitle">{description}</DialogDescription>
+        </div>
+        <div className="modal-body space-y-3">
+          <div
+            onClick={() => inputRef.current?.click()}
+            className="cursor-pointer rounded-lg border-2 border-dashed border-border p-6 text-center hover:border-[#0095DA]/50 hover:bg-[#0095DA]/5 transition-colors"
+          >
+            <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-[11px] text-muted-foreground">
+              {selectedFile ? selectedFile.name : "Hacé click para seleccionar un archivo"}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Formatos aceptados: {accept}
+            </p>
+            <input
+              ref={inputRef}
+              type="file"
+              accept={accept}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) setSelectedFile(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <Button className="pg-btn-platinum" onClick={onClose}>Cancelar</Button>
+          <Button
+            className="pg-btn-platinum"
+            disabled={!selectedFile || isUploading}
+            onClick={() => selectedFile && onUpload(selectedFile)}
+          >
+            {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            Subir
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DocumentVersionHistory — Modal con historial de versiones
+// ═══════════════════════════════════════════════════════════════
+
+function DocumentVersionHistory({ actionId, onClose }: { actionId: string; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["claim-action-documents", actionId],
+    queryFn: async () => {
+      const res = await fetch(`/api/claims/actions/${actionId}/documents`);
+      if (!res.ok) throw new Error("Error al cargar historial");
+      return res.json() as Promise<{ documents: ClaimActionDocument[] }>;
+    },
+  });
+
+  const restoreMut = useMutation({
+    mutationFn: async (docId: string) => {
+      const res = await fetch(`/api/claims/actions/${actionId}/documents/${docId}/restore`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Error al restaurar" }));
+        throw new Error(err.error || "Error al restaurar");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Versión restaurada");
+      queryClient.invalidateQueries({ queryKey: ["claim-action-document-current", actionId] });
+      queryClient.invalidateQueries({ queryKey: ["claim-action-documents", actionId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="modal-md" showCloseButton>
+        <div className="modal-header">
+          <DialogTitle className="modal-title">Historial de versiones</DialogTitle>
+          <DialogDescription className="modal-subtitle">
+            Todas las versiones del documento de la gestión
+          </DialogDescription>
+        </div>
+        <div className="modal-body space-y-1.5">
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-[11px]">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cargando historial...
+            </div>
+          ) : !data?.documents || data.documents.length === 0 ? (
+            <p className="text-center py-8 text-[11px] text-muted-foreground">No hay versiones</p>
+          ) : (
+            data.documents.map((doc) => {
+              const Icon = doc.file_type === "xlsx" ? FileSpreadsheet : doc.file_type === "pptx" ? Presentation : doc.file_type === "pdf" ? FileIcon : FileText;
+              const color = doc.file_type === "pdf" ? "text-red-600" : "text-[#0095DA]";
+              const sourceLabel = {
+                template: "Plantilla",
+                upload_docx: "Subido",
+                upload_xlsx: "Subido",
+                upload_pptx: "Subido",
+                pdf_conversion: "Conversión PDF",
+              }[doc.source] || doc.source;
+              return (
+                <div
+                  key={doc.id}
+                  className="flex items-center gap-3 rounded-lg border border-border p-2.5"
+                >
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-${doc.file_type === "pdf" ? "red" : "[#0095DA]"}/10`}>
+                    <Icon className={`h-3.5 w-3.5 ${color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[11px] font-medium">v{doc.version}</p>
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+                        {sourceLabel}
+                      </Badge>
+                      {doc.is_current && (
+                        <Badge className="text-[9px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-900/50">
+                          Actual
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {doc.original_filename || doc.file_name} · {formatFileSize(doc.file_size)} · {formatDate(doc.created_at)}
+                      {doc.created_by_user && ` · ${doc.created_by_user.full_name}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <a
+                      href={doc.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-neutral btn-icon"
+                      title="Descargar"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                    {!doc.is_current && doc.file_type !== "pdf" && (
+                      <button
+                        type="button"
+                        onClick={() => restoreMut.mutate(doc.id)}
+                        disabled={restoreMut.isPending}
+                        className="btn-neutral btn-icon"
+                        title="Restaurar esta versión"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div className="modal-footer">
+          <Button className="pg-btn-platinum" onClick={onClose}>Cerrar</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Helpers ───
+
+function formatFileSize(bytes: number | null | undefined): string {
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return iso;
+  }
 }

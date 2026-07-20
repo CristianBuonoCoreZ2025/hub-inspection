@@ -9,14 +9,13 @@ import {
  deleteActionFeature,
  getActionTemplates,
 } from "@/services/actions";
-import { getGestionScreens } from "@/services/gestion-screens";
+import { getGestionScreens, screenHasDocumentTemplates } from "@/services/gestion-screens";
 import type { GestionScreen } from "@/types";
 import { toast } from "sonner";
-import { Pencil, Ban, Boxes, Layers, LayoutTemplate, FileText } from "lucide-react";
+import { Pencil, Ban, Boxes, Layers, LayoutTemplate } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTableSort } from "@/hooks/use-table-sort";
-import { ToggleChip } from "@/components/ui/toggle-chip";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,14 +92,22 @@ export default function CaracteristicasPage() {
  e.preventDefault();
  if (!formData.name.trim()) { toast.error("El nombre es requerido"); return; }
  if (!editingId && !formData.code.trim()) { toast.error("El código es requerido"); return; }
- if (editingId) { updateMut.mutate({ id: editingId, input: formData }); }
- else { createMut.mutate(formData); }
+ // has_template se deriva automáticamente de la pantalla seleccionada:
+ // si la pantalla tiene un campo de tipo "document_templates", la característica
+ // soporta plantillas de documento. No se pregunta manualmente.
+ const selectedScreen = screens?.find(s => s.id === formData.screen_id);
+ const derivedHasTemplate = screenHasDocumentTemplates(selectedScreen);
+ const payload = { ...formData, has_template: derivedHasTemplate };
+ if (editingId) { updateMut.mutate({ id: editingId, input: payload }); }
+ else { createMut.mutate(payload); }
  };
 
  // Tipo de gestión derivado — ahora siempre es una pantalla, el tipo indica
- // si además genera documentos
- const getTipo = (f: { has_template: boolean }) => {
- return f.has_template ? "Pantalla + Documentos" : "Pantalla";
+ // si además genera documentos. Se determina por la pantalla asociada,
+ // no por un flag manual en la característica.
+ const getTipo = (f: ActionFeature) => {
+ const screen = screens?.find(s => s.id === f.screen_id);
+ return screenHasDocumentTemplates(screen) ? "Pantalla + Documentos" : "Pantalla";
  };
 
  const tipoColor: Record<string, string> = {
@@ -264,25 +271,6 @@ export default function CaracteristicasPage() {
  <ScreenHelpPanel screen={screens?.find(s => s.id === formData.screen_id)} />
  </div>
 
- {/* ¿Genera documentos? — toggle independiente */}
- <div className="flex flex-col gap-1.5">
- <Label className="app-field-label">Generación de documentos</Label>
- <div className="flex items-center gap-2 flex-wrap">
- <ToggleChip
- active={formData.has_template}
- onClick={(v) => setFormData({ ...formData, has_template: v, has_specific_screen: true })}
- icon={<FileText className="h-3 w-3" />}
- >
- Con plantillas de documento
- </ToggleChip>
- {formData.has_template && (
- <span className="text-[10px] text-muted-foreground">
- Permite asociar .docx que se rellenan con datos del siniestro al emitir
- </span>
- )}
- </div>
- </div>
-
  {/* Max niveles de revisión */}
  <div className="flex flex-col gap-1.5">
  <Label className="app-field-label flex items-center gap-1.5">
@@ -340,11 +328,17 @@ function ScreenHelpPanel({ screen }: { screen: GestionScreen | undefined }) {
  }
 
  const fields = Array.isArray(screen.form_schema?.fields) ? (screen.form_schema.fields as { id?: string; code?: string; label?: string; type?: string }[]) : [];
+ const supportsDocs = screenHasDocumentTemplates(screen);
 
  return (
  <div className="rounded-md border border-border bg-card p-3 space-y-1.5">
  <div className="flex items-center gap-2">
  <span className="text-[12px] font-semibold">{screen.name}</span>
+ {supportsDocs && (
+ <span className="inline-flex rounded bg-violet-100 px-1.5 py-0.5 text-[9px] font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+ + Plantillas
+ </span>
+ )}
  </div>
  {screen.description && (
  <p className="text-[11px] text-muted-foreground">{screen.description}</p>

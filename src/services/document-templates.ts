@@ -1,4 +1,5 @@
 import { fetchAll, fetchById, insertRow, updateRow } from "@/lib/supabase/db";
+import { detectFileType, type DocumentFileType } from "./claim-action-documents";
 
 // ──────────────────────────────────────────────────────────────
 // Types
@@ -25,6 +26,8 @@ export interface DocumentTemplate {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  // Tipo de archivo derivado (docx, xlsx, pptx) — no está en BD, se calcula
+  file_type?: DocumentFileType;
   // Joins
   action_template?: { id: string; name: string; code: string | null } | null;
   event?: { id: string; name: string } | null;
@@ -85,14 +88,18 @@ export async function getDocumentTemplates(
     ...options,
     order: { column: "sort_order", ascending: true },
   });
-  return rows.sort((a, b) => {
+  // Calcular file_type para cada template
+  const sorted = rows.sort((a, b) => {
     if (a.sort_order === b.sort_order) return a.name.localeCompare(b.name);
     return a.sort_order - b.sort_order;
   });
+  return sorted.map((t) => ({ ...t, file_type: detectFileType(t.file_name, t.mime_type || undefined) }));
 }
 
 export async function getDocumentTemplateById(id: string): Promise<DocumentTemplate | null> {
-  return fetchById<DocumentTemplate>("document_templates", id, TEMPLATE_FIELDS);
+  const t = await fetchById<DocumentTemplate>("document_templates", id, TEMPLATE_FIELDS);
+  if (!t) return null;
+  return { ...t, file_type: detectFileType(t.file_name, t.mime_type || undefined) };
 }
 
 export async function createDocumentTemplate(input: DocumentTemplateInput): Promise<DocumentTemplate> {

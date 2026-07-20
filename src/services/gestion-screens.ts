@@ -1,5 +1,6 @@
-import { fetchAll, insertRow, updateRow, getSupabaseClient } from "@/lib/supabase/db";
+import { fetchAll, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
 import type { GestionScreen, CharacteristicScreen, ClaimAction } from "@/types";
+import { createAdminClient } from "@/lib/supabase/server";
 
 const SCREEN_FIELDS =
   "id, code, name, description, icon, form_schema, is_active, is_dynamic, sort_order";
@@ -9,10 +10,11 @@ const SCREEN_FIELDS =
 // con las características (many-to-many).
 // ═══════════════════════════════════════════════════════════════════
 
-export async function getGestionScreens(): Promise<GestionScreen[]> {
+export async function getGestionScreens(options?: { includeInactive?: boolean }): Promise<GestionScreen[]> {
+  const eq = options?.includeInactive ? undefined : { is_active: true };
   return fetchAll<GestionScreen>("gestion_screens", {
     select: SCREEN_FIELDS,
-    eq: { is_active: true },
+    eq,
     order: { column: "sort_order", ascending: true },
   }).then((rows) =>
     rows.sort((a, b) => {
@@ -20,6 +22,17 @@ export async function getGestionScreens(): Promise<GestionScreen[]> {
       return a.sort_order - b.sort_order;
     })
   );
+}
+
+/**
+ * Determina si una pantalla soporta flujo de plantillas de documento (.docx).
+ * Se considera que lo soporta si su form_schema tiene al menos un campo
+ * de tipo "document_templates" (complex_entity que renderiza DocumentTemplatesView).
+ */
+export function screenHasDocumentTemplates(screen: { form_schema?: Record<string, unknown> | null } | null | undefined): boolean {
+  if (!screen?.form_schema) return false;
+  const fields = Array.isArray(screen.form_schema.fields) ? screen.form_schema.fields : [];
+  return fields.some((f) => (f as { type?: string }).type === "document_templates");
 }
 
 export async function getGestionScreenByCode(code: string): Promise<GestionScreen | null> {
@@ -128,6 +141,21 @@ export async function updateGestionScreenBase(id: string, input: {
  */
 export async function deactivateGestionScreen(id: string): Promise<GestionScreen> {
   return updateGestionScreenBase(id, { is_active: false });
+}
+
+/**
+ * Reactivar una pantalla desactivada.
+ */
+export async function reactivateGestionScreen(id: string): Promise<GestionScreen> {
+  return updateGestionScreenBase(id, { is_active: true });
+}
+
+/**
+ * Eliminar permanentemente una pantalla.
+ * Solo debe usarse cuando la pantalla no está asociada a ninguna característica.
+ */
+export async function deleteGestionScreen(id: string): Promise<void> {
+  await deleteRow("gestion_screens", id, "id");
 }
 
 /**
