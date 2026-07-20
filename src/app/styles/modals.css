@@ -37,8 +37,14 @@
 
   /* modal-md-wide → 660px → modales de análisis IA */
   .modal-md-wide {
-    @apply flex max-h-[90vh] w-[min(96vw,660px)] flex-col gap-0
-           overflow-hidden border-0 p-0;
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 90vh !important;
+    width: min(96vw, 660px) !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    padding: 0 !important;
     border-radius: 18px !important;
     background: color-mix(in srgb, var(--card) 85%, transparent) !important;
     backdrop-filter: blur(20px) saturate(140%);
