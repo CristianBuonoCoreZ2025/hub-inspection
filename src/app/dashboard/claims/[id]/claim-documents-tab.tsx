@@ -434,10 +434,6 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
 
     // 2. Documentos de la póliza
     for (const doc of policyDocs || []) {
-      const docTypeName =
-        docOptions.lineDocs.find((d) => d.code === doc.document_type)?.name ||
-        docOptions.restDocs.find((d) => d.code === doc.document_type)?.name ||
-        doc.document_type || "—";
       docs.push({
         id: doc.id,
         origen: "poliza",
