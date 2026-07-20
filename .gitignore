@@ -72,3 +72,5 @@ screenshots/
 migrations/supabase_data.sql
 migrations/supabase_schema.sql
 .git-commit-msg.tmp
+.vercel
+.env*
