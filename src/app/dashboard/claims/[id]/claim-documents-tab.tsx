@@ -542,12 +542,17 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                       {doc.codigo}
                     </td>
                     <td className="font-medium wrap-break-word">
-                      <div>{doc.nombre}</div>
-                      {doc.subnombre && (
-                        <div className="text-[10px] text-muted-foreground/70 truncate">
-                          {doc.subnombre}
-                        </div>
-                      )}
+                      <div className="flex items-baseline gap-1.5 min-w-0">
+                        <span className="truncate">{doc.nombre}</span>
+                        {doc.subnombre && (
+                          <>
+                            <span className="text-muted-foreground/40 shrink-0">/</span>
+                            <span className="text-[10px] text-muted-foreground/70 truncate" title={doc.subnombre}>
+                              {doc.subnombre}
+                            </span>
+                          </>
+                        )}
+                      </div>
                       {doc.aiStatus === "pending" ? (
                         <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
                           <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
