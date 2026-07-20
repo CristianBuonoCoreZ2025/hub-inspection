@@ -202,7 +202,7 @@ export interface Claim {
   broker?: { id: string; name: string } | null;
   insurance_company?: { id: string; name: string } | null;
   policy?: { id: string; policy_number: string | null; policy_name: string; status: string | null; currency: string | null } | null;
-  currency?: { id: string; category: string; code: string; name: string } | null;
+  currency?: { id: string; code: string; name: string; symbol: string | null; decimals: number | null } | null;
 }
 
 export interface ClaimsParticipant {
