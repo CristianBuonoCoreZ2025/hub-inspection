@@ -61,6 +61,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
   const { canCreate, canDelete } = usePermissions();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedDocType, setSelectedDocType] = useState<string>("");
+  const [aiSummaryModal, setAiSummaryModal] = useState<{ visible: boolean; title: string; summary: string }>({ visible: false, title: "", summary: "" });
 
   // 1. Documentos físicos del siniestro
   const { data: claimDocs, isLoading: claimDocsLoading } = useQuery({
@@ -553,7 +554,11 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                           <span className="font-medium">Analizando con IA...</span>
                         </div>
                       ) : doc.aiSummary ? (
-                        <div className="mt-1 flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400">
+                        <div
+                          className="mt-1 flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400 cursor-help hover:text-violet-700 dark:hover:text-violet-300"
+                          title="Clic para ver el análisis completo"
+                          onClick={() => setAiSummaryModal({ visible: true, title: doc.nombre, summary: doc.aiSummary! })}
+                        >
                           <Zap className="h-3 w-3 shrink-0 mt-0.5" />
                           <span className="italic line-clamp-2 wrap-break-word">{doc.aiSummary}</span>
                         </div>
@@ -965,6 +970,35 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 Reintentar
               </Button>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══ MODAL: Ver análisis IA completo ═══ */}
+      <Dialog
+        open={aiSummaryModal.visible}
+        onOpenChange={(open) => setAiSummaryModal((p) => ({ ...p, visible: open }))}
+      >
+        <DialogContent className="modal-md" showCloseButton={false}>
+          <div className="modal-header">
+            <DialogTitle className="modal-title flex items-center gap-2">
+              <Zap className="h-4 w-4 text-violet-500" />
+              Análisis IA
+            </DialogTitle>
+          </div>
+          <div className="modal-body space-y-2">
+            <div className="text-[11px] font-medium text-foreground">{aiSummaryModal.title}</div>
+            <div className="rounded-md bg-violet-50/50 p-3 text-[12px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap">
+              {aiSummaryModal.summary}
+            </div>
+          </div>
+          <div className="modal-footer">
+            <Button
+              className="pg-btn-platinum"
+              onClick={() => setAiSummaryModal((p) => ({ ...p, visible: false }))}
+            >
+              Cerrar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

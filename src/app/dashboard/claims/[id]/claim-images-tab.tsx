@@ -68,6 +68,7 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [aiSummaryModal, setAiSummaryModal] = useState<{ visible: boolean; title: string; summary: string }>({ visible: false, title: "", summary: "" });
 
   // ─── Modal de subida (drag&drop + progreso) ───
   const [uploadModal, setUploadModal] = useState<{
@@ -358,6 +359,7 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
                   image={img}
                   onZoom={() => setZoomImage(img.url)}
                   onDelete={() => deleteMut.mutate(img.id)}
+                  onShowSummary={() => setAiSummaryModal({ visible: true, title: img.descripcion || img.codigo, summary: img.aiSummary! })}
                   claimId={claimId}
                   formatFileSize={formatFileSize}
                   OrigenBadge={OrigenBadge}
@@ -595,6 +597,35 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
           />
         </div>
       )}
+
+      {/* ═══ MODAL: Ver análisis IA completo ═══ */}
+      <Dialog
+        open={aiSummaryModal.visible}
+        onOpenChange={(open) => setAiSummaryModal((p) => ({ ...p, visible: open }))}
+      >
+        <DialogContent className="modal-md" showCloseButton={false}>
+          <div className="modal-header">
+            <DialogTitle className="modal-title flex items-center gap-2">
+              <Zap className="h-4 w-4 text-violet-500" />
+              Análisis IA
+            </DialogTitle>
+          </div>
+          <div className="modal-body space-y-2">
+            <div className="text-[11px] font-medium text-foreground">{aiSummaryModal.title}</div>
+            <div className="rounded-md bg-violet-50/50 p-3 text-[12px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap">
+              {aiSummaryModal.summary}
+            </div>
+          </div>
+          <div className="modal-footer">
+            <Button
+              className="pg-btn-platinum"
+              onClick={() => setAiSummaryModal((p) => ({ ...p, visible: false }))}
+            >
+              Cerrar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -605,6 +636,7 @@ function UnifiedImageCard({
   image,
   onZoom,
   onDelete,
+  onShowSummary,
   claimId,
   formatFileSize,
   OrigenBadge,
@@ -612,6 +644,7 @@ function UnifiedImageCard({
   image: UnifiedImage;
   onZoom: () => void;
   onDelete: () => void;
+  onShowSummary: () => void;
   claimId: string;
   formatFileSize: (bytes?: number | null) => string;
   OrigenBadge: React.ComponentType<{ origen: UnifiedImage["origen"] }>;
@@ -698,12 +731,13 @@ function UnifiedImageCard({
             <span className="font-medium">Analizando con IA...</span>
           </div>
         ) : image.aiSummary ? (
-          <div className="mt-0.5 flex items-start gap-1 rounded bg-violet-50/50 p-1 dark:bg-violet-950/20">
+          <div
+            className="mt-0.5 flex items-start gap-1 rounded bg-violet-50/50 p-1 dark:bg-violet-950/20 cursor-help hover:bg-violet-100/70 dark:hover:bg-violet-900/30"
+            title="Clic para ver el análisis completo"
+            onClick={onShowSummary}
+          >
             <Zap className="mt-0.5 h-2.5 w-2.5 shrink-0 text-violet-500" />
-            <p
-              className="line-clamp-2 text-[9px] leading-relaxed text-violet-700 dark:text-violet-300"
-              title={image.aiSummary}
-            >
+            <p className="line-clamp-2 text-[9px] leading-relaxed text-violet-700 dark:text-violet-300">
               {image.aiSummary}
             </p>
           </div>
