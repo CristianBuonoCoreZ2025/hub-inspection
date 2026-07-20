@@ -52,20 +52,44 @@ export async function POST(
       return NextResponse.json({ url: null, message: "Sin template asociado" }, { status: 200 });
     }
 
-    const { data: templates, error: templatesError } = await supabase
-      .from("document_templates")
-      .select("id, file_url, file_name, placeholder_mapping, is_active")
-      .eq("action_template_id", actionTemplateId)
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .limit(1);
-
-    if (templatesError || !templates || templates.length === 0) {
-      // Sin document_template → no hay documento que generar
-      return NextResponse.json({ url: null, message: "Sin document_template activo" }, { status: 200 });
+    // Si el body trae templateId, usar esa plantilla específica (selección desde la UI).
+    // Si no, tomar la primera activa del action_template (comportamiento anterior).
+    let body: { templateId?: string } = {};
+    try {
+      body = await request.json().catch(() => ({})) as { templateId?: string };
+    } catch {
+      body = {};
     }
 
-    const templateRow = templates[0];
+    let templateRow: { id: string; file_url: string; file_name: string; placeholder_mapping: unknown; is_active: boolean } | null = null;
+    if (body.templateId) {
+      const { data: tpl, error: tplError } = await supabase
+        .from("document_templates")
+        .select("id, file_url, file_name, placeholder_mapping, is_active")
+        .eq("id", body.templateId)
+        .maybeSingle();
+      if (tplError || !tpl) {
+        return NextResponse.json({ error: "Plantilla no encontrada" }, { status: 404 });
+      }
+      if (!tpl.is_active) {
+        return NextResponse.json({ error: "La plantilla está inactiva" }, { status: 400 });
+      }
+      templateRow = tpl;
+    } else {
+      const { data: templates, error: templatesError } = await supabase
+        .from("document_templates")
+        .select("id, file_url, file_name, placeholder_mapping, is_active")
+        .eq("action_template_id", actionTemplateId)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .limit(1);
+
+      if (templatesError || !templates || templates.length === 0) {
+        // Sin document_template → no hay documento que generar
+        return NextResponse.json({ url: null, message: "Sin document_template activo" }, { status: 200 });
+      }
+      templateRow = templates[0];
+    }
     const template = await getDocumentTemplateById(templateRow.id);
     if (!template) {
       return NextResponse.json({ url: null, message: "Template no encontrado" }, { status: 200 });

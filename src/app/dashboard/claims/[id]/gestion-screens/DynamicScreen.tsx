@@ -29,9 +29,10 @@ import { getUsersByRoles, updateClaimAction, issueClaimAction } from "@/services
 import { getUsersByRoleForCompany } from "@/services/users";
 import { getInspectionSessions, createInspectionSession, getInspectorSchedule } from "@/services/inspections";
 import { getCoverageCatalog } from "@/services/coverage-catalog";
+import { getDocumentTemplates, type DocumentTemplate } from "@/services/document-templates";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Plus, Ban, ChevronDown, Check, CheckCircle, X } from "lucide-react";
+import { Plus, Ban, ChevronDown, Check, CheckCircle, X, FileText, Download, Loader2, Play } from "lucide-react";
 import type { ClaimAction, Claim } from "@/types";
 import type { GestionScreenProps } from "./types";
 
@@ -840,6 +841,8 @@ function ComplexEntityView({ type, field, action, readOnly, values, onAdvance, o
  return <AdjustmentEditorView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} generalValues={values} action={action} onChange={onChange} />;
  case "claim_documents":
  return <DocumentRequestView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} />;
+ case "document_templates":
+ return <DocumentTemplatesView action={action} readOnly={readOnly} />;
  case "claim_document_receipt":
  return <DocumentReceiptView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} action={action} fieldConfig={(field?.config || {}) as ReceiptFieldConfig} />;
  case "inspection_coordination":
@@ -4287,6 +4290,155 @@ function CoordScheduler({
  )}
  {daysToIssue && daysToIssue > 0 && !isPast && !isOverMaxDate && (
  <p className="text-[9px] text-muted-foreground">Máx recomendado: {daysToIssue} días</p>
+ )}
+ </div>
+ );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DocumentTemplatesView — Plantillas de documento disponibles
+// para esta gestión (filtradas por action_template + compañía + evento).
+// Permite seleccionar una y generar el Word con los datos del siniestro.
+// ═══════════════════════════════════════════════════════════════
+
+function DocumentTemplatesView({ action, readOnly }: { action: ActionWithRelations; readOnly?: boolean }) {
+ const queryClient = useQueryClient();
+ const [generatingId, setGeneratingId] = useState<string | null>(null);
+ const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+
+ // Cargar el claim para obtener company_id y event_id (filtros de plantillas)
+ const { data: claim } = useQuery({
+ queryKey: ["claim", action.claim_id],
+ queryFn: () => getClaimById(action.claim_id),
+ enabled: !!action.claim_id,
+ });
+
+ // Cargar plantillas disponibles para esta gestión
+ const actionTemplateId = action.action_template_id || undefined;
+ const { data: templates, isLoading } = useQuery({
+ queryKey: ["doc-templates-for-action", actionTemplateId, claim?.company_id, claim?.event_id],
+ queryFn: () => getDocumentTemplates({
+ actionTemplateId,
+ companyId: claim?.company_id || undefined,
+ eventId: claim?.event_id || undefined,
+ }),
+ enabled: !!actionTemplateId,
+ });
+
+ // Mutación para generar el documento
+ const generateMut = useMutation({
+ mutationFn: async (templateId: string) => {
+ setGeneratingId(templateId);
+ const res = await fetch(`/api/claims/actions/${action.id}/generate-document`, {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({ templateId }),
+ });
+ if (!res.ok) {
+ const err = await res.json().catch(() => ({ error: "Error al generar documento" }));
+ throw new Error(err.error || "Error al generar documento");
+ }
+ return res.json() as Promise<{ url: string | null; key?: string }>;
+ },
+ onSuccess: (data) => {
+ if (data.url) {
+ setGeneratedUrl(data.url);
+ toast.success("Documento generado correctamente");
+ queryClient.invalidateQueries({ queryKey: ["claim-actions", action.claim_id] });
+ } else {
+ toast.info("No se generó documento (sin template activo)");
+ }
+ },
+ onError: (e: Error) => toast.error(e.message),
+ onSettled: () => setGeneratingId(null),
+ });
+
+ if (isLoading) {
+ return (
+ <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground text-[12px]">
+ <Loader2 className="h-4 w-4 animate-spin" />
+ Cargando plantillas...
+ </div>
+ );
+ }
+
+ if (!templates || templates.length === 0) {
+ return (
+ <div className="text-center py-6 text-muted-foreground text-[12px]">
+ No hay plantillas de documento configuradas para esta gestión.
+ <p className="text-[10px] mt-1">
+ Configurá plantillas en Catálogos → Gestiones → Plantillas de Documento.
+ </p>
+ </div>
+ );
+ }
+
+ return (
+ <div className="space-y-2">
+ {readOnly && (
+ <p className="text-[10px] text-muted-foreground italic">
+ La gestión ya está emitida — las plantillas son solo de referencia.
+ </p>
+ )}
+ {templates.map((tpl: DocumentTemplate) => {
+ const isGenerating = generatingId === tpl.id;
+ const placeholders = tpl.detected_placeholders || [];
+ return (
+ <div
+ key={tpl.id}
+ className="flex items-center gap-3 rounded-lg border border-border p-2.5 hover:border-border/80 transition-colors"
+ >
+ <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#0095DA]/10">
+ <FileText className="h-4 w-4 text-[#0095DA]" />
+ </div>
+ <div className="flex-1 min-w-0">
+ <p className="text-[12px] font-medium truncate">{tpl.name}</p>
+ <p className="text-[10px] text-muted-foreground truncate">
+ {tpl.file_name}
+ {placeholders.length > 0 && ` · ${placeholders.length} placeholder${placeholders.length !== 1 ? "s" : ""}`}
+ </p>
+ </div>
+ <div className="flex items-center gap-1 shrink-0">
+ <a
+ href={tpl.file_url}
+ target="_blank"
+ rel="noopener noreferrer"
+ className="btn-icon-sm text-muted-foreground hover:text-foreground hover:bg-muted"
+ title="Descargar plantilla original"
+ >
+ <Download className="h-3.5 w-3.5" />
+ </a>
+ {!readOnly && (
+ <button
+ type="button"
+ disabled={isGenerating}
+ onClick={() => generateMut.mutate(tpl.id)}
+ className="btn-icon-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 disabled:opacity-50"
+ title="Generar documento con datos del siniestro"
+ >
+ {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+ </button>
+ )}
+ </div>
+ </div>
+ );
+ })}
+ {generatedUrl && (
+ <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 p-3 space-y-1.5">
+ <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+ <CheckCircle className="h-4 w-4" />
+ <span className="text-[12px] font-medium">Documento generado</span>
+ </div>
+ <a
+ href={generatedUrl}
+ target="_blank"
+ rel="noopener noreferrer"
+ className="inline-flex items-center gap-1.5 text-[11px] text-[#0095DA] hover:underline"
+ >
+ <Download className="h-3 w-3" />
+ Descargar documento .docx
+ </a>
+ </div>
  )}
  </div>
  );
