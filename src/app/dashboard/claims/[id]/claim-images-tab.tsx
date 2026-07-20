@@ -730,8 +730,8 @@ function UnifiedImageCard({
           </div>
         ) : image.aiSummary ? (
           <div
-            className="mt-0.5 flex items-start gap-1 rounded bg-violet-50/50 p-1 dark:bg-violet-950/20 cursor-help hover:bg-violet-100/70 dark:hover:bg-violet-900/30"
-            title="Clic para ver el análisis completo"
+            className="mt-0.5 flex items-start gap-1 rounded bg-violet-50/50 p-1 dark:bg-violet-950/20 cursor-pointer hover:bg-violet-100/70 dark:hover:bg-violet-900/30"
+            title={image.aiSummary}
             onClick={onShowSummary}
           >
             <Zap className="mt-0.5 h-2.5 w-2.5 shrink-0 text-violet-500" />

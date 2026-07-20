@@ -555,8 +555,8 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                         </div>
                       ) : doc.aiSummary ? (
                         <div
-                          className="mt-1 flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400 cursor-help hover:text-violet-700 dark:hover:text-violet-300"
-                          title="Clic para ver el análisis completo"
+                          className="mt-1 flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400 cursor-pointer hover:text-violet-700 dark:hover:text-violet-300"
+                          title={doc.aiSummary}
                           onClick={() => setAiSummaryModal({ visible: true, title: doc.nombre, summary: doc.aiSummary! })}
                         >
                           <Zap className="h-3 w-3 shrink-0 mt-0.5" />
