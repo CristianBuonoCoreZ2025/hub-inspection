@@ -118,7 +118,9 @@ function extractSquarePlaceholdersFromXml(content: Uint8Array): string[] {
  * Devuelve el buffer del .docx generado.
  *
  * Soporta placeholders en formato <placeholder> y [PLACEHOLDER].
- * Los [PLACEHOLDER] se convierten a <PLACEHOLDER> antes de renderizar.
+ * Los [PLACEHOLDER] se convierten a <placeholder> (minúsculas) antes de renderizar.
+ * También elimina los Content Controls (SDT) de Word conservando su contenido,
+ * para que docxtemplater pueda acceder a los placeholders dentro de ellos.
  */
 export function renderDocx(
   buffer: Uint8Array | ArrayBuffer,
@@ -126,8 +128,8 @@ export function renderDocx(
 ): Uint8Array {
   let content = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
 
-  // Pre-procesar: convertir [PLACEHOLDER] → <PLACEHOLDER> en el XML del docx
-  content = convertSquareToAnglePlaceholders(content, data);
+  // Pre-procesar: eliminar SDTs, convertir [PLACEHOLDER] → <placeholder>
+  content = preprocessDocxForRender(content, data);
 
   const zip = new PizZip(content);
   const doc = new Docxtemplater(zip, {
@@ -145,17 +147,24 @@ export function renderDocx(
 }
 
 /**
- * Pre-procesa el .docx convirtiendo [PLACEHOLDER] → <PLACEHOLDER>
- * para los placeholders que existen en `data`.
- * Solo convierte los placeholders conocidos para no alterar texto legítimo.
+ * Pre-procesa el .docx antes de renderizar:
+ * 1. Elimina los Content Controls (SDT) de Word conservando su contenido
+ *    (para que docxtemplater pueda acceder a los placeholders dentro de ellos)
+ * 2. Convierte [PLACEHOLDER] → <placeholder> (minúsculas) para los placeholders
+ *    que existen en `data` (case-insensitive match)
  */
-function convertSquareToAnglePlaceholders(
+function preprocessDocxForRender(
   content: Uint8Array,
   data: Record<string, unknown>
 ): Uint8Array {
   const zip = new PizZip(content);
-  const knownKeys = new Set(Object.keys(data));
-  if (knownKeys.size === 0) return content;
+
+  // Mapa case-insensitive: UPPER_KEY → canonicalKey (ej: LIQUIDATION_NUMBER → liquidation_number)
+  const dataKeysLower = new Map<string, string>();
+  for (const k of Object.keys(data)) {
+    dataKeysLower.set(k.toUpperCase(), k);
+  }
+  if (dataKeysLower.size === 0) return content;
 
   const filesToPatch = [
     "word/document.xml",
@@ -167,17 +176,53 @@ function convertSquareToAnglePlaceholders(
     const file = zip.files[filePath];
     if (!file) continue;
     let xml = file.asText();
-    // Reemplazar [PLACEHOLDER] → <PLACEHOLDER> solo si PLACEHOLDER está en data
-    const newXml = xml.replace(
+
+    // 1. Eliminar SDTs (Content Controls) conservando el contenido
+    xml = unwrapSdts(xml);
+
+    // 2. Convertir [PLACEHOLDER] → &lt;placeholder&gt; (entidades XML escapadas)
+    //    docxtemplater decodifica las entidades y detecta el placeholder.
+    //    Solo si PLACEHOLDER (en mayúsculas) corresponde a una key de data.
+    xml = xml.replace(
       /\[([A-Z][A-Z0-9_]*(?:\.[A-Z][A-Z0-9_]*)*)\]/g,
-      (full, key) => knownKeys.has(key) ? `<${key}>` : full
+      (full, key: string) => {
+        const canonical = dataKeysLower.get(key);
+        return canonical ? `&lt;${canonical}&gt;` : full;
+      }
     );
-    if (newXml !== xml) {
-      zip.file(filePath, newXml);
-      modified = true;
-    }
+
+    zip.file(filePath, xml);
+    modified = true;
   }
 
   if (!modified) return content;
   return zip.generate({ type: "uint8array", compression: "DEFLATE" }) as unknown as Uint8Array;
+}
+
+/**
+ * Elimina los Content Controls (SDT) de Word del XML, conservando
+ * el contenido de <w:sdtContent>.
+ *
+ * Un SDT tiene la estructura:
+ *   <w:sdt>
+ *     <w:sdtPr>...propiedades...</w:sdtPr>
+ *     <w:sdtContent>...contenido a conservar...</w:sdtContent>
+ *   </w:sdt>
+ *
+ * Después del unwrap queda solo el contenido del sdtContent.
+ * Maneja SDTs anidados repitiendo hasta que no queden más.
+ */
+function unwrapSdts(xml: string): string {
+  let prev: string;
+  do {
+    prev = xml;
+    xml = xml.replace(
+      /<w:sdt>([\s\S]*?)<\/w:sdt>/g,
+      (full, inner: string) => {
+        const contentMatch = inner.match(/<w:sdtContent>([\s\S]*?)<\/w:sdtContent>/);
+        return contentMatch ? contentMatch[1] : "";
+      }
+    );
+  } while (xml !== prev);
+  return xml;
 }
