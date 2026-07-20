@@ -765,7 +765,13 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                     onValueChange={(v) => setSelectedDocType(v ?? "")}
                   >
                     <SelectTrigger className="app-input h-7">
-                      <SelectValue placeholder="Seleccionar tipo..." />
+                      <SelectValue placeholder="Seleccionar tipo...">
+                        {(value) => {
+                          const all = [...docOptions.lineDocs, ...docOptions.restDocs];
+                          const found = all.find((d) => d.code === value);
+                          return found ? found.name : value;
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {docOptions.lineDocs.length > 0 && (
