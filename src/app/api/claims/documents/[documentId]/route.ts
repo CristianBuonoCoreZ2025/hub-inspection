@@ -89,42 +89,117 @@ export async function DELETE(
 
     // 4. Desvincular de claim_document_request_items si estaba linkeado
     //    + reabrir el request si estaba cerrado (status="received")
-    //    IMPORTANTE: solo desvincular el item cuyo received_file_id === documentId
-    //    (no todos los items del mismo document_type_code, que puede haber varios)
+    //
+    //    IMPORTANTE: si hay OTRO documento del mismo tipo que sigue existiendo
+    //    en el claim, el item debe seguir marcado como "received" apuntando a
+    //    ese otro documento (no se desvincula ni se revierte la RTA).
+    //    Solo si NO hay otro documento del mismo tipo, se desvincula el item.
     let wasLinkedToRequest = false;
     let affectedRequestIds: string[] = [];
     {
       const { data: linkedItems } = await supabase
         .from("claim_document_request_items")
-        .select("id, request_id")
+        .select("id, request_id, document_type_code")
         .eq("received_file_id", documentId);
 
       if (linkedItems && linkedItems.length > 0) {
         wasLinkedToRequest = true;
         affectedRequestIds = [...new Set(linkedItems.map((i: { request_id: string }) => i.request_id))];
 
-        await supabase
-          .from("claim_document_request_items")
-          .update({
-            received_file_url: null,
-            received_file_id: null,
-            received_at: null,
-            received_by: null,
-            status: "requested",
-            updated_at: new Date().toISOString(),
-          })
-          .in("id", linkedItems.map((i: { id: string }) => i.id));
+        // Para cada item vinculado, buscar si hay otro documento del mismo tipo
+        // que siga existiendo en el claim (distinto al que se está eliminando)
+        const itemsToUnlink: string[] = [];
+        const itemsToRelink: { id: string; newFileId: string; newFileUrl: string | null }[] = [];
 
-        // Reabrir requests que estaban cerrados (status="received" → "requested")
-        // porque al eliminar un documento vinculado, ya no están completos
-        await supabase
-          .from("claim_document_requests")
-          .update({
-            status: "requested",
-            updated_at: new Date().toISOString(),
-          })
-          .in("id", affectedRequestIds)
-          .eq("status", "received");
+        for (const item of linkedItems) {
+          // Buscar otro documento del mismo tipo en el claim (que no sea el que se borra)
+          const { data: otherDocs } = await supabase
+            .from("claim_documents")
+            .select("id, document_url")
+            .eq("claim_id", doc.claim_id)
+            .eq("document_type", item.document_type_code)
+            .neq("id", documentId)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          if (otherDocs && otherDocs.length > 0) {
+            // Hay otro documento del mismo tipo → re-vincular el item a ese documento
+            itemsToRelink.push({
+              id: item.id,
+              newFileId: otherDocs[0].id,
+              newFileUrl: otherDocs[0].document_url,
+            });
+          } else {
+            // No hay otro documento del mismo tipo → desvincular el item
+            itemsToUnlink.push(item.id);
+          }
+        }
+
+        // Re-vincular items a otros documentos del mismo tipo
+        for (const r of itemsToRelink) {
+          await supabase
+            .from("claim_document_request_items")
+            .update({
+              received_file_id: r.newFileId,
+              received_file_url: r.newFileUrl,
+              updated_at: new Date().toISOString(),
+              // status y received_at se mantienen
+            })
+            .eq("id", r.id);
+
+          logger.info("Item re-vinculado a otro documento del mismo tipo", {
+            component: "claim-documents",
+            action: "relink.request_item",
+            metadata: {
+              item_id: r.id,
+              new_file_id: r.newFileId,
+              deleted_file_id: documentId,
+            },
+          });
+        }
+
+        // Desvincular items sin otro documento del mismo tipo
+        if (itemsToUnlink.length > 0) {
+          await supabase
+            .from("claim_document_request_items")
+            .update({
+              received_file_url: null,
+              received_file_id: null,
+              received_at: null,
+              received_by: null,
+              status: "requested",
+              updated_at: new Date().toISOString(),
+            })
+            .in("id", itemsToUnlink);
+
+          // Reabrir requests que estaban cerrados (status="received" → "requested")
+          // Solo si hubo items desvinculados sin reemplazo
+          await supabase
+            .from("claim_document_requests")
+            .update({
+              status: "requested",
+              updated_at: new Date().toISOString(),
+            })
+            .in("id", affectedRequestIds)
+            .eq("status", "received");
+        }
+
+        // Si TODOS los items fueron re-vinculados (no hubo desvinculación),
+        // entonces la RTA no debe reversarse
+        if (itemsToUnlink.length === 0) {
+          wasLinkedToRequest = false;
+          logger.info("Todos los items vinculados tenían otro documento del mismo tipo — RTA no se toca", {
+            component: "claim-documents",
+            action: "delete.skip_rta_reversal",
+            metadata: {
+              claim_id: doc.claim_id,
+              document_id: documentId,
+              doc_code: doc.doc_code,
+              document_type: doc.document_type,
+              relinked_count: itemsToRelink.length,
+            },
+          });
+        }
       }
     }
 
