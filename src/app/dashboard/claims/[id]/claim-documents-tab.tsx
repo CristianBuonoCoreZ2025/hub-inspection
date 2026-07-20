@@ -193,17 +193,18 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     return docs;
   }, [policyCoverages, coverageCatalog, policySubcoverages]);
 
-  // Estado del modal de progreso de subida
-  const [uploadProgress, setUploadProgress] = useState<{
+  // Estado del modal de subida (selección + progreso en uno solo)
+  const [uploadModal, setUploadModal] = useState<{
     visible: boolean;
     fileName: string;
     fileSize: number;
     loaded: number;
     speed: number; // KB/s
     elapsed: number; // ms
-    status: "uploading" | "processing" | "done" | "error";
+    status: "idle" | "uploading" | "processing" | "done" | "error";
     errorMsg?: string;
-  }>({ visible: false, fileName: "", fileSize: 0, loaded: 0, speed: 0, elapsed: 0, status: "uploading" });
+    isDragging: boolean;
+  }>({ visible: false, fileName: "", fileSize: 0, loaded: 0, speed: 0, elapsed: 0, status: "idle", isDragging: false });
 
   // Estado del modal de eliminación
   const [deleteModal, setDeleteModal] = useState<{
@@ -234,7 +235,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
           if (e.lengthComputable) {
             const elapsed = Date.now() - startTime;
             const speed = elapsed > 0 ? (e.loaded / 1024) / (elapsed / 1000) : 0;
-            setUploadProgress((p) => ({
+            setUploadModal((p) => ({
               ...p,
               loaded: e.loaded,
               fileSize: e.total,
@@ -250,7 +251,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
         xhr.upload.addEventListener("load", () => {
           const elapsed = Date.now() - startTime;
           const finalSpeed = elapsed > 0 ? (file.size / 1024) / (elapsed / 1000) : 0;
-          setUploadProgress((p) => ({
+          setUploadModal((p) => ({
             ...p,
             status: "uploading",
             loaded: p.fileSize,
@@ -258,7 +259,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
             elapsed,
           }));
           setTimeout(() => {
-            setUploadProgress((p) => ({ ...p, status: "processing" }));
+            setUploadModal((p) => ({ ...p, status: "processing" }));
           }, 400);
         });
 
@@ -266,7 +267,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               const data = JSON.parse(xhr.responseText);
-              setUploadProgress((p) => ({ ...p, status: "done" }));
+              setUploadModal((p) => ({ ...p, status: "done" }));
               resolve(data);
             } catch {
               reject(new Error("Respuesta inválida del servidor"));
@@ -290,18 +291,18 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 msg = `Error ${xhr.status}: ${xhr.statusText}`;
               }
             }
-            setUploadProgress((p) => ({ ...p, status: "error", errorMsg: msg }));
+            setUploadModal((p) => ({ ...p, status: "error", errorMsg: msg }));
             reject(new Error(msg));
           }
         });
 
         xhr.addEventListener("error", () => {
-          setUploadProgress((p) => ({ ...p, status: "error", errorMsg: "Error de red" }));
+          setUploadModal((p) => ({ ...p, status: "error", errorMsg: "Error de red" }));
           reject(new Error("Error de red al subir archivo"));
         });
 
         xhr.addEventListener("abort", () => {
-          setUploadProgress((p) => ({ ...p, status: "error", errorMsg: "Subida cancelada" }));
+          setUploadModal((p) => ({ ...p, status: "error", errorMsg: "Subida cancelada" }));
           reject(new Error("Subida cancelada"));
         });
 
@@ -310,15 +311,15 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
       });
     },
     onMutate: ({ file }) => {
-      setUploadProgress({
-        visible: true,
+      setUploadModal((p) => ({
+        ...p,
         fileName: file.name,
         fileSize: file.size,
         loaded: 0,
         speed: 0,
         elapsed: 0,
         status: "uploading",
-      });
+      }));
     },
     onSuccess: () => {
       toast.success("Documento subido");
@@ -327,16 +328,11 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
       queryClient.invalidateQueries({ queryKey: ["claim-action"] });
       queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
       queryClient.invalidateQueries({ queryKey: ["gestion-screens"] });
-      // Cerrar modal después de 1.5s para que se vea el check verde
-      setTimeout(() => {
-        setUploadProgress((p) => ({ ...p, visible: false }));
-      }, 1500);
+      setUploadModal((p) => ({ ...p, status: "done" }));
     },
     onError: (e: Error) => {
       toast.error(e.message);
-      setTimeout(() => {
-        setUploadProgress((p) => ({ ...p, visible: false }));
-      }, 3000);
+      setUploadModal((p) => ({ ...p, status: "error", errorMsg: e.message }));
     },
   });
 
@@ -506,69 +502,15 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
             )}
           </h3>
           {canCreateDocs && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleFileSelect}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-              />
-              <div className="flex items-center gap-2">
-                <Select
-                  value={selectedDocType || "__none"}
-                  onValueChange={(v) => setSelectedDocType(v === "__none" ? "" : (v ?? ""))}
-                >
-                  <SelectTrigger className="app-input h-7 w-[200px]">
-                    <SelectValue placeholder="Tipo de documento..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">Sin selección</SelectItem>
-                    {docOptions.lineDocs.length > 0 && (
-                      <SelectGroup>
-                        <SelectLabel>Línea de Negocio</SelectLabel>
-                        {docOptions.lineDocs.map((d) => (
-                          <SelectItem key={d.code} value={d.code}>{d.name}</SelectItem>
-                        ))}
-                      </SelectGroup>
-                    )}
-                    {docOptions.lineDocs.length > 0 && docOptions.restDocs.length > 0 && (
-                      <SelectSeparator />
-                    )}
-                    {docOptions.restDocs.length > 0 && (
-                      <SelectGroup>
-                        <SelectLabel>Otros Documentos</SelectLabel>
-                        {docOptions.restDocs.map((d) => (
-                          <SelectItem key={d.code} value={d.code}>{d.name}</SelectItem>
-                        ))}
-                      </SelectGroup>
-                    )}
-                  </SelectContent>
-                </Select>
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="pg-btn-platinum-icon"
-                  disabled={uploadMut.isPending}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  {uploadMut.isPending ? "Subiendo..." : "Subir"}
-                </Button>
-              </div>
-            </>
+            <Button
+              onClick={() => setUploadModal((p) => ({ ...p, visible: true, status: "idle", fileName: "", fileSize: 0, loaded: 0, isDragging: false }))}
+              className="pg-btn-platinum-icon"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Subir
+            </Button>
           )}
         </div>
-
-        {/* Paginación arriba */}
-        {total > 0 && (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            total={total}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-          />
-        )}
 
         {claimDocsLoading ? (
           <p className="text-sm text-muted-foreground text-center py-6">Cargando...</p>
@@ -775,110 +717,234 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
         </DialogContent>
       </Dialog>
 
-      {/* ═══ MODAL: Progreso de subida ═══ */}
+      {/* ═══ MODAL: Subir documento (selección tipo + drag&drop + progreso) ═══ */}
       <Dialog
-        open={uploadProgress.visible}
+        open={uploadModal.visible}
         onOpenChange={(open) => {
-          if (!open && (uploadProgress.status === "uploading" || uploadProgress.status === "processing")) return;
-          setUploadProgress((p) => ({ ...p, visible: open }));
+          if (!open && (uploadModal.status === "uploading" || uploadModal.status === "processing")) return;
+          setUploadModal((p) => ({ ...p, visible: open, status: "idle" }));
         }}
+        dismissible={false}
       >
-        <DialogContent className="modal-sm" showCloseButton={false}>
+        <DialogContent className="modal-md" showCloseButton={false}>
           <div className="modal-header">
             <DialogTitle className="modal-title">
-              {uploadProgress.status === "done"
+              {uploadModal.status === "done"
                 ? "Documento subido"
-                : uploadProgress.status === "error"
+                : uploadModal.status === "error"
                 ? "Error"
+                : uploadModal.status === "idle"
+                ? "Subir documento"
                 : "Subiendo documento"}
             </DialogTitle>
           </div>
 
           <div className="modal-body space-y-3">
-            {/* Info del archivo: icono + nombre + tamaño total */}
-            <div className="flex items-center gap-2.5 rounded-md bg-muted/40 p-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <FileText className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[11px] font-medium text-foreground">{uploadProgress.fileName}</div>
-                <div className="text-[10px] text-muted-foreground">{formatFileSize(uploadProgress.fileSize)}</div>
-              </div>
-            </div>
+            {/* ─── Fase idle: selección de tipo + drag&drop ─── */}
+            {uploadModal.status === "idle" && (
+              <>
+                {/* Select de tipo de documento */}
+                <div className="space-y-1.5">
+                  <label className="app-field-label">Tipo de documento</label>
+                  <Select
+                    value={selectedDocType || "__none"}
+                    onValueChange={(v) => setSelectedDocType(v === "__none" ? "" : (v ?? ""))}
+                  >
+                    <SelectTrigger className="app-input h-7">
+                      <SelectValue placeholder="Seleccionar tipo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">Sin selección</SelectItem>
+                      {docOptions.lineDocs.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Línea de Negocio</SelectLabel>
+                          {docOptions.lineDocs.map((d) => (
+                            <SelectItem key={d.code} value={d.code}>{d.name}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {docOptions.lineDocs.length > 0 && docOptions.restDocs.length > 0 && (
+                        <SelectSeparator />
+                      )}
+                      {docOptions.restDocs.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Otros Documentos</SelectLabel>
+                          {docOptions.restDocs.map((d) => (
+                            <SelectItem key={d.code} value={d.code}>{d.name}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Subiendo: barra de progreso con detalle completo */}
-            {uploadProgress.status === "uploading" && (
-              <div className="space-y-2">
-                {/* % grande + velocidad */}
-                <div className="flex items-end justify-between">
-                  <span className="text-[11px] text-muted-foreground">Subiendo...</span>
-                  <div className="flex items-end gap-3">
-                    {uploadProgress.speed > 0 && (
-                      <span className="text-[10px] text-muted-foreground tabular-nums">
-                        {uploadProgress.speed < 1024
-                          ? `${uploadProgress.speed.toFixed(0)} KB/s`
-                          : `${(uploadProgress.speed / 1024).toFixed(1)} MB/s`}
-                      </span>
-                    )}
-                    <span className="text-lg font-bold tabular-nums text-primary leading-none">
-                      {uploadProgress.fileSize > 0
-                        ? Math.round((uploadProgress.loaded / uploadProgress.fileSize) * 100)
-                        : 0}%
-                    </span>
+                {/* Drag & drop area */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setUploadModal((p) => ({ ...p, isDragging: true }));
+                  }}
+                  onDragLeave={() => setUploadModal((p) => ({ ...p, isDragging: false }))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setUploadModal((p) => ({ ...p, isDragging: false }));
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      if (!selectedDocType) {
+                        toast.error("Selecciona un tipo de documento antes de subir");
+                        return;
+                      }
+                      uploadMut.mutate({ file, docTypeCode: selectedDocType });
+                    }
+                  }}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+                    uploadModal.isDragging
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/30"
+                  }`}
+                >
+                  <Upload className={`h-8 w-8 ${uploadModal.isDragging ? "text-primary" : "text-muted-foreground"}`} />
+                  <div className="text-[12px] font-medium text-foreground">
+                    Arrastra el archivo aquí
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    o haz clic para seleccionar
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="pg-btn-platinum mt-1"
+                  >
+                    Seleccionar
+                  </Button>
+                </div>
+
+                <div className="text-[10px] text-muted-foreground text-center">
+                  PDF, DOC, XLS, JPG, PNG · máx. 50 MB
+                </div>
+              </>
+            )}
+
+            {/* ─── Fase uploading/processing/done/error: info del archivo + progreso ─── */}
+            {uploadModal.status !== "idle" && (
+              <>
+                {/* Info del archivo */}
+                <div className="flex items-center gap-2.5 rounded-md bg-muted/40 p-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[11px] font-medium text-foreground">{uploadModal.fileName}</div>
+                    <div className="text-[10px] text-muted-foreground">{formatFileSize(uploadModal.fileSize)}</div>
                   </div>
                 </div>
-                {/* Barra */}
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-200 ease-out rounded-full"
-                    style={{
-                      width: `${uploadProgress.fileSize > 0 ? (uploadProgress.loaded / uploadProgress.fileSize) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-                {/* Bytes subidos / total + tiempo */}
-                <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
-                  <span>
-                    {formatFileSize(uploadProgress.loaded)} / {formatFileSize(uploadProgress.fileSize)}
-                  </span>
-                  <span>
-                    {uploadProgress.elapsed > 0
-                      ? `${(uploadProgress.elapsed / 1000).toFixed(1)}s`
-                      : ""}
-                  </span>
-                </div>
-              </div>
-            )}
 
-            {/* Procesando: spinner con detalle */}
-            {uploadProgress.status === "processing" && (
-              <div className="flex items-center gap-2 py-1">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                <span className="text-[11px] text-muted-foreground">Vinculando documento y verificando RTA...</span>
-              </div>
-            )}
+                {/* Subiendo: barra de progreso */}
+                {uploadModal.status === "uploading" && (
+                  <div className="space-y-2">
+                    <div className="flex items-end justify-between">
+                      <span className="text-[11px] text-muted-foreground">Subiendo...</span>
+                      <div className="flex items-end gap-3">
+                        {uploadModal.speed > 0 && (
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            {uploadModal.speed < 1024
+                              ? `${uploadModal.speed.toFixed(0)} KB/s`
+                              : `${(uploadModal.speed / 1024).toFixed(1)} MB/s`}
+                          </span>
+                        )}
+                        <span className="text-lg font-bold tabular-nums text-primary leading-none">
+                          {uploadModal.fileSize > 0
+                            ? Math.round((uploadModal.loaded / uploadModal.fileSize) * 100)
+                            : 0}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-200 ease-out rounded-full"
+                        style={{
+                          width: `${uploadModal.fileSize > 0 ? (uploadModal.loaded / uploadModal.fileSize) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
+                      <span>
+                        {formatFileSize(uploadModal.loaded)} / {formatFileSize(uploadModal.fileSize)}
+                      </span>
+                      <span>
+                        {uploadModal.elapsed > 0
+                          ? `${(uploadModal.elapsed / 1000).toFixed(1)}s`
+                          : ""}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
-            {/* Done: check + resumen */}
-            {uploadProgress.status === "done" && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 py-1">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  <span className="text-[11px] font-medium text-emerald-600">Documento subido correctamente</span>
-                </div>
-                <div className="text-[10px] text-muted-foreground pl-6">
-                  {formatFileSize(uploadProgress.fileSize)} · {uploadProgress.fileName}
-                </div>
-              </div>
-            )}
+                {/* Procesando */}
+                {uploadModal.status === "processing" && (
+                  <div className="flex items-center gap-2 py-1">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                    <span className="text-[11px] text-muted-foreground">Vinculando documento y verificando RTA...</span>
+                  </div>
+                )}
 
-            {/* Error: X + mensaje */}
-            {uploadProgress.status === "error" && (
-              <div className="flex items-center gap-2 py-1">
-                <XCircle className="h-4 w-4 text-rose-500" />
-                <span className="text-[11px] font-medium text-rose-600">
-                  {uploadProgress.errorMsg || "Error al subir"}
-                </span>
-              </div>
+                {/* Done */}
+                {uploadModal.status === "done" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 py-1">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      <span className="text-[11px] font-medium text-emerald-600">Documento subido correctamente</span>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground pl-6">
+                      {formatFileSize(uploadModal.fileSize)} · {uploadModal.fileName}
+                    </div>
+                  </div>
+                )}
+
+                {/* Error */}
+                {uploadModal.status === "error" && (
+                  <div className="flex items-center gap-2 py-1">
+                    <XCircle className="h-4 w-4 text-rose-500" />
+                    <span className="text-[11px] font-medium text-rose-600">
+                      {uploadModal.errorMsg || "Error al subir"}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="modal-footer">
+            {uploadModal.status === "idle" && (
+              <Button
+                className="pg-btn-platinum"
+                onClick={() => setUploadModal((p) => ({ ...p, visible: false }))}
+              >
+                Cancelar
+              </Button>
+            )}
+            {uploadModal.status === "done" && (
+              <Button
+                className="pg-btn-platinum"
+                onClick={() => setUploadModal((p) => ({ ...p, visible: false, status: "idle" }))}
+              >
+                Cerrar
+              </Button>
+            )}
+            {uploadModal.status === "error" && (
+              <Button
+                className="pg-btn-platinum"
+                onClick={() => setUploadModal((p) => ({ ...p, status: "idle", fileName: "", fileSize: 0, loaded: 0 }))}
+              >
+                Reintentar
+              </Button>
             )}
           </div>
         </DialogContent>
