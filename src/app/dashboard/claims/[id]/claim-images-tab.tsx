@@ -601,7 +601,7 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         open={aiSummaryModal.visible}
         onOpenChange={(open) => setAiSummaryModal((p) => ({ ...p, visible: open }))}
       >
-        <DialogContent className="modal-md" showCloseButton={false}>
+        <DialogContent className="modal-md-wide" showCloseButton={false}>
           <div className="modal-header">
             <DialogTitle className="modal-title flex items-center gap-2">
               <Zap className="h-4 w-4 text-violet-500" />
