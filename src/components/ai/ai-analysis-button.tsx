@@ -81,6 +81,7 @@ interface AiAnalysisButtonProps {
   fileName?: string;
   hasSummary?: boolean;
   queryKey: unknown[];
+  disabled?: boolean;
 }
 
 export function AiAnalysisButton({
@@ -89,6 +90,7 @@ export function AiAnalysisButton({
   fileName,
   hasSummary,
   queryKey,
+  disabled,
 }: AiAnalysisButtonProps) {
   const [open, setOpen] = useState(false);
   const [stage, setStage] = useState<Stage>("idle");
@@ -196,7 +198,7 @@ export function AiAnalysisButton({
         size="icon"
         className="btn-icon-sm btn-danger-hover"
         title={hasSummary ? "Re-analizar con IA" : "Analizar con IA"}
-        disabled={isBusy}
+        disabled={isBusy || disabled}
         onClick={runAnalysis}
       >
         {isBusy ? (

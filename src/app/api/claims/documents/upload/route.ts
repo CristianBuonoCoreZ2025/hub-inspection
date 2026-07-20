@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
         created_by: userId,
         ai_summary: null,
         ai_model: null,
+        ai_status: "pending",
       })
       .select("id, claim_id, doc_code, document_name, document_url, document_type, original_filename, mime_type, file_size, file_path, is_active, created_at, updated_at")
       .single();
@@ -334,17 +335,20 @@ export async function POST(request: NextRequest) {
       // 1. IA: resumen automático
       let aiSummary: string | null = null;
       let aiModel: string | null = null;
+      let aiStatus: "done" | "error" | "skipped" = "error";
       try {
         const ai = await summarizeFile(docBuffer, docMimeType, docFileName);
         if (ai.ok) {
           aiSummary = ai.summary;
           aiModel = ai.model;
+          aiStatus = "done";
           logger.info("IA (bg): resumen generado", {
             component: "claim-doc-upload",
             action: "ai.summary.bg",
             metadata: { docId, model: ai.model, summaryLength: ai.summary.length },
           });
         } else {
+          aiStatus = "skipped";
           logger.warn("IA (bg): documento no procesado", {
             component: "claim-doc-upload",
             action: "ai.summary.skipped.bg",
@@ -352,6 +356,7 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch (aiErr) {
+        aiStatus = "error";
         logger.warn("IA (bg): no se pudo generar resumen", {
           component: "claim-doc-upload",
           action: "ai.summary.error.bg",
@@ -381,9 +386,9 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // 3. Actualizar el registro con IA + URL optimizada
+      // 3. Actualizar el registro con IA + URL optimizada + estado
       try {
-        const updateFields: Record<string, unknown> = {};
+        const updateFields: Record<string, unknown> = { ai_status: aiStatus };
         if (aiSummary) {
           updateFields.ai_summary = aiSummary;
           updateFields.ai_model = aiModel;
@@ -393,17 +398,15 @@ export async function POST(request: NextRequest) {
           updateFields.file_path = optimizedKey;
           updateFields.document_url = optimizedUrl;
         }
-        if (Object.keys(updateFields).length > 0) {
-          await createAdminClient()
-            .from("claim_documents")
-            .update(updateFields)
-            .eq("id", docId);
-          logger.info("Background: documento actualizado", {
-            component: "claim-doc-upload",
-            action: "bg.update",
-            metadata: { docId, fields: Object.keys(updateFields) },
-          });
-        }
+        await createAdminClient()
+          .from("claim_documents")
+          .update(updateFields)
+          .eq("id", docId);
+        logger.info("Background: documento actualizado", {
+          component: "claim-doc-upload",
+          action: "bg.update",
+          metadata: { docId, aiStatus, fields: Object.keys(updateFields) },
+        });
       } catch (updErr) {
         logger.error("Background: error actualizando documento", updErr as Error, {
           component: "claim-doc-upload",

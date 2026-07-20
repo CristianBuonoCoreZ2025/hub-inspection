@@ -67,6 +67,12 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     queryKey: ["claim-documents", claimId],
     queryFn: () => getClaimDocuments(claimId),
     enabled: !!claimId,
+    // Polling cada 5s mientras hay documentos siendo procesados por IA
+    refetchInterval: (query) => {
+      const docs = query.state.data;
+      if (docs && docs.some((d) => d.ai_status === "pending")) return 5000;
+      return false;
+    },
   });
 
   // Obtener business_line_id del siniestro
@@ -394,6 +400,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     tamano: string;
     url: string;
     aiSummary?: string | null;
+    aiStatus?: string | null;
     docTypeCode?: string;
     canDelete?: boolean;
     docId?: string; // para delete (solo siniestro)
@@ -418,6 +425,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
         tamano: formatFileSize(doc.file_size),
         url: doc.document_url || "",
         aiSummary: doc.ai_summary,
+        aiStatus: doc.ai_status,
         docTypeCode: doc.document_type || undefined,
         canDelete: canDeleteDocs,
         docId: doc.id,
@@ -543,12 +551,17 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                           {doc.subnombre}
                         </div>
                       )}
-                      {doc.aiSummary && (
+                      {doc.aiStatus === "pending" ? (
+                        <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
+                          <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                          <span className="font-medium">Analizando con IA...</span>
+                        </div>
+                      ) : doc.aiSummary ? (
                         <div className="mt-1 flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400">
                           <Zap className="h-3 w-3 shrink-0 mt-0.5" />
                           <span className="italic line-clamp-2 wrap-break-word">{doc.aiSummary}</span>
                         </div>
-                      )}
+                      ) : null}
                     </td>
                     <td className="text-muted-foreground uppercase text-[11px]">
                       {doc.ext}
@@ -561,8 +574,10 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             href={doc.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"
-                            title="Ver documento"
+                            className={doc.aiStatus === "pending"
+                              ? "flex h-8 w-8 items-center justify-center rounded text-muted-foreground/30 cursor-not-allowed pointer-events-none"
+                              : "flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"}
+                            title={doc.aiStatus === "pending" ? "Procesando..." : "Ver documento"}
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
                           </a>
@@ -574,6 +589,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             fileName={doc.subnombre || doc.nombre}
                             hasSummary={!!doc.aiSummary}
                             queryKey={["claim-documents", claimId]}
+                            disabled={doc.aiStatus === "pending"}
                           />
                         )}
                         {doc.canDelete && doc.docId && (
@@ -581,7 +597,9 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             variant="ghost"
                             size="icon"
                             className="btn-icon-sm btn-danger-hover"
+                            disabled={doc.aiStatus === "pending"}
                             onClick={() => {
+                              if (doc.aiStatus === "pending") return;
                               setDeleteModal({
                                 visible: true,
                                 docId: doc.docId!,
