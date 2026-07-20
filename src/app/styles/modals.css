@@ -35,9 +35,9 @@
     border: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
   }
 
-  /* modal-md-wide → 610px → modales de análisis IA (modal-md + 50px) */
+  /* modal-md-wide → 660px → modales de análisis IA */
   .modal-md-wide {
-    @apply flex max-h-[90vh] w-[min(96vw,610px)] flex-col gap-0
+    @apply flex max-h-[90vh] w-[min(96vw,660px)] flex-col gap-0
            overflow-hidden border-0 p-0;
     border-radius: 18px !important;
     background: color-mix(in srgb, var(--card) 85%, transparent) !important;
