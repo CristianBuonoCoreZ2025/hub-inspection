@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
  FileText, Upload, Trash2, Loader2, FileUp, Check,
- ChevronDown, ChevronRight, Tag, Download,
+ ChevronDown, ChevronRight, Tag, Download, Power,
 } from "lucide-react";
 
 import {
@@ -47,7 +47,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  // Query: templates de esta gestión
  const { data: templates, isLoading } = useQuery({
  queryKey: ["document-templates", actionTemplateId],
- queryFn: () => getDocumentTemplates({ actionTemplateId }),
+ queryFn: () => getDocumentTemplates({ actionTemplateId, includeInactive: true }),
  });
 
  // Mutation: subir + detectar placeholders
@@ -216,7 +216,9 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  return (
  <div
  key={tpl.id}
- className="rounded-lg border border-border/60 overflow-hidden"
+ className={`rounded-lg border border-border/60 overflow-hidden transition-opacity ${
+ tpl.is_active ? "" : "opacity-60"
+ }`}
  >
  {/* Fila principal */}
  <div className="flex items-center gap-2 px-3 py-2 hover:bg-muted/30 transition-colors">
@@ -232,7 +234,14 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  )}
  <FileText className="h-4 w-4 text-[#0095DA] shrink-0" />
  <span className="flex flex-col leading-tight min-w-0">
- <span className="text-[12px] font-medium truncate">{tpl.file_name}</span>
+ <span className="text-[12px] font-medium truncate flex items-center gap-1.5">
+ {tpl.file_name}
+ {!tpl.is_active && (
+ <span className="inline-flex items-center rounded-full bg-muted-foreground/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+ Inactiva
+ </span>
+ )}
+ </span>
  {tpl.original_filename && tpl.original_filename !== tpl.file_name && (
  <span className="text-[10px] text-muted-foreground/70 truncate">{tpl.original_filename.replace(/\.docx$/i, "")}</span>
  )}
@@ -293,6 +302,24 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  <Download className="h-3.5 w-3.5" />
  </a>
  )}
+ {/* Toggle activo/inactivo — define si la plantilla se usa al generar documentos.
+     Las plantillas inactivas NO se pierden: siguen visibles aquí, solo no se usan. */}
+ <button
+ type="button"
+ onClick={(e) => {
+ e.stopPropagation();
+ updateMut.mutate({ id: tpl.id, data: { is_active: !tpl.is_active } });
+ }}
+ title={tpl.is_active ? "Activa — click para desactivar (no se usará al generar documentos, pero no se pierde)" : "Inactiva — click para activar"}
+ className={`btn-icon-sm shrink-0 ${
+ tpl.is_active
+ ? "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+ : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted"
+ }`}
+ aria-label={tpl.is_active ? "Desactivar plantilla" : "Activar plantilla"}
+ >
+ <Power className="h-3.5 w-3.5" />
+ </button>
  <button
  type="button"
  onClick={() => {

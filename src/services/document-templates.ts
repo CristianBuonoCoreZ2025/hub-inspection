@@ -62,12 +62,15 @@ const TEMPLATE_FIELDS =
 // ──────────────────────────────────────────────────────────────
 
 export async function getDocumentTemplates(
-  filters?: { actionTemplateId?: string; companyId?: string; eventId?: string }
+  filters?: { actionTemplateId?: string; companyId?: string; eventId?: string; includeInactive?: boolean }
 ): Promise<DocumentTemplate[]> {
   const options: Parameters<typeof fetchAll>[1] = {
     select: TEMPLATE_FIELDS,
-    eq: { is_active: true },
   };
+  // Por defecto solo activas; la UI de configuracion pasa includeInactive=true
+  if (!filters?.includeInactive) {
+    options.eq = { is_active: true };
+  }
   if (filters?.actionTemplateId) {
     options.eq = { ...options.eq, action_template_id: filters.actionTemplateId };
   }
