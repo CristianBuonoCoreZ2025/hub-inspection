@@ -1,7 +1,7 @@
 import "server-only";
 
 import { fetchById, fetchAll } from "@/lib/supabase/db";
-import type { DocumentData, ParticipantData, UserData, CatalogRef } from "@/lib/document-fields";
+import type { DocumentData, ParticipantData, UserData, CatalogRef, ActionSummary } from "@/lib/document-fields";
 
 /**
  * Obtiene los datos completos de un siniestro con todos los joins resueltos
@@ -87,6 +87,14 @@ interface RawParticipant {
   notes: string | null;
 }
 
+interface RawAction {
+  id: string;
+  code: string;
+  issued_on: string | null;
+  action_data: Record<string, unknown> | null;
+  action_template: { code: string } | null;
+}
+
 /** Mapea un participante crudo a ParticipantData */
 function toParticipant(p: RawParticipant): ParticipantData {
   return {
@@ -117,11 +125,16 @@ function toUser(u: { id: string; full_name: string; email: string | null } | nul
  * Resuelve todos los joins a strings y obtiene TODOS los participantes.
  */
 export async function buildDocumentDataForClaim(claimId: string): Promise<DocumentData> {
-  const [rawClaim, participants] = await Promise.all([
+  const [rawClaim, participants, rawActions] = await Promise.all([
     fetchById<Record<string, unknown>>("claims", claimId, CLAIM_SELECT),
     fetchAll<RawParticipant>("claim_participants", {
       select: "type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, notes",
       eq: { claim_id: claimId, is_active: true },
+    }),
+    fetchAll<RawAction>("claim_actions", {
+      select: "id, code, issued_on, action_data, action_template:action_template!claim_actions_action_template_id_fkey(code)",
+      eq: { claim_id: claimId, is_active: true },
+      order: { column: "issued_on", ascending: false },
     }),
   ]);
 
@@ -143,6 +156,23 @@ export async function buildDocumentDataForClaim(claimId: string): Promise<Docume
     const p = participants.find((part) => part.type === type);
     return p ? toParticipant(p) : null;
   };
+
+  // Construir mapa de gestiones: code → última gestión emitida de ese código
+  // rawActions viene ordenado por issued_on DESC, así que la primera de cada code es la más reciente
+  const actions: Record<string, ActionSummary> = {};
+  for (const ra of rawActions) {
+    const code = ra.action_template?.code;
+    if (!code) continue;
+    // Solo nos quedamos con la primera (más reciente) de cada code
+    if (actions[code]) continue;
+    // Solo gestiones emitidas (con issued_on) cuentan como "última gestión"
+    if (!ra.issued_on) continue;
+    actions[code] = {
+      code,
+      issued_on: ra.issued_on,
+      action_data: ra.action_data ?? null,
+    };
+  }
 
   return {
     claim: claim as unknown as Record<string, unknown>,
@@ -181,6 +211,8 @@ export async function buildDocumentDataForClaim(claimId: string): Promise<Docume
     auditor: toUser(claim.auditor_user),
     dispatcher: toUser(claim.dispatcher_user),
     assistant: toUser(claim.assistant_user),
+    // Gestiones del siniestro (mapa code → última gestión emitida)
+    actions,
     today: new Date().toLocaleDateString("es-CL", {
       day: "2-digit",
       month: "2-digit",

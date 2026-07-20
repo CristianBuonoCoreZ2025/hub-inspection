@@ -82,8 +82,17 @@ export interface DocumentData {
   auditor?: UserData | null;
   dispatcher?: UserData | null;
   assistant?: UserData | null;
+  // Gestiones del siniestro (mapa code → datos de la última gestión emitida)
+  actions?: Record<string, ActionSummary>;
   // Fechas formateadas
   today?: string;
+}
+
+/** Resumen de una gestión emitida (para campos derivados en plantillas) */
+export interface ActionSummary {
+  code: string;          // código del template (COB, RES, PCA, NSA, RTA, COI, INS, AAS, etc.)
+  issued_on: string | null;
+  action_data: Record<string, unknown> | null;
 }
 
 export interface DocumentField {
@@ -259,6 +268,166 @@ export const DOCUMENT_FIELDS: DocumentField[] = [
   { key: "auditor_name", label: "Nombre Auditor", group: "Asignaciones", resolve: (d) => d.auditor?.full_name ?? d.auditor?.display_name ?? "" },
   { key: "dispatcher_name", label: "Nombre Despachador", group: "Asignaciones", resolve: (d) => d.dispatcher?.full_name ?? d.dispatcher?.display_name ?? "" },
   { key: "assistant_name", label: "Nombre Asistente", group: "Asignaciones", resolve: (d) => d.assistant?.full_name ?? d.assistant?.display_name ?? "" },
+  { key: "assistant_email", label: "Email Asistente", group: "Asignaciones", resolve: (d) => d.assistant?.email ?? "" },
+
+  // ─── Gestiones: Fechas ───
+  // Cada campo deriva de la última gestión emitida del código correspondiente.
+  { key: "last_reserve_date", label: "Fecha Última Reserva", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.RES?.issued_on) },
+  { key: "last_adjustment_date", label: "Fecha Último Ajuste (PCA)", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.PCA?.issued_on) },
+  { key: "last_coverage_date", label: "Fecha Última Cobertura (COB)", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.COB?.issued_on) },
+  { key: "last_nsa_date", label: "Fecha Última Solicitud Antecedentes", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.NSA?.issued_on) },
+  { key: "last_rta_date", label: "Fecha Última Recepción Antecedentes", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.RTA?.issued_on) },
+  { key: "last_coord_inspection_date", label: "Fecha Última Coordinación Inspección", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.COI?.issued_on) },
+  { key: "last_inspection_date", label: "Fecha Última Inspección", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.INS?.issued_on) },
+  { key: "last_assignment_notice_date", label: "Fecha Último Aviso Asignación", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.AAS?.issued_on) },
+  { key: "last_liquidation_report_date", label: "Fecha Último Informe Liquidación", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.IFL?.issued_on) },
+  // Fecha del último contacto con asegurado (campo email_fecha del AAS)
+  { key: "last_insured_contact_date", label: "Fecha Último Contacto Asegurado", group: "Gestiones: Fechas", resolve: (d) => {
+    const aas = d.actions?.AAS;
+    if (!aas?.action_data) return "";
+    const fecha = aas.action_data.email_fecha ?? aas.action_data.contact_date;
+    return fmtDate(fecha as unknown);
+  }},
+
+  // ─── Gestiones: Montos de Reserva (RES) ───
+  // La última RES tiene parent_snapshot con coberturas + totales
+  { key: "reserve_amount", label: "Monto Reserva Total", group: "Gestiones: Reserva", resolve: (d) => {
+    const res = d.actions?.RES;
+    if (!res?.action_data) return "";
+    const snapshot = (res.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!snapshot) return "";
+    return fmtMoney(snapshot.reserve_amount);
+  }},
+  { key: "reserve_claimed_amount", label: "Monto Reclamado (Reserva)", group: "Gestiones: Reserva", resolve: (d) => {
+    const res = d.actions?.RES;
+    if (!res?.action_data) return "";
+    const snapshot = (res.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!snapshot) return "";
+    return fmtMoney(snapshot.claimed_amount);
+  }},
+  { key: "reserve_deductible_amount", label: "Deducible (Reserva)", group: "Gestiones: Reserva", resolve: (d) => {
+    const res = d.actions?.RES;
+    if (!res?.action_data) return "";
+    const snapshot = (res.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!snapshot) return "";
+    return fmtMoney(snapshot.deductible_amount);
+  }},
+  { key: "reserve_final_amount", label: "Monto Final Reserva", group: "Gestiones: Reserva", resolve: (d) => {
+    const res = d.actions?.RES;
+    if (!res?.action_data) return "";
+    const snapshot = (res.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!snapshot) return "";
+    return fmtMoney(snapshot.final_amount);
+  }},
+  { key: "reserve_currency", label: "Moneda Reserva", group: "Gestiones: Reserva", resolve: (d) => {
+    const res = d.actions?.RES;
+    if (!res?.action_data) return "";
+    const snapshot = (res.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!snapshot) return "";
+    return String(snapshot.currency ?? "");
+  }},
+
+  // ─── Gestiones: Montos de Ajuste (PCA) ───
+  // La última PCA tiene parent_snapshot con adjusted_amount, adjusted_final_amount, etc.
+  { key: "adjustment_amount", label: "Monto Ajuste (Pérdida Determinada)", group: "Gestiones: Ajuste", resolve: (d) => {
+    const pca = d.actions?.PCA;
+    if (!pca?.action_data) return "";
+    const snapshot = (pca.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!snapshot) return "";
+    return fmtMoney(snapshot.adjusted_amount);
+  }},
+  { key: "adjustment_final_amount", label: "Monto Final Ajuste (Indemnización)", group: "Gestiones: Ajuste", resolve: (d) => {
+    const pca = d.actions?.PCA;
+    if (!pca?.action_data) return "";
+    const snapshot = (pca.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!snapshot) return "";
+    return fmtMoney(snapshot.adjusted_final_amount);
+  }},
+  { key: "adjustment_deductible", label: "Deducible Ajuste", group: "Gestiones: Ajuste", resolve: (d) => {
+    const pca = d.actions?.PCA;
+    if (!pca?.action_data) return "";
+    const snapshot = (pca.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!snapshot) return "";
+    return fmtMoney(snapshot.adjusted_deductible);
+  }},
+  { key: "adjustment_claimed_amount", label: "Monto Reclamado (Ajuste)", group: "Gestiones: Ajuste", resolve: (d) => {
+    const pca = d.actions?.PCA;
+    if (!pca?.action_data) return "";
+    const snapshot = (pca.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!snapshot) return "";
+    return fmtMoney(snapshot.claimed_amount);
+  }},
+  { key: "adjustment_reserve_amount", label: "Reserva (Ajuste)", group: "Gestiones: Ajuste", resolve: (d) => {
+    const pca = d.actions?.PCA;
+    if (!pca?.action_data) return "";
+    const snapshot = (pca.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!snapshot) return "";
+    return fmtMoney(snapshot.reserve_amount);
+  }},
+
+  // ─── Gestiones: Coberturas (COB) ───
+  // La última COB tiene parent_snapshot con la lista de coberturas
+  { key: "coverage_detail", label: "Detalle de Coberturas", group: "Gestiones: Coberturas", resolve: (d) => {
+    const cob = d.actions?.COB;
+    if (!cob?.action_data) return "";
+    const snapshot = (cob.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined);
+    if (!snapshot || snapshot.length === 0) return "";
+    // Listar coberturas: "Cobertura X: reclamado $Y, reservado $Z"
+    return snapshot.map((c) => {
+      const name = c.coverage_name ?? c.coverage_catalog_name ?? "—";
+      const claimed = fmtMoney(c.claimed_amount);
+      const reserved = fmtMoney(c.reserved_amount);
+      return `${name}: reclamado ${claimed}, reservado ${reserved}`;
+    }).join("; ");
+  }},
+  { key: "coverage_count", label: "Cantidad de Coberturas", group: "Gestiones: Coberturas", resolve: (d) => {
+    const cob = d.actions?.COB;
+    if (!cob?.action_data) return "";
+    const snapshot = (cob.action_data.parent_snapshot as Array<Record<string, unknown>> | undefined);
+    if (!snapshot) return "";
+    return String(snapshot.length);
+  }},
+
+  // ─── Gestiones: Coordinación de Inspección (COI) ───
+  { key: "coord_inspection_date", label: "Fecha Coordinada Inspección", group: "Gestiones: Coordinación", resolve: (d) => {
+    const coi = d.actions?.COI;
+    if (!coi?.action_data) return "";
+    return fmtDate(coi.action_data.coord_fecha as unknown);
+  }},
+  { key: "coord_inspection_contact", label: "Contacto Coordinación", group: "Gestiones: Coordinación", resolve: (d) => {
+    const coi = d.actions?.COI;
+    if (!coi?.action_data) return "";
+    return String(coi.action_data.coord_contacto ?? "");
+  }},
+  { key: "coord_inspection_location", label: "Ubicación Coordinación", group: "Gestiones: Coordinación", resolve: (d) => {
+    const coi = d.actions?.COI;
+    if (!coi?.action_data) return "";
+    return String(coi.action_data.coord_ubicacion ?? "");
+  }},
+  { key: "coord_inspection_type", label: "Tipo Inspección Coordinada", group: "Gestiones: Coordinación", resolve: (d) => {
+    const coi = d.actions?.COI;
+    if (!coi?.action_data) return "";
+    const t = String(coi.action_data.coord_inspection_type ?? "");
+    return t === "remote" ? "Remota" : t === "in_person" ? "Presencial" : t;
+  }},
+
+  // ─── Gestiones: Aviso de Asignación (AAS) ───
+  { key: "assignment_notice_contact", label: "Contacto Aviso Asignación", group: "Gestiones: Aviso Asignación", resolve: (d) => {
+    const aas = d.actions?.AAS;
+    if (!aas?.action_data) return "";
+    return String(aas.action_data.email_contacto ?? "");
+  }},
+  { key: "assignment_notice_type", label: "Tipo Aviso Asignación", group: "Gestiones: Aviso Asignación", resolve: (d) => {
+    const aas = d.actions?.AAS;
+    if (!aas?.action_data) return "";
+    const t = String(aas.action_data.email_tipo ?? "");
+    return t === "email" ? "Email" : t === "phone" ? "Teléfono" : t;
+  }},
+  { key: "assignment_notice_details", label: "Detalles Aviso Asignación", group: "Gestiones: Aviso Asignación", resolve: (d) => {
+    const aas = d.actions?.AAS;
+    if (!aas?.action_data) return "";
+    return String(aas.action_data.email_detalles ?? "");
+  }},
 ];
 
 /** Mapa key -> DocumentField para resolución rápida */
