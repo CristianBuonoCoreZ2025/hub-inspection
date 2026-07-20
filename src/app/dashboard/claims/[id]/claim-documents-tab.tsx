@@ -747,14 +747,13 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 <div className="space-y-1.5">
                   <label className="app-field-label">Tipo de documento</label>
                   <Select
-                    value={selectedDocType || "__none"}
-                    onValueChange={(v) => setSelectedDocType(v === "__none" ? "" : (v ?? ""))}
+                    value={selectedDocType || undefined}
+                    onValueChange={(v) => setSelectedDocType(v ?? "")}
                   >
                     <SelectTrigger className="app-input h-7">
                       <SelectValue placeholder="Seleccionar tipo..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none">Sin selección</SelectItem>
                       {docOptions.lineDocs.length > 0 && (
                         <SelectGroup>
                           <SelectLabel>Línea de Negocio</SelectLabel>
@@ -815,7 +814,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                     type="file"
                     className="hidden"
                     onChange={handleFileSelect}
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
                   />
                   <Button
                     onClick={() => fileInputRef.current?.click()}
@@ -826,7 +825,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 </div>
 
                 <div className="text-[10px] text-muted-foreground text-center">
-                  PDF, DOC, XLS, JPG, PNG · máx. 50 MB
+                  PDF, DOC, XLS, TXT · máx. 50 MB
                 </div>
               </>
             )}
