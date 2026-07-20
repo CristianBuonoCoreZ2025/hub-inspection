@@ -16,6 +16,7 @@ export interface DocumentTemplate {
   file_url: string;
   file_id: string | null;
   file_name: string;
+  original_filename: string | null;
   file_size: number | null;
   mime_type: string | null;
   detected_placeholders: string[];
@@ -43,6 +44,7 @@ export interface DocumentTemplateInput {
   file_url: string;
   file_id?: string | null;
   file_name: string;
+  original_filename?: string | null;
   file_size?: number | null;
   mime_type?: string;
   detected_placeholders?: string[];
@@ -53,7 +55,7 @@ export interface DocumentTemplateInput {
 }
 
 const TEMPLATE_FIELDS =
-  "id, company_id, insurance_company_id, action_template_id, event_id, country_id, name, description, file_url, file_id, file_name, file_size, mime_type, detected_placeholders, placeholder_mapping, is_active, sort_order, created_at, updated_at";
+  "id, company_id, insurance_company_id, action_template_id, event_id, country_id, name, description, file_url, file_id, file_name, original_filename, file_size, mime_type, detected_placeholders, placeholder_mapping, is_active, sort_order, created_at, updated_at";
 
 // ──────────────────────────────────────────────────────────────
 // CRUD (cliente-safe — no usa pizzip/docxtemplater)
@@ -102,6 +104,7 @@ export async function createDocumentTemplate(input: DocumentTemplateInput): Prom
     file_url: input.file_url,
     file_id: input.file_id ?? null,
     file_name: input.file_name,
+    original_filename: input.original_filename ?? null,
     file_size: input.file_size ?? null,
     mime_type: input.mime_type ?? "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     detected_placeholders: input.detected_placeholders ?? [],

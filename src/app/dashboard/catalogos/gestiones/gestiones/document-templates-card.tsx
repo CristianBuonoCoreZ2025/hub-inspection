@@ -34,6 +34,7 @@ interface UploadResult {
  url: string;
  fileId: string;
  fileName: string;
+ originalFilename: string;
  fileSize: number;
  placeholders: string[];
 }
@@ -66,12 +67,15 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  return (await res.json()) as UploadResult;
  },
  onSuccess: (data) => {
- // Auto-crear el registro con el nombre del archivo y los placeholders detectados
+ // Auto-crear el registro con el nombre original como display,
+ // file_name con el código (ej: HIFL-00001.docx),
+ // y original_filename con el nombre original del archivo.
  createMut.mutate({
- name: data.fileName.replace(/\.docx$/i, ""),
+ name: data.originalFilename.replace(/\.docx$/i, ""),
  file_url: data.url,
  file_id: data.fileId,
  file_name: data.fileName,
+ original_filename: data.originalFilename,
  file_size: data.fileSize,
  detected_placeholders: data.placeholders,
  action_template_id: actionTemplateId,
@@ -227,7 +231,12 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
  )}
  <FileText className="h-4 w-4 text-[#0095DA] shrink-0" />
- <span className="text-[12px] font-medium truncate">{tpl.name}</span>
+ <span className="flex flex-col leading-tight min-w-0">
+ <span className="text-[12px] font-medium truncate">{tpl.file_name}</span>
+ {tpl.original_filename && tpl.original_filename !== tpl.file_name && (
+ <span className="text-[10px] text-muted-foreground/70 truncate">{tpl.original_filename.replace(/\.docx$/i, "")}</span>
+ )}
+ </span>
  {/* Badges de asociaciones */}
  {!expanded && (
  <span className="flex items-center gap-1 shrink-0">

@@ -58,17 +58,23 @@ export async function POST(request: NextRequest) {
 
     // 2. Subir a R2 con path estructurado del plan
     const buffer = Buffer.from(arrayBuffer);
-    const { url, key: filePath } = await uploadGestionTemplate(
+    const { url, key: filePath, seq, templateCode } = await uploadGestionTemplate(
       actionTemplateId,
       buffer,
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       ".docx"
     );
 
+    // 3. file_name codificado: {templateCode}-{seq:5d}.docx (ej: HIFL-00001.docx)
+    //    No usar el nombre original del archivo — la idea es que queden siempre codificados.
+    //    El nombre original se guarda en original_filename como referencia/display.
+    const codedFileName = `${templateCode}-${String(seq).padStart(5, "0")}.docx`;
+
     return NextResponse.json({
       url,
       fileId: filePath,
-      fileName: file.name,
+      fileName: codedFileName,
+      originalFilename: file.name,
       fileSize: file.size,
       placeholders,
     });
