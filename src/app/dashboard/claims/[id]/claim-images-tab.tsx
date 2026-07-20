@@ -8,8 +8,6 @@ import {
   getInspectionPhotosByClaim,
   getInspectionSketchesByClaim,
   type ClaimImage,
-  type InspectionImageFromSession,
-  type InspectionSketchFromSession,
 } from "@/services/claim-images";
 import { toast } from "sonner";
 import {
