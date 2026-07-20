@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
  FileText, Upload, Trash2, Loader2, FileUp, Check,
- ChevronDown, ChevronRight, Tag,
+ ChevronDown, ChevronRight, Tag, Download,
 } from "lucide-react";
 
 import {
@@ -279,6 +279,20 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  </span>
  )}
  </button>
+ {/* Descargar plantilla .docx */}
+ {tpl.file_url && (
+ <a
+ href={tpl.file_url}
+ download={tpl.file_name}
+ target="_blank"
+ rel="noopener noreferrer"
+ className="btn-icon-sm btn-default-hover shrink-0"
+ title={`Descargar ${tpl.file_name}`}
+ onClick={(e) => e.stopPropagation()}
+ >
+ <Download className="h-3.5 w-3.5" />
+ </a>
+ )}
  <button
  type="button"
  onClick={() => {
