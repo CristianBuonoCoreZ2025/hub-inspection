@@ -150,8 +150,11 @@ export function renderDocx(
  * Pre-procesa el .docx antes de renderizar:
  * 1. Elimina los Content Controls (SDT) de Word conservando su contenido
  *    (para que docxtemplater pueda acceder a los placeholders dentro de ellos)
- * 2. Convierte [PLACEHOLDER] → <placeholder> (minúsculas) para los placeholders
- *    que existen en `data` (case-insensitive match)
+ * 2. Convierte [PLACEHOLDER] → &lt;placeholder&gt; (entidades XML escapadas)
+ *    para TODOS los placeholders detectados, no solo los mapeados.
+ *    Los que no estén en `data` se agregan con valor "" para que
+ *    docxtemplater los reemplace con string vacío (nullGetter) en vez
+ *    de dejarlos literalmente como [PLACEHOLDER] en el documento final.
  */
 function preprocessDocxForRender(
   content: Uint8Array,
@@ -164,12 +167,15 @@ function preprocessDocxForRender(
   for (const k of Object.keys(data)) {
     dataKeysLower.set(k.toUpperCase(), k);
   }
-  if (dataKeysLower.size === 0) return content;
 
   const filesToPatch = [
     "word/document.xml",
     ...Object.keys(zip.files).filter((f) => f.match(/^word\/(header|footer)\d*\.xml$/)),
   ];
+
+  // Set de placeholders (en UPPER) que aparecen en el .docx pero NO están en data.
+  // Los agregaremos a data con "" para que docxtemplater los reemplace con vacío.
+  const unresolvedPlaceholders = new Set<string>();
 
   let modified = false;
   for (const filePath of filesToPatch) {
@@ -180,19 +186,34 @@ function preprocessDocxForRender(
     // 1. Eliminar SDTs (Content Controls) conservando el contenido
     xml = unwrapSdts(xml);
 
-    // 2. Convertir [PLACEHOLDER] → &lt;placeholder&gt; (entidades XML escapadas)
-    //    docxtemplater decodifica las entidades y detecta el placeholder.
-    //    Solo si PLACEHOLDER (en mayúsculas) corresponde a una key de data.
+    // 2. Convertir [PLACEHOLDER] → &lt;key&gt; (entidades XML escapadas)
+    //    - Si PLACEHOLDER (UPPER) corresponde a una key de data → usa la key canónica
+    //    - Si no corresponde a ninguna key de data → usa el nombre tal cual (UPPER)
+    //      y lo agrega a data con "" para que quede vacío en el render.
     xml = xml.replace(
       /\[([A-Z][A-Z0-9_]*(?:\.[A-Z][A-Z0-9_]*)*)\]/g,
       (full, key: string) => {
         const canonical = dataKeysLower.get(key);
-        return canonical ? `&lt;${canonical}&gt;` : full;
+        if (canonical) {
+          return `&lt;${canonical}&gt;`;
+        }
+        // No está en data → agregar con "" y usar el key tal cual
+        unresolvedPlaceholders.add(key);
+        return `&lt;${key}&gt;`;
       }
     );
 
     zip.file(filePath, xml);
     modified = true;
+  }
+
+  // 3. Agregar placeholders no resueltos a data con "" para que docxtemplater
+  //    los reemplace con string vacío (gracias a nullGetter) en vez de dejarlos
+  //    literalmente como [PLACEHOLDER] en el documento final.
+  for (const key of unresolvedPlaceholders) {
+    if (!(key in data)) {
+      data[key] = "";
+    }
   }
 
   if (!modified) return content;
