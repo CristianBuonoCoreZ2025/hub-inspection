@@ -995,6 +995,7 @@ export default function ClaimDetailPage() {
  onOpenAction={(actionId) => {
  const a = (claimActions || []).find(x => x.id === actionId);
  if (a) {
+ setEditingActionData({});
  setEditingGestion({
  id: a.id,
  tipo: a.action_feature?.name || a.name || "Acción",
@@ -1217,6 +1218,7 @@ export default function ClaimDetailPage() {
  if (g.href) {
  router.push(g.href);
  } else if (g.esAccion && g.screenType && g.screenType !== "inspeccion") {
+ setEditingActionData({});
  setEditingGestion(g);
  setOpenEditGestionModal(true);
  }
@@ -1273,6 +1275,7 @@ export default function ClaimDetailPage() {
  size="sm"
  className="btn-icon-sm"
  onClick={() => {
+ setEditingActionData({});
  setEditingGestion(g);
  setOpenEditGestionModal(true);
  }}

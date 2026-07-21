@@ -258,7 +258,12 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  // Ordenar entidades complejas:
  // 1. claim_coverages primero
  // 2. resto de entidades complejas
- const sortedComplexEntities = [...complexEntities].sort((a, b) => {
+ // 3. claim_documents (Fuentes) y claim_history (Historia) VAN AL FINAL (abajo del form)
+ const BOTTOM_ENTITIES = new Set(["claim_documents", "claim_history"]);
+ const topComplexEntities = complexEntities.filter((f) => !BOTTOM_ENTITIES.has(f.type));
+ const bottomComplexEntities = complexEntities.filter((f) => BOTTOM_ENTITIES.has(f.type));
+
+ const sortedComplexEntities = [...topComplexEntities].sort((a, b) => {
  if (a.type === "claim_coverages" && b.type !== "claim_coverages") return -1;
  if (b.type === "claim_coverages" && a.type !== "claim_coverages") return 1;
  return 0;
@@ -335,6 +340,18 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  </div>
  )}
  </section>
+ )}
+
+ {/* ─── Entidades complejas al final (Fuentes / Historia) ─── */}
+ {bottomComplexEntities.length > 0 && (
+ <div className="space-y-4">
+ {bottomComplexEntities.map((field) => (
+ <section key={field.id} className="app-panel p-3">
+ <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">{field.label}</h4>
+ <ComplexEntityView type={field.type} field={field} action={action} readOnly={readOnly} values={values} onAdvance={onAdvance} onReject={onReject} onChange={onChange} />
+ </section>
+ ))}
+ </div>
  )}
 
  {/* ─── Niveles de Revisión (SIEMPRE al final, en toda gestión) ─── */}
