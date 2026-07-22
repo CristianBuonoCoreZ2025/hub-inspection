@@ -4,10 +4,12 @@ export interface TemplateDependency {
   id: string;
   parent_code: string;
   child_code: string;
+  condition_field?: string | null;
+  condition_value?: string | null;
   created_at: string;
 }
 
-const DEPENDENCY_SELECT = "id, parent_code, child_code, created_at";
+const DEPENDENCY_SELECT = "id, parent_code, child_code, condition_field, condition_value, created_at";
 
 export async function getDependencies(): Promise<TemplateDependency[]> {
   return fetchAll<TemplateDependency>("action_template_dependencies", {
@@ -16,10 +18,19 @@ export async function getDependencies(): Promise<TemplateDependency[]> {
   });
 }
 
-export async function createDependency(parentCode: string, childCode: string): Promise<TemplateDependency> {
+export async function createDependency(
+  parentCode: string,
+  childCode: string,
+  condition?: { field?: string | null; value?: string | null }
+): Promise<TemplateDependency> {
+  const payload: Record<string, unknown> = { parent_code: parentCode, child_code: childCode };
+  if (condition?.field && condition?.value) {
+    payload.condition_field = condition.field;
+    payload.condition_value = condition.value;
+  }
   return insertRow<TemplateDependency>(
     "action_template_dependencies",
-    { parent_code: parentCode, child_code: childCode },
+    payload,
     DEPENDENCY_SELECT
   );
 }

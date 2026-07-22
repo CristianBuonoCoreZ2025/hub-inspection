@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDependencies, createDependency, deleteDependency } from "@/services/template-dependencies";
+import { getDependencies, createDependency, deleteDependency, type TemplateDependency } from "@/services/template-dependencies";
 import { getActionTemplates } from "@/services/actions";
 import { toast } from "sonner";
 import { Trash2, Link2, ChevronRight } from "lucide-react";
@@ -23,6 +23,8 @@ export default function DependenciasGestionPage() {
  const [open, setOpen] = useState(false);
  const [parentCode, setParentCode] = useState("");
  const [childCode, setChildCode] = useState("");
+ const [conditionField, setConditionField] = useState("");
+ const [conditionValue, setConditionValue] = useState("");
 
  const { data: dependencies, isLoading } = useQuery({
  queryKey: ["template-dependencies"],
@@ -35,13 +37,15 @@ export default function DependenciasGestionPage() {
  });
 
  const createMutation = useMutation({
- mutationFn: ({ parent, child }: { parent: string; child: string }) => createDependency(parent, child),
+ mutationFn: ({ parent, child, condition }: { parent: string; child: string; condition?: { field?: string | null; value?: string | null } }) => createDependency(parent, child, condition),
  onSuccess: () => {
  toast.success("Dependencia creada");
  queryClient.invalidateQueries({ queryKey: ["template-dependencies"] });
  setOpen(false);
  setParentCode("");
  setChildCode("");
+ setConditionField("");
+ setConditionValue("");
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -138,12 +142,19 @@ export default function DependenciasGestionPage() {
  e.preventDefault();
  if (!parentCode || !childCode) { toast.error("Selecciona ambas gestiones"); return; }
  if (parentCode === childCode) { toast.error("Una gestión no puede depender de sí misma"); return; }
- createMutation.mutate({ parent: parentCode, child: childCode });
+ const condition = (conditionField.trim() && conditionValue.trim())
+ ? { field: conditionField.trim(), value: conditionValue.trim() }
+ : undefined;
+ createMutation.mutate({ parent: parentCode, child: childCode, condition });
  };
 
  const nameFor = (code: string) => codeMap.find(c => c.code === code)?.name || code;
  const depIdFor = (parent: string, child: string) =>
  (dependencies || []).find(d => d.parent_code === parent && d.child_code === child)?.id;
+ const depConditionFor = (parent: string, child: string) =>
+ (dependencies || []).find(d => d.parent_code === parent && d.child_code === child);
+ const hasCondition = (dep: TemplateDependency | undefined) =>
+ !!dep?.condition_field && !!dep?.condition_value;
 
  return (
  <div className="app-page">
@@ -207,6 +218,8 @@ export default function DependenciasGestionPage() {
  // Buscar el depId: encontrar quien es el padre real de este item
  const parentCodeForItem = (dependencies || []).find(d => d.child_code === item.code)?.parent_code;
  const depId = parentCodeForItem ? depIdFor(parentCodeForItem, item.code) : undefined;
+ const depForItem = parentCodeForItem ? depConditionFor(parentCodeForItem, item.code) : undefined;
+ const isConditional = hasCondition(depForItem);
  const levelStyles = [
  { bg: "bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/15", icon: "bg-violet-500/20 text-violet-400 border-violet-500/30", badge: "bg-violet-500/15 text-violet-400", label: "RAÍZ" },
  { bg: "bg-sky-500/10 border-sky-500/20 hover:bg-sky-500/15", icon: "bg-sky-500/20 text-sky-400 border-sky-500/30", badge: "bg-sky-500/15 text-sky-400", label: "NIVEL 2" },
@@ -229,6 +242,11 @@ export default function DependenciasGestionPage() {
  <span className={`ml-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${style.badge}`}>
  {style.label}
  </span>
+ {isConditional && depForItem && (
+ <span className="ml-1 rounded-md px-1.5 py-0.5 text-[8px] font-medium bg-amber-500/20 text-amber-700 border border-amber-500/30" title={`Se crea solo si ${depForItem.condition_field} = ${depForItem.condition_value}`}>
+ Condicional: {depForItem.condition_field} = {depForItem.condition_value}
+ </span>
+ )}
  {!isRoot && canDelete("catalogos") && depId && (
  <Button
  variant="ghost"
@@ -295,6 +313,8 @@ export default function DependenciasGestionPage() {
  La gestión <strong className="text-violet-400">padre</strong> puede ser cualquier gestión, incluso
  una que ya es hija de otra. La gestión <strong className="text-sky-400">hija</strong> se crea
  automáticamente al emitir la padre, en estado pendiente.
+ <br />
+ <span className="text-amber-600">Opcionalmente</span>, puede ser una <strong>dependencia condicional</strong>: se crea solo si un campo de <code>action_data</code> del padre tiene un valor específico (ej: CIN → INS solo si <code>coord_result=coordinada</code>).
  </div>
  <div>
  <Label className="app-field-label">Gestión Padre <span className="text-red-500">*</span></Label>
@@ -334,6 +354,34 @@ export default function DependenciasGestionPage() {
  ))}
  </SelectContent>
  </Select>
+ </div>
+ <div className="rounded-xl border border-amber-500/10 bg-amber-500/5 px-3 py-2.5 space-y-2">
+ <div className="text-[11px] font-medium text-amber-700">Dependencia condicional (opcional)</div>
+ <div className="grid grid-cols-2 gap-2">
+ <div>
+ <Label className="app-field-label text-[10px]">Campo en action_data</Label>
+ <input
+ type="text"
+ className="app-input w-full h-7 text-[11px]"
+ placeholder="ej: coord_result"
+ value={conditionField}
+ onChange={(e) => setConditionField(e.target.value)}
+ />
+ </div>
+ <div>
+ <Label className="app-field-label text-[10px]">Valor esperado</Label>
+ <input
+ type="text"
+ className="app-input w-full h-7 text-[11px]"
+ placeholder="ej: coordinada"
+ value={conditionValue}
+ onChange={(e) => setConditionValue(e.target.value)}
+ />
+ </div>
+ </div>
+ <p className="text-[9px] text-muted-foreground">
+ Si se completan ambos campos, la gestión hija solo se creará cuando el campo coincida (case-insensitive). Dejar vacío para dependencia incondicional.
+ </p>
  </div>
  </div>
  <div className="modal-footer">
