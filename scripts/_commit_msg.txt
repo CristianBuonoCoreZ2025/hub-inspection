@@ -1,9 +1,11 @@
-feat: UI de dependencias condicionales en catalogo de gestiones
+fix: evitar duplicado de inspection_session al emitir CIN coordinada
 
-- Servicio template-dependencies soporta condition_field y condition_value
-- Pantalla Dependencias de Gestiones muestra badge "Condicional" en los nodos
-- Modal Nueva Dependencia permite definir campo y valor condicional
-- CIN → INS ya aparece marcado como condicional: coord_result = coordinada
+- issueClaimAction ya NO llama createInspectionSession directamente
+- El trigger SQL auto_create_inspection_session es la fuente unica de verdad
+  (se dispara al insertar la accion INS desde el cascade)
+- Migration 196: el trigger cancela cualquier sesion activa previa del mismo
+  siniestro antes de crear la nueva (re-coordinacion)
+- Cancelada sesion huerfana de L-141 (claim_action eliminado al resetear)
 
 Generated with [Devin](https://devin.ai)
 

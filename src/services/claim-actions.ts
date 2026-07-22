@@ -675,35 +675,18 @@ export async function issueClaimAction(actionId: string, userId?: string, action
   });
 
   // ── Si es CIN (Coordinación de Inspección), ramificar según coord_result ──
-  // coordinada → crea inspection_session
+  // coordinada → el trigger cascade crea la acción INS, y el trigger
+  //   auto_create_inspection_session crea la inspection_session automáticamente.
+  //   NO llamamos createInspectionSession aquí para evitar duplicados
+  //   (el unique constraint inspection_sessions_one_active_per_claim
+  //   impide dos sesiones activas por siniestro).
   // fallida    → crea una nueva gestión CIN para re-coordinar (con fecha tentativa)
   // desistida  → no hace nada (rompe el flujo)
   if (action?.action_template?.code === "CIN") {
     const data = actionData || action.action_data || {};
     const coordResult = String(data.coord_result || "coordinada").toLowerCase(); // default para gestiones viejas
 
-    if (coordResult === "coordinada") {
-      const fechaStr = String(data.coord_fecha || "");
-      if (fechaStr) {
-        try {
-          const scheduledAt = new Date(fechaStr).toISOString();
-          const { createInspectionSession } = await import("@/services/inspections");
-          await createInspectionSession(action.claim_id!, {
-            inspectionType: String(data.coord_inspection_type || "onsite") as "onsite" | "remote",
-            scheduledAt,
-            inspectorId: String(data.coord_inspector || "") || undefined,
-            schedulingNotes: [
-              data.coord_ubicacion && `Aclaración dirección: ${data.coord_ubicacion}`,
-              data.coord_contacto && `Otros contactos: ${data.coord_contacto}`,
-              data.coord_comentarios && `Comentarios: ${data.coord_comentarios}`,
-            ].filter(Boolean).join("\n\n") || undefined,
-            actionTemplateId: action.action_template_id || undefined,
-          });
-        } catch (err) {
-          console.warn("[issueClaimAction] No se pudo crear inspection_session:", err);
-        }
-      }
-    } else if (coordResult === "fallida") {
+    if (coordResult === "fallida") {
       // Crear una nueva gestión CIN para re-coordinar
       try {
         const fechaRecoord = String(data.coord_fecha_recoord || "");
