@@ -1,10 +1,12 @@
-fix: INS hereda fecha y tipo de inspeccion del CIN padre
+fix: INS muestra datos heredados del CIN (fecha, tipo, inspector, etc.)
 
-- DynamicScreen aplana parent_action_data en values para que la pantalla
-  hija (INS) pueda leer los campos del padre (CIN) directamente
-- Los campos propios del hijo tienen prioridad sobre los del padre
-- coord_fecha, coord_inspection_type, coord_inspector, coord_contacto,
-  coord_ubicacion, coord_comentarios ahora se muestran en la INS
+- Los campos del CIN tienen IDs con sufijos (coord_type_1, coord_fecha_1, etc.)
+  porque el editor de pantallas genera IDs unicos
+- index.tsx buscaba por IDs canonicos exactos (coord_inspection_type, coord_fecha)
+  y no encontraba los valores
+- Nuevo helper findCoord busca por ID canonico o por prefijo de tipo de campo
+- Excluye coord_fecha_recoord (no es la fecha de inspeccion)
+- Verificado con datos reales de L-141: tipo=remote, fecha=2026-07-23T15:00, etc.
 
 Generated with [Devin](https://devin.ai)
 

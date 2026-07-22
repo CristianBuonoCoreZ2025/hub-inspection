@@ -41,15 +41,42 @@ export default function GestionScreenSwitcher({ screens, action, onChange, readO
   console.log("[GestionScreenSwitcher] screens:", screens?.length, "screen:", screen?.code, "is_dynamic:", screen?.is_dynamic, "action.action_data:", action.action_data);
 
   // Datos heredados de la coordinación (parent_action_data)
+  // Los campos del CIN pueden tener IDs con sufijos (coord_type_1, coord_fecha_1, etc.)
+  // porque el editor de pantallas genera IDs únicos. Buscamos por tipo usando
+  // prefijos canónicos, no por ID exacto.
   const coordData = (action.action_data || {}) as Record<string, unknown>;
   const parentData = (coordData.parent_action_data || {}) as Record<string, unknown>;
+
+  // Helper: busca un valor por ID canónico o por prefijo de tipo de campo.
+  // Ej: findCoord("coord_inspection_type", ["coord_type"]) encuentra coord_type_1
+  const findCoord = (canonicalId: string, prefixes: string[]): unknown => {
+    const sources = [coordData, parentData];
+    for (const src of sources) {
+      // 1. ID canónico exacto
+      if (src[canonicalId] !== undefined && src[canonicalId] !== null && src[canonicalId] !== "") {
+        return src[canonicalId];
+      }
+      // 2. Cualquier key que empiece con alguno de los prefijos
+      //    (excluyendo coord_fecha_recoord que es otro campo)
+      for (const key of Object.keys(src)) {
+        for (const prefix of prefixes) {
+          if (key.startsWith(prefix) && !key.includes("recoord")) {
+            const v = src[key];
+            if (v !== undefined && v !== null && v !== "") return v;
+          }
+        }
+      }
+    }
+    return undefined;
+  };
+
   const inherited = {
-    inspectionType: (coordData.coord_inspection_type as string) || (parentData.coord_inspection_type as string),
-    inspector: (coordData.coord_inspector as string) || (parentData.coord_inspector as string),
-    fecha: (coordData.coord_fecha as string) || (parentData.coord_fecha as string),
-    contacto: (coordData.coord_contacto as string) || (parentData.coord_contacto as string),
-    ubicacion: (coordData.coord_ubicacion as string) || (parentData.coord_ubicacion as string),
-    comentarios: (coordData.coord_comentarios as string) || (parentData.coord_comentarios as string),
+    inspectionType: findCoord("coord_inspection_type", ["coord_type", "coord_inspection_type"]) as string | undefined,
+    inspector: findCoord("coord_inspector", ["coord_inspector"]) as string | undefined,
+    fecha: findCoord("coord_fecha", ["coord_fecha"]) as string | undefined,
+    contacto: findCoord("coord_contacto", ["coord_cont", "coord_contacto"]) as string | undefined,
+    ubicacion: findCoord("coord_ubicacion", ["coord_ubic", "coord_ubicacion"]) as string | undefined,
+    comentarios: findCoord("coord_comentarios", ["coord_com"]) as string | undefined,
   };
 
   // Pantalla fija de inspección — mostrar datos y link directo
