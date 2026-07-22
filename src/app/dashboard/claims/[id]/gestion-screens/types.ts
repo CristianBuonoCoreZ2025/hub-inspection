@@ -6,4 +6,5 @@ export interface GestionScreenProps {
   readOnly?: boolean;
   onAdvance?: (level: "issuer" | "reviewer" | "approver") => void;
   onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void;
+  screenCode?: string;
 }

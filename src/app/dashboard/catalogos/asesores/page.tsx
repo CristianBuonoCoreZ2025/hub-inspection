@@ -88,18 +88,16 @@ export default function AsesoresPage() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-cyan-500 text-white shadow-sm">
- <UserCheck className="h-5 w-5" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-blue-500 to-cyan-500">
+ <UserCheck />
  </div>
- <div>
- <h1 className="app-page-title">Asesores</h1>
- <p className="app-page-lead">Gestión de asesores del sistema.</p>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Asesores</h1>
  </div>
  </div>
- <div className="flex items-center gap-2">
+ <div className="app-grid-header-right">
  {canCreate("catalogos") && (
  <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="pg-btn-platinum">
  Nuevo
@@ -107,19 +105,17 @@ export default function AsesoresPage() {
  )}
  </div>
  </div>
- </div>
 
- <div className="app-toolbar">
- <div className="flex items-center gap-2">
- <div className="relative w-[160px] shrink-0">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
  <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
  </div>
  </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
  </div>
-
- <div className="app-panel">
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead><tr><th className="w-10"></th><th>País</th><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><SortableTh sortKey="email" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Email</SortableTh><SortableTh sortKey="phone" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Teléfono</SortableTh><th className="w-[80px]"></th></tr></thead>
@@ -136,7 +132,7 @@ export default function AsesoresPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(a.id); setFormData({ country_id: a.country_id || "", name: a.name, email: a.email || "", phone: a.phone || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); setEditingId(a.id); setFormData({ country_id: a.country_id || "", name: a.name, email: a.email || "", phone: a.phone || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("catalogos") && (
  <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este asesor?")) deleteMutation.mutate(a.id); }}><Ban className="h-4 w-4" /></Button>
@@ -169,7 +165,7 @@ export default function AsesoresPage() {
  onValueChange={(v) => setFormData({ ...formData, country_id: v === "__none" ? "" : (v ?? "") })}
  items={[{ value: "__none", label: "Sin selección" }, ...(countries || []).map((c) => ({ value: c.id, label: c.name }))]}
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Seleccionar país..." />
  </SelectTrigger>
  <SelectContent>

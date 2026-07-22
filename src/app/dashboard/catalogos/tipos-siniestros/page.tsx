@@ -95,18 +95,16 @@ export default function ClaimTypePage() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-red-500 to-rose-500 text-white shadow-sm">
- <AlertCircle className="h-5 w-5" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-red-500 to-rose-500">
+ <AlertCircle />
  </div>
- <div>
- <h1 className="app-page-title">Tipos de Siniestro</h1>
- <p className="app-page-lead">Gestión de tipos de siniestros.</p>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Tipos de Siniestro</h1>
  </div>
  </div>
- <div className="flex items-center gap-2">
+ <div className="app-grid-header-right">
  {canCreate("catalogos") && (
  <Button
  onClick={() => { setEditingId(null); setFormData({ name: "", description: "", icon: "FileWarning" }); setOpen(true); }}
@@ -117,19 +115,17 @@ export default function ClaimTypePage() {
  )}
  </div>
  </div>
- </div>
 
- <div className="app-toolbar">
- <div className="flex items-center gap-2">
- <div className="relative w-[160px] shrink-0">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
  <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
  </div>
  </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
  </div>
-
- <div className="app-panel">
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
@@ -162,7 +158,7 @@ export default function ClaimTypePage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
  setEditingId(item.id);
  setFormData({ name: item.name || "", description: item.description || "", icon: item.icon || "FileWarning" });
  setOpen(true);

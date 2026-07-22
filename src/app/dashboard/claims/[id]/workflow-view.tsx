@@ -20,11 +20,11 @@ const stateConfig: Record<NodeState, { color: string; bg: string; border: string
   none:     { color: "text-muted-foreground/40",               bg: "bg-transparent",                         border: "border-dashed border-white/10 dark:border-white/5", icon: Circle, label: "N/A" },
 };
 
-// Dependencias conocidas entre templates
+// Dependencias conocidas entre templates (usa feature codes)
 const DEPENDENCIES: Record<string, string[]> = {
   RES: ["COB"],
-  PCA: ["RES"],
-  RTA: ["NSA"],
+  AJU: ["RES"],
+  RTA: ["SOL"],
 };
 
 const CLOSED_STATUSES = new Set(["issued", "reviewed", "approved", "dispatched"]);
@@ -95,7 +95,7 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
     }
     return Array.from(map.entries()).sort((a, b) => {
       // Ordenar por dependencias: COB antes que RES, etc
-      const order = ["COB", "RES", "PCA", "INS", "COI", "NSA", "RTA", "CIE", "REA", "PRO", "IMP", "IND"];
+      const order = ["COB", "RES", "AJU", "INS", "CIN", "SOL", "RTA", "CIE", "REA", "PRO", "IMP", "RIN"];
       const ai = order.indexOf(a[0]);
       const bi = order.indexOf(b[0]);
       return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);

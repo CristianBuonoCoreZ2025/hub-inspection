@@ -317,33 +317,21 @@ export default function UsersPage() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-purple-500 text-white shadow-sm">
- <Users className="h-5 w-5" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-violet-500 to-purple-500">
+ <Users />
  </div>
- <div>
- <h1 className="app-page-title">Usuarios</h1>
- <p className="app-page-lead">Gestión de usuarios del sistema.</p>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Usuarios</h1>
  </div>
  </div>
- <div className="flex items-center gap-2">
+ <div className="app-grid-header-right">
  {canCreate("users") && (
  <Button onClick={openCreate} className="pg-btn-platinum">
  Invitar
  </Button>
  )}
- </div>
- </div>
- </div>
-
- <div className="app-toolbar">
- <div className="flex items-center gap-2">
- <div className="relative w-full sm:w-[160px] shrink-0">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
- <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
- </div>
  </div>
  </div>
 
@@ -370,7 +358,7 @@ export default function UsersPage() {
  <div className="modal-field">
  <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={editForm.firstName ?? ""}
  onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
  placeholder="Juan"
@@ -379,7 +367,7 @@ export default function UsersPage() {
  <div className="modal-field">
  <Label className="app-field-label">Apellido</Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={editForm.lastName ?? ""}
  onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
  placeholder="Pérez"
@@ -388,7 +376,7 @@ export default function UsersPage() {
  <div className="modal-field modal-field-full">
  <Label className="app-field-label">Nombre completo <span className="text-red-500">*</span></Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={editForm.fullName ?? ""}
  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
  placeholder="Juan Pérez"
@@ -398,7 +386,7 @@ export default function UsersPage() {
  <Label className="app-field-label">Email <span className="text-red-500">*</span></Label>
  <Input
  type="email"
- className="app-input h-7"
+ className="app-input"
  value={editForm.email ?? ""}
  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
  placeholder="juan@empresa.cl"
@@ -407,7 +395,7 @@ export default function UsersPage() {
  <div className="modal-field">
  <Label className="app-field-label">Teléfono</Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={editForm.phone ?? ""}
  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
  placeholder="+56 9 1234 5678"
@@ -416,7 +404,7 @@ export default function UsersPage() {
  <div className="modal-field">
  <Label className="app-field-label">RUT</Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={editForm.rut ?? ""}
  onChange={(e) => setEditForm({ ...editForm, rut: e.target.value })}
  placeholder="12.345.678-9"
@@ -429,7 +417,7 @@ export default function UsersPage() {
  onValueChange={(v) => setEditForm({ ...editForm, countryId: v || "" })}
  items={countries?.map((c: { id: string; name: string }) => ({ value: c.id, label: c.name })) || []}
  >
- <SelectTrigger className="app-input h-7"><SelectValue placeholder="Seleccionar país" /></SelectTrigger>
+ <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar país" /></SelectTrigger>
  <SelectContent>
  {countries?.map((c: { id: string; name: string }) => (
  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -443,14 +431,14 @@ export default function UsersPage() {
  {/* ── Modo creación: campos mínimos ── */}
  <div className="modal-field modal-field-full">
  <Label className="app-field-label">Nombre completo <span className="text-red-500">*</span></Label>
- <Input {...form.register("fullName")} placeholder="Juan Pérez" className="app-input h-7" />
+ <Input {...form.register("fullName")} placeholder="Juan Pérez" className="app-input" />
  {form.formState.errors.fullName && (
  <p className="text-xs text-red-500">{form.formState.errors.fullName.message}</p>
  )}
  </div>
  <div className="modal-field modal-field-full">
  <Label className="app-field-label">Email <span className="text-red-500">*</span></Label>
- <Input {...form.register("email")} type="email" placeholder="juan@empresa.cl" className="app-input h-7" />
+ <Input {...form.register("email")} type="email" placeholder="juan@empresa.cl" className="app-input" />
  {form.formState.errors.email && (
  <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
  )}
@@ -483,7 +471,7 @@ export default function UsersPage() {
  { value: "dispatcher", label: "Despachador" },
  ]}
  >
- <SelectTrigger className="app-input h-7"><SelectValue placeholder="Selecciona un tipo" /></SelectTrigger>
+ <SelectTrigger className="app-input"><SelectValue placeholder="Selecciona un tipo" /></SelectTrigger>
  <SelectContent>
  <SelectItem value="internal">Interno (Administrador)</SelectItem>
  <SelectItem value="adjuster">Liquidador</SelectItem>
@@ -566,7 +554,7 @@ export default function UsersPage() {
  onValueChange={(v) => setNewSecRole(v as SecondaryRole)}
  items={availableSecRoles.map((r) => ({ value: r.value, label: r.label }))}
  >
- <SelectTrigger className="app-input h-7"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+ <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
  <SelectContent>
  {availableSecRoles.map((r) => (
  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
@@ -584,7 +572,7 @@ export default function UsersPage() {
  ...(companies?.map((c: Company) => ({ value: c.id, label: c.name })) || []),
  ]}
  >
- <SelectTrigger className="app-input h-7"><SelectValue placeholder="Todos los clientes" /></SelectTrigger>
+ <SelectTrigger className="app-input"><SelectValue placeholder="Todos los clientes" /></SelectTrigger>
  <SelectContent>
  <SelectItem value="">Todos los clientes</SelectItem>
  {companies?.map((c: Company) => (
@@ -629,7 +617,15 @@ export default function UsersPage() {
  </Dialog>
 
  <div className="app-panel">
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
+ <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
+ </div>
+ </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ </div>
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
@@ -669,7 +665,7 @@ export default function UsersPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("users") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => openEdit(user)}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => openEdit(user)}>
  <Pencil className="h-4 w-4" />
  </Button>
  )}

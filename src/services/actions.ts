@@ -149,6 +149,8 @@ export async function getActionFeatures(): Promise<ActionFeature[]> {
         f.characteristics.sort((a, b) => a.sort_order - b.sort_order);
       }
     }
+    // eslint-disable-next-line no-console
+    console.log("[getActionFeatures] rows:", rows.length, "ILI:", rows.find(r => r.code === "ILI")?.has_template, "withTemplate:", rows.filter(r => r.has_template).map(r => r.code));
     return rows;
   });
 }
@@ -264,11 +266,15 @@ export async function deleteCharacteristic(id: string) {
 const ACTION_TEMPLATE_FIELDS =
   "id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, review_levels, issuer_roles, reviewer_roles, approver_roles, default_issuer_role, default_reviewer_role, default_approver_role, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, code, is_dispatch_applicable, company_id, insurance_company_id, event_id, country_id, sort_order, action_feature:action_features!action_template_action_features_id_fkey(id, name, code), line_business:business_lines!action_template_line_business_id_fkey(id, name, code_prefix), company:companies!action_template_company_id_fkey(id, name), event:events!action_template_event_id_fkey(id, name), claim_statuses:action_template_claim_status!action_template_claim_status_action_template_id_fkey(claim_status_id, is_active)";
 
-export async function getActionTemplates(): Promise<ActionTemplate[]> {
-  const templates = await fetchAll<ActionTemplate>("action_template", {
+export async function getActionTemplates(includeInactive = true): Promise<ActionTemplate[]> {
+  const options: Parameters<typeof fetchAll>[1] = {
     select: ACTION_TEMPLATE_FIELDS,
     order: { column: "name", ascending: true },
-  });
+  };
+  if (!includeInactive) {
+    options.eq = { is_active: true };
+  }
+  const templates = await fetchAll<ActionTemplate>("action_template", options);
   // Fetch action_type names separately
   const types = await getActionTypes();
   const typeMap = new Map(types.map(t => [t.id, t]));

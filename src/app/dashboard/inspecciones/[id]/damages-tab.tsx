@@ -350,7 +350,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  setForm({ ...form, space_id: v || "", dependency: space?.name || "" });
  }}
  >
- <SelectTrigger className="app-input h-7 w-full text-[13px]">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Seleccionar..." />
  </SelectTrigger>
  <SelectContent>
@@ -368,7 +368,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  setForm({ ...form, building_damage_category_id: v || "", category: cat?.name || form.category });
  }}
  >
- <SelectTrigger className="app-input h-7 w-full text-[13px]">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Seleccionar..." />
  </SelectTrigger>
  <SelectContent>
@@ -383,7 +383,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={severityOptions}
  onValueChange={(v) => setForm({ ...form, severity: (v || "low") as InspectionDamage["severity"] })}
  >
- <SelectTrigger className="app-input h-7 w-full text-[13px]">
+ <SelectTrigger className="app-input w-full">
  <SelectValue />
  </SelectTrigger>
  <SelectContent>
@@ -397,7 +397,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.description || ""}
  onChange={(e) => setForm({ ...form, description: e.target.value })}
  placeholder="Ej. Grieta en muro de carga, filtración en techumbre..."
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  <div className="modal-field">
@@ -406,7 +406,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.materiality_type}
  onChange={(e) => setForm({ ...form, materiality_type: e.target.value })}
  placeholder="Ej. Hormigón, Albañilería..."
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  <div className="modal-field">
@@ -416,7 +416,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.quantity}
  onChange={(e) => setForm({ ...form, quantity: e.target.value ? Number(e.target.value) : 0 })}
  placeholder="0"
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  <div className="modal-field">
@@ -426,7 +426,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={unitOptions.map((u) => ({ value: u, label: u }))}
  onValueChange={(v) => setForm({ ...form, unit: v || "" })}
  >
- <SelectTrigger className="app-input h-7 w-full text-[13px]">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Seleccionar..." />
  </SelectTrigger>
  <SelectContent>
@@ -440,7 +440,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.observations}
  onChange={(e) => setForm({ ...form, observations: e.target.value })}
  placeholder="Observaciones adicionales..."
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  <div className="modal-field">
@@ -451,7 +451,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={currencyOptions}
  onValueChange={(v) => setForm({ ...form, currency: v || "CLP" })}
  >
- <SelectTrigger className="app-input h-7 w-[90px] text-[13px] shrink-0">
+ <SelectTrigger className="app-input w-[90px] shrink-0">
  <SelectValue />
  </SelectTrigger>
  <SelectContent>
@@ -463,7 +463,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.estimated_amount}
  onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : 0 })}
  placeholder="0"
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  </div>
@@ -475,7 +475,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={affectedThirdParties.map((t) => ({ value: t.id, label: t.full_name || "Sin nombre" }))}
  onValueChange={(v) => setForm({ ...form, third_party_id: v || "" })}
  >
- <SelectTrigger className="app-input h-7 w-full text-[13px]">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Si es daño de un tercero..." />
  </SelectTrigger>
  <SelectContent>
@@ -500,7 +500,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  setForm({ ...form, content_good_type_id: v || "", category: gt?.name || form.category });
  }}
  >
- <SelectTrigger className="app-input h-7 w-full text-[13px]">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Seleccionar..." />
  </SelectTrigger>
  <SelectContent>
@@ -514,7 +514,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.product}
  onChange={(e) => setForm({ ...form, product: e.target.value })}
  placeholder="Ej. Televisor Samsung 55"
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  <div className="modal-field">
@@ -523,7 +523,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.brand_model}
  onChange={(e) => setForm({ ...form, brand_model: e.target.value })}
  placeholder="Ej. UN55AU8000"
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  <div className="modal-field">
@@ -533,7 +533,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={severityOptions}
  onValueChange={(v) => setForm({ ...form, severity: (v || "low") as InspectionDamage["severity"] })}
  >
- <SelectTrigger className="app-input h-7 w-full text-[13px]">
+ <SelectTrigger className="app-input w-full">
  <SelectValue />
  </SelectTrigger>
  <SelectContent>
@@ -548,7 +548,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.quantity}
  onChange={(e) => setForm({ ...form, quantity: e.target.value ? Number(e.target.value) : 0 })}
  placeholder="1"
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  <div className="modal-field">
@@ -565,7 +565,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.description}
  onChange={(e) => setForm({ ...form, description: e.target.value })}
  placeholder="Ej. Pantalla rota por impacto, quemado total..."
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  <div className="modal-field modal-field-full">
@@ -574,7 +574,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.observations}
  onChange={(e) => setForm({ ...form, observations: e.target.value })}
  placeholder="Observaciones adicionales..."
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  <div className="modal-field">
@@ -584,7 +584,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={filteredSpaces.map((s) => ({ value: s.id, label: s.name }))}
  onValueChange={(v) => setForm({ ...form, space_id: v || "" })}
  >
- <SelectTrigger className="app-input h-7 w-full text-[13px]">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Si se puede ubicar..." />
  </SelectTrigger>
  <SelectContent>
@@ -600,7 +600,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={currencyOptions}
  onValueChange={(v) => setForm({ ...form, currency: v || "CLP" })}
  >
- <SelectTrigger className="app-input h-7 w-[90px] text-[13px] shrink-0">
+ <SelectTrigger className="app-input w-[90px] shrink-0">
  <SelectValue />
  </SelectTrigger>
  <SelectContent>
@@ -612,7 +612,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.estimated_amount}
  onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : 0 })}
  placeholder="0"
- className="app-input h-7 w-full text-[13px]"
+ className="app-input w-full"
  />
  </div>
  </div>
@@ -624,7 +624,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={affectedThirdParties.map((t) => ({ value: t.id, label: t.full_name || "Sin nombre" }))}
  onValueChange={(v) => setForm({ ...form, third_party_id: v || "" })}
  >
- <SelectTrigger className="app-input h-7 w-full text-[13px]">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Si es daño de un tercero..." />
  </SelectTrigger>
  <SelectContent>

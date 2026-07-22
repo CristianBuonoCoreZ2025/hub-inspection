@@ -254,8 +254,13 @@ export default function WorkflowsPage() {
  const selectedConfig = configs?.find(c => c.id === selectedConfigId);
 
  const { data: availableTemplates } = useQuery({
- queryKey: ["available-templates", selectedConfig?.claim_status_id, selectedConfig?.business_line_id],
- queryFn: () => getActionTemplatesByClaimStatus(selectedConfig!.claim_status_id, selectedConfig?.business_line_id || undefined),
+ queryKey: ["available-templates", selectedConfig?.claim_status_id, selectedConfig?.business_line_id, selectedConfig?.event_id],
+ queryFn: () => getActionTemplatesByClaimStatus({
+  claimStatusId: selectedConfig!.claim_status_id,
+  businessLineId: selectedConfig?.business_line_id || null,
+  eventId: selectedConfig?.event_id || null,
+  // No filtrar por compañía en el editor de workflows (los workflows no son por compañía)
+ }),
  enabled: !!selectedConfig,
  staleTime: 30000,
  });
@@ -836,7 +841,7 @@ function CreateWorkflowModal({
  ]}
  required
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Seleccionar estado..." />
  </SelectTrigger>
  <SelectContent>
@@ -865,7 +870,7 @@ function CreateWorkflowModal({
  disabled={!statusId || !countries}
  required
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder={!statusId ? "Primero selecciona estado..." : !countries ? "Cargando..." : "Seleccionar país..."} />
  </SelectTrigger>
  <SelectContent>
@@ -894,7 +899,7 @@ function CreateWorkflowModal({
  disabled={!countryId || !events}
  required
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder={!countryId ? "Primero selecciona país..." : !events ? "Cargando..." : "Seleccionar evento..."} />
  </SelectTrigger>
  <SelectContent>
@@ -923,7 +928,7 @@ function CreateWorkflowModal({
  disabled={!eventId || !lines}
  required
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder={!eventId ? "Primero selecciona evento..." : !lines ? "Cargando..." : "Seleccionar línea..."} />
  </SelectTrigger>
  <SelectContent>

@@ -24,18 +24,18 @@ import {
  updateClaimDocumentRequestNotes,
 } from "@/services/claim-documents";
 import { getPolicyCoveragesByPolicyId } from "@/services/policies";
-import { getClaimById } from "@/services/claims";
-import { getUsersByRoles, updateClaimAction, issueClaimAction } from "@/services/claim-actions";
+import { getClaimById, getClaimParticipants } from "@/services/claims";
+import { updateClaimAction, issueClaimAction } from "@/services/claim-actions";
 import { getUsersByRoleForCompany } from "@/services/users";
-import { getInspectionSessions, createInspectionSession, getInspectorSchedule } from "@/services/inspections";
+import { getInspectionSessions, getInspectorSchedule } from "@/services/inspections";
 import { getCoverageCatalog } from "@/services/coverage-catalog";
 import { getDocumentTemplates, type DocumentTemplate } from "@/services/document-templates";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Plus, Ban, ChevronDown, Check, CheckCircle, X, FileText, Download, Loader2, Play, Upload, History, Lock, Unlock, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw, AlertCircle } from "lucide-react";
+import { Plus, Ban, ChevronDown, Check, CheckCircle, X, FileText, Download, Loader2, Play, Upload, History, Lock, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import type { ClaimAction, Claim } from "@/types";
+import type { ClaimAction, Claim, ClaimsParticipant } from "@/types";
 import type { GestionScreenProps } from "./types";
 
 // ClaimAction extendido con relaciones que vienen de GraphQL pero no están en el tipo base
@@ -48,7 +48,7 @@ type ActionWithRelations = ClaimAction & {
 // Tipos
 // ═══════════════════════════════════════════════════════════════
 
-export type FieldWidth = "full" | "half" | "third" | "quarter";
+export type FieldWidth = "full" | "half" | "third" | "quarter" | "fifth" | "sixth";
 
 export type FieldCategory = "own" | "simple_entity" | "complex_entity";
 
@@ -57,6 +57,13 @@ export interface DateValidation {
  "greater_than_today" | "less_than_today" | "equal_today";
  compareField?: string;
  label?: string;
+}
+
+// Regla de visibilidad / obligatoriedad condicional (genérica para todas las pantallas)
+export interface VisibilityRule {
+ field: string;                    // ID del campo controlador
+ operator: "equals" | "not_equals" | "in" | "not_in";
+ value: string | string[];
 }
 
 export interface ScreenField {
@@ -76,6 +83,40 @@ export interface ScreenField {
  columns?: string[];
  // Configuración específica por tipo de campo complejo
  config?: Record<string, boolean | string | number>;
+ // Reglas condicionales (genéricas para todas las pantallas dinámicas)
+ visibilityRule?: VisibilityRule;   // cuándo mostrar el campo
+ requiredRule?: VisibilityRule;     // cuándo el campo es obligatorio (override de required)
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Helpers de reglas condicionales
+// ═══════════════════════════════════════════════════════════════
+
+export function evalRule(rule: VisibilityRule, values: Record<string, unknown>): boolean {
+ const ctrlValue = String(values[rule.field] ?? "").toLowerCase();
+ const ruleValue = rule.value;
+ switch (rule.operator) {
+ case "equals":
+ return ctrlValue === String(ruleValue).toLowerCase();
+ case "not_equals":
+ return ctrlValue !== String(ruleValue).toLowerCase();
+ case "in":
+ return Array.isArray(ruleValue) && ruleValue.some(v => ctrlValue === String(v).toLowerCase());
+ case "not_in":
+ return Array.isArray(ruleValue) && !ruleValue.some(v => ctrlValue === String(v).toLowerCase());
+ default:
+ return true;
+ }
+}
+
+export function isFieldVisible(field: ScreenField, values: Record<string, unknown>): boolean {
+ if (!field.visibilityRule) return true;
+ return evalRule(field.visibilityRule, values);
+}
+
+export function isFieldRequired(field: ScreenField, values: Record<string, unknown>): boolean {
+ if (field.requiredRule) return evalRule(field.requiredRule, values);
+ return !!field.required;
 }
 
 // Config del campo claim_document_receipt (Recepción de Documentos)
@@ -88,13 +129,16 @@ export interface ReceiptFieldConfig {
  notNeededOnlyIssuers?: boolean;
 }
 
+
 export function widthClass(width: FieldWidth = "full"): string {
  switch (width) {
- case "full": return "col-span-12";
- case "half": return "col-span-6";
- case "third": return "col-span-4";
- case "quarter": return "col-span-3";
- default: return "col-span-12";
+ case "full": return "col-span-[60]";
+ case "half": return "col-span-[30]";
+ case "third": return "col-span-[20]";
+ case "quarter": return "col-span-[15]";
+ case "fifth": return "col-span-[12]";
+ case "sixth": return "col-span-[10]";
+ default: return "col-span-[60]";
  }
 }
 
@@ -160,6 +204,33 @@ export const CLAIM_ENTITIES: { code: string; label: string; icon: string; desc: 
  { code: "reserve_number", label: "N° Reserva", icon: "#", desc: "Número de la reserva origen" },
  { code: "reserve_currency", label: "Moneda Reserva", icon: "$", desc: "Moneda de la reserva origen" },
  { code: "reserve_payment_date", label: "Fecha Pago Reserva", icon: "📅", desc: "Fecha de pago de la reserva" },
+ // ═══ Cards agrupadas del siniestro (readonly, se muestran como card completo) ═══
+ { code: "claim_insured_card", label: "Card Asegurado", icon: "👤", desc: "Datos completos del asegurado (card agrupada)" },
+ { code: "claim_address_card", label: "Card Dirección Siniestro", icon: "📍", desc: "Dirección completa del siniestro (card agrupada)" },
+ { code: "claim_contact_card", label: "Card Persona de Contacto", icon: "📞", desc: "Persona de contacto del siniestro (card agrupada)" },
+ // ═══ Campos individuales del Asegurado (tras desagrupar card) ═══
+ { code: "insured_rut", label: "RUT Asegurado", icon: "#", desc: "RUT del asegurado" },
+ { code: "insured_person_type", label: "Tipo Persona", icon: "👤", desc: "Tipo de persona del asegurado" },
+ { code: "insured_first_name", label: "Nombre Asegurado", icon: "👤", desc: "Nombre del asegurado" },
+ { code: "insured_last_name", label: "Apellido Asegurado", icon: "👤", desc: "Apellido del asegurado" },
+ { code: "insured_email", label: "Email Asegurado", icon: "✉", desc: "Email del asegurado" },
+ { code: "insured_phone", label: "Teléfono Asegurado", icon: "📞", desc: "Teléfono del asegurado" },
+ { code: "insured_address", label: "Dirección Asegurado", icon: "📍", desc: "Dirección del asegurado" },
+ { code: "insured_country", label: "País Asegurado", icon: "🌍", desc: "País del asegurado" },
+ { code: "insured_region", label: "Región Asegurado", icon: "🗺", desc: "Región del asegurado" },
+ { code: "insured_city", label: "Ciudad Asegurado", icon: "🏙", desc: "Ciudad del asegurado" },
+ { code: "insured_commune", label: "Comuna Asegurado", icon: "🏘", desc: "Comuna del asegurado" },
+ // ═══ Campos individuales de la Dirección del Siniestro (tras desagrupar card) ═══
+ { code: "claim_destination_housing", label: "Tipo Vivienda", icon: "🏠", desc: "Tipo de vivienda del siniestro" },
+ { code: "claim_country", label: "País Siniestro", icon: "🌍", desc: "País del siniestro" },
+ { code: "claim_region", label: "Región Siniestro", icon: "🗺", desc: "Región del siniestro" },
+ { code: "claim_city", label: "Ciudad Siniestro", icon: "🏙", desc: "Ciudad del siniestro" },
+ { code: "claim_commune", label: "Comuna Siniestro", icon: "🏘", desc: "Comuna del siniestro" },
+ // ═══ Campos individuales de la Persona de Contacto (tras desagrupar card) ═══
+ { code: "contact_first_name", label: "Nombre Contacto", icon: "👤", desc: "Nombre del contacto" },
+ { code: "contact_last_name", label: "Apellido Contacto", icon: "👤", desc: "Apellido del contacto" },
+ { code: "contact_email", label: "Email Contacto", icon: "✉", desc: "Email del contacto" },
+ { code: "contact_phone", label: "Teléfono Contacto", icon: "📞", desc: "Teléfono del contacto" },
 ];
 
 export const ACTION_ENTITIES: { code: string; label: string; icon: string; desc: string }[] = [
@@ -196,20 +267,47 @@ export const ALL_SYSTEM_CODES = new Set([
 // Componente principal — agrupa campos por categoría
 // ═══════════════════════════════════════════════════════════════
 
-export default function DynamicScreen({ action, fields, onChange, readOnly, onAdvance, onReject }: DynamicScreenProps) {
+export default function DynamicScreen({ action, fields, onChange, readOnly, onAdvance, onReject, screenCode }: DynamicScreenProps) {
  const values = (action.action_data || {}) as Record<string, unknown>;
 
+ // ── Inyectar campos universales de fecha si no están en el form_schema ──
+ // Fecha Creación y Actualización NO se inyectan como campos — se muestran
+ // siempre en el header del panel "Datos de la Gestión" en formato 24h
+ // (horario militar), definido más abajo en el render.
+ // "Compromiso Término" SOLO se inyecta en pantallas genéricas (sin code específico).
+ // En pantallas específicas (coordinacion, ajuste, indemnizacion, etc.) NO se muestra
+ // porque la fecha de compromiso = fecha máxima de ejecución según config de la gestión.
+ const injectedFields: ScreenField[] = [];
+ const hasField = (id: string) => fields.some((f) => f.id === id);
+
+ // Pantallas genéricas: sin code, o code = "generica" / "default" / "estandar"
+ const isGenericScreen = !screenCode || ["generica", "default", "estandar", "generic"].includes(screenCode.toLowerCase());
+
+ // Compromiso Término: solo en pantallas genéricas
+ if (isGenericScreen && !hasField("inf_compromiso")) {
+ injectedFields.push({ id: "inf_compromiso", category: "own", type: "date", label: "Compromiso Término", width: "half" });
+ }
+ const allFields = [...injectedFields, ...fields];
+
  // Cargar siniestro para entidades de tipo claim_* y para precargar inspector en coordinación
- const hasClaimEntities = fields.some((f) => CLAIM_ENTITIES.some((e) => e.code === f.type));
- const hasCoordInspector = fields.some((f) => f.id === "coord_inspector");
+ const hasClaimEntities = allFields.some((f) => CLAIM_ENTITIES.some((e) => e.code === f.type));
+ const hasCoordInspector = allFields.some((f) => f.id === "coord_inspector");
  const { data: claim } = useQuery({
  queryKey: ["claim", action.claim_id],
  queryFn: () => getClaimById(action.claim_id),
  enabled: (hasClaimEntities || hasCoordInspector) && !!action.claim_id,
  });
 
+ // Cargar participantes del siniestro (para cards agrupadas: asegurado, contacto)
+ const hasClaimCardEntities = allFields.some((f) => f.type === "claim_insured_card" || f.type === "claim_contact_card");
+ const { data: claimParticipants } = useQuery({
+ queryKey: ["claim-participants", action.claim_id],
+ queryFn: () => getClaimParticipants(action.claim_id),
+ enabled: hasClaimCardEntities && !!action.claim_id,
+ });
+
  // Cargar reserva del siniestro (para entidades reserve_currency, reserve_payment_date, reserve_number)
- const hasReserveEntities = fields.some((f) => f.type === "reserve_currency" || f.type === "reserve_payment_date" || f.type === "reserve_number");
+ const hasReserveEntities = allFields.some((f) => f.type === "reserve_currency" || f.type === "reserve_payment_date" || f.type === "reserve_number");
  const { data: reserves } = useQuery({
  queryKey: ["claim-reserves", action.claim_id],
  queryFn: () => getClaimReserves(action.claim_id),
@@ -229,13 +327,16 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  // eslint-disable-next-line react-hooks/exhaustive-deps
  }, [claim?.inspector_id, hasCoordInspector]);
 
- // Separar campos por categoría
- const actionEntities = fields.filter((f) => f.category === "simple_entity" && ACTION_ENTITIES.some((e) => e.code === f.type));
- const otherEntities = fields.filter((f) => f.category === "simple_entity" && !CLAIM_ENTITIES.some((e) => e.code === f.type) && !ACTION_ENTITIES.some((e) => e.code === f.type));
+ // Separar campos por categoría (usar allFields para incluir los inyectados)
+ // actionEntities = entidades de la gestión (action_*)
+ // otherEntities = entidades del siniestro (claim_*, insured_*, card_*) + otras no clasificadas
+ //   NOTA: NO se excluyen CLAIM_ENTITIES — esos campos (claim_address_card,
+ //   claim_contact_card, insured_*, etc.) DEBEN caer aquí para renderizarse.
+ const actionEntities = allFields.filter((f) => f.category === "simple_entity" && ACTION_ENTITIES.some((e) => e.code === f.type));
+ const otherEntities = allFields.filter((f) => f.category === "simple_entity" && !ACTION_ENTITIES.some((e) => e.code === f.type));
  // review_levels se renderiza siempre al final, sin importar si está en los campos configurados
- const complexEntities = fields.filter((f) => f.category === "complex_entity" && f.type !== "review_levels");
- const ownFields = fields.filter((f) => f.category === "own");
- const hasCoordFields = ownFields.some((f) => f.id === "coord_fecha");
+ const complexEntities = allFields.filter((f) => f.category === "complex_entity" && f.type !== "review_levels");
+ const ownFields = allFields.filter((f) => f.category === "own");
 
  // Si la pantalla tiene reserva o ajuste, los campos de moneda/fecha/reserva van arriba del form
  // → quitarlos de los own fields para no duplicarlos
@@ -257,74 +358,104 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
 
  // Ordenar entidades complejas:
  // 1. claim_coverages primero
- // 2. resto de entidades complejas
- // 3. claim_documents (Fuentes) y claim_history (Historia) VAN AL FINAL (abajo del form)
- const BOTTOM_ENTITIES = new Set(["claim_documents", "claim_history"]);
+ // 2. inspection_coordination segundo (antes que review_levels)
+ // 3. resto de entidades complejas
+ // 4. claim_documents / document_templates (Fuentes) y claim_history (Historia) VAN AL FINAL (abajo del form)
+ const BOTTOM_ENTITIES = new Set(["claim_documents", "document_templates", "claim_history"]);
  const topComplexEntities = complexEntities.filter((f) => !BOTTOM_ENTITIES.has(f.type));
  const bottomComplexEntities = complexEntities.filter((f) => BOTTOM_ENTITIES.has(f.type));
 
+ const PRIORITY_ORDER = ["claim_coverages", "inspection_coordination"];
  const sortedComplexEntities = [...topComplexEntities].sort((a, b) => {
- if (a.type === "claim_coverages" && b.type !== "claim_coverages") return -1;
- if (b.type === "claim_coverages" && a.type !== "claim_coverages") return 1;
+ const ia = PRIORITY_ORDER.indexOf(a.type);
+ const ib = PRIORITY_ORDER.indexOf(b.type);
+ const pa = ia === -1 ? PRIORITY_ORDER.length : ia;
+ const pb = ib === -1 ? PRIORITY_ORDER.length : ib;
+ if (pa !== pb) return pa - pb;
  return 0;
  });
 
+ // ── Validación de campos obligatorios ──
+ // Verifica que todos los campos obligatorios (según `required` o `requiredRule`)
+ // tengan valor, respetando la visibilidad condicional (`visibilityRule`).
+ // Se usa para bloquear el botón "Emitir" hasta que la gestión esté completa.
+ const missingRequired = allFields.filter((f) => f.category === "own").filter((f) => {
+ // Si el campo no es visible según su visibilityRule, no se valida
+ if (!isFieldVisible(f, values)) return false;
+ // Si el campo no es obligatorio según requiredRule o required, no se valida
+ if (!isFieldRequired(f, values)) return false;
+ const v = values[f.id];
+ return v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0);
+ });
+ const requiredFieldsComplete = missingRequired.length === 0;
+
  return (
- <div className="space-y-4">
+ <div className="space-y-3">
+ {/* ─── Barra de fechas (siempre visible, horario militar 24h) ─── */}
+ <div className="grid grid-cols-2 gap-3 text-[10px] text-muted-foreground px-1 pb-1">
+ <div>
+ <span>Creación: </span>
+ <span className="font-mono">{action.created_on ? new Date(action.created_on).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</span>
+ </div>
+ <div>
+ <span>Actualización: </span>
+ <span className="font-mono">{action.updated_on ? new Date(action.updated_on).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</span>
+ </div>
+ </div>
+
  {/* ─── Entidades complejas (coberturas primero, review_levels al final) ─── */}
  {sortedComplexEntities.length > 0 && (
- <div className="space-y-4">
+ <div className="space-y-3">
  {sortedComplexEntities.map((field) => (
- <section key={field.id} className="app-panel p-3">
- <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">{field.label}</h4>
+ <section key={field.id} className="app-panel p-2.5">
+ <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">{field.label}</h4>
  <ComplexEntityView type={field.type} field={field} action={action} readOnly={readOnly} values={values} onAdvance={onAdvance} onReject={onReject} onChange={onChange} />
  </section>
  ))}
  </div>
  )}
 
- {/* ─── Datos de la gestión ─── */}
+ {/* ─── Datos de la gestión (entidades de acción) ─── */}
  {actionEntities.length > 0 && (
- <section className="app-panel p-3">
- <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">Datos de la Gestión</h4>
- <div className="grid grid-cols-12 gap-3">
- {actionEntities.map((field) => (
+ <section className="app-panel p-2.5">
+ <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-2.5">
+ {actionEntities.map((field) => {
+ if (!isFieldVisible(field, values)) return null;
+ return (
  <div key={field.id} className={widthClass(field.width)}>
  <EntityField field={field} value={values[field.id]} action={action} reserveData={reserveData} />
  </div>
- ))}
+ );
+ })}
  </div>
  </section>
  )}
 
- {/* ─── Otras entidades simples ─── */}
+ {/* ─── Otras entidades simples (cards del siniestro, informativos) ─── */}
  {otherEntities.length > 0 && (
- <section className="app-panel p-3">
- <div className="grid grid-cols-12 gap-3">
- {otherEntities.map((field) => (
+ <section className="app-panel p-2.5">
+ <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-2.5">
+ {otherEntities.map((field) => {
+ if (!isFieldVisible(field, values)) return null;
+ return (
  <div key={field.id} className={widthClass(field.width)}>
- <EntityField field={field} value={values[field.id]} action={action} reserveData={reserveData} />
+ <EntityField field={field} value={values[field.id]} action={action} reserveData={reserveData} claim={claim} claimParticipants={claimParticipants} />
  </div>
- ))}
+ );
+ })}
  </div>
  </section>
  )}
 
  {/* ─── Formulario (campos propios) ─── */}
  {filteredOwnFields.length > 0 && (
- <section className="app-panel p-3">
- {hasCoordFields ? (
- <CoordFieldsGrid
- fields={filteredOwnFields}
- values={values}
- allFields={fields}
- onChange={updateValue}
- readOnly={readOnly}
- action={action}
- />
- ) : (
- <div className="grid grid-cols-12 gap-3">
- {filteredOwnFields.map((field) => (
+ <section className="app-panel p-2.5">
+ <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-2.5">
+ {filteredOwnFields.map((field) => {
+ // Visibilidad condicional genérica via visibilityRule
+ if (!isFieldVisible(field, values)) return null;
+
+ return (
  <div key={field.id} className={widthClass(field.width)}>
  <OwnField
  field={field}
@@ -336,9 +467,9 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  action={action}
  />
  </div>
- ))}
+ );
+ })}
  </div>
- )}
  </section>
  )}
 
@@ -346,10 +477,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  {bottomComplexEntities.length > 0 && (
  <div className="space-y-4">
  {bottomComplexEntities.map((field) => (
- <section key={field.id} className="app-panel p-3">
- <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">{field.label}</h4>
- <ComplexEntityView type={field.type} field={field} action={action} readOnly={readOnly} values={values} onAdvance={onAdvance} onReject={onReject} onChange={onChange} />
- </section>
+ <CollapsibleBottomSection key={field.id} field={field} action={action} readOnly={readOnly} values={values} onAdvance={onAdvance} onReject={onReject} onChange={onChange} />
  ))}
  </div>
  )}
@@ -361,6 +489,8 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  onAdvance={onAdvance}
  onReject={onReject}
  receiptFieldConfig={(fields.find((f) => f.type === "claim_document_receipt")?.config || {}) as ReceiptFieldConfig}
+ requiredFieldsComplete={requiredFieldsComplete}
+ missingRequiredFields={missingRequired.map((f) => f.label || f.id)}
  />
  )}
  </div>
@@ -376,12 +506,69 @@ function EntityField({ field, value, action, reserveData, claim, claimParticipan
  value: unknown;
  action: ActionWithRelations;
  reserveData?: { reserve_number: string | null; currency: string | null; payment_date: string | null } | null;
- claim?: Claim;
- claimParticipants?: { type: string; full_name: string }[];
+ claim?: Claim | null;
+ claimParticipants?: ClaimsParticipant[] | null;
 }) {
  const isActionEntity = ACTION_ENTITIES.some((e) => e.code === field.type);
  const isReserveEntity = field.type === "reserve_currency" || field.type === "reserve_payment_date" || field.type === "reserve_number";
  const isClaimEntity = CLAIM_ENTITIES.some((e) => e.code === field.type);
+
+ // Cards agrupadas del siniestro (readonly, estilo compacto 10px)
+ if (field.type === "claim_insured_card") {
+ const insured = claimParticipants?.find((p) => p.type === "insured");
+ if (!insured) return <CardEmpty label={field.label} />;
+ return (
+ <div className="rounded-md border border-border/60 p-1.5 space-y-1 bg-muted/20">
+ <p className="text-[10px] font-semibold text-muted-foreground">{field.label || "Datos del Asegurado"}</p>
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-3 gap-y-0.5 text-[10px]">
+ <div><span className="app-data-label">RUT</span><p className="font-medium truncate">{insured.rut || "—"}</p></div>
+ <div><span className="app-data-label">Tipo</span><p className="font-medium">{insured.person_type === "legal" ? "P. Jurídica" : insured.person_type === "natural" ? "P. Natural" : "—"}</p></div>
+ <div><span className="app-data-label">Nombre</span><p className="font-medium truncate">{insured.first_name || "—"}</p></div>
+ <div><span className="app-data-label">Apellido</span><p className="font-medium truncate">{insured.last_name || "—"}</p></div>
+ <div><span className="app-data-label">Email</span><p className="font-medium truncate">{insured.email || "—"}</p></div>
+ <div><span className="app-data-label">Teléfono</span><p className="font-medium truncate">{insured.cell_phone || insured.phone || "—"}</p></div>
+ <div className="col-span-2"><span className="app-data-label">Dirección</span><p className="font-medium truncate">{insured.address || "—"}</p></div>
+ <div><span className="app-data-label">País</span><p className="font-medium truncate">{insured.country || "—"}</p></div>
+ <div><span className="app-data-label">Región</span><p className="font-medium truncate">{insured.region || "—"}</p></div>
+ <div><span className="app-data-label">Ciudad</span><p className="font-medium truncate">{insured.city || "—"}</p></div>
+ <div><span className="app-data-label">Comuna</span><p className="font-medium truncate">{insured.commune || "—"}</p></div>
+ </div>
+ </div>
+ );
+ }
+
+ if (field.type === "claim_address_card") {
+ if (!claim) return <CardEmpty label={field.label} />;
+ return (
+ <div className="rounded-md border border-border/60 p-1.5 space-y-1 bg-muted/20">
+ <p className="text-[10px] font-semibold text-muted-foreground">{field.label || "Dirección del Siniestro"}</p>
+ <div className="grid grid-cols-3 gap-x-3 gap-y-0.5 text-[10px]">
+ <div><span className="app-data-label">Dirección</span><p className="font-medium truncate">{claim.claim_address || "—"}</p></div>
+ <div><span className="app-data-label">Tipo</span><p className="font-medium truncate">{claim.destination_housing?.name || "—"}</p></div>
+ <div><span className="app-data-label">País</span><p className="font-medium truncate">{claim.country?.name || "—"}</p></div>
+ <div><span className="app-data-label">Región</span><p className="font-medium truncate">{claim.region?.name || "—"}</p></div>
+ <div><span className="app-data-label">Ciudad</span><p className="font-medium truncate">{claim.city?.name || "—"}</p></div>
+ <div><span className="app-data-label">Comuna</span><p className="font-medium truncate">{claim.commune?.name || "—"}</p></div>
+ </div>
+ </div>
+ );
+ }
+
+ if (field.type === "claim_contact_card") {
+ const contact = claimParticipants?.find((p) => p.type === "contact");
+ if (!contact) return <CardEmpty label={field.label} />;
+ return (
+ <div className="rounded-md border border-border/60 p-1.5 space-y-1 bg-muted/20">
+ <p className="text-[10px] font-semibold text-muted-foreground">{field.label || "Persona de Contacto"}</p>
+ <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 text-[10px]">
+ <div><span className="app-data-label">Nombre</span><p className="font-medium truncate">{contact.first_name || "—"}</p></div>
+ <div><span className="app-data-label">Apellido</span><p className="font-medium truncate">{contact.last_name || "—"}</p></div>
+ <div><span className="app-data-label">Email</span><p className="font-medium truncate">{contact.email || "—"}</p></div>
+ <div><span className="app-data-label">Teléfono</span><p className="font-medium truncate">{contact.cell_phone || contact.phone || "—"}</p></div>
+ </div>
+ </div>
+ );
+ }
 
  let displayValue: string;
  if (isActionEntity) {
@@ -395,15 +582,24 @@ function EntityField({ field, value, action, reserveData, claim, claimParticipan
  }
 
  return (
- <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[10px] text-muted-foreground">{field.label}</Label>
+ <div className="flex flex-col gap-0.5">
+ <Label className="text-[10px] text-muted-foreground">{field.label}</Label>
  <Input
  type="text"
- className="app-input h-8 bg-muted/30 border-dashed"
+ className="h-7 text-[10px] bg-muted/30 border-dashed border-border/60 px-2 text-muted-foreground"
  value={displayValue}
  readOnly
  placeholder={`Se completa automáticamente`}
  />
+ </div>
+ );
+}
+
+function CardEmpty({ label }: { label: string }) {
+ return (
+ <div className="rounded-lg border border-dashed border-border p-3 text-center">
+ <p className="text-[12px] font-semibold text-muted-foreground">{label}</p>
+ <p className="text-[10px] text-muted-foreground mt-1">Sin datos disponibles</p>
  </div>
  );
 }
@@ -422,7 +618,7 @@ function getReserveEntityValue(type: string, reserve: { reserve_number: string |
  }
 }
 
-function getClaimEntityValue(type: string, claim?: Claim | null, participants?: { type: string; full_name: string }[] | null): string {
+function getClaimEntityValue(type: string, claim?: Claim | null, participants?: ClaimsParticipant[] | null): string {
  if (!claim) return "";
  switch (type) {
  case "claim_number":
@@ -449,6 +645,79 @@ function getClaimEntityValue(type: string, claim?: Claim | null, participants?: 
  return claim.assigned_adjuster?.full_name || claim.adjuster?.full_name || "—";
  case "claim_address":
  return claim.claim_address || "—";
+ // ═══ Campos individuales del Asegurado ═══
+ case "insured_rut": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.rut || "—";
+ }
+ case "insured_person_type": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.person_type === "legal" ? "Persona Jurídica" : insured?.person_type === "natural" ? "Persona Natural" : "—";
+ }
+ case "insured_first_name": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.first_name || "—";
+ }
+ case "insured_last_name": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.last_name || "—";
+ }
+ case "insured_email": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.email || "—";
+ }
+ case "insured_phone": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.cell_phone || insured?.phone || "—";
+ }
+ case "insured_address": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.address || "—";
+ }
+ case "insured_country": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.country || "—";
+ }
+ case "insured_region": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.region || "—";
+ }
+ case "insured_city": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.city || "—";
+ }
+ case "insured_commune": {
+ const insured = participants?.find((p) => p.type === "insured");
+ return insured?.commune || "—";
+ }
+ // ═══ Campos individuales de la Dirección del Siniestro ═══
+ case "claim_destination_housing":
+ return claim.destination_housing?.name || "—";
+ case "claim_country":
+ return claim.country?.name || "—";
+ case "claim_region":
+ return claim.region?.name || "—";
+ case "claim_city":
+ return claim.city?.name || "—";
+ case "claim_commune":
+ return claim.commune?.name || "—";
+ // ═══ Campos individuales de la Persona de Contacto ═══
+ case "contact_first_name": {
+ const contact = participants?.find((p) => p.type === "contact");
+ return contact?.first_name || "—";
+ }
+ case "contact_last_name": {
+ const contact = participants?.find((p) => p.type === "contact");
+ return contact?.last_name || "—";
+ }
+ case "contact_email": {
+ const contact = participants?.find((p) => p.type === "contact");
+ return contact?.email || "—";
+ }
+ case "contact_phone": {
+ const contact = participants?.find((p) => p.type === "contact");
+ return contact?.cell_phone || contact?.phone || "—";
+ }
  default:
  return "";
  }
@@ -466,9 +735,9 @@ function getActionEntityValue(type: string, action: ActionWithRelations | null, 
  case "action_approver":
  return action.approver?.name || action.approver?.email || "Aprobador asignado";
  case "action_created_at":
- return action.created_at ? new Date(action.created_at).toLocaleString("es-CL") : String(fallback || "");
+ return action.created_on ? new Date(action.created_on).toLocaleString("es-CL") : String(fallback || "");
  case "action_updated_at":
- return action.updated_at ? new Date(action.updated_at).toLocaleString("es-CL") : String(fallback || "");
+ return action.updated_on ? new Date(action.updated_on).toLocaleString("es-CL") : String(fallback || "");
  case "action_expected_date":
  return action.expected_date || String(fallback || "");
  default:
@@ -481,7 +750,7 @@ function getActionEntityValue(type: string, action: ActionWithRelations | null, 
 // Muestra 1, 2 o 3 niveles según la configuración de action_feature
 // ═══════════════════════════════════════════════════════════════
 
-function ReviewLevelsView({ action, onAdvance, onReject, receiptFieldConfig }: { action: ActionWithRelations; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void; receiptFieldConfig?: ReceiptFieldConfig }) {
+function ReviewLevelsView({ action, onAdvance, onReject, receiptFieldConfig, requiredFieldsComplete, missingRequiredFields }: { action: ActionWithRelations; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void; receiptFieldConfig?: ReceiptFieldConfig; requiredFieldsComplete?: boolean; missingRequiredFields?: string[] }) {
  const feature = action.action_feature;
  const { profile } = useAuth();
  const tpl = action.action_template;
@@ -593,8 +862,16 @@ function ReviewLevelsView({ action, onAdvance, onReject, receiptFieldConfig }: {
  currentUserId={profile?.id || null}
  onAdvance={onAdvance}
  onReject={onReject}
- canIssue={level.key === "issuer" ? rtaAllResolved : undefined}
- issueBlockedReason={level.key === "issuer" && blockEmit && !rtaAllResolved ? `Faltan ${rtaPendingCount} documento(s) por recibir` : undefined}
+ canIssue={level.key === "issuer" ? (rtaAllResolved && (requiredFieldsComplete !== false)) : undefined}
+ issueBlockedReason={
+ level.key === "issuer"
+ ? (blockEmit && !rtaAllResolved
+ ? `Faltan ${rtaPendingCount} documento(s) por recibir`
+ : requiredFieldsComplete === false
+ ? `Faltan campos obligatorios: ${(missingRequiredFields || []).join(", ")}`
+ : undefined)
+ : undefined
+ }
  />
  </div>
  ))}
@@ -714,15 +991,19 @@ function LevelCard({
  ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-800"
  : "bg-muted/40 text-muted-foreground";
 
- const isCurrentUser = level.currentId && currentUserId === level.currentId;
+ const isCurrentUser = !!currentUserId && !!level.currentId && currentUserId === level.currentId;
  const isCandidate = !!currentUserId && allCandidates.some(c => c.id === currentUserId);
- // Para emisión (issuer): cualquiera puede emitir, pasa a ser el emisor
- // Para revisión/aprobación: solo el responsable o candidatos con el rol
- // RTA: la emisión se bloquea hasta que todos los documentos estén resueltos
+ // Regla: solo el responsable actual puede emitir/revisar/aprobar.
+ // Si no es el responsable pero está en el combo, puede asignarse a sí mismo
+ // desde el select del LevelCard, y luego recién puede actuar.
+ // Si no está en el combo, no puede asignarse ni actuar.
+ // RTA: la emisión se bloquea hasta que todos los documentos estén resueltos.
+ // Campos obligatorios: la emisión se bloquea hasta que todos estén completos,
+ // pero el rechazo sigue disponible (se puede rechazar una gestión incompleta).
  const isIssueBlocked = level.key === "issuer" && canIssue === false;
- const canAct = level.active && !level.done && !isIssueBlocked && (onAdvance || onReject) && (
- level.key === "issuer" ? !!currentUserId : (isCandidate || isCurrentUser)
- );
+ const canAct = isCurrentUser;
+ const canReject = level.active && !level.done && !!onReject && canAct;
+ const canAdvance = level.active && !level.done && !isIssueBlocked && !!onAdvance && canAct;
 
  const advanceLabel = level.key === "issuer" ? "Emitir" : level.key === "reviewer" ? "Revisar" : "Aprobar";
 
@@ -760,8 +1041,11 @@ function LevelCard({
  <span className="text-[10px] opacity-50 italic">Por asignar</span>
  )}
  </div>
- {/* Panel de asignación cuando no hay responsable y la etapa está activa */}
- {!level.currentId && level.active && !level.done && (
+ {/* Panel de asignación cuando:
+  - no hay responsable y la etapa está activa, o
+  - hay responsable pero no es el usuario actual y el usuario actual está en el combo
+    (puede reasignarse a sí mismo para poder actuar) */}
+ {level.active && !level.done && (!level.currentId || (!isCurrentUser && isCandidate)) && (
  <div className="flex flex-col gap-1 pt-0.5">
  <select
  className="text-[10px] rounded border border-border bg-background px-1.5 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -771,7 +1055,7 @@ function LevelCard({
  }}
  disabled={assignMut.isPending}
  >
- <option value="" disabled>Seleccionar persona...</option>
+ <option value="" disabled>{level.currentId ? "Tomar la gestión..." : "Seleccionar persona..."}</option>
  {(allCandidates || []).map((c) => (
  <option key={c.id} value={c.id}>
  {c.source === "internal" ? "★ " : ""}{c.full_name || c.email || c.id.slice(0, 8)}{c.source === "internal" ? " (Interno)" : ""}
@@ -780,9 +1064,10 @@ function LevelCard({
  </select>
  </div>
  )}
- {/* Botones de acción: ✓ avanzar / ✗ rechazar — solo para el responsable activo */}
- {canAct && !showRejectBox && (
+ {/* Botones de acción: ✓ avanzar (solo si canAdvance) / ✗ rechazar (si canReject) */}
+ {(canAdvance || canReject) && !showRejectBox && (
  <div className="flex gap-1 pt-0.5">
+ {canAdvance && (
  <button
  type="button"
  onClick={handleAdvance}
@@ -791,6 +1076,8 @@ function LevelCard({
  >
  <Check className="h-3 w-3" />
  </button>
+ )}
+ {canReject && (
  <button
  type="button"
  onClick={() => setShowRejectBox(true)}
@@ -799,6 +1086,7 @@ function LevelCard({
  >
  <X className="h-3 w-3" />
  </button>
+ )}
  </div>
  )}
  {/* Bloqueo de emisión para RTA: mostrar motivo cuando no se puede emitir */}
@@ -810,7 +1098,7 @@ function LevelCard({
  </div>
  )}
  {/* Caja de rechazo con motivo */}
- {canAct && showRejectBox && (
+ {canReject && showRejectBox && (
  <div className="flex flex-col gap-1 pt-0.5">
  <textarea
  className="text-[9px] rounded border border-rose-300 dark:border-rose-700 bg-background px-1.5 py-1 text-foreground min-h-[40px] resize-none focus:outline-none focus:ring-1 focus:ring-rose-400"
@@ -846,6 +1134,34 @@ function LevelCard({
 // Entidades complejas (solo vista, datos reales)
 // ═══════════════════════════════════════════════════════════════
 
+// Sección colapsable para entidades del final (Fuentes / Historia).
+// Historia (claim_history) arranca colapsada porque es solo referencia.
+// Fuentes (document_templates / claim_documents) arranca abierta.
+function CollapsibleBottomSection({ field, action, readOnly, values, onAdvance, onReject, onChange }: { field: ScreenField; action: ActionWithRelations; readOnly?: boolean; values: Record<string, unknown>; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void; onChange?: (data: Record<string, unknown>) => void }) {
+ const defaultOpen = field.type !== "claim_history";
+ const [open, setOpen] = useState(defaultOpen);
+ return (
+ <section className="app-panel p-3">
+  <button
+  type="button"
+  onClick={() => setOpen((o) => !o)}
+  className="flex items-center justify-between w-full text-left mb-2.5 group"
+  aria-expanded={open}
+  >
+  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide group-hover:text-foreground transition-colors">
+  {field.label}
+  </h4>
+  <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">
+  {open ? "▼" : "▶"}
+  </span>
+  </button>
+  {open && (
+  <ComplexEntityView type={field.type} field={field} action={action} readOnly={readOnly} values={values} onAdvance={onAdvance} onReject={onReject} onChange={onChange} />
+  )}
+ </section>
+ );
+}
+
 function ComplexEntityView({ type, field, action, readOnly, values, onAdvance, onReject, onChange }: { type: string; field?: ScreenField; action: ActionWithRelations; readOnly?: boolean; values: Record<string, unknown>; onAdvance?: (level: "issuer" | "reviewer" | "approver") => void; onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void; onChange?: (data: Record<string, unknown>) => void }) {
  switch (type) {
  case "review_levels":
@@ -864,8 +1180,6 @@ function ComplexEntityView({ type, field, action, readOnly, values, onAdvance, o
  return <DocumentTemplatesView action={action} readOnly={readOnly} />;
  case "claim_document_receipt":
  return <DocumentReceiptView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} action={action} fieldConfig={(field?.config || {}) as ReceiptFieldConfig} />;
- case "inspection_coordination":
- return <InspectionCoordinationView claimId={action?.claim_id} actionId={action?.id} readOnly={readOnly} action={action} />;
  case "inspection_session_view":
  return <InspectionSessionView claimId={action?.claim_id} readOnly={readOnly} />;
  case "claim_participants":
@@ -1416,6 +1730,21 @@ function OwnField({
  return d.toISOString().slice(0, 16);
  }, [daysToIssue]);
 
+ // SLA: total de días configurados en el template (issue + review + approve)
+ const totalSlaDays = (action?.action_template?.days_to_issue || 0)
+ + (action?.action_template?.days_to_review || 0)
+ + (action?.action_template?.days_to_approve || 0);
+ const createdOn = action?.created_on;
+ const issuedOn = action?.issued_on;
+
+ // Máx SLA = creación + total_días (para inf_compromiso e inf_fecha_entrega)
+ const slaMaxDate = useMemo(() => {
+ if (!createdOn || totalSlaDays <= 0) return undefined;
+ const d = new Date(createdOn);
+ d.setDate(d.getDate() + totalSlaDays);
+ return d.toISOString().slice(0, 10);
+ }, [createdOn, totalSlaDays]);
+
  switch (field.type) {
  case "section":
  return (
@@ -1470,8 +1799,45 @@ function OwnField({
  </div>
  );
 
- case "date":
+ case "date": {
+ // inf_fecha_entrega fue eliminado — no se muestra más.
+ // inf_compromiso: editable, con SLA y fecha propuesta.
+ if (field.id === "inf_compromiso") {
+ // Fecha de compromiso = editable, máx = slaMaxDate
+ // Fecha propuesta = created_on + days_to_issue (SLA de emisión)
+ // SLA: si issuedOn > compromiso → "no cumpliste compromiso"
+ let slaHint: { type: "ok" | "warning" | "late"; text: string } | undefined;
+ const compromisoStr = value ? String(value) : null;
+ if (issuedOn && compromisoStr) {
+ const issued = issuedOn.slice(0, 10);
+ if (issued > compromisoStr) {
+ slaHint = slaMaxDate && issued <= slaMaxDate
+ ? { type: "warning", text: "No cumpliste el compromiso (SLA ok)" }
+ : { type: "late", text: "No cumpliste el compromiso ni el SLA" };
+ } else {
+ slaHint = { type: "ok", text: "Compromiso cumplido" };
+ }
+ }
+ // Fecha propuesta = created_on + days_to_issue
+ const proposedDate = createdOn
+ ? new Date(new Date(createdOn).setDate(new Date(createdOn).getDate() + daysToIssue)).toISOString().slice(0, 10)
+ : undefined;
+ return (
+ <DateField
+ field={field}
+ value={value}
+ allFields={allFields}
+ onChange={onChange}
+ readOnly={readOnly}
+ maxDate={slaMaxDate}
+ slaHint={slaHint}
+ proposedDate={proposedDate}
+ />
+ );
+ }
+
  return <DateField field={field} value={value} allFields={allFields} onChange={onChange} readOnly={readOnly} />;
+ }
 
  case "textarea":
  return (
@@ -1515,7 +1881,7 @@ function OwnField({
  disabled={readOnly}
  items={selectItems}
  >
- <SelectTrigger className="app-input h-7 w-full">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder={field.placeholder || "Seleccionar..."}>
  {(val: string) => {
  const item = selectItems.find((i) => i.value === val);
@@ -1549,15 +1915,132 @@ function OwnField({
  case "table":
  return <TableField field={field} value={value} onChange={onChange} readOnly={readOnly} />;
 
- case "datetime": {
- // Si es coord_fecha, usar el scheduler con disponibilidad
- if (field.id === "coord_fecha") {
+ case "coord_result": {
+ // Select de resultado de coordinación: Coordinada / Fallida / Desistida
+ const resultItems = [
+ { value: "__none", label: "Seleccionar resultado..." },
+ { value: "coordinada", label: "✓ Coordinada (contacto exitoso)" },
+ { value: "fallida", label: "⚠ Fallida (no se pudo contactar)" },
+ { value: "desistida", label: "✗ Desistida (asegurado desiste)" },
+ ];
+ return (
+ <div className="flex flex-col gap-1">
+ <Label className="app-field-label text-[11px]">
+ {field.label} {field.required && <span className="text-red-500">*</span>}
+ </Label>
+ <Select
+ value={String(value || "__none")}
+ onValueChange={(v) => onChange(field.id, v === "__none" ? "" : v)}
+ disabled={readOnly}
+ items={resultItems}
+ >
+ <SelectTrigger className="app-input w-full">
+ <SelectValue placeholder="Seleccionar resultado...">
+ {(val: string) => {
+ const item = resultItems.find((i) => i.value === val);
+ return item ? item.label : "Seleccionar resultado...";
+ }}
+ </SelectValue>
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Seleccionar resultado...</SelectItem>
+ <SelectItem value="coordinada">✓ Coordinada (contacto exitoso)</SelectItem>
+ <SelectItem value="fallida">⚠ Fallida (no se pudo contactar)</SelectItem>
+ <SelectItem value="desistida">✗ Desistida (asegurado desiste)</SelectItem>
+ </SelectContent>
+ </Select>
+ </div>
+ );
+ }
+
+ case "coord_motivo": {
+ // Textarea para motivo de falla o desistimiento
+ return (
+ <div className="flex flex-col gap-1">
+ <Label className="app-field-label text-[11px]">
+ {field.label} {field.required && <span className="text-red-500">*</span>}
+ </Label>
+ <textarea
+ className="app-input min-h-[70px] resize-none"
+ value={String(value || "")}
+ onChange={(e) => onChange(field.id, e.target.value)}
+ disabled={readOnly}
+ placeholder={field.placeholder || "Motivo..."}
+ />
+ </div>
+ );
+ }
+
+ case "coord_fecha_recoord": {
+ // Date input para fecha tentativa de re-coordinación
+ // Máximo = SLA (created_on + total_días) — no puede superar la fecha máxima de ejecución
+ const todayStr = new Date().toISOString().slice(0, 10);
+ return (
+ <div className="flex flex-col gap-1">
+ <Label className="app-field-label text-[11px]">
+ {field.label} {field.required && <span className="text-red-500">*</span>}
+ </Label>
+ <DatePicker
+ value={String(value || "")}
+ onChange={(v) => onChange(field.id, v || null)}
+ placeholder={field.placeholder || "dd-mm-aaaa"}
+ disabled={readOnly}
+ minDate={todayStr}
+ maxDate={slaMaxDate || undefined}
+ />
+ {slaMaxDate && (
+ <p className="text-[9px] text-muted-foreground">
+ Máximo: {slaMaxDate} (SLA de la acción)
+ </p>
+ )}
+ </div>
+ );
+ }
+
+ case "coord_fecha": {
+ // Scheduler con disponibilidad del inspector
+ // Buscar el inspector y tipo de inspección por TIPO de campo (no por ID fijo)
+ // porque los IDs pueden tener sufijos (_1, _2, etc.) según el editor
+ const inspectorId = String(
+ allFields.find((f) => f.type === "coord_inspector" || f.type === "inspector_select") &&
+ (allValues?.[allFields.find((f) => f.type === "coord_inspector" || f.type === "inspector_select")!.id] || "")
+ || ""
+ );
+ const inspectionTypeField = allFields.find((f) => f.type === "coord_inspection_type");
+ const inspectionType = inspectionTypeField
+ ? String(allValues?.[inspectionTypeField.id] || "onsite")
+ : "onsite";
  return (
  <CoordScheduler
  field={field}
  value={value}
- inspectorId={String(allValues?.coord_inspector || "")}
- inspectionType={String(allValues?.coord_inspection_type || "onsite")}
+ inspectorId={inspectorId}
+ inspectionType={inspectionType}
+ onChange={onChange}
+ readOnly={readOnly}
+ daysToIssue={daysToIssue}
+ />
+ );
+ }
+
+ case "datetime": {
+ // Si es coord_fecha, usar el scheduler con disponibilidad
+ if (field.id === "coord_fecha" || field.id.startsWith("coord_fecha")) {
+ const inspectorId = String(
+ allFields.find((f) => f.type === "coord_inspector" || f.type === "inspector_select") &&
+ (allValues?.[allFields.find((f) => f.type === "coord_inspector" || f.type === "inspector_select")!.id] || "")
+ || ""
+ );
+ const inspectionTypeField = allFields.find((f) => f.type === "coord_inspection_type");
+ const inspectionType = inspectionTypeField
+ ? String(allValues?.[inspectionTypeField.id] || "onsite")
+ : "onsite";
+ return (
+ <CoordScheduler
+ field={field}
+ value={value}
+ inspectorId={inspectorId}
+ inspectionType={inspectionType}
  onChange={onChange}
  readOnly={readOnly}
  daysToIssue={daysToIssue}
@@ -1602,6 +2085,74 @@ function OwnField({
 
  case "inspector_select":
  return <InspectorSelectField field={field} value={value} onChange={onChange} readOnly={readOnly} claimId={action?.claim_id} />;
+
+ case "coord_inspector":
+ return <InspectorSelectField field={field} value={value} onChange={onChange} readOnly={readOnly} claimId={action?.claim_id} />;
+
+ case "coord_inspection_type":
+ return (
+ <div className="flex flex-col gap-1">
+ <Label className="app-field-label text-[11px]">
+ {field.label} {field.required && <span className="text-red-500">*</span>}
+ </Label>
+ <Select
+ value={String(value || "")}
+ onValueChange={(v) => onChange(field.id, v)}
+ disabled={readOnly}
+ items={[
+ { value: "onsite", label: "Presencial" },
+ { value: "remote", label: "Remota" },
+ ]}
+ >
+ <SelectTrigger className="app-input h-8 w-full">
+ <SelectValue placeholder="Seleccionar...">
+ {(val: string) => val === "remote" ? "Remota" : val === "onsite" ? "Presencial" : "Seleccionar..."}
+ </SelectValue>
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="onsite">Presencial</SelectItem>
+ <SelectItem value="remote">Remota</SelectItem>
+ </SelectContent>
+ </Select>
+ </div>
+ );
+
+ case "coord_agendar":
+ return <CoordInspectionStatus field={field} action={action} readOnly={readOnly} />;
+
+ case "coord_ubicacion":
+ case "coord_contacto":
+ return (
+ <div className="flex flex-col gap-1">
+ <Label className="app-field-label text-[11px]">
+ {field.label} {field.required && <span className="text-red-500">*</span>}
+ </Label>
+ <Input
+ className="app-input h-8"
+ value={String(value || "")}
+ onChange={(e) => onChange(field.id, e.target.value)}
+ disabled={readOnly}
+ placeholder={field.type === "coord_ubicacion" ? "Detalle adicional de la dirección..." : "Nombre, teléfono, email..."}
+ />
+ </div>
+ );
+
+ case "coord_comentarios":
+ return (
+ <div className="flex flex-col gap-1">
+ <Label className="app-field-label text-[11px]">
+ {field.label} {field.required && <span className="text-red-500">*</span>}
+ </Label>
+ <Textarea
+ className="app-input text-[11px] min-h-[60px]"
+ value={String(value || "")}
+ onChange={(e) => onChange(field.id, e.target.value)}
+ disabled={readOnly}
+ placeholder="Comentarios finales..."
+ rows={3}
+ />
+ </div>
+ );
 
  default:
  return <div className="text-[11px] text-amber-600">Tipo no soportado: <strong>{field.type}</strong></div>;
@@ -1662,7 +2213,7 @@ function InspectorSelectField({
  disabled={readOnly}
  items={selectItems}
  >
- <SelectTrigger className="app-input h-8 w-full">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Seleccionar inspector...">
  {(val: string) => {
  const item = selectItems.find((i) => i.value === val);
@@ -1694,8 +2245,85 @@ function InspectorSelectField({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Campo de fecha con validaciones
+// CoordInspectionStatus — panel informativo del estado de la inspección
+// La inspección se crea automáticamente al EMITIR la gestión (issueClaimAction).
 // ═══════════════════════════════════════════════════════════════
+function CoordInspectionStatus({
+ action,
+}: {
+ field?: ScreenField;
+ action?: ActionWithRelations;
+ allValues?: Record<string, unknown>;
+ readOnly?: boolean;
+}) {
+ const claimId = action?.claim_id;
+
+ // Inspecciones existentes
+ const { data: sessions, isLoading } = useQuery({
+ queryKey: ["inspection-sessions", claimId],
+ queryFn: () => getInspectionSessions(claimId!),
+ enabled: !!claimId,
+ });
+
+ const activeSession = sessions?.find((s) => s.status === "scheduled" || s.status === "active") || null;
+
+ if (isLoading) {
+ return <div className="text-[11px] text-muted-foreground py-2">Cargando estado de inspección...</div>;
+ }
+
+ // Si ya hay inspección agendada, mostrar el panel informativo
+ if (activeSession) {
+ return (
+ <div className="rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-3">
+ <div className="flex items-center gap-2 mb-1.5">
+ <CheckCircle className="w-4 h-4 text-emerald-600" />
+ <span className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">
+ Inspección {activeSession.status === "scheduled" ? "agendada" : "en curso"}
+ </span>
+ </div>
+ <div className="grid grid-cols-2 gap-2 text-[11px]">
+ <div>
+ <span className="text-muted-foreground">Tipo:</span> {activeSession.inspection_type === "onsite" ? "Presencial" : "Remota"}
+ </div>
+ <div>
+ <span className="text-muted-foreground">Fecha:</span> {activeSession.scheduled_at ? new Date(activeSession.scheduled_at).toLocaleString("es-CL") : "—"}
+ </div>
+ <div>
+ <span className="text-muted-foreground">Contacto:</span> {activeSession.interviewed_name || "—"}
+ </div>
+ <div>
+ <span className="text-muted-foreground">Estado:</span> <Badge variant="outline" className="text-[10px] h-4">{activeSession.status}</Badge>
+ </div>
+ </div>
+ <p className="text-[10px] text-muted-foreground text-center mt-2">
+ Esta inspección está disponible en la gestión de Inspección.
+ </p>
+ </div>
+ );
+ }
+
+ // Si la gestión ya está emitida pero no hay sesión, mostrar advertencia
+ const isIssued = action?.action_status?.code === "issued" || action?.action_status?.code === "reviewed" || action?.action_status?.code === "approved" || action?.action_status?.code === "dispatched";
+ if (isIssued) {
+ return (
+ <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-3 text-center">
+ <p className="text-[11px] text-amber-700 dark:text-amber-400">
+ La gestión fue emitida pero no se creó la sesión de inspección.
+ </p>
+ </div>
+ );
+ }
+
+ // Si no hay inspección y la gestión está pendiente, mostrar mensaje informativo
+ return (
+ <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-center">
+ <p className="text-[11px] text-muted-foreground">
+ Al <strong>emitir</strong> esta gestión se agendará automáticamente la inspección
+ con los datos de coordinación capturados arriba.
+ </p>
+ </div>
+ );
+}// ═══════════════════════════════════════════════════════════════
 
 function DateField({
  field,
@@ -1703,21 +2331,40 @@ function DateField({
  allFields,
  onChange,
  readOnly,
+ maxDate,
+ autoFilledValue,
+ slaHint,
+ proposedDate,
 }: {
  field: ScreenField;
  value: unknown;
  allFields: ScreenField[];
  onChange: (id: string, value: unknown) => void;
  readOnly?: boolean;
+ maxDate?: string; // ISO yyyy-MM-dd — no permitir fechas posteriores
+ autoFilledValue?: string | null; // si viene, se muestra este valor read-only
+ slaHint?: { type: "ok" | "warning" | "late"; text: string };
+ proposedDate?: string; // ISO yyyy-MM-dd — fecha sugerida clickable
 }) {
  const [error, setError] = useState<string | null>(null);
 
+ // Si hay autoFilledValue (ej: issued_on), mostrarlo read-only
+ const effectiveValue = autoFilledValue ?? (value ? String(value) : "");
+ const isAutoFilled = !!autoFilledValue;
+ const effectiveReadOnly = readOnly || isAutoFilled;
+
  const validate = (dateStr: string) => {
- if (!dateStr || !field.dateValidation) { setError(null); return; }
- const date = new Date(dateStr);
+ if (!dateStr) { setError(null); return; }
+ const date = new Date(dateStr + "T00:00:00");
+
+ if (maxDate) {
+ const max = new Date(maxDate + "T00:00:00");
+ if (date > max) { setError(`No puede ser mayor a ${formatDateDisplay(maxDate)}`); return; }
+ }
+
+ if (field.dateValidation) {
  const today = new Date();
  today.setHours(0, 0, 0, 0);
-
  const v = field.dateValidation!;
  if (v.type === "greater_than_today") {
  if (date <= today) { setError("Debe ser mayor a la fecha actual"); return; }
@@ -1725,6 +2372,7 @@ function DateField({
  if (date >= today) { setError("Debe ser menor a la fecha actual"); return; }
  } else if (v.type === "equal_today") {
  if (date.toDateString() !== today.toDateString()) { setError("Debe ser igual a la fecha actual"); return; }
+ }
  }
  setError(null);
  };
@@ -1734,18 +2382,36 @@ function DateField({
  <Label className="app-field-label text-[11px]">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
- <Input
- type={field.dateType === "datetime" ? "datetime-local" : "date"}
- className="app-input h-8 "
- value={String(value || "")}
- onChange={(e) => {
- onChange(field.id, e.target.value);
- validate(e.target.value);
+ <DatePicker
+ value={effectiveValue}
+ onChange={(v) => {
+ if (effectiveReadOnly) return;
+ onChange(field.id, v || null);
+ validate(v);
  }}
- disabled={readOnly}
+ placeholder={isAutoFilled ? "Se completa al emitir" : field.placeholder || "dd-mm-aaaa"}
+ disabled={effectiveReadOnly}
+ maxDate={maxDate}
  />
- {field.dateValidation && (
+ {field.dateValidation && !isAutoFilled && (
  <p className="text-[10px] text-amber-600">⚠ {getDateValidationLabel(field.dateValidation, allFields)}</p>
+ )}
+ {maxDate && !isAutoFilled && (
+ <p className="text-[9px] text-muted-foreground">Máx permitido: {formatDateDisplay(maxDate)} (SLA)</p>
+ )}
+ {proposedDate && !isAutoFilled && !effectiveReadOnly && !effectiveValue && (
+ <button
+ type="button"
+ onClick={() => { onChange(field.id, proposedDate); validate(proposedDate); }}
+ className="text-[10px] text-primary hover:underline w-fit"
+ >
+ Sugerir: {formatDateDisplay(proposedDate)}
+ </button>
+ )}
+ {slaHint && (
+ <p className={`text-[10px] ${slaHint.type === "late" ? "text-red-500" : slaHint.type === "warning" ? "text-amber-600" : "text-emerald-600"}`}>
+ {slaHint.type === "late" ? "⛔" : slaHint.type === "warning" ? "⚠" : "✓"} {slaHint.text}
+ </p>
  )}
  {error && <p className="text-[10px] text-red-500">{error}</p>}
  </div>
@@ -2131,7 +2797,7 @@ function ReserveEditorForm({
  }}
  items={CURRENCY_OPTIONS}
  >
- <SelectTrigger className="app-input h-7 ">
+ <SelectTrigger className="app-input">
  <SelectValue>
  {(val: string) => {
  const opt = CURRENCY_OPTIONS.find((o) => o.value === val);
@@ -2152,16 +2818,16 @@ function ReserveEditorForm({
  {readOnly ? (
  <Input className="app-input h-7 bg-muted/30" value={formatDateDisplay(paymentDate)} readOnly />
  ) : (
- <Input
- type="date"
- className="app-input h-7 "
+ <DatePicker
  value={paymentDate}
- min={new Date().toISOString().slice(0, 10)}
- max={(generalValues.default_payment_date as string) || undefined}
- onChange={(e) => {
- setPaymentDate(e.target.value);
- onChange?.({ reserve_payment_date: e.target.value });
+ onChange={(v) => {
+ setPaymentDate(v);
+ onChange?.({ reserve_payment_date: v });
  }}
+ placeholder="dd-mm-aaaa"
+ minDate={new Date().toISOString().slice(0, 10)}
+ maxDate={(generalValues.default_payment_date as string) || undefined}
+ className="w-full"
  />
  )}
  </div>
@@ -2513,16 +3179,16 @@ function AdjustmentEditorForm({
  {readOnly ? (
  <Input className="app-input h-7 bg-muted/30" value={formatDateDisplay(adjustmentDate)} readOnly />
  ) : (
- <Input
- type="date"
- className="app-input h-7 "
+ <DatePicker
  value={adjustmentDate}
- min={new Date().toISOString().slice(0, 10)}
- max={maxDate}
- onChange={(e) => {
- setAdjustmentDate(e.target.value);
- onChange?.({ adjustment_date: e.target.value });
+ onChange={(v) => {
+ setAdjustmentDate(v);
+ onChange?.({ adjustment_date: v });
  }}
+ placeholder="dd-mm-aaaa"
+ minDate={new Date().toISOString().slice(0, 10)}
+ maxDate={maxDate || undefined}
+ className="w-full"
  />
  )}
  </div>
@@ -2602,7 +3268,7 @@ function AdjustmentEditorForm({
  <span className="text-[10px] text-muted-foreground">{row.adjustment_notes || "—"}</span>
  ) : (
  <Input
- className="app-input h-7 w-full"
+ className="app-input w-full"
  value={row.adjustment_notes}
  onChange={(e) => updateRow(idx, "adjustment_notes", e.target.value)}
  placeholder="Notas del ajuste..."
@@ -3474,242 +4140,18 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  );
 }
 
+
 // ═══════════════════════════════════════════════════════════════
-// Cadena: Coordinación de Inspección → Inspección
+// CoordFieldsGrid — layout personalizado para pantalla de coordinación
+// Row 1: [Tipo Inspección (6)] [Inspector (6)]
+// Row 2: [Fecha/Hora picker (6)] [Ubicación (6)]
+// Row 3: [Slots (6)] [Contacto (6)]
+// Row 4: [Comentarios (12)]
 // ═══════════════════════════════════════════════════════════════
 
-function InspectionCoordinationView({ claimId, readOnly, action }: { claimId?: string; actionId?: string; readOnly?: boolean; action?: ActionWithRelations }) {
- const queryClient = useQueryClient();
-
- // Cargar inspecciones existentes del siniestro
- const { data: sessions, isLoading } = useQuery({
- queryKey: ["inspection-sessions", claimId],
- queryFn: () => getInspectionSessions(claimId!),
- enabled: !!claimId,
- });
-
- // Cargar inspectores disponibles
- const { data: inspectors } = useQuery({
- queryKey: ["users-by-roles", ["inspector", "adjuster"]],
- queryFn: () => getUsersByRoles(["inspector", "adjuster"]),
- });
-
- const activeSession = sessions?.find((s) => s.status === "scheduled" || s.status === "active") || null;
-
- const [inspectionType, setInspectionType] = useState<"onsite" | "remote">("onsite");
- const [scheduledDate, setScheduledDate] = useState("");
- const [scheduledTime, setScheduledTime] = useState("");
- const [inspectorId, setInspectorId] = useState("");
- const [contactName, setContactName] = useState("");
- const [contactPhone, setContactPhone] = useState("");
- const [contactEmail, setContactEmail] = useState("");
- const [location, setLocation] = useState("");
- const [notes, setNotes] = useState("");
-
- const createMut = useMutation({
- mutationFn: async () => {
- if (!claimId) throw new Error("Sin siniestro");
- if (!scheduledDate || !scheduledTime) throw new Error("Fecha y hora son obligatorias");
- const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
- await createInspectionSession(claimId, {
- inspectionType,
- scheduledAt,
- inspectorId: inspectorId || undefined,
- contactName: contactName || undefined,
- contactPhone: contactPhone || undefined,
- contactEmail: contactEmail || undefined,
- inspectionLocation: location || undefined,
- schedulingNotes: notes || undefined,
- actionTemplateId: action?.action_template_id || undefined,
- });
- },
- onSuccess: () => {
- toast.success("Inspección agendada");
- queryClient.invalidateQueries({ queryKey: ["inspection-sessions", claimId] });
- setScheduledDate("");
- setScheduledTime("");
- setInspectorId("");
- setContactName("");
- setContactPhone("");
- setContactEmail("");
- setLocation("");
- setNotes("");
- },
- onError: (e: Error) => toast.error(e.message),
- });
-
- if (isLoading) {
- return <div className="text-[11px] text-muted-foreground py-2">Cargando...</div>;
- }
-
- // Si ya hay una inspección activa, mostrarla
- if (activeSession) {
- return (
- <div className="space-y-3">
- <div className="rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-3">
- <div className="flex items-center gap-2 mb-1.5">
- <CheckCircle className="w-4 h-4 text-emerald-600" />
- <span className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">
- Inspección {activeSession.status === "scheduled" ? "agendada" : "en curso"}
- </span>
- </div>
- <div className="grid grid-cols-2 gap-2 text-[11px]">
- <div>
- <span className="text-muted-foreground">Tipo:</span> {activeSession.inspection_type === "onsite" ? "Presencial" : "Remota"}
- </div>
- <div>
- <span className="text-muted-foreground">Fecha:</span> {activeSession.scheduled_at ? new Date(activeSession.scheduled_at).toLocaleString("es-CL") : "—"}
- </div>
- <div>
- <span className="text-muted-foreground">Contacto:</span> {activeSession.interviewed_name || "—"}
- </div>
- <div>
- <span className="text-muted-foreground">Estado:</span> <Badge variant="outline" className="text-[10px] h-4">{activeSession.status}</Badge>
- </div>
- </div>
- </div>
- <p className="text-[10px] text-muted-foreground text-center">
- Esta inspección está disponible en la gestión de Inspección.
- </p>
- </div>
- );
- }
-
- if (readOnly) {
- return (
- <div className="rounded-lg border border-dashed border-border py-6 text-center">
- <p className="text-[11px] text-muted-foreground">
- No se ha agendado inspección.
- </p>
- </div>
- );
- }
-
- return (
- <div className="space-y-3">
- <div className="grid grid-cols-2 gap-3">
- <div>
- <Label className="text-[11px]">Tipo de Inspección</Label>
- <select
- className="app-input h-7 mt-1"
- value={inspectionType}
- onChange={(e) => setInspectionType(e.target.value as "onsite" | "remote")}
- >
- <option value="onsite">Presencial</option>
- <option value="remote">Remota</option>
- </select>
- </div>
- <div>
- <Label className="text-[11px]">Inspector</Label>
- <Select
- value={inspectorId || "__none"}
- onValueChange={(v) => setInspectorId(v && v !== "__none" ? v : "")}
- items={[
- { value: "__none", label: "Sin asignar" },
- ...(inspectors?.map((insp) => ({ value: insp.id, label: insp.full_name })) || []),
- ]}
- >
- <SelectTrigger className="app-input h-7 mt-1">
- <SelectValue placeholder="Sin asignar">
- {(val: string) => {
- const insp = inspectors?.find((i) => i.id === val);
- return insp ? insp.full_name : "Sin asignar";
- }}
- </SelectValue>
- </SelectTrigger>
- <SelectContent>
- <SelectItem value="__none">Sin asignar</SelectItem>
- {inspectors?.map((insp) => (
- <SelectItem key={insp.id} value={insp.id}>{insp.full_name}</SelectItem>
- ))}
- </SelectContent>
- </Select>
- </div>
- </div>
-
- <div className="grid grid-cols-2 gap-3">
- <div>
- <Label className="text-[11px]">Fecha <span className="text-red-500">*</span></Label>
- <DatePicker
- value={scheduledDate}
- onChange={(value) => setScheduledDate(value)}
- className="w-[130px]"
- />
- </div>
- <div>
- <Label className="text-[11px]">Hora <span className="text-red-500">*</span></Label>
- <Input
- type="time"
- className="app-input h-7 mt-1"
- value={scheduledTime}
- onChange={(e) => setScheduledTime(e.target.value)}
- min="06:00"
- max="22:00"
- />
- </div>
- </div>
-
- <div className="grid grid-cols-2 gap-3">
- <div>
- <Label className="text-[11px]">Nombre Contacto</Label>
- <Input
- className="app-input h-7 mt-1"
- value={contactName}
- onChange={(e) => setContactName(e.target.value)}
- placeholder="Persona en el lugar"
- />
- </div>
- <div>
- <Label className="text-[11px]">Teléfono Contacto</Label>
- <Input
- className="app-input h-7 mt-1"
- value={contactPhone}
- onChange={(e) => setContactPhone(e.target.value)}
- placeholder="+56 9 ..."
- />
- </div>
- </div>
-
- <div>
- <Label className="text-[11px]">Email Contacto</Label>
- <Input
- className="app-input h-7 mt-1"
- value={contactEmail}
- onChange={(e) => setContactEmail(e.target.value)}
- placeholder="email@ejemplo.cl"
- />
- </div>
-
- <div>
- <Label className="text-[11px]">Lugar de Inspección</Label>
- <Input
- className="app-input h-7 mt-1"
- value={location}
- onChange={(e) => setLocation(e.target.value)}
- placeholder="Dirección donde se realizará la inspección"
- />
- </div>
-
- <div>
- <Label className="text-[11px]">Notas</Label>
- <Textarea
- className="app-input mt-1 min-h-[60px]"
- value={notes}
- onChange={(e) => setNotes(e.target.value)}
- placeholder="Instrucciones especiales..."
- />
- </div>
-
- <button
- className="pg-btn-platinum"
- disabled={createMut.isPending || !scheduledDate || !scheduledTime}
- onClick={() => createMut.mutate()}
- >
- {createMut.isPending ? "Agendando..." : "Agendar"}
- </button>
- </div>
- );
-}
+// ═══════════════════════════════════════════════════════════════
+// InspectionSessionView — vista de inspecciones del siniestro
+// ═══════════════════════════════════════════════════════════════
 
 function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boolean }) {
  const { data: sessions, isLoading } = useQuery({
@@ -3810,115 +4252,6 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
  );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CoordFieldsGrid — layout personalizado para pantalla de coordinación
-// Row 1: [Tipo Inspección (6)] [Inspector (6)]
-// Row 2: [Fecha/Hora picker (6)] [Ubicación (6)]
-// Row 3: [Slots (6)] [Contacto (6)]
-// Row 4: [Comentarios (12)]
-// ═══════════════════════════════════════════════════════════════
-
-function CoordFieldsGrid({
- fields,
- values,
- allFields,
- onChange,
- readOnly,
- action,
-}: {
- fields: ScreenField[];
- values: Record<string, unknown>;
- allFields: ScreenField[];
- onChange: (id: string, value: unknown) => void;
- readOnly?: boolean;
- action?: ActionWithRelations;
-}) {
- const findField = (id: string) => fields.find((f) => f.id === id);
- const [coordSelectedDate, setCoordSelectedDate] = useState("");
-
- const tipoField = findField("coord_inspection_type");
- const inspectorField = findField("coord_inspector");
- const fechaField = findField("coord_fecha");
- const ubicacionField = findField("coord_ubicacion");
- const contactoField = findField("coord_contacto");
- const comentariosField = findField("coord_comentarios");
-
- const inspectorId = String(values.coord_inspector || "");
- const inspectionType = String(values.coord_inspection_type || "onsite");
-
- return (
- <div className="grid grid-cols-12 gap-3">
- {/* Row 1: Tipo + Inspector */}
- {tipoField && (
- <div className="col-span-6">
- <OwnField field={tipoField} value={values[tipoField.id]} allFields={allFields} allValues={values} onChange={onChange} readOnly={readOnly} action={action} />
- </div>
- )}
- {inspectorField && (
- <div className="col-span-6">
- <OwnField field={inspectorField} value={values[inspectorField.id]} allFields={allFields} allValues={values} onChange={onChange} readOnly={readOnly} action={action} />
- </div>
- )}
-
- {/* Row 2: Fecha picker + Ubicación */}
- {fechaField && (
- <div className="col-span-6">
- <CoordScheduler
- field={fechaField}
- value={values[fechaField.id]}
- inspectorId={inspectorId}
- inspectionType={inspectionType}
- onChange={onChange}
- readOnly={readOnly}
- mode="picker"
- selectedDate={coordSelectedDate}
- setSelectedDate={setCoordSelectedDate}
- />
- </div>
- )}
- {ubicacionField && (
- <div className="col-span-6">
- <OwnField field={ubicacionField} value={values[ubicacionField.id]} allFields={allFields} allValues={values} onChange={onChange} readOnly={readOnly} action={action} />
- </div>
- )}
-
- {/* Row 3: Slots + Contacto */}
- {fechaField && (
- <div className="col-span-6">
- <CoordScheduler
- field={fechaField}
- value={values[fechaField.id]}
- inspectorId={inspectorId}
- inspectionType={inspectionType}
- onChange={onChange}
- readOnly={readOnly}
- mode="slots"
- selectedDate={coordSelectedDate}
- setSelectedDate={setCoordSelectedDate}
- />
- </div>
- )}
- {contactoField && (
- <div className="col-span-6">
- <OwnField field={contactoField} value={values[contactoField.id]} allFields={allFields} allValues={values} onChange={onChange} readOnly={readOnly} action={action} />
- </div>
- )}
-
- {/* Row 4: Comentarios */}
- {comentariosField && (
- <div className="col-span-12">
- <OwnField field={comentariosField} value={values[comentariosField.id]} allFields={allFields} allValues={values} onChange={onChange} readOnly={readOnly} action={action} />
- </div>
- )}
- </div>
- );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CoordScheduler — selector de fecha/hora con disponibilidad de inspector
-// mode="picker": solo el selector de fecha
-// mode="slots": solo la caja de slots disponibles
-// mode="full" (default): ambos (para uso standalone)
 // ═══════════════════════════════════════════════════════════════
 
 function CoordScheduler({
@@ -4052,16 +4385,16 @@ function CoordScheduler({
  <span className="text-muted-foreground ml-2">({slotLabel} por inspección)</span>
  </Label>
  <div className="flex items-center gap-2">
- <Input
- type="date"
- className={`app-input h-8 w-auto ${isOverMax ? "border-amber-500 focus-visible:ring-amber-500" : ""}`}
+ <DatePicker
  value={selectedDate}
- min={todayLocal}
- onChange={(e) => setSelectedDate(e.target.value)}
+ onChange={(v) => setSelectedDate(v)}
+ placeholder="dd-mm-aaaa"
  disabled={readOnly}
+ minDate={todayLocal}
+ className={isOverMax ? "border-amber-500" : ""}
  />
  {currentValue && (
- <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0">
+ <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0 text-[11px]">
  {valDate ? valDate.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : ""}
  </Badge>
  )}
@@ -4192,7 +4525,7 @@ function CoordScheduler({
  );
  }
 
- // ─── Modo FULL: picker + slots (standalone) ───
+ // ─── Modo FULL: panel calendario unificado ───
  // Calcular si la fecha seleccionada excede daysToIssue (alarma, no bloqueo)
  const isOverMaxDate = daysToIssue && daysToIssue > 0 && selectedDate ? (() => {
  const maxDate = new Date();
@@ -4201,114 +4534,140 @@ function CoordScheduler({
  return sel > maxDate;
  })() : false;
 
+ // Formatear fecha seleccionada para mostrar
+ const selectedDateLabel = selectedDate
+ ? new Date(selectedDate + "T12:00:00").toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })
+ : null;
+
  return (
- <div className="flex flex-col gap-2">
+ <div className="flex flex-col gap-1.5">
+ {/* Label arriba */}
+ <div className="flex items-center justify-between">
  <Label className="app-field-label text-[11px]">
  {field.label} {field.required && <span className="text-red-500">*</span>}
- <span className="text-muted-foreground ml-2">({slotLabel} por inspección)</span>
  </Label>
- <div className="flex items-center gap-2">
- <Input
- type="date"
- className={`app-input h-8 w-auto ${isOverMaxDate ? "border-amber-500 focus-visible:ring-amber-500" : ""}`}
+ </div>
+
+ {/* Control doble: fecha centrada a la izquierda, slots a la derecha */}
+ <div className="flex flex-col sm:flex-row gap-2">
+ {/* Columna izquierda: date picker + fecha centrada verticalmente */}
+ <div className="flex flex-col justify-center gap-1 sm:w-[110px] shrink-0">
+ <DatePicker
  value={selectedDate}
- min={todayLocal}
- onChange={(e) => setSelectedDate(e.target.value)}
+ onChange={(v) => setSelectedDate(v)}
+ placeholder="dd-mm-aaaa"
  disabled={readOnly}
+ minDate={todayLocal}
+ className={`w-full ${isOverMaxDate ? "border-amber-500" : ""}`}
  />
- {currentValue && (
- <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0">
- {valDate ? valDate.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : ""}
+ {currentValue && valDate && (
+ <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 w-fit text-[11px] px-1 py-0">
+ ✓ {valDate.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
  </Badge>
  )}
- </div>
- {!inspectorId && selectedDate && (
- <p className="text-[10px] text-amber-600">⚠ Seleccione un inspector para ver disponibilidades.</p>
+ {selectedDateLabel && (
+ <p className="text-[10px] text-muted-foreground capitalize leading-tight">{selectedDateLabel}</p>
  )}
- {inspectorId && selectedDate && (
- <div className="rounded-lg border border-border p-2">
+ </div>
+
+ {/* Columna derecha: slots + barra inferior con info */}
+ {inspectorId && selectedDate ? (
+ <div className="flex-1 min-w-0 flex flex-col gap-1">
  {scheduleLoading ? (
- <p className="text-[11px] text-muted-foreground text-center py-2">Cargando disponibilidades...</p>
+ <p className="text-[10px] text-muted-foreground py-2">Cargando disponibilidades...</p>
  ) : slots.length === 0 ? (
- <p className="text-[11px] text-muted-foreground text-center py-2">No hay slots disponibles para esta fecha.</p>
+ <p className="text-[10px] text-muted-foreground py-2">No hay slots disponibles.</p>
  ) : (
  <>
- <div className="flex flex-wrap gap-1.5">
+ {/* Grid de slots — 12 columnas, compactos (24px) */}
+ <div className="grid grid-cols-12 gap-1">
  {slots.map((slot) => (
  <button
  key={slot.time}
  type="button"
  disabled={readOnly || !slot.available}
  onClick={() => assignSlot(slot.time)}
- className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
+ className={`h-6 max-h-[24px] rounded text-[10px] font-medium transition-colors flex items-center justify-center gap-0.5 ${
  !slot.available
- ? "bg-muted/50 text-muted-foreground/50 cursor-not-allowed line-through"
+ ? "bg-muted/40 text-muted-foreground/40 cursor-not-allowed line-through border border-border/30"
  : slot.extra
  ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-500/20"
  : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 border border-emerald-500/20"
- } ${currentValue === `${selectedDate}T${slot.time}` ? "ring-2 ring-primary" : ""}`}
- title={slot.bookedInfo || (slot.extra ? "Horario extra (fuera de 09-19)" : "Horario normal")}
+ } ${currentValue === `${selectedDate}T${slot.time}` ? "ring-2 ring-primary bg-primary/5" : ""}`}
+ title={slot.bookedInfo || `${slot.label}${slot.extra ? " (extra)" : ""}`}
  >
  {slot.time}
- {slot.extra && <span className="ml-1 text-[8px]">★</span>}
+ {slot.extra && <span className="text-[7px]">★</span>}
  </button>
  ))}
  </div>
- <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border text-[9px] text-muted-foreground">
- <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-emerald-500/30" /> Normal 09-19</span>
- <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-amber-500/30" /> Extra ★</span>
- <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-muted" /> Ocupado</span>
+ {/* Barra inferior: tipo + leyenda + horario personalizado */}
+ <div className="flex flex-wrap items-center gap-2 mt-0.5 pt-1 border-t border-border/30 text-[9px] text-muted-foreground">
+ <span className="font-medium text-foreground/80">
+ {inspectionType === "remote" ? "Remota · 30 min" : "Presencial · 3 hrs"}
+ </span>
+ <div className="flex flex-wrap items-center gap-2 ml-auto">
+ <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded bg-emerald-500/40" /> 09-19</span>
+ <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded bg-amber-500/40" /> Extra ★</span>
+ <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded bg-muted" /> Ocupado</span>
  </div>
- </>
- )}
  {!readOnly && (
- <div className="mt-2 pt-2 border-t border-border">
- {!showCustomTime ? (
  <button
  type="button"
  onClick={() => setShowCustomTime(true)}
- className="text-[10px] text-sky-600 hover:underline"
+ className="text-sky-600 hover:underline ml-1"
  >
- + Asignar horario personalizado
+ + Horario personalizado
  </button>
- ) : (
- <div className="flex items-center gap-2">
+ )}
+ </div>
+ {showCustomTime && !readOnly && (
+ <div className="flex items-center gap-1.5">
  <Input
  type="time"
- className="app-input h-7 text-[11px] w-auto"
+ className="app-input h-6 text-[10px] w-auto"
  value={customTime}
  onChange={(e) => setCustomTime(e.target.value)}
  />
  <button
  type="button"
  onClick={assignCustom}
- className="px-2 py-1 rounded-md text-[10px] font-medium bg-sky-500/10 text-sky-700 hover:bg-sky-500/20 border border-sky-500/20"
+ className="px-2 py-0.5 rounded text-[9px] font-medium bg-sky-500/10 text-sky-700 hover:bg-sky-500/20 border border-sky-500/20"
  >
  Asignar
  </button>
  <button
  type="button"
  onClick={() => setShowCustomTime(false)}
- className="text-[10px] text-muted-foreground hover:underline"
+ className="text-[9px] text-muted-foreground hover:underline"
  >
  Cancelar
  </button>
  </div>
  )}
+ </>
+ )}
+ </div>
+ ) : !selectedDate ? (
+ <div className="flex-1 flex items-center justify-center text-[10px] text-muted-foreground py-2">
+ Seleccione una fecha para ver horarios.
+ </div>
+ ) : (
+ <div className="flex-1 flex items-center justify-center text-[10px] text-muted-foreground py-2">
+ Seleccione un inspector para ver disponibilidades.
  </div>
  )}
  </div>
- )}
- {isPast && (
- <p className="text-[9px] text-red-600 font-medium">⚠ La fecha no puede ser en el pasado.</p>
- )}
- {isOverMaxDate && (
- <p className="text-[9px] text-amber-600 font-medium">
- ⚠ La fecha excede el máximo recomendado de {daysToIssue} días. Se permite pero requiere justificación.
- </p>
- )}
+
+ {/* Alertas compactas abajo */}
+ {(isPast || isOverMaxDate || (daysToIssue && daysToIssue > 0 && !isPast && !isOverMaxDate)) && (
+ <div className="flex flex-wrap gap-2 text-[9px]">
+ {isPast && <span className="text-red-600 font-medium">⚠ Fecha en el pasado.</span>}
+ {isOverMaxDate && <span className="text-amber-600 font-medium">⚠ Excede máx {daysToIssue} días.</span>}
  {daysToIssue && daysToIssue > 0 && !isPast && !isOverMaxDate && (
- <p className="text-[9px] text-muted-foreground">Máx recomendado: {daysToIssue} días</p>
+ <span className="text-muted-foreground">Máx: {daysToIssue} días</span>
+ )}
+ </div>
  )}
  </div>
  );

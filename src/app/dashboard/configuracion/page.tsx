@@ -241,7 +241,7 @@ function MarcaTab() {
             <select
               value={effectiveSelectedId}
               onChange={(e) => setSelectedId(e.target.value)}
-              className="app-input h-7"
+              className="app-input"
             >
               {companies.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -268,7 +268,7 @@ function MarcaTab() {
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
                   placeholder="https://..."
-                  className="app-input h-7"
+                  className="app-input"
                 />
               </div>
             </div>
@@ -279,7 +279,7 @@ function MarcaTab() {
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="app-input h-7"
+                className="app-input"
               />
             </div>
 
@@ -298,7 +298,7 @@ function MarcaTab() {
                     value={primaryColor}
                     onChange={(e) => setPrimaryColor(e.target.value)}
                     placeholder="#3b82f6"
-                    className="app-input h-7 max-w-[120px]"
+                    className="app-input max-w-[120px]"
                   />
                 </div>
               </div>
@@ -312,7 +312,7 @@ function MarcaTab() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="contacto@empresa.com"
-                  className="app-input h-7"
+                  className="app-input"
                 />
               </div>
               <div className="space-y-1.5">
@@ -321,7 +321,7 @@ function MarcaTab() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+56 2 1234 5678"
-                  className="app-input h-7"
+                  className="app-input"
                 />
               </div>
             </div>
@@ -332,7 +332,7 @@ function MarcaTab() {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Av. Principal 123"
-                className="app-input h-7"
+                className="app-input"
               />
             </div>
 

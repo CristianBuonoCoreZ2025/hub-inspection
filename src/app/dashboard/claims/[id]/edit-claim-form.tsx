@@ -799,6 +799,10 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  const watchedBeneficiaryRut = useWatch({ control, name: "beneficiaryRut" });
  const watchedBeneficiaryPersonType = useWatch({ control, name: "beneficiaryPersonType" });
 
+ // Vigencia: fechas de inicio/término como control conjunto
+ const watchedPolicyStartDate = useWatch({ control, name: "policyStartDate" });
+ const watchedPolicyEndDate = useWatch({ control, name: "policyEndDate" });
+
  // Cascading Tipo → Línea → Producto
  const watchedBusinessLineId = watch("businessLineId");
 
@@ -1560,11 +1564,31 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  <EditInput label="Prima" type="number" step="0.01" {...register("policyPremium")} />
  <div className="space-y-1">
  <FieldLabel label="Inicio Vigencia" />
- <FormDatePicker control={control} name="policyStartDate" className="w-[130px]" />
+ <FormDatePicker
+ control={control}
+ name="policyStartDate"
+ className="w-[130px]"
+ maxDate={watchedPolicyEndDate || undefined}
+ onDateChange={(value) => {
+ if (value && watchedPolicyEndDate && value > watchedPolicyEndDate) {
+ setValue("policyEndDate", value as never);
+ }
+ }}
+ />
  </div>
  <div className="space-y-1">
  <FieldLabel label="Término Vigencia" />
- <FormDatePicker control={control} name="policyEndDate" className="w-[130px]" />
+ <FormDatePicker
+ control={control}
+ name="policyEndDate"
+ className="w-[130px]"
+ minDate={watchedPolicyStartDate || undefined}
+ onDateChange={(value) => {
+ if (value && watchedPolicyStartDate && value < watchedPolicyStartDate) {
+ setValue("policyStartDate", value as never);
+ }
+ }}
+ />
  </div>
  </div>
  </div>
@@ -2010,8 +2034,17 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  {claimAddressLinked ? "Desligar" : "Copiar"}
  </Button>
  </div>
- <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-1 pt-2">
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-1 pt-2">
  <EditInput label="Dirección" {...register("claimAddress")} disabled={claimAddressLinked} />
+ <EditSelect
+ label="Tipo"
+ control={control}
+ name="destinationHousingId"
+ placeholder="Seleccionar..."
+ clearable
+ items={housingDestItems}
+ disabled={claimAddressLinked}
+ />
  <EditSelect
  label="País"
  control={control}
@@ -2083,7 +2116,6 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  </h3>
  <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-1">
  <EditSelect label="Tipo Construcción" control={control} name="constructionTypeId" placeholder="Seleccionar..." clearable items={constructionTypeItems} />
- <EditSelect label="Destino" control={control} name="destinationHousingId" placeholder="Seleccionar..." clearable items={housingDestItems} />
  <EditSelect label="Clasif. Daño" control={control} name="damageClassificationId" placeholder="Seleccionar..." clearable items={damageClassItems} />
  <EditSelect label="Habitabilidad" control={control} name="habitabilityId" placeholder="Seleccionar..." clearable items={habitabilityItems} />
  <EditSelect
@@ -2259,16 +2291,24 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  <FieldLabel label="Inicio Vigencia" />
  <DatePicker
  value={newPolicy.start_date}
- onChange={(value) => setNewPolicy({ ...newPolicy, start_date: value })}
+ onChange={(value) => {
+ const newEnd = value && newPolicy.end_date && value > newPolicy.end_date ? value : newPolicy.end_date;
+ setNewPolicy({ ...newPolicy, start_date: value, end_date: newEnd });
+ }}
  className="w-[130px]"
+ maxDate={newPolicy.end_date || undefined}
  />
  </div>
  <div>
  <FieldLabel label="Término Vigencia" />
  <DatePicker
  value={newPolicy.end_date}
- onChange={(value) => setNewPolicy({ ...newPolicy, end_date: value })}
+ onChange={(value) => {
+ const newStart = value && newPolicy.start_date && value < newPolicy.start_date ? value : newPolicy.start_date;
+ setNewPolicy({ ...newPolicy, end_date: value, start_date: newStart });
+ }}
  className="w-[130px]"
+ minDate={newPolicy.start_date || undefined}
  />
  </div>
  </div>

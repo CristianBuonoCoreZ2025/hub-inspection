@@ -485,7 +485,7 @@ function PropertiesPanel({
  }}
  items={[{ value: "__none", label: "Sin validación" }, ...DATE_VALIDATION_TYPES.map((v) => ({ value: v.code, label: v.label }))]}
  >
- <SelectTrigger className="app-input h-7 w-full">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Sin validación" />
  </SelectTrigger>
  <SelectContent>
@@ -509,7 +509,7 @@ function PropertiesPanel({
  })}
  items={[{ value: "__none", label: "Seleccionar campo..." }, ...dateFields.map((f) => ({ value: f.id, label: f.label }))]}
  >
- <SelectTrigger className="app-input h-7 w-full">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Seleccionar campo..." />
  </SelectTrigger>
  <SelectContent>

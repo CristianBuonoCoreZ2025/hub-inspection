@@ -12,6 +12,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
 import { LockOpen, Search, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function ReabrirPage() {
  const { user } = useAuth();
@@ -72,7 +73,14 @@ export default function ReabrirPage() {
  return (
  <div className="app-page">
  <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-purple-500 to-fuchsia-500">
+ <LockOpen />
+ </div>
+ <div className="app-grid-title-row">
  <h1 className="app-page-title shrink-0">Reabrir Siniestros</h1>
+ </div>
+ </div>
  </div>
 
  {/* Sección 1: Buscar siniestro cerrado */}
@@ -81,17 +89,14 @@ export default function ReabrirPage() {
  Buscar Siniestro Cerrado
  </h2>
 
- <div className="flex items-center gap-2 mb-4">
- <div className="relative flex-1">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
- <input
- type="text"
- value={searchTerm}
- onChange={(e) => setSearchTerm(e.target.value)}
- placeholder="Buscar por N° siniestro, liquidación, referencia..."
- className="app-input h-8 w-full pl-9"
- />
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
+ <Input placeholder="Buscar por N° siniestro, liquidación, referencia..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="liquid-search" />
  </div>
+ </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
  </div>
 
  {isLoading ? (
@@ -104,8 +109,7 @@ export default function ReabrirPage() {
  </p>
  ) : (
  <>
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
- <div className="overflow-auto max-h-[300px] border rounded-lg">
+ <div className="app-data-table-wrap max-h-[300px]">
  <table className="app-data-table">
  <thead>
  <tr>
@@ -120,7 +124,7 @@ export default function ReabrirPage() {
  {paginatedData.map((claim) => (
  <tr
  key={claim.id}
- className={`cursor-pointer ${selectedClaimId === claim.id ? "bg-purple-500/5" : ""}`}
+ className={`row-clickable ${selectedClaimId === claim.id ? "bg-purple-500/5" : ""}`}
  onClick={() => setSelectedClaimId(claim.id)}
  >
  <td className="text-[11px] font-mono">{claim.claim_number || "—"}</td>

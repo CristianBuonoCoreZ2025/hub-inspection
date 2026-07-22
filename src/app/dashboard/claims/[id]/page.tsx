@@ -237,8 +237,13 @@ export default function ClaimDetailPage() {
 
  // Plantillas disponibles según el estado del siniestro (carga solo al abrir modal)
  const { data: availableTemplates, isLoading: templatesLoading } = useQuery({
- queryKey: ["action-templates-by-status", claim?.status_id, claim?.business_line_id],
- queryFn: () => getActionTemplatesByClaimStatus(claim!.status_id!, claim!.business_line_id || undefined),
+ queryKey: ["action-templates-by-status", claim?.status_id, claim?.business_line_id, claim?.event_id, claim?.insurance_company_id],
+ queryFn: () => getActionTemplatesByClaimStatus({
+  claimStatusId: claim!.status_id!,
+  businessLineId: claim!.business_line_id || null,
+  eventId: claim!.event_id || null,
+  insuranceCompanyId: claim!.insurance_company_id || null,
+ }),
  enabled: !!claim?.status_id && openGestionModal,
  });
 
@@ -252,27 +257,42 @@ export default function ClaimDetailPage() {
  if (code === "RES") {
  return actions.some((a) => a.action_template?.code === "COB" && a.action_status?.code && CLOSED_STATUSES.has(a.action_status.code));
  }
- if (code === "PCA") {
+ if (code === "AJU") {
  return actions.some((a) => a.action_template?.code === "RES" && a.action_status?.code && CLOSED_STATUSES.has(a.action_status.code));
  }
  if (code === "RTA") {
- return actions.some((a) => a.action_template?.code === "NSA");
+ return actions.some((a) => a.action_template?.code === "SOL");
  }
  return true;
  });
 
  const editingActionId = editingGestion?.id;
- const { data: editingAction } = useQuery({
+ const { data: editingAction, error: editingActionError } = useQuery({
  queryKey: ["claim-action", editingActionId],
  queryFn: () => getClaimActionById(editingActionId!),
  enabled: !!editingActionId && openEditGestionModal,
  });
 
- const { data: editingScreens } = useQuery({
+ const { data: editingScreens, error: editingScreensError } = useQuery({
  queryKey: ["gestion-screens", editingActionId],
  queryFn: async () => editingAction ? getGestionScreensForClaimAction(editingAction) : [],
  enabled: !!editingAction,
  });
+
+ // Debug temporal — diagnosticar por qué se queda en "Cargando gestión..."
+ useEffect(() => {
+ if (openEditGestionModal && editingActionId) {
+ console.log("[EditGestion Modal] estado:", {
+ editingActionId,
+ editingAction: editingAction ? "cargado" : "null/undefined",
+ editingActionError: editingActionError?.message || null,
+ editingScreens: editingScreens ? `array[${editingScreens.length}]` : "undefined",
+ editingScreensError: editingScreensError?.message || null,
+ hasScreenSnapshot: editingAction?.screen_snapshot ? "SÍ" : "NO",
+ hasActionFeature: editingAction?.action_feature ? "SÍ" : "NO",
+ });
+ }
+ }, [openEditGestionModal, editingActionId, editingAction, editingScreens, editingActionError, editingScreensError]);
 
  const createGestionMutation = useMutation({
  mutationFn: (template: ActionTemplate) =>
@@ -287,10 +307,41 @@ export default function ClaimDetailPage() {
  line_business_id: template.line_business_id || undefined,
  expected_date: expectedDate || undefined,
  }),
- onSuccess: () => {
+ onSuccess: (createdAction) => {
  toast.success("Gestión creada");
  queryClient.invalidateQueries({ queryKey: ["claim-actions", id] });
  setOpenGestionModal(false);
+ // Abrir directamente la pantalla de la gestión recién creada
+ setEditingActionData({});
+ setEditingGestion({
+ id: createdAction.id,
+ tipo: createdAction.action_feature?.name || createdAction.name || "Acción",
+ codigo: createdAction.code || createdAction.name?.slice(0, 10) || "—",
+ nombre: createdAction.name || "—",
+ estado: createdAction.action_status?.code || "todo",
+ fecha: createdAction.issued_on || createdAction.created_on,
+ expectedDate: createdAction.expected_date,
+ createdOn: createdAction.created_on,
+ daysToIssue: createdAction.action_template?.days_to_issue ?? 0,
+ hasIssue: createdAction.action_feature?.has_issue ?? false,
+ hasReview: createdAction.action_feature?.has_review ?? false,
+ hasApprove: createdAction.action_feature?.has_approve ?? false,
+ issuedOn: null,
+ issuedBy: null,
+ issuedByEmail: null,
+ reviewedOn: null,
+ reviewedBy: null,
+ reviewedByEmail: null,
+ approvedOn: null,
+ approvedBy: null,
+ approvedByEmail: null,
+ href: null,
+ esAccion: true,
+ esAutomatica: createdAction.is_automatic,
+ screenType: createdAction.action_feature?.has_specific_screen ? (createdAction.action_feature?.screen?.code || "generica") : null,
+ origin: createdAction.origin || "M",
+ });
+ setOpenEditGestionModal(true);
  setSelectedTemplate(null);
  setGestionDescription("");
  setExpectedDate(new Date().toISOString().split("T")[0]);
@@ -878,6 +929,7 @@ export default function ClaimDetailPage() {
  </h3>
  <div className="app-data-grid-4">
  <DataField label="Dirección" value={claim.claim_address || "—"} />
+ <DataField label="Tipo" value={resolveName(claim.destination_housing_id, housingDestinationsCatalog)} />
  <DataField label="País" value={countryName?.name || "—"} />
  <DataField label="Región" value={regionName?.name || "—"} />
  <DataField label="Ciudad" value={cityName?.name || "—"} />
@@ -911,7 +963,6 @@ export default function ClaimDetailPage() {
  <DataField label="Causal del Siniestro" value={resolveName(claim.claim_cause_id, claimCausesCatalog)} />
  <DataField label="Tipo de Construcción" value={resolveName(claim.construction_type_id, constructionTypesCatalog)} />
  <DataField label="Habitabilidad" value={resolveName(claim.habitability_id, habitabilityCatalog)} />
- <DataField label="Destino" value={resolveName(claim.destination_housing_id, housingDestinationsCatalog)} />
  <DataField label="Clasificación del Daño" value={resolveName(claim.damage_classification_id, damageClassificationsCatalog)} />
  <DataField label="Asegurado/Propietario" value={claim.owner_same_as_insured ? "Propietario" : "Arrendatario"} />
  </div>
@@ -973,7 +1024,7 @@ export default function ClaimDetailPage() {
  active={showRejected}
  onClick={(v) => setShowRejected(v)}
  >
- Rechazadas
+ Rechazadas/Deshab.
  </ToggleChip>
  )}
  {canEdit("claims") && gestionSubTab === "lista" && (
@@ -1041,6 +1092,7 @@ export default function ClaimDetailPage() {
  codigo: a.code || a.name?.slice(0, 10) || "—",
  nombre: a.name || "—",
  estado: a.action_status?.code || "todo",
+ isActive: a.is_active,
  fecha: a.issued_on || a.created_on,
  expectedDate: a.expected_date,
  createdOn: a.created_on,
@@ -1213,7 +1265,7 @@ export default function ClaimDetailPage() {
  return (
  <tr
  key={g.id}
- className="cursor-pointer hover:bg-muted/30 transition-colors"
+ className={`cursor-pointer hover:bg-muted/30 transition-colors ${g.isActive === false ? "opacity-50" : ""}`}
  onClick={() => {
  if (g.href) {
  router.push(g.href);
@@ -1229,6 +1281,9 @@ export default function ClaimDetailPage() {
  <span className={`ml-1 inline-flex items-center justify-center rounded px-0.5 text-[8px] font-bold ${
  g.origin === "W" ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
  }`}>{g.origin}</span>
+ {g.isActive === false && (
+ <span className="ml-1 inline-flex items-center justify-center rounded px-0.5 text-[8px] font-bold bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" title="Gestión deshabilitada">OFF</span>
+ )}
  </td>
  <td className="font-medium text-[11px]">{g.nombre}</td>
  <td className="text-[11px] text-muted-foreground">{g.fecha ? formatDateTime(g.fecha) : "—"}</td>
@@ -1336,7 +1391,7 @@ export default function ClaimDetailPage() {
  Nueva Gestión
  </DialogTitle>
  <DialogDescription className="modal-subtitle">
- Selecciona la gestión a aplicar al siniestro #{claim?.claim_number}.
+ Selecciona la gestión a aplicar al siniestro {claim?.liquidation_number || "—"} / {claim?.client_reference || "—"}.
  </DialogDescription>
  </div>
 
@@ -1365,12 +1420,10 @@ export default function ClaimDetailPage() {
  }}
  items={[
  { value: "__none", label: "Seleccionar..." },
- ...[...chainFilteredTemplates]
- .sort((a, b) => a.name.localeCompare(b.name))
- .map((tpl) => ({ value: tpl.id, label: tpl.name })),
+ ...chainFilteredTemplates.map((tpl) => ({ value: tpl.id, label: tpl.name })),
  ]}
  >
- <SelectTrigger className="app-input h-7 w-full">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Seleccionar...">
  {(val: string) => {
  if (!val || val === "__none") return "Seleccionar...";
@@ -1381,13 +1434,19 @@ export default function ClaimDetailPage() {
  </SelectTrigger>
  <SelectContent>
  <SelectItem value="__none">Seleccionar...</SelectItem>
- {[...chainFilteredTemplates]
- .sort((a, b) => a.name.localeCompare(b.name))
- .map((tpl) => (
+ {chainFilteredTemplates.map((tpl) => {
+ // Indicador de especificidad del match
+ const tags: string[] = [];
+ if (tpl.line_business_id) tags.push("Línea");
+ if (tpl.event_id) tags.push("Evento");
+ if (tpl.company_id) tags.push("Cía");
+ const matchLabel = tags.length > 0 ? ` · ${tags.join("+")}` : " · General";
+ return (
  <SelectItem key={tpl.id} value={tpl.id}>
- {tpl.name}
+ {tpl.name}<span className="text-[10px] text-muted-foreground">{matchLabel}</span>
  </SelectItem>
- ))}
+ );
+ })}
  </SelectContent>
  </Select>
  </div>
@@ -1441,7 +1500,7 @@ export default function ClaimDetailPage() {
 
  {/* ═══ MODAL: Editar Gestión ═══ */}
  <Dialog open={openEditGestionModal} onOpenChange={setOpenEditGestionModal}>
- <DialogContent className="modal-lg" showCloseButton>
+ <DialogContent className="modal-xl" showCloseButton>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
@@ -1456,7 +1515,17 @@ export default function ClaimDetailPage() {
 
  <div className="modal-body">
  {!editingAction || !editingScreens ? (
- <p className="text-sm text-muted-foreground text-center py-8">Cargando gestión...</p>
+ <div className="text-center py-8 space-y-2">
+ <p className="text-sm text-muted-foreground">Cargando gestión...</p>
+ {(editingActionError || editingScreensError) && (
+ <p className="text-xs text-red-500">
+ Error: {editingActionError?.message || editingScreensError?.message}
+ </p>
+ )}
+ <p className="text-[10px] text-muted-foreground">
+ action: {editingAction ? "OK" : "—"} | screens: {editingScreens ? `[${editingScreens.length}]` : "—"}
+ </p>
+ </div>
  ) : (
  <>
  <GestionScreenSwitcher

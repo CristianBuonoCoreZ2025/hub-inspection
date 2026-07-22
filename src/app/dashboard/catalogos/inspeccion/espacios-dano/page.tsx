@@ -106,18 +106,16 @@ export default function DamageSpacesPage() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-cyan-500 text-white shadow-sm">
- <Home className="h-5 w-5" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-blue-500 to-cyan-500">
+ <Home />
  </div>
- <div>
- <h1 className="app-page-title">Espacios de Daño</h1>
- <p className="app-page-lead">Recintos para registro de daños constructivos.</p>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Espacios de Daño</h1>
  </div>
  </div>
- <div className="flex items-center gap-2">
+ <div className="app-grid-header-right">
  {canEdit("catalogos_inspeccion") && (
  <Button className="pg-btn-platinum gap-1.5" onClick={() => setMatrixOpen(true)}>
  <Grid3x3 className="h-3.5 w-3.5" />
@@ -135,19 +133,17 @@ export default function DamageSpacesPage() {
  )}
  </div>
  </div>
- </div>
 
- <div className="app-toolbar">
- <div className="flex items-center gap-2">
- <div className="relative w-[200px] shrink-0">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
  <Input placeholder="Buscar espacio..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
  </div>
  </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
  </div>
-
- <div className="app-panel">
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
@@ -180,7 +176,7 @@ export default function DamageSpacesPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos_inspeccion") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
  setEditingId(item.id);
  setFormData({ name: item.name, description: item.description || "" });
  setOpen(true);

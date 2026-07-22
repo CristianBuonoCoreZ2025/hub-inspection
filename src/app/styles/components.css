@@ -643,7 +643,9 @@
     @apply flex items-center justify-end gap-1.5;
   }
 
-  /* Botones dentro de filas de tabla — estilo glass pill */
+  /* Botones dentro de filas de tabla — estilo glass pill por defecto.
+     IMPORTANTE: .btn-icon-sm tiene sus propios estilos glass (fondo, borde,
+     blur, sombra) que deben preservarse — ver override más abajo. */
   .app-row-actions button,
   .app-row-actions [data-slot="button"] {
     height: 26px !important;
@@ -666,6 +668,74 @@
   .app-row-actions button:active,
   .app-row-actions [data-slot="button"]:active {
     transform: translateY(0) scale(0.97);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * OVERRIDE: .btn-icon-sm dentro de .app-row-actions
+   * Los botones de icono de tabla (btn-icon-sm) DEBEN conservar su
+   * estilo glass solid (fondo, borde visible, blur, sombra) en vez
+   * de ser pisados por el estilo transparent por defecto de row-actions.
+   * Mayor especificidad (doble clase) para ganar sobre las reglas above.
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-row-actions .btn-icon-sm {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.03) 100%
+    ) !important;
+    backdrop-filter: blur(8px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    color: var(--foreground) !important;
+  }
+
+  .app-row-actions .btn-icon-sm:hover {
+    transform: translateY(-1px) !important;
+    border-color: color-mix(in srgb, var(--foreground) 25%, transparent) !important;
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  }
+
+  .app-row-actions .btn-icon-sm.btn-danger-hover:hover {
+    color: rgb(244, 63, 94) !important;
+    border-color: rgba(244, 63, 94, 0.25) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(244, 63, 94, 0.12) 0%,
+      rgba(244, 63, 94, 0.04) 100%
+    ) !important;
+    box-shadow:
+      0 4px 14px rgba(244, 63, 94, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* Dark mode — bordes más visibles */
+  .dark .app-row-actions .btn-icon-sm {
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    ) !important;
+  }
+
+  .dark .app-row-actions .btn-icon-sm:hover {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .dark .app-row-actions .btn-icon-sm.btn-danger-hover:hover {
+    border-color: rgba(244, 63, 94, 0.3) !important;
+    background: linear-gradient(
+      180deg,
+      rgba(244, 63, 94, 0.15) 0%,
+      rgba(244, 63, 94, 0.05) 100%
+    ) !important;
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -900,6 +970,164 @@
     .app-row-actions a {
       min-width: 32px;
       min-height: 32px;
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * GRILLA CON BUSCADOR INTEGRADO — patrón de página compacto
+ * ═══════════════════════════════════════════════════════════════
+ * Estructura:
+ *   <div class="app-page">
+ *     <div class="app-grid-header">           ← header unificado
+ *       <div class="app-grid-header-left">    ← icono + título + breadcrumbs
+ *         <div class="app-grid-icon">📍</div>
+ *         <h1 class="app-page-title">Título</h1>
+ *         <span class="app-grid-sep">·</span>
+ *         <nav class="app-grid-breadcrumbs">...</nav>
+ *       </div>
+ *       <div class="app-grid-header-right">   ← contador + botón "Nueva"
+ *         <span class="app-grid-count">12 registros</span>
+ *         <Button className="pg-btn-platinum">Nueva</Button>
+ *       </div>
+ *     </div>
+ *     <div class="app-panel">
+ *       <div class="app-grid-toolbar">        ← buscador + controles paginación
+ *         <Input className="app-grid-search" />
+ *         <Pagination variant="controls" />
+ *       </div>
+ *       <div class="app-data-table-wrap">
+ *         <table class="app-data-table">...</table>
+ *       </div>
+ *       <Pagination />                        ← paginación completa abajo
+ *     </div>
+ *   </div>
+ * ═══════════════════════════════════════════════════════════════ */
+@layer components {
+
+  /* ── Header unificado: icono + título + breadcrumbs + acciones ── */
+  .app-grid-header {
+    @apply flex items-center justify-between gap-3;
+  }
+
+  .app-grid-header-left {
+    @apply flex items-center gap-2.5 min-w-0;
+  }
+
+  /* Icono del header — 36px, gradiente, redondeado */
+  .app-grid-icon {
+    @apply flex items-center justify-center rounded-xl text-white shadow-sm shrink-0;
+    width: 36px;
+    height: 36px;
+  }
+
+  .app-grid-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Contenedor interno: título + separador + breadcrumbs */
+  .app-grid-title-row {
+    @apply flex items-center gap-2 min-w-0;
+  }
+
+  /* Separador "·" entre título y breadcrumbs */
+  .app-grid-sep {
+    @apply text-muted-foreground/40 shrink-0;
+  }
+
+  /* Breadcrumbs dentro del header */
+  .app-grid-breadcrumbs {
+    @apply flex items-center gap-1 text-sm text-muted-foreground min-w-0;
+  }
+
+  .app-grid-breadcrumbs button,
+  .app-grid-breadcrumb-btn {
+    @apply hover:text-foreground transition-colors truncate;
+  }
+
+  .app-grid-breadcrumbs button.is-current,
+  .app-grid-breadcrumb-btn.is-current {
+    @apply font-medium text-foreground cursor-default;
+  }
+
+  .app-grid-breadcrumbs button:not(.is-current),
+  .app-grid-breadcrumb-btn:not(.is-current) {
+    @apply hover:underline;
+  }
+
+  /* ── Lado derecho del header: contador + botón ── */
+  .app-grid-header-right {
+    @apply flex items-center gap-2 shrink-0;
+  }
+
+  /* Contador de registros — misma tipografía que el Pagination inferior */
+  .app-grid-count {
+    @apply text-[11px] text-muted-foreground hidden sm:inline;
+  }
+
+  .app-grid-count .num {
+    @apply font-medium text-foreground;
+  }
+
+  /* ── Toolbar integrado en el panel (buscador + controles) ──
+     -mt-3 sm:-mt-4 contrarresta el padding-top del app-panel (p-3 sm:p-4)
+     para que el buscador quede pegado al borde superior del panel. */
+  .app-grid-toolbar {
+    @apply flex items-center justify-between gap-2 px-1 -mt-3 sm:-mt-4 pt-2 pb-2;
+  }
+
+  .app-grid-toolbar-left {
+    @apply flex items-center gap-2;
+  }
+
+  /* Buscador con icono — ancho fijo 180px, shrink-0 */
+  .app-grid-search-wrap {
+    @apply relative w-[180px] shrink-0;
+  }
+
+  .app-grid-search-wrap svg {
+    @apply absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground;
+  }
+
+  /* ── Fila clickeable — toda la fila dispara la acción del primer botón ──
+     Útil en móvil donde los botones de icono son difíciles de tocar. */
+  .app-data-table tbody tr.row-clickable {
+    cursor: pointer;
+  }
+
+  .app-data-table tbody tr.row-clickable:hover {
+    background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  }
+
+  .app-data-table tbody tr.row-clickable:hover td {
+    color: hsl(var(--primary)) !important;
+  }
+
+  /* ── Mobile (≤767px) ── */
+  @media (max-width: 767px) {
+    /* Header: apilar vertical en móvil */
+    .app-grid-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    /* Breadcrumbs: scroll horizontal si son muy largos */
+    .app-grid-breadcrumbs {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Buscador: full width en móvil */
+    .app-grid-search-wrap {
+      width: 100% !important;
+    }
+
+    /* Contador: oculto en móvil (ya está en el Pagination inferior) */
+    .app-grid-count {
+      display: none !important;
     }
   }
 }

@@ -13,7 +13,7 @@ import {
  getBusinessLinesWithPolicies,
 } from "@/services/policies";
 import { useAuth } from "@/hooks/use-auth";
-import { Search, FileCheck, Pencil } from "lucide-react";
+import { Search, FileCheck, Pencil, Eye } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,17 +135,16 @@ export default function PolizasPage() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
- <FileCheck className="h-5 w-5" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-[#0095DA] to-[#005BBB]">
+ <FileCheck />
  </div>
- <div>
- <h1 className="app-page-title">Pólizas</h1>
- <p className="app-page-lead">Gestión de pólizas por compañía de seguros</p>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Pólizas</h1>
  </div>
  </div>
+ <div className="app-grid-header-right">
  {canCreate("claims") && (
  <Button
  size="sm"
@@ -158,10 +157,11 @@ export default function PolizasPage() {
  </div>
  </div>
 
- <div className="app-toolbar">
- <div className="flex gap-2 flex-1 flex-wrap">
- <div className="relative flex-1 min-w-[200px] max-w-sm">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
  <Input
  className="liquid-search"
  placeholder="Buscar por número, nombre..."
@@ -170,7 +170,7 @@ export default function PolizasPage() {
  />
  </div>
  <Select value={insuranceCompanyFilter || "__all"} onValueChange={(v) => setInsuranceCompanyFilter(v === "__all" || v === null ? "" : v)} items={[{ value: "__all", label: "Todas las compañías" }, ...(insuranceCompanies || []).map(c => ({ value: c.id, label: `${c.name} (${c.policy_count})` }))]}>
- <SelectTrigger className="app-input max-w-[200px]">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Todas las compañías" />
  </SelectTrigger>
  <SelectContent>
@@ -181,7 +181,7 @@ export default function PolizasPage() {
  </SelectContent>
  </Select>
  <Select value={brokerFilter || "__all"} onValueChange={(v) => setBrokerFilter(v === "__all" || v === null ? "" : v)} items={[{ value: "__all", label: "Todos los corredores" }, ...(brokers || []).map(b => ({ value: b.id, label: `${b.name} (${b.policy_count})` }))]}>
- <SelectTrigger className="app-input max-w-[180px]">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Todos los corredores" />
  </SelectTrigger>
  <SelectContent>
@@ -192,7 +192,7 @@ export default function PolizasPage() {
  </SelectContent>
  </Select>
  <Select value={businessLineFilter || "__all"} onValueChange={(v) => setBusinessLineFilter(v === "__all" || v === null ? "" : v)} items={[{ value: "__all", label: "Todas las líneas" }, ...(businessLines || []).map(b => ({ value: b.id, label: `${b.name} (${b.policy_count})` }))]}>
- <SelectTrigger className="app-input max-w-[180px]">
+ <SelectTrigger className="app-input app-filter-narrow">
  <SelectValue placeholder="Todas las líneas" />
  </SelectTrigger>
  <SelectContent>
@@ -203,7 +203,7 @@ export default function PolizasPage() {
  </SelectContent>
  </Select>
  <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={[{ value: "__all", label: "Todos los estados" }, { value: "active", label: "Activas" }, { value: "draft", label: "Borrador" }, { value: "expired", label: "Vencidas" }, { value: "cancelled", label: "Canceladas" }]}>
- <SelectTrigger className="app-input max-w-[140px]">
+ <SelectTrigger className="app-input app-filter-narrow">
  <SelectValue placeholder="Todos los estados" />
  </SelectTrigger>
  <SelectContent>
@@ -223,9 +223,8 @@ export default function PolizasPage() {
  </button>
  )}
  </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
  </div>
-
- <div className="app-panel p-0 overflow-hidden">
  {isLoading ? (
  <p className="text-sm text-muted-foreground text-center py-12">Cargando...</p>
  ) : paginatedData.length === 0 ? (
@@ -252,7 +251,7 @@ export default function PolizasPage() {
  {paginatedData.map((p) => (
  <tr
  key={p.id}
- className="hover:bg-muted/30 cursor-pointer transition-colors"
+ className="row-clickable"
  onClick={() => router.push(`/dashboard/catalogos/polizas/${p.id}`)}
  >
  <td className="font-mono font-medium">
@@ -280,7 +279,14 @@ export default function PolizasPage() {
  <StatusBadge status={p.status} label={statusLabels[p.status] || p.status} />
  </td>
  <td>
- <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+ <div className="app-row-actions">
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/catalogos/polizas/${p.id}`); }} title="Ver">
+ <Eye className="h-4 w-4" />
+ </Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/catalogos/polizas/${p.id}`); }} title="Editar">
+ <Pencil className="h-4 w-4" />
+ </Button>
+ </div>
  </td>
  </tr>
  ))}

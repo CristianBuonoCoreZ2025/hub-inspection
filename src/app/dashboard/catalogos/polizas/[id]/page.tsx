@@ -612,7 +612,7 @@ export default function PolicyDetailPage() {
  ...(insuranceCompanies?.map((c) => ({ value: c.id, label: c.name })) || []),
  ]}
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Seleccionar..." />
  </SelectTrigger>
  <SelectContent>
@@ -633,7 +633,7 @@ export default function PolicyDetailPage() {
  ...(brokers?.map((b) => ({ value: b.id, label: b.name })) || []),
  ]}
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Seleccionar..." />
  </SelectTrigger>
  <SelectContent>
@@ -808,23 +808,35 @@ export default function PolicyDetailPage() {
  placeholder="0"
  />
  </div>
- <div className="lg:col-span-2">
+ <div className="sm:col-span-2 lg:col-span-2 grid grid-cols-2 gap-4">
+ <div>
  <Label className="app-field-label">Fecha Inicio <span className="text-red-500">*</span></Label>
  <DatePicker
  value={form.start_date}
- onChange={(value) => setForm({ ...form, start_date: value })}
- className="w-[130px]"
+ onChange={(value) => {
+ const newStart = value;
+ const newEnd = newStart && form.end_date && newStart > form.end_date ? newStart : form.end_date;
+ setForm({ ...form, start_date: newStart, end_date: newEnd });
+ }}
+ className="w-full"
+ maxDate={form.end_date || undefined}
  />
  </div>
- <div className="lg:col-span-3">
+ <div>
  <Label className="app-field-label">Fecha Término <span className="text-red-500">*</span></Label>
  <DatePicker
  value={form.end_date}
- onChange={(value) => setForm({ ...form, end_date: value })}
- className="w-[130px]"
+ onChange={(value) => {
+ const newEnd = value;
+ const newStart = newEnd && form.start_date && newEnd < form.start_date ? newEnd : form.start_date;
+ setForm({ ...form, end_date: newEnd, start_date: newStart });
+ }}
+ className="w-full"
+ minDate={form.start_date || undefined}
  />
  </div>
- <div className="lg:col-span-3">
+ </div>
+ <div className="lg:col-span-4">
  <Label className="app-field-label">Estado</Label>
  <select
  className="app-input w-full"
@@ -888,7 +900,7 @@ export default function PolicyDetailPage() {
  ...(coverageThemes || []).map((t) => ({ value: t, label: t })),
  ]}
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Todos los temas" />
  </SelectTrigger>
  <SelectContent>

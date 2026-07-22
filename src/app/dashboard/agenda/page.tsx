@@ -244,7 +244,7 @@ export default function AgendaPage() {
  ...inspectors.map((i) => ({ value: i.id, label: i.full_name || i.email })),
  ]}
  >
- <SelectTrigger className="app-input h-8 w-[260px] max-w-[260px] min-w-[260px]">
+ <SelectTrigger className="app-input w-[260px] max-w-[260px] min-w-[260px]">
  <User className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
  <SelectValue placeholder="Todos">
  {(val: string) => {

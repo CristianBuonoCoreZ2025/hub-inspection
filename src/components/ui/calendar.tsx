@@ -9,6 +9,7 @@ import {
   eachDayOfInterval,
   isSameDay, isSameMonth, isToday,
   format, getYear, setYear, setMonth, getMonth,
+  isAfter, isBefore, startOfDay,
 } from "date-fns"
 import { es } from "date-fns/locale"
 import { cn } from "@/lib/utils"
@@ -19,6 +20,8 @@ export type CalendarProps = {
   locale?: typeof es
   className?: string
   mode?: "single"
+  maxDate?: Date
+  minDate?: Date
 }
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"]
@@ -31,6 +34,8 @@ function Calendar({
   selected,
   onSelect,
   className,
+  maxDate,
+  minDate,
 }: CalendarProps) {
   const [viewDate, setViewDate] = React.useState(selected ?? new Date())
   const [view, setView] = React.useState<"days" | "months" | "years">("days")
@@ -103,7 +108,7 @@ function Calendar({
         <button
           type="button"
           onClick={handleTitleClick}
-          className="rounded-lg px-3 py-1 text-[13px] font-semibold tracking-tight text-foreground transition-all hover:bg-foreground/8 active:scale-95"
+          className="rounded-lg px-3 py-1 text-[11px] font-semibold tracking-tight text-foreground transition-all hover:bg-foreground/8 active:scale-95"
         >
           {title}
         </button>
@@ -123,7 +128,7 @@ function Calendar({
             {WEEKDAYS.map((d, i) => (
               <div
                 key={i}
-                className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50"
+                className="text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50"
               >
                 {d}
               </div>
@@ -134,17 +139,21 @@ function Calendar({
               const isOutside = !isSameMonth(day, viewDate)
               const isSelected = selected && isSameDay(day, selected)
               const isTodayDay = isToday(day)
+              const dayStart = startOfDay(day)
+              const isDisabled = (maxDate && isAfter(dayStart, startOfDay(maxDate))) || (minDate && isBefore(dayStart, startOfDay(minDate)))
               return (
                 <button
                   key={day.toISOString()}
                   type="button"
-                  onClick={() => handleSelectDay(day)}
+                  onClick={() => !isDisabled && handleSelectDay(day)}
+                  disabled={isDisabled}
                   className={cn(
-                    "mx-auto flex h-8 w-8 items-center justify-center rounded-xl text-[12px] font-medium transition-all duration-150",
+                    "mx-auto flex h-8 w-8 items-center justify-center rounded-xl text-[11px] font-medium transition-all duration-150",
                     "hover:bg-primary/12 hover:scale-105 active:scale-95",
-                    isOutside && "text-muted-foreground/30",
-                    !isOutside && !isSelected && "text-foreground/80",
-                    isTodayDay && !isSelected && "text-primary font-semibold",
+                    isDisabled && "text-muted-foreground/20 cursor-not-allowed hover:bg-transparent hover:scale-100",
+                    isOutside && !isDisabled && "text-muted-foreground/30",
+                    !isOutside && !isSelected && !isDisabled && "text-foreground/80",
+                    isTodayDay && !isSelected && !isDisabled && "text-primary font-semibold",
                     isSelected && [
                       "bg-primary text-primary-foreground font-semibold",
                       "shadow-[0_2px_12px_color-mix(in_srgb,var(--primary)_45%,transparent)]",
@@ -171,7 +180,7 @@ function Calendar({
                 type="button"
                 onClick={() => handleSelectMonth(idx)}
                 className={cn(
-                  "flex h-12 items-center justify-center rounded-xl text-[12px] font-medium transition-all duration-150",
+                  "flex h-12 items-center justify-center rounded-xl text-[11px] font-medium transition-all duration-150",
                   "hover:bg-primary/12 hover:scale-105 active:scale-95",
                   isActive
                     ? "bg-primary text-primary-foreground font-semibold shadow-[0_2px_12px_color-mix(in_srgb,var(--primary)_45%,transparent)]"
@@ -196,7 +205,7 @@ function Calendar({
                 type="button"
                 onClick={() => handleSelectYear(y)}
                 className={cn(
-                  "flex h-12 items-center justify-center rounded-xl text-[12px] font-medium transition-all duration-150",
+                  "flex h-12 items-center justify-center rounded-xl text-[11px] font-medium transition-all duration-150",
                   "hover:bg-primary/12 hover:scale-105 active:scale-95",
                   isActive
                     ? "bg-primary text-primary-foreground font-semibold shadow-[0_2px_12px_color-mix(in_srgb,var(--primary)_45%,transparent)]"

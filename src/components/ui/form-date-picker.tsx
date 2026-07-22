@@ -10,6 +10,10 @@ interface FormDatePickerProps<TFieldValues extends FieldValues = FieldValues> {
   disabled?: boolean;
   className?: string;
   clearable?: boolean;
+  minDate?: string;
+  maxDate?: string;
+  /** Se ejecuta tras el cambio, con el nuevo valor. Útil para validación cruzada de rangos. */
+  onDateChange?: (value: string) => void;
 }
 
 export function FormDatePicker<TFieldValues extends FieldValues = FieldValues>({
@@ -19,6 +23,9 @@ export function FormDatePicker<TFieldValues extends FieldValues = FieldValues>({
   disabled,
   className,
   clearable,
+  minDate,
+  maxDate,
+  onDateChange,
 }: FormDatePickerProps<TFieldValues>) {
   return (
     <Controller
@@ -27,11 +34,16 @@ export function FormDatePicker<TFieldValues extends FieldValues = FieldValues>({
       render={({ field }) => (
         <DatePicker
           value={field.value || ""}
-          onChange={(value) => field.onChange(value || "")}
+          onChange={(value) => {
+            field.onChange(value || "");
+            onDateChange?.(value || "");
+          }}
           placeholder={placeholder}
           disabled={disabled}
           className={className}
           clearable={clearable}
+          minDate={minDate}
+          maxDate={maxDate}
         />
       )}
     />

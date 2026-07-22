@@ -281,7 +281,7 @@ function TiposCambioContent() {
  onValueChange={(v) => { const val = v === "__none" ? "" : (v ?? ""); setFilterCountry(val); setFilterCurrency(""); }}
  items={[{ value: "__none", label: "Seleccione..." }, ...countriesWithCurrencies.map((c) => ({ value: c.id, label: c.name }))]}
  >
- <SelectTrigger className="app-input h-7"><SelectValue /></SelectTrigger>
+ <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
  <SelectContent>
  <SelectItem value="__none">Seleccione...</SelectItem>
  {countriesWithCurrencies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -297,7 +297,7 @@ function TiposCambioContent() {
  onValueChange={(v) => setFilterCurrency(v === "__none" ? "" : (v ?? ""))}
  items={[{ value: "__none", label: "Seleccione..." }, ...countryCurrencyOptions.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))]}
  >
- <SelectTrigger className="app-input h-7"><SelectValue /></SelectTrigger>
+ <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
  <SelectContent>
  <SelectItem value="__none">Seleccione...</SelectItem>
  {countryCurrencyOptions.map((c) => <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>)}
@@ -313,7 +313,7 @@ function TiposCambioContent() {
  onValueChange={(v) => setFilterYear(v ?? String(currentYear))}
  items={availableYears.map(y => ({ value: y, label: y }))}
  >
- <SelectTrigger className="app-input h-7"><SelectValue /></SelectTrigger>
+ <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
  <SelectContent>
  {availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
  </SelectContent>

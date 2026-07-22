@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Settings2, Eye, EyeOff, Lock } from "lucide-react";
 
-interface FieldConfig {
+export interface FieldConfig {
  show?: string[];
  hide?: string[];
  labels?: Record<string, string>;
@@ -187,7 +187,7 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
  placeholder={field.defaultLabel}
  value={labels[field.key] || ""}
  onChange={(e) => updateLabel(field.key, e.target.value)}
- className="app-input h-7 flex-1"
+ className="app-input flex-1"
  disabled={!isVisible}
  />
  </div>

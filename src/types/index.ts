@@ -203,6 +203,11 @@ export interface Claim {
   insurance_company?: { id: string; name: string } | null;
   policy?: { id: string; policy_number: string | null; policy_name: string; status: string | null; currency: string | null } | null;
   currency?: { id: string; code: string; name: string; symbol: string | null; decimals: number | null } | null;
+  country?: { id: string; name: string } | null;
+  region?: { id: string; name: string } | null;
+  city?: { id: string; name: string } | null;
+  commune?: { id: string; name: string } | null;
+  destination_housing?: { id: string; name: string } | null;
 }
 
 export interface ClaimsParticipant {
@@ -217,6 +222,7 @@ export interface ClaimsParticipant {
   phone: string | null;
   cell_phone: string | null;
   address: string | null;
+  person_type: string | null;
   country: string | null;
   region: string | null;
   city: string | null;
@@ -983,6 +989,11 @@ export interface ClaimAction {
   origin: string;
   updated_on: string | null;
   updated_by: string | null;
+  // Snapshot del form_schema del gestion_screen al momento de crear la acción.
+  // Permite que la gestión funcione con la estructura original aunque la
+  // pantalla cambie después. Si es null, se usa el form_schema actual del screen.
+  screen_snapshot?: Record<string, unknown> | null;
+  screen_snapshot_at?: string | null;
   action_feature?: ActionFeature;
   action_type?: LookupCatalog;
   action_status?: LookupCatalog;

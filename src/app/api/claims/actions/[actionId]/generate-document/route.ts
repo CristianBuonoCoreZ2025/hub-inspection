@@ -33,7 +33,7 @@ export async function POST(
     const { data: action, error: actionError } = await supabase
       .from("claim_actions")
       .select(
-        "id, code, claim_id, action_template_id, status, issuer_id, issued_by, action_template:action_template!claim_actions_action_template_id_fkey(id, code)"
+        "id, code, claim_id, action_template_id, issuer_id, issued_by, action_template:action_template!claim_actions_action_template_id_fkey(id, code)"
       )
       .eq("id", actionId)
       .single();
@@ -46,15 +46,15 @@ export async function POST(
       return NextResponse.json({ error: "La gestión no tiene code o claim_id" }, { status: 400 });
     }
 
-    // 1b. Validar que la pantalla de la gestión soporte flujo de plantillas.
+    // 1b. Validar que la pantalla de la gestión soporte flujo de templates.
     // Si la pantalla no tiene un campo "document_templates" en su form_schema,
-    // no se puede generar un documento desde plantilla.
+    // no se puede generar un documento desde template.
     const supportsTemplates = await actionSupportsDocumentTemplates(actionId);
     if (!supportsTemplates) {
       return NextResponse.json(
         {
           error:
-            "La pantalla asociada a esta gestión no soporta plantillas de documento. Solo las gestiones con pantalla «Pantalla + Documentos» pueden generar documentos desde plantilla.",
+            "La pantalla asociada a esta gestión no soporta templates. Solo las gestiones con pantalla «Pantalla + Templates» pueden generar documentos desde template.",
         },
         { status: 400 }
       );
@@ -110,7 +110,9 @@ export async function POST(
     const rendered = await renderDocument(templateBuffer, templateData, fileType);
 
     // 6. Determinar workflow_level según el estado de la gestión
-    const workflowLevel = determineWorkflowLevel(action.status);
+    // Nota: no trajimos el status en el select, pero para generate-document
+    // el workflow_level siempre es "issuer" (se genera en etapa de emisión).
+    const workflowLevel = determineWorkflowLevel(null);
 
     // 7. Crear versión (esto calcula el número de versión automáticamente)
     // Necesitamos pre-calcular el path, pero el número de versión lo calcula createDocumentVersion.

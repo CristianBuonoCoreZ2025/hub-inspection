@@ -108,6 +108,7 @@ export default function GestionesPage() {
  const [search, setSearch] = useState("");
  const [filterFeature, setFilterFeature] = useState("");
  const [filterLine, setFilterLine] = useState("");
+ const [showInactive, setShowInactive] = useState(false);
  const [mode, setMode] = useState<"list" | "edit">("list");
  const [editingId, setEditingId] = useState<string | null>(null);
  const [form, setForm] = useState<FormState>(emptyForm);
@@ -133,10 +134,10 @@ export default function GestionesPage() {
 
  const { data: templates, isLoading, error } = useQuery({
  queryKey: ["action-templates"],
- queryFn: getActionTemplates,
+ queryFn: () => getActionTemplates(true),
  });
  const { data: types } = useQuery({ queryKey: ["action-types"], queryFn: getActionTypes });
- const { data: features } = useQuery({ queryKey: ["action-features"], queryFn: getActionFeatures });
+ const { data: features } = useQuery({ queryKey: ["action-features-v2"], queryFn: getActionFeatures, staleTime: 0, refetchOnMount: true });
  const { data: businessLines } = useQuery({ queryKey: ["business-lines-actions"], queryFn: getBusinessLinesForActions });
  const { data: claimStatuses } = useQuery({ queryKey: ["claim-statuses"], queryFn: getClaimStatuses });
  const { data: clients } = useQuery({ queryKey: ["companies-list"], queryFn: getCompanies });
@@ -182,10 +183,11 @@ export default function GestionesPage() {
  });
 
  const filtered = templates?.filter((t) => {
- const matchText = [t.name, t.code, t.action_type?.name, t.action_feature?.name].join(" ").toLowerCase().includes(search.toLowerCase());
+ const matchText = [t.name, t.code, t.action_type?.name, t.action_feature?.name]. join(" ").toLowerCase().includes(search.toLowerCase());
  const matchFeature = !filterFeature || t.action_features_id === filterFeature;
  const matchLine = !filterLine || t.line_business_id === filterLine;
- return matchText && matchFeature && matchLine;
+ const matchActive = showInactive || t.is_active;
+ return matchText && matchFeature && matchLine && matchActive;
  });
 
  // Sort con accessors para campos anidados
@@ -568,7 +570,7 @@ export default function GestionesPage() {
  <div className="grid grid-cols-3 gap-x-4 gap-y-2">
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Código</Label>
- <div className="app-input h-7 flex items-center px-2 font-mono text-muted-foreground bg-muted/40">
+ <div className="app-input flex items-center px-2 font-mono text-muted-foreground bg-muted/40">
  {(() => {
  const feat = features?.find(f => f.id === form.action_features_id);
  const line = businessLines?.find(b => b.id === form.line_business_id);
@@ -589,7 +591,7 @@ export default function GestionesPage() {
  Tipo <span className="text-red-500">*</span>
  </Label>
  <Select value={form.action_type_id || null} onValueChange={(v) => setForm({ ...form, action_type_id: v ?? "" })} items={types?.map(t => ({ value: t.id, label: t.name })) || []}>
- <SelectTrigger className="app-input h-7"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+ <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
  <SelectContent>{types?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
  </Select>
  </div>
@@ -611,14 +613,14 @@ export default function GestionesPage() {
  items={features?.map(f => ({ value: f.id, label: f.code ? `${f.name} (${f.code})` : f.name })) || []}
  disabled={!!editingId}
  >
- <SelectTrigger className="app-input h-7"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+ <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
  <SelectContent>{features?.map(f => <SelectItem key={f.id} value={f.id}>{f.code ? `${f.name} (${f.code})` : f.name}</SelectItem>)}</SelectContent>
  </Select>
  {/* Resumen compacto de la característica seleccionada */}
  {(() => {
  const feat = features?.find(f => f.id === form.action_features_id);
  if (!feat) return null;
- const tipo = feat.has_template ? "Pantalla + Documentos" : "Pantalla";
+ const tipo = feat.has_template ? "Pantalla + Templates" : "Pantalla";
  return (
  <div className="flex flex-wrap items-center gap-1 mt-1">
  <span className="app-badge app-badge-active">{tipo}</span>
@@ -640,7 +642,7 @@ export default function GestionesPage() {
  items={businessLines?.map(b => ({ value: b.id, label: b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name })) || []}
  disabled={!!editingId}
  >
- <SelectTrigger className="app-input h-7"><SelectValue placeholder="Sin selección" /></SelectTrigger>
+ <SelectTrigger className="app-input"><SelectValue placeholder="Sin selección" /></SelectTrigger>
  <SelectContent><SelectItem value="__none">Sin selección</SelectItem>{businessLines?.map(b => <SelectItem key={b.id} value={b.id}>{b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name}</SelectItem>)}</SelectContent>
  </Select>
  </div>
@@ -828,9 +830,9 @@ export default function GestionesPage() {
  </section>
  </div>{/* /columna izquierda */}
 
- {/* Columna derecha: Plantillas */}
+ {/* Columna derecha: Templates */}
  <div>
- {/* ═══ Card: Plantillas de Documento ═══ */}
+ {/* ═══ Card: Templates ═══ */}
  {(() => {
  const feat = features?.find(f => f.id === form.action_features_id);
  const hasTemplate = feat?.has_template ?? false;
@@ -839,13 +841,13 @@ export default function GestionesPage() {
  <section className="app-panel">
  <h3 className="app-section-title">
  <FileText className="h-3.5 w-3.5" />
- Plantillas de Documento
+ Templates
  </h3>
  <div className="app-empty-state flex flex-col items-center gap-2">
  <AlertTriangle className="h-5 w-5 text-amber-500" />
- <span>Esta característica no soporta plantillas de documento.</span>
+ <span>Esta característica no soporta templates.</span>
  <span className="text-[10px]">
- La pantalla asociada no tiene flujo de plantillas. Asigná una pantalla con campo &laquo;Plantillas de documento&raquo; en el catálogo de pantallas para habilitar esta sección.
+ La pantalla asociada no tiene flujo de templates. Asigná una pantalla con campo &laquo;Templates&raquo; en el catálogo de pantallas para habilitar esta sección.
  </span>
  </div>
  </section>
@@ -856,10 +858,10 @@ export default function GestionesPage() {
  <section className="app-panel">
  <h3 className="app-section-title">
  <FileText className="h-3.5 w-3.5" />
- Plantillas de Documento
+ Templates
  </h3>
  <div className="app-empty-state">
- Guarda la gestión primero para configurar sus plantillas.
+ Guarda la gestión primero para configurar sus templates.
  </div>
  </section>
  );
@@ -899,42 +901,68 @@ export default function GestionesPage() {
  // ═══════════════════════════════════════════════════════════════
  return (
  <div className="app-page">
- {/* Header compacto: título + búsqueda + filtros + Agregar en una sola fila */}
- <div className="flex items-center gap-3 flex-wrap mb-3">
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-[#0095DA] to-[#005BBB]">
+ <FileSpreadsheet />
+ </div>
+ <div className="app-grid-title-row">
  <h1 className="app-page-title shrink-0">Gestiones</h1>
- <div className="flex items-center gap-2 flex-1 min-w-[300px]">
- <div className="relative max-w-[180px]">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
- <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
  </div>
- <Select value={filterFeature || "__all"} onValueChange={(v) => { setFilterFeature(v === "__all" || v === null ? "" : v); setPage(1); }} items={features?.map(f => ({ value: f.id, label: f.code ? `${f.name} (${f.code})` : f.name })) || []}>
- <SelectTrigger className="app-input h-8 max-w-[180px]"><SelectValue placeholder="Característica..." /></SelectTrigger>
- <SelectContent>
- <SelectItem value="__all">Todas</SelectItem>
- {features?.map(f => <SelectItem key={f.id} value={f.id}>{f.code ? `${f.name} (${f.code})` : f.name}</SelectItem>)}
- </SelectContent>
- </Select>
- <Select value={filterLine || "__all"} onValueChange={(v) => { setFilterLine(v === "__all" || v === null ? "" : v); setPage(1); }} items={businessLines?.map(b => ({ value: b.id, label: b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name })) || []}>
- <SelectTrigger className="app-input h-8 max-w-[160px]"><SelectValue placeholder="Línea..." /></SelectTrigger>
- <SelectContent>
- <SelectItem value="__all">Todas</SelectItem>
- {businessLines?.map(b => <SelectItem key={b.id} value={b.id}>{b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name}</SelectItem>)}
- </SelectContent>
- </Select>
- {(filterFeature || filterLine || search) && (
- <Button variant="ghost" size="sm" className="h-8 text-[12px] text-muted-foreground px-2" onClick={() => { setFilterFeature(""); setFilterLine(""); setSearch(""); setPage(1); }}>
- <X className="h-3.5 w-3.5" /> Limpiar
- </Button>
- )}
  </div>
+ <div className="app-grid-header-right">
  {canCreate("catalogos") && (
  <Button onClick={startNew} className="pg-btn-platinum">
  Nueva
  </Button>
  )}
  </div>
+ </div>
 
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
+ <Input
+ className="liquid-search"
+ placeholder="Buscar..."
+ value={search}
+ onChange={(e) => setSearch(e.target.value)}
+ />
+ </div>
+ <Select value={filterFeature || "__all"} onValueChange={(v) => setFilterFeature(v === "__all" || v === null ? "" : v)} items={[{ value: "__all", label: "Todas" }, ...(features || []).map(f => ({ value: f.id, label: f.code ? `${f.name} (${f.code})` : f.name }))]}>
+ <SelectTrigger className="app-input">
+ <SelectValue placeholder="Todas" />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__all">Todas</SelectItem>
+ {features?.map(f => <SelectItem key={f.id} value={f.id}>{f.code ? `${f.name} (${f.code})` : f.name}</SelectItem>)}
+ </SelectContent>
+ </Select>
+ <Select value={filterLine || "__all"} onValueChange={(v) => setFilterLine(v === "__all" || v === null ? "" : v)} items={[{ value: "__all", label: "Todas" }, ...(businessLines || []).map(b => ({ value: b.id, label: b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name }))]}>
+ <SelectTrigger className="app-input app-filter-narrow">
+ <SelectValue placeholder="Todas" />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__all">Todas</SelectItem>
+ {businessLines?.map(b => <SelectItem key={b.id} value={b.id}>{b.code_prefix ? `${b.name} (${b.code_prefix})` : b.name}</SelectItem>)}
+ </SelectContent>
+ </Select>
+ <ToggleChip
+ active={showInactive}
+ onClick={(v) => setShowInactive(v)}
+ >
+ Inactivas
+ </ToggleChip>
+ {(filterFeature || filterLine || search) && (
+ <Button variant="ghost" size="sm" className="h-8 text-[12px] text-muted-foreground px-2" onClick={() => { setFilterFeature(""); setFilterLine(""); setSearch(""); setPage(1); }}>
+ <X className="h-3.5 w-3.5" /> Limpiar
+ </Button>
+ )}
+ </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+ </div>
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead><tr>
@@ -969,7 +997,7 @@ export default function GestionesPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => startEdit(t)}><Pencil className="h-4 w-4" /></Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => startEdit(t)}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("catalogos") && (
  <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta gestión?")) deleteMut.mutate(t.id); }}><Ban className="h-4 w-4" /></Button>
@@ -982,6 +1010,7 @@ export default function GestionesPage() {
  </table>
  </div>
  <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ </div>
  </div>
  );
 }

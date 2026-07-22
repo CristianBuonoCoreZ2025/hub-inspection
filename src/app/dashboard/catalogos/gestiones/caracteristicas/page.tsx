@@ -66,6 +66,10 @@ export default function CaracteristicasPage() {
  queryFn: () => getGestionScreens(),
  });
 
+ // ID de la pantalla "generica" — usada como default cuando una característica
+ // no tiene screen_id asignado. Toda característica DEBE tener una pantalla.
+ const genericScreenId = screens?.find(s => s.code === "generica")?.id;
+
  const featureHasGestions = (featureId: string) =>
  (templates || []).some(t => t.action_features_id === featureId);
 
@@ -92,53 +96,66 @@ export default function CaracteristicasPage() {
  e.preventDefault();
  if (!formData.name.trim()) { toast.error("El nombre es requerido"); return; }
  if (!editingId && !formData.code.trim()) { toast.error("El código es requerido"); return; }
+ // La pantalla es obligatoria. Si no se seleccionó ninguna, se usa la
+ // pantalla "generica" como default (fallback técnico con editor JSON).
+ const effectiveScreenId = formData.screen_id || genericScreenId || "";
+ if (!effectiveScreenId) { toast.error("Debe seleccionar una pantalla"); return; }
  // has_template se deriva automáticamente de la pantalla seleccionada:
  // si la pantalla tiene un campo de tipo "document_templates", la característica
- // soporta plantillas de documento. No se pregunta manualmente.
- const selectedScreen = screens?.find(s => s.id === formData.screen_id);
+ // soporta templates. No se pregunta manualmente.
+ const selectedScreen = screens?.find(s => s.id === effectiveScreenId);
  const derivedHasTemplate = screenHasDocumentTemplates(selectedScreen);
- const payload = { ...formData, has_template: derivedHasTemplate };
+ const payload = { ...formData, screen_id: effectiveScreenId, has_template: derivedHasTemplate };
  if (editingId) { updateMut.mutate({ id: editingId, input: payload }); }
  else { createMut.mutate(payload); }
  };
 
- // Tipo de gestión derivado — ahora siempre es una pantalla, el tipo indica
- // si además genera documentos. Se determina por la pantalla asociada,
- // no por un flag manual en la característica.
+ // Tipo de gestión derivado — se determina por la pantalla asociada:
+ // - Pantalla Fija: componente hardcoded (ej: inspección)
+ // - Pantalla Dinámica: configurable, sin templates
+ // - Dinámica + Templates: configurable con campo document_templates
  const getTipo = (f: ActionFeature) => {
- const screen = screens?.find(s => s.id === f.screen_id);
- return screenHasDocumentTemplates(screen) ? "Pantalla + Documentos" : "Pantalla";
+ const screen = screens?.find(s => s.id === (f.screen_id || genericScreenId));
+ if (!screen) return "Pantalla Dinámica";
+ if (!screen.is_dynamic) return "Pantalla Fija";
+ return screenHasDocumentTemplates(screen) ? "Dinámica + Templates" : "Pantalla Dinámica";
  };
 
  const tipoColor: Record<string, string> = {
- "Pantalla": "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
- "Pantalla + Documentos": "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
+ "Pantalla Fija": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+ "Pantalla Dinámica": "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+ "Dinámica + Templates": "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
  };
 
  return (
  <div className="app-page">
- {/* Header compacto: título + Agregar en una sola fila */}
- <div className="flex items-center gap-3 mb-3">
- <h1 className="app-page-title flex items-center gap-2 shrink-0">
- <Boxes className="h-5 w-5" />
- Características
- </h1>
- <div className="flex-1" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-[#0095DA] to-[#005BBB]">
+ <Boxes />
+ </div>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Características</h1>
+ </div>
+ </div>
+ <div className="app-grid-header-right">
  {canCreate("catalogos") && (
  <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="pg-btn-platinum">
  Nueva
  </Button>
  )}
  </div>
+ </div>
 
+ <div className="app-panel">
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
  <tr>
  <SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Código</SortableTh>
  <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
- <th>Tipo</th>
  <th>Pantalla Asociada</th>
+ <th>Tipo</th>
  <SortableTh sortKey="max_review_levels" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Max. niveles</SortableTh>
  <th className="w-[80px]"></th>
  </tr>
@@ -147,21 +164,25 @@ export default function CaracteristicasPage() {
  {isLoading ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
  : error ? <tr><td colSpan={6} className="text-center text-red-500 py-4">Error al cargar características: {error instanceof Error ? error.message : "Error desconocido"}</td></tr>
  : sortedFeatures.length === 0 ? <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
- : sortedFeatures.map((f) => (
+ : sortedFeatures.map((f) => {
+ const screen = screens?.find(s => s.id === (f.screen_id || genericScreenId));
+ return (
  <tr key={f.id}>
  <td className="font-mono font-semibold text-primary">{f.code || "—"}</td>
  <td className="font-medium">{f.name}</td>
+ <td className="text-muted-foreground">
+ {screen?.name || f.screen?.name || "Genérica"}
+ </td>
  <td>
  <span className={`inline-flex rounded px-2 py-0.5 text-[10px] font-medium ${tipoColor[getTipo(f)]}`}>
  {getTipo(f)}
  </span>
  </td>
- <td className="text-muted-foreground">{f.screen?.name || "Genérica"}</td>
  <td className="text-center font-mono">{f.max_review_levels}</td>
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
  setEditingId(f.id);
  setFormData({
  name: f.name,
@@ -180,7 +201,7 @@ export default function CaracteristicasPage() {
  <Button
  variant="ghost"
  size="icon"
- className="btn-neutral btn-icon"
+ className="btn-icon-sm"
  onClick={() => router.push(`/dashboard/catalogos/pantallas/${f.screen_id}`)}
  title="Diseñar pantalla"
  >
@@ -195,9 +216,11 @@ export default function CaracteristicasPage() {
  </div>
  </td>
  </tr>
- ))}
+ );
+ })}
  </tbody>
  </table>
+ </div>
  </div>
 
  {/* Dialog: crear/editar característica */}
@@ -233,28 +256,24 @@ export default function CaracteristicasPage() {
  </div>
  </div>
 
- {/* Pantalla asociada — siempre visible (toda gestión usa una pantalla) */}
+ {/* Pantalla asociada — obligatoria, toda característica tiene una pantalla */}
  <div className="flex flex-col gap-1.5">
  <Label className="app-field-label">Pantalla asociada <span className="text-red-500">*</span></Label>
  <Select
- value={formData.screen_id || "__none"}
- onValueChange={(v) => setFormData({ ...formData, screen_id: v === "__none" ? "" : (v ?? ""), has_specific_screen: true })}
- items={[
- { value: "__none", label: "Pantalla genérica (JSON libre)" },
- ...(screens?.map((s) => {
+ value={formData.screen_id || genericScreenId || ""}
+ onValueChange={(v) => setFormData({ ...formData, screen_id: v ?? "", has_specific_screen: true })}
+ items={screens?.map((s) => {
  const fields = Array.isArray(s.form_schema?.fields) ? s.form_schema.fields as string[] : [];
  const label = s.is_dynamic === false
  ? `${s.name} (fija)`
  : `${s.name} ${fields.length ? `(${fields.length} campos)` : ""}`;
  return { value: s.id, label };
- }) || []),
- ]}
+ }) || []}
  >
- <SelectTrigger className="app-input h-7 w-full">
- <SelectValue placeholder="Pantalla genérica (JSON libre)" />
+ <SelectTrigger className="app-input w-full">
+ <SelectValue placeholder="Seleccionar pantalla..." />
  </SelectTrigger>
  <SelectContent>
- <SelectItem value="__none">Pantalla genérica (JSON libre)</SelectItem>
  {screens?.map((s) => {
  const fields = Array.isArray(s.form_schema?.fields) ? s.form_schema.fields as string[] : [];
  const label = s.is_dynamic === false
@@ -268,7 +287,7 @@ export default function CaracteristicasPage() {
  })}
  </SelectContent>
  </Select>
- <ScreenHelpPanel screen={screens?.find(s => s.id === formData.screen_id)} />
+ <ScreenHelpPanel screen={screens?.find(s => s.id === (formData.screen_id || genericScreenId))} />
  </div>
 
  {/* Max niveles de revisión */}
@@ -322,7 +341,7 @@ function ScreenHelpPanel({ screen }: { screen: GestionScreen | undefined }) {
  if (!screen) {
  return (
  <div className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-[11px] text-muted-foreground">
- Pantalla genérica: permite editar los datos de la gestión en formato JSON libre.
+ Cargando pantallas...
  </div>
  );
  }
@@ -336,7 +355,7 @@ function ScreenHelpPanel({ screen }: { screen: GestionScreen | undefined }) {
  <span className="text-[12px] font-semibold">{screen.name}</span>
  {supportsDocs && (
  <span className="inline-flex rounded bg-violet-100 px-1.5 py-0.5 text-[9px] font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
- + Plantillas
+ + Templates
  </span>
  )}
  </div>

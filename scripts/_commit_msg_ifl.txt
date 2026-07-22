@@ -1,0 +1,30 @@
+fix: IFL L-141 eliminada, Fuentes/Historia al final de pantalla, reset editingActionData
+
+## Cambios
+
+### 1. IFL de L-141 eliminada (script _delete_ifl_141.cjs)
+- Gestión IFL (id: 0f66493e-...) estaba en estado "todo" sin datos ni documentos
+- Eliminada de claim_actions para recrearse correctamente
+- Script de verificación incluido (_check_ifl_141.cjs)
+
+### 2. DynamicScreen: Fuentes y Historia al final
+- claim_documents (Fuentes) y claim_history (Historia) ahora se renderizan
+  DESPUÉS de los campos del formulario, no arriba
+- Antes: todas las entidades complejas iban arriba del form
+- Ahora: solo coberturas/reserva/ajuste arriba; Fuentes/Historia abajo
+- Review levels sigue al final de todo
+
+### 3. Reset de editingActionData al abrir gestión
+- Al abrir una gestión (3 puntos de entrada: workflow, lista, botón editar),
+  se resetea editingActionData a {} antes de setEditingGestion
+- Esto asegura que los valores guardados en action_data se muestren
+  correctamente al abrir, sin mezclarse con edits stale de una gestión previa
+
+### 4. Guía de despliegue OnlyOffice + Gotenberg
+- docs/DEPLOY_ONLYOFFICE_GOTENBERG.md con paso a paso para Oracle Cloud
+  Always Free + Cloudflare Tunnel
+- Incluye troubleshooting, costos, mantenimiento
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

@@ -27,50 +27,32 @@
     height: 48px;
     padding: 0 14px;
     border-radius: 999px;
-    border: 1px solid transparent !important;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.55) 0%,
-        rgba(255, 255, 255, 0.12) 50%,
-        rgba(255, 255, 255, 0.04) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.15) 0%,
-        rgba(255, 255, 255, 0.04) 100%
-      ) padding-box !important;
+    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.04) 100%
+    ) padding-box !important;
     backdrop-filter: blur(32px) saturate(200%) brightness(1.06) !important;
     -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.06) !important;
     box-shadow:
-      0 14px 44px rgba(0, 0, 0, 0.1),
-      0 6px 16px rgba(0, 0, 0, 0.06),
+      0 6px 20px rgba(0, 0, 0, 0.08),
       0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
-      0 -1px 0 0.5px rgba(0, 0, 0, 0.05) inset,
-      0 8px 20px rgba(0, 0, 0, 0.05) inset !important;
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.05) inset !important;
     overflow: visible;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
   .dark .topbar-inner {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.14) 0%,
-        rgba(255, 255, 255, 0.05) 50%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.06) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) padding-box !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) padding-box !important;
     box-shadow:
-      0 14px 44px rgba(0, 0, 0, 0.45),
-      0 6px 16px rgba(0, 0, 0, 0.25),
+      0 6px 20px rgba(0, 0, 0, 0.35),
       0 1px 0 0.5px rgba(255, 255, 255, 0.25) inset,
-      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset,
-      0 8px 20px rgba(0, 0, 0, 0.15) inset !important;
+      0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
   }
 
   /* Destello especular superior — el brillo de lente del cristal */
@@ -85,7 +67,7 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 255, 0.5) 50%,
       transparent 100%
     );
     border-radius: 999px;
@@ -95,7 +77,7 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255, 255, 255, 0.35) 50%,
+      rgba(255, 255, 255, 0.2) 50%,
       transparent 100%
     );
   }
@@ -104,14 +86,14 @@
   .topbar-inner::after {
     content: "";
     position: absolute;
-    bottom: -60%;
+    bottom: 0;
     left: 30%;
     right: 30%;
-    height: 120%;
+    height: 30%;
     pointer-events: none;
     background: radial-gradient(
       100% 50% at 50% 100%,
-      rgba(0, 122, 255, 0.05) 0%,
+      rgba(0, 122, 255, 0.04) 0%,
       transparent 70%
     );
     border-radius: 999px;
@@ -120,7 +102,7 @@
   .dark .topbar-inner::after {
     background: radial-gradient(
       100% 50% at 50% 100%,
-      rgba(0, 122, 255, 0.04) 0%,
+      rgba(0, 122, 255, 0.03) 0%,
       transparent 70%
     );
   }
@@ -213,18 +195,12 @@
     min-width: 32px;
     padding: 0 10px;
     border-radius: 999px !important;
-    border: 1px solid transparent !important;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.45) 0%,
-        rgba(255, 255, 255, 0.08) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.03) 100%
-      ) padding-box !important;
+    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.03) 100%
+    ) padding-box !important;
     box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.06),
       0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
@@ -256,17 +232,11 @@
   }
 
   .dark .topbar-chip {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.14) 0%,
-        rgba(255, 255, 255, 0.04) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.05) 0%,
-        rgba(255, 255, 255, 0.01) 100%
-      ) padding-box !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    ) padding-box !important;
     box-shadow:
       0 2px 10px rgba(0, 0, 0, 0.25),
       0 1px 0 0.5px rgba(255, 255, 255, 0.15) inset,
@@ -275,17 +245,11 @@
 
   .topbar-chip:hover {
     --dock-scale: 1.08;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.6) 0%,
-        rgba(255, 255, 255, 0.12) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.15) 0%,
-        rgba(255, 255, 255, 0.04) 100%
-      ) padding-box !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.04) 100%
+    ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.1),
       0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
@@ -293,17 +257,11 @@
   }
 
   .dark .topbar-chip:hover {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.2) 0%,
-        rgba(255, 255, 255, 0.06) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) padding-box !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.35),
       0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
@@ -314,13 +272,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--foreground);
     flex-shrink: 0;
   }
 
   .topbar-chip-icon svg {
-    width: 15px;
-    height: 15px;
+    width: 18px;
+    height: 18px;
+    display: block;
   }
 
   /* Número DENTRO del pill, al lado del icono */
@@ -367,18 +325,12 @@
     width: 34px;
     height: 34px;
     border-radius: 999px !important;
-    border: 1px solid transparent !important;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.35) 0%,
-        rgba(255, 255, 255, 0.06) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) padding-box !important;
+    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) padding-box !important;
     box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.06),
       0 1px 0 0.5px rgba(255, 255, 255, 0.45) inset,
@@ -406,17 +358,11 @@
 
   .topbar-action:hover {
     --dock-scale: 1.1;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.5) 0%,
-        rgba(255, 255, 255, 0.1) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.12) 0%,
-        rgba(255, 255, 255, 0.03) 100%
-      ) padding-box !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.03) 100%
+    ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.1),
       0 1px 0 0.5px rgba(255, 255, 255, 0.55) inset,
@@ -424,17 +370,11 @@
   }
 
   .dark .topbar-action {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.12) 0%,
-        rgba(255, 255, 255, 0.03) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.04) 0%,
-        rgba(255, 255, 255, 0.01) 100%
-      ) padding-box !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    ) padding-box !important;
     box-shadow:
       0 2px 10px rgba(0, 0, 0, 0.25),
       0 1px 0 0.5px rgba(255, 255, 255, 0.12) inset,
@@ -442,17 +382,11 @@
   }
 
   .dark .topbar-action:hover {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.18) 0%,
-        rgba(255, 255, 255, 0.05) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.06) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) padding-box !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.35),
       0 1px 0 0.5px rgba(255, 255, 255, 0.18) inset,
@@ -460,12 +394,18 @@
   }
 
   .topbar-action svg {
-    width: 15px;
-    height: 15px;
+    width: 18px;
+    height: 18px;
+    display: block;
+  }
+
+  /* Hover: los iconos custom se iluminan ligeramente */
+  .topbar-action:hover svg {
+    filter: brightness(1.08);
   }
 
   .topbar-action-logout:hover {
-    color: #ef4444 !important;
+    opacity: 0.85;
   }
 
   /* ── Botón Recientes — pill como los chips del centro ── */
@@ -478,18 +418,12 @@
     min-width: 32px;
     padding: 0 10px;
     border-radius: 999px !important;
-    border: 1px solid transparent !important;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.45) 0%,
-        rgba(255, 255, 255, 0.08) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.03) 100%
-      ) padding-box !important;
+    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.03) 100%
+    ) padding-box !important;
     box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.06),
       0 1px 0 0.5px rgba(255, 255, 255, 0.5) inset,
@@ -516,17 +450,11 @@
   }
 
   .dark .topbar-action-recents {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.14) 0%,
-        rgba(255, 255, 255, 0.04) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.05) 0%,
-        rgba(255, 255, 255, 0.01) 100%
-      ) padding-box !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    ) padding-box !important;
     box-shadow:
       0 2px 10px rgba(0, 0, 0, 0.25),
       0 1px 0 0.5px rgba(255, 255, 255, 0.15) inset,
@@ -535,17 +463,11 @@
 
   .topbar-action-recents:hover {
     --dock-scale: 1.08;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.6) 0%,
-        rgba(255, 255, 255, 0.12) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.15) 0%,
-        rgba(255, 255, 255, 0.04) 100%
-      ) padding-box !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.04) 100%
+    ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.1),
       0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
@@ -553,17 +475,11 @@
   }
 
   .dark .topbar-action-recents:hover {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.2) 0%,
-        rgba(255, 255, 255, 0.06) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) padding-box !important;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.35),
       0 1px 0 0.5px rgba(255, 255, 255, 0.2) inset,
@@ -706,18 +622,12 @@
     width: 34px;
     height: 34px;
     border-radius: 999px;
-    border: 1px solid transparent;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.35) 0%,
-        rgba(255, 255, 255, 0.06) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) padding-box;
+    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) padding-box;
     box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.06),
       0 1px 0 0.5px rgba(255, 255, 255, 0.45) inset,
@@ -732,17 +642,11 @@
   }
 
   .topbar-hamburger:hover {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.5) 0%,
-        rgba(255, 255, 255, 0.1) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.12) 0%,
-        rgba(255, 255, 255, 0.03) 100%
-      ) padding-box;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.03) 100%
+    ) padding-box;
     transform: translateY(-2px) scale(1.06);
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.1),
@@ -751,17 +655,11 @@
   }
 
   .dark .topbar-hamburger {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.12) 0%,
-        rgba(255, 255, 255, 0.03) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.04) 0%,
-        rgba(255, 255, 255, 0.01) 100%
-      ) padding-box;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    ) padding-box;
     box-shadow:
       0 2px 10px rgba(0, 0, 0, 0.25),
       0 1px 0 0.5px rgba(255, 255, 255, 0.12) inset,
@@ -769,17 +667,11 @@
   }
 
   .dark .topbar-hamburger:hover {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.18) 0%,
-        rgba(255, 255, 255, 0.05) 100%
-      ) border-box,
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.06) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ) padding-box;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ) padding-box;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.35),
       0 1px 0 0.5px rgba(255, 255, 255, 0.18) inset,

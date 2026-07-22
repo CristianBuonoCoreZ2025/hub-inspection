@@ -9,18 +9,20 @@ import {
   Sun,
   Moon,
   Monitor,
-  Palette,
   Menu,
   X,
-  History,
-  Power,
 } from "lucide-react";
 import {
   LiquidacionIcon,
   InspeccionIcon,
   DespachoIcon,
   AuditoriaIcon,
-} from "@/components/icons/claim-toolbar-icons";
+  RecientesIcon,
+  SkinIcon,
+  LogoutIcon,
+  ThemeSunIcon,
+  ThemeMoonIcon,
+} from "@/components/icons/topbar-icons";
 import { useSyncExternalStore } from "react";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -85,7 +87,7 @@ function ThemeToggleCompact() {
   const mounted = useMounted();
 
   const currentIcon =
-    mounted && theme === "dark" ? <Moon /> : <Sun />;
+    mounted && theme === "dark" ? <ThemeMoonIcon size={18} /> : <ThemeSunIcon size={18} />;
 
   const currentValue = mounted ? theme ?? "system" : "system";
 
@@ -131,7 +133,7 @@ function SkinToggleCompact() {
       <DropdownMenuTrigger
         render={
           <button type="button" className="topbar-action dock-item" title="Color">
-            <Palette />
+            <SkinIcon size={18} />
           </button>
         }
       />
@@ -170,7 +172,7 @@ function RecentClaimsButton() {
         render={
           <button type="button" className="topbar-chip topbar-action-recents dock-item" title="Siniestros recientes">
             <span className="topbar-chip-icon">
-              <History />
+              <RecientesIcon size={18} />
             </span>
             {count > 0 && <span className="topbar-chip-count">{count}</span>}
           </button>
@@ -356,8 +358,9 @@ export function TopBar() {
             className="topbar-action topbar-action-logout dock-item"
             title="Salir"
           >
-            {isLoading ? <Loader2 className="animate-spin" /> : <Power />}
+            {isLoading ? <Loader2 className="animate-spin" /> : <LogoutIcon size={18} />}
           </button>
+          {/* placeholder for help below */}
         </div>
       </div>
     </div>

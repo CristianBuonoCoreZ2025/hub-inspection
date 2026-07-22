@@ -1,0 +1,17 @@
+feat: sistema de reglas condicionales, dependencias condicionales CIN, refresh de snapshots y rediseño del CoordScheduler
+
+- Reglas genericas visibilityRule/requiredRule en ScreenField (case-insensitive)
+- Editor UI para reglas con dropdowns para campos con opciones canonicas
+- Sistema de dependencias condicionales en action_template_dependencies (migracion 195)
+- CIN → INS solo se crea si coord_result=coordinada (fallida/desistida no crean INS)
+- Sistema refresh_pristine_snapshots para actualizar snapshots sin perder datos
+- Rediseño CoordScheduler: control doble (DatePicker + grid 12 cols de slots a 24px)
+- DatePicker (liquid-date-picker) reemplaza inputs nativos type=date en todos los DynamicScreen
+- coord_comentarios siempre visible (sin visibilityRule)
+- Fix bugs CIN: inspector/tipo busqueda por tipo de campo, no por ID fijo
+- Niveles de revision muestran campos obligatorios faltantes
+- Migraciones 181-195: nav_menu, screen_snapshot, refresh_pristine, CIN branching
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

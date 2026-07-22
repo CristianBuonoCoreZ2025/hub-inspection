@@ -138,33 +138,21 @@ export default function CompaniesPage() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-indigo-500 text-white shadow-sm">
- <Building2 className="h-5 w-5" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-blue-500 to-indigo-500">
+ <Building2 />
  </div>
- <div>
- <h1 className="app-page-title">Empresas</h1>
- <p className="app-page-lead">Gestión de empresas del sistema.</p>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Empresas</h1>
  </div>
  </div>
- <div className="flex items-center gap-2">
+ <div className="app-grid-header-right">
  {canCreate("companies") && (
  <Button onClick={() => { setEditingId(null); form.reset(); setOpen(true); }} className="pg-btn-platinum">
  Nueva
  </Button>
  )}
- </div>
- </div>
- </div>
-
- <div className="app-toolbar">
- <div className="flex items-center gap-2">
- <div className="relative w-[160px] shrink-0">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
- <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
- </div>
  </div>
  </div>
 
@@ -270,7 +258,7 @@ export default function CompaniesPage() {
  ...(countries?.map((c: Country) => ({ value: c.id, label: c.name })) || []),
  ]}
  >
- <SelectTrigger className="app-input h-[40px]">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Selecciona un país" />
  </SelectTrigger>
  <SelectContent>
@@ -334,7 +322,15 @@ export default function CompaniesPage() {
  </Dialog>
 
  <div className="app-panel">
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
+ <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
+ </div>
+ </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ </div>
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
@@ -413,7 +409,7 @@ export default function CompaniesPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("companies") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
  setEditingId(company.id);
  form.reset({
  name: company.name, slug: company.slug, countryId: company.country_id || "",

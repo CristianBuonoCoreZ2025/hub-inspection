@@ -81,24 +81,34 @@ export default function TiposGestionPage() {
 
  return (
  <div className="app-page">
- <header className="app-page-header">
- <h1 className="app-page-title">Tipos de Gestión</h1>
- <p className="app-page-lead">Categorías de acciones: Ajuste, Inspección, Impugnación, Cierre, Comunicaciones, Reapertura.</p>
- </header>
-
- <div className="app-toolbar">
- <div className="flex items-center gap-3">
- <Search className="h-4 w-4 text-muted-foreground" />
- <Input placeholder="Buscar tipo..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-full max-w-sm" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-[#0095DA] to-[#005BBB]">
+ <ListChecks />
  </div>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Tipos de Gestión</h1>
+ </div>
+ </div>
+ <div className="app-grid-header-right">
  {canCreate("catalogos") && (
- <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="pg-btn-platinum ml-auto">
+ <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="pg-btn-platinum">
  Nuevo
  </Button>
  )}
  </div>
+ </div>
 
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
+ <Input placeholder="Buscar tipo..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
+ </div>
+ </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+ </div>
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead><tr><th className="w-10"></th><th>Código</th><th>Nombre</th><th>Descripción</th><th className="w-[80px]"></th></tr></thead>
@@ -114,7 +124,7 @@ export default function TiposGestionPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(t.id); setFormData({ code: t.code, name: t.name, description: t.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => { setEditingId(t.id); setFormData({ code: t.code, name: t.name, description: t.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canDelete("catalogos") && (
  <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este tipo?")) deleteMutation.mutate(t.id); }}><Ban className="h-4 w-4" /></Button>
@@ -127,6 +137,7 @@ export default function TiposGestionPage() {
  </table>
  </div>
  <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ </div>
 
  <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
  <DialogContent className="modal-md" showCloseButton={false}>

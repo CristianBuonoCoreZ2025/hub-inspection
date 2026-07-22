@@ -1,10 +1,11 @@
 "use client";
 
-import { Database } from "lucide-react";
+import { Database, Layers } from "lucide-react";
 
 import type { ScreenField, DateValidation } from "./types";
 import {
   ACTION_ENTITIES,
+  CARD_FIELD_MAP,
 } from "./types";
 
 interface FieldPreviewProps {
@@ -42,6 +43,16 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
     <div className="flex items-center gap-1.5 mb-1.5">
       <span className="text-[11px] font-medium">{field.label}</span>
       {field.required && <span className="text-red-500 text-[10px]">*</span>}
+      {field.requiredRule && (
+        <span title={`Obligatorio cuando ${field.requiredRule.field} ${field.requiredRule.operator} ${Array.isArray(field.requiredRule.value) ? field.requiredRule.value.join(",") : field.requiredRule.value}`}>
+          <span className="text-[9px] rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1 py-0">⚠ req</span>
+        </span>
+      )}
+      {field.visibilityRule && (
+        <span title={`Visible cuando ${field.visibilityRule.field} ${field.visibilityRule.operator} ${Array.isArray(field.visibilityRule.value) ? field.visibilityRule.value.join(",") : field.visibilityRule.value}`}>
+          <span className="text-[9px] rounded bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-1 py-0">👁 if</span>
+        </span>
+      )}
       {badge}
     </div>
   );
@@ -107,6 +118,31 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
 
   // Entidad simple
   if (isEntity) {
+    // Cards agrupadas del siniestro — mostrar campos internos
+    const cardFields = CARD_FIELD_MAP[field.type];
+    if (cardFields) {
+      return (
+        <div>
+          {label}
+          <div className="rounded-md border border-violet-300/50 dark:border-violet-700/40 bg-violet-50/40 dark:bg-violet-900/10 p-2">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Layers className="h-3 w-3 text-violet-600 dark:text-violet-400" />
+              <span className="text-[9px] font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-wide">
+                Card agrupada · {cardFields.length} campos
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {cardFields.map((cf) => (
+                <span key={cf.code} className="text-[9px] rounded bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/50">
+                  {cf.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div>
         {label}
@@ -244,7 +280,99 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
     );
   }
 
-  return null;
+  // Campos de coordinación (coord_*) — preview genérico según subtipo
+  if (field.type === "coord_fecha" || field.type === "coord_fecha_recoord") {
+    return (
+      <div>
+        {label}
+        <div className="flex flex-col sm:flex-row gap-1.5">
+          {/* Input date pequeño */}
+          <div className="flex flex-col gap-0.5 sm:w-[80px] shrink-0">
+            <div className="h-5 rounded border border-border bg-background px-1 text-[9px] text-muted-foreground flex items-center">
+              📅 {new Date().toISOString().split("T")[0]}
+            </div>
+            <p className="text-[7px] text-muted-foreground capitalize leading-tight">
+              {new Date().toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}
+            </p>
+          </div>
+          {/* Slots grid */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-[8px] font-medium text-foreground/80">Horarios</span>
+              <div className="flex items-center gap-1.5 text-[6px] text-muted-foreground ml-auto">
+                <span className="flex items-center gap-0.5"><span className="w-1 h-1 rounded bg-emerald-500/40" /> 09-19</span>
+                <span className="flex items-center gap-0.5"><span className="w-1 h-1 rounded bg-muted" /> Ocup</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-5 gap-0.5">
+              {["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30"].map((t, i) => (
+                <div
+                  key={t}
+                  className={`h-4 rounded text-[7px] font-medium flex items-center justify-center ${
+                    i === 6
+                      ? "ring-1 ring-primary bg-primary/5 text-primary"
+                      : i < 2
+                      ? "bg-muted/40 text-muted-foreground/40 line-through"
+                      : "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
+                  }`}
+                >
+                  {t}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <p className="text-[9px] text-muted-foreground mt-0.5">
+          {field.type === "coord_fecha_recoord" ? "Fecha tentativa de próxima coordinación" : "Input date + slots de disponibilidad"}
+        </p>
+      </div>
+    );
+  }
+
+  if (field.type.startsWith("coord_")) {
+    const coordPreview = getCoordFieldPreview(field.type);
+    return (
+      <div>
+        {label}
+        <div className={inputClass + " flex items-center justify-between"}>
+          <span>{coordPreview.text}</span>
+          <span className="text-muted-foreground">{coordPreview.icon}</span>
+        </div>
+        <p className="text-[9px] text-muted-foreground mt-0.5">{coordPreview.hint}</p>
+      </div>
+    );
+  }
+
+  // Fallback: cualquier campo propio no reconocido
+  return (
+    <div>
+      {label}
+      <div className={inputClass}>...</div>
+    </div>
+  );
+}
+
+function getCoordFieldPreview(type: string): { text: string; icon: string; hint: string } {
+  switch (type) {
+    case "coord_result":
+      return { text: "Seleccionar resultado...", icon: "▾", hint: "Coordinada / Fallida / Desistida" };
+    case "coord_inspection_type":
+      return { text: "Seleccionar...", icon: "▼", hint: "Presencial / Remota" };
+    case "coord_inspector":
+      return { text: "Seleccionar inspector...", icon: "👤", hint: "Lista de inspectores" };
+    case "coord_ubicacion":
+      return { text: "Aclaración de dirección...", icon: "📍", hint: "Detalle adicional" };
+    case "coord_contacto":
+      return { text: "Contacto alternativo...", icon: "📞", hint: "Opcional" };
+    case "coord_comentarios":
+      return { text: "Comentarios...", icon: "¶", hint: "Notas finales" };
+    case "coord_motivo":
+      return { text: "Motivo de falla o desistimiento...", icon: "✎", hint: "Solo si Fallida/Desistida" };
+    case "coord_agendar":
+      return { text: "Estado de inspección", icon: "✓", hint: "Panel informativo (se crea al emitir)" };
+    default:
+      return { text: "...", icon: "□", hint: "Campo de coordinación" };
+  }
 }
 
 function getComplexEntityPreview(type: string): string {
@@ -263,6 +391,59 @@ function getComplexEntityPreview(type: string): string {
       return "📄 Seleccionar documentos a solicitar según línea de negocio";
     case "claim_document_receipt":
       return "✓ Controlar recepción de documentos solicitados";
+    case "inspection_session_view":
+      return "� Ver estado y resultados de la inspección";
+    case "claim_insured_card":
+      return "👤 RUT | Tipo | Nombre | Apellido | Email | Teléfono | Dirección | País | Región | Ciudad | Comuna";
+    case "claim_address_card":
+      return "📍 Dirección | Tipo | País | Región | Ciudad | Comuna (3 cols, 2 filas)";
+    case "claim_contact_card":
+      return "📞 Nombre | Apellido | Email | Teléfono (4 cols, 1 fila)";
+    // ═══ Campos individuales del Asegurado (tras desagrupar) ═══
+    case "insured_rut":
+      return "RUT del asegurado";
+    case "insured_person_type":
+      return "Tipo de persona (Natural/Jurídica)";
+    case "insured_first_name":
+      return "Nombre del asegurado";
+    case "insured_last_name":
+      return "Apellido del asegurado";
+    case "insured_email":
+      return "Email del asegurado";
+    case "insured_phone":
+      return "Teléfono del asegurado";
+    case "insured_address":
+      return "Dirección del asegurado";
+    case "insured_country":
+      return "País del asegurado";
+    case "insured_region":
+      return "Región del asegurado";
+    case "insured_city":
+      return "Ciudad del asegurado";
+    case "insured_commune":
+      return "Comuna del asegurado";
+    // ═══ Campos individuales de la Dirección del Siniestro (tras desagrupar) ═══
+    case "claim_address":
+      return "Dirección del siniestro";
+    case "claim_destination_housing":
+      return "Tipo de vivienda del siniestro";
+    case "claim_country":
+      return "País del siniestro";
+    case "claim_region":
+      return "Región del siniestro";
+    case "claim_city":
+      return "Ciudad del siniestro";
+    case "claim_commune":
+      return "Comuna del siniestro";
+    // ═══ Campos individuales de la Persona de Contacto (tras desagrupar) ═══
+    case "contact_first_name":
+      return "Nombre del contacto";
+    case "contact_last_name":
+      return "Apellido del contacto";
+    case "contact_email":
+      return "Email del contacto";
+    case "contact_phone":
+      return "Teléfono del contacto";
     case "claim_participants":
       return "👥 Nombre | Rol | Contacto";
     case "claim_history":

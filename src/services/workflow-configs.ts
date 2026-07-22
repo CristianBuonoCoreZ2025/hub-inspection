@@ -454,9 +454,9 @@ export async function getAvailableLinesForStatusCountryEvent(claimStatusId: stri
 
 export const INTRINSIC_DEPENDENCIES: Record<string, string> = {
   RES: "COB",
-  PCA: "RES",
-  RTA: "NSA",
-  INS: "COI",
+  AJU: "RES",
+  RTA: "SOL",
+  INS: "CIN",
 };
 
 export function getIntrinsicDependency(templateCode: string): string | null {

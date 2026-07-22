@@ -177,7 +177,14 @@ export default function CargaSiniestrosPage() {
   return (
     <div className="app-page">
       <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Carga Masiva de Siniestros</h1>
+        <div className="app-grid-header-left">
+          <div className="app-grid-icon bg-linear-to-br from-blue-500 to-cyan-500">
+            <FileSpreadsheet />
+          </div>
+          <div className="app-grid-title-row">
+            <h1 className="app-page-title shrink-0">Carga Masiva de Siniestros</h1>
+          </div>
+        </div>
       </div>
 
       {/* Drop Zone */}

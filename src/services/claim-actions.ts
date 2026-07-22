@@ -17,7 +17,7 @@ const ACTION_TEMPLATE_SELECT =
   `id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, reviewer_roles, approver_roles, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, issuer_roles, default_issuer_role, default_reviewer_role, default_approver_role, code, is_dispatch_applicable, company_id, event_id, sort_order, created_at, updated_at, action_feature:action_features!action_template_action_features_id_fkey(${ACTION_FEATURE_SELECT}), action_type:lookup_catalog!action_template_action_type_id_fkey(id, category, code, name), claim_statuses:action_template_claim_status!action_template_claim_status_action_template_id_fkey(id, claim_status_id, is_active, claim_status:lookup_catalog!action_template_claim_status_claim_status_id_fkey(id, category, code, name))`;
 
 const CLAIM_ACTION_SELECT =
-  `id, claim_id, action_type_id, action_features_id, action_template_id, line_business_id, name, description, code, action_data, action_status_id, created_by, created_on, issued_by, issued_on, issuer_id, issue_rejected_by, issue_rejected_on, issuer_rejection_comment, reviewed_by, reviewed_on, reviewer_id, review_rejected_by, review_rejected_on, reviewer_rejection_comment, approved_by, approved_on, approver_id, approve_rejected_by, approve_rejected_on, approver_rejection_comment, dispatched_by, dispatched_on, dispatcher_id, dispatch_rejected_by, dispatch_rejected_on, dispatcher_rejection_comment, expected_date, is_blocker, is_active, is_automatic, origin, updated_on, updated_by, action_feature:action_features!claim_actions_action_features_id_fkey(${ACTION_FEATURE_SELECT}), action_type:lookup_catalog!claim_actions_action_type_id_fkey(id, category, code, name), action_status:lookup_catalog!claim_actions_action_status_id_fkey(id, category, code, name), action_template:action_template(id, name, code, issuer_roles, reviewer_roles, approver_roles, days_to_issue, days_to_review, days_to_approve), issuer:profiles!claim_actions_issuer_id_fkey(id, full_name, email), reviewer:profiles!claim_actions_reviewer_id_fkey(id, full_name, email), approver:profiles!claim_actions_approver_id_fkey(id, full_name, email)`;
+  `id, claim_id, action_type_id, action_features_id, action_template_id, line_business_id, name, description, code, action_data, action_status_id, created_by, created_on, issued_by, issued_on, issuer_id, issue_rejected_by, issue_rejected_on, issuer_rejection_comment, reviewed_by, reviewed_on, reviewer_id, review_rejected_by, review_rejected_on, reviewer_rejection_comment, approved_by, approved_on, approver_id, approve_rejected_by, approve_rejected_on, approver_rejection_comment, dispatched_by, dispatched_on, dispatcher_id, dispatch_rejected_by, dispatch_rejected_on, dispatcher_rejection_comment, expected_date, is_blocker, is_active, is_automatic, origin, updated_on, updated_by, screen_snapshot, screen_snapshot_at, action_feature:action_features!claim_actions_action_features_id_fkey(${ACTION_FEATURE_SELECT}), action_type:lookup_catalog!claim_actions_action_type_id_fkey(id, category, code, name), action_status:lookup_catalog!claim_actions_action_status_id_fkey(id, category, code, name), action_template:action_template(id, name, code, issuer_roles, reviewer_roles, approver_roles, days_to_issue, days_to_review, days_to_approve), issuer:profiles!claim_actions_issuer_id_fkey(id, full_name, email), reviewer:profiles!claim_actions_reviewer_id_fkey(id, full_name, email), approver:profiles!claim_actions_approver_id_fkey(id, full_name, email)`;
 
 /** Obtiene el nombre completo de un perfil por ID (para logging de historial) */
 export async function getProfileName(userId: string): Promise<string | null> {
@@ -31,7 +31,34 @@ export async function getProfileName(userId: string): Promise<string | null> {
 
 // ═══ Obtener plantillas disponibles según el estado del siniestro ═══
 
-export async function getActionTemplatesByClaimStatus(claimStatusId: string, businessLineId?: string): Promise<ActionTemplate[]> {
+export interface TemplateMatchContext {
+  claimStatusId: string;
+  /** Si se omite (undefined), no se filtra por esta dimensión. Si es null, solo pasa tpl con line_business_id null. */
+  businessLineId?: string | null;
+  /** Si se omite (undefined), no se filtra por esta dimensión. Si es null, solo pasa tpl con event_id null. */
+  eventId?: string | null;
+  /** Si se omite (undefined), no se filtra por esta dimensión. Si es null, solo pasa tpl con company_id null. */
+  insuranceCompanyId?: string | null;
+}
+
+/**
+ * Obtiene las plantillas de gestión aplicables a un siniestro según su estado.
+ *
+ * Lógica de matching (de lo más particular a lo más general):
+ * - Una plantilla tiene 3 dimensiones opcionales: evento, línea de negocio, compañía.
+ * - "Abierta/libre" = null (sin restricción en esa dimensión).
+ * - Una dimensión del contexto que sea `undefined` → no se filtra por ella
+ *   (útil para el editor de workflows, que no tiene compañía).
+ * - Una plantilla se ofrece si TODAS sus dimensiones restrictivas coinciden con el claim:
+ *     • si tpl.event_id != null  → debe == ctx.eventId
+ *     • si tpl.line_business_id != null → debe == ctx.businessLineId
+ *     • si tpl.company_id != null → debe == ctx.insuranceCompanyId
+ *   Las dimensiones null (abiertas) del template siempre pasan.
+ * - Las plantillas con restricciones que NO cuadran con el claim se DESCARTAN.
+ * - Orden: más específica primero (más dimensiones restrictivas = mayor prioridad).
+ */
+export async function getActionTemplatesByClaimStatus(ctx: TemplateMatchContext): Promise<ActionTemplate[]> {
+  const { claimStatusId, businessLineId, eventId, insuranceCompanyId } = ctx;
   const supabase = getSupabaseClient();
 
   // 1. Obtener template_ids para este estado
@@ -45,23 +72,48 @@ export async function getActionTemplatesByClaimStatus(claimStatusId: string, bus
   const templateIds = ((atcsRows as { action_template_id: string }[]) || []).map(r => r.action_template_id).filter(Boolean);
   if (templateIds.length === 0) return [];
 
-  // 2. Obtener templates activos con toda su info
-  let query = supabase
+  // 2. Obtener TODOS los templates activos para este estado (sin filtrar por línea en BD)
+  const { data, error } = await supabase
     .from("action_template")
     .select(ACTION_TEMPLATE_SELECT)
     .in("id", templateIds)
     .eq("is_active", true);
 
-  if (businessLineId) {
-    query = query.eq("line_business_id", businessLineId);
-  }
-
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  const rows = (data as ActionTemplate[]) ?? [];
+  const rows = ((data as ActionTemplate[]) ?? []);
+
+  // 3. Filtrar por matching de dimensiones.
+  //    - Dimensión undefined en ctx → no se filtra (pasa todo).
+  //    - Dimensión proporcionada (incluso null) → tpl.dimensión debe ser null OR == ctx.
+  const matches = rows.filter((tpl) => {
+    if (businessLineId !== undefined && tpl.line_business_id !== null && tpl.line_business_id !== businessLineId) return false;
+    if (eventId !== undefined && tpl.event_id !== null && tpl.event_id !== eventId) return false;
+    if (insuranceCompanyId !== undefined && tpl.company_id !== null && tpl.company_id !== insuranceCompanyId) return false;
+    return true;
+  });
+
+  // 4. Ordenar por especificidad (más restricciones = más particular = primero)
+  //    Peso: línea (4) > evento (2) > compañía (1) — la línea es la más discriminante.
+  //    Empate: por sort_order y luego name.
+  const specificity = (tpl: ActionTemplate): number => {
+    let score = 0;
+    if (tpl.line_business_id) score += 4;
+    if (tpl.event_id) score += 2;
+    if (tpl.company_id) score += 1;
+    return score;
+  };
+
+  matches.sort((a, b) => {
+    const sa = specificity(a);
+    const sb = specificity(b);
+    if (sa !== sb) return sb - sa; // mayor especificidad primero
+    if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+    return a.name.localeCompare(b.name);
+  });
+
   // Filtrar characteristics activas
-  return rows.map((tpl) => {
+  return matches.map((tpl) => {
     if (tpl.action_feature?.characteristics) {
       tpl.action_feature.characteristics = tpl.action_feature.characteristics.filter((c) => c.is_active);
     }
@@ -69,14 +121,17 @@ export async function getActionTemplatesByClaimStatus(claimStatusId: string, bus
   });
 }
 
-// ═══ Obtener todas las plantillas activas ═══
+// ═══ Obtener todas las plantillas (activas e inactivas para grilla de configuración) ═══
 
-export async function getActionTemplates(): Promise<ActionTemplate[]> {
-  const rows = await fetchAll<ActionTemplate>("action_template", {
+export async function getActionTemplates(includeInactive = false): Promise<ActionTemplate[]> {
+  const options: Parameters<typeof fetchAll>[1] = {
     select: ACTION_TEMPLATE_SELECT,
-    eq: { is_active: true },
     order: { column: "name", ascending: true },
-  });
+  };
+  if (!includeInactive) {
+    options.eq = { is_active: true };
+  }
+  const rows = await fetchAll<ActionTemplate>("action_template", options);
   // Filtrar characteristics activas (el filtro original era where: { is_active: { _eq: true } })
   return rows.map((tpl) => {
     if (tpl.action_feature?.characteristics) {
@@ -108,11 +163,18 @@ export async function getActionFeatures(): Promise<ActionFeature[]> {
 // use includeRejected=true para incluir las rechazadas
 
 export async function getClaimActions(claimId: string, includeRejected = false): Promise<ClaimAction[]> {
-  const all = await fetchAll<ClaimAction>("claim_actions", {
+  // Si includeRejected=true, traer también las inactivas (deshabilitadas) y rechazadas.
+  // Si includeRejected=false, solo activas y no rechazadas.
+  const options: Parameters<typeof fetchAll>[1] = {
     select: CLAIM_ACTION_SELECT,
-    eq: { claim_id: claimId, is_active: true },
     order: { column: "created_on", ascending: false },
-  });
+  };
+  if (includeRejected) {
+    options.eq = { claim_id: claimId };
+  } else {
+    options.eq = { claim_id: claimId, is_active: true };
+  }
+  const all = await fetchAll<ClaimAction>("claim_actions", options);
 
   // Filtrar rechazadas desde emisión si no se piden explícitamente
   if (!includeRejected) {
@@ -228,8 +290,8 @@ async function findPendingGestion(
 // Código de template → { código prerequisito, requiereCerrada, mensaje }
 const CHAIN_DEPENDENCIES: Record<string, { prereqCode: string; requireClosed: boolean; message: string }> = {
   "RES": { prereqCode: "COB", requireClosed: true, message: "No se puede crear una Reserva sin un Ingreso de Coberturas cerrado." },
-  "PCA": { prereqCode: "RES", requireClosed: true, message: "No se puede crear un Ajuste sin una Reserva cerrada." },
-  "RTA": { prereqCode: "NSA", requireClosed: true, message: "No se puede crear una Recepción Total de Antecedentes sin una Solicitud de Antecedentes cerrada." },
+  "AJU": { prereqCode: "RES", requireClosed: true, message: "No se puede crear un Ajuste sin una Reserva cerrada." },
+  "RTA": { prereqCode: "SOL", requireClosed: true, message: "No se puede crear una Recepción Total de Antecedentes sin una Solicitud de Antecedentes cerrada." },
 };
 
 // ═══ Crear una acción en un siniestro ═══
@@ -342,6 +404,24 @@ export async function createClaimAction(input: {
     autoApproverId = autoAssigned.approver;
   }
 
+  // ── Snapshot del form_schema del gestion_screen asociado al action_feature ──
+  // Congela la estructura de la pantalla al momento de crear la acción, para
+  // que la gestión siga funcionando aunque alguien después edite la pantalla.
+  let screenSnapshot: Record<string, unknown> | null = null;
+  try {
+    const feature = await fetchById<{ screen_id: string | null; screen?: { form_schema: Record<string, unknown> | null } | null }>(
+      "action_features",
+      input.action_features_id,
+      "id, screen_id, screen:gestion_screens!action_features_screen_id_fkey(id, code, name, form_schema)"
+    );
+    if (feature?.screen?.form_schema) {
+      screenSnapshot = feature.screen.form_schema;
+    }
+  } catch (err) {
+    // Si falla la obtención del snapshot, no bloqueamos la creación de la acción.
+    console.warn("[createClaimAction] No se pudo obtener screen_snapshot:", err);
+  }
+
   const insertData = {
     claim_id: input.claim_id,
     action_template_id: input.action_template_id || null,
@@ -360,6 +440,8 @@ export async function createClaimAction(input: {
     approver_id: autoApproverId,
     expected_date: input.expected_date || null,
     is_automatic: input.is_automatic ?? false,
+    screen_snapshot: screenSnapshot,
+    screen_snapshot_at: screenSnapshot ? new Date().toISOString() : null,
   };
 
   const result = await insertRow<ClaimAction>("claim_actions", insertData, CLAIM_ACTION_SELECT);
@@ -483,7 +565,7 @@ export async function issueClaimAction(actionId: string, userId?: string, action
   }
 
   // ── Validar que el COB tenga al menos 1 cobertura ──
-  const action = await fetchById<ClaimAction>("claim_actions", actionId, "id, action_template_id, claim_id, action_data, action_template:action_template!claim_actions_action_template_id_fkey(code)");
+  const action = await fetchById<ClaimAction>("claim_actions", actionId, "id, action_template_id, claim_id, action_data, screen_snapshot, action_template:action_template!claim_actions_action_template_id_fkey(code)");
   if (action?.action_template?.code === "COB") {
     const coverages = await getClaimCoveragesByAction(action.claim_id!, actionId);
     if (!coverages || coverages.length === 0) {
@@ -491,22 +573,48 @@ export async function issueClaimAction(actionId: string, userId?: string, action
     }
   }
 
-  // ── Validar campos obligatorios para COI (Coordinación de Inspección) ──
-  if (action?.action_template?.code === "COI") {
+  // ── Validar campos obligatorios (genérico, aplica a TODAS las gestiones) ──
+  // Usa los campos marcados como required: true (o con requiredRule) en el
+  // screen_snapshot de la gestión. Respeta visibilityRule y requiredRule.
+  if (action?.screen_snapshot) {
     const data = actionData || action.action_data || {};
     const errors: string[] = [];
 
-    if (!data.coord_inspection_type) {
-      errors.push("Tipo de inspección");
-    }
-    if (!data.coord_fecha) {
-      errors.push("Fecha y hora");
-    }
-    if (!data.coord_contacto) {
-      errors.push("Contacto");
-    }
-    if (!data.coord_inspector) {
-      errors.push("Inspector asignado");
+    type SnapshotField = {
+      id: string;
+      type: string;
+      category: string;
+      required?: boolean;
+      label?: string;
+      visibilityRule?: { field: string; operator: "equals" | "not_equals" | "in" | "not_in"; value: string | string[] };
+      requiredRule?: { field: string; operator: "equals" | "not_equals" | "in" | "not_in"; value: string | string[] };
+    };
+    const snapshotFields = (action.screen_snapshot as { fields?: SnapshotField[] } | null)?.fields || [];
+    const ownFields = snapshotFields.filter((f) => f.category === "own");
+
+    const evalRule = (rule: { field: string; operator: string; value: string | string[] }, values: Record<string, unknown>): boolean => {
+      const ctrlValue = String(values[rule.field] ?? "").toLowerCase();
+      const ruleValue = rule.value;
+      switch (rule.operator) {
+        case "equals": return ctrlValue === String(ruleValue).toLowerCase();
+        case "not_equals": return ctrlValue !== String(ruleValue).toLowerCase();
+        case "in": return Array.isArray(ruleValue) && ruleValue.some(v => ctrlValue === String(v).toLowerCase());
+        case "not_in": return Array.isArray(ruleValue) && !ruleValue.some(v => ctrlValue === String(v).toLowerCase());
+        default: return true;
+      }
+    };
+
+    for (const f of ownFields) {
+      // Si el campo no es visible según visibilityRule, no se valida
+      if (f.visibilityRule && !evalRule(f.visibilityRule, data)) continue;
+      // Determinar si es obligatorio (requiredRule tiene prioridad sobre required)
+      const isRequired = f.requiredRule ? evalRule(f.requiredRule, data) : !!f.required;
+      if (!isRequired) continue;
+
+      const v = data[f.id] ?? data[f.type];
+      if (v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0)) {
+        errors.push(f.label || f.type);
+      }
     }
 
     if (errors.length > 0) {
@@ -533,11 +641,15 @@ export async function issueClaimAction(actionId: string, userId?: string, action
     }
   }
 
+  const now = new Date();
+  const issuedOnIso = now.toISOString();
+  const issuedOnDate = issuedOnIso.slice(0, 10); // yyyy-MM-dd
+
   const setFields: Record<string, unknown> = {
     action_status_id: issuedStatusId,
-    issued_on: new Date().toISOString(),
+    issued_on: issuedOnIso,
     issued_by: userId,
-    updated_on: new Date().toISOString(),
+    updated_on: issuedOnIso,
     updated_by: userId,
   };
   // Solo asignar issuer_id si el usuario existe en profiles
@@ -545,7 +657,8 @@ export async function issueClaimAction(actionId: string, userId?: string, action
     setFields.issuer_id = validUserId;
   }
   if (actionData) {
-    setFields.action_data = actionData;
+    // Auto-completar inf_fecha_entrega con la fecha de emisión real
+    setFields.action_data = { ...actionData, inf_fecha_entrega: issuedOnDate };
   }
 
   const result = await updateRow<ClaimAction>("claim_actions", actionId, setFields, CLAIM_ACTION_SELECT);
@@ -560,6 +673,63 @@ export async function issueClaimAction(actionId: string, userId?: string, action
     performed_by_name: userId ? await getProfileName(userId) : null,
     level: "issue",
   });
+
+  // ── Si es CIN (Coordinación de Inspección), ramificar según coord_result ──
+  // coordinada → crea inspection_session
+  // fallida    → crea una nueva gestión CIN para re-coordinar (con fecha tentativa)
+  // desistida  → no hace nada (rompe el flujo)
+  if (action?.action_template?.code === "CIN") {
+    const data = actionData || action.action_data || {};
+    const coordResult = String(data.coord_result || "coordinada").toLowerCase(); // default para gestiones viejas
+
+    if (coordResult === "coordinada") {
+      const fechaStr = String(data.coord_fecha || "");
+      if (fechaStr) {
+        try {
+          const scheduledAt = new Date(fechaStr).toISOString();
+          const { createInspectionSession } = await import("@/services/inspections");
+          await createInspectionSession(action.claim_id!, {
+            inspectionType: String(data.coord_inspection_type || "onsite") as "onsite" | "remote",
+            scheduledAt,
+            inspectorId: String(data.coord_inspector || "") || undefined,
+            schedulingNotes: [
+              data.coord_ubicacion && `Aclaración dirección: ${data.coord_ubicacion}`,
+              data.coord_contacto && `Otros contactos: ${data.coord_contacto}`,
+              data.coord_comentarios && `Comentarios: ${data.coord_comentarios}`,
+            ].filter(Boolean).join("\n\n") || undefined,
+            actionTemplateId: action.action_template_id || undefined,
+          });
+        } catch (err) {
+          console.warn("[issueClaimAction] No se pudo crear inspection_session:", err);
+        }
+      }
+    } else if (coordResult === "fallida") {
+      // Crear una nueva gestión CIN para re-coordinar
+      try {
+        const fechaRecoord = String(data.coord_fecha_recoord || "");
+        const expectedDate = fechaRecoord ? new Date(fechaRecoord).toISOString() : undefined;
+        // Obtener action_features_id del template original
+        const tpl = await fetchById<{ action_features_id: string }>(
+          "action_template",
+          action.action_template_id || "",
+          "action_features_id"
+        );
+        if (tpl?.action_features_id) {
+          await createClaimAction({
+            claim_id: action.claim_id!,
+            action_template_id: action.action_template_id || undefined,
+            action_features_id: tpl.action_features_id,
+            name: "Coordinación de Inspección (re-coordinación)",
+            description: `Re-coordinación generada por intento fallido. Motivo: ${data.coord_motivo || "no especificado"}`,
+            expected_date: expectedDate,
+          });
+        }
+      } catch (err) {
+        console.warn("[issueClaimAction] No se pudo crear re-coordinación CIN:", err);
+      }
+    }
+    // desistida: no hace nada
+  }
 
   // ── Generar y subir documento desde template (fire-and-forget) ──
   // Si la gestión tiene un document_template asociado, se renderiza el .docx

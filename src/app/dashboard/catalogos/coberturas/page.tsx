@@ -236,18 +236,16 @@ export default function CoberturasPage() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-cyan-500 text-white shadow-sm">
- <ShieldCheck className="h-5 w-5" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-blue-500 to-cyan-500">
+ <ShieldCheck />
  </div>
- <div>
- <h1 className="app-page-title">Coberturas</h1>
- <p className="app-page-lead">Catálogo de coberturas y subcoberturas.</p>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Coberturas</h1>
  </div>
  </div>
- <div className="flex items-center gap-2">
+ <div className="app-grid-header-right">
  {canCreateCat && (
  <Button
  onClick={() => { setEditingId(null); resetForm(); setOpen(true); }}
@@ -256,45 +254,6 @@ export default function CoberturasPage() {
  Nueva
  </Button>
  )}
- </div>
- </div>
- </div>
-
- <div className="app-toolbar">
- <div className="flex items-center gap-2">
- <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
- <Select
- value={selectedCountryId || "__none"}
- onValueChange={(v) => {
- const id = v === "__none" ? "" : (v ?? "");
- setSelectedCountryId(id);
- setSelectedTheme("");
- setSearch("");
- setExpandedCovs(new Set());
- }}
- items={[{ value: "__none", label: "Chile (CL)" }, ...(countries || []).filter((c) => c.code !== CHILE_CODE).map((c) => ({ value: c.id, label: `${c.name} (${c.code})` }))]}
- >
- <SelectTrigger className="app-input h-7 max-w-[160px]">
- <SelectValue placeholder="Chile (CL)" />
- </SelectTrigger>
- <SelectContent>
- <SelectItem value="__none">Chile (CL)</SelectItem>
- {(countries || [])
- .filter((c) => c.code !== CHILE_CODE)
- .map((c) => (
- <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>
- ))}
- </SelectContent>
- </Select>
- <div className="relative w-[180px] shrink-0">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
- <Input
- placeholder="Buscar cobertura..."
- value={search}
- onChange={(e) => setSearch(e.target.value)}
- className="liquid-search"
- />
- </div>
  </div>
  </div>
 
@@ -329,6 +288,44 @@ export default function CoberturasPage() {
 
  {/* ── Panel principal: grilla de coberturas ── */}
  <section className="app-panel p-0! overflow-hidden">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+ <Select
+ value={selectedCountryId || "__none"}
+ onValueChange={(v) => {
+ const id = v === "__none" ? "" : (v ?? "");
+ setSelectedCountryId(id);
+ setSelectedTheme("");
+ setSearch("");
+ setExpandedCovs(new Set());
+ }}
+ items={[{ value: "__none", label: "Chile (CL)" }, ...(countries || []).filter((c) => c.code !== CHILE_CODE).map((c) => ({ value: c.id, label: `${c.name} (${c.code})` }))]}
+ >
+ <SelectTrigger className="app-input app-filter-narrow">
+ <SelectValue placeholder="Chile (CL)" />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Chile (CL)</SelectItem>
+ {(countries || [])
+ .filter((c) => c.code !== CHILE_CODE)
+ .map((c) => (
+ <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
+ <div className="app-grid-search-wrap">
+ <Search />
+ <Input
+ placeholder="Buscar cobertura..."
+ value={search}
+ onChange={(e) => setSearch(e.target.value)}
+ className="liquid-search"
+ />
+ </div>
+ </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+ </div>
  <div className="flex items-center justify-between border-b border-border px-3 py-2 bg-muted/30">
  <div className="flex items-baseline gap-2 min-w-0">
  <span className="text-[12px] font-semibold text-foreground truncate">
@@ -341,11 +338,6 @@ export default function CoberturasPage() {
  </div>
  </div>
 
- {total > 0 && (
- <div className="border-b border-border px-3 py-2">
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
- </div>
- )}
  <div className="app-data-table-wrap">
  {isLoading ? (
  <p className="text-sm text-muted-foreground text-center py-12">Cargando...</p>
@@ -441,7 +433,7 @@ export default function CoberturasPage() {
  <div className="modal-field">
  <Label className="app-field-label">Código <span className="text-red-500">*</span></Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={formData.code}
  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
  placeholder="Ej: POL120131268"
@@ -450,7 +442,7 @@ export default function CoberturasPage() {
  <div className="modal-field">
  <Label className="app-field-label">Tema <span className="text-red-500">*</span></Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={formData.theme}
  onChange={(e) => setFormData({ ...formData, theme: e.target.value })}
  placeholder="Ej: Incendio"
@@ -464,7 +456,7 @@ export default function CoberturasPage() {
  <div className="modal-field">
  <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={formData.name}
  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
  placeholder="Nombre de la cobertura"
@@ -473,7 +465,7 @@ export default function CoberturasPage() {
  <div className="modal-field">
  <Label className="app-field-label">Descripción</Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={formData.description}
  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
  placeholder="Descripción opcional"
@@ -507,7 +499,7 @@ export default function CoberturasPage() {
  <div className="modal-field">
  <Label className="app-field-label">Código <span className="text-red-500">*</span></Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={subFormData.code}
  onChange={(e) => setSubFormData({ ...subFormData, code: e.target.value })}
  placeholder="Ej: CAD120140384"
@@ -516,7 +508,7 @@ export default function CoberturasPage() {
  <div className="modal-field">
  <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={subFormData.name}
  onChange={(e) => setSubFormData({ ...subFormData, name: e.target.value })}
  placeholder="Nombre de la subcobertura"
@@ -526,7 +518,7 @@ export default function CoberturasPage() {
  <div className="modal-field">
  <Label className="app-field-label">Descripción</Label>
  <Input
- className="app-input h-7"
+ className="app-input"
  value={subFormData.description}
  onChange={(e) => setSubFormData({ ...subFormData, description: e.target.value })}
  placeholder="Descripción opcional"
@@ -616,7 +608,7 @@ function CoberturaRow({
  <td className="px-3 py-2">
  <div className="app-row-actions">
  {canEdit && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={onEdit}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={onEdit}>
  <Pencil className="h-3.5 w-3.5" />
  </Button>
  )}

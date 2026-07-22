@@ -31,7 +31,7 @@ export default function DependenciasGestionPage() {
 
  const { data: templates } = useQuery({
  queryKey: ["action-templates-all"],
- queryFn: getActionTemplates,
+ queryFn: () => getActionTemplates(),
  });
 
  const createMutation = useMutation({
@@ -304,7 +304,7 @@ export default function DependenciasGestionPage() {
  required
  items={[{ value: "__none", label: "Seleccionar..." }, ...codeMap.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))]}
  >
- <SelectTrigger className="app-input h-7 w-full">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Seleccionar..." />
  </SelectTrigger>
  <SelectContent>
@@ -324,7 +324,7 @@ export default function DependenciasGestionPage() {
  required
  items={[{ value: "__none", label: !parentCode ? "Primero selecciona padre..." : "Seleccionar..." }, ...availableChildren.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))]}
  >
- <SelectTrigger className="app-input h-7 w-full">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder={!parentCode ? "Primero selecciona padre..." : "Seleccionar..."} />
  </SelectTrigger>
  <SelectContent>

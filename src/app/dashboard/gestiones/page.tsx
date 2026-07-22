@@ -84,17 +84,19 @@ function GestionesContent() {
 
   return (
     <div className="app-page">
-      {/* ── Header premium ── */}
-      <div className="dash-section-header" style={{ marginTop: 0 }}>
-        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br ${config.gradient} text-white shadow-lg shrink-0`}>
-          <Icon className="h-5 w-5" />
+      {/* ── Header ── */}
+      <div className="app-grid-header">
+        <div className="app-grid-header-left">
+          <div className={`app-grid-icon bg-linear-to-br ${config.gradient}`}>
+            <Icon />
+          </div>
+          <div className="app-grid-title-row">
+            <h1 className="app-page-title shrink-0">{config.title}</h1>
+          </div>
         </div>
-        <div className="flex flex-col min-w-0">
-          <h1 className="app-page-title">{config.title}</h1>
-          <p className="app-page-lead">Gestiones asignadas a ti, en flujo activo.</p>
+        <div className="app-grid-header-right">
+          <div className="dash-section-count">{kpis.total} gestiones</div>
         </div>
-        <div className="dash-section-line" />
-        <div className="dash-section-count">{kpis.total} gestiones</div>
       </div>
 
       {/* ── Tabs de filtro — Liquid Glass ── */}
@@ -152,26 +154,22 @@ function GestionesContent() {
         </div>
       </div>
 
-      {/* ── Buscador + Cards — Glass Panel ── */}
-      <div className="glass-panel dash-col-12" style={{ marginTop: 16, ["--glass-glow" as string]: config.glow }}>
-        <div className="glass-panel-header">
-          <div className="glass-panel-title">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <span>Buscar en mis gestiones</span>
+      {/* ── Buscador + Cards ── */}
+      <div className="app-panel">
+        <div className="app-grid-toolbar">
+          <div className="app-grid-toolbar-left">
+            <div className="app-grid-search-wrap">
+              <Search />
+              <Input
+                placeholder="Buscar por gestión, siniestro, asegurado..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="liquid-search"
+              />
+            </div>
           </div>
-        </div>
-        <div className="glass-panel-body">
-          <div className="relative w-full mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por gestión, siniestro, asegurado..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="liquid-search h-9"
-            />
-          </div>
-
           <Pagination
+            variant="controls"
             page={page}
             totalPages={totalPages}
             total={total}
@@ -179,26 +177,35 @@ function GestionesContent() {
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
           />
-
-          {isLoading ? (
-            <div className="text-center text-muted-foreground py-12">
-              <div className="inline-flex items-center gap-2">
-                <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-                Cargando...
-              </div>
-            </div>
-          ) : paginatedData.length === 0 ? (
-            <div className="text-center text-muted-foreground py-12">
-              No hay gestiones {validFilter === "all" ? "asignadas" : `con filtro "${config.label.toLowerCase()}"`}.
-            </div>
-          ) : (
-            <div className="my-casos-grid">
-              {paginatedData.map((g) => (
-                <GestionCard key={g.id} gestion={g} />
-              ))}
-            </div>
-          )}
         </div>
+
+        {isLoading ? (
+          <div className="text-center text-muted-foreground py-12">
+            <div className="inline-flex items-center gap-2">
+              <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+              Cargando...
+            </div>
+          </div>
+        ) : paginatedData.length === 0 ? (
+          <div className="text-center text-muted-foreground py-12">
+            No hay gestiones {validFilter === "all" ? "asignadas" : `con filtro "${config.label.toLowerCase()}"`}.
+          </div>
+        ) : (
+          <div className="my-casos-grid">
+            {paginatedData.map((g) => (
+              <GestionCard key={g.id} gestion={g} />
+            ))}
+          </div>
+        )}
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
     </div>
   );

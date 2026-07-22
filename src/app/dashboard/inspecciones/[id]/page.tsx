@@ -337,7 +337,7 @@ export default function InspectionDetailPage() {
  advisor?: { name: string } | null;
  claim_cause?: { name: string } | null;
  commune?: { name: string } | null;
- claims_participants?: Array<{ type: string; full_name: string | null; email: string | null; phone: string | null; cell_phone: string | null; rut?: string | null }>;
+ claims_participants?: Array<{ type: string; full_name: string | null; first_name: string | null; last_name: string | null; email: string | null; phone: string | null; cell_phone: string | null; rut?: string | null; address?: string | null; person_type?: string | null; country?: string | null; region?: string | null; city?: string | null; commune?: string | null }>;
  };
  const claim = session.claim as ClaimData | undefined;
  const participants = claim?.claims_participants || [];
@@ -503,20 +503,50 @@ export default function InspectionDetailPage() {
  </h3>
  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
  <div>
+ <span className="app-data-label">RUT</span>
+ <p className="font-medium">{insuredParticipant?.rut || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Tipo</span>
+ <p className="font-medium">
+ {insuredParticipant?.person_type === "legal" ? "Persona Jurídica" : insuredParticipant?.person_type === "natural" ? "Persona Natural" : "—"}
+ </p>
+ </div>
+ <div>
  <span className="app-data-label">Nombre</span>
- <p className="font-medium">{insuredParticipant?.full_name || "—"}</p>
+ <p className="font-medium">{insuredParticipant?.first_name || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Apellido</span>
+ <p className="font-medium">{insuredParticipant?.last_name || "—"}</p>
  </div>
  <div>
  <span className="app-data-label">Email</span>
  <p className="font-medium">{insuredParticipant?.email || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Telefono</span>
- <p className="font-medium">{insuredParticipant?.phone || insuredParticipant?.cell_phone || "—"}</p>
+ <span className="app-data-label">Teléfono</span>
+ <p className="font-medium">{insuredParticipant?.cell_phone || insuredParticipant?.phone || "—"}</p>
  </div>
  <div className="col-span-2">
- <span className="app-data-label">Direccion</span>
- <p className="font-medium">{claim?.claim_address || "—"}</p>
+ <span className="app-data-label">Dirección</span>
+ <p className="font-medium">{insuredParticipant?.address || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">País</span>
+ <p className="font-medium">{insuredParticipant?.country || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Región</span>
+ <p className="font-medium">{insuredParticipant?.region || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Ciudad</span>
+ <p className="font-medium">{insuredParticipant?.city || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Comuna</span>
+ <p className="font-medium">{insuredParticipant?.commune || "—"}</p>
  </div>
  </div>
  </div>

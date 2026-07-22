@@ -17,8 +17,8 @@ className="pg-btn-platinum"
 - **TODOS** los botones usan `pg-btn-platinum`. Sin excepciones.
 - **NO** usar: `btn-danger`, `btn-neutral`, `btn-cancel`, `btn-close`,
   `btn-skip`, `btn-save`, `btn-create`, `liquid-button`, `liquid-button-outline`.
-- Botones de icono en grilla: `className="btn-neutral btn-icon"` (ghost + icon).
-- Botones de eliminar en grilla: `className="btn-danger btn-icon"` (ghost + icon rojo).
+- Botones de icono en grilla: `className="btn-icon-sm"` (glass icon solid 28px, con fondo glass + borde + blur).
+- Botones de eliminar en grilla: `className="btn-icon-sm btn-danger-hover"` (glass icon + rojo al hover).
 - **NUNCA** un `<Button>` sin `className`.
 - **NUNCA** dos atributos `className` en el mismo elemento JSX.
 
@@ -136,27 +136,90 @@ className="app-field-label"  // labels de campos
 
 ## 5. Grillas / Tablas
 
-### Estructura
+### Estructura OBLIGATORIA (patrón unificado)
 ```tsx
-<div className="app-panel">
-  <Pagination ... />
-  <div className="app-data-table-wrap">
-    <table className="app-data-table">
-      <thead>...</thead>
-      <tbody>...</tbody>
-    </table>
+<div className="app-page">
+  {/* 1. Header unificado: icono + título + botones de acción */}
+  <div className="app-grid-header">
+    <div className="app-grid-header-left">
+      <div className="app-grid-icon bg-linear-to-br from-X to-Y">
+        <Icon />
+      </div>
+      <div className="app-grid-title-row">
+        <h1 className="app-page-title shrink-0">Título</h1>
+        {/* breadcrumbs opcionales con app-grid-sep + app-grid-breadcrumbs */}
+      </div>
+    </div>
+    <div className="app-grid-header-right">
+      {/* botones de acción: Exportar, Nuevo, etc. */}
+    </div>
   </div>
-  <Pagination ... />
+
+  {/* 2. Panel con toolbar integrado + tabla + paginación completa */}
+  <div className="app-panel">
+    {/* Toolbar: buscador + filtros + controles de paginación (variant="controls") */}
+    <div className="app-grid-toolbar">
+      <div className="app-grid-toolbar-left">
+        <div className="app-grid-search-wrap">
+          <Search />
+          <Input placeholder="Buscar..." className="liquid-search" />
+        </div>
+        {/* filtros adicionales: Select, DatePicker, etc. */}
+      </div>
+      <Pagination variant="controls" ... />
+    </div>
+
+    {/* Tabla */}
+    <div className="app-data-table-wrap">
+      <table className="app-data-table">
+        <thead>...</thead>
+        <tbody>
+          {/* filas clickeables con className="row-clickable" */}
+        </tbody>
+      </table>
+    </div>
+
+    {/* Paginación completa abajo */}
+    <Pagination ... />
+  </div>
 </div>
 ```
 
-### Reglas
+### Reglas OBLIGATORIAS
+- **Header unificado** con `app-grid-header` — icono + título + botones en una sola fila.
+- **Toolbar integrado** dentro del panel con `app-grid-toolbar` — buscador + filtros + `Pagination variant="controls"`.
+- **`Pagination variant="controls"`** arriba (solo botones + contador) y **`Pagination`** (full) abajo.
+- **Filas clickeables** con `className="row-clickable"` — toda la fila dispara la acción del primer botón (Ver).
 - Tabla dentro de `app-panel` con `app-data-table-wrap`.
-- `Pagination` arriba y abajo de la tabla.
 - `SortableTh` para columnas ordenables.
 - `StatusBadge` para estados (activo/inactivo).
-- Acciones de fila: iconos `btn-neutral btn-icon` (editar) y `btn-danger btn-icon` (eliminar).
+- Acciones de fila: iconos `btn-icon-sm` (ver, editar) y `btn-icon-sm btn-danger-hover` (eliminar).
 - `app-row-actions` como contenedor de acciones de fila.
+- Botones de acción (Editar, Eliminar) con `e.stopPropagation()` para no disparar el click de la fila.
+
+### Controles de paginación (variant="controls") — formato OBLIGATORIO
+- **Botones redondos sueltos** (`size-6 rounded-md border border-border`) — NO pegados, NO en bloque unificado.
+- Estructura: `[⏮] [◀] [1] [2] [3] [▶] [⏭]`
+- **Contador "X registros" DEBAJO** de los botones, en una row aparte:
+  - `text-[9px] text-muted-foreground/60 tabular-nums leading-none`
+  - Centrado horizontalmente respecto a la botonera (`inline-flex flex-col items-center` + `w-full text-center`)
+  - `gap-1` entre botones y contador (separación leve para que no se monte)
+  - `py-1.5` en el contenedor (compacto, no aumenta significativamente el alto del control)
+- **`Pagination` full** abajo de la tabla: texto "Mostrando X-Y de Z" + selector de página + botones.
+
+### Clases CSS del patrón (definidas en components.css)
+- `app-grid-header` — contenedor del header unificado (flex justify-between)
+- `app-grid-header-left` — lado izquierdo (icono + título + breadcrumbs)
+- `app-grid-icon` — icono 36px con gradiente
+- `app-grid-title-row` — contenedor interno: título + separador + breadcrumbs
+- `app-grid-sep` — separador "·" entre título y breadcrumbs
+- `app-grid-breadcrumbs` — nav de breadcrumbs
+- `app-grid-breadcrumb-btn` — botón individual del breadcrumb (+ `is-current`)
+- `app-grid-header-right` — lado derecho (botones de acción)
+- `app-grid-toolbar` — fila del buscador dentro del panel (margen negativo para pegar arriba)
+- `app-grid-toolbar-left` — contenedor izquierdo del toolbar
+- `app-grid-search-wrap` — wrapper del input con icono (180px, shrink-0)
+- `row-clickable` — fila clickeable (cursor pointer + hover primary)
 
 ---
 
@@ -271,7 +334,12 @@ RESEND_FROM_EMAIL=noreply@tudominio.com
 ### Reglas
 - Buscador con icono `Search` de lucide-react.
 - `app-input` en todos los filtros (no `liquid-search`).
-- Selects de filtro con `w-[180px]` o `w-[200px]`.
+- **Selects de filtro con ancho fijo** — definido globalmente en `forms.css`
+  con `!important` para que pise cualquier `max-w-[...]` o `w-[...]` de Tailwind:
+  - **Default (200px):** compañías, corredores, características, eventos, etc.
+  - **`.app-filter-narrow` (150px):** estados, líneas de negocio, países.
+  La regla aplica a TODO `[data-slot="select-trigger"]` dentro de
+  `.app-grid-toolbar-left` o `.app-toolbar`. El texto largo se trunca con ellipsis.
 - Contenedor `app-toolbar`.
 
 ---

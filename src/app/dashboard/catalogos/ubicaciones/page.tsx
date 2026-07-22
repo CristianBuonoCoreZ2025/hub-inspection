@@ -8,8 +8,9 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getRegions, getCities, getCommunes, createRegion, updateRegion, deleteRegion, createCity, updateCity, deleteCity, createCommune, updateCommune, deleteCommune } from "@/services/catalogs";
 import { getCountries } from "@/services/countries";
-import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag, MapPin, Pencil, Ban, Search } from "lucide-react";
+import { ChevronRight, ArrowLeft, Globe, Building2, Landmark, Flag, MapPin, Pencil, Ban, Search, Eye } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -172,15 +173,6 @@ export default function UbicacionesPage() {
  }, "name");
  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
 
- const getLevelTitle = () => {
- switch (level) {
- case 0: return "Paises";
- case 1: return `Regiones de ${selectedCountry?.name}`;
- case 2: return `Ciudades de ${selectedRegion?.name}`;
- case 3: return `Comunas de ${selectedCity?.name}`;
- }
- };
-
  const getLevelIcon = () => {
  switch (level) {
  case 0: return <Globe className="h-5 w-5" />;
@@ -274,44 +266,28 @@ export default function UbicacionesPage() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-teal-500 text-white shadow-sm">
- <MapPin className="h-5 w-5" />
+ {/* Header unificado: icono + "Ubicaciones" + breadcrumbs + botón "Nueva"
+     Todo en una sola fila compacta usando las clases app-grid-* */}
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-emerald-500 to-teal-500">
+ <MapPin />
  </div>
- <div>
- <h1 className="app-page-title">Ubicaciones</h1>
- <p className="app-page-lead">Paises, regiones, ciudades y comunas.</p>
- </div>
- </div>
- <div className="flex items-center gap-2">
- {level > 0 && canCreate("catalogos") && (
- <Button onClick={handleCreate} className="pg-btn-platinum">
- Nueva
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Ubicaciones</h1>
+ <span className="app-grid-sep">·</span>
+ {level > 0 && (
+ <Button variant="ghost" size="icon" className="btn-icon-sm shrink-0" onClick={() => handleBreadcrumb(level - 1)} title="Nivel anterior">
+ <ArrowLeft className="h-4 w-4" />
  </Button>
  )}
- </div>
- </div>
- </div>
-
- <div className="app-toolbar">
- <div className="flex items-center gap-2">
- <div className="relative w-[180px] shrink-0">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
- <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
- </div>
- </div>
- </div>
-
- {/* Breadcrumbs */}
- <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
+ <nav className="app-grid-breadcrumbs">
  {breadcrumbs.map((crumb, idx) => (
- <span key={idx} className="flex items-center gap-1">
- {idx > 0 && <ChevronRight className="h-3.5 w-3.5" />}
+ <span key={idx} className="flex items-center gap-1 min-w-0">
+ {idx > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
  <button
  onClick={() => handleBreadcrumb(crumb.level)}
- className={`hover:text-foreground transition-colors ${idx === breadcrumbs.length - 1 ? 'font-medium text-foreground cursor-default' : 'hover:underline'}`}
+ className={cn("app-grid-breadcrumb-btn", idx === breadcrumbs.length - 1 && "is-current")}
  disabled={idx === breadcrumbs.length - 1}
  >
  {crumb.label}
@@ -319,26 +295,28 @@ export default function UbicacionesPage() {
  </span>
  ))}
  </nav>
-
- {/* Level header */}
- <div className="flex items-center gap-2.5 mb-4">
- {level > 0 && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => handleBreadcrumb(level - 1)}>
- <ArrowLeft className="h-4 w-4" />
+ </div>
+ </div>
+ <div className="app-grid-header-right">
+ {level > 0 && canCreate("catalogos") && (
+ <Button onClick={handleCreate} className="pg-btn-platinum">
+ Nueva
  </Button>
  )}
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
- {getLevelIcon()}
  </div>
- <h2 className="text-base font-semibold">{getLevelTitle()}</h2>
- <span className="ml-auto text-sm text-muted-foreground">
- {isLoading ? "Cargando..." : `${currentData.length} registros`}
- </span>
  </div>
 
- {/* Data table */}
+ {/* Data table — buscador integrado en la fila superior del panel */}
  <div className="app-panel">
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
+ <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
+ </div>
+ </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+ </div>
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
@@ -356,7 +334,11 @@ export default function UbicacionesPage() {
  <tr><td colSpan={4} className="text-center text-muted-foreground py-8">No se encontraron registros.</td></tr>
  ) : (
  paginatedData.map((item) => (
- <tr key={item.id} className="group">
+ <tr
+ key={item.id}
+ className={cn("group", level < 3 && "row-clickable")}
+ onClick={level < 3 ? () => handleRowClick(item) : undefined}
+ >
  <td>
  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
  {level === 0 ? <Globe className="h-4 w-4 text-muted-foreground" /> :
@@ -370,19 +352,19 @@ export default function UbicacionesPage() {
  <td>
  <div className="app-row-actions">
  {level < 3 && (
- <Button variant="ghost" size="sm" className="pg-btn-platinum" onClick={(e) => { e.stopPropagation(); handleRowClick(item); }}>
- {getNextLevelLabel()}
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(item); }} title={getNextLevelLabel() || undefined}>
+ <Eye className="h-4 w-4" />
  </Button>
  )}
  {level > 0 && (
  <>
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => handleEdit(item)}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); handleEdit(item); }} title="Editar">
  <Pencil className="h-4 w-4" />
  </Button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => handleDelete(item.id)}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} title="Eliminar">
  <Ban className="h-4 w-4" />
  </Button>
  )}

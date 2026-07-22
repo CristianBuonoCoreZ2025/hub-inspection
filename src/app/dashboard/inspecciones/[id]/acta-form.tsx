@@ -78,8 +78,26 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
 
  // Pre-llenar desde el siniestro: si el acta no tiene datos del entrevistado,
  // usar los del asegurado desde claims_participants
- const claim = session.claim as Record<string, unknown> | null | undefined;
- const participants = (claim?.claims_participants as Array<{ type: string; full_name: string | null; email: string | null }>) || [];
+ const claim = session.claim as {
+ claim_number?: string | null;
+ claim_address?: string | null;
+ claims_participants?: Array<{
+ type: string;
+ full_name: string | null;
+ first_name: string | null;
+ last_name: string | null;
+ email: string | null;
+ phone: string | null;
+ cell_phone: string | null;
+ rut?: string | null;
+ }>;
+ country?: { name: string } | null;
+ region?: { name: string } | null;
+ city?: { name: string } | null;
+ commune?: { name: string } | null;
+ destination_housing?: { name: string } | null;
+ } | null | undefined;
+ const participants = claim?.claims_participants || [];
  const insuredParticipant = participants.find((p) => p.type === "insured");
  const preInsuredName = insuredParticipant?.full_name || "";
  const preInsuredEmail = insuredParticipant?.email || "";
@@ -223,7 +241,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  value={current}
  onValueChange={(v) => set(name, v ?? "")}
  >
- <SelectTrigger className="app-input h-8 w-full">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder={placeholder} />
  </SelectTrigger>
  <SelectContent>
@@ -247,7 +265,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  value={current}
  onValueChange={(v) => set(name, v ?? "")}
  >
- <SelectTrigger className="app-input h-8 w-full">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder={placeholder} />
  </SelectTrigger>
  <SelectContent>
@@ -271,7 +289,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  value={current}
  onValueChange={(v) => set(name, v ?? "")}
  >
- <SelectTrigger className="app-input h-8 w-full">
+ <SelectTrigger className="app-input w-full">
  <SelectValue placeholder={placeholder} />
  </SelectTrigger>
  <SelectContent>
@@ -324,14 +342,47 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  {/* Paso 1: Datos Generales */}
  {step === 1 && (
  <div className="space-y-3">
+ {/* Datos del Siniestro (readonly, vienen del claim) */}
+ <div className="app-panel">
+ <h3 className="app-section-title">
+ Dirección del Siniestro
+ </h3>
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
+ <div>
+ <span className="app-data-label">Dirección</span>
+ <p className="font-medium">{claim?.claim_address || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Tipo</span>
+ <p className="font-medium">{claim?.destination_housing?.name || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">País</span>
+ <p className="font-medium">{claim?.country?.name || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Región</span>
+ <p className="font-medium">{claim?.region?.name || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Ciudad</span>
+ <p className="font-medium">{claim?.city?.name || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Comuna</span>
+ <p className="font-medium">{claim?.commune?.name || "—"}</p>
+ </div>
+ </div>
+ </div>
+
  <div className="app-panel">
  <h3 className="app-section-title">
  Datos Generales de la Inspeccion
  </h3>
- <div className="modal-grid-3">
+ <div className="modal-grid-5">
  <div className="modal-field">
  <Label className="app-field-label">Fecha Inspeccion</Label>
- <FormDatePicker control={form.control} name="inspection_date" className="w-[130px]" disabled={readOnly} />
+ <FormDatePicker control={form.control} name="inspection_date" disabled={readOnly} />
  </div>
  <div className="modal-field">
  <Label className="app-field-label">Hora Inspeccion</Label>
@@ -722,7 +773,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  value={String(watch(`third_parties.${idx}.party_type`) ?? "") || null}
  onValueChange={(v) => set(`third_parties.${idx}.party_type`, v)}
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Seleccionar..." />
  </SelectTrigger>
  <SelectContent>

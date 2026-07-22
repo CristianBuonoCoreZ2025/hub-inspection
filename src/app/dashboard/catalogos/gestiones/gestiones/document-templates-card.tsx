@@ -154,7 +154,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  <div className="flex items-center justify-between mb-3">
  <h3 className="app-section-title">
  <FileText className="h-3.5 w-3.5" />
- Plantillas de Documento
+ Templates
  </h3>
  <div className="flex items-center gap-2">
  <input
@@ -327,7 +327,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  onValueChange={(v) => handleAssociationChange(tpl.id, "company_id", v === "__all" ? "" : v)}
  items={[{ value: "__all", label: "Todos" }, ...clients.map((c) => ({ value: c.id, label: c.name }))]}
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Todos" />
  </SelectTrigger>
  <SelectContent>
@@ -346,7 +346,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  onValueChange={(v) => handleAssociationChange(tpl.id, "insurance_company_id", v === "__all" ? "" : v)}
  items={[{ value: "__all", label: "Todas" }, ...insuranceCompanies.map((c) => ({ value: c.id, label: c.name }))]}
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Todas" />
  </SelectTrigger>
  <SelectContent>
@@ -365,7 +365,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  onValueChange={(v) => handleAssociationChange(tpl.id, "country_id", v === "__all" ? "" : v)}
  items={[{ value: "__all", label: "Todos" }, ...countries.map((c) => ({ value: c.id, label: c.name }))]}
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Todos" />
  </SelectTrigger>
  <SelectContent>
@@ -384,7 +384,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  onValueChange={(v) => handleAssociationChange(tpl.id, "event_id", v === "__all" ? "" : v)}
  items={[{ value: "__all", label: "Todos" }, ...events.map((ev) => ({ value: ev.id, label: ev.name }))]}
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Todos" />
  </SelectTrigger>
  <SelectContent>
@@ -461,7 +461,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  onValueChange={(v) => handleMappingChange(tpl.id, ph, v === "__none" ? null : v)}
  items={[{ value: "__none", label: "— Sin mapeo —" }, ...DOCUMENT_FIELDS.map((f) => ({ value: f.key, label: f.label }))]}
  >
- <SelectTrigger className="app-input h-6 text-[11px] flex-1">
+ <SelectTrigger className="app-input flex-1">
  <SelectValue placeholder="Asignar a campo…" />
  </SelectTrigger>
  <SelectContent>

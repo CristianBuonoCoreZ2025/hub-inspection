@@ -220,7 +220,14 @@ export default function CargaCatalogosPage() {
   return (
     <div className="app-page">
       <div className="app-grid-header">
-        <h1 className="app-page-title shrink-0">Carga Masiva de Catálogos</h1>
+        <div className="app-grid-header-left">
+          <div className="app-grid-icon bg-linear-to-br from-amber-500 to-orange-500">
+            <FileSpreadsheet />
+          </div>
+          <div className="app-grid-title-row">
+            <h1 className="app-page-title shrink-0">Carga Masiva de Catálogos</h1>
+          </div>
+        </div>
       </div>
 
       {/* Selector de catálogo */}

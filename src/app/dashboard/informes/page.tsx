@@ -10,11 +10,11 @@ import {
   CheckCircle2,
   FileText,
   Download,
-  Filter,
   Users,
   Building2,
   Calendar,
   ClipboardCheck,
+  Search,
 } from "lucide-react";
 
 import { getClaims } from "@/services/claims";
@@ -224,55 +224,83 @@ export default function InformesPage() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold">Informes</h1>
-          <p className="text-[12px] text-muted-foreground">Reportes y métricas de gestión</p>
+      <div className="app-grid-header">
+        <div className="app-grid-header-left">
+          <div className="app-grid-icon bg-linear-to-br from-blue-500 to-cyan-500">
+            <BarChart3 />
+          </div>
+          <div className="app-grid-title-row">
+            <h1 className="app-page-title shrink-0">Informes</h1>
+          </div>
         </div>
-        <Button className="pg-btn-platinum" onClick={exportCSV}>
-          <Download className="mr-1.5 size-3.5" />
-          Exportar CSV
-        </Button>
+        <div className="app-grid-header-right">
+          <Button className="pg-btn-platinum" onClick={exportCSV}>
+            <Download className="mr-1.5 size-3.5" />
+            Exportar CSV
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="app-panel p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Filter className="size-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="app-input h-7 max-w-[200px]"
-          />
-          <Select
-            value={statusFilter || "__all"}
-            onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)}
-            items={[
-              { value: "__all", label: "Todos los estados" },
-              ...Object.entries(STATUS_LABELS).map(([code, label]) => ({ value: code, label })),
-            ]}
-          >
-            <SelectTrigger className="app-input h-7 max-w-[140px]">
-              <SelectValue placeholder="Todos los estados" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">Todos los estados</SelectItem>
-              {Object.entries(STATUS_LABELS).map(([code, label]) => (
-                <SelectItem key={code} value={code}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="max-w-[110px]" />
-          <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="max-w-[110px]" />
-          {(statusFilter || dateFrom || dateTo || search) && (
-            <button
-              onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); setSearch(""); }}
-              className="text-[12px] text-muted-foreground hover:text-foreground px-2"
+        <div className="app-grid-toolbar">
+          <div className="app-grid-toolbar-left">
+            <div className="app-grid-search-wrap">
+              <Search />
+              <Input
+                placeholder="Buscar..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="liquid-search"
+              />
+            </div>
+            <Select
+              value={statusFilter || "__all"}
+              onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)}
+              items={[
+                { value: "__all", label: "Todos los estados" },
+                ...Object.entries(STATUS_LABELS).map(([code, label]) => ({ value: code, label })),
+              ]}
             >
-              Limpiar
-            </button>
-          )}
+              <SelectTrigger className="app-input app-filter-narrow">
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all">Todos los estados</SelectItem>
+                {Object.entries(STATUS_LABELS).map(([code, label]) => (
+                  <SelectItem key={code} value={code}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <DatePicker
+              value={dateFrom}
+              onChange={(value) => {
+                setDateFrom(value);
+                if (value && dateTo && value > dateTo) setDateTo(value);
+              }}
+              placeholder="Desde"
+              className="max-w-[110px]"
+              maxDate={dateTo || undefined}
+            />
+            <DatePicker
+              value={dateTo}
+              onChange={(value) => {
+                setDateTo(value);
+                if (value && dateFrom && value < dateFrom) setDateFrom(value);
+              }}
+              placeholder="Hasta"
+              className="max-w-[110px]"
+              minDate={dateFrom || undefined}
+            />
+            {(statusFilter || dateFrom || dateTo || search) && (
+              <button
+                onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); setSearch(""); }}
+                className="text-[12px] text-muted-foreground hover:text-foreground px-2"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -355,6 +383,19 @@ export default function InformesPage() {
               ))}
             </div>
             <h3 className="text-[13px] font-semibold mb-3">Productividad por {ROLE_CONFIG[roleSubTab].label}</h3>
+            <div className="app-grid-toolbar">
+              <div className="app-grid-toolbar-left">
+              </div>
+              <Pagination
+                variant="controls"
+                page={rolePagination.page}
+                totalPages={rolePagination.totalPages}
+                total={rolePagination.total}
+                pageSize={rolePagination.pageSize}
+                onPageChange={rolePagination.setPage}
+                onPageSizeChange={rolePagination.setPageSize}
+              />
+            </div>
             <div className="app-data-table-wrap">
               <table className="app-data-table">
                 <thead>
@@ -383,21 +424,34 @@ export default function InformesPage() {
                   )}
                 </tbody>
               </table>
-              <Pagination
-                page={rolePagination.page}
-                totalPages={rolePagination.totalPages}
-                total={rolePagination.total}
-                pageSize={rolePagination.pageSize}
-                onPageChange={rolePagination.setPage}
-                onPageSizeChange={rolePagination.setPageSize}
-              />
             </div>
+            <Pagination
+              page={rolePagination.page}
+              totalPages={rolePagination.totalPages}
+              total={rolePagination.total}
+              pageSize={rolePagination.pageSize}
+              onPageChange={rolePagination.setPage}
+              onPageSizeChange={rolePagination.setPageSize}
+            />
           </div>
         )}
 
         {tab === "companias" && (
           <div className="p-4">
             <h3 className="text-[13px] font-semibold mb-3">Siniestros por Compañía</h3>
+            <div className="app-grid-toolbar">
+              <div className="app-grid-toolbar-left">
+              </div>
+              <Pagination
+                variant="controls"
+                page={companyPagination.page}
+                totalPages={companyPagination.totalPages}
+                total={companyPagination.total}
+                pageSize={companyPagination.pageSize}
+                onPageChange={companyPagination.setPage}
+                onPageSizeChange={companyPagination.setPageSize}
+              />
+            </div>
             <div className="app-data-table-wrap">
               <table className="app-data-table">
                 <thead>
@@ -426,15 +480,15 @@ export default function InformesPage() {
                   )}
                 </tbody>
               </table>
-              <Pagination
-                page={companyPagination.page}
-                totalPages={companyPagination.totalPages}
-                total={companyPagination.total}
-                pageSize={companyPagination.pageSize}
-                onPageChange={companyPagination.setPage}
-                onPageSizeChange={companyPagination.setPageSize}
-              />
             </div>
+            <Pagination
+              page={companyPagination.page}
+              totalPages={companyPagination.totalPages}
+              total={companyPagination.total}
+              pageSize={companyPagination.pageSize}
+              onPageChange={companyPagination.setPage}
+              onPageSizeChange={companyPagination.setPageSize}
+            />
           </div>
         )}
 
@@ -456,6 +510,19 @@ export default function InformesPage() {
             <h3 className="text-[13px] font-semibold mb-3">
               Detalle ({filteredClaims.length} siniestros)
             </h3>
+            <div className="app-grid-toolbar">
+              <div className="app-grid-toolbar-left">
+              </div>
+              <Pagination
+                variant="controls"
+                page={claimsPagination.page}
+                totalPages={claimsPagination.totalPages}
+                total={claimsPagination.total}
+                pageSize={claimsPagination.pageSize}
+                onPageChange={claimsPagination.setPage}
+                onPageSizeChange={claimsPagination.setPageSize}
+              />
+            </div>
             <div className="app-data-table-wrap">
               <table className="app-data-table">
                 <thead>
@@ -496,15 +563,15 @@ export default function InformesPage() {
                   )}
                 </tbody>
               </table>
-              <Pagination
-                page={claimsPagination.page}
-                totalPages={claimsPagination.totalPages}
-                total={claimsPagination.total}
-                pageSize={claimsPagination.pageSize}
-                onPageChange={claimsPagination.setPage}
-                onPageSizeChange={claimsPagination.setPageSize}
-              />
             </div>
+            <Pagination
+              page={claimsPagination.page}
+              totalPages={claimsPagination.totalPages}
+              total={claimsPagination.total}
+              pageSize={claimsPagination.pageSize}
+              onPageChange={claimsPagination.setPage}
+              onPageSizeChange={claimsPagination.setPageSize}
+            />
           </div>
         )}
       </div>

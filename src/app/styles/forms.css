@@ -131,18 +131,48 @@
     box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
   }
 
-  /* Select trigger (combobox) — misma altura y fuente que app-input */
-  [data-slot="select-trigger"].app-input {
-    height: 28px !important;
-    font-size: 11px !important;
+  /* Select trigger (combobox) — misma altura y fuente que app-input.
+     Esta regla pisaba antes solo .app-input; ahora la regla global
+     completa está FUERA de @layer (al final del archivo) para que
+     aplique a TODOS los selects de la app, tengan o no .app-input. */
+
+  /* ═══════════════════════════════════════════════════════════════
+   * COMBOS DE FILTRO EN TOOLBARS DE GRILLAS
+   * Ancho fijo para mantener consistencia visual entre grillas.
+   *   · Default (compañías, corredores, características, etc.): 200px
+   *   · .app-filter-narrow (estados, líneas de negocio, países): 150px
+   * La regla pisa .app-input (width:100%) y cualquier max-w-[...] de Tailwind.
+   * El texto largo se trunca con ellipsis.
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-grid-toolbar-left [data-slot="select-trigger"],
+  .app-grid-toolbar-left [data-slot="select-trigger"].app-input,
+  .app-toolbar [data-slot="select-trigger"]:not(.app-input-full),
+  .app-toolbar [data-slot="select-trigger"].app-input:not(.app-input-full) {
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+    flex-shrink: 0 !important;
   }
 
-  /* Select dropdown (popup) — fuente 11px en todos los combos de la app */
-  [data-slot="select-popup"],
-  [data-slot="select-popup"] [data-slot="select-item"],
-  [data-slot="select-popup"] [data-slot="select-label"] {
-    font-size: 11px !important;
+  /* Combos estrechos: estados, líneas de negocio, países */
+  .app-grid-toolbar-left [data-slot="select-trigger"].app-filter-narrow,
+  .app-toolbar [data-slot="select-trigger"].app-filter-narrow:not(.app-input-full) {
+    width: 150px !important;
+    min-width: 150px !important;
+    max-width: 150px !important;
   }
+
+  .app-grid-toolbar-left [data-slot="select-trigger"] [data-slot="select-value"],
+  .app-toolbar [data-slot="select-trigger"]:not(.app-input-full) [data-slot="select-value"] {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    display: block !important;
+  }
+
+  /* Select dropdown (popup) — la regla de fuente 11px está FUERA de
+     @layer components (al final del archivo) para que gane sobre
+     text-xs de @layer utilities de Tailwind v4. */
 
   /* ═══════════════════════════════════════════════════════════════
    * CLASE .liquid-search — input de búsqueda con Liquid Glass
@@ -219,7 +249,7 @@
     backdrop-filter: blur(8px) !important;
     -webkit-backdrop-filter: blur(8px) !important;
     color: var(--foreground) !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
     font-weight: 500 !important;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04) !important;
     transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
@@ -258,6 +288,18 @@
   [data-slot="popover-content"] .rdp-calendar-glass {
     --rdp-accent-color: var(--primary);
     --rdp-accent-color-foreground: var(--primary-foreground);
+    font-size: 11px !important;
+  }
+
+  /* Todos los textos del calendario (días, meses, años, header) a 11px */
+  [data-slot="popover-content"] .rdp-calendar-glass button,
+  [data-slot="popover-content"] .rdp-calendar-glass span {
+    font-size: 11px !important;
+  }
+
+  /* Weekdays header (text-[10px] hardcoded en calendar.tsx) — alinear a 11px */
+  [data-slot="popover-content"] .rdp-calendar-glass .grid.grid-cols-7 > div {
+    font-size: 11px !important;
   }
 
   /* Cuando está dentro de .modal-field, el gap maneja el espaciado */
@@ -268,4 +310,50 @@
   .modal-field > p {
     margin-top: 0 !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * FUERA DE @layer components — CSS global sin capa para que gane
+ * sobre @layer utilities de Tailwind v4 (text-xs = 12px, h-7, h-8, etc.).
+ *
+ * REGLA GLOBAL DE SELECTS / COMBOS:
+ * Todos los combos de la app (trigger + dropdown + items) usan:
+ *   · Altura del trigger: 28px
+ *   · Fuente: 11px
+ *   · line-height: 1.4
+ * Esto unifica TODOS los SelectTrigger sin importar qué clases Tailwind
+ * tengan (h-7, h-8, h-6, h-[40px], text-[13px], text-[11px], etc.).
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Trigger (lo que se ve cerrado) — altura 28px + fuente 11px */
+[data-slot="select-trigger"] {
+  height: 28px !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+}
+
+/* Value (texto dentro del trigger) */
+[data-slot="select-trigger"] [data-slot="select-value"] {
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+}
+
+/* Dropdown (popup desplegado) — data-slot es "select-content" */
+[data-slot="select-content"],
+[data-slot="select-content"] [data-slot="select-item"],
+[data-slot="select-content"] [data-slot="select-item"] *,
+[data-slot="select-content"] [data-slot="select-label"],
+[data-slot="select-content"] [data-slot="select-label"] * {
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+}
+
+/* Item seleccionado — fondo celeste (regla global de la app) */
+[data-slot="select-content"] [data-slot="select-item"][data-selected] {
+  background-color: #dbeafe !important;
+  color: #1e40af !important;
+}
+.dark [data-slot="select-content"] [data-slot="select-item"][data-selected] {
+  background-color: rgba(59, 130, 246, 0.18) !important;
+  color: #93c5fd !important;
 }

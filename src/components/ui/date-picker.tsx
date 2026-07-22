@@ -16,6 +16,8 @@ interface DatePickerProps {
   className?: string
   disabled?: boolean
   clearable?: boolean
+  maxDate?: string // ISO yyyy-MM-dd
+  minDate?: string // ISO yyyy-MM-dd
 }
 
 function DatePicker({
@@ -25,10 +27,14 @@ function DatePicker({
   className,
   disabled,
   clearable = true,
+  maxDate,
+  minDate,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
 
   const date = value ? parseISO(value) : undefined
+  const maxDateObj = maxDate ? parseISO(maxDate) : undefined
+  const minDateObj = minDate ? parseISO(minDate) : undefined
 
   const handleSelect = (selected: Date | undefined) => {
     if (selected) {
@@ -54,13 +60,13 @@ function DatePicker({
               type="button"
               disabled={disabled}
               className={cn(
-                "liquid-date-picker group/date-picker flex w-full items-center justify-between gap-2",
+                "liquid-date-picker group/date-picker flex w-full items-center gap-2",
                 !date && "text-muted-foreground",
                 showClear && "pr-7"
               )}
             >
-              <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[12px]">{displayValue}</span>
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="flex-1 text-center text-[11px] tabular-nums">{displayValue}</span>
             </button>
           }
         />
@@ -74,6 +80,8 @@ function DatePicker({
             selected={date}
             onSelect={handleSelect}
             locale={es}
+            maxDate={maxDateObj}
+            minDate={minDateObj}
           />
         </PopoverContent>
       </Popover>

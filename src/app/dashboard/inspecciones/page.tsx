@@ -18,6 +18,7 @@ import {
  Calendar,
  MapPin,
  User,
+ ClipboardCheck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -103,30 +104,36 @@ function InspectionsPageContent() {
 
  return (
  <div className="app-page">
- <header className="app-page-header">
- <h1 className="app-page-title">Inspecciones</h1>
- <p className="app-page-lead">
- Gestiona las sesiones de inspeccion en terreno asociadas a los siniestros.
- </p>
- </header>
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-amber-500 to-orange-500">
+ <ClipboardCheck />
+ </div>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Inspecciones</h1>
+ </div>
+ </div>
+ <div className="app-grid-header-right">
+ </div>
+ </div>
 
- <div className="app-toolbar">
- <div className="flex gap-2 flex-1 flex-wrap">
- <div className="relative flex-1 min-w-[200px] max-w-sm">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
  <Input
  placeholder="Buscar inspeccion..."
  value={search}
  onChange={(e) => setSearch(e.target.value)}
- className="app-input"
+ className="liquid-search"
  />
  </div>
- <Select value={statusFilter || "__none"} onValueChange={(v) => setStatusFilter(v === "__none" ? "" : v ?? "all")} items={[{ value: "__none", label: "Sin selección" }, { value: "all", label: "Todos los estados" }, { value: "scheduled", label: "Agendada" }, { value: "active", label: "En progreso" }, { value: "completed", label: "Completada" }, { value: "cancelled", label: "Cancelada" }]}>
- <SelectTrigger className="app-input max-w-[160px]">
- <SelectValue placeholder="Estado" />
+ <Select value={statusFilter || "all"} onValueChange={(v) => setStatusFilter(v ?? "all")} items={[{ value: "all", label: "Todos los estados" }, { value: "scheduled", label: "Agendada" }, { value: "active", label: "En progreso" }, { value: "completed", label: "Completada" }, { value: "cancelled", label: "Cancelada" }]}>
+ <SelectTrigger className="app-input app-filter-narrow">
+ <SelectValue placeholder="Todos los estados" />
  </SelectTrigger>
  <SelectContent>
- <SelectItem value="__none">Sin selección</SelectItem>
  <SelectItem value="all">Todos los estados</SelectItem>
  <SelectItem value="scheduled">Agendada</SelectItem>
  <SelectItem value="active">En progreso</SelectItem>
@@ -135,8 +142,8 @@ function InspectionsPageContent() {
  </SelectContent>
  </Select>
  </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
  </div>
-
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
@@ -175,7 +182,7 @@ function InspectionsPageContent() {
  paginatedData.map((session) => (
  <tr
  key={session.id}
- className="cursor-pointer hover:bg-muted/40 transition-colors"
+ className="row-clickable"
  onClick={() => router.push(`/dashboard/inspecciones/${session.id}`)}
  >
  <td>
@@ -282,6 +289,7 @@ function InspectionsPageContent() {
  </table>
  </div>
  <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ </div>
  </div>
  );
 }

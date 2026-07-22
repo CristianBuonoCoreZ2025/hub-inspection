@@ -327,22 +327,27 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
     <div className="space-y-4">
       {/* ═══ GRILLA UNIFICADA: todas las imágenes ═══ */}
       <div className="app-panel">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="app-section-title">
-            <ImageIcon className="h-4 w-4" />
-            Imágenes
-            {total > 0 && (
-              <span className="text-[11px] text-muted-foreground">({total})</span>
+        <div className="app-grid-toolbar">
+          <div className="app-grid-toolbar-left">
+            <h3 className="app-section-title">
+              <ImageIcon className="h-4 w-4" />
+              Imágenes
+              {total > 0 && (
+                <span className="text-[11px] text-muted-foreground">({total})</span>
+              )}
+            </h3>
+            {canCreateImages && (
+              <Button
+                onClick={() => setUploadModal((p) => ({ ...p, visible: true, status: "idle", fileName: "", fileSize: 0, loaded: 0, isDragging: false }))}
+                className="pg-btn-platinum-icon"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Subir
+              </Button>
             )}
-          </h3>
-          {canCreateImages && (
-            <Button
-              onClick={() => setUploadModal((p) => ({ ...p, visible: true, status: "idle", fileName: "", fileSize: 0, loaded: 0, isDragging: false }))}
-              className="pg-btn-platinum-icon"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Subir
-            </Button>
+          </div>
+          {total > 0 && (
+            <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
           )}
         </div>
 

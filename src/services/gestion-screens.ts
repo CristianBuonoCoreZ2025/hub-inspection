@@ -100,6 +100,34 @@ export async function updateGestionScreen(id: string, formSchema: Record<string,
 }
 
 /**
+ * Refrescar el screen_snapshot de gestiones prístinas (sin datos, status=todo)
+ * con el form_schema actual de la pantalla vinculada.
+ *
+ * REGLA: las gestiones con datos guardados o emitidas NO se tocan, para evitar
+ * inconsistencias entre los datos ya capturados y la nueva estructura de pantalla.
+ *
+ * @param claimId Si se pasa, solo refresca las gestiones de ese siniestro.
+ *                Si no se pasa, refresca TODAS las gestiones prístimas.
+ * @returns { refreshed_count, protected_count, details }
+ */
+export async function refreshPristineSnapshots(claimId?: string): Promise<{
+  refreshed_count: number;
+  protected_count: number;
+  details: { action_id: string; template_code: string; refreshed: boolean }[];
+}> {
+  const res = await fetch("/api/gestion-screens/refresh-pristine-snapshots", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ claim_id: claimId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Error al refrescar snapshots" }));
+    throw new Error(err.error || "Error al refrescar snapshots");
+  }
+  return res.json();
+}
+
+/**
  * Crear una nueva pantalla de gestión.
  */
 export async function createGestionScreen(input: {

@@ -29,17 +29,27 @@ export async function POST(
 ) {
   try {
     const { actionId } = await params;
+    logger.info("upload-document llamado", {
+      component: "upload-document",
+      action: "upload.start",
+      metadata: { actionId, actionIdType: typeof actionId, actionIdLength: actionId?.length },
+    });
     const supabase = createAdminClient();
 
     // 1. Obtener la gestión
     const { data: action, error: actionError } = await supabase
       .from("claim_actions")
-      .select("id, code, claim_id, status, issuer_id, issued_by")
+      .select("id, code, claim_id, issuer_id, issued_by, action_status:lookup_catalog!claim_actions_action_status_id_fkey(code)")
       .eq("id", actionId)
       .single();
 
     if (actionError || !action) {
-      return NextResponse.json({ error: "Gestión no encontrada" }, { status: 404 });
+      logger.error("Gestión no encontrada en upload-document", new Error(actionError?.message || "no data"), {
+        component: "upload-document",
+        action: "upload.notfound",
+        metadata: { actionId, error: actionError?.message, code: actionError?.code },
+      });
+      return NextResponse.json({ error: "Gestión no encontrada", detail: actionError?.message, actionId }, { status: 404 });
     }
 
     if (!action.code || !action.claim_id) {
@@ -107,7 +117,8 @@ export async function POST(
     const url = await uploadToR2(buffer, key, mimeType);
 
     // 7. Determinar workflow_level
-    const workflowLevel = determineWorkflowLevel(action.status);
+    const statusCode = (action as Record<string, unknown>)?.action_status as { code?: string | null } | null;
+    const workflowLevel = determineWorkflowLevel(statusCode?.code ?? null);
 
     // 8. Crear versión
     const source = `upload_${fileType}` as "upload_docx" | "upload_xlsx" | "upload_pptx";

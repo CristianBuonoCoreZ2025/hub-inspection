@@ -100,18 +100,16 @@ export default function CausasPage() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-red-500 to-orange-500 text-white shadow-sm">
- <AlertTriangle className="h-5 w-5" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-red-500 to-orange-500">
+ <AlertTriangle />
  </div>
- <div>
- <h1 className="app-page-title">Causas de Siniestros</h1>
- <p className="app-page-lead">Gestión de causas de siniestros.</p>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Causas de Siniestros</h1>
  </div>
  </div>
- <div className="flex items-center gap-2">
+ <div className="app-grid-header-right">
  {canCreate("catalogos") && (
  <Button onClick={() => { setEditingId(null); resetForm(); setOpen(true); }} className="pg-btn-platinum">
  Nueva
@@ -119,19 +117,17 @@ export default function CausasPage() {
  )}
  </div>
  </div>
- </div>
 
- <div className="app-toolbar">
- <div className="flex items-center gap-2">
- <div className="relative w-[160px] shrink-0">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
  <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
  </div>
  </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
  </div>
-
- <div className="app-panel">
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead><tr><th className="w-10"></th><th>País</th><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripcion</SortableTh><th className="w-[80px]"></th></tr></thead>
@@ -147,7 +143,7 @@ export default function CausasPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation();
  setEditingId(cause.id);
  setFormData({ country_id: cause.country_id || "", name: cause.name, description: cause.description || "" });
  setOpen(true);
@@ -188,7 +184,7 @@ export default function CausasPage() {
  onValueChange={(v) => setFormData({ ...formData, country_id: v === "__none" ? "" : (v ?? "") })}
  items={[{ value: "__none", label: "Sin selección" }, ...(countries || []).map((c) => ({ value: c.id, label: c.name }))]}
  >
- <SelectTrigger className="app-input h-7">
+ <SelectTrigger className="app-input">
  <SelectValue placeholder="Seleccionar país..." />
  </SelectTrigger>
  <SelectContent>

@@ -113,6 +113,9 @@ export default function GestionScreenSwitcher({ screens, action, onChange, readO
   }
 
   if (!screen.is_dynamic) {
+    // Pantallas FIJAS (ej: "Inspección") no son configurables — no tienen
+    // form_schema ni snapshot. Se renderizan con su propio componente fijo
+    // (el flujo de inspección está manejado más arriba, líneas 56-113).
     return (
       <p className="text-sm text-muted-foreground text-center py-8">
         La pantalla <strong>{screen.name}</strong> es un componente fijo no configurable.
@@ -120,9 +123,18 @@ export default function GestionScreenSwitcher({ screens, action, onChange, readO
     );
   }
 
-  // Renderizado dinámico desde form_schema.fields
-  const fields = Array.isArray(screen.form_schema?.fields)
-    ? (screen.form_schema.fields as ScreenField[])
+  // ── Snapshot de la pantalla (SOLO pantallas dinámicas) ──
+  // Si la acción tiene screen_snapshot, usarlo. Esto "congela" la estructura
+  // con la que nació la gestión, de modo que si alguien después edita la
+  // pantalla (agrega, quita o reordena campos), las gestiones ya creadas
+  // siguen funcionando con la estructura original.
+  // Si no hay snapshot (acciones creadas antes de la migración 190), se hace
+  // fallback al form_schema actual del screen (mismo comportamiento de antes).
+  const effectiveFormSchema = action.screen_snapshot || screen.form_schema;
+
+  // Renderizado dinámico desde form_schema.fields (snapshot o actual)
+  const fields = Array.isArray(effectiveFormSchema?.fields)
+    ? (effectiveFormSchema.fields as ScreenField[])
     : null;
 
   if (fields && fields.length > 0) {
@@ -134,6 +146,7 @@ export default function GestionScreenSwitcher({ screens, action, onChange, readO
         readOnly={readOnly}
         onAdvance={onAdvance}
         onReject={onReject}
+        screenCode={screen.code}
       />
     );
   }

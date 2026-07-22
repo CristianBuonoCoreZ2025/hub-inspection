@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { getGestionScreens, updateGestionScreen } from "@/services/gestion-screens";
+import { getGestionScreens, updateGestionScreen, refreshPristineSnapshots } from "@/services/gestion-screens";
 
 import {
   type ScreenField,
@@ -33,9 +33,18 @@ import {
   widthClass,
   createField,
   OWN_FIELD_TYPES,
+  OWN_FIELD_BASIC_TYPES,
+  OWN_FIELD_COORD_TYPES,
   CLAIM_ENTITIES,
+  CLAIM_ENTITIES_GENERAL,
+  CLAIM_ENTITY_CARDS,
+  CLAIM_ENTITIES_INSURED,
+  CLAIM_ENTITIES_ADDRESS,
+  CLAIM_ENTITIES_CONTACT,
+  CLAIM_ENTITIES_RESERVE,
   ACTION_ENTITIES,
   COMPLEX_ENTITIES,
+  CARD_FIELD_MAP,
 } from "./types";
 import { PaletteItem } from "./PaletteItem";
 import { SortableFieldCard } from "./SortableFieldCard";
@@ -64,7 +73,11 @@ export default function ScreenBuilderPage() {
   const screen = screens?.find((s) => s.id === screenId);
 
   const [loadedScreenId, setLoadedScreenId] = useState<string | null>(null);
-  if (screen && screen.id !== loadedScreenId) {
+  // Recargar campos cuando:
+  // 1. Es la primera carga (loadedScreenId !== screen.id)
+  // 2. El form_schema cambió en la BD y no hay cambios sin guardar
+  // Esto permite que cambios externos a la pantalla se reflejen al refrescar
+  if (screen && screen.id !== loadedScreenId && !dirty) {
     setLoadedScreenId(screen.id);
     const loaded = Array.isArray(screen.form_schema?.fields)
       ? (screen.form_schema.fields as ScreenField[])
@@ -76,10 +89,26 @@ export default function ScreenBuilderPage() {
   const saveMut = useMutation({
     mutationFn: ({ id, schema }: { id: string; schema: Record<string, unknown> }) =>
       updateGestionScreen(id, schema),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Pantalla guardada");
       queryClient.invalidateQueries({ queryKey: ["gestion-screens"] });
       setDirty(false);
+
+      // Refrescar snapshots de gestiones prístinas (sin datos, status=todo)
+      // Las gestiones con datos o emitidas NO se tocan (protección contra inconsistencias).
+      try {
+        const result = await refreshPristineSnapshots();
+        if (result.refreshed_count > 0) {
+          toast.info(
+            `${result.refreshed_count} gestión(es) prístina(s) refrescada(s) con la nueva pantalla. ` +
+            `${result.protected_count} protegida(s) con datos.`
+          );
+          // Invalidar queries de gestiones para que se recarguen con el nuevo snapshot
+          queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
+        }
+      } catch (err) {
+        console.warn("[saveMut] No se pudieron refrescar snapshots prístinos:", err);
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -133,6 +162,33 @@ export default function ScreenBuilderPage() {
       const next = [...prev];
       next.splice(idx + 1, 0, copy);
       setSelectedId(copy.id);
+      return next;
+    });
+    setDirty(true);
+  }, []);
+
+  // Desagrupar una card agrupada del siniestro en sus campos individuales.
+  // Reemplaza la card en su posición por los N campos individuales que la componen.
+  const ungroupField = useCallback((id: string) => {
+    setFields((prev) => {
+      const idx = prev.findIndex((f) => f.id === id);
+      if (idx === -1) return prev;
+      const card = prev[idx];
+      const members = CARD_FIELD_MAP[card.type];
+      if (!members) return prev;
+      const stamp = Date.now();
+      const newFields: ScreenField[] = members.map((m, i) => ({
+        id: `${m.code}_${stamp}_${i}`,
+        type: m.code,
+        category: "simple_entity" as FieldCategory,
+        label: m.label,
+        width: m.width,
+        required: false,
+        readOnly: true,
+      }));
+      const next = [...prev];
+      next.splice(idx, 1, ...newFields);
+      if (newFields.length > 0) setSelectedId(newFields[0].id);
       return next;
     });
     setDirty(true);
@@ -352,30 +408,64 @@ export default function ScreenBuilderPage() {
                 <p className="text-[11px] font-semibold text-muted-foreground">Componentes</p>
                 <p className="text-[10px] text-muted-foreground/70 mt-0.5">Arrastra al lienzo →</p>
               </div>
-              <div className="flex-1 overflow-y-auto p-3 space-y-4">
+              <div className="flex-1 overflow-y-auto p-3 space-y-3">
                 {/* Campos propios */}
-                <PaletteSection title="Campos propios" subtitle="Editables por el usuario">
-                  {OWN_FIELD_TYPES.map((t) => (
-                    <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
-                  ))}
+                <PaletteSection title="Campos propios" subtitle="Editables por el usuario" theme="blue">
+                  <PaletteSubSection title="Básicos">
+                    {OWN_FIELD_BASIC_TYPES.map((t) => (
+                      <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                    ))}
+                  </PaletteSubSection>
+                  <PaletteSubSection title="Coordinación de inspección">
+                    {OWN_FIELD_COORD_TYPES.map((t) => (
+                      <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                    ))}
+                  </PaletteSubSection>
                 </PaletteSection>
 
                 {/* Datos del siniestro */}
-                <PaletteSection title="Datos del siniestro" subtitle="Solo lectura">
-                  {CLAIM_ENTITIES.map((t) => (
-                    <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
-                  ))}
+                <PaletteSection title="Datos del siniestro" subtitle="Solo lectura" theme="emerald">
+                  <PaletteSubSection title="Generales">
+                    {CLAIM_ENTITIES_GENERAL.map((t) => (
+                      <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                    ))}
+                  </PaletteSubSection>
+                  <PaletteSubSection title="Cards agrupadas">
+                    {CLAIM_ENTITY_CARDS.map((t) => (
+                      <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                    ))}
+                  </PaletteSubSection>
+                  <PaletteSubSection title="Asegurado (individual)">
+                    {CLAIM_ENTITIES_INSURED.map((t) => (
+                      <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                    ))}
+                  </PaletteSubSection>
+                  <PaletteSubSection title="Dirección del siniestro (individual)">
+                    {CLAIM_ENTITIES_ADDRESS.map((t) => (
+                      <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                    ))}
+                  </PaletteSubSection>
+                  <PaletteSubSection title="Contacto (individual)">
+                    {CLAIM_ENTITIES_CONTACT.map((t) => (
+                      <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                    ))}
+                  </PaletteSubSection>
+                  <PaletteSubSection title="Reserva">
+                    {CLAIM_ENTITIES_RESERVE.map((t) => (
+                      <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
+                    ))}
+                  </PaletteSubSection>
                 </PaletteSection>
 
                 {/* Datos de la gestión */}
-                <PaletteSection title="Datos de la gestión" subtitle="Solo lectura">
+                <PaletteSection title="Datos de la gestión" subtitle="Solo lectura" theme="amber">
                   {ACTION_ENTITIES.map((t) => (
                     <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
                   ))}
                 </PaletteSection>
 
                 {/* Entidades complejas */}
-                <PaletteSection title="Entidades complejas" subtitle="Solo lectura · Estructuras">
+                <PaletteSection title="Entidades complejas" subtitle="Solo lectura · Estructuras" theme="violet">
                   {COMPLEX_ENTITIES.map((t) => (
                     <PaletteItem key={t.code} code={t.code} label={t.label} icon={t.icon} desc={t.desc} />
                   ))}
@@ -416,7 +506,7 @@ export default function ScreenBuilderPage() {
                   {fields.length === 0 ? (
                     <DropEmptyZone onAdd={addField} />
                   ) : (
-                    <div className="grid grid-cols-12 gap-3 p-5">
+                    <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-3 p-5">
                       {fields.map((field) => (
                         <div key={field.id} className={widthClass(field.width)}>
                           <SortableFieldCard
@@ -430,7 +520,7 @@ export default function ScreenBuilderPage() {
                       ))}
 
                       {/* Drop zone al final */}
-                      <div className="col-span-12">
+                      <div className="col-span-[60]">
                         <DropZone />
                       </div>
                     </div>
@@ -454,6 +544,7 @@ export default function ScreenBuilderPage() {
                     onUpdate={(updates) => updateField(selectedField.id, updates)}
                     onRemove={() => removeField(selectedField.id)}
                     onDuplicate={() => duplicateField(selectedField.id)}
+                    onUngroup={() => ungroupField(selectedField.id)}
                   />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-muted-foreground">
@@ -488,20 +579,51 @@ export default function ScreenBuilderPage() {
 // Sección de paleta
 // ═══════════════════════════════════════════════════════════════
 
+type PaletteTheme = "blue" | "emerald" | "violet" | "amber" | "slate";
+
 function PaletteSection({
   title,
   subtitle,
+  theme = "slate",
   children,
 }: {
   title: string;
   subtitle: string;
+  theme?: PaletteTheme;
+  children: React.ReactNode;
+}) {
+  const themeClasses = {
+    blue: "border-blue-300/40 dark:border-blue-800/40 bg-blue-50/40 dark:bg-blue-900/15",
+    emerald: "border-emerald-300/40 dark:border-emerald-800/40 bg-emerald-50/40 dark:bg-emerald-900/15",
+    violet: "border-violet-300/40 dark:border-violet-800/40 bg-violet-50/40 dark:bg-violet-900/15",
+    amber: "border-amber-300/40 dark:border-amber-800/40 bg-amber-50/40 dark:bg-amber-900/15",
+    slate: "border-border/50 bg-card/40 dark:bg-card/30",
+  };
+  return (
+    <div className={`rounded-lg border p-2.5 space-y-2.5 ${themeClasses[theme]}`}>
+      <div>
+        <p className="text-[11px] font-semibold text-foreground/90">{title}</p>
+        <p className="text-[9px] text-muted-foreground">{subtitle}</p>
+      </div>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+function PaletteSubSection({
+  title,
+  children,
+}: {
+  title: string;
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <p className="text-[11px] font-semibold mb-0.5">{title}</p>
-      <p className="text-[9px] text-muted-foreground mb-2">{subtitle}</p>
-      <div className="space-y-1.5">{children}</div>
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">{title}</span>
+        <div className="flex-1 h-px bg-border/40" />
+      </div>
+      <div className="space-y-1">{children}</div>
     </div>
   );
 }
@@ -575,7 +697,7 @@ function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName
               <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
                 Datos del Siniestro / Gestión
               </h4>
-              <div className="grid grid-cols-12 gap-3">
+              <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-3">
                 {simpleEntities.map((field) => (
                   <div key={field.id} className={widthClass(field.width)}>
                     <FieldPreview field={field} allFields={fields} />
@@ -590,7 +712,7 @@ function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName
               <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
                 Formulario
               </h4>
-              <div className="grid grid-cols-12 gap-3">
+              <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-3">
                 {ownFields.map((field) => (
                   <div key={field.id} className={widthClass(field.width)}>
                     <FieldPreview field={field} allFields={fields} />

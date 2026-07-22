@@ -1,8 +1,8 @@
 import { fetchAll, fetchById, insertRow, updateRow, deleteRow } from "@/lib/supabase/db";
-import type { Claim, ClaimInput } from "@/types";
+import type { Claim, ClaimInput, ClaimsParticipant } from "@/types";
 
 const CLAIM_SELECT =
-  "id, claim_number, policy_number, policy_id, claim_date, status_id, report_date, assignment_date, client_reference, company_report_number, liquidation_number, is_special_claim, summary, event_id, internal_number, notes, company_id, assigned_adjuster_id, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, claim_cause_id, claim_type_id, business_line_id, insurance_product_id, country_id, region_id, city_id, commune_id, construction_type_id, destination_housing_id, damage_classification_id, habitability_id, type_id, currency_id, service_type_id, billing_type_id, claim_address, owner_same_as_insured, policy_item, policy_start_date, policy_end_date, policy_amount, policy_premium, recovery_type_legal, recovery_type_material, recovery_comments, broker_executive, created_at, updated_at, updated_by, disabled, disabled_reason, disabled_at, disabled_by, reopened_at, reopened_by, reopened_reason, inspection_sessions:inspection_sessions(id, claim_action_id, status, inspection_number, inspection_type, scheduled_at, started_at, ended_at, created_at), status:lookup_catalog!claims_status_id_fkey(id, category, code, name), assigned_adjuster:profiles!claims_assigned_adjuster_id_fkey(id, full_name, email), adjuster:profiles!claims_adjuster_id_fkey(id, full_name, email), inspector:profiles!claims_inspector_id_fkey(id, full_name, email), auditor:profiles!claims_auditor_id_fkey(id, full_name, email), dispatcher:profiles!claims_dispatcher_id_fkey(id, full_name, email), assistant:profiles!claims_assistant_id_fkey(id, full_name, email), broker:brokers!claims_broker_id_fkey(id, name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name), policy:policies!claims_policy_id_fkey(id, policy_number, policy_name, status, currency), currency:currencies!claims_currency_id_fkey(id, code, name, symbol, decimals)";
+  "id, claim_number, policy_number, policy_id, claim_date, status_id, report_date, assignment_date, client_reference, company_report_number, liquidation_number, is_special_claim, summary, event_id, internal_number, notes, company_id, assigned_adjuster_id, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, claim_cause_id, claim_type_id, business_line_id, insurance_product_id, country_id, region_id, city_id, commune_id, construction_type_id, destination_housing_id, damage_classification_id, habitability_id, type_id, currency_id, service_type_id, billing_type_id, claim_address, owner_same_as_insured, policy_item, policy_start_date, policy_end_date, policy_amount, policy_premium, recovery_type_legal, recovery_type_material, recovery_comments, broker_executive, created_at, updated_at, updated_by, disabled, disabled_reason, disabled_at, disabled_by, reopened_at, reopened_by, reopened_reason, inspection_sessions:inspection_sessions(id, claim_action_id, status, inspection_number, inspection_type, scheduled_at, started_at, ended_at, created_at), status:lookup_catalog!claims_status_id_fkey(id, category, code, name), assigned_adjuster:profiles!claims_assigned_adjuster_id_fkey(id, full_name, email), adjuster:profiles!claims_adjuster_id_fkey(id, full_name, email), inspector:profiles!claims_inspector_id_fkey(id, full_name, email), auditor:profiles!claims_auditor_id_fkey(id, full_name, email), dispatcher:profiles!claims_dispatcher_id_fkey(id, full_name, email), assistant:profiles!claims_assistant_id_fkey(id, full_name, email), broker:brokers!claims_broker_id_fkey(id, name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name), policy:policies!claims_policy_id_fkey(id, policy_number, policy_name, status, currency), currency:currencies!claims_currency_id_fkey(id, code, name, symbol, decimals), country:countries!claims_country_id_fkey(id, name), region:regions!claims_region_id_fkey(id, name), city:cities!claims_city_id_fkey(id, name), commune:communes!claims_commune_id_fkey(id, name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(id, name)";
 
 export async function getClaims(companyId?: string) {
   const eq: Record<string, unknown> = { disabled: false };
@@ -275,27 +275,9 @@ export async function getReopenedClaims() {
   });
 }
 
-export async function getClaimParticipants(id: string) {
-  type Participant = {
-    id: string;
-    claim_id: string;
-    type: string;
-    full_name: string;
-    first_name: string | null;
-    last_name: string | null;
-    rut: string | null;
-    email: string | null;
-    phone: string | null;
-    cell_phone: string | null;
-    address: string | null;
-    country: string | null;
-    region: string | null;
-    city: string | null;
-    commune: string | null;
-    linked_to_insured: boolean;
-  };
-  return fetchAll<Participant>("claims_participants", {
-    select: "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, linked_to_insured",
+export async function getClaimParticipants(id: string): Promise<ClaimsParticipant[]> {
+  return fetchAll<ClaimsParticipant>("claims_participants", {
+    select: "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, person_type, country, region, city, commune, linked_to_insured",
     eq: { claim_id: id },
   });
 }

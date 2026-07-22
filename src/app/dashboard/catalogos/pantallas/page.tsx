@@ -20,6 +20,7 @@ import {
  deactivateGestionScreen,
  reactivateGestionScreen,
  deleteGestionScreen,
+ screenHasDocumentTemplates,
 } from "@/services/gestion-screens";
 import { getActionFeatures, type ActionFeature } from "@/services/actions";
 import type { GestionScreen } from "@/types";
@@ -117,17 +118,36 @@ export default function PantallasPage() {
  return fields.slice(0, 4).map((f) => f.label).join(", ");
  };
 
+ // Tipo de pantalla:
+ // - Fija: componente React hardcoded, no editable (ej: inspección)
+ // - Dinámica: configurable via form_schema, sin flujo de templates
+ // - Dinámica + Templates: configurable Y con campo document_templates
+ const getTipo = (s: GestionScreen) => {
+ if (!s.is_dynamic) return "Fija";
+ return screenHasDocumentTemplates(s) ? "Dinámica + Templates" : "Dinámica";
+ };
+
+ const tipoColor: Record<string, string> = {
+ "Fija": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+ "Dinámica": "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+ "Dinámica + Templates": "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
+ };
+
  return (
  <div className="app-page">
- <div className="flex items-center gap-3 mb-3">
- <h1 className="app-page-title flex items-center gap-2 shrink-0">
- <Monitor className="h-5 w-5" />
- Pantallas
- </h1>
- <div className="flex-1" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-[#0095DA] to-[#005BBB]">
+ <Monitor />
+ </div>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Pantallas</h1>
+ </div>
+ </div>
+ <div className="app-grid-header-right">
  {screens && screens.length > 0 && (
  <span className="text-[11px] text-muted-foreground">
- {screens.filter((s) => s.is_active && getUsage(s.id).length > 0).length} en uso · {screens.filter((s) => s.is_active).length} activas · {screens.filter((s) => !s.is_active).length} inactivas
+ {screens.filter((s) => s.is_active && getUsage(s.id).length > 0).length} en uso · {screens.filter((s) => !s.is_dynamic).length} fijas · {screens.filter((s) => s.is_dynamic && screenHasDocumentTemplates(s)).length} c/templates · {screens.filter((s) => s.is_dynamic && !screenHasDocumentTemplates(s)).length} dinámicas · {screens.filter((s) => !s.is_active).length} inactivas
  </span>
  )}
  <ToggleChip
@@ -143,13 +163,16 @@ export default function PantallasPage() {
  </Button>
  )}
  </div>
+ </div>
 
+ <div className="app-panel">
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
  <tr>
  <SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Código</SortableTh>
  <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
+ <th>Tipo</th>
  <th>Descripción</th>
  <th>Campos</th>
  <th>Uso</th>
@@ -158,24 +181,27 @@ export default function PantallasPage() {
  </tr>
  </thead>
  <tbody>
- {isLoading ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
- : sortedScreens.length === 0 ? <tr><td colSpan={7} className="text-center text-muted-foreground py-4">No se encontraron pantallas.</td></tr>
+ {isLoading ? <tr><td colSpan={8} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+ : sortedScreens.length === 0 ? <tr><td colSpan={8} className="text-center text-muted-foreground py-4">No se encontraron pantallas.</td></tr>
  : sortedScreens.map((s) => {
  const usage = getUsage(s.id);
  const inUse = usage.length > 0;
  const isInactive = !s.is_active;
+ const tipo = getTipo(s);
  return (
  <tr key={s.id} className={isInactive ? "opacity-50" : ""}>
  <td className="font-mono font-semibold text-primary">
  {s.code}
- {!s.is_dynamic && (
- <span className="ml-2 text-[10px] text-amber-600 font-normal">(fija)</span>
- )}
  {isInactive && (
  <span className="ml-2 text-[10px] text-muted-foreground font-normal">(inactiva)</span>
  )}
  </td>
  <td className="font-medium">{s.name}</td>
+ <td>
+ <span className={`inline-flex rounded px-2 py-0.5 text-[10px] font-medium ${tipoColor[tipo]}`}>
+ {tipo}
+ </span>
+ </td>
  <td className="text-muted-foreground max-w-[280px] truncate">{s.description || "—"}</td>
  <td className="text-muted-foreground">
  {s.is_dynamic ? (
@@ -200,7 +226,7 @@ export default function PantallasPage() {
  <td>
  <div className="app-row-actions">
  {s.is_dynamic && !isInactive && canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
  setEditingId(s.id);
  setFormData({
  code: s.code,
@@ -215,12 +241,12 @@ export default function PantallasPage() {
  </Button>
  )}
  {s.is_dynamic && !isInactive && canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => router.push(`/dashboard/catalogos/pantallas/${s.id}`)} title="Diseñar pantalla">
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => router.push(`/dashboard/catalogos/pantallas/${s.id}`)} title="Diseñar pantalla">
  <LayoutTemplate className="h-4 w-4" />
  </Button>
  )}
  {isInactive && canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => reactivateMut.mutate(s.id)} title="Reactivar">
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => reactivateMut.mutate(s.id)} title="Reactivar">
  <RotateCcw className="h-4 w-4" />
  </Button>
  )}
@@ -246,6 +272,7 @@ export default function PantallasPage() {
  })}
  </tbody>
  </table>
+ </div>
  </div>
 
  {/* Dialog: crear/editar pantalla */}

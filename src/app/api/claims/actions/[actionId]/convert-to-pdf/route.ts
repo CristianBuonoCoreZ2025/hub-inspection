@@ -49,6 +49,20 @@ export async function POST(
       );
     }
 
+    // 1b. Validar que la pantalla de la gestión soporte flujo de templates.
+    // La conversión a PDF solo aplica a gestiones cuya pantalla tiene un campo
+    // "document_templates" (pantallas del tipo "Pantalla + Templates").
+    const supportsTemplates = await actionSupportsDocumentTemplates(actionId);
+    if (!supportsTemplates) {
+      return NextResponse.json(
+        {
+          error:
+            "La pantalla asociada a esta gestión no soporta templates. La conversión a PDF solo aplica a gestiones con pantalla «Pantalla + Templates».",
+        },
+        { status: 400 }
+      );
+    }
+
     // 2. Obtener el documento editable actual
     const editableDoc = await getCurrentEditableDocument(actionId);
     if (!editableDoc) {
@@ -62,7 +76,7 @@ export async function POST(
     const { data: action, error: actionError } = await supabase
       .from("claim_actions")
       .select(
-        "id, code, claim_id, status, action_template:action_template!claim_actions_action_template_id_fkey(id, is_dispatch_applicable)"
+        "id, code, claim_id, action_template:action_template!claim_actions_action_template_id_fkey(id, is_dispatch_applicable)"
       )
       .eq("id", actionId)
       .single();
@@ -72,7 +86,8 @@ export async function POST(
     }
 
     // 4. Validar según is_dispatch_applicable
-    const isDispatchApplicable = (action.action_template as any)?.is_dispatch_applicable === true;
+    const actionTemplate = action.action_template as { is_dispatch_applicable?: boolean } | null;
+    const isDispatchApplicable = actionTemplate?.is_dispatch_applicable === true;
 
     if (isDispatchApplicable) {
       // Verificar que el siniestro esté en estado "despacho"
@@ -86,8 +101,9 @@ export async function POST(
         return NextResponse.json({ error: "Siniestro no encontrado" }, { status: 404 });
       }
 
-      const claimStatusCode = (claim.status as any)?.code?.toLowerCase() || "";
-      const claimStatusName = (claim.status as any)?.name?.toLowerCase() || "";
+      const claimStatus = claim.status as { code?: string; name?: string } | null;
+      const claimStatusCode = claimStatus?.code?.toLowerCase() || "";
+      const claimStatusName = claimStatus?.name?.toLowerCase() || "";
       const isDispatchState =
         claimStatusCode.includes("despacho") || claimStatusName.includes("despacho");
 
@@ -96,7 +112,7 @@ export async function POST(
           {
             error:
               "Esta gestión requiere despacho. El botón 'Convertir a PDF' solo está disponible cuando el siniestro está en estado 'despacho'.",
-            claimStatus: (claim.status as any)?.name,
+            claimStatus: claimStatus?.name,
           },
           { status: 400 }
         );

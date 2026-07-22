@@ -41,6 +41,7 @@ import {
   Coins,
   ArrowRightLeft,
   BarChart3,
+  Menu as MenuIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -56,6 +57,30 @@ export interface NavGroup {
   section: string;
   icon: LucideIcon;
   links: NavLink[];
+}
+
+// ── Tipos para grupos visibles (con permisos aplicados) ──
+// Soporta 2 niveles de anidamiento: Grupo → Subgrupo → Links
+// Los children preservan el orden interleaved de links y subgrupos
+// tal como están en la config del menú.
+export interface VisibleNavSubgroup {
+  title: string;
+  section: string;
+  icon: LucideIcon;
+  visibleLinks: NavLink[];
+}
+
+// Un child de un grupo visible: puede ser un link o un subgrupo.
+// El discriminador es "kind".
+export type VisibleNavChild =
+  | { kind: "link"; link: NavLink }
+  | { kind: "subgroup"; subgroup: VisibleNavSubgroup };
+
+export interface VisibleNavGroup {
+  title: string;
+  section: string;
+  icon: LucideIcon;
+  children: VisibleNavChild[];
 }
 
 // ── Links principales ──
@@ -129,6 +154,7 @@ export const adminLinks: NavLink[] = [
   { href: "/dashboard/users", label: "Usuarios", icon: Users, section: "users" },
   { href: "/dashboard/companies", label: "Empresas", icon: Building2, section: "companies" },
   { href: "/dashboard/permisos", label: "Permisos", icon: Shield, section: "configuracion" },
+  { href: "/dashboard/admin/menu", label: "Menú Lateral", icon: MenuIcon, section: "configuracion" },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings, section: "configuracion" },
 ];
 

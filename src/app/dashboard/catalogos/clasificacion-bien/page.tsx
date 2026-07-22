@@ -21,7 +21,7 @@ import {
  DialogTitle,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { FieldConfigEditor } from "@/components/ui/field-config-editor";
+import { FieldConfigEditor, type FieldConfig } from "@/components/ui/field-config-editor";
 
 export default function PropertyClassificationPage() {
  const queryClient = useQueryClient();
@@ -62,7 +62,7 @@ export default function PropertyClassificationPage() {
  });
 
  const updateConfigMutation = useMutation({
- mutationFn: ({ id, config }: { id: string; config: any }) => updatePropertyClassification(id, { field_config: config }),
+ mutationFn: ({ id, config }: { id: string; config: FieldConfig }) => updatePropertyClassification(id, { field_config: config as unknown as Record<string, unknown> }),
  onSuccess: () => {
  toast.success("Configuración de campos actualizada");
  queryClient.invalidateQueries({ queryKey: ["clasificacion_bien"] });
@@ -104,18 +104,16 @@ export default function PropertyClassificationPage() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-purple-500 text-white shadow-sm">
- <Boxes className="h-5 w-5" />
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-violet-500 to-purple-500">
+ <Boxes />
  </div>
- <div>
- <h1 className="app-page-title">Clasificacion Bien</h1>
- <p className="app-page-lead">Gestión de clasificaciones de bienes.</p>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Clasificacion Bien</h1>
  </div>
  </div>
- <div className="flex items-center gap-2">
+ <div className="app-grid-header-right">
  {canCreate("catalogos") && (
  <Button onClick={() => { setEditingId(null); setFormData({"name":"","description":""}); setOpen(true); }} className="pg-btn-platinum">
  Nueva
@@ -123,19 +121,17 @@ export default function PropertyClassificationPage() {
  )}
  </div>
  </div>
- </div>
 
- <div className="app-toolbar">
- <div className="flex items-center gap-2">
- <div className="relative w-[160px] shrink-0">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
  <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
  </div>
  </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
  </div>
-
- <div className="app-panel">
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
@@ -160,14 +156,14 @@ export default function PropertyClassificationPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
  setEditingId(item.id);
  setFormData({ name: item.name || "", description: item.description || "" });
  setOpen(true);
  }}><Pencil className="h-4 w-4" /></Button>
  )}
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
  setConfigItem(item);
  setConfigOpen(true);
  }}><Settings2 className="h-4 w-4" /></Button>
@@ -223,7 +219,7 @@ export default function PropertyClassificationPage() {
  <FieldConfigEditor
  open={configOpen}
  onOpenChange={setConfigOpen}
- currentConfig={configItem.field_config as any}
+ currentConfig={configItem.field_config as FieldConfig | undefined}
  onSave={(config) => updateConfigMutation.mutate({ id: configItem.id, config })}
  itemName={configItem.name}
  />

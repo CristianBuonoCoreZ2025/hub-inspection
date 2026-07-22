@@ -20,6 +20,7 @@ import {
   BookOpen,
   Lightbulb,
 } from "lucide-react";
+import { HelpIcon } from "@/components/icons/topbar-icons";
 
 import {
   Dialog,
@@ -699,7 +700,7 @@ export function HelpButton() {
         className="topbar-action dock-item"
         title="Ayuda"
       >
-        <HelpCircle />
+        <HelpIcon size={18} />
       </button>
       <HelpPanel open={open} onOpenChange={setOpen} />
     </>

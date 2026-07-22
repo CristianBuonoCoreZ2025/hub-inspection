@@ -849,18 +849,17 @@ function ClaimsPageContent() {
 
  return (
  <div className="app-page">
- <div className="app-page-header">
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-sky-500 text-white shadow-sm">
- <Shield className="h-5 w-5" />
+ {/* Header unificado: icono + "Siniestros" + contador + botones Exportar/Nuevo */}
+ <div className="app-grid-header">
+ <div className="app-grid-header-left">
+ <div className="app-grid-icon bg-linear-to-br from-violet-500 to-sky-500">
+ <Shield />
  </div>
- <div>
- <h1 className="app-page-title">Siniestros</h1>
- <p className="app-page-lead">Gestión de siniestros y seguimiento de casos.</p>
+ <div className="app-grid-title-row">
+ <h1 className="app-page-title shrink-0">Siniestros</h1>
  </div>
  </div>
- <div className="flex items-center gap-2">
+ <div className="app-grid-header-right">
  <Button
  className="pg-btn-platinum-icon"
  onClick={() => {
@@ -885,41 +884,6 @@ function ClaimsPageContent() {
  <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="pg-btn-platinum">
  Nuevo
  </Button>
- )}
- </div>
- </div>
- </div>
-
- <div className="app-toolbar">
- <div className="flex gap-2 flex-1 flex-wrap">
- <div className="relative flex-1 min-w-[200px] max-w-sm">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
- <Input
- placeholder="Buscar..."
- value={search}
- onChange={(e) => setSearch(e.target.value)}
- className="liquid-search"
- />
- </div>
- <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={statusOptions}>
- <SelectTrigger className="app-input max-w-[140px]">
- <SelectValue placeholder="Todos los estados" />
- </SelectTrigger>
- <SelectContent>
- {statusOptions.map((s) => (
- <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
- ))}
- </SelectContent>
- </Select>
- <DatePicker value={dateFrom} onChange={setDateFrom} placeholder="Desde" className="max-w-[110px]" />
- <DatePicker value={dateTo} onChange={setDateTo} placeholder="Hasta" className="max-w-[110px]" />
- {(statusFilter || dateFrom || dateTo) && (
- <button
- onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
- className="text-[12px] text-muted-foreground hover:text-foreground px-2"
- >
- Limpiar
- </button>
  )}
  </div>
  </div>
@@ -1001,7 +965,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="claimCountry"
  placeholder="Seleccionar país..."
- className="app-input h-7"
+ className="app-input"
  onValueChange={() => {
  form.setValue("claimRegion", "");
  form.setValue("claimCity", "");
@@ -1026,7 +990,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="companyId"
  placeholder="Selecciona una empresa"
- className="app-input h-7"
+ className="app-input"
  items={companies?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
  >
  {companies?.map((c) => (
@@ -1046,7 +1010,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="insuranceCompanyId"
  placeholder="Seleccionar compañía..."
- className="app-input h-7"
+ className="app-input"
  items={filteredInsuranceCompanies?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
  >
  {filteredInsuranceCompanies?.map((c) => (
@@ -1060,14 +1024,14 @@ function ClaimsPageContent() {
 
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">N° Interno Cliente</Label>
- <input {...form.register("clientReference")} placeholder="MCL-XXXX" className="app-input h-7" />
+ <input {...form.register("clientReference")} placeholder="MCL-XXXX" className="app-input" />
  </div>
 
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">
  N° Siniestro (Compañía) <span className="text-red-500">*</span>
  </Label>
- <input {...form.register("claimNumber")} placeholder="Ej: 12345678" className={`app-input h-7 ${claimNumberWarning ? "border-amber-500 ring-1 ring-amber-500/30" : ""}`} />
+ <input {...form.register("claimNumber")} placeholder="Ej: 12345678" className={`app-input ${claimNumberWarning ? "border-amber-500 ring-1 ring-amber-500/30" : ""}`} />
  <FieldError message={form.formState.errors.claimNumber?.message} />
  {claimNumberWarning && (
  <p className="text-[10px] text-amber-600 leading-tight flex items-center gap-1">
@@ -1081,7 +1045,7 @@ function ClaimsPageContent() {
  <Label className="text-[10px] text-muted-foreground">
  N° Póliza <span className="text-red-500">*</span>
  </Label>
- <input {...form.register("policyNumber")} placeholder="Ej: POL-2026-001" className="app-input h-7" />
+ <input {...form.register("policyNumber")} placeholder="Ej: POL-2026-001" className="app-input" />
  <FieldError message={form.formState.errors.policyNumber?.message} />
  </div>
 
@@ -1117,7 +1081,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="claimTypeId"
  placeholder="Seleccionar tipo..."
- className="app-input h-7"
+ className="app-input"
  onValueChange={() => {
  form.setValue("businessLineId", "");
  form.setValue("insuranceProductId", "");
@@ -1139,7 +1103,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="businessLineId"
  placeholder="Seleccionar línea..."
- className="app-input h-7"
+ className="app-input"
  clearable
  onValueChange={() => form.setValue("insuranceProductId", "")}
  items={filteredBusinessLines?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
@@ -1158,7 +1122,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="insuranceProductId"
  placeholder="Seleccionar producto..."
- className="app-input h-7"
+ className="app-input"
  disabled={!selectedBusinessLineId}
  clearable
  items={filteredInsuranceProducts?.map((p) => ({ value: p.id, label: p.name ?? "" })) || []}
@@ -1177,7 +1141,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="eventId"
  placeholder="Seleccionar evento..."
- className="app-input h-7"
+ className="app-input"
  clearable
  items={eventsCatalog?.map((e) => ({ value: e.id, label: e.name ?? "" })) || []}
  >
@@ -1195,7 +1159,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="advisorId"
  placeholder="Seleccionar asesor..."
- className="app-input h-7"
+ className="app-input"
  clearable
  items={filteredAdvisors?.map((a) => ({ value: a.id, label: a.name ?? "" })) || []}
  >
@@ -1213,7 +1177,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="brokerId"
  placeholder="Seleccionar corredor..."
- className="app-input h-7"
+ className="app-input"
  clearable
  items={filteredBrokers?.map((b) => ({ value: b.id, label: b.name ?? "" })) || []}
  >
@@ -1239,7 +1203,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="inspectorId"
  placeholder="Seleccionar inspector..."
- className="app-input h-7"
+ className="app-input"
  items={inspectors?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
  >
  {inspectors?.map((u) => (
@@ -1257,7 +1221,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="adjusterId"
  placeholder="Seleccionar ajustador..."
- className="app-input h-7"
+ className="app-input"
  clearable
  items={adjusters?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
  >
@@ -1300,38 +1264,38 @@ function ClaimsPageContent() {
  <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">RUT</Label>
- <input {...form.register("rut")} placeholder="14185994k" className="app-input h-7" />
+ <input {...form.register("rut")} placeholder="14185994k" className="app-input" />
  <FieldError message={form.formState.errors.rut?.message} />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">
  Nombre <span className="text-red-500">*</span>
  </Label>
- <input {...form.register("insuredName")} placeholder="Cristian" className="app-input h-7" />
+ <input {...form.register("insuredName")} placeholder="Cristian" className="app-input" />
  <FieldError message={form.formState.errors.insuredName?.message} />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Apellido</Label>
- <input {...form.register("lastName")} placeholder="Zárate" className="app-input h-7" />
+ <input {...form.register("lastName")} placeholder="Zárate" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Email</Label>
- <input {...form.register("insuredEmail")} type="email" placeholder="asegurado@email.com" className="app-input h-7" />
+ <input {...form.register("insuredEmail")} type="email" placeholder="asegurado@email.com" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">
  Celular <span className="text-red-500">*</span>
  </Label>
- <input {...form.register("cellPhone")} placeholder="9 9999 9999" className="app-input h-7" />
+ <input {...form.register("cellPhone")} placeholder="9 9999 9999" className="app-input" />
  <FieldError message={form.formState.errors.cellPhone?.message} />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Teléfono</Label>
- <input {...form.register("insuredPhone")} placeholder="X XXXX XXXX" className="app-input h-7" />
+ <input {...form.register("insuredPhone")} placeholder="X XXXX XXXX" className="app-input" />
  </div>
  <div className="flex flex-col gap-1 col-span-full">
  <Label className="text-[10px] text-muted-foreground">Dirección</Label>
- <input {...form.register("insuredAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
+ <input {...form.register("insuredAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
  </div>
  </div>
  <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
@@ -1341,7 +1305,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="insuredCountry"
  placeholder="Seleccionar país..."
- className="app-input h-7"
+ className="app-input"
  clearable
  onValueChange={() => {
  form.setValue("insuredRegion", "");
@@ -1362,7 +1326,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="insuredRegion"
  placeholder="Seleccionar región..."
- className="app-input h-7"
+ className="app-input"
  disabled={!selectedInsuredCountry}
  clearable
  onValueChange={() => {
@@ -1384,7 +1348,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="insuredCity"
  placeholder="Seleccionar ciudad..."
- className="app-input h-7"
+ className="app-input"
  disabled={!selectedInsuredRegion}
  clearable
  onValueChange={() => form.setValue("insuredCommune", "")}
@@ -1403,7 +1367,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="insuredCommune"
  placeholder="Seleccionar comuna..."
- className="app-input h-7"
+ className="app-input"
  disabled={!selectedInsuredCity}
  clearable
  items={insuredCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
@@ -1463,32 +1427,32 @@ function ClaimsPageContent() {
  <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">RUT</Label>
- <input {...form.register("contractorRut")} readOnly={contractorLinked} placeholder="14185994k" className="app-input h-7" />
+ <input {...form.register("contractorRut")} readOnly={contractorLinked} placeholder="14185994k" className="app-input" />
  <FieldError message={form.formState.errors.contractorRut?.message} />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Nombre</Label>
- <input {...form.register("contractorName")} readOnly={contractorLinked} placeholder="Cristian" className="app-input h-7" />
+ <input {...form.register("contractorName")} readOnly={contractorLinked} placeholder="Cristian" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Apellido</Label>
- <input {...form.register("contractorLastName")} readOnly={contractorLinked} placeholder="Zárate" className="app-input h-7" />
+ <input {...form.register("contractorLastName")} readOnly={contractorLinked} placeholder="Zárate" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Email</Label>
- <input {...form.register("contractorEmail")} readOnly={contractorLinked} type="email" placeholder="contratante@email.com" className="app-input h-7" />
+ <input {...form.register("contractorEmail")} readOnly={contractorLinked} type="email" placeholder="contratante@email.com" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Celular</Label>
- <input {...form.register("contractorCellPhone")} readOnly={contractorLinked} placeholder="9 9999 9999" className="app-input h-7" />
+ <input {...form.register("contractorCellPhone")} readOnly={contractorLinked} placeholder="9 9999 9999" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Teléfono</Label>
- <input {...form.register("contractorPhone")} readOnly={contractorLinked} placeholder="X XXXX XXXX" className="app-input h-7" />
+ <input {...form.register("contractorPhone")} readOnly={contractorLinked} placeholder="X XXXX XXXX" className="app-input" />
  </div>
  <div className="flex flex-col gap-1 col-span-full">
  <Label className="text-[10px] text-muted-foreground">Dirección</Label>
- <input {...form.register("contractorAddress")} readOnly={contractorLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
+ <input {...form.register("contractorAddress")} readOnly={contractorLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
  </div>
  </div>
  <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
@@ -1498,7 +1462,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="contractorCountry"
  placeholder="Seleccionar país..."
- className="app-input h-7"
+ className="app-input"
  disabled={contractorLinked}
  clearable
  onValueChange={() => {
@@ -1520,7 +1484,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="contractorRegion"
  placeholder="Seleccionar región..."
- className="app-input h-7"
+ className="app-input"
  disabled={contractorLinked || !selectedContractorCountry}
  clearable
  onValueChange={() => {
@@ -1542,7 +1506,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="contractorCity"
  placeholder="Seleccionar ciudad..."
- className="app-input h-7"
+ className="app-input"
  disabled={contractorLinked || !selectedContractorRegion}
  clearable
  onValueChange={() => form.setValue("contractorCommune", "")}
@@ -1561,7 +1525,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="contractorCommune"
  placeholder="Seleccionar comuna..."
- className="app-input h-7"
+ className="app-input"
  disabled={contractorLinked || !selectedContractorCity}
  clearable
  items={contractorCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
@@ -1623,32 +1587,32 @@ function ClaimsPageContent() {
  <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">RUT</Label>
- <input {...form.register("beneficiaryRut")} readOnly={beneficiaryLinked} placeholder="14185994k" className="app-input h-7" />
+ <input {...form.register("beneficiaryRut")} readOnly={beneficiaryLinked} placeholder="14185994k" className="app-input" />
  <FieldError message={form.formState.errors.beneficiaryRut?.message} />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Nombre</Label>
- <input {...form.register("beneficiaryName")} readOnly={beneficiaryLinked} placeholder="Cristian" className="app-input h-7" />
+ <input {...form.register("beneficiaryName")} readOnly={beneficiaryLinked} placeholder="Cristian" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Apellido</Label>
- <input {...form.register("beneficiaryLastName")} readOnly={beneficiaryLinked} placeholder="Zárate" className="app-input h-7" />
+ <input {...form.register("beneficiaryLastName")} readOnly={beneficiaryLinked} placeholder="Zárate" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Email</Label>
- <input {...form.register("beneficiaryEmail")} readOnly={beneficiaryLinked} type="email" placeholder="beneficiario@email.com" className="app-input h-7" />
+ <input {...form.register("beneficiaryEmail")} readOnly={beneficiaryLinked} type="email" placeholder="beneficiario@email.com" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Celular</Label>
- <input {...form.register("beneficiaryCellPhone")} readOnly={beneficiaryLinked} placeholder="9 9999 9999" className="app-input h-7" />
+ <input {...form.register("beneficiaryCellPhone")} readOnly={beneficiaryLinked} placeholder="9 9999 9999" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">Teléfono</Label>
- <input {...form.register("beneficiaryPhone")} readOnly={beneficiaryLinked} placeholder="X XXXX XXXX" className="app-input h-7" />
+ <input {...form.register("beneficiaryPhone")} readOnly={beneficiaryLinked} placeholder="X XXXX XXXX" className="app-input" />
  </div>
  <div className="flex flex-col gap-1 col-span-full">
  <Label className="text-[10px] text-muted-foreground">Dirección</Label>
- <input {...form.register("beneficiaryAddress")} readOnly={beneficiaryLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
+ <input {...form.register("beneficiaryAddress")} readOnly={beneficiaryLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
  </div>
  </div>
  <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
@@ -1658,7 +1622,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="beneficiaryCountry"
  placeholder="Seleccionar país..."
- className="app-input h-7"
+ className="app-input"
  disabled={beneficiaryLinked}
  clearable
  onValueChange={() => {
@@ -1680,7 +1644,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="beneficiaryRegion"
  placeholder="Seleccionar región..."
- className="app-input h-7"
+ className="app-input"
  disabled={beneficiaryLinked || !selectedBeneficiaryCountry}
  clearable
  onValueChange={() => {
@@ -1702,7 +1666,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="beneficiaryCity"
  placeholder="Seleccionar ciudad..."
- className="app-input h-7"
+ className="app-input"
  disabled={beneficiaryLinked || !selectedBeneficiaryRegion}
  clearable
  onValueChange={() => form.setValue("beneficiaryCommune", "")}
@@ -1721,7 +1685,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="beneficiaryCommune"
  placeholder="Seleccionar comuna..."
- className="app-input h-7"
+ className="app-input"
  disabled={beneficiaryLinked || !selectedBeneficiaryCity}
  clearable
  items={beneficiaryCommunes?.map((c) => ({ value: c.name, label: c.name })) || []}
@@ -1752,7 +1716,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="claimCauseId"
  placeholder="Seleccionar causal..."
- className="app-input h-7"
+ className="app-input"
  clearable
  items={filteredClaimCauses?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
  >
@@ -1767,7 +1731,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="constructionTypeId"
  placeholder="Seleccionar tipo..."
- className="app-input h-7"
+ className="app-input"
  clearable
  items={constructionTypesCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
  >
@@ -1782,7 +1746,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="habitabilityId"
  placeholder="Seleccionar habitabilidad..."
- className="app-input h-7"
+ className="app-input"
  clearable
  items={habitabilityCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
  >
@@ -1797,7 +1761,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="destinationHousingId"
  placeholder="Seleccionar destino..."
- className="app-input h-7"
+ className="app-input"
  clearable
  items={housingDestinationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
  >
@@ -1812,7 +1776,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="ownerType"
  placeholder="Seleccionar..."
- className="app-input h-7"
+ className="app-input"
  clearable
  >
  <SelectItem value="propietario">Propietario</SelectItem>
@@ -1825,7 +1789,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="damageClassificationId"
  placeholder="Seleccionar clasificación..."
- className="app-input h-7"
+ className="app-input"
  clearable
  items={damageClassificationsCatalog?.map((c) => ({ value: c.id, label: c.name ?? "" })) || []}
  >
@@ -1860,7 +1824,7 @@ function ClaimsPageContent() {
  <Label className="text-[10px] text-muted-foreground">
  Dirección <span className="text-red-500">*</span>
  </Label>
- <input {...form.register("claimAddress")} readOnly={claimAddressLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input h-7" />
+ <input {...form.register("claimAddress")} readOnly={claimAddressLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
  <FieldError message={form.formState.errors.claimAddress?.message} />
  </div>
  </div>
@@ -1871,7 +1835,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="claimCountry"
  placeholder="Seleccionar país..."
- className="app-input h-7"
+ className="app-input"
  disabled={claimAddressLinked}
  onValueChange={() => {
  form.setValue("claimRegion", "");
@@ -1892,7 +1856,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="claimRegion"
  placeholder="Seleccionar región..."
- className="app-input h-7"
+ className="app-input"
  disabled={!selectedClaimCountry || claimAddressLinked}
  clearable
  onValueChange={() => {
@@ -1916,7 +1880,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="claimCity"
  placeholder="Seleccionar ciudad..."
- className="app-input h-7"
+ className="app-input"
  disabled={!selectedClaimRegion || claimAddressLinked}
  onValueChange={() => form.setValue("claimCommune", "")}
  items={citiesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
@@ -1935,7 +1899,7 @@ function ClaimsPageContent() {
  control={form.control}
  name="claimCommune"
  placeholder="Seleccionar comuna..."
- className="app-input h-7"
+ className="app-input"
  disabled={!selectedClaimCity || claimAddressLinked}
  clearable
  items={communesCatalog?.map((c) => ({ value: c.name, label: c.name })) || []}
@@ -2102,7 +2066,59 @@ function ClaimsPageContent() {
  </Dialog>
 
  <div className="app-panel">
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ {/* Toolbar integrado: buscador + filtros + controles de paginación */}
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <div className="app-grid-search-wrap">
+ <Search />
+ <Input
+ placeholder="Buscar..."
+ value={search}
+ onChange={(e) => setSearch(e.target.value)}
+ className="liquid-search"
+ />
+ </div>
+ <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={statusOptions}>
+ <SelectTrigger className="app-input app-filter-narrow">
+ <SelectValue placeholder="Todos los estados" />
+ </SelectTrigger>
+ <SelectContent>
+ {statusOptions.map((s) => (
+ <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
+ <DatePicker
+ value={dateFrom}
+ onChange={(value) => {
+ setDateFrom(value);
+ if (value && dateTo && value > dateTo) setDateTo(value);
+ }}
+ placeholder="Desde"
+ className="max-w-[110px]"
+ maxDate={dateTo || undefined}
+ />
+ <DatePicker
+ value={dateTo}
+ onChange={(value) => {
+ setDateTo(value);
+ if (value && dateFrom && value < dateFrom) setDateFrom(value);
+ }}
+ placeholder="Hasta"
+ className="max-w-[110px]"
+ minDate={dateFrom || undefined}
+ />
+ {(statusFilter || dateFrom || dateTo) && (
+ <button
+ onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
+ className="text-[12px] text-muted-foreground hover:text-foreground px-2"
+ >
+ Limpiar
+ </button>
+ )}
+ </div>
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+ </div>
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
@@ -2133,7 +2149,7 @@ function ClaimsPageContent() {
  return (
  <tr
  key={claim.id}
- className="cursor-pointer hover:bg-muted/40"
+ className="row-clickable"
  onClick={() => router.push(`/dashboard/claims/${claim.id}?edit=1`)}
  >
  <td className="font-mono font-semibold text-primary">
@@ -2176,6 +2192,9 @@ function ClaimsPageContent() {
  </table>
  </div>
  <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ <div className="text-center text-[10px] text-muted-foreground/70 -mt-1 pb-0.5">
+ {total} siniestro{total !== 1 ? "s" : ""}
+ </div>
  </div>
  </div>
  );
