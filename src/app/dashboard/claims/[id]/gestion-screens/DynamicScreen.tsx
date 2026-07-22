@@ -268,7 +268,12 @@ export const ALL_SYSTEM_CODES = new Set([
 // ═══════════════════════════════════════════════════════════════
 
 export default function DynamicScreen({ action, fields, onChange, readOnly, onAdvance, onReject, screenCode }: DynamicScreenProps) {
- const values = (action.action_data || {}) as Record<string, unknown>;
+ // Aplanar parent_action_data: los campos del padre (ej: CIN) se exponen
+ // en values para que la pantalla hija (ej: INS) pueda leerlos directamente.
+ // Los campos propios del hijo (top level) tienen prioridad sobre los del padre.
+ const rawValues = (action.action_data || {}) as Record<string, unknown>;
+ const parentData = (rawValues.parent_action_data || {}) as Record<string, unknown>;
+ const values = { ...parentData, ...rawValues };
 
  // ── Inyectar campos universales de fecha si no están en el form_schema ──
  // Fecha Creación y Actualización NO se inyectan como campos — se muestran
