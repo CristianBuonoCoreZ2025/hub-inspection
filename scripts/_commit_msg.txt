@@ -1,21 +1,10 @@
-feat: reagendar/cancelar inspeccion vinculado con CIN + UI de iconos
+fix: motivos duplicados en modales de cancelar y reagendar
 
-Reagendar y cancelar ahora generan gestiones CIN vinculadas:
-- Reagendar: cancela sesion + rechaza INS + crea/emite CIN con coord_result=fallida
-  → issueClaimAction fallida crea nueva CIN (todo) para re-coordinar
-- Cancelar: cancela sesion + rechaza INS + crea/emite CIN con coord_result=desistida
-  → desistida no crea nueva CIN (rompe el flujo)
-
-UI:
-- Botones Iniciar/Reagendar/Cancelar ahora son iconos verticales (Play, CalendarClock, XCircle)
-  a la derecha del panel "Estado de la Sesion", estilo compacto como WhatsApp/email
-- Inspectores del modal de reagendamiento incluyen role=inspector + role=internal
-- Al reagendar/cancelar, redirige al siniestro para completar la nueva CIN
-
-Fix motivos duplicados:
-- Migration 199: deduplica cancellation_reason en lookup_catalog
-- Agrega unique index (category, code) para cancellation_reason activos
-- Los motivos ya no se repiten en el modal
+- El Select de base-ui recibe items prop Y SelectItem children
+- Ambos se renderizan causando duplicacion visual
+- Removido items prop de todos los Select del modal de cancelacion y reagendamiento
+- Ahora solo se usan los SelectItem children (explicitos)
+- Afecta: motivo de cancelacion, motivo de reagendamiento, inspector, tipo
 
 Generated with [Devin](https://devin.ai)
 
