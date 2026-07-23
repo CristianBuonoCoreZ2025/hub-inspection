@@ -34,9 +34,6 @@ DECLARE
   v_contact_name TEXT;
   v_contact_email TEXT;
   v_otros_contactos TEXT;
-  v_aclaracion_direccion TEXT;
-  v_comentarios TEXT;
-  v_observations TEXT;
 BEGIN
   -- Solo para acciones INS
   SELECT code INTO v_template_code FROM action_template WHERE id = NEW.action_template_id LIMIT 1;
@@ -122,37 +119,6 @@ BEGIN
     LIMIT 1;
   END IF;
 
-  -- ── Anexos del CIN (van a inspector_observations) ──
-  v_otros_contactos := COALESCE(
-    find_coord_field(v_action_data, 'coord_cont', 'coord_contacto'),
-    find_coord_field(v_parent_data, 'coord_cont', 'coord_contacto')
-  );
-
-  v_aclaracion_direccion := COALESCE(
-    find_coord_field(v_action_data, 'coord_ubic', 'coord_ubicacion'),
-    find_coord_field(v_parent_data, 'coord_ubic', 'coord_ubicacion')
-  );
-
-  v_comentarios := COALESCE(
-    find_coord_field(v_action_data, 'coord_com'),
-    find_coord_field(v_parent_data, 'coord_com')
-  );
-
-  -- Construir observations con etiquetas claras
-  v_observations := NULL;
-  IF v_otros_contactos IS NOT NULL OR v_aclaracion_direccion IS NOT NULL OR v_comentarios IS NOT NULL THEN
-    v_observations := concat(
-      CASE WHEN v_aclaracion_direccion IS NOT NULL
-           THEN 'Aclaración dirección: ' || v_aclaracion_direccion || E'\n' ELSE '' END,
-      CASE WHEN v_otros_contactos IS NOT NULL
-           THEN 'Otros contactos: ' || v_otros_contactos || E'\n' ELSE '' END,
-      CASE WHEN v_comentarios IS NOT NULL
-           THEN 'Comentarios: ' || v_comentarios ELSE '' END
-    );
-    -- Quitar salto de línea final
-    v_observations := rtrim(v_observations, E'\n');
-  END IF;
-
   -- Generar número de inspección
   v_inspection_number := 'INS-' || to_char(now(), 'YYYYMMDD') || '-' || lpad((random() * 9999)::int::text, 4, '0');
 
@@ -188,7 +154,7 @@ BEGIN
     CASE WHEN v_scheduled_at IS NOT NULL THEN v_scheduled_at::timestamptz ELSE NULL END,
     NULLIF(v_contact_name, ''),
     NULLIF(v_contact_email, ''),
-    v_observations,
+    NULL,  -- inspector_observations: solo para observaciones del inspector, no anexos del CIN
     v_inspection_number,
     'scheduled',
     CASE WHEN v_inspector_id IS NOT NULL THEN v_inspector_id::uuid ELSE NULL END,

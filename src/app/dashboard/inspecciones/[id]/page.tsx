@@ -620,7 +620,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Datos de la Coordinación
  </h3>
- <div className="app-data-grid">
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2 text-[12px]">
  <div>
  <span className="app-data-label">Tipo de Inspección</span>
  <p className="font-medium">{session.inspection_type === "remote" ? "Remota" : session.inspection_type === "onsite" ? "Presencial" : "—"}</p>
@@ -628,6 +628,10 @@ export default function InspectionDetailPage() {
  <div>
  <span className="app-data-label">Fecha Agendada</span>
  <p className="font-medium">{session.scheduled_at ? formatDateTime(session.scheduled_at) : "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Inspector</span>
+ <p className="font-medium">{inspectors.find((i) => i.id === session.inspector_id)?.full_name || "—"}</p>
  </div>
  {coordAclaracionDireccion && (
  <div className="col-span-2 md:col-span-3">

@@ -1,16 +1,13 @@
-fix: separar cards Datos del Siniestro y Datos de la Coordinacion
+fix: eliminar duplicacion y ordenar card Datos de la Coordinacion
 
-- Card 1 "Datos del Siniestro": contacto y direccion del claim (NO se tocan)
-  * Nombre contacto (del claim, no del CIN)
-  * Email, Telefono (del claim)
-  * Direccion del Siniestro, Pais, Region, Ciudad, Comuna
-- Card 2 "Datos de la Coordinacion": anexos capturados al agendar (CIN)
-  * Tipo de Inspeccion, Fecha Agendada
-  * Aclaracion Direccion, Otros Contactos, Comentarios (del CIN)
-  * Observaciones del Inspector (session.inspector_observations)
-- Eliminado el uso de session.interviewed_name como nombre de contacto
-  (esos datos son del siniestro, no se reemplazan)
-- L-141 reseteado para que la nueva INS use la logica del trigger 198
+- El trigger 198 ya NO copia los anexos del CIN en inspector_observations
+  (los anexos se leen directamente del parent_action_data del INS)
+- Card "Datos de la Coordinacion" ahora usa grilla de 2-4 columnas:
+  Tipo de Inspeccion, Fecha Agendada, Inspector, Aclaracion Direccion,
+  Otros Contactos, Comentarios
+- Observaciones del Inspector solo se muestra si el inspector escribio algo
+- Eliminadas todas las sesiones de inspeccion (incluida la nueva creada con duplicados)
+- L-141 reseteado para probar flujo limpio
 
 Generated with [Devin](https://devin.ai)
 
