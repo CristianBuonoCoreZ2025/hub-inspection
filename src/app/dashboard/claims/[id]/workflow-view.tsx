@@ -26,12 +26,11 @@ const DEPENDENCIES: Record<string, string[]> = {
   RES: ["COB"],
   PCA: ["RES"],
   AJU: ["RES"],
-  INS: ["COI"],
-  CIN: ["INS"],
+  INS: ["CIN"],
   RTA: ["SOL"],
 };
 
-const ORDER = ["COB", "RES", "PCA", "AJU", "INS", "CIN", "SOL", "RTA", "CIE", "REA", "PRO", "IMP", "RIN"];
+const ORDER = ["COB", "RES", "PCA", "AJU", "CIN", "INS", "SOL", "RTA", "CIE", "REA", "PRO", "IMP", "RIN"];
 
 const CLOSED_STATUSES = new Set(["issued", "reviewed", "approved", "dispatched"]);
 
