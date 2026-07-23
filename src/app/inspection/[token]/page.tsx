@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import VideoCall from "@/components/video-call";
 import { DrawingCanvas } from "@/components/ui/drawing-canvas";
+import { GeoCapture } from "@/components/inspection/geo-capture";
 
 // ═══════════════════════════════════════════════════════════════
 // Tipos
@@ -43,6 +44,7 @@ interface LiveClaim {
   claim_number: string | null; client_reference: string | null;
   claim_address: string | null; policy_number: string | null;
   claim_date: string | null; liquidation_number: string | null;
+  claim_latitude: number | null; claim_longitude: number | null;
   claims_participants: LiveParticipant[];
   insurance_company: { name: string } | null;
 }
@@ -61,6 +63,9 @@ interface LiveSession {
   inspector_observations: string | null;
   active_tab: string | null;
   acta_step: string | null;
+  geo_latitude: number | null; geo_longitude: number | null;
+  geo_captured_at: string | null; geo_distance_meters: number | null;
+  geo_status: string | null; geo_map_url: string | null;
   property_risk: Record<string, unknown> | null;
   property_materiality: Record<string, unknown> | null;
   security_measures: Record<string, unknown> | null;
@@ -431,6 +436,25 @@ export default function MagicLinkPage() {
 function ResumenTab({ session }: { session: LiveSession }) {
   const claim = session.claim;
   const insured = claim?.claims_participants?.find((p) => p.type === "insured");
+  const queryClient = useQueryClient();
+  const updateGeoMutation = useMutation({
+    mutationFn: async (input: {
+      geo_latitude: number; geo_longitude: number;
+      geo_captured_at: string; geo_distance_meters: number;
+      geo_status: string; geo_map_url: string;
+    }) => {
+      const res = await fetch(`/api/inspection/live/${session.magic_link_token}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) throw new Error("No se pudo guardar la geolocalización");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["live-session", session.magic_link_token] });
+    },
+  });
   return (
     <div className="space-y-2">
       <Panel title="Datos del Siniestro">
@@ -472,6 +496,27 @@ function ResumenTab({ session }: { session: LiveSession }) {
           <Field label="Finalizada" value={fmtDate(session.ended_at)} />
         </div>
       </Panel>
+      {/* Geolocalización del lugar (remota: el asegurado captura) */}
+      <GeoCapture
+        title="Verificación de Ubicación"
+        inspectionType="remote"
+        claimCoords={claim?.claim_latitude && claim?.claim_longitude ? { lat: claim.claim_latitude, lng: claim.claim_longitude } : null}
+        claimAddress={claim?.claim_address || undefined}
+        initialCoords={session.geo_latitude && session.geo_longitude ? { lat: session.geo_latitude, lng: session.geo_longitude } : null}
+        initialDistance={session.geo_distance_meters}
+        initialStatus={(session.geo_status as "pending" | "verified" | "out_of_range" | "failed") || "pending"}
+        disabled={session.status === "completed" || session.status === "cancelled"}
+        onCapture={(result) => {
+          updateGeoMutation.mutate({
+            geo_latitude: result.coords.lat,
+            geo_longitude: result.coords.lng,
+            geo_captured_at: new Date().toISOString(),
+            geo_distance_meters: result.distance,
+            geo_status: result.status,
+            geo_map_url: result.mapUrl,
+          });
+        }}
+      />
     </div>
   );
 }

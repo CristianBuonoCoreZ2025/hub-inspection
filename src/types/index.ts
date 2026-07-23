@@ -403,6 +403,13 @@ export interface InspectionSession {
   cancelled_by: string | null;
   active_tab: string | null;
   acta_step: string | null;
+  geo_latitude: number | null;
+  geo_longitude: number | null;
+  geo_captured_at: string | null;
+  geo_captured_by: string | null;
+  geo_distance_meters: number | null;
+  geo_status: string | null;
+  geo_map_url: string | null;
   property_risk?: ActaPropertyRisk | null;
   property_materiality?: ActaPropertyMateriality | null;
   security_measures?: ActaSecurityMeasures | null;

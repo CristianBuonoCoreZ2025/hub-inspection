@@ -13,6 +13,7 @@ import {
 import { updateClaimStatus } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getUsers } from "@/services/users";
+import { GeoCapture } from "@/components/inspection/geo-capture";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -359,6 +360,8 @@ export default function InspectionDetailPage() {
  claim_number?: string | null;
  client_reference?: string | null;
  claim_address?: string | null;
+ claim_latitude?: number | null;
+ claim_longitude?: number | null;
  policy_number?: string | null;
  claim_date?: string | null;
  liquidation_number?: string | null;
@@ -374,7 +377,7 @@ export default function InspectionDetailPage() {
  city?: { name: string } | null;
  commune?: { name: string } | null;
  claims_participants?: Array<{ type: string; full_name: string | null; first_name: string | null; last_name: string | null; email: string | null; phone: string | null; cell_phone: string | null; rut?: string | null; address?: string | null; person_type?: string | null; country?: string | null; region?: string | null; city?: string | null; commune?: string | null }>;
- };
+};
  const claim = session.claim as ClaimData | undefined;
  const participants = claim?.claims_participants || [];
  const insuredParticipant = participants.find((p) => p.type === "insured");
@@ -776,6 +779,34 @@ export default function InspectionDetailPage() {
  )}
  </div>
  </div>
+
+ {/* Geolocalización del lugar (presencial: inspector captura) */}
+ {session.inspection_type === "onsite" && (
+ <GeoCapture
+ title="Geolocalización del Lugar del Siniestro"
+ inspectionType="onsite"
+ claimCoords={claim?.claim_latitude && claim?.claim_longitude ? { lat: claim.claim_latitude, lng: claim.claim_longitude } : null}
+ claimAddress={claim?.claim_address || undefined}
+ initialCoords={session.geo_latitude && session.geo_longitude ? { lat: session.geo_latitude, lng: session.geo_longitude } : null}
+ initialDistance={session.geo_distance_meters}
+ initialStatus={(session.geo_status as "pending" | "verified" | "out_of_range" | "failed") || "pending"}
+ disabled={session.status === "completed" || session.status === "cancelled"}
+ onCapture={(result) => {
+ updateMutation.mutate({
+ id: session.id,
+ input: {
+ geo_latitude: result.coords.lat,
+ geo_longitude: result.coords.lng,
+ geo_captured_at: new Date().toISOString(),
+ geo_captured_by: profile?.id,
+ geo_distance_meters: result.distance,
+ geo_status: result.status,
+ geo_map_url: result.mapUrl,
+ },
+ });
+ }}
+ />
+ )}
 
  {/* Magic link */}
  {session.inspection_type === "remote" && session.magic_link_token && (

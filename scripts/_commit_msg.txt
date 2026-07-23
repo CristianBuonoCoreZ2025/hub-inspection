@@ -1,18 +1,50 @@
-style: campos de fecha a 10px + fecha centrada + liquid glass obligatorio
+feat: geolocalizacion de inspecciones (presencial + remota)
 
-Regla obligatoria para todos los campos de fecha con calendario:
-- Trigger: 10px (antes 11px)
-- Calendario (días, meses, años, header): 10px (antes 11px)
-- Fecha mostrada: centrada (text-center, ya estaba)
-- Estilo Liquid Glass obligatorio (.rdp-calendar-glass)
-- Icono del calendario: h-3 w-3 (antes h-3.5 w-3.5)
+Funcionalidad de geolocalización para inspecciones:
+- Presencial (onsite): el inspector captura su ubicación en el lugar
+- Remota (remote): el asegurado captura su ubicación via magic link
+- Coteja contra la dirección declarada del siniestro (haversine)
+- Umbral: 500 metros (warning no bloqueante si supera)
+- Mapa interactivo con Leaflet + OpenStreetMap
+- Marcadores: azul (capturada), rojo (dirección declarada)
+- Estado: pending → verified / out_of_range / failed
+- Imagen del mapa via Static Map API (configurable: osm/google/mapbox)
 
-Cambios:
-- forms.css: .liquid-date-picker font-size 11px → 10px
-- forms.css: .rdp-calendar-glass font-size 11px → 10px (días, meses, header)
-- date-picker.tsx: span text-[11px] → text-[10px], icono h-3.5 → h-3
-- tipos-cambio: reemplazado <Input type="date"> nativo por <DatePicker>
-- AGENTS.md: documentada la regla obligatoria de 10px + liquid glass
+Migración 201:
+- claims: claim_latitude, claim_longitude (dirección geocodificada)
+- inspection_sessions: geo_latitude, geo_longitude, geo_captured_at,
+  geo_captured_by, geo_distance_meters, geo_status, geo_map_url
+- Catálogo geo_status: pending, verified, out_of_range, failed
+
+src/lib/geo.ts:
+- haversine(a, b) → distancia en metros
+- validateGeoProximity(captured, claim, threshold) → resultado validación
+- geocodeAddress(address) → lat/lng (Nominatim/OpenStreetMap)
+- reverseGeocode(lat, lng) → dirección
+- generateStaticMapUrl(lat, lng) → URL imagen mapa (osm/google/mapbox)
+- buildClaimAddress(claim) → dirección completa
+
+Componente GeoCapture:
+- Mapa Leaflet con marcadores (capturada + dirección declarada)
+- Botón "Capturar mi ubicación" (geolocation API)
+- Validación de cercanía (500m) con badge de estado
+- Warning no bloqueante si está fuera de rango
+- Callback onCapture con coords, distance, status, mapUrl
+
+Integración:
+- Inspector (presencial): tab Resumen, GeoCapture con inspectionType=onsite
+- Cliente (remota): magic link /inspection/[token], tab Resumen,
+  GeoCapture con inspectionType=remote
+- API PATCH /api/inspection/live/[token] para guardar geo desde magic link
+
+Dependencias:
+- leaflet + react-leaflet + @types/leaflet
+- CSS de leaflet importado en globals.css
+
+Configuración (env vars opcionales):
+- NEXT_PUBLIC_MAP_PROVIDER: "osm" (default) | "google" | "mapbox"
+- NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: para Google Static Maps
+- NEXT_PUBLIC_MAPBOX_TOKEN: para Mapbox Static API
 
 Generated with [Devin](https://devin.ai)
 
