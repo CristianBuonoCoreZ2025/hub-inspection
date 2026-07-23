@@ -1,13 +1,12 @@
-feat: motivos de cancelacion en pantalla CIN vinculados con inspeccion
+feat: mantenedor de motivos de cancelacion/reagendamiento en catalogos
 
-- coord_motivo ahora es un Select con los mismos motivos de cancellation_reason
-  que el modal de cancelar/reagendar de la inspeccion
-- Mismos motivos en CIN e INS → vinculación completa
-- coord_motivo ahora guarda el ID del lookup_catalog (no el nombre)
-- rescheduleInspectionViaCIN y cancelInspectionViaCIN guardan el ID
-- issueClaimAction resuelve el nombre del ID para la descripcion
-  (helper resolveMotivoName)
-- useQuery movido al inicio de OwnField (rules of hooks)
+- Nueva pagina: /dashboard/catalogos/inspeccion/motivos-cancelacion
+- Usa LookupCatalogManager con category=cancellation_reason
+- Permite CRUD completo de los mismos motivos que usan:
+  - Pantalla CIN (campo coord_motivo)
+  - Modal de cancelar inspeccion
+  - Modal de reagendar inspeccion
+- Agregado al nav de Catalogos de Inspeccion (icono Ban)
 
 Generated with [Devin](https://devin.ai)
 

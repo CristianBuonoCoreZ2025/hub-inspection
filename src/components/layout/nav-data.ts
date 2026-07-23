@@ -128,6 +128,7 @@ export const inspectionCatalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/inspeccion/cierre-perimetral", label: "Cierre Perimetral", icon: Fence },
   { href: "/dashboard/catalogos/inspeccion/espacios-dano", label: "Espacios de Daño", icon: Grid3x3 },
   { href: "/dashboard/catalogos/inspeccion/categorias-evidencia", label: "Categorías Evidencia", icon: Camera },
+  { href: "/dashboard/catalogos/inspeccion/motivos-cancelacion", label: "Motivos Cancelación / Reagendamiento", icon: Ban },
 ];
 
 // ── Configuración de Gestiones ──
