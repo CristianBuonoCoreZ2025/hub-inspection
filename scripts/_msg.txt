@@ -1,17 +1,18 @@
-fix: metadata.fileSize ahora refleja el tamaño optimizado, no el original
+fix: scanner de huérfanos R2 + borrado de IMG-000001 duplicada
 
-PROBLEMA: la UI mostraba 2.5 MB para una imagen que en R2 pesa 220 KB.
-El after() optimizaba la imagen (sharp 1920px q80) y actualizaba la url,
-pero NUNCA actualizaba metadata.fileSize — quedaba con el tamaño original.
+PROBLEMA: L-000000141-IMG-000001.jpg existia en R2 (220 KB) sin
+registro en la BD — era una copia huérfana de la evidencia
+L-000000141-HINS-001-EVI-0001.jpg (mismo MD5). Los huérfanos
+desperdician almacenamiento en Cloudflare R2.
 
 FIX:
-- reuploadInspectionFileOptimized ahora devuelve optimizedSize (bytes)
-- after() del upload route actualiza metadata con:
-  fileSize = tamaño optimizado (lo que realmente está en R2)
-  originalFileSize = tamaño original (preservado para auditoria)
-- BD: actualizada la evidencia L-000000141-EVI-0001
-  fileSize: 2,608,418 -> 220,925 (215.75 KB)
-  originalFileSize: 2,608,418 (preservado)
+- scripts/r2-orphan-scanner.cjs: scanner permanente que lista todos
+  los objetos de R2 y los compara contra 9 tablas de la BD
+  (claim_images, inspection_evidences, claim_documents, policy_documents,
+   damage_sketches, claim_action_documents, companies, profiles,
+   document_templates). Soporta --delete para borrar huérfanos.
+- Borrado: L-000000141-IMG-000001.jpg (único huérfano real, 220 KB)
+- Verificado: 11 objetos en R2, 16 keys referenciadas, 0 huérfanos
 
 Generado con [Devin](https://devin.ai)
 
