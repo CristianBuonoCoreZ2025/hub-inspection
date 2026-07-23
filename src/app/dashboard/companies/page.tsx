@@ -61,7 +61,7 @@ export default function CompaniesPage() {
 
  const form = useForm<CompanyInput>({
  resolver: standardSchemaResolver(companySchema),
- defaultValues: { name: "", slug: "", countryId: "", rut: "", address: "", phone: "", email: "", logoUrl: "" },
+ defaultValues: { name: "", slug: "", countryId: "", rut: "", address: "", phone: "", email: "", logoUrl: "", primaryColor: "" },
  });
 
  const { data: companies, isLoading } = useQuery({
@@ -231,6 +231,24 @@ export default function CompaniesPage() {
  </button>
  )}
  </div>
+ </div>
+ </div>
+
+ {/* Color principal */}
+ <div className="modal-field">
+ <Label className="app-field-label">Color principal</Label>
+ <div className="flex items-center gap-2">
+ <input
+ type="color"
+ value={form.watch("primaryColor") || "#3b82f6"}
+ onChange={(e) => form.setValue("primaryColor", e.target.value)}
+ className="size-8 rounded-md border border-border cursor-pointer"
+ />
+ <Input
+ {...form.register("primaryColor")}
+ placeholder="#3b82f6"
+ className="app-input"
+ />
  </div>
  </div>
 
@@ -414,7 +432,7 @@ export default function CompaniesPage() {
  form.reset({
  name: company.name, slug: company.slug, countryId: company.country_id || "",
  rut: company.rut || "", address: company.address || "", phone: company.phone || "", email: company.email || "",
- logoUrl: company.logo_url || "",
+ logoUrl: company.logo_url || "", primaryColor: company.primary_color || "",
  });
  setOpen(true);
  }}><Pencil className="h-4 w-4" /></Button>

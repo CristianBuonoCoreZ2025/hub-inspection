@@ -1,18 +1,20 @@
-feat: modal de progreso en subida de evidencias (igual que siniestro)
+fix: branding por empresa ahora se edita en Empresas, no en Configuración
 
-La subida de evidencias de inspección ahora usa el mismo patrón que la
-subida de documentos del siniestro: modal con progreso real por archivo
-(% completado, KB/s, tiempo transcurrido, estado uploading/processing/done/error).
+El branding (logo + color principal) estaba en el tab "Marca" de
+Configuración, pero corresponde a cada cliente/empresa (ej: Mclarens).
+Se movió al formulario de edición/creación de Empresas.
 
 Cambios:
-- src/app/dashboard/inspecciones/[id]/evidences-tab.tsx:
-  - Reemplaza uploadMutation por XMLHttpRequest con callbacks de progreso
-  - Nuevo estado uploadQueue con lista de archivos subiendo
-  - Modal flotante que muestra progreso individual de cada evidencia
-  - Cierra automáticamente 1.5s después de que todas terminen
-  - Soporta drag & drop múltiple con progreso por archivo
-  - Mantiene el envío de EXIF GPS y sin lat/lng del dispositivo
-- docs/PLAN_INSPECCIONES.md: actualizada sección 5.1 con modal de progreso
+- src/app/dashboard/configuracion/page.tsx:
+  - Eliminado tab "Marca" y componente MarcaTab
+  - Eliminados imports de getCompanies, updateCompany, type CompanyInput
+  - Limpieza de iconos y tipos no usados
+- src/app/dashboard/companies/page.tsx:
+  - Agregado primaryColor a defaultValues y form.reset
+  - Agregado input de color principal en el modal de empresa
+  - El logo ya existía; ahora están juntos logo + color
+
+Backend ya soportaba primary_color y logo_url en companies.
 
 Generado con [Devin](https://devin.ai)
 

@@ -6,9 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Settings,
-  Building2,
   Bell,
-  Palette,
   Plug,
   User,
   Shield,
@@ -17,17 +15,15 @@ import {
   Loader2,
 } from "lucide-react";
 
-import { getCompanies, updateCompany } from "@/services/companies";
+import { invalidateSystemSettingCache } from "@/services/settings";
 import { useAuth } from "@/hooks/use-auth";
-import type { CompanyInput } from "@/types";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DiagnosticLogToggle from "./DiagnosticLogToggle";
-import { invalidateSystemSettingCache } from "@/services/settings";
 
-type ConfigTab = "general" | "marca" | "notificaciones" | "integraciones" | "perfiles";
+type ConfigTab = "general" | "notificaciones" | "integraciones" | "perfiles";
 
 const profiles = [
   {
@@ -89,7 +85,6 @@ export default function SettingsPage() {
 
   const tabs: { id: ConfigTab; label: string; icon: typeof Settings; internalOnly?: boolean }[] = [
     { id: "general", label: "General", icon: Settings },
-    { id: "marca", label: "Marca", icon: Palette, internalOnly: true },
     { id: "notificaciones", label: "Notificaciones", icon: Bell },
     { id: "integraciones", label: "Integraciones", icon: Plug, internalOnly: true },
     { id: "perfiles", label: "Perfiles", icon: User },
@@ -128,7 +123,6 @@ export default function SettingsPage() {
       </div>
 
       {tab === "general" && <GeneralTab />}
-      {tab === "marca" && isInternal && <MarcaTab />}
       {tab === "notificaciones" && <NotificacionesTab />}
       {tab === "integraciones" && isInternal && <IntegracionesTab />}
       {tab === "perfiles" && <PerfilesTab />}
@@ -249,198 +243,6 @@ function GeneralTab() {
             </span>
           </div>
         </div>
-      </section>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════
-// Tab: Marca (branding por empresa)
-// ═══════════════════════════════════════════════════════════
-function MarcaTab() {
-  const { profile } = useAuth();
-  const queryClient = useQueryClient();
-  const companyId = profile?.company_id;
-
-  const { data: companies = [] } = useQuery({
-    queryKey: ["companies"],
-    queryFn: () => getCompanies(),
-  });
-
-  const [selectedId, setSelectedId] = useState<string>("");
-  const [name, setName] = useState("");
-  const [primaryColor, setPrimaryColor] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-
-  // Sync selectedId when companies load
-  const effectiveSelectedId = selectedId || companyId || companies[0]?.id || "";
-  const selected = companies.find((c) => c.id === effectiveSelectedId);
-
-  // Sync form fields when selected company changes
-  const formKey = effectiveSelectedId;
-  const [lastFormKey, setLastFormKey] = useState("");
-  if (formKey !== lastFormKey && selected) {
-    setLastFormKey(formKey);
-    setName(selected.name || "");
-    setPrimaryColor(selected.primary_color || "");
-    setLogoUrl(selected.logo_url || "");
-    setEmail(selected.email || "");
-    setPhone(selected.phone || "");
-    setAddress(selected.address || "");
-  }
-
-  const updateMut = useMutation({
-    mutationFn: async (input: Partial<CompanyInput>) => {
-      if (!effectiveSelectedId) throw new Error("Selecciona una empresa");
-      return updateCompany(effectiveSelectedId, input);
-    },
-    onSuccess: () => {
-      toast.success("Guardado");
-      queryClient.invalidateQueries({ queryKey: ["companies"] });
-    },
-    onError: (err: Error) => toast.error(err.message || "Error al guardar"),
-  });
-
-  const onSave = () => {
-    updateMut.mutate({
-      name,
-      primaryColor,
-      logoUrl,
-      email,
-      phone,
-      address,
-    } as Partial<CompanyInput>);
-  };
-
-  return (
-    <div className="space-y-4">
-      <section className="app-panel">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold">Branding por empresa</h2>
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              Personaliza el logo, color principal y datos de contacto de cada empresa.
-            </p>
-          </div>
-        </div>
-
-        {/* Selector de empresa */}
-        {companies.length > 1 && (
-          <div className="mt-3 space-y-1.5">
-            <Label className="app-field-label">Empresa</Label>
-            <select
-              value={effectiveSelectedId}
-              onChange={(e) => setSelectedId(e.target.value)}
-              className="app-input"
-            >
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {selected && (
-          <div className="mt-4 space-y-3">
-            {/* Logo preview */}
-            <div className="flex items-center gap-4">
-              <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-muted/30 overflow-hidden">
-                {logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logoUrl} alt="Logo" className="size-full object-contain" />
-                ) : (
-                  <Building2 className="size-6 text-muted-foreground" />
-                )}
-              </div>
-              <div className="flex-1 space-y-1.5">
-                <Label className="app-field-label">URL del logo</Label>
-                <Input
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="app-input"
-                />
-              </div>
-            </div>
-
-            {/* Nombre */}
-            <div className="space-y-1.5">
-              <Label className="app-field-label">Nombre de la empresa</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="app-input"
-              />
-            </div>
-
-            {/* Color principal */}
-            <div className="flex items-center gap-3">
-              <div className="space-y-1.5 flex-1">
-                <Label className="app-field-label">Color principal</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={primaryColor || "#3b82f6"}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="size-7 rounded-md border border-border cursor-pointer"
-                  />
-                  <Input
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    placeholder="#3b82f6"
-                    className="app-input max-w-[120px]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Contacto */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="app-field-label">Email</Label>
-                <Input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="contacto@empresa.com"
-                  className="app-input"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="app-field-label">Teléfono</Label>
-                <Input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+56 2 1234 5678"
-                  className="app-input"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="app-field-label">Dirección</Label>
-              <Input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Av. Principal 123"
-                className="app-input"
-              />
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <Button
-                className="pg-btn-platinum"
-                onClick={onSave}
-                disabled={updateMut.isPending}
-              >
-                {updateMut.isPending ? "Guardando..." : "Guardar"}
-                {!updateMut.isPending && <Save className="ml-1.5 size-3.5" />}
-              </Button>
-            </div>
-          </div>
-        )}
       </section>
     </div>
   );
