@@ -3,11 +3,10 @@
 import * as React from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { MapPin, Navigation, CheckCircle2, AlertTriangle, XCircle, Loader2, ImageIcon } from "lucide-react";
+import { MapPin, Navigation, CheckCircle2, AlertTriangle, XCircle, Loader2 } from "lucide-react";
 import {
   GEO_THRESHOLD_METERS,
   validateGeoProximity,
-  generateStaticMapUrl,
   type LatLng,
   type GeoValidationResult,
 } from "@/lib/geo";
@@ -79,12 +78,6 @@ interface GeoCaptureProps {
   capturedBy?: string;
 }
 
-interface SavedEvidence {
-  id: string;
-  url: string;
-  description: string;
-}
-
 export function GeoCapture({
   claimCoords,
   claimAddress,
@@ -95,10 +88,6 @@ export function GeoCapture({
   onCapture,
   disabled,
   title,
-  sessionId,
-  sessionToken,
-  replaceEvidence,
-  capturedBy,
 }: GeoCaptureProps) {
   const { data: threshold = GEO_THRESHOLD_METERS } = useQuery({
     queryKey: ["geo-threshold"],
@@ -118,10 +107,6 @@ export function GeoCapture({
   );
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [savingMap, setSavingMap] = React.useState(false);
-  const [mapEvidence, setMapEvidence] = React.useState<SavedEvidence | null>(null);
-  const [declaredMapEvidence, setDeclaredMapEvidence] = React.useState<SavedEvidence | null>(null);
-  const lastCapturedRef = React.useRef<{ coords: LatLng; mapUrl: string } | null>(null);
   const autoCaptureRef = React.useRef(false);
 
   // Sincronizar con coordenadas iniciales cuando cambian (recaptura habilitada desde dashboard)
@@ -139,48 +124,6 @@ export function GeoCapture({
     }, 0);
     return () => clearTimeout(id);
   }, [initialCoords, initialDistance, initialStatus, threshold]);
-
-  // Guardar el mapa estático como evidencia
-  const saveMapAsEvidence = React.useCallback(
-    async (sid: string, coords: LatLng, mapUrl: string, by?: string, label?: string) => {
-      setSavingMap(true);
-      try {
-        const res = await fetch("/api/inspection/geo/save-map", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: sid,
-            lat: coords.lat,
-            lng: coords.lng,
-            mapUrl,
-            capturedBy: by,
-            label,
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          const msg =
-            err.error && err.detail && err.detail !== err.error
-              ? `${err.error}: ${err.detail}`
-              : err.detail || err.error || `HTTP ${res.status}`;
-          throw new Error(msg);
-        }
-        const data = await res.json();
-        if (data.evidence) {
-          return {
-            id: data.evidence.id,
-            url: data.evidence.url,
-            description: data.evidence.description,
-          } as SavedEvidence;
-        }
-        throw new Error("La API no devolvió evidencia");
-      } finally {
-        setSavingMap(false);
-      }
-    },
-    [],
-  );
-
   const handleCapture = React.useCallback(() => {
     if (!navigator.geolocation) {
       setError("Tu navegador no soporta geolocalización.");
@@ -211,53 +154,13 @@ export function GeoCapture({
             setCaptured(coords);
             setValidation(result);
 
-            // Generar URL del mapa estático de la ubicación capturada
-            const capturedMapUrl = generateStaticMapUrl(coords.lat, coords.lng, {
-              zoom: 16,
-              width: 600,
-              height: 400,
-            });
-
-            // Notificar al padre inmediatamente para guardar lat/long/status
-            // La evidencia del mapa se intenta después, pero nunca bloquea la captura
-            lastCapturedRef.current = { coords, mapUrl: capturedMapUrl };
+            // Solo guardar lat/long/status. No se almacenan imágenes de mapa.
             onCapture({
               coords,
               distance: result.distance,
               status: result.status,
-              mapUrl: capturedMapUrl,
+              mapUrl: "",
             });
-
-            // Guardar mapa(s) como evidencia automáticamente (segundo plano)
-            // Sin proveedor de mapas (OSM roto) no intentamos para evitar URLs rotas
-            const isUsableMapUrl = !capturedMapUrl.includes("staticmap.openstreetmap.de");
-            if (sessionId && isUsableMapUrl) {
-              try {
-                if (replaceEvidence && sessionToken) {
-                  await fetch("/api/inspection/geo/reset-geo", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token: sessionToken }),
-                  });
-                }
-                const ev = await saveMapAsEvidence(sessionId, coords, capturedMapUrl, capturedBy, "captured");
-                if (ev) setMapEvidence(ev);
-
-                // Si está fuera de rango Y tenemos coords del siniestro, guardar
-                // también el mapa de la dirección declarada (evidencia de discrepancia)
-                if (result.status === "out_of_range" && claimCoords) {
-                  const declaredMapUrl = generateStaticMapUrl(claimCoords.lat, claimCoords.lng, {
-                    zoom: 16,
-                    width: 600,
-                    height: 400,
-                  });
-                  const dev = await saveMapAsEvidence(sessionId, claimCoords, declaredMapUrl, capturedBy, "declared");
-                  if (dev) setDeclaredMapEvidence(dev);
-                }
-              } catch (evErr) {
-                console.warn("[GeoCapture] No se pudo guardar evidencia del mapa:", evErr);
-              }
-            }
           } catch (err) {
             const message = err instanceof Error ? err.message : "Error al guardar la ubicación";
             setError(message);
@@ -280,7 +183,7 @@ export function GeoCapture({
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
-  }, [claimCoords, onCapture, sessionId, sessionToken, replaceEvidence, capturedBy, saveMapAsEvidence, threshold]);
+  }, [claimCoords, onCapture, threshold]);
 
   // ── Auto-captura para inspecciones presenciales ──
   // El inspector no necesita presionar ningún botón: al montar el componente
@@ -480,74 +383,7 @@ export function GeoCapture({
         </div>
       )}
 
-      {/* Estado del guardado del mapa como evidencia */}
-      {captured && sessionId && (
-        <div className="mt-2 flex items-center gap-2 text-[10px]">
-          {savingMap ? (
-            <>
-              <Loader2 className="h-3 w-3 animate-spin text-primary" />
-              <span className="text-muted-foreground">
-                Guardando {validation?.status === "out_of_range" && claimCoords ? "mapas" : "mapa"} como evidencia...
-              </span>
-            </>
-          ) : mapEvidence ? (
-            <>
-              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-              <span className="text-emerald-600">
-                {declaredMapEvidence ? "Mapas guardados" : "Mapa guardado"}
-              </span>
-            </>
-          ) : (
-            <span className="text-muted-foreground">El mapa se guardará automáticamente como evidencia.</span>
-          )}
-        </div>
-      )}
 
-      {/* Miniaturas de mapas guardados como evidencia */}
-      {(mapEvidence || declaredMapEvidence) && (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {mapEvidence && !mapEvidence.url.includes("staticmap.openstreetmap.de") && (
-            <a
-              href={mapEvidence.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative rounded-lg overflow-hidden border border-border/40 hover:border-primary/40 transition-colors"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- URL dinámica de R2 */}
-              <img
-                src={mapEvidence.url}
-                alt="Mapa de ubicación capturada"
-                className="w-full h-24 object-cover"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end p-1">
-                <span className="text-[9px] text-white bg-black/60 rounded px-1 py-0.5 flex items-center gap-1">
-                  <ImageIcon className="h-2.5 w-2.5" /> {declaredMapEvidence ? "Capturada" : "Mapa"}
-                </span>
-              </div>
-            </a>
-          )}
-          {declaredMapEvidence && !declaredMapEvidence.url.includes("staticmap.openstreetmap.de") && (
-            <a
-              href={declaredMapEvidence.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative rounded-lg overflow-hidden border border-border/40 hover:border-primary/40 transition-colors"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- URL dinámica de R2 */}
-              <img
-                src={declaredMapEvidence.url}
-                alt="Mapa de dirección declarada"
-                className="w-full h-24 object-cover"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end p-1">
-                <span className="text-[9px] text-white bg-black/60 rounded px-1 py-0.5 flex items-center gap-1">
-                  <ImageIcon className="h-2.5 w-2.5" /> Declarada
-                </span>
-              </div>
-            </a>
-          )}
-        </div>
-      )}
     </div>
   );
 }
