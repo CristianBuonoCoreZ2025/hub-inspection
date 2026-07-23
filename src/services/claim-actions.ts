@@ -698,6 +698,9 @@ export async function issueClaimAction(actionId: string, userId?: string, action
           "action_features_id"
         );
         if (tpl?.action_features_id) {
+          // Preservar existing_session_id si viene desde el CIN original
+          // (reagendamiento desde inspección → la nueva CIN debe vincularse a la sesión existente)
+          const existingSessionId = data.existing_session_id ? String(data.existing_session_id) : undefined;
           await createClaimAction({
             claim_id: action.claim_id!,
             action_template_id: action.action_template_id || undefined,
@@ -705,6 +708,7 @@ export async function issueClaimAction(actionId: string, userId?: string, action
             name: "Coordinación de Inspección (re-coordinación)",
             description: `Re-coordinación generada por intento fallido. Motivo: ${await resolveMotivoName(String(data.coord_motivo || ""))}`,
             expected_date: expectedDate,
+            action_data: existingSessionId ? { existing_session_id: existingSessionId } : undefined,
           });
         }
       } catch (err) {

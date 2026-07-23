@@ -41,6 +41,7 @@ import {
   Coins,
   ArrowRightLeft,
   BarChart3,
+  RotateCcw,
   Menu as MenuIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -128,7 +129,8 @@ export const inspectionCatalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/inspeccion/cierre-perimetral", label: "Cierre Perimetral", icon: Fence },
   { href: "/dashboard/catalogos/inspeccion/espacios-dano", label: "Espacios de Daño", icon: Grid3x3 },
   { href: "/dashboard/catalogos/inspeccion/categorias-evidencia", label: "Categorías Evidencia", icon: Camera },
-  { href: "/dashboard/catalogos/inspeccion/motivos-cancelacion", label: "Motivos Cancelación / Reagendamiento", icon: Ban },
+  { href: "/dashboard/catalogos/inspeccion/motivos-fallida", label: "Motivos Reagendamiento", icon: RotateCcw },
+  { href: "/dashboard/catalogos/inspeccion/motivos-desistida", label: "Motivos Cancelación", icon: Ban },
 ];
 
 // ── Configuración de Gestiones ──

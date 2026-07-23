@@ -215,12 +215,18 @@ export default function InspectionDetailPage() {
  };
  const rescheduleSlots = rescheduleDate && rescheduleInspectorId ? generateRescheduleSlots() : [];
 
- // Cargar motivos de cancelación
- const { data: cancellationReasons } = useQuery({
- queryKey: ["lookup-catalog", "cancellation_reason"],
- queryFn: () => getLookupCatalog("cancellation_reason"),
- enabled: cancelModalOpen || rescheduleModalOpen,
+ // Cargar motivos: fallida para reagendar, desistida para cancelar
+ // Se cargan siempre para poder mostrar el motivo de sesiones canceladas
+ const { data: fallidaReasons } = useQuery({
+ queryKey: ["lookup-catalog", "cancellation_reason_fallida"],
+ queryFn: () => getLookupCatalog("cancellation_reason_fallida"),
  });
+ const { data: desistidaReasons } = useQuery({
+ queryKey: ["lookup-catalog", "cancellation_reason_desistida"],
+ queryFn: () => getLookupCatalog("cancellation_reason_desistida"),
+ });
+ // Motivos combinados para mostrar el motivo de una sesión ya cancelada
+ const allCancellationReasons = [...(fallidaReasons || []), ...(desistidaReasons || [])];
 
  const updateMutation = useMutation({
  mutationFn: ({ id, input }: { id: string; input: Partial<InspectionSession> }) =>
@@ -867,7 +873,7 @@ export default function InspectionDetailPage() {
  claimCause={claim?.claim_cause?.name ?? undefined}
  claimDate={claim?.claim_date ?? undefined}
  commune={claim?.commune?.name ?? undefined}
- cancellationReason={cancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || null}
+ cancellationReason={allCancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || null}
  cancellationNotes={session.cancellation_notes}
  cancelledAt={session.cancelled_at}
  />
@@ -931,7 +937,7 @@ export default function InspectionDetailPage() {
  <Select value={cancelReasonId || null} onValueChange={(v) => setCancelReasonId(v ?? "")}>
  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar motivo..." /></SelectTrigger>
  <SelectContent>
- {cancellationReasons?.map((r) => (
+ {desistidaReasons?.map((r) => (
  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
  ))}
  </SelectContent>
@@ -1079,7 +1085,7 @@ export default function InspectionDetailPage() {
  <Select value={cancelReasonId || null} onValueChange={(v) => setCancelReasonId(v ?? "")}>
  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar motivo..." /></SelectTrigger>
  <SelectContent>
- {cancellationReasons?.map((r) => (
+ {fallidaReasons?.map((r) => (
  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
  ))}
  </SelectContent>
@@ -1132,7 +1138,7 @@ export default function InspectionDetailPage() {
  Inspección Cancelada
  </h3>
  <p className="text-[12px] text-muted-foreground mt-1">
- {cancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || "Motivo no registrado"}
+ {allCancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || "Motivo no registrado"}
  </p>
  {session.cancellation_notes && (
  <p className="text-[12px] text-muted-foreground mt-1 italic">

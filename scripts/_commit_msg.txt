@@ -1,12 +1,30 @@
-feat: mantenedor de motivos de cancelacion/reagendamiento en catalogos
+feat: motivos separados (fallida/desistida) + reagendar vincula sesion existente
 
-- Nueva pagina: /dashboard/catalogos/inspeccion/motivos-cancelacion
-- Usa LookupCatalogManager con category=cancellation_reason
-- Permite CRUD completo de los mismos motivos que usan:
-  - Pantalla CIN (campo coord_motivo)
-  - Modal de cancelar inspeccion
-  - Modal de reagendar inspeccion
-- Agregado al nav de Catalogos de Inspeccion (icono Ban)
+Motivos separados en dos categorias:
+- cancellation_reason_fallida: no_answer, reschedule, weather, access_denied,
+  insured_unavailable, other (para reagendamiento)
+- cancellation_reason_desistida: insured_refused, duplicate, cancelled_by_company,
+  no_longer_needed, other (para cancelacion)
+- Pantalla CIN: coord_motivo muestra combo segun coord_result
+- Modal reagendar (INS): usa cancellation_reason_fallida
+- Modal cancelar (INS): usa cancellation_reason_desistida
+- Dos mantenedores: motivos-fallida y motivos-desistida
+
+Reagendar vincula sesion existente (NO cancela, NO rechaza INS):
+- rescheduleInspectionViaCIN ahora:
+  1. NO cancela la sesion, NO rechaza la INS
+  2. Crea CIN con coord_result=fallida + existing_session_id
+  3. Emite CIN → issueClaimAction pasa existing_session_id a nueva CIN (todo)
+  4. Usuario completa nueva CIN como coordinada
+  5. cascade_workflow_on_issue ve existing_session_id → vincula INS existente
+  6. auto_create_inspection_session ve existing_session_id → actualiza sesion existente
+- La inspeccion en curso queda vinculada a la nueva coordinacion (cambia puntero)
+
+Migration 200:
+- Crea categorias cancellation_reason_fallida y cancellation_reason_desistida
+- Actualiza cascade_workflow_on_issue: si existing_session_id, vincula INS existente
+- Actualiza auto_create_inspection_session: si existing_session_id, actualiza sesion
+- Unique indexes para las nuevas categorias
 
 Generated with [Devin](https://devin.ai)
 

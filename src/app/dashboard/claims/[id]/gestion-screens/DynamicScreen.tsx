@@ -1730,9 +1730,16 @@ function OwnField({
 
  // Motivos de cancellation_reason (lookup_catalog) — para coord_motivo
  // Mismos motivos que el modal de cancelar/reagendar de la inspección
- const { data: cancellationReasons } = useQuery({
- queryKey: ["lookup-catalog", "cancellation_reason"],
- queryFn: () => getLookupCatalog("cancellation_reason"),
+ // Dos categorías distintas según coord_result:
+ //   fallida    → cancellation_reason_fallida (reagendamiento)
+ //   desistida  → cancellation_reason_desistida (cancelación)
+ const { data: fallidaReasons } = useQuery({
+ queryKey: ["lookup-catalog", "cancellation_reason_fallida"],
+ queryFn: () => getLookupCatalog("cancellation_reason_fallida"),
+ });
+ const { data: desistidaReasons } = useQuery({
+ queryKey: ["lookup-catalog", "cancellation_reason_desistida"],
+ queryFn: () => getLookupCatalog("cancellation_reason_desistida"),
  });
 
  // Calcular maxDate para campos datetime (días configurados en el template)
@@ -1967,9 +1974,12 @@ function OwnField({
  }
 
  case "coord_motivo": {
- // Select con motivos de cancellation_reason (lookup_catalog)
- // Mismos motivos que el modal de cancelar/reagendar de la inspección
+ // Select con motivos según coord_result:
+ //   fallida    → cancellation_reason_fallida (reagendamiento)
+ //   desistida  → cancellation_reason_desistida (cancelación)
  // → vinculación CIN ↔ INS
+ const coordResult = String(allValues?.coord_result || "");
+ const motivos = coordResult === "desistida" ? desistidaReasons : fallidaReasons;
  return (
  <div className="flex flex-col gap-1">
  <Label className="app-field-label text-[11px]">
@@ -1980,7 +1990,7 @@ function OwnField({
  <SelectValue placeholder="Seleccionar motivo..." />
  </SelectTrigger>
  <SelectContent>
- {cancellationReasons?.map((r) => (
+ {motivos?.map((r) => (
  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
  ))}
  </SelectContent>

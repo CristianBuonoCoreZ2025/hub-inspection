@@ -473,14 +473,14 @@ export async function updateInspectionSession(id: string, input: Partial<Inspect
 
 /**
  * Reagendar una inspección vinculando con la coordinación.
- * Flujo:
- *   1. Cancela la sesión de inspección actual
- *   2. Rechaza la gestión INS (status = rejected)
- *   3. Crea una gestión CIN con coord_result=fallida y los nuevos datos
- *   4. Emite la CIN → issueClaimAction crea una nueva CIN (todo) para re-coordinar
+ * Flujo (NO cancela la sesión, NO rechaza la INS):
+ *   1. Crea una gestión CIN con coord_result=fallida + existing_session_id
+ *   2. Emite la CIN → issueClaimAction fallida crea nueva CIN (todo) con existing_session_id
+ *   3. El usuario completa la nueva CIN como coordinada
+ *   4. El trigger cascade vincula la INS existente (no crea nueva)
+ *   5. El trigger auto_create actualiza la sesión existente (no crea nueva)
  *
- * El usuario luego completa la nueva CIN con los datos finales y la emite
- * como coordinada → cascade crea nueva INS → trigger crea nueva sesión.
+ * La inspección en curso queda vinculada a la nueva coordinación (cambia el puntero).
  */
 export async function rescheduleInspectionViaCIN(params: {
   sessionId: string;
@@ -496,28 +496,17 @@ export async function rescheduleInspectionViaCIN(params: {
   cancelledBy?: string;
   userId?: string;
 }) {
-  const { sessionId, claimId, insActionId, reasonId, notes, newOptions, cancelledBy, userId } = params;
+  const { sessionId, claimId, reasonId, notes, newOptions, userId } = params;
 
-  // 1. Cancelar la sesión actual
-  await cancelInspectionSession(sessionId, reasonId, notes, cancelledBy);
-
-  // 2. Rechazar la gestión INS (si existe)
-  if (insActionId) {
-    try {
-      const { rejectClaimAction } = await import("@/services/claim-actions");
-      await rejectClaimAction(insActionId, "issue", userId, notes || "Inspección reagendada");
-    } catch (err) {
-      console.warn("[rescheduleInspectionViaCIN] No se pudo rechazar INS:", err);
-    }
-  }
-
-  // 3. Encontrar el template CIN para este claim
+  // 1. Encontrar el template CIN para este claim
   const cinTemplate = await findCINTemplateForClaim(claimId);
   if (!cinTemplate) {
     throw new Error("No se encontró el template CIN para este siniestro");
   }
 
-  // 4. Crear gestión CIN con coord_result=fallida y los nuevos datos
+  // 2. Crear gestión CIN con coord_result=fallida + existing_session_id
+  //    La sesión NO se cancela, la INS NO se rechaza.
+  //    existing_session_id indica que la nueva CIN debe vincularse a la sesión existente.
   const { createClaimAction, issueClaimAction } = await import("@/services/claim-actions");
   const reasonName = await getLookupName(reasonId);
   const newCin = await createClaimAction({
@@ -528,16 +517,17 @@ export async function rescheduleInspectionViaCIN(params: {
     description: `Reagendamiento generado desde inspección. Motivo: ${reasonName}`,
     action_data: {
       coord_result: "fallida",
-      coord_motivo: reasonId, // ID del lookup_catalog (consistente con la pantalla CIN)
+      coord_motivo: reasonId, // ID del lookup_catalog (cancellation_reason_fallida)
       coord_fecha_recoord: newOptions.scheduledAt,
       coord_inspection_type: newOptions.inspectionType,
       coord_inspector: newOptions.inspectorId || undefined,
       coord_comentarios: notes || undefined,
+      existing_session_id: sessionId, // ← vincula la sesión existente
     },
     issuer_id: userId,
   });
 
-  // 5. Emitir la CIN → issueClaimAction fallida crea nueva CIN (todo) para re-coordinar
+  // 3. Emitir la CIN → issueClaimAction fallida crea nueva CIN (todo) con existing_session_id
   await issueClaimAction(newCin.id, userId, {
     coord_result: "fallida",
     coord_motivo: reasonId,
@@ -545,9 +535,10 @@ export async function rescheduleInspectionViaCIN(params: {
     coord_inspection_type: newOptions.inspectionType,
     coord_inspector: newOptions.inspectorId || undefined,
     coord_comentarios: notes || undefined,
+    existing_session_id: sessionId,
   });
 
-  return { cancelledSessionId: sessionId, newCinId: newCin.id };
+  return { rescheduledSessionId: sessionId, newCinId: newCin.id };
 }
 
 /**
