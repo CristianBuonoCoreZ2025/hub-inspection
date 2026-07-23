@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -689,7 +689,7 @@ export default function ClaimDetailPage() {
  <p className="text-[13px] font-semibold text-amber-900 dark:text-amber-200">
  Siniestro sin póliza asignada
  </p>
- <p className="text-[12px] text-amber-700 dark:text-amber-300 mt-0.5">
+ <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
  No se pueden ejecutar gestiones ni cambiar el estado del siniestro hasta que se asigne una póliza.
  Edita el siniestro para seleccionar una póliza existente o crear una nueva.
  </p>

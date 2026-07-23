@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,7 @@ export default function GenericaScreen({ action, onChange, readOnly }: GestionSc
 
   return (
     <div className="space-y-2">
-      <p className="text-[12px] text-muted-foreground">
+      <p className="text-[11px] text-muted-foreground">
         Pantalla genérica. Edita los datos específicos de la gestión en formato JSON.
       </p>
       <Textarea

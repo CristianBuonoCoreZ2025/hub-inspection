@@ -217,7 +217,7 @@ export default function PolizasPage() {
  {hasActiveFilters && (
  <button
  onClick={clearFilters}
- className="text-[12px] text-muted-foreground hover:text-foreground px-2"
+ className="text-[11px] text-muted-foreground hover:text-foreground px-2"
  >
  Limpiar
  </button>

@@ -41,13 +41,13 @@ export default function PropuestasPage() {
             asociadas a siniestros, enviarlas al asegurado para aceptación o
             rechazo, y generar el documento PDF correspondiente.
           </p>
-          <div className="mt-4 flex items-center gap-2 text-[12px] text-muted-foreground">
+          <div className="mt-4 flex items-center gap-2 text-[11px] text-muted-foreground">
             <Clock className="size-3.5" />
             <span>Pendiente de definición de alcance</span>
           </div>
           <Link
             href="/dashboard/claims"
-            className="mt-6 inline-flex items-center gap-1.5 text-[12px] font-medium text-primary hover:underline"
+            className="mt-6 inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
           >
             Volver a siniestros
             <ArrowRight className="size-3.5" />

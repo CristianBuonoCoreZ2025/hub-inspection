@@ -412,7 +412,7 @@ export default function WorkflowsPage() {
  <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-500" />
  </div>
  ) : (
- <div className="text-[12px] space-y-0.5">
+ <div className="text-[11px] space-y-0.5">
  {Array.from(tree.entries()).map(([statusId, countriesMap]) => {
  const statusCode = getStatusCode(statusId);
  const statusMeta = STATUS_ICONS[statusCode] || STATUS_ICONS["adjustment"];
@@ -683,14 +683,14 @@ export default function WorkflowsPage() {
  <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1
  bg-sky-500/10 border border-sky-500/20">
  <span className="text-[10px] text-muted-foreground">Nivel</span>
- <span className="text-[12px] font-mono font-bold text-sky-400">{selectedStep.level}</span>
+ <span className="text-[11px] font-mono font-bold text-sky-400">{selectedStep.level}</span>
  </div>
  {selectedStep.depends_on_template && (
  <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1
  bg-violet-500/10 border border-violet-500/20">
  <ArrowRight className="h-2.5 w-2.5 text-violet-400" />
  <span className="text-[10px] text-muted-foreground">desde</span>
- <span className="text-[12px] font-mono font-bold text-violet-400">{selectedStep.depends_on_template?.code}</span>
+ <span className="text-[11px] font-mono font-bold text-violet-400">{selectedStep.depends_on_template?.code}</span>
  </div>
  )}
  </div>
@@ -715,7 +715,7 @@ export default function WorkflowsPage() {
  {canDelete("catalogos") && selectedConfig?.status !== "online" && (
  <button
  className="mt-6 w-full flex items-center justify-center gap-2 rounded-lg
- px-3 h-8 text-[12px] font-medium
+ px-3 h-8 text-[11px] font-medium
  bg-rose-500/10 hover:bg-rose-500/20
  border border-rose-500/20 text-rose-400
  transition-all duration-200 active:scale-95"
@@ -989,7 +989,7 @@ function GlassTreeNode({
  {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
  </span>
  <span className="shrink-0">{icon}</span>
- <span className={`truncate text-[12px] ${bold ? "font-semibold" : "font-normal"}`}>{label}</span>
+ <span className={`truncate text-[11px] ${bold ? "font-semibold" : "font-normal"}`}>{label}</span>
  {count !== undefined && count > 0 && (
  <span className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1
  text-[9px] font-medium bg-white/10 dark:bg-white/10 text-muted-foreground">
@@ -1146,7 +1146,7 @@ function GlassToggle({
  <div className={`h-2 w-2 rounded-full transition-all duration-200 ${active ? c.dot : "bg-muted-foreground/30"}`} />
  </div>
  <div className="text-left flex-1">
- <div className={`text-[12px] font-medium ${active ? c.text : ""}`}>{label}</div>
+ <div className={`text-[11px] font-medium ${active ? c.text : ""}`}>{label}</div>
  <div className="text-[9px] text-muted-foreground/60">{description}</div>
  </div>
  </button>
@@ -1177,7 +1177,7 @@ function EmptyState({ onCreate, canCreate }: { onCreate: () => void; canCreate: 
  onClick={onCreate}
  className="flex items-center gap-2 rounded-lg px-4 h-8
  bg-linear-to-r from-violet-500/80 to-sky-500/80 hover:from-violet-500 hover:to-sky-500
- text-white text-[12px] font-medium shadow-lg shadow-violet-500/20
+ text-white text-[11px] font-medium shadow-lg shadow-violet-500/20
  transition-all active:scale-95"
  >
  <Plus className="h-3.5 w-3.5" />
@@ -1376,7 +1376,7 @@ function RootNode({ children, isPaletteDrag, businessLineName }: {
  <Workflow className={`h-3.5 w-3.5 ${showDropIndicator ? "text-violet-300" : "text-violet-400"}`} />
  </div>
  <div className="flex flex-col">
- <span className="text-[12px] font-semibold text-violet-400">Nivel 1 — Raíz</span>
+ <span className="text-[11px] font-semibold text-violet-400">Nivel 1 — Raíz</span>
  <span className="text-[9px] text-muted-foreground">
  {businessLineName || "Gestiones iniciales"}
  {showDropIndicator && " · Soltar aquí"}

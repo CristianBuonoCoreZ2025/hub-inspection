@@ -109,7 +109,7 @@ export default function SettingsPage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium transition-colors border-b-2 ${
+              className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium transition-colors border-b-2 ${
                 tab === t.id
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -238,7 +238,7 @@ function GeneralTab() {
               <Shield className="size-4 text-primary" />
               <span className="text-[13px] font-medium">Rol</span>
             </div>
-            <span className="text-[12px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               {useAuth().profile?.role || "—"}
             </span>
           </div>
@@ -419,7 +419,7 @@ function PerfilesTab() {
               {p.permissions.map((perm) => (
                 <li
                   key={perm}
-                  className="flex items-center gap-2 text-[12px] text-muted-foreground"
+                  className="flex items-center gap-2 text-[11px] text-muted-foreground"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   {perm}

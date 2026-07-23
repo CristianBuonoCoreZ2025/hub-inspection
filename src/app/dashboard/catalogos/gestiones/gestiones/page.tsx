@@ -394,7 +394,7 @@ export default function GestionesPage() {
  <span className={`flex h-5 w-5 items-center justify-center rounded-md ${sty.bg} ${sty.color} shrink-0`}>
  {cfg.icon}
  </span>
- <span className={`text-[12px] font-semibold ${sty.color}`}>{cfg.title}</span>
+ <span className={`text-[11px] font-semibold ${sty.color}`}>{cfg.title}</span>
  </div>
  {/* Body */}
  <div className="p-3 space-y-3">
@@ -561,7 +561,7 @@ export default function GestionesPage() {
  <div className="flex items-center justify-between border-b border-border/60 px-4 py-2.5 bg-muted/30">
  <div className="flex items-center gap-2">
  <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
- <h3 className="text-[12px] font-semibold text-foreground">Configuración</h3>
+ <h3 className="text-[11px] font-semibold text-foreground">Configuración</h3>
  </div>
  </div>
  {/* Body */}
@@ -792,7 +792,7 @@ export default function GestionesPage() {
 
  {/* Steps según el nivel seleccionado — 3 tarjetas lado a lado */}
  {form.review_levels === 0 ? (
- <div className="rounded-lg border border-dashed border-border/60 p-4 text-center text-[12px] text-muted-foreground">
+ <div className="rounded-lg border border-dashed border-border/60 p-4 text-center text-[11px] text-muted-foreground">
  Esta gestión no tiene workflow de revisión.
  </div>
  ) : (
@@ -956,7 +956,7 @@ export default function GestionesPage() {
  Inactivas
  </ToggleChip>
  {(filterFeature || filterLine || search) && (
- <Button variant="ghost" size="sm" className="h-8 text-[12px] text-muted-foreground px-2" onClick={() => { setFilterFeature(""); setFilterLine(""); setSearch(""); setPage(1); }}>
+ <Button variant="ghost" size="sm" className="h-8 text-[11px] text-muted-foreground px-2" onClick={() => { setFilterFeature(""); setFilterLine(""); setSearch(""); setPage(1); }}>
  <X className="h-3.5 w-3.5" /> Limpiar
  </Button>
  )}

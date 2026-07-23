@@ -132,7 +132,7 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
     }
   };
 
-  const btnClass = "pg-btn-platinum h-7 text-[12px] gap-1.5 shrink-0";
+  const btnClass = "pg-btn-platinum h-7 text-[11px] gap-1.5 shrink-0";
 
   const expiryConfig = {
     valid: { icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" },
@@ -146,7 +146,7 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
   return (
     <div className="space-y-2">
       {/* Link + copiar + refrescar */}
-      <div className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[12px]">
+      <div className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[11px]">
         <span className="text-violet-700 dark:text-violet-300 shrink-0">Link:</span>
         <code className="flex-1 truncate text-muted-foreground">{link}</code>
         <Button size="sm" variant="outline" className="btn-icon-sm shrink-0" onClick={copyLink}>

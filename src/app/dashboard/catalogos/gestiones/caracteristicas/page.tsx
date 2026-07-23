@@ -352,7 +352,7 @@ function ScreenHelpPanel({ screen }: { screen: GestionScreen | undefined }) {
  return (
  <div className="rounded-md border border-border bg-card p-3 space-y-1.5">
  <div className="flex items-center gap-2">
- <span className="text-[12px] font-semibold">{screen.name}</span>
+ <span className="text-[11px] font-semibold">{screen.name}</span>
  {supportsDocs && (
  <span className="inline-flex rounded bg-violet-100 px-1.5 py-0.5 text-[9px] font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
  + Templates

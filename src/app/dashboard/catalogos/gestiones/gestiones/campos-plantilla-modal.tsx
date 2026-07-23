@@ -95,7 +95,7 @@ export function CamposPlantillaModal({ open, onOpenChange }: Props) {
           {/* Aviso */}
           <div className="info-box flex items-start gap-2">
             <Info className="h-4 w-4 shrink-0 mt-0.5" />
-            <div className="text-[12px]">
+            <div className="text-[11px]">
               <strong>Cómo usar:</strong> Escribe el placeholder entre signos de menor y mayor,
               por ejemplo <code className="app-inline-code mx-1">{"<claim_number>"}</code>
               para el número de siniestro. Click en cualquier campo para copiarlo.
@@ -128,7 +128,7 @@ export function CamposPlantillaModal({ open, onOpenChange }: Props) {
           {/* Grupos */}
           <div className="space-y-2">
             {filteredGroups.length === 0 ? (
-              <div className="text-center text-muted-foreground py-6 text-[12px] border border-dashed border-border rounded-lg">
+              <div className="text-center text-muted-foreground py-6 text-[11px] border border-dashed border-border rounded-lg">
                 No se encontraron campos para &ldquo;{search}&rdquo;.
               </div>
             ) : (

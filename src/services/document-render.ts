@@ -54,7 +54,13 @@ export async function extractPlaceholders(
 async function renderXlsx(buffer: Uint8Array | ArrayBuffer, data: Record<string, unknown>): Promise<Uint8Array> {
   const XlsxTemplate = (await import("xlsx-template")).default;
   const buf = buffer instanceof Uint8Array ? Buffer.from(buffer) : Buffer.from(buffer);
-  const template = new XlsxTemplate(buf) as any;
+  const template = new XlsxTemplate(buf) as unknown as {
+    workbook?: { Sheets?: unknown[] };
+    sheets?: unknown[];
+    substitute(sheetId: unknown, data: Record<string, unknown>): void;
+    substituteAll?: (data: Record<string, unknown>) => void;
+    generate(): Uint8Array | Buffer;
+  };
 
   // xlsx-template usa ${name} como delimitador por defecto
   // substitute(sheetNameOrIndex, data) — aplicar a todas las hojas
@@ -62,7 +68,11 @@ async function renderXlsx(buffer: Uint8Array | ArrayBuffer, data: Record<string,
   try {
     const sheets = template.workbook?.Sheets || template.sheets || [];
     for (const sheet of sheets) {
-      const sheetId = sheet?.id ?? sheet?.name ?? sheet;
+      const s = sheet as { id?: unknown; name?: unknown } | unknown;
+      const sheetId =
+        typeof s === "object" && s !== null
+          ? (s as { id?: unknown; name?: unknown }).id ?? (s as { id?: unknown; name?: unknown }).name ?? s
+          : s;
       try {
         template.substitute(sheetId, data);
       } catch {
@@ -82,9 +92,7 @@ async function renderXlsx(buffer: Uint8Array | ArrayBuffer, data: Record<string,
 
 async function extractPlaceholdersFromXlsx(buffer: Uint8Array | ArrayBuffer): Promise<string[]> {
   try {
-    const XlsxTemplate = (await import("xlsx-template")).default;
     const buf = buffer instanceof Uint8Array ? Buffer.from(buffer) : Buffer.from(buffer);
-    const template = new XlsxTemplate(buf);
     // xlsx-template no expone getTags, así que extraemos del XML
     const PizZip = (await import("pizzip")).default;
     const zip = new PizZip(buf);
@@ -129,7 +137,13 @@ async function renderPptx(buffer: Uint8Array | ArrayBuffer, data: Record<string,
 
   // node-pptx-templater usa {{placeholder}} por defecto
   // Cargar desde buffer
-  const ppt = (await PPTXTemplater.load(buf)) as any;
+  const ppt = (await PPTXTemplater.load(buf)) as unknown as {
+    useAllSlides?: () => { replaceMultiple(replacements: Record<string, string>): void };
+    getSlides?: () => Promise<unknown[]> | unknown[];
+    useSlide: (n: number) => { replaceMultiple(replacements: Record<string, string>): void };
+    toBuffer?: () => Promise<Uint8Array | Buffer> | Uint8Array | Buffer;
+    export?: () => Promise<Uint8Array | Buffer> | Uint8Array | Buffer;
+  };
 
   // Construir mapa de reemplazos {{key}} → value
   const replacements: Record<string, string> = {};
@@ -169,8 +183,17 @@ async function renderPptx(buffer: Uint8Array | ArrayBuffer, data: Record<string,
     // sin placeholders
   }
 
-  const result = typeof ppt.toBuffer === "function" ? await ppt.toBuffer() : await ppt.export();
-  return new Uint8Array(result);
+  const toBuffer = ppt.toBuffer;
+  if (typeof toBuffer === "function") {
+    const result = await toBuffer();
+    return new Uint8Array(result);
+  }
+  const exportFn = ppt.export;
+  if (typeof exportFn === "function") {
+    const result = await exportFn();
+    return new Uint8Array(result);
+  }
+  throw new Error("PPTXTemplater no expone toBuffer ni export");
 }
 
 async function extractPlaceholdersFromPptx(buffer: Uint8Array | ArrayBuffer): Promise<string[]> {

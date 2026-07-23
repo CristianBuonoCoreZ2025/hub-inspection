@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -402,7 +402,7 @@ export default function AuditLogSection({ claimId, users, catalogs = {} }: Audit
                               Campos modificados ({changes.length})
                             </div>
                             {changes.map((c) => (
-                              <div key={c.field} className="flex items-center gap-2 text-[12px]">
+                              <div key={c.field} className="flex items-center gap-2 text-[11px]">
                                 <span className="font-medium min-w-[140px] text-foreground">{c.label}:</span>
                                 <span className="text-muted-foreground line-through">{c.oldValue}</span>
                                 <span className="text-muted-foreground">→</span>
@@ -420,7 +420,7 @@ export default function AuditLogSection({ claimId, users, catalogs = {} }: Audit
                               .filter(([k, v]) => fieldLabels[k] && v != null)
                               .slice(0, 15)
                               .map(([k, v]) => (
-                                <div key={k} className="flex items-center gap-2 text-[12px]">
+                                <div key={k} className="flex items-center gap-2 text-[11px]">
                                   <span className="font-medium min-w-[140px] text-foreground">{fieldLabels[k]}:</span>
                                   <span className="text-muted-foreground">{resolveField(k, v)}</span>
                                 </div>

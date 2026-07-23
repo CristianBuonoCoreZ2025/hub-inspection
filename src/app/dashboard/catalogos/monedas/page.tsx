@@ -155,7 +155,7 @@ function MonedasTab() {
  <td className="font-medium">{c.name}</td>
  <td className="text-muted-foreground">{c.symbol || "—"}</td>
  <td className="text-muted-foreground">{c.decimals}</td>
- <td className="text-center font-mono text-[12px] text-muted-foreground">{countryCountByCode[c.code] || 0}</td>
+ <td className="text-center font-mono text-[11px] text-muted-foreground">{countryCountByCode[c.code] || 0}</td>
  <td>
  <div className="app-row-actions">
  {/* Ver tipos de cambio */}
@@ -338,7 +338,7 @@ function PaisesModal({
  </DialogTitle>
  </div>
  <div className="modal-body">
- <p className="text-[12px] text-muted-foreground mb-3">
+ <p className="text-[11px] text-muted-foreground mb-3">
  Activa los países donde esta moneda se utiliza. Marca <Star className="inline h-3 w-3 fill-current text-amber-500" /> Base para la moneda base de cada país.
  </p>
  <div className="app-data-table-wrap max-h-[400px] overflow-y-auto">

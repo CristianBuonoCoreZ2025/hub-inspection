@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
@@ -231,7 +231,7 @@ export default function MagicLinkPage() {
             </div>
             <div>
               <h2 className="text-base font-semibold">Inspección programada</h2>
-              <p className="text-[12px] text-slate-400">Su inspector lo contactará a la hora indicada</p>
+              <p className="text-[11px] text-slate-400">Su inspector lo contactará a la hora indicada</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
@@ -250,7 +250,7 @@ export default function MagicLinkPage() {
               </div>
             </div>
           </div>
-          <div className="mt-4 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-[12px] text-amber-300">
+          <div className="mt-4 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-[11px] text-amber-300">
             <strong>Importante:</strong> Mantenga esta pestaña abierta. Cuando el inspector inicie la sesión,
             verá la inspección en tiempo real aquí mismo.
           </div>
@@ -338,7 +338,7 @@ export default function MagicLinkPage() {
             return (
               <div
                 key={tab.id}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-medium ${
                   active
                     ? "bg-sky-500/15 text-sky-400"
                     : "text-slate-600"
@@ -377,7 +377,7 @@ export default function MagicLinkPage() {
           <div className="w-[300px] shrink-0 hidden lg:flex flex-col py-6">
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 flex flex-col flex-1 sticky top-20" style={{ maxHeight: "calc(100vh - 100px)" }}>
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
-                <span className="text-[12px] font-semibold text-slate-400 flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
                   <MessageSquare className="h-3.5 w-3.5" />
                   Chat con Inspector
                 </span>
@@ -448,7 +448,7 @@ function ResumenTab({ session }: { session: LiveSession }) {
   return (
     <div className="space-y-2">
       <Panel title="Datos del Siniestro">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
           <Field label="N° Interno" value={claim?.liquidation_number || "—"} mono />
           <Field label="Ref. Cliente" value={claim?.client_reference || "—"} />
           <Field label="N° Siniestro Cía" value={claim?.claim_number || "—"} />
@@ -458,7 +458,7 @@ function ResumenTab({ session }: { session: LiveSession }) {
         </div>
       </Panel>
       <Panel title="Asegurado">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
           <Field label="Nombre" value={insured?.full_name || "—"} />
           <Field label="Email" value={insured?.email || "—"} />
           <Field label="Teléfono" value={insured?.phone || insured?.cell_phone || "—"} />
@@ -466,20 +466,20 @@ function ResumenTab({ session }: { session: LiveSession }) {
         </div>
       </Panel>
       <Panel title="Contacto de Inspección">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
           <Field label="Nombre contacto" value={session.interviewed_name || "—"} />
           <Field label="Email" value={session.interviewed_email || "—"} />
           <Field label="Lugar inspección" value={claim?.claim_address || "—"} />
           {session.inspector_observations && (
             <div className="col-span-2 md:col-span-3">
               <p className="text-[10px] text-slate-500 mb-0.5">Comentarios</p>
-              <p className="font-medium whitespace-pre-wrap text-[12px]">{session.inspector_observations}</p>
+              <p className="font-medium whitespace-pre-wrap text-[11px]">{session.inspector_observations}</p>
             </div>
           )}
         </div>
       </Panel>
       <Panel title="Estado de la Sesión">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-[12px]">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-[11px]">
           <Field label="Estado" value={statusLabels[session.status] || session.status} />
           <Field label="Programada" value={fmtDate(session.scheduled_at)} />
           <Field label="Iniciada" value={fmtDate(session.started_at)} />
@@ -560,7 +560,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
         {innerTabs.map((tab) => (
           <div
             key={tab.id}
-            className={`flex shrink-0 items-center rounded-lg px-3 py-1.5 text-[12px] font-medium ${
+            className={`flex shrink-0 items-center rounded-lg px-3 py-1.5 text-[11px] font-medium ${
               innerTab === tab.id
                 ? "bg-sky-500/15 text-sky-400"
                 : "text-slate-600"
@@ -575,7 +575,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       {innerTab === "datos" && (
         <div className="space-y-2">
           <Panel title="Datos Generales de la Inspeccion">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
               <Field label="Fecha Inspeccion" value={session.inspection_date || "—"} />
               <Field label="Hora Inspeccion" value={session.inspection_time || "—"} />
               <Field label="Nombre Entrevistado" value={session.interviewed_name || "—"} />
@@ -584,7 +584,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
             </div>
           </Panel>
           <Panel title="Parte Policial y Bomberos">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
               <Field label="N° Parte Policial" value={session.police_report_number || "—"} />
               <Field label="Nombre Denunciante" value={session.police_report_name || "—"} />
               <Field label="RUT Denunciante" value={session.police_report_rut || "—"} />
@@ -592,7 +592,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
             </div>
           </Panel>
           <Panel title="Otros Seguros y Observaciones">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
               <Field label="¿Presenta otros seguros?" value={session.other_insurances ? "Sí" : "No"} />
               {session.other_insurances && (
                 <Field label="Compañia" value={session.other_insurance_company || "—"} />
@@ -615,7 +615,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
             const riskClass = val(pr, "risk_class");
             const isResidential = riskClass === "Residencial";
             return (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
                 <Field label="Clasificacion del Bien" value={riskClass} />
                 <Field label="Destino del Bien" value={val(pr, "property_type")} />
                 <Field label="N° Dpto / Oficina" value={val(pr, "apartment_number")} />
@@ -640,7 +640,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       {/* Materialidad */}
       {innerTab === "materialidad" && (
         <Panel title="Materialidad">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
             <Field label="Muros" value={val(pm, "walls")} />
             <Field label="Cubierta / Techumbre" value={val(pm, "roof")} />
             <Field label="Pavimentos Interiores" value={val(pm, "interior_flooring")} />
@@ -656,7 +656,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       {/* Seguridad */}
       {innerTab === "seguridad" && (
         <Panel title="Medidas de Asegurabilidad">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
             <Field label="Protecciones Generales" value={boolVal(sm, "protections")} />
             <Field label="Chapas / Cerraduras de Seguridad" value={boolVal(sm, "security_locks")} />
             <Field label="Guardias de Seguridad" value={boolVal(sm, "security_guards")} />
@@ -670,7 +670,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       {/* Declaración del Asegurado */}
       {innerTab === "declaracion" && (
         <Panel title="Declaracion del Asegurado">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-[12px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
             <Field label="Relato de los Hechos" value={val(isv, "statement")} />
             <Field label="Punto de Ingreso / Salida" value={val(isv, "entry_exit_point")} />
             <Field label="Activacion de Alarmas" value={val(isv, "alarm_activation")} />
@@ -689,7 +689,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
           ) : (
             <div className="space-y-2">
               {tp.map((t, i) => (
-                <div key={i} className="rounded-lg bg-slate-900/50 p-3 text-[12px]">
+                <div key={i} className="rounded-lg bg-slate-900/50 p-3 text-[11px]">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     <Field label="Nombre" value={val(t, "name")} />
                     <Field label="RUT" value={val(t, "rut")} />
@@ -834,7 +834,7 @@ function SketchesTab({ sketches, session }: { sketches: LiveSketch[]; session: L
           </h3>
           <button
             onClick={() => { setMode("view"); setEditingSketch(null); }}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-[12px] text-slate-300 hover:bg-slate-800"
+            className="rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] text-slate-300 hover:bg-slate-800"
           >
             Cancelar
           </button>
@@ -1059,13 +1059,13 @@ function SignaturesTab({ session }: { session: LiveSession }) {
             />
           </div>
           <div className="flex gap-2">
-            <button onClick={clear} className="rounded-lg border border-slate-700 px-3 py-1.5 text-[12px] text-slate-300 hover:bg-slate-800">
+            <button onClick={clear} className="rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] text-slate-300 hover:bg-slate-800">
               Limpiar
             </button>
             <button
               onClick={save}
               disabled={saving}
-              className="rounded-lg bg-sky-600 px-3 py-1.5 text-[12px] text-white hover:bg-sky-500 disabled:opacity-50 flex items-center gap-1.5"
+              className="rounded-lg bg-sky-600 px-3 py-1.5 text-[11px] text-white hover:bg-sky-500 disabled:opacity-50 flex items-center gap-1.5"
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PenTool className="h-3.5 w-3.5" />}
               Firmar
@@ -1122,7 +1122,7 @@ function ChatPanel({ session }: { session: LiveSession }) {
     <div className="flex flex-col gap-2 h-full">
         <div className="flex-1 space-y-2 overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 220px)" }}>
           {messages.length === 0 ? (
-            <p className="text-[12px] text-slate-500 text-center py-8">
+            <p className="text-[11px] text-slate-500 text-center py-8">
               No hay mensajes aún. Puede escribir un mensaje al inspector.
             </p>
           ) : (
@@ -1185,7 +1185,7 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
   return (
     <div>
       <p className="text-[11px] font-semibold text-slate-300 mb-0.5">{label}</p>
-      <p className={`text-[12px] font-medium ${mono ? "font-mono text-sky-400" : ""}`}>{value}</p>
+      <p className={`text-[11px] font-medium ${mono ? "font-mono text-sky-400" : ""}`}>{value}</p>
     </div>
   );
 }

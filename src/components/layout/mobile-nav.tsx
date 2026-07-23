@@ -69,7 +69,7 @@ function MobileSubGroupAccordion({
         )}
       >
         <Icon className="size-3.5 shrink-0" />
-        <span className="text-[12px] font-medium flex-1 text-left">{subgroup.title}</span>
+        <span className="text-[11px] font-medium flex-1 text-left">{subgroup.title}</span>
         <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", open && "rotate-180")} />
       </button>
 

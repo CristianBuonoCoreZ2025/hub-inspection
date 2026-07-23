@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ export default function CoordinacionScreen({ action, onChange, readOnly }: Gesti
  return (
  <div className="space-y-3">
  <div className="rounded-lg border border-border p-3 space-y-3">
- <p className="text-[12px] font-semibold">Datos Coordinación</p>
+ <p className="text-[11px] font-semibold">Datos Coordinación</p>
  <div>
  <Label className="app-field-label text-[11px]">Inspector</Label>
  <select
@@ -52,7 +52,7 @@ export default function CoordinacionScreen({ action, onChange, readOnly }: Gesti
  </div>
 
  <div className="rounded-lg border border-border p-3 space-y-3">
- <p className="text-[12px] font-semibold">Datos Inspección</p>
+ <p className="text-[11px] font-semibold">Datos Inspección</p>
  <div>
  <Label className="app-field-label text-[11px]">Fecha y Hora de Inspección *</Label>
  <Input

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,7 +48,7 @@ export default function EmailViewScreen({ action }: GestionScreenProps) {
  </div>
  </div>
  <div>
- <p className="text-[12px] font-semibold mt-2">No hay Archivos Adjuntos</p>
+ <p className="text-[11px] font-semibold mt-2">No hay Archivos Adjuntos</p>
  </div>
  </div>
  );

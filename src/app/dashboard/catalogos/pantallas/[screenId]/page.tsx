@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -565,7 +565,7 @@ export default function ScreenBuilderPage() {
                               bg-card/80 backdrop-blur-2xl saturate-150 px-3 py-2
                               shadow-[0_8px_30px_rgba(0,0,0,0.12)] opacity-90">
                 <span className="text-[14px]">{activeDrag.icon}</span>
-                <span className="text-[12px] font-medium">{activeDrag.label}</span>
+                <span className="text-[11px] font-medium">{activeDrag.label}</span>
               </div>
             ) : null}
           </DragOverlay>
@@ -690,7 +690,7 @@ function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName
                         bg-card/70 backdrop-blur-2xl saturate-150 p-5
                         shadow-[0_8px_40px_rgba(0,0,0,0.08)]">
           <h2 className="text-base font-semibold mb-1">{screenName}</h2>
-          <p className="text-[12px] text-muted-foreground mb-4">Vista previa del formulario</p>
+          <p className="text-[11px] text-muted-foreground mb-4">Vista previa del formulario</p>
 
           {simpleEntities.length > 0 && (
             <section className="mb-4">
@@ -740,7 +740,7 @@ function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName
           {fields.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <LayoutTemplate className="h-10 w-10 opacity-20" />
-              <p className="text-[12px] mt-2">Sin campos para previsualizar</p>
+              <p className="text-[11px] mt-2">Sin campos para previsualizar</p>
             </div>
           )}
         </div>

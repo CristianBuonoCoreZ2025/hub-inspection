@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -318,7 +318,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     <div className="app-stack">
       {/* ─── Banner de solo lectura (inspección finalizada) ─── */}
       {readOnly && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+        <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
           <Lock className="h-3.5 w-3.5 shrink-0" />
           Inspección finalizada — las evidencias son de solo lectura
         </div>
@@ -393,7 +393,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
                 return (
                   <div key={it.id} className="rounded-xl border border-border bg-muted/30 p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[12px] font-medium truncate flex-1" title={it.fileName}>
+                      <span className="text-[11px] font-medium truncate flex-1" title={it.fileName}>
                         {it.fileName}
                       </span>
                       <span
@@ -515,7 +515,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
             <div className="text-[11px] font-medium text-foreground">{aiSummaryModal.title}</div>
             <div
               style={{ maxHeight: "60vh", overflowY: "auto" }}
-              className="rounded-md bg-violet-50/50 p-3 text-[12px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap"
+              className="rounded-md bg-violet-50/50 p-3 text-[11px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap"
             >
               {aiSummaryModal.summary}
             </div>
@@ -553,7 +553,7 @@ function EvidenceSection({
     <div className="app-panel">
       <div className="mb-3 flex items-center gap-2">
         <span className="text-muted-foreground">{icon}</span>
-        <h3 className="text-[12px] font-semibold text-foreground">{title}</h3>
+        <h3 className="text-[11px] font-semibold text-foreground">{title}</h3>
         <span className="text-[11px] text-muted-foreground">({count})</span>
       </div>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">

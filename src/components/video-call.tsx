@@ -204,7 +204,7 @@ export default function VideoCall({ sessionId, displayName, compact = false, onH
           <Video className={`${compact ? "h-5 w-5" : "h-7 w-7"} text-sky-400`} />
         </div>
         <div className="text-center">
-          <p className={`font-medium ${compact ? "text-[12px]" : "text-sm"}`}>Videollamada</p>
+          <p className={`font-medium ${compact ? "text-[11px]" : "text-sm"}`}>Videollamada</p>
           <p className={`text-slate-500 ${compact ? "text-[10px]" : "text-xs"}`}>
             Conéctese con {compact ? "el cliente" : "el inspector"}
           </p>

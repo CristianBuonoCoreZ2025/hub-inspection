@@ -165,7 +165,7 @@ export default function DamageSpacesPage() {
  <tr key={item.id}>
  <td><StatusBadge status={item.is_active ? "active" : "inactive"} label={item.is_active ? "Activo" : "Inactivo"} /></td>
  <td className="font-medium">{item.name}</td>
- <td className="text-[12px] text-muted-foreground">{item.description || "—"}</td>
+ <td className="text-[11px] text-muted-foreground">{item.description || "—"}</td>
  <td className="text-[11px]">
  <div className="flex flex-wrap gap-1">
  {(item.applicable_classifications || []).map((c: string) => (

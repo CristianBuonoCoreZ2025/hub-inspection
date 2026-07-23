@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -348,7 +348,7 @@ export default function InspectionDetailPage() {
  <p className="text-muted-foreground py-20 text-center">
  No se encontro la sesion de inspeccion.
  {isError && (
- <span className="block mt-2 text-rose-500 text-[12px]">
+ <span className="block mt-2 text-rose-500 text-[11px]">
  Error: {(error as Error)?.message || "desconocido"}
  </span>
  )}
@@ -1107,7 +1107,7 @@ export default function InspectionDetailPage() {
  disabled={!slot.available}
  title={slot.bookedInfo ? `Ocupado: ${slot.bookedInfo}` : slot.extra ? "Extra horario" : "Disponible"}
  onClick={() => setRescheduleTime(slot.time)}
- className={`rounded-lg border px-3 py-2 text-[12px] font-medium transition-all text-center ${
+ className={`rounded-lg border px-3 py-2 text-[11px] font-medium transition-all text-center ${
  !slot.available
  ? "border-rose-500/20 bg-rose-500/5 text-rose-400 cursor-not-allowed line-through"
  : rescheduleTime === slot.time
@@ -1129,7 +1129,7 @@ export default function InspectionDetailPage() {
  )}
  </div>
  ) : (
- <div className="rounded-lg border border-dashed border-border p-4 text-center text-[12px] text-muted-foreground">
+ <div className="rounded-lg border border-dashed border-border p-4 text-center text-[11px] text-muted-foreground">
  Selecciona inspector y fecha para ver la disponibilidad.
  </div>
  )}
@@ -1191,11 +1191,11 @@ export default function InspectionDetailPage() {
  <h3 className="text-[13px] font-semibold text-rose-700 dark:text-rose-300">
  Inspección Cancelada
  </h3>
- <p className="text-[12px] text-muted-foreground mt-1">
+ <p className="text-[11px] text-muted-foreground mt-1">
  {allCancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || "Motivo no registrado"}
  </p>
  {session.cancellation_notes && (
- <p className="text-[12px] text-muted-foreground mt-1 italic">
+ <p className="text-[11px] text-muted-foreground mt-1 italic">
  &ldquo;{session.cancellation_notes}&rdquo;
  </p>
  )}

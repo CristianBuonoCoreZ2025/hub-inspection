@@ -311,7 +311,7 @@ export default function LandingPage() {
                         <Icon className="size-5" />
                       </div>
                       <h3 className="text-[14px] font-semibold">{f.title}</h3>
-                      <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">{f.desc}</p>
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">{f.desc}</p>
                     </div>
                   </div>
                 );
@@ -431,13 +431,13 @@ export default function LandingPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className={`text-[12px] font-bold ${
+                          <span className={`text-[11px] font-bold ${
                             isDone ? "text-emerald-500"
                             : isAuto ? "text-primary"
                             : isCurso ? "text-amber-500"
                             : "text-muted-foreground/50"
                           }`}>{g.code}</span>
-                          <span className="text-[12px] font-medium">{g.name}</span>
+                          <span className="text-[11px] font-medium">{g.name}</span>
                         </div>
                         <p className="text-[11px] text-muted-foreground">{g.desc}</p>
                       </div>
@@ -481,7 +481,7 @@ export default function LandingPage() {
               {modules.map((m) => (
                 <span
                   key={m}
-                  className="rounded-full border border-border/50 bg-card/40 px-3.5 py-1.5 text-[12px] font-medium backdrop-blur-md transition-colors hover:border-primary/30 hover:bg-primary/5"
+                  className="rounded-full border border-border/50 bg-card/40 px-3.5 py-1.5 text-[11px] font-medium backdrop-blur-md transition-colors hover:border-primary/30 hover:bg-primary/5"
                 >
                   {m}
                 </span>

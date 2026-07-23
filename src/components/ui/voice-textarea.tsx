@@ -13,10 +13,33 @@ interface VoiceTextareaProps {
   disabled?: boolean;
 }
 
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: {
+    isFinal: boolean;
+    0: { transcript: string };
+  }[];
+}
+
+interface SpeechRecognitionInstance {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((this: SpeechRecognitionInstance, ev: SpeechRecognitionEvent) => void) | null;
+  onerror: ((this: SpeechRecognitionInstance, ev: Event) => void) | null;
+  onend: ((this: SpeechRecognitionInstance, ev: Event) => void) | null;
+  start(): void;
+  stop(): void;
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognitionInstance;
+}
+
 declare global {
   interface Window {
-    SpeechRecognition?: any;
-    webkitSpeechRecognition?: any;
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
   }
 }
 
@@ -29,15 +52,11 @@ export function VoiceTextarea({
   disabled = false,
 }: VoiceTextareaProps) {
   const [isListening, setIsListening] = React.useState(false);
-  const [isSupported, setIsSupported] = React.useState(false);
   const [spellCheck, setSpellCheck] = React.useState(true);
-  const recognitionRef = React.useRef<any>(null);
+  const recognitionRef = React.useRef<SpeechRecognitionInstance | null>(null);
   const editorRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    setIsSupported(!!SR);
-  }, []);
+  const isSupported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
   // Sincronizar el contentEditable con value cuando cambia externamente
   React.useEffect(() => {
@@ -58,7 +77,7 @@ export function VoiceTextarea({
     let finalText = editorRef.current?.innerHTML || "";
     if (finalText && !finalText.endsWith(" ")) finalText += " ";
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;

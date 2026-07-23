@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -680,7 +680,7 @@ export default function PolicyDetailPage() {
  if (selectedBusinessLines.length === 0) setPrimaryBusinessLine(b.id);
  }
  }}
- className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all ${
+ className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all ${
  selected
  ? "bg-teal-500/10 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 ring-1 ring-inset ring-teal-500/25"
  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground ring-1 ring-inset ring-border"
@@ -740,7 +740,7 @@ export default function PolicyDetailPage() {
  setDragIndex(null);
  setDragOverIndex(null);
  }}
- className={`group flex items-center gap-3 px-3 py-2.5 text-[12px] transition-colors cursor-grab active:cursor-grabbing border-b border-border/50 last:border-b-0 ${
+ className={`group flex items-center gap-3 px-3 py-2.5 text-[11px] transition-colors cursor-grab active:cursor-grabbing border-b border-border/50 last:border-b-0 ${
  isDragging ? "opacity-40" : ""
  } ${isDragOver ? "bg-teal-500/5" : "hover:bg-muted/40"}`}
  >
@@ -1176,7 +1176,7 @@ export default function PolicyDetailPage() {
  </table>
  </div>
  ) : (
- <p className="text-[12px] text-muted-foreground text-center py-6">
+ <p className="text-[11px] text-muted-foreground text-center py-6">
  No hay coberturas cargadas. Seleccione un tema, luego una cobertura y agregue.
  </p>
  )}
@@ -1243,7 +1243,7 @@ export default function PolicyDetailPage() {
  </table>
  </div>
  ) : (
- <p className="text-[12px] text-muted-foreground py-4 text-center">
+ <p className="text-[11px] text-muted-foreground py-4 text-center">
  No hay documentos online. Associe coberturas a la póliza para ver sus documentos aquí.
  </p>
  )}
@@ -1346,7 +1346,7 @@ export default function PolicyDetailPage() {
  </table>
  </div>
  ) : (
- <p className="text-[12px] text-muted-foreground py-4 text-center">
+ <p className="text-[11px] text-muted-foreground py-4 text-center">
  No hay documentos subidos. Haga clic en &quot;Subir&quot; para agregar documentos.
  </p>
  )}

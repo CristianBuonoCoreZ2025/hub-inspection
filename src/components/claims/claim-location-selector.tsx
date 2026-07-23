@@ -103,13 +103,13 @@ export function ClaimLocationSelector({
           <div className="flex flex-col border-r border-border">
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {isLoading && (
-                <div className="flex items-center gap-2 text-[12px] text-muted-foreground py-8">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground py-8">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Buscando ubicaciones...
                 </div>
               )}
               {hasError && (
-                <div className="flex items-start gap-2 text-[12px] text-rose-600 py-8">
+                <div className="flex items-start gap-2 text-[11px] text-rose-600 py-8">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                   No se encontraron ubicaciones con esa dirección y contexto.
                 </div>
@@ -119,7 +119,7 @@ export function ClaimLocationSelector({
                   key={i}
                   type="button"
                   onClick={() => setSelectedIndex(i)}
-                  className={`w-full text-left rounded-lg border p-3 text-[12px] transition-colors ${
+                  className={`w-full text-left rounded-lg border p-3 text-[11px] transition-colors ${
                     i === selectedIndex
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-primary/40"
@@ -194,7 +194,7 @@ export function ClaimLocationSelector({
                 <Recenter center={selected} />
               </MapContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-[12px] text-muted-foreground">
+              <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
                 {isLoading ? "Cargando mapa..." : "Selecciona una ubicación"}
               </div>
             )}

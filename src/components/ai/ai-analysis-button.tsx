@@ -230,7 +230,7 @@ export function AiAnalysisButton({
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span className="text-[12px] font-medium">Análisis completado</span>
+                  <span className="text-[11px] font-medium">Análisis completado</span>
                   <span className="text-[10px] text-muted-foreground ml-auto tabular-nums">
                     {elapsed.toFixed(1)}s
                   </span>
@@ -257,7 +257,7 @@ export function AiAnalysisButton({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                   <XCircle className="h-4 w-4" />
-                  <span className="text-[12px] font-medium">No se pudo analizar</span>
+                  <span className="text-[11px] font-medium">No se pudo analizar</span>
                   <span className="text-[10px] text-muted-foreground ml-auto tabular-nums">
                     {elapsed.toFixed(1)}s
                   </span>
@@ -274,7 +274,7 @@ export function AiAnalysisButton({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin text-violet-600 dark:text-violet-400" />
-                    <span className="text-[12px] font-medium">Procesando...</span>
+                    <span className="text-[11px] font-medium">Procesando...</span>
                   </div>
                   <span className="text-[10px] text-muted-foreground tabular-nums">
                     {elapsed.toFixed(1)}s

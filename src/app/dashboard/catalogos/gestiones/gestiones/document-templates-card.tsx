@@ -188,12 +188,12 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
 
  {/* Lista de templates */}
  {isLoading ? (
- <div className="text-center text-muted-foreground py-4 text-[12px]">
+ <div className="text-center text-muted-foreground py-4 text-[11px]">
  <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
  Cargando plantillas...
  </div>
  ) : !templates || templates.length === 0 ? (
- <div className="text-center text-muted-foreground py-6 text-[12px] border border-dashed border-border rounded-lg">
+ <div className="text-center text-muted-foreground py-6 text-[11px] border border-dashed border-border rounded-lg">
  <FileUp className="h-6 w-6 mx-auto mb-2 opacity-40" />
  No hay plantillas asociadas a esta gestión.
  </div>
@@ -225,7 +225,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  )}
  <FileText className="h-4 w-4 text-[#0095DA] shrink-0" />
  <span className="flex flex-col leading-tight min-w-0">
- <span className="text-[12px] font-medium truncate">{tpl.file_name}</span>
+ <span className="text-[11px] font-medium truncate">{tpl.file_name}</span>
  {tpl.original_filename && tpl.original_filename !== tpl.file_name && (
  <span className="text-[10px] text-muted-foreground/70 truncate">{tpl.original_filename.replace(/\.docx$/i, "")}</span>
  )}

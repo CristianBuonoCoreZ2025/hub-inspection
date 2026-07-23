@@ -275,7 +275,7 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  {fields.length === 0 && (
  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-2 py-12">
  <LayoutTemplate className="h-10 w-10 opacity-20" />
- <p className="text-[12px]">El formulario está vacío</p>
+ <p className="text-[11px]">El formulario está vacío</p>
  <p className="text-[11px]">Agrega campos desde el lateral izquierdo</p>
  </div>
  )}
@@ -721,7 +721,7 @@ function CanvasFieldPreview({ field, allFields }: { field: ScreenField; allField
  </div>
  );
 
- const inputClass = "w-full rounded-md border border-input bg-muted/30 px-2 py-1.5 text-[12px] text-muted-foreground";
+ const inputClass = "w-full rounded-md border border-input bg-muted/30 px-2 py-1.5 text-[11px] text-muted-foreground";
 
  // Entidad compleja
  if (isComplex) {
@@ -819,7 +819,7 @@ function CanvasFieldPreview({ field, allFields }: { field: ScreenField; allField
  // Checkbox (renderizado como toggle)
  if (field.type === "checkbox") {
  return (
- <label className="flex items-center gap-2 text-[12px]">
+ <label className="flex items-center gap-2 text-[11px]">
  <span className="inline-flex h-[18px] w-[32px] items-center rounded-full bg-input">
  <span className="ml-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-sm" />
  </span>

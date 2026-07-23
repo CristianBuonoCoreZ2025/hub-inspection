@@ -296,7 +296,7 @@ export default function InformesPage() {
             {(statusFilter || dateFrom || dateTo || search) && (
               <button
                 onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); setSearch(""); }}
-                className="text-[12px] text-muted-foreground hover:text-foreground px-2"
+                className="text-[11px] text-muted-foreground hover:text-foreground px-2"
               >
                 Limpiar
               </button>
@@ -322,7 +322,7 @@ export default function InformesPage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium transition-colors border-b-2 ${
+              className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium transition-colors border-b-2 ${
                 tab === t.id
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -358,7 +358,7 @@ export default function InformesPage() {
                   </div>
                 ))}
                 {byStatus.length === 0 && (
-                  <p className="text-[12px] text-muted-foreground text-center py-4">Sin datos</p>
+                  <p className="text-[11px] text-muted-foreground text-center py-4">Sin datos</p>
                 )}
               </div>
             </div>
@@ -373,7 +373,7 @@ export default function InformesPage() {
                 <button
                   key={r}
                   onClick={() => { setRoleSubTab(r); rolePagination.setPage(1); }}
-                  className={`flex-1 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors text-center ${
+                  className={`flex-1 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-colors text-center ${
                     roleSubTab === r
                       ? "bg-primary/15 text-primary border border-primary/30"
                       : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent"

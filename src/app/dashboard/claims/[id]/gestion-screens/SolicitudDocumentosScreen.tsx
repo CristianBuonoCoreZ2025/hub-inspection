@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ export default function SolicitudDocumentosScreen({ action, onChange, readOnly }
 
  return (
  <div className="space-y-2">
- <p className="text-[12px] font-semibold">Documentos Requeridos</p>
+ <p className="text-[11px] font-semibold">Documentos Requeridos</p>
  {docs.map((doc, idx) => (
  <div key={idx} className="grid grid-cols-5 gap-2 items-end rounded-md border border-border p-2">
  <div className="col-span-2">

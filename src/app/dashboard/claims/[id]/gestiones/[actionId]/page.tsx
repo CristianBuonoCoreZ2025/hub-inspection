@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -266,7 +266,7 @@ export default function GestionDetailPage() {
  {issueOverdue && (
  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 flex items-center gap-2">
  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
- <p className="text-[12px] text-amber-700 dark:text-amber-300">
+ <p className="text-[11px] text-amber-700 dark:text-amber-300">
  Plazo de emisión vencido: {daysSinceCreated} días transcurridos de {daysToIssue} permitidos.
  </p>
  </div>
@@ -424,7 +424,7 @@ export default function GestionDetailPage() {
  <Clock className="h-4 w-4" />
  Plazos
  </h3>
- <div className="grid grid-cols-2 gap-2 text-[12px]">
+ <div className="grid grid-cols-2 gap-2 text-[11px]">
  <div>
  <span className="app-data-label">Emitir</span>
  <p className="font-medium">{template?.days_to_issue ?? "—"} días</p>
@@ -502,7 +502,7 @@ export default function GestionDetailPage() {
  </Button>
  )}
  {!canIssue && !canReview && !canApprove && !canDispatch && !canReject && (
- <p className="text-[12px] text-muted-foreground text-center py-2">
+ <p className="text-[11px] text-muted-foreground text-center py-2">
  No hay acciones disponibles.
  </p>
  )}
@@ -517,7 +517,7 @@ export default function GestionDetailPage() {
  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setRejectModalOpen(false)}>
  <div className="modal-md bg-card rounded-xl shadow-lg p-6 max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
  <h3 className="text-sm font-semibold mb-2">Rechazar Gestión</h3>
- <p className="text-[12px] text-muted-foreground mb-3">
+ <p className="text-[11px] text-muted-foreground mb-3">
  Indica el motivo del rechazo. La gestión volverá a estado pendiente.
  </p>
  <Textarea
@@ -585,7 +585,7 @@ function WorkflowStep({
  <Icon className="h-3.5 w-3.5" />
  </div>
  <div className="flex-1 min-w-0">
- <p className={`text-[12px] font-medium ${done ? "text-foreground" : active ? "text-primary" : "text-muted-foreground"}`}>
+ <p className={`text-[11px] font-medium ${done ? "text-foreground" : active ? "text-primary" : "text-muted-foreground"}`}>
  {label}
  {active && overdue && " (vencido)"}
  </p>

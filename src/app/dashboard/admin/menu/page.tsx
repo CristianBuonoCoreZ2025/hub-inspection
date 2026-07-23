@@ -423,13 +423,13 @@ function SortableMenuNode({
           }}
           onBlur={commitEdit}
           className="flex-1 min-w-0 rounded bg-white/10 dark:bg-black/30 border border-violet-500/40
-            px-1.5 py-0.5 text-[12px] font-semibold text-foreground outline-none
+            px-1.5 py-0.5 text-[11px] font-semibold text-foreground outline-none
             focus:ring-1 focus:ring-violet-500/50"
           placeholder={item.defaultLabel}
         />
       ) : (
         <span className={cn(
-          "truncate text-[12px] flex-1",
+          "truncate text-[11px] flex-1",
           isGroup ? "font-semibold" : "font-normal",
           item.depth === 1 && "text-muted-foreground",
           item.customLabel && "italic",
@@ -633,7 +633,7 @@ function CanvasRoot({
           <MenuIcon className={cn("h-3.5 w-3.5", showDropIndicator ? "text-violet-300" : "text-violet-400")} />
         </div>
         <div className="flex flex-col">
-          <span className="text-[12px] font-semibold text-violet-400">Estructura del Menú</span>
+          <span className="text-[11px] font-semibold text-violet-400">Estructura del Menú</span>
           <span className="text-[9px] text-muted-foreground">
             {isEmpty ? "Arrastra items desde la paleta →" : showDropIndicator ? "Soltar aquí como item raíz" : "Arrastra para reordenar"}
           </span>
@@ -1179,7 +1179,7 @@ export default function AdminMenuPage() {
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-500/10 border border-sky-500/20">
                   <ChevronRight className="h-3.5 w-3.5 text-sky-400" />
                 </div>
-                <span className="text-[12px] font-semibold">Paleta</span>
+                <span className="text-[11px] font-semibold">Paleta</span>
               </div>
               <p className="text-[10px] text-muted-foreground/60 ml-9">
                 Arrastra al canvas para agregar
@@ -1236,7 +1236,7 @@ export default function AdminMenuPage() {
                   <activeDrag.icon className="h-3.5 w-3.5 text-sky-400" />
                 )}
               </div>
-              <span className="text-[12px] font-semibold">{activeDrag.label}</span>
+              <span className="text-[11px] font-semibold">{activeDrag.label}</span>
             </div>
           ) : null}
         </DragOverlay>

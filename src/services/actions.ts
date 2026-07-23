@@ -149,7 +149,6 @@ export async function getActionFeatures(): Promise<ActionFeature[]> {
         f.characteristics.sort((a, b) => a.sort_order - b.sort_order);
       }
     }
-    // eslint-disable-next-line no-console
     console.log("[getActionFeatures] rows:", rows.length, "ILI:", rows.find(r => r.code === "ILI")?.has_template, "withTemplate:", rows.filter(r => r.has_template).map(r => r.code));
     return rows;
   });

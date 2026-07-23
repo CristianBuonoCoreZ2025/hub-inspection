@@ -139,7 +139,7 @@ export default function LoginPage() {
               {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
               {!isLoading && <ArrowRight className="ml-1.5 size-3.5" />}
             </Button>
-            <div className="flex flex-col items-center gap-2 text-[12px] text-muted-foreground">
+            <div className="flex flex-col items-center gap-2 text-[11px] text-muted-foreground">
               <Link
                 href="/forgot-password"
                 className="hover:text-foreground underline-offset-4 hover:underline transition-colors"

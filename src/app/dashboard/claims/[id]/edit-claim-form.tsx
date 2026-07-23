@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useForm, useWatch, type Control, type FieldValues } from "react-hook-form";
@@ -1400,7 +1400,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  key={t.id}
  type="button"
  onClick={() => setActiveTab(t.id)}
- className={`flex items-center gap-2 px-4 py-2.5 text-[12px] font-medium border-b-2 transition-colors whitespace-nowrap ${
+ className={`flex items-center gap-2 px-4 py-2.5 text-[11px] font-medium border-b-2 transition-colors whitespace-nowrap ${
  isActive
  ? "border-primary text-primary"
  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
@@ -2005,7 +2005,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
 
  {contact && !insured && !contractor && !beneficiary && (
  <div className="app-panel text-center py-6">
- <p className="text-muted-foreground text-[12px]">
+ <p className="text-muted-foreground text-[11px]">
  Persona de Contacto: {contact.full_name} — {contact.email || contact.phone || "—"}
  </p>
  <p className="text-muted-foreground text-xs mt-1">(editable en tab Incidente)</p>
@@ -2200,7 +2200,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  : "border-border hover:border-primary/40"
  }`}
  >
- <div className="text-[12px] font-semibold">Pendiente</div>
+ <div className="text-[11px] font-semibold">Pendiente</div>
  <div className="text-[10px] text-muted-foreground mt-0.5">
  Póliza sin número. El siniestro queda detenido hasta asignar el número correcto.
  </div>
@@ -2214,7 +2214,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  : "border-border hover:border-primary/40"
  }`}
  >
- <div className="text-[12px] font-semibold">N° Pendiente</div>
+ <div className="text-[11px] font-semibold">N° Pendiente</div>
  <div className="text-[10px] text-muted-foreground mt-0.5">
  Póliza genérica para la compañía. Permite cargar cualquier cobertura.
  </div>

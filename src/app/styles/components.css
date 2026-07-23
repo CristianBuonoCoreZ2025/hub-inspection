@@ -403,17 +403,17 @@
 
   /* Grid de datos — 3 columnas responsive, 4 en xl */
   .app-data-grid {
-    @apply grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-2 text-[12px];
+    @apply grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-2 text-[11px];
   }
 
   /* Grid de datos — 4 columnas responsive, 6 en xl */
   .app-data-grid-4 {
-    @apply grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[12px];
+    @apply grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[11px];
   }
 
   /* Grid de datos — 2 columnas, 3 en xl */
   .app-data-grid-2 {
-    @apply grid grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-2 text-[12px];
+    @apply grid grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-2 text-[11px];
   }
 
   /* Campo de datos: label + valor */
@@ -428,7 +428,7 @@
 
   /* Texto de cuerpo (párrafos descriptivos) */
   .app-body-text {
-    @apply text-[12px] text-foreground leading-relaxed;
+    @apply text-[11px] text-foreground leading-relaxed;
   }
 
   /* Barra de tabs — glassmorphism delicado y refinado */
@@ -466,7 +466,7 @@
 
   /* Tab individual */
   .app-tab {
-    @apply relative flex items-center gap-2 px-3.5 py-1.5 text-[12px] font-medium transition-all duration-200 whitespace-nowrap rounded-lg text-muted-foreground;
+    @apply relative flex items-center gap-2 px-3.5 py-1.5 text-[11px] font-medium transition-all duration-200 whitespace-nowrap rounded-lg text-muted-foreground;
     border: 0 !important;
   }
 
@@ -789,7 +789,7 @@
 
   /* Estado vacío en columna derecha de formularios */
   .app-empty-state {
-    @apply rounded-lg border border-dashed border-border/60 p-6 text-center text-[12px] text-muted-foreground;
+    @apply rounded-lg border border-dashed border-border/60 p-6 text-center text-[11px] text-muted-foreground;
   }
 
   /* ═══════════════════════════════════════════════════════════════

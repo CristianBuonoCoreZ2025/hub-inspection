@@ -325,13 +325,13 @@ function TiposCambioContent() {
  <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
  <button
  onClick={() => setViewMode("year")}
- className={`px-3 py-1 text-[12px] font-medium rounded transition-colors ${viewMode === "year" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+ className={`px-3 py-1 text-[11px] font-medium rounded transition-colors ${viewMode === "year" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
  >
  Año
  </button>
  <button
  onClick={() => setViewMode("month")}
- className={`px-3 py-1 text-[12px] font-medium rounded transition-colors ${viewMode === "month" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+ className={`px-3 py-1 text-[11px] font-medium rounded transition-colors ${viewMode === "month" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
  >
  Mes
  </button>
@@ -343,7 +343,7 @@ function TiposCambioContent() {
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon h-7 w-7" onClick={() => navigateMonth(-1)}>
  <ChevronLeft className="h-4 w-4" />
  </Button>
- <span className="text-[12px] font-medium min-w-[90px] text-center">
+ <span className="text-[11px] font-medium min-w-[90px] text-center">
  {MONTHS[parseInt(filterMonth)]} {filterYear}
  </span>
  <Button variant="ghost" size="icon" className="btn-neutral btn-icon h-7 w-7" onClick={() => navigateMonth(1)}>
@@ -465,7 +465,7 @@ function TiposCambioContent() {
  <span className="text-muted-foreground">·</span>
  <span className="font-mono font-semibold text-[13px]">{effectiveFilterCurrency}</span>
  <span className="text-muted-foreground">·</span>
- <span className="text-[12px] text-muted-foreground">
+ <span className="text-[11px] text-muted-foreground">
  {viewMode === "month" ? `${MONTHS[parseInt(filterMonth)]} ${filterYear}` : filterYear}
  </span>
  </h3>
@@ -509,7 +509,7 @@ function TiposCambioContent() {
  </table>
  ) : (
  // Vista mensual: tabla simple, una fila por día
- <table className="app-data-table text-[12px]">
+ <table className="app-data-table text-[11px]">
  <thead>
  <tr>
  <th className="w-16">Día</th>
@@ -589,7 +589,7 @@ function TiposCambioContent() {
  </DialogTitle>
  </div>
  <div className="modal-body space-y-3">
- <p className="text-[12px] text-muted-foreground">
+ <p className="text-[11px] text-muted-foreground">
  <span className="font-mono font-medium text-foreground">{effectiveFilterCurrency}</span>
  {" "}—{" "}
  <span className="font-medium text-foreground">

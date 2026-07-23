@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -838,7 +838,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                   }`}
                 >
                   <Upload className={`h-8 w-8 ${uploadModal.isDragging ? "text-primary" : "text-muted-foreground"}`} />
-                  <div className="text-[12px] font-medium text-foreground">
+                  <div className="text-[11px] font-medium text-foreground">
                     Arrastra el archivo aquí
                   </div>
                   <div className="text-[10px] text-muted-foreground">
@@ -998,7 +998,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
           </div>
           <div className="modal-body space-y-2">
             <div className="text-[11px] font-medium text-foreground">{aiSummaryModal.title}</div>
-            <div style={{ maxHeight: "60vh", overflowY: "auto" }} className="rounded-md bg-violet-50/50 p-3 text-[12px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap">
+            <div style={{ maxHeight: "60vh", overflowY: "auto" }} className="rounded-md bg-violet-50/50 p-3 text-[11px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap">
               {aiSummaryModal.summary}
             </div>
           </div>

@@ -1,16 +1,19 @@
-fix: unificar tipografía a 11px en Resumen de inspección
+fix: unificar toda la tipografía del dashboard a 11px y limpiar lint
 
-En src/app/dashboard/inspecciones/[id]/page.tsx, todas las secciones del
-Resumen de inspección ahora usan 11px tanto para títulos/secciones como
-para valores. Antes los títulos/labels estaban a 11px pero los valores a
-12px, lo que hacía que los títulos parecieran más pequeños.
+Se reemplazó `text-[12px]` por `text-[11px]` en todo `src/` (.tsx, .ts, .css,
+.cjs) y se actualizaron las utilidades `app-data-grid`, `app-data-grid-2` y
+`app-data-grid-4` en `components.css` para usar 11px. De este modo títulos,
+labels y valores quedan al mismo tamaño en todas las pantallas.
 
-Cambios:
-- Información General: grid pasa a text-[11px]
-- Asegurado: grid pasa a text-[11px]
-- Datos del Siniestro: reemplazado app-data-grid por grid con text-[11px]
-- Datos de la Coordinación: grid pasa a text-[11px]
-- Estado de la Sesión: reemplazado app-data-grid-4 por grid con text-[11px]
+Además se aprovechó para arreglar los errores/warnings de ESLint que impedían
+un build limpio:
+- Imports no usados en rutas API y servicios.
+- `any` explícitos en `document-render.ts` y `voice-textarea.tsx`.
+- Llamada síncrona a `setState` dentro de un `useEffect` en `voice-textarea.tsx`.
+- `form.watch()` de react-hook-form en `claims/page.tsx` centralizado en una
+  única suscripción reactiva con `eslint-disable-next-line` documentado.
+
+`npx tsc --noEmit` y `npx eslint .` pasan con 0 errores/warnings.
 
 Generado con [Devin](https://devin.ai)
 

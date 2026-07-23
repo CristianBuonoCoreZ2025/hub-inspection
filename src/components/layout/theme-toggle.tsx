@@ -31,7 +31,7 @@ export function ThemeToggle() {
         render={
           <button type="button" className="sidebar-item w-full cursor-pointer">
             {currentIcon}
-            <span className="text-[12px] font-medium flex-1 text-left">Tema</span>
+            <span className="text-[11px] font-medium flex-1 text-left">Tema</span>
           </button>
         }
       />

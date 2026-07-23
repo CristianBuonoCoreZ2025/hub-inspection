@@ -1,5 +1,4 @@
 import "server-only";
-import type sharp from "sharp";
 import { logger } from "@/lib/logger";
 
 /**

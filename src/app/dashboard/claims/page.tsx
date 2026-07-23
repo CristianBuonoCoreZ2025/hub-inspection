@@ -853,6 +853,17 @@ function ClaimsPageContent() {
 
  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(filtered);
 
+ // eslint-disable-next-line react-hooks/incompatible-library -- React Compiler no puede memoizar useForm().watch() de react-hook-form; suscripción reactiva intencional a los campos de ubicación.
+ const [claimAddressW, claimCityW, claimLatitudeW, claimLongitudeW, claimCommuneW, claimRegionW, claimCountryW] = form.watch([
+   "claimAddress",
+   "claimCity",
+   "claimLatitude",
+   "claimLongitude",
+   "claimCommune",
+   "claimRegion",
+   "claimCountry",
+ ]);
+
  return (
  <div className="app-page">
  {/* Header unificado: icono + "Siniestros" + contador + botones Exportar/Nuevo */}
@@ -1844,18 +1855,18 @@ function ClaimsPageContent() {
  size="sm"
  variant="outline"
  className="pg-btn-platinum h-6 text-[11px]"
- disabled={!form.watch("claimAddress") || !form.watch("claimCity")}
+ disabled={!claimAddressW || !claimCityW}
  onClick={() => setLocationSelectorOpen(true)}
  >
  <MapPin className="h-3 w-3 mr-1" />
  Buscar ubicación
  </Button>
  </div>
- {(form.watch("claimLatitude") && form.watch("claimLongitude")) ? (
+ {(claimLatitudeW && claimLongitudeW) ? (
  <div className="text-[11px] text-emerald-600 flex items-center gap-2">
  <CheckCircle2 className="h-3.5 w-3.5" />
  <span>
- Ubicación confirmada: {Number(form.watch("claimLatitude")).toFixed(6)}, {Number(form.watch("claimLongitude")).toFixed(6)}
+ Ubicación confirmada: {Number(claimLatitudeW).toFixed(6)}, {Number(claimLongitudeW).toFixed(6)}
  </span>
  </div>
  ) : (
@@ -2103,11 +2114,11 @@ function ClaimsPageContent() {
  <ClaimLocationSelector
  open={locationSelectorOpen}
  onOpenChange={setLocationSelectorOpen}
- address={form.watch("claimAddress") || ""}
- commune={form.watch("claimCommune")}
- city={form.watch("claimCity")}
- region={form.watch("claimRegion")}
- country={form.watch("claimCountry")}
+ address={claimAddressW || ""}
+ commune={claimCommuneW}
+ city={claimCityW}
+ region={claimRegionW}
+ country={claimCountryW}
  onSelect={(candidate: GeocodeCandidate) => {
  form.setValue("claimLatitude", candidate.lat);
  form.setValue("claimLongitude", candidate.lng);
@@ -2162,7 +2173,7 @@ function ClaimsPageContent() {
  {(statusFilter || dateFrom || dateTo) && (
  <button
  onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
- className="text-[12px] text-muted-foreground hover:text-foreground px-2"
+ className="text-[11px] text-muted-foreground hover:text-foreground px-2"
  >
  Limpiar
  </button>

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
-import { createBrowserClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 export async function GET() {

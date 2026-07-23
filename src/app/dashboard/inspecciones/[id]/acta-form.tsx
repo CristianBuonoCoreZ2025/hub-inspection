@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
@@ -251,7 +251,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  </SelectTrigger>
  <SelectContent>
  {items.length === 0 ? (
- <div className="px-2 py-1.5 text-[12px] text-muted-foreground">Sin opciones</div>
+ <div className="px-2 py-1.5 text-[11px] text-muted-foreground">Sin opciones</div>
  ) : (
  items.map((item) => (
  <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
@@ -275,7 +275,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  </SelectTrigger>
  <SelectContent>
  {items.length === 0 ? (
- <div className="px-2 py-1.5 text-[12px] text-muted-foreground">Sin opciones</div>
+ <div className="px-2 py-1.5 text-[11px] text-muted-foreground">Sin opciones</div>
  ) : (
  items.map((item) => (
  <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
@@ -311,7 +311,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  <form onSubmit={onSubmit} className="app-stack">
  {/* Banner de solo lectura */}
  {readOnly && (
- <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+ <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
  <Lock className="h-3.5 w-3.5 shrink-0" />
  Inspección finalizada — el acta es de solo lectura
  </div>
@@ -352,7 +352,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  <h3 className="app-section-title">
  Dirección del Siniestro
  </h3>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 text-[11px]">
  <div>
  <span className="app-data-label">Dirección</span>
  <p className="font-medium">{claim?.claim_address || "—"}</p>
@@ -763,7 +763,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  {((watch("third_parties") as Array<Record<string, unknown>>) || []).map((_, idx) => (
  <div key={idx} className="rounded-lg border border-border p-3 space-y-3">
  <div className="flex items-center justify-between">
- <span className="text-[12px] font-medium">Tercero {idx + 1}</span>
+ <span className="text-[11px] font-medium">Tercero {idx + 1}</span>
  {!readOnly && (
  <Button
  type="button"
@@ -850,7 +850,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  )}
  {!Boolean(watch(`third_parties.${idx}.has_insurance`)) && (
  <div className="modal-field modal-field-full">
- <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-2 text-[12px] text-amber-900 dark:text-amber-100">
+ <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-2 text-[11px] text-amber-900 dark:text-amber-100">
  Sin seguro — Se procederá con demanda particular contra el tercero responsable.
  </div>
  </div>
@@ -944,7 +944,7 @@ function GeoValidationBlock({
  </div>
 
  {/* Datos de la validación */}
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 text-[11px]">
  <div>
  <span className="app-data-label">Dirección declarada</span>
  <p className="font-medium">{claimAddress || "—"}</p>

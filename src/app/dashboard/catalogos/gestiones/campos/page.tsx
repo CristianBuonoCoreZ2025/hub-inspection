@@ -89,7 +89,7 @@ export default function CamposPlantillaPage() {
       {/* Aviso informativo */}
       <div className="app-alert-warn flex items-start gap-2">
         <Info className="h-4 w-4 shrink-0 mt-0.5" />
-        <div className="text-[12px]">
+        <div className="text-[11px]">
           <strong>Cómo usar:</strong> En tu documento Word, escribe el placeholder entre signos de menor y mayor,
           por ejemplo <code className="app-inline-code mx-1">{"<claim_number>"}</code>
           para el número de siniestro. Al subir la plantilla, el sistema detecta automáticamente los campos
@@ -122,7 +122,7 @@ export default function CamposPlantillaPage() {
       {/* Grupos de campos */}
       <div className="space-y-3">
         {filteredByGroup.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8 text-[12px] border border-dashed border-border rounded-lg">
+          <div className="text-center text-muted-foreground py-8 text-[11px] border border-dashed border-border rounded-lg">
             No se encontraron campos para &ldquo;{search}&rdquo;.
           </div>
         ) : (

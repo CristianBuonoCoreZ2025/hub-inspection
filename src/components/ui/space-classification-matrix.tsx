@@ -77,7 +77,7 @@ export function SpaceClassificationMatrix({
             <Grid3x3 className="h-4 w-4" />
             Matriz Espacios × Clasificaciones
           </DialogTitle>
-          <DialogDescription className="text-[12px] text-muted-foreground">
+          <DialogDescription className="text-[11px] text-muted-foreground">
             Marca qué espacios aplican a cada tipo de inmueble. Los cambios se guardan en la base de datos.
           </DialogDescription>
         </div>
@@ -97,7 +97,7 @@ export function SpaceClassificationMatrix({
                 const active = matrix.get(space.id) || new Set<string>();
                 return (
                   <tr key={space.id}>
-                    <td className="text-[12px] font-medium sticky left-0 bg-card z-10 whitespace-nowrap">
+                    <td className="text-[11px] font-medium sticky left-0 bg-card z-10 whitespace-nowrap">
                       {space.name}
                     </td>
                     {classNames.map((cn) => {

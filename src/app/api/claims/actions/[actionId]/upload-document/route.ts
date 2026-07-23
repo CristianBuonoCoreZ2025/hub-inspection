@@ -6,7 +6,6 @@ import {
   createDocumentVersion,
   detectFileType,
   mimeTypeFor,
-  type DocumentFileType,
   type WorkflowLevel,
 } from "@/services/claim-action-documents";
 import { logger } from "@/lib/logger";

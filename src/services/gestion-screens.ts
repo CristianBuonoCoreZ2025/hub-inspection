@@ -1,6 +1,5 @@
 import { fetchAll, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
 import type { GestionScreen, CharacteristicScreen, ClaimAction } from "@/types";
-import { createAdminClient } from "@/lib/supabase/server";
 
 const SCREEN_FIELDS =
   "id, code, name, description, icon, form_schema, is_active, is_dynamic, sort_order";

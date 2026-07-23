@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -187,7 +187,7 @@ export default function SignaturesTab({ sessionId, sessionStatus }: { sessionId:
         <>
           {/* Banner de solo lectura */}
           {readOnly && (
-            <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+            <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
               <Lock className="h-3.5 w-3.5 shrink-0" />
               Inspección finalizada — las firmas son de solo lectura
             </div>

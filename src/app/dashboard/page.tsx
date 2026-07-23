@@ -850,7 +850,7 @@ export default function DashboardPage() {
                             <Icon className="h-3.5 w-3.5 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[12px] font-medium truncate">{item.text}</p>
+                            <p className="text-[11px] font-medium truncate">{item.text}</p>
                             <p className="text-[10px] text-muted-foreground mt-0.5">{item.time}</p>
                           </div>
                           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-1" />
@@ -941,7 +941,7 @@ export default function DashboardPage() {
                             <Icon className="h-3.5 w-3.5 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[12px] font-medium truncate">{item.text}</p>
+                            <p className="text-[11px] font-medium truncate">{item.text}</p>
                             <p className="text-[10px] text-muted-foreground mt-0.5">{item.time}</p>
                           </div>
                           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-1" />

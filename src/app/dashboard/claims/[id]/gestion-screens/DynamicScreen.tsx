@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -604,7 +604,7 @@ function EntityField({ field, value, action, reserveData, claim, claimParticipan
 function CardEmpty({ label }: { label: string }) {
  return (
  <div className="rounded-lg border border-dashed border-border p-3 text-center">
- <p className="text-[12px] font-semibold text-muted-foreground">{label}</p>
+ <p className="text-[11px] font-semibold text-muted-foreground">{label}</p>
  <p className="text-[10px] text-muted-foreground mt-1">Sin datos disponibles</p>
  </div>
  );
@@ -1438,7 +1438,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  if (policyType === "none") {
  return (
  <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4 text-center">
- <p className="text-[12px] font-medium text-amber-700 dark:text-amber-400">
+ <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400">
  Sin Póliza asignada
  </p>
  <p className="text-[11px] text-muted-foreground mt-1">
@@ -1458,7 +1458,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  ref={comboBtnRef}
  type="button"
  onClick={() => setComboOpen(!comboOpen)}
- className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-[12px] text-muted-foreground hover:border-primary/40 transition-colors"
+ className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-[11px] text-muted-foreground hover:border-primary/40 transition-colors"
  >
  <span className="flex items-center gap-2">
  <Plus className="h-3.5 w-3.5" />
@@ -1497,7 +1497,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  type="button"
  onClick={() => addCoverageMut.mutate(pc.id)}
  disabled={addCoverageMut.isPending}
- className="flex w-full items-center justify-between px-3 py-2 text-left text-[12px] hover:bg-accent transition-colors disabled:opacity-50"
+ className="flex w-full items-center justify-between px-3 py-2 text-left text-[11px] hover:bg-accent transition-colors disabled:opacity-50"
  >
  <div className="min-w-0 flex-1">
  <div className="font-medium truncate">
@@ -1659,7 +1659,7 @@ function ClaimReservesView({ claimId }: { claimId: string }) {
  {data.map((r) => (
  <div key={r.id} className="rounded-lg border border-border p-3">
  <div className="flex items-center justify-between mb-2">
- <span className="text-[12px] font-semibold">Reserva {r.reserve_number || r.id.slice(0, 8)}</span>
+ <span className="text-[11px] font-semibold">Reserva {r.reserve_number || r.id.slice(0, 8)}</span>
  <span className="text-[11px] text-muted-foreground">{r.currency}</span>
  </div>
  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] mb-2">
@@ -1922,7 +1922,7 @@ function OwnField({
 
  case "checkbox":
  return (
- <label className="flex items-center gap-2 text-[12px] py-1">
+ <label className="flex items-center gap-2 text-[11px] py-1">
  <Checkbox
  checked={!!value}
  onChange={(e) => onChange(field.id, (e.target as HTMLInputElement).checked)}
@@ -2305,7 +2305,7 @@ function CoordInspectionStatus({
  <div className="rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-3">
  <div className="flex items-center gap-2 mb-1.5">
  <CheckCircle className="w-4 h-4 text-emerald-600" />
- <span className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">
+ <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
  Inspección {activeSession.status === "scheduled" ? "agendada" : "en curso"}
  </span>
  </div>
@@ -2632,7 +2632,7 @@ function ReserveEditorView({ claimId, actionId, readOnly, generalValues, action,
  if (!claimCoverages || claimCoverages.length === 0) {
  return (
  <div className="rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-4 text-center">
- <p className="text-[12px] font-medium text-red-700 dark:text-red-400">
+ <p className="text-[11px] font-medium text-red-700 dark:text-red-400">
  Inconsistencia de datos
  </p>
  <p className="text-[11px] text-muted-foreground mt-1">
@@ -4127,7 +4127,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  <div className="space-y-2">
  <Label className="text-[11px]">Motivo <span className="text-rose-600">*</span></Label>
  <Textarea
- className="min-h-[80px] text-[12px]"
+ className="min-h-[80px] text-[11px]"
  placeholder="Explique por qué este documento no es necesario..."
  value={notNeededReason}
  onChange={(e) => setNotNeededReason(e.target.value)}
@@ -4222,7 +4222,7 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
  <div key={session.id} className="rounded-lg border border-border p-3 space-y-2">
  <div className="flex items-center justify-between">
  <div className="flex items-center gap-2">
- <span className="text-[12px] font-semibold">
+ <span className="text-[11px] font-semibold">
  {session.inspection_number || `Inspección`}
  </span>
  <Badge variant="outline" className={`text-[10px] h-4 ${statusColors[session.status] || ""}`}>

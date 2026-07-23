@@ -145,7 +145,7 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
  <div key={group.title}>
  <div className="flex items-center gap-1.5 mb-1.5">
  <GroupIcon className="h-3.5 w-3.5 text-muted-foreground" />
- <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">{group.title}</h4>
+ <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{group.title}</h4>
  </div>
  <div className="grid grid-cols-1 gap-1">
  {group.fields.map((field) => {

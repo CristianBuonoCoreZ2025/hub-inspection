@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Database, Layers } from "lucide-react";
 
@@ -58,7 +58,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
   );
 
   const inputClass =
-    "w-full rounded-md border border-input bg-muted/30 px-2 py-1.5 text-[12px] text-muted-foreground";
+    "w-full rounded-md border border-input bg-muted/30 px-2 py-1.5 text-[11px] text-muted-foreground";
 
   // Entidad compleja
   if (isComplex) {
@@ -230,7 +230,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
   // Checkbox (renderizado como toggle)
   if (field.type === "checkbox") {
     return (
-      <label className="flex items-center gap-2 text-[12px]">
+      <label className="flex items-center gap-2 text-[11px]">
         <span className="inline-flex h-[18px] w-[32px] items-center rounded-full bg-input">
           <span className="ml-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-sm" />
         </span>

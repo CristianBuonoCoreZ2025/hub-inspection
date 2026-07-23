@@ -268,7 +268,7 @@ export default function CoberturasPage() {
  <div className="max-h-[70vh] overflow-y-auto">
  <button
  onClick={() => { setSelectedTheme(""); setSearch(""); }}
- className={`w-full flex items-center justify-between px-3 py-1.5 text-[12px] text-left hover:bg-muted/40 transition-colors ${selectedTheme === "" ? "bg-primary/10 text-primary font-semibold" : ""}`}
+ className={`w-full flex items-center justify-between px-3 py-1.5 text-[11px] text-left hover:bg-muted/40 transition-colors ${selectedTheme === "" ? "bg-primary/10 text-primary font-semibold" : ""}`}
  >
  <span>Todos</span>
  <span className="text-[10px] text-muted-foreground tabular-nums">{coverages?.length || 0}</span>
@@ -277,7 +277,7 @@ export default function CoberturasPage() {
  <button
  key={t.theme}
  onClick={() => { setSelectedTheme(t.theme); setSearch(""); }}
- className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-[12px] text-left hover:bg-muted/40 transition-colors ${selectedTheme === t.theme ? "bg-primary/10 text-primary font-semibold" : ""}`}
+ className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-[11px] text-left hover:bg-muted/40 transition-colors ${selectedTheme === t.theme ? "bg-primary/10 text-primary font-semibold" : ""}`}
  >
  <span className="truncate">{t.theme}</span>
  <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">{t.covs}</span>
@@ -328,7 +328,7 @@ export default function CoberturasPage() {
  </div>
  <div className="flex items-center justify-between border-b border-border px-3 py-2 bg-muted/30">
  <div className="flex items-baseline gap-2 min-w-0">
- <span className="text-[12px] font-semibold text-foreground truncate">
+ <span className="text-[11px] font-semibold text-foreground truncate">
  {selectedTheme || "Todas las coberturas"}
  </span>
  <span className="text-[11px] text-muted-foreground shrink-0">

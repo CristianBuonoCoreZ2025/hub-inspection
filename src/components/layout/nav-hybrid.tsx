@@ -261,7 +261,7 @@ function HybridFlyout({
         )}
       >
         <Icon className="size-[18px] shrink-0" />
-        <span className="text-[12px] font-medium truncate flex-1">{group.title}</span>
+        <span className="text-[11px] font-medium truncate flex-1">{group.title}</span>
         <span className={cn(
           "size-1.5 rounded-full shrink-0 transition-colors",
           isGroupActive ? "bg-primary" : "bg-muted-foreground/40"
@@ -349,7 +349,7 @@ function MainLinkIcon({
       className={cn("sidebar-item", isActive && "sidebar-item-active")}
     >
       <Icon className="size-[18px] shrink-0" />
-      <span className="text-[12px] font-medium truncate">{link.label}</span>
+      <span className="text-[11px] font-medium truncate">{link.label}</span>
     </Link>
   );
 }

@@ -236,7 +236,7 @@ export default function DependenciasGestionPage() {
  {item.code.slice(0, 2)}
  </div>
  <div className="flex flex-col">
- <span className="text-[12px] font-semibold leading-tight">{item.code}</span>
+ <span className="text-[11px] font-semibold leading-tight">{item.code}</span>
  <span className="text-[10px] text-muted-foreground leading-tight">{nameFor(item.code)}</span>
  </div>
  <span className={`ml-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${style.badge}`}>

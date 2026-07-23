@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -109,7 +109,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
 
     // Resumen de datos heredados de la coordinación
     const coordSummary = (
-      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5 text-[12px] mb-4">
+      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5 text-[11px] mb-4">
         <p className="font-medium text-foreground text-[13px] mb-1">Datos de la Coordinación</p>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
           <div><span className="text-muted-foreground">Tipo:</span> {inherited.inspectionType === "remote" ? "Remota" : inherited.inspectionType === "onsite" ? "Presencial" : "—"}</div>
@@ -139,7 +139,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
               {" — "}
               {linkedSession.inspection_type === "onsite" ? "Presencial" : "Remota"}
             </p>
-            <p className="text-[12px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               Estado: {linkedSession.status}
               {linkedSession.scheduled_at && ` · Programada: ${new Date(linkedSession.scheduled_at).toLocaleString("es-CL")}`}
             </p>

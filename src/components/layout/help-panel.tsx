@@ -558,7 +558,7 @@ export function HelpPanel({ open, onOpenChange }: HelpPanelProps) {
                       <button
                         key={section.id}
                         onClick={() => setActiveSection(section.id)}
-                        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[12px] transition-colors ${
+                        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
                           activeSection === section.id
                             ? "bg-primary/10 text-primary font-medium"
                             : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
@@ -579,7 +579,7 @@ export function HelpPanel({ open, onOpenChange }: HelpPanelProps) {
             {searchResults ? (
               /* Search results */
               <div className="space-y-3">
-                <div className="text-[12px] text-muted-foreground mb-2">
+                <div className="text-[11px] text-muted-foreground mb-2">
                   {searchResults.length} resultado{searchResults.length !== 1 ? "s" : ""} para &quot;{search}&quot;
                 </div>
                 {searchResults.map((topic, i) => (
@@ -649,7 +649,7 @@ function HelpTopicCard({
       </button>
       {expanded && (
         <div className="px-3 pb-3 pt-1 space-y-2">
-          <p className="text-[12px] leading-relaxed text-muted-foreground">
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
             {topic.answer}
           </p>
           {topic.steps && (
@@ -657,7 +657,7 @@ function HelpTopicCard({
               <div className="text-[11px] font-semibold text-foreground mb-1">Pasos:</div>
               <ol className="space-y-1">
                 {topic.steps.map((step, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[12px] text-muted-foreground">
+                  <li key={i} className="flex items-start gap-2 text-[11px] text-muted-foreground">
                     <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary mt-0.5">
                       {i + 1}
                     </span>
