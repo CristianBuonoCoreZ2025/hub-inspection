@@ -1,0 +1,13 @@
+fix: robustecer geocodificación de direcciones de siniestro
+
+- src/lib/geo.ts: geocodeAddressCandidates ahora evita duplicar en la query
+  comunas/ciudades/países que ya estén escritos en la dirección. Si no
+  encuentra con contexto, intenta fallback con "dirección, país" y luego
+  "solo dirección", esperando el rate limit de Nominatim (1 req/s) entre
+  intentos.
+- src/components/claims/claim-location-selector.tsx: ya no requiere que se
+  haya seleccionado ciudad para buscar; con la dirección basta.
+
+Generado con [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

@@ -84,31 +84,55 @@ export async function geocodeAddressCandidates(
 ): Promise<GeocodeCandidate[]> {
   if (!address?.trim()) return [];
 
-  const parts = [address.trim()];
-  if (ctx?.commune?.trim()) parts.push(ctx.commune.trim());
-  if (ctx?.city?.trim()) parts.push(ctx.city.trim());
-  if (ctx?.region?.trim()) parts.push(ctx.region.trim());
-  if (ctx?.country?.trim()) parts.push(ctx.country.trim());
-  const q = parts.join(", ");
+  const a = address.trim();
+  const lowerA = a.toLowerCase();
+  const commune = ctx?.commune?.trim();
+  const city = ctx?.city?.trim();
+  const country = ctx?.country?.trim();
 
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`;
-    const res = await fetch(url, {
-      headers: { "User-Agent": "hub-inspection/1.0" },
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    if (!Array.isArray(data)) return [];
+  const included = (value?: string) => !!value && lowerA.includes(value.toLowerCase());
 
-    return data.map((item: { lat: string; lon: string; display_name: string }) => ({
-      lat: parseFloat(item.lat),
-      lng: parseFloat(item.lon),
-      displayName: item.display_name,
-      label: item.display_name.split(",")[0] || item.display_name,
-    }));
-  } catch {
-    return [];
+  // Query 1: dirección + comuna + ciudad + país (sin duplicar lo que ya esté en address)
+  const parts1 = [a];
+  if (commune && !included(commune)) parts1.push(commune);
+  if (city && !included(city) && city.toLowerCase() !== commune?.toLowerCase()) parts1.push(city);
+  if (country && !included(country)) parts1.push(country);
+
+  // Query 2: dirección + país
+  const parts2 = [a];
+  if (country && !included(country)) parts2.push(country);
+
+  // Query 3: solo dirección
+  const queries = [...new Set([parts1.join(", "), parts2.join(", "), a])];
+
+  for (let i = 0; i < queries.length; i++) {
+    const q = queries[i];
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`;
+      const res = await fetch(url, {
+        headers: { "User-Agent": "hub-inspection/1.0" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map((item: { lat: string; lon: string; display_name: string }) => ({
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+            displayName: item.display_name,
+            label: item.display_name.split(",")[0] || item.display_name,
+          }));
+        }
+      }
+    } catch {
+      // continuar con siguiente query
+    }
+    // Respetar rate limit de Nominatim (1 req/s) entre intentos
+    if (i < queries.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+    }
   }
+
+  return [];
 }
 
 /**

@@ -79,11 +79,11 @@ export function ClaimLocationSelector({
   const { data: candidates = [], isLoading } = useQuery({
     queryKey: ["geocode-candidates", address, commune, city, region, country],
     queryFn: () => geocodeAddressCandidates(address, { commune, city, region, country }),
-    enabled: open && !!address?.trim() && !!city?.trim(),
+    enabled: open && !!address?.trim(),
     staleTime: 0,
   });
 
-  const hasError = !isLoading && candidates.length === 0 && open && !!address && !!city;
+  const hasError = !isLoading && candidates.length === 0 && open && !!address;
   const selected = candidates[selectedIndex];
 
   return (
