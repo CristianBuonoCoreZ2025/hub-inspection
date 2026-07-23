@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import { MapPin, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { MapPin, Loader2, AlertTriangle, CheckCircle2, MousePointer2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -45,6 +45,15 @@ function Recenter({ center }: { center: { lat: number; lng: number } }) {
   return null;
 }
 
+function MapClickHandler({ onClick }: { onClick: (latlng: { lat: number; lng: number }) => void }) {
+  useMapEvents({
+    click(e) {
+      onClick({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
+  return null;
+}
+
 interface ClaimLocationSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -67,12 +76,16 @@ export function ClaimLocationSelector({
   onSelect,
 }: ClaimLocationSelectorProps) {
   const [selectedIndex, setSelectedIndex] = React.useState(0);
+  const [manualPin, setManualPin] = React.useState<{ lat: number; lng: number } | null>(null);
 
   // Reset selected index cuando se abre con una nueva dirección
   // Se difiere con setTimeout para evitar setState sincrónico dentro del effect.
   React.useEffect(() => {
     if (!open) return;
-    const id = setTimeout(() => setSelectedIndex(0), 0);
+    const id = setTimeout(() => {
+      setSelectedIndex(0);
+      setManualPin(null);
+    }, 0);
     return () => clearTimeout(id);
   }, [open, address, commune, city, region, country]);
 
@@ -83,8 +96,33 @@ export function ClaimLocationSelector({
     staleTime: 0,
   });
 
-  const hasError = !isLoading && candidates.length === 0 && open && !!address;
+  // Fallback: centrar el mapa manual en la comuna/ciudad/región/país
+  const centerAddress = [city, commune, region, country].filter(Boolean).join(", ") || "Chile";
+  const { data: centerCandidates = [] } = useQuery({
+    queryKey: ["geocode-center", centerAddress],
+    queryFn: () => geocodeAddressCandidates(centerAddress, {}),
+    enabled: open && !isLoading && candidates.length === 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const selected = candidates[selectedIndex];
+  const mapCenter = manualPin || selected || centerCandidates[0] || { lat: -33.44, lng: -70.66 };
+  const hasCandidates = candidates.length > 0;
+
+  const handleConfirm = () => {
+    if (manualPin) {
+      onSelect({
+        lat: manualPin.lat,
+        lng: manualPin.lng,
+        label: "Ubicación manual",
+        displayName: "Ubicación manual seleccionada en mapa",
+      });
+      onOpenChange(false);
+    } else if (selected) {
+      onSelect(selected);
+      onOpenChange(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -94,7 +132,9 @@ export function ClaimLocationSelector({
           <DialogDescription className="modal-subtitle">
             {isLoading
               ? "Buscando ubicaciones..."
-              : `Se encontraron ${candidates.length} posibles ubicaciones. Elige la más cercana al siniestro.`}
+              : hasCandidates
+                ? `Se encontraron ${candidates.length} posibles ubicaciones. Elige la más cercana al siniestro.`
+                : "No se encontraron ubicaciones automáticas. Haz clic en el mapa para marcar la ubicación."}
           </DialogDescription>
         </DialogHeader>
 
@@ -108,19 +148,38 @@ export function ClaimLocationSelector({
                   Buscando ubicaciones...
                 </div>
               )}
-              {hasError && (
-                <div className="flex items-start gap-2 text-[11px] text-rose-600 py-8">
-                  <AlertTriangle className="h-4 w-4 shrink-0" />
-                  No se encontraron ubicaciones con esa dirección y contexto.
+              {!isLoading && !hasCandidates && (
+                <div className="space-y-3 py-4">
+                  <div className="flex items-start gap-2 text-[11px] text-rose-600">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    No se encontraron ubicaciones con esa dirección.
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Haz clic en el mapa a la derecha para marcar el punto exacto. Luego pulsa Confirmar.
+                  </p>
+                  {manualPin && (
+                    <div className="rounded-lg border border-border p-3 text-[11px] space-y-1">
+                      <p className="font-medium text-emerald-600 flex items-center gap-1">
+                        <MousePointer2 className="h-3 w-3" />
+                        Ubicación manual seleccionada
+                      </p>
+                      <p className="font-mono text-muted-foreground">
+                        {manualPin.lat.toFixed(6)}, {manualPin.lng.toFixed(6)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
-              {!isLoading && candidates.map((c, i) => (
+              {!isLoading && hasCandidates && candidates.map((c, i) => (
                 <button
                   key={i}
                   type="button"
-                  onClick={() => setSelectedIndex(i)}
+                  onClick={() => {
+                    setSelectedIndex(i);
+                    setManualPin(null);
+                  }}
                   className={`w-full text-left rounded-lg border p-3 text-[11px] transition-colors ${
-                    i === selectedIndex
+                    i === selectedIndex && !manualPin
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-primary/40"
                   }`}
@@ -136,7 +195,7 @@ export function ClaimLocationSelector({
                         {c.lat.toFixed(6)}, {c.lng.toFixed(6)}
                       </p>
                     </div>
-                    {i === selectedIndex && (
+                    {i === selectedIndex && !manualPin && (
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 ml-auto" />
                     )}
                   </div>
@@ -155,13 +214,8 @@ export function ClaimLocationSelector({
               <Button
                 type="button"
                 className="pg-btn-platinum"
-                disabled={!selected}
-                onClick={() => {
-                  if (selected) {
-                    onSelect(selected);
-                    onOpenChange(false);
-                  }
-                }}
+                disabled={!selected && !manualPin}
+                onClick={handleConfirm}
               >
                 Confirmar ubicación
               </Button>
@@ -170,9 +224,9 @@ export function ClaimLocationSelector({
 
           {/* Mapa */}
           <div className="relative h-full min-h-[300px] md:min-h-0">
-            {selected ? (
+            {(selected || !hasCandidates) ? (
               <MapContainer
-                center={[selected.lat, selected.lng]}
+                center={[mapCenter.lat, mapCenter.lng]}
                 zoom={16}
                 style={{ height: "100%", width: "100%" }}
                 scrollWheelZoom={false}
@@ -185,13 +239,23 @@ export function ClaimLocationSelector({
                   <Marker
                     key={i}
                     position={[c.lat, c.lng]}
-                    icon={i === selectedIndex ? blueIcon : grayIcon}
+                    icon={i === selectedIndex && !manualPin ? blueIcon : grayIcon}
                     eventHandlers={{
-                      click: () => setSelectedIndex(i),
+                      click: () => {
+                        setSelectedIndex(i);
+                        setManualPin(null);
+                      },
                     }}
                   />
                 ))}
-                <Recenter center={selected} />
+                {manualPin && (
+                  <Marker
+                    position={[manualPin.lat, manualPin.lng]}
+                    icon={blueIcon}
+                  />
+                )}
+                <MapClickHandler onClick={setManualPin} />
+                <Recenter center={mapCenter} />
               </MapContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
