@@ -44,6 +44,8 @@ import {
  ArrowUp,
  ArrowDown,
 } from "lucide-react";
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import L from "leaflet";
 
 import { Button } from "@/components/ui/button";
 import { ToggleChip } from "@/components/ui/toggle-chip";
@@ -53,6 +55,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
  Dialog,
  DialogContent,
+ DialogHeader,
  DialogTitle,
  DialogDescription,
 } from "@/components/ui/dialog";
@@ -62,6 +65,14 @@ import ClaimImagesTab from "./claim-images-tab";
 import EditClaimForm from "./edit-claim-form";
 import GestionScreenSwitcher from "./gestion-screens";
 import WorkflowView from "./workflow-view";
+
+// Fix iconos de Leaflet en Next.js (CDN)
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 const statusConfig: Record<string, { label: string; className: string }> = {
  created: { label: "Creación", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
@@ -191,6 +202,7 @@ export default function ClaimDetailPage() {
  const [expectedDate, setExpectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
  const [gestionDescription, setGestionDescription] = useState<string>("");
  const [gestionSort, setGestionSort] = useState<{ key: "codigo" | "nombre" | "fecha" | "dias" | "estado"; direction: "asc" | "desc" } | null>(null);
+ const [mapOpen, setMapOpen] = useState(false);
 
  // Filtrar tabs por permisos de sub-sección (con fallback al padre)
  const tabs = allTabs.filter(t => canView(t.section));
@@ -927,10 +939,22 @@ export default function ClaimDetailPage() {
  <div className="space-y-2">
  {/* Dirección del Siniestro */}
  <div className="app-panel">
- <h3 className="app-section-title">
+ <div className="flex items-start justify-between gap-2">
+ <h3 className="app-section-title flex items-center gap-2">
  <MapPin className="h-4 w-4" />
  Dirección del Siniestro
  </h3>
+ {claim.claim_latitude && claim.claim_longitude && (
+ <button
+ type="button"
+ className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+ title="Ver en mapa"
+ onClick={() => setMapOpen(true)}
+ >
+ <MapPin className="h-3.5 w-3.5" />
+ </button>
+ )}
+ </div>
  <div className="app-data-grid-4">
  <DataField label="Dirección" value={claim.claim_address || "—"} />
  <DataField label="Tipo" value={resolveName(claim.destination_housing_id, housingDestinationsCatalog)} />
@@ -1652,6 +1676,34 @@ export default function ClaimDetailPage() {
  })()}
  </DialogContent>
  </Dialog>
+
+ {/* ═══ MODAL: Mapa de ubicación del siniestro ═══ */}
+ {claim.claim_latitude && claim.claim_longitude && (
+ <Dialog open={mapOpen} onOpenChange={setMapOpen}>
+ <DialogContent className="max-w-3xl p-0 overflow-hidden" showCloseButton>
+ <DialogHeader className="p-4 pb-0">
+ <DialogTitle className="app-section-title">Ubicación del siniestro</DialogTitle>
+ <DialogDescription className="modal-subtitle">
+ {claim.claim_address || "Ubicación confirmada"} — {Number(claim.claim_latitude).toFixed(6)}, {Number(claim.claim_longitude).toFixed(6)}
+ </DialogDescription>
+ </DialogHeader>
+ <div className="h-[400px]">
+ <MapContainer
+ center={[claim.claim_latitude, claim.claim_longitude]}
+ zoom={16}
+ style={{ height: "100%", width: "100%" }}
+ scrollWheelZoom={false}
+ >
+ <TileLayer
+ url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+ attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+ />
+ <Marker position={[claim.claim_latitude, claim.claim_longitude]} />
+ </MapContainer>
+ </div>
+ </DialogContent>
+ </Dialog>
+ )}
  </div>
  );
 }
