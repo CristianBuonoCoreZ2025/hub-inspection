@@ -240,10 +240,12 @@ export function GeoCapture({
         <div className="rounded-lg border border-border/40 bg-muted/20 px-3 py-2 mb-3">
           <span className="text-[10px] text-muted-foreground">Dirección declarada del siniestro:</span>
           <p className="text-[11px] font-medium mt-0.5">{claimAddress}</p>
-          {claimCoords && (
+          {claimCoords ? (
             <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
               {claimCoords.lat.toFixed(6)}, {claimCoords.lng.toFixed(6)}
             </p>
+          ) : (
+            <p className="text-[10px] text-amber-600 mt-0.5">Sin coordenadas del siniestro</p>
           )}
         </div>
       )}

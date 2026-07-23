@@ -817,7 +817,7 @@ export default function InspectionDetailPage() {
  inspectionType="onsite"
  sessionId={session.id}
  capturedBy={profile?.id}
- claimCoords={claim?.claim_latitude && claim?.claim_longitude ? { lat: claim.claim_latitude, lng: claim.claim_longitude } : null}
+ claimCoords={claim?.claim_latitude != null && claim?.claim_longitude != null ? { lat: claim.claim_latitude, lng: claim.claim_longitude } : null}
  claimAddress={claim?.claim_address || undefined}
  initialCoords={session.geo_latitude && session.geo_longitude ? { lat: session.geo_latitude, lng: session.geo_longitude } : null}
  initialDistance={session.geo_distance_meters}
