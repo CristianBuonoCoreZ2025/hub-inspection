@@ -189,43 +189,34 @@ export function GeoCapture({
     setError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const coords: LatLng = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
-        setCaptured(coords);
+        (async () => {
+          try {
+            const coords: LatLng = {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+            };
 
-        // Validar contra la dirección del siniestro con el umbral configurable
-        let result: GeoValidationResult = {
-          distance: 0,
-          status: "verified",
-          threshold,
-        };
-        if (claimCoords) {
-          result = validateGeoProximity(coords, claimCoords, threshold);
-        }
-        setValidation(result);
+            // Validar contra la dirección del siniestro con el umbral configurable
+            let result: GeoValidationResult = {
+              distance: 0,
+              status: "verified",
+              threshold,
+            };
+            if (claimCoords) {
+              result = validateGeoProximity(coords, claimCoords, threshold);
+            }
 
-        // Generar URL del mapa estático de la ubicación capturada
-        const capturedMapUrl = generateStaticMapUrl(coords.lat, coords.lng, {
-          zoom: 16,
-          width: 600,
-          height: 400,
-        });
+            // Generar URL del mapa estático de la ubicación capturada
+            const capturedMapUrl = generateStaticMapUrl(coords.lat, coords.lng, {
+              zoom: 16,
+              width: 600,
+              height: 400,
+            });
 
-        onCapture({
-          coords,
-          distance: result.distance,
-          status: result.status,
-          mapUrl: capturedMapUrl,
-        });
-        setLoading(false);
-        lastCapturedRef.current = { coords, mapUrl: capturedMapUrl };
+            let capturedEvidenceUrl = capturedMapUrl;
 
-        // Guardar mapa(s) como evidencia automáticamente
-        if (sessionId) {
-          (async () => {
-            try {
+            // Guardar mapa(s) como evidencia automáticamente
+            if (sessionId) {
               if (replaceEvidence && sessionToken) {
                 await fetch("/api/inspection/geo/reset-geo", {
                   method: "POST",
@@ -234,7 +225,9 @@ export function GeoCapture({
                 });
               }
               const ev = await saveMapAsEvidence(sessionId, coords, capturedMapUrl, capturedBy, "captured");
-              if (ev) setMapEvidence(ev);
+              if (!ev) throw new Error("No se pudo guardar la evidencia del mapa");
+              setMapEvidence(ev);
+              capturedEvidenceUrl = ev.url;
 
               // Si está fuera de rango Y tenemos coords del siniestro, guardar
               // también el mapa de la dirección declarada (evidencia de discrepancia)
@@ -247,11 +240,25 @@ export function GeoCapture({
                 const dev = await saveMapAsEvidence(sessionId, claimCoords, declaredMapUrl, capturedBy, "declared");
                 if (dev) setDeclaredMapEvidence(dev);
               }
-            } catch {
-              // no bloquear la captura si falla el guardado de evidencia
             }
-          })();
-        }
+
+            // Actualizar estado y notificar al padre
+            setCaptured(coords);
+            setValidation(result);
+            lastCapturedRef.current = { coords, mapUrl: capturedEvidenceUrl };
+            onCapture({
+              coords,
+              distance: result.distance,
+              status: result.status,
+              mapUrl: capturedEvidenceUrl,
+            });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : "Error al guardar la evidencia";
+            setError(message);
+          } finally {
+            setLoading(false);
+          }
+        })();
       },
       (err) => {
         setError(
