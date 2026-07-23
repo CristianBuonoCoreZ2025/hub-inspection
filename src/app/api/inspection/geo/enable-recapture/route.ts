@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, createAdminClient } from "@/lib/supabase/server";
-import { enableGeoRecapture } from "@/services/inspections";
 
 /**
  * POST /api/inspection/geo/enable-recapture
@@ -41,7 +40,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    const updated = await enableGeoRecapture(sessionId);
+    const { data: updated, error } = await admin
+      .from("inspection_sessions")
+      .update({ geo_recapture_enabled: true })
+      .eq("id", sessionId)
+      .select("id, geo_recapture_enabled")
+      .single();
+    if (error) throw new Error(error.message);
+
     return NextResponse.json({ session: updated });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error al habilitar recaptura";
