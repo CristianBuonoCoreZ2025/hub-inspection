@@ -175,20 +175,20 @@ export default function CompaniesPage() {
  {/* Logo — full width */}
  <div className="modal-field modal-field-full">
  <Label className="app-field-label">Logo</Label>
- <div className="flex items-center gap-3">
+ <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
  {form.watch("logoUrl") ? (
  // eslint-disable-next-line @next/next/no-img-element
  <img
  src={form.watch("logoUrl")}
  alt="Logo"
- className="h-12 w-12 rounded-xl object-cover border border-border/60 shadow-sm"
+ className="h-20 w-auto max-w-[220px] rounded-xl border border-border/60 bg-white object-contain p-2 shadow-sm dark:bg-white"
  />
  ) : (
- <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border/60 bg-muted/60 shadow-sm">
- <ImageIcon className="h-5 w-5 text-muted-foreground" />
+ <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-border/60 bg-muted/60 shadow-sm">
+ <ImageIcon className="h-6 w-6 text-muted-foreground" />
  </div>
  )}
- <div className="flex items-center gap-2">
+ <div className="flex flex-wrap items-center gap-2">
  <input
  id="logo-upload"
  type="file"
@@ -377,10 +377,10 @@ export default function CompaniesPage() {
  <img
  src={company.logo_url}
  alt={company.name}
- className="h-8 w-8 rounded-lg object-cover border border-border/60"
+ className="h-10 w-auto max-w-[100px] rounded-lg border border-border/60 bg-white object-contain p-1 dark:bg-white"
  />
  ) : (
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-[11px] font-semibold text-muted-foreground">
+ <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-[11px] font-semibold text-muted-foreground">
  {company.name.slice(0, 2).toUpperCase()}
  </div>
  )}

@@ -1,22 +1,14 @@
-tool: script reutilizable reset-claim-workflow.cjs
+fix: mejorar visualización de logos corporativos en Empresas
 
-Agrega scripts/reset-claim-workflow.cjs para resetear el workflow de
-cualquier siniestro por número de liquidación.
+Los logos corporativos se recortaban en un cuadrado pequeño con
+object-cover. Ahora se muestran completos y legibles.
 
-Características:
-- Lee credenciales desde .env.local usando dotenv
-- Acepta argumento posicional o --liquidation=
-- Pide confirmación explícita (escribir SI) antes de borrar
-- Borra sesiones, evidencias, daños, notas, chat, firmas, documentos de
-  gestiones y las gestiones del claim
-- Resetea el estado del siniestro a 'created' y luego al original para
-  disparar el workflow automático según país + línea + evento + estado
-- Muestra las gestiones recreadas al finalizar
-
-Reemplaza al script ad-hoc reset-claim-L141.cjs.
-
-Uso:
-  node scripts/reset-claim-workflow.cjs L-000000141
+Cambios en src/app/dashboard/companies/page.tsx:
+- Modal de empresa: preview del logo pasa a h-20 w-auto max-w-[220px]
+  con object-contain, fondo blanco y padding para logos con transparencia
+- Tabla de empresas: logo pasa a h-10 w-auto max-w-[100px] con
+  object-contain y fondo blanco
+- Mantenido el placeholder con iniciales cuando no hay logo
 
 Generado con [Devin](https://devin.ai)
 
