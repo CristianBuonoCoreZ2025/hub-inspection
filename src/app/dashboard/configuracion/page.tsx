@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DiagnosticLogToggle from "./DiagnosticLogToggle";
+import GeoThresholdSetting from "./GeoThresholdSetting";
 
 type ConfigTab = "general" | "marca" | "notificaciones" | "integraciones" | "perfiles";
 
@@ -139,6 +140,7 @@ function GeneralTab() {
   return (
     <div className="space-y-4">
       <DiagnosticLogToggle />
+      <GeoThresholdSetting />
 
       <section className="app-panel">
         <h2 className="text-sm font-semibold">Información de la cuenta</h2>

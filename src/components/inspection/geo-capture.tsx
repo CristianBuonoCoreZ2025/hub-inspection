@@ -11,6 +11,7 @@ import {
   type LatLng,
   type GeoValidationResult,
 } from "@/lib/geo";
+import { useQuery } from "@tanstack/react-query";
 
 // Fix iconos de Leaflet en Next.js (CDN)
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -93,10 +94,20 @@ export function GeoCapture({
   sessionId,
   capturedBy,
 }: GeoCaptureProps) {
+  const { data: threshold = GEO_THRESHOLD_METERS } = useQuery({
+    queryKey: ["geo-threshold"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/geo-threshold");
+      const data = await res.json();
+      return typeof data.threshold === "number" ? data.threshold : GEO_THRESHOLD_METERS;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const [captured, setCaptured] = React.useState<LatLng | null>(initialCoords || null);
   const [validation, setValidation] = React.useState<GeoValidationResult | null>(
     initialCoords && initialDistance != null
-      ? { distance: initialDistance, status: initialStatus as GeoValidationResult["status"], threshold: GEO_THRESHOLD_METERS }
+      ? { distance: initialDistance, status: initialStatus as GeoValidationResult["status"], threshold }
       : null,
   );
   const [loading, setLoading] = React.useState(false);
@@ -162,14 +173,14 @@ export function GeoCapture({
         };
         setCaptured(coords);
 
-        // Validar contra la dirección del siniestro
+        // Validar contra la dirección del siniestro con el umbral configurable
         let result: GeoValidationResult = {
           distance: 0,
           status: "verified",
-          threshold: GEO_THRESHOLD_METERS,
+          threshold,
         };
         if (claimCoords) {
-          result = validateGeoProximity(coords, claimCoords);
+          result = validateGeoProximity(coords, claimCoords, threshold);
         }
         setValidation(result);
 
@@ -224,7 +235,7 @@ export function GeoCapture({
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
-  }, [claimCoords, onCapture, sessionId, capturedBy, saveMapAsEvidence]);
+  }, [claimCoords, onCapture, sessionId, capturedBy, saveMapAsEvidence, threshold]);
 
   // ── Auto-captura para inspecciones presenciales ──
   // El inspector no necesita presionar ningún botón: al montar el componente
@@ -239,7 +250,7 @@ export function GeoCapture({
     // (React Compiler: "Calling setState synchronously within an effect can trigger cascading renders")
     const id = setTimeout(() => handleCapture(), 0);
     return () => clearTimeout(id);
-  }, [inspectionType, disabled, initialCoords, handleCapture]);
+  }, [inspectionType, disabled, initialCoords, handleCapture, threshold]);
 
   const statusConfig = {
     pending: { icon: MapPin, color: "text-muted-foreground", bg: "bg-muted/40", label: "Pendiente" },

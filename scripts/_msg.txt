@@ -1,33 +1,30 @@
-feat: geocodificación manual con selector de ubicación + correcciones al plan
+feat: umbral de geolocalización configurable desde Configuración
 
-PROBLEMA: la geocodificación de direcciones de siniestros se hacía en
-background (fire-and-forget) sin contexto de país/región/ciudad/comuna,
-y elegía el primer resultado al azar. Si una dirección existía en
-múltiples lugares, el punto de referencia podía estar mal.
+PROBLEMA: el umbral de 500m estaba hardcodeado en src/lib/geo.ts. No se
+podía ajustar a 10m, 100m, 5km, etc. según el tipo de siniestro o zona.
 
 FIX:
-- src/lib/geo.ts: nuevo geocodeAddressCandidates(address, ctx) que arma
-  la query con dirección + comuna + ciudad + región + país y devuelve
-  hasta 5 candidatos. geocodeAddress queda como legacy wrapper.
-- src/components/claims/claim-location-selector.tsx: modal con lista de
-  candidatos + mapa interactivo (Leaflet) para que el usuario elija la
-  ubicación exacta.
-- src/app/dashboard/claims/page.tsx: integrado el selector en el wizard
-  de creación de siniestro. Botón "Buscar ubicación" en el paso de
-  dirección. Al confirmar se guardan claimLatitude y claimLongitude en
-  el formulario.
-- src/lib/validations.ts: agregados claimLatitude y claimLongitude al
-  schema claimCreateMinimalSchema.
-- src/services/claims.ts:
-  - createClaimMinimal ahora guarda claim_latitude y claim_longitude
-    si vienen en el input.
-  - eliminada geocodificación automática en createClaim y updateClaim.
-- docs/PLAN_INSPECCIONES.md: actualizado con los cambios de flujo de
-  geolocalización (presencial auto, remota botón, geo de fotos EXIF,
-  geocodificación manual).
+- migrations/206_geo_threshold_config.sql: nueva tabla system_settings
+  (key/value) con seed geo_threshold_meters = 500.
+- src/services/settings.ts: servicios getSystemSetting y
+  getGeoThresholdMeters() con cache en memoria (1 min) + invalidación.
+- src/app/api/settings/geo-threshold/route.ts:
+  - GET: devuelve el umbral actual
+  - POST: actualiza el valor en system_settings
+- src/components/inspection/geo-capture.tsx:
+  - Lee el umbral desde /api/settings/geo-threshold
+  - Usa ese umbral en validateGeoProximity
+  - Muestra el threshold en la validación
+- src/app/dashboard/configuracion/GeoThresholdSetting.tsx: panel en la
+  pestaña General para editar el umbral (metros) con guardado.
+- src/app/dashboard/configuracion/page.tsx: integrado GeoThresholdSetting
+  en el tab General.
 
-Principio: la dirección del siniestro solo se geocodifica con contexto
-completo y requiere confirmación manual. No más elección al azar.
+Además, se confirma que GeoCapture SIEMPRE guarda el mapa de la ubicación
+ capturada como evidencia, tanto en inspecciones presenciales como
+remotas, independientemente de si el estado es verified o out_of_range.
+Cuando es out_of_range en remoto, también guarda el mapa de la dirección
+ declarada como evidencia de discrepancia.
 
 Generado con [Devin](https://devin.ai)
 
