@@ -267,9 +267,13 @@ function GestionCard({ gestion: g }: { gestion: MyGestion }) {
       <div className="flex items-center gap-2 mb-1.5">
         <div className="flex flex-col min-w-0 flex-1">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Siniestro</span>
-          <span className="text-[13px] font-medium text-primary truncate">
+          <Link
+            href={`/dashboard/claims/${g.claim_id}`}
+            className="text-[13px] font-medium text-primary truncate hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
             {g.liquidation_number || g.claim_number || g.client_reference || "Ver siniestro"}
-          </span>
+          </Link>
         </div>
       </div>
 

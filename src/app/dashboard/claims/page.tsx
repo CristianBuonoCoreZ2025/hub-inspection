@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
@@ -2155,7 +2156,9 @@ function ClaimsPageContent() {
  <td className="font-mono font-semibold text-primary">
  <div className="flex items-center gap-2">
  <FileText className="h-4 w-4 text-muted-foreground" />
+ <Link href={`/dashboard/claims/${claim.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
  {claim.liquidation_number || "—"}
+ </Link>
  </div>
  </td>
  <td>{claim.client_reference || "—"}</td>

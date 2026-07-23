@@ -1,55 +1,48 @@
-feat: videollamada WebRTC p2p con captura de fotos en vivo (anti-fraude)
+feat: liquidation_number clickable → redirige al siniestro
 
-Reemplaza la videollamada Jitsi (iframe externo, sin acceso al stream)
-por WebRTC peer-to-peer puro con signaling via Supabase Realtime.
+Desde cualquier lugar donde aparezca el número de liquidación (L-000000141),
+al hacer click redirige al siniestro (/dashboard/claims/[id]).
 
-Funcionalidades:
+Patrón aplicado: Link de next/link con onClick stopPropagation
+(para no triggerear el click de la fila/tarjeta contenedora).
 
-1. Video + audio bidireccional (WebRTC p2p):
-   - RTCPeerConnection directo entre inspector y cliente
-   - Signaling via Supabase Realtime (canal webrtc:{sessionId})
-   - STUN publico de Google (sin costo, sin servidor SFU)
-   - Perfect negotiation pattern (inspector impolite, cliente polite)
-   - ICE restart automatico si falla la conexion
-   - Video local en PiP + video remoto grande
-   - Controles: mic on/off, camara on/off, fullscreen, colgar
+Ubicaciones actualizadas:
 
-2. Captura de fotos desde el video en vivo (anti-fraude):
-   - Boton "Camara" captura el frame actual del video remoto
-   - canvas.drawImage(video) → blob JPEG → upload a R2
-   - Ambos (inspector y cliente) pueden capturar fotos
-   - source: 'screenshot_inspector' o 'screenshot_client'
-   - Se guardan como evidencias con codigo EVI-NNNN
-   - Aviso al otro par via signaling (mensaje 'screenshot')
-   - Contador de fotos capturadas en el header
+1. src/app/dashboard/inspecciones/[id]/page.tsx (línea 514)
+   - Panel "Datos del Siniestro" → N° Interno
 
-3. Campo source en inspection_evidences (migration 202):
-   - upload: subida manual
-   - screenshot_inspector: capturada en vivo por inspector
-   - screenshot_client: capturada en vivo por cliente
-   - live_video: grabacion de video (futuro)
-   - geo_map: mapa de geolocalizacion
-   - Permite distinguir evidencias capturadas en vivo vs subidas
-   - Actualizadas evidencias existentes de geo_map
+2. src/app/dashboard/inspecciones/page.tsx (línea 200)
+   - Tabla de inspecciones → columna Liquidación
+   - Usa session.claim_id (SessionClaim no tiene id)
 
-4. Integracion:
-   - Inspector: boton "Videollamada" abre LiveVideoCall full-screen
-     (solo si inspeccion remota + status active)
-   - Cliente: boton "Videollamada" en magic link abre LiveVideoCall
-   - userId del cliente: 'client:{token}' (no requiere auth)
-   - Al capturar foto, se invalidan queries para verla en evidencias
+3. src/app/dashboard/informes/page.tsx (línea 542)
+   - Tabla de informes → columna Liquidación
 
-Archivos nuevos:
-- src/lib/webrtc/signaling.ts — helper de signaling con Supabase Realtime
-- src/components/inspection/live-video-call.tsx — componente WebRTC p2p
-- migrations/202_evidence_source.sql — campo source en inspection_evidences
+4. src/app/dashboard/gestiones/page.tsx (línea 271)
+   - Tarjeta de gestión → Siniestro
+   - stopPropagation para no navegar a la gestión
 
-Archivos modificados:
-- src/types/index.ts — tipo EvidenceSource + campo source en InspectionEvidence
-- src/app/api/inspection/evidences/upload/route.ts — acepta campo source
-- src/app/api/inspection/geo/save-map/route.ts — setea source='geo_map'
-- src/app/dashboard/inspecciones/[id]/page.tsx — reemplaza Jitsi por LiveVideoCall
-- src/app/inspection/[token]/page.tsx — reemplaza Jitsi por LiveVideoCall
+5. src/app/dashboard/claims/page.tsx (línea 2158)
+   - Tabla de claims → columna Liquidación
+   - stopPropagation (la fila completa navega con ?edit=1)
+
+6. src/app/dashboard/operaciones/reabrir/page.tsx (líneas 131, 222)
+   - Tabla de siniestros cerrados → columna Liquidación
+   - Tabla de siniestros reabiertos → columna Liquidación
+
+7. src/app/dashboard/operaciones/inhabilitar/page.tsx (líneas 138, 233)
+   - Tabla de siniestros activos → columna Liquidación
+   - Tabla de siniestros inhabilitados → columna Liquidación
+
+No se modificó:
+- src/app/inspection/[token]/page.tsx (magic link público)
+  → El cliente no tiene acceso al dashboard, se mantiene como texto
+- src/app/dashboard/mis-casos/page.tsx
+  → La tarjeta completa ya es un Link al siniestro
+- src/components/layout/top-bar.tsx
+  → Ya es clickable
+- src/app/dashboard/agenda/page.tsx
+  → Ya es clickable (usa query param ?liquidation=)
 
 Generado con [Devin](https://devin.ai)
 

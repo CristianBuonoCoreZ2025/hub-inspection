@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
@@ -539,7 +540,15 @@ export default function InformesPage() {
                 <tbody>
                   {claimsPagination.paginatedData.map((c) => (
                     <tr key={c.id}>
-                      <td className="font-mono text-[11px]">{c.liquidation_number || "—"}</td>
+                      <td className="font-mono text-[11px]">
+                        {c.liquidation_number ? (
+                          <Link href={`/dashboard/claims/${c.id}`} className="text-primary hover:underline">
+                            {c.liquidation_number}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="font-mono text-[11px]">{c.claim_number || "—"}</td>
                       <td>{c.insurance_company?.name || "—"}</td>
                       <td>{c.adjuster?.full_name || "—"}</td>

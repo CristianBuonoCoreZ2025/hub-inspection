@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -135,7 +136,15 @@ export default function InhabilitarPage() {
  onClick={() => setSelectedClaimId(claim.id)}
  >
  <td className="text-[11px] font-mono">{claim.claim_number || "—"}</td>
- <td className="text-[11px]">{claim.liquidation_number || "—"}</td>
+ <td className="text-[11px]">
+ {claim.liquidation_number ? (
+ <Link href={`/dashboard/claims/${claim.id}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+ {claim.liquidation_number}
+ </Link>
+ ) : (
+ "—"
+ )}
+ </td>
  <td className="text-[11px]">{claim.client_reference || "—"}</td>
  <td className="text-[11px]">{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
  <td>
@@ -230,7 +239,15 @@ export default function InhabilitarPage() {
  {(disabledClaims || []).map((claim) => (
  <tr key={claim.id}>
  <td className="text-[11px] font-mono">{claim.claim_number || "—"}</td>
- <td className="text-[11px]">{claim.liquidation_number || "—"}</td>
+ <td className="text-[11px]">
+ {claim.liquidation_number ? (
+ <Link href={`/dashboard/claims/${claim.id}`} className="text-primary hover:underline">
+ {claim.liquidation_number}
+ </Link>
+ ) : (
+ "—"
+ )}
+ </td>
  <td className="text-[11px] max-w-[300px] truncate text-muted-foreground">
  {claim.disabled_reason || "—"}
  </td>

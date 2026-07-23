@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
  getInspectionSessionById,
@@ -511,7 +512,15 @@ export default function InspectionDetailPage() {
  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
  <div>
  <span className="app-data-label">N° Interno</span>
- <p className="font-mono font-semibold text-primary">{(claim?.liquidation_number as string) || "—"}</p>
+ <p className="font-mono font-semibold text-primary">
+ {claim?.liquidation_number ? (
+ <Link href={`/dashboard/claims/${session.claim_id}`} className="hover:underline">
+ {claim.liquidation_number as string}
+ </Link>
+ ) : (
+ "—"
+ )}
+ </p>
  </div>
  <div>
  <span className="app-data-label">Ref. Cliente</span>

@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
@@ -197,7 +198,13 @@ function InspectionsPageContent() {
  </td>
  <td>
  <span className="font-mono text-[11px] font-medium">
- {session.claim?.liquidation_number || "—"}
+ {session.claim?.liquidation_number ? (
+ <Link href={`/dashboard/claims/${session.claim_id}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+ {session.claim.liquidation_number}
+ </Link>
+ ) : (
+ "—"
+ )}
  </span>
  </td>
  <td>
