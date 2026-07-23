@@ -89,10 +89,24 @@ export function ClaimLocationSelector({
     return () => clearTimeout(id);
   }, [open, address, commune, city, region, country]);
 
+  const { data: mapProviders } = useQuery({
+    queryKey: ["map-providers"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/map-providers");
+      const data = await res.json();
+      return data as { providers: ("osm" | "mapbox")[]; tokens: Record<string, string | null> };
+    },
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: candidates = [], isLoading } = useQuery({
-    queryKey: ["geocode-candidates", address, commune, city, region, country],
-    queryFn: () => geocodeAddressCandidates(address, { commune, city, region, country }),
-    enabled: open && !!address?.trim(),
+    queryKey: ["geocode-candidates", address, commune, city, region, country, mapProviders],
+    queryFn: () => geocodeAddressCandidates(address, { commune, city, region, country }, {
+      providers: mapProviders?.providers,
+      tokens: mapProviders?.tokens,
+    }),
+    enabled: open && !!address?.trim() && !!mapProviders,
     staleTime: 0,
   });
 

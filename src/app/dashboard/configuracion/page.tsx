@@ -227,6 +227,8 @@ function GeneralTab() {
         </p>
       </section>
 
+      <MapProvidersSection />
+
       <section className="app-panel">
         <h2 className="text-sm font-semibold">Información de la cuenta</h2>
         <p className="mt-1 text-[13px] text-muted-foreground">
@@ -245,6 +247,131 @@ function GeneralTab() {
         </div>
       </section>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Sección: Proveedores de mapas
+// ═══════════════════════════════════════════════════════════
+type MapProvider = "osm" | "mapbox";
+
+function MapProvidersSection() {
+  const queryClient = useQueryClient();
+  const [primary, setPrimary] = React.useState<MapProvider>("osm");
+  const [secondary, setSecondary] = React.useState<MapProvider | "none">("none");
+  const [mapboxToken, setMapboxToken] = React.useState("");
+
+  const { data: config, isLoading } = useQuery({
+    queryKey: ["map-providers"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/map-providers");
+      const data = await res.json();
+      return data as { providers: MapProvider[]; tokens: Record<string, string | null> };
+    },
+  });
+
+  React.useEffect(() => {
+    if (!config) return;
+    const [p, s] = config.providers;
+    const id = setTimeout(() => {
+      setPrimary(p || "osm");
+      setSecondary(s || "none");
+      setMapboxToken(config.tokens?.mapbox || "");
+    }, 0);
+    return () => clearTimeout(id);
+  }, [config]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const providers: MapProvider[] = [primary];
+      if (secondary !== "none" && secondary !== primary) providers.push(secondary);
+      const res = await fetch("/api/settings/map-providers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          providers,
+          tokens: { mapbox: mapboxToken || null },
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Error al guardar");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      invalidateSystemSettingCache("map_providers");
+      queryClient.invalidateQueries({ queryKey: ["map-providers"] });
+      toast.success("Proveedores de mapas actualizados");
+    },
+    onError: (err: Error) => toast.error(err.message || "Error al guardar"),
+  });
+
+  return (
+    <section className="app-panel">
+      <div className="flex items-center gap-2 mb-1">
+        <MapPin className="size-4 text-primary" />
+        <h2 className="text-sm font-semibold">Proveedores de mapas</h2>
+      </div>
+      <p className="text-[13px] text-muted-foreground">
+        Define el orden de proveedores para geocodificación. Si el primero no encuentra resultados,
+        se intenta con el segundo.
+      </p>
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <Label className="text-[11px] text-muted-foreground">Proveedor primario</Label>
+          <select
+            className="app-input mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 text-[13px]"
+            value={primary}
+            onChange={(e) => setPrimary(e.target.value as MapProvider)}
+            disabled={isLoading}
+          >
+            <option value="osm">OpenStreetMap (gratis)</option>
+            <option value="mapbox">Mapbox (requiere token)</option>
+          </select>
+        </div>
+        <div>
+          <Label className="text-[11px] text-muted-foreground">Proveedor secundario (fallback)</Label>
+          <select
+            className="app-input mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 text-[13px]"
+            value={secondary}
+            onChange={(e) => setSecondary(e.target.value as MapProvider | "none")}
+            disabled={isLoading}
+          >
+            <option value="none">Ninguno</option>
+            <option value="osm">OpenStreetMap (gratis)</option>
+            <option value="mapbox">Mapbox (requiere token)</option>
+          </select>
+        </div>
+      </div>
+      {primary === "mapbox" || secondary === "mapbox" ? (
+        <div className="mt-3">
+          <Label className="text-[11px] text-muted-foreground">Token de Mapbox</Label>
+          <Input
+            type="text"
+            value={mapboxToken}
+            onChange={(e) => setMapboxToken(e.target.value)}
+            placeholder="pk.eyJ1Ijoi..."
+            className="app-input mt-1"
+            disabled={isLoading}
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            El token es obligatorio si seleccionás Mapbox. Se guarda cifrado en la base de datos.
+          </p>
+        </div>
+      ) : null}
+      <div className="mt-3">
+        <Button
+          type="button"
+          className="pg-btn-platinum"
+          onClick={() => save.mutate()}
+          disabled={isLoading || save.isPending || ((primary === "mapbox" || secondary === "mapbox") && !mapboxToken.trim())}
+        >
+          {save.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+          Guardar
+        </Button>
+      </div>
+    </section>
   );
 }
 

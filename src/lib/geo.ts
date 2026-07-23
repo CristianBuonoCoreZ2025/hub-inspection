@@ -73,6 +73,59 @@ export function validateGeoProximity(
  * Nota: Nominatim tiene un rate limit de 1 request/segundo.
  * Para producción considerar usar un servicio con API key.
  */
+export type MapProvider = "osm" | "mapbox";
+
+interface GeocodeOptions {
+  providers?: MapProvider[];
+  tokens?: Record<MapProvider, string | null>;
+}
+
+function buildQueries(a: string, ctx?: { commune?: string | null; city?: string | null; country?: string | null }): string[] {
+  const lowerA = a.toLowerCase();
+  const commune = ctx?.commune?.trim();
+  const city = ctx?.city?.trim();
+  const country = ctx?.country?.trim();
+  const included = (value?: string) => !!value && lowerA.includes(value.toLowerCase());
+
+  const parts1 = [a];
+  if (commune && !included(commune)) parts1.push(commune);
+  if (city && !included(city) && city.toLowerCase() !== commune?.toLowerCase()) parts1.push(city);
+  if (country && !included(country)) parts1.push(country);
+
+  const parts2 = [a];
+  if (country && !included(country)) parts2.push(country);
+
+  return [...new Set([parts1.join(", "), parts2.join(", "), a])];
+}
+
+async function osmGeocodeCandidates(q: string): Promise<GeocodeCandidate[]> {
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`;
+  const res = await fetch(url, { headers: { "User-Agent": "hub-inspection/1.0" } });
+  if (!res.ok) return [];
+  const data = await res.json();
+  if (!Array.isArray(data) || data.length === 0) return [];
+  return data.map((item: { lat: string; lon: string; display_name: string }) => ({
+    lat: parseFloat(item.lat),
+    lng: parseFloat(item.lon),
+    displayName: item.display_name,
+    label: item.display_name.split(",")[0] || item.display_name,
+  }));
+}
+
+async function mapboxGeocodeCandidates(q: string, token: string): Promise<GeocodeCandidate[]> {
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${encodeURIComponent(token)}&limit=5`;
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = await res.json();
+  if (!data.features || data.features.length === 0) return [];
+  return data.features.map((item: { center: [number, number]; place_name: string }) => ({
+    lat: item.center[1],
+    lng: item.center[0],
+    displayName: item.place_name,
+    label: item.place_name.split(",")[0] || item.place_name,
+  }));
+}
+
 export async function geocodeAddressCandidates(
   address: string,
   ctx?: {
@@ -80,54 +133,43 @@ export async function geocodeAddressCandidates(
     city?: string | null;
     region?: string | null;
     country?: string | null;
-  }
+  },
+  options?: GeocodeOptions
 ): Promise<GeocodeCandidate[]> {
   if (!address?.trim()) return [];
 
   const a = address.trim();
-  const lowerA = a.toLowerCase();
-  const commune = ctx?.commune?.trim();
-  const city = ctx?.city?.trim();
-  const country = ctx?.country?.trim();
+  const providers: MapProvider[] = options?.providers?.length ? options.providers : ["osm"];
+  const queries = buildQueries(a, ctx);
 
-  const included = (value?: string) => !!value && lowerA.includes(value.toLowerCase());
+  for (let p = 0; p < providers.length; p++) {
+    const provider = providers[p];
+    const token = options?.tokens?.[provider];
 
-  // Query 1: dirección + comuna + ciudad + país (sin duplicar lo que ya esté en address)
-  const parts1 = [a];
-  if (commune && !included(commune)) parts1.push(commune);
-  if (city && !included(city) && city.toLowerCase() !== commune?.toLowerCase()) parts1.push(city);
-  if (country && !included(country)) parts1.push(country);
-
-  // Query 2: dirección + país
-  const parts2 = [a];
-  if (country && !included(country)) parts2.push(country);
-
-  // Query 3: solo dirección
-  const queries = [...new Set([parts1.join(", "), parts2.join(", "), a])];
-
-  for (let i = 0; i < queries.length; i++) {
-    const q = queries[i];
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`;
-      const res = await fetch(url, {
-        headers: { "User-Agent": "hub-inspection/1.0" },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          return data.map((item: { lat: string; lon: string; display_name: string }) => ({
-            lat: parseFloat(item.lat),
-            lng: parseFloat(item.lon),
-            displayName: item.display_name,
-            label: item.display_name.split(",")[0] || item.display_name,
-          }));
-        }
-      }
-    } catch {
-      // continuar con siguiente query
+    if (provider === "mapbox" && !token) {
+      console.warn("[geocode] Mapbox solicitado pero no hay token configurado");
+      continue;
     }
-    // Respetar rate limit de Nominatim (1 req/s) entre intentos
-    if (i < queries.length - 1) {
+
+    for (let i = 0; i < queries.length; i++) {
+      const q = queries[i];
+      try {
+        const candidates =
+          provider === "mapbox"
+            ? await mapboxGeocodeCandidates(q, token as string)
+            : await osmGeocodeCandidates(q);
+        if (candidates.length > 0) return candidates;
+      } catch {
+        // continuar con siguiente query o provider
+      }
+      // Respetar rate limit entre queries (Nominatim 1 req/s, Mapbox tolera más)
+      if (i < queries.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      }
+    }
+
+    // Pausa entre providers para no saturar
+    if (p < providers.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 1100));
     }
   }

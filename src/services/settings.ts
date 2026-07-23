@@ -42,6 +42,39 @@ export async function getGeoThresholdMeters(): Promise<number> {
 /**
  * Invalida la cache de settings (útil tras actualizar un valor).
  */
+export type MapProvider = "osm" | "mapbox";
+
+export interface MapProvidersConfig {
+  providers: MapProvider[];
+  tokens: Record<MapProvider, string | null>;
+}
+
+/**
+ * Obtiene la configuración de proveedores de mapas.
+ * Por defecto: OpenStreetMap.
+ */
+export async function getMapProviders(): Promise<MapProvidersConfig> {
+  const raw = await getSystemSetting("map_providers");
+  if (!raw) {
+    return { providers: [("osm" as MapProvider)], tokens: { osm: null, mapbox: null } };
+  }
+  try {
+    const parsed = JSON.parse(raw) as Partial<MapProvidersConfig>;
+    const providers = Array.isArray(parsed.providers)
+      ? parsed.providers.filter((p): p is MapProvider => p === "osm" || p === "mapbox")
+      : [("osm" as MapProvider)];
+    return {
+      providers: providers.length > 0 ? providers : [("osm" as MapProvider)],
+      tokens: {
+        osm: null,
+        mapbox: typeof parsed.tokens?.mapbox === "string" ? parsed.tokens.mapbox : null,
+      },
+    };
+  } catch {
+    return { providers: [("osm" as MapProvider)], tokens: { osm: null, mapbox: null } };
+  }
+}
+
 export function invalidateSystemSettingCache(key?: string) {
   if (key) {
     delete cache[key];
