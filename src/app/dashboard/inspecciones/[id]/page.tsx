@@ -29,7 +29,6 @@ import {
  MessageSquare,
  RotateCcw,
  CalendarClock,
- Video,
  Play,
  AlertTriangle,
 } from "lucide-react";
@@ -62,7 +61,7 @@ import SignaturesTab from "./signatures-tab";
 import ReportTab from "./report-tab";
 import SketchesTab from "./sketches-tab";
 import ChatTab from "./chat-tab";
-import VideoCall from "@/components/video-call";
+import { LiveVideoCall } from "@/components/inspection/live-video-call";
 
 // Mapea estado de inspección → código de estado de claim
 const sessionToClaimStatusCode: Record<string, string> = {
@@ -455,31 +454,20 @@ export default function InspectionDetailPage() {
  </div>
  </div>
 
- {/* Modal Videollamada */}
- {videoCallOpen && (
- <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
- <div className="relative w-full max-w-2xl rounded-xl bg-white dark:bg-slate-900 p-4">
- <div className="flex items-center justify-between mb-3">
- <h3 className="text-sm font-semibold flex items-center gap-2">
- <Video className="h-4 w-4" />
- Videollamada con Cliente
- </h3>
- <Button
- variant="ghost"
- size="icon"
- className="btn-neutral btn-icon"
- onClick={() => setVideoCallOpen(false)}
- >
- <XCircle className="h-4 w-4" />
- </Button>
- </div>
- <VideoCall
+ {/* Modal Videollamada en vivo (WebRTC p2p) */}
+ {videoCallOpen && profile?.id && (
+ <LiveVideoCall
  sessionId={session.id}
+ userId={profile.id}
+ role="inspector"
  displayName="Inspector"
  onHangup={() => setVideoCallOpen(false)}
+ onScreenshotSaved={() => {
+ // Invalidar queries de evidencias para que aparezca en la lista
+ queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
+ }}
  />
- </div>
- </div>
  )}
 
  {/* Layout principal: tabs a la izquierda, chat lateral a la derecha */}

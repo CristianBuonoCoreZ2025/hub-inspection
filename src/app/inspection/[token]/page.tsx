@@ -8,9 +8,9 @@ import {
   Camera, FileText, AlertTriangle, MessageSquare, Send,
   ShieldCheck, MapPin, PenTool, XCircle,
 } from "lucide-react";
-import VideoCall from "@/components/video-call";
 import { DrawingCanvas } from "@/components/ui/drawing-canvas";
 import { GeoCapture } from "@/components/inspection/geo-capture";
+import { LiveVideoCall } from "@/components/inspection/live-video-call";
 
 // ═══════════════════════════════════════════════════════════════
 // Tipos
@@ -159,7 +159,7 @@ export default function MagicLinkPage() {
     return () => clearInterval(t);
   }, []);
 
-  const { data: session, isLoading, isError } = useQuery({
+  const { data: session, isLoading, isError, refetch } = useQuery({
     queryKey: ["magic-link-live", token],
     queryFn: () => fetchLiveSession(token),
     refetchInterval: 2000,
@@ -314,29 +314,19 @@ export default function MagicLinkPage() {
         </div>
       </header>
 
-      {/* Modal Videollamada */}
+      {/* Modal Videollamada en vivo (WebRTC p2p) */}
       {videoCallOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="relative w-full max-w-2xl mx-4 rounded-xl bg-slate-900 p-4 border border-slate-800">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Video className="h-4 w-4 text-sky-400" />
-                Videollamada con Inspector
-              </h3>
-              <button
-                onClick={() => setVideoCallOpen(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
-            </div>
-            <VideoCall
-              sessionId={session.id}
-              displayName={session.interviewed_name || "Cliente"}
-              onHangup={() => setVideoCallOpen(false)}
-            />
-          </div>
-        </div>
+        <LiveVideoCall
+          sessionId={session.id}
+          userId={`client:${token}`}
+          role="client"
+          displayName={session.interviewed_name || "Cliente"}
+          onHangup={() => setVideoCallOpen(false)}
+          onScreenshotSaved={() => {
+            // Refrescar datos de la sesión para ver la nueva evidencia
+            refetch();
+          }}
+        />
       )}
 
       {/* Indicador de progreso (read-only, no clickeable) */}

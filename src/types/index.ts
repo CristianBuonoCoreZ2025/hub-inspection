@@ -547,13 +547,21 @@ export interface InspectionChecklist {
   updated_at: string;
 }
 
+export type EvidenceSource =
+  | "upload"
+  | "screenshot_inspector"
+  | "screenshot_client"
+  | "live_video"
+  | "geo_map";
+
 export interface InspectionEvidence {
   id: string;
   session_id: string;
   type: "photo" | "video" | "document";
   url: string;
   description: string | null;
-  metadata: { originalName?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number } | null;
+  source: EvidenceSource | null;
+  metadata: { originalName?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number; source?: string; lat?: number; lng?: number; capturedBy?: string } | null;
   created_at: string;
 }
 

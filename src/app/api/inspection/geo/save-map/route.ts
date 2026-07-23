@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
         description: fileCode,
         captured_by: capturedBy || null,
         captured_at: new Date().toISOString(),
+        source: "geo_map",
         lat,
         lng,
         metadata: {
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
           mimeType,
         },
       })
-      .select("id, url, description, type, created_at")
+      .select("id, url, description, type, created_at, source")
       .single();
 
     if (error) {

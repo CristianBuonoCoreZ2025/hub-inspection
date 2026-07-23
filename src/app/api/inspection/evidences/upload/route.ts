@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     const lat = formData.get("lat");
     const lng = formData.get("lng");
     const originalName = formData.get("originalName");
+    const source = formData.get("source"); // upload | screenshot_inspector | screenshot_client | live_video | geo_map
 
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "No se encontró el archivo" }, { status: 400 });
@@ -130,6 +131,9 @@ export async function POST(request: NextRequest) {
     const deviceLng = lng && typeof lng === "string" ? parseFloat(lng) : null;
 
     // Insertar en inspection_evidences
+    const validSources = ["upload", "screenshot_inspector", "screenshot_client", "live_video", "geo_map"];
+    const sourceValue = source && typeof source === "string" && validSources.includes(source) ? source : "upload";
+
     const { data: evidence, error } = await supabase
       .from("inspection_evidences")
       .insert({
@@ -139,6 +143,7 @@ export async function POST(request: NextRequest) {
         description: fileCode,
         captured_by: user?.id || null,
         captured_at: new Date().toISOString(),
+        source: sourceValue,
         metadata,
         lat: deviceLat,
         lng: deviceLng,
@@ -147,7 +152,7 @@ export async function POST(request: NextRequest) {
         ai_summary: aiSummary,
         ai_model: aiModel,
       })
-      .select("id, url, type, description, created_at, lat, lng, exif_lat, exif_lng, ai_summary, ai_model")
+      .select("id, url, type, description, created_at, lat, lng, exif_lat, exif_lng, ai_summary, ai_model, source")
       .single();
 
     if (error) {
