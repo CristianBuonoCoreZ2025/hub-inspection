@@ -29,6 +29,7 @@ import { updateClaimAction, issueClaimAction } from "@/services/claim-actions";
 import { getUsersByRoleForCompany } from "@/services/users";
 import { getInspectionSessions, getInspectorSchedule } from "@/services/inspections";
 import { getCoverageCatalog } from "@/services/coverage-catalog";
+import { getLookupCatalog } from "@/services/catalogs";
 import { getDocumentTemplates, type DocumentTemplate } from "@/services/document-templates";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -1727,6 +1728,13 @@ function OwnField({
 }) {
  const inputClass = "app-input h-8 ";
 
+ // Motivos de cancellation_reason (lookup_catalog) — para coord_motivo
+ // Mismos motivos que el modal de cancelar/reagendar de la inspección
+ const { data: cancellationReasons } = useQuery({
+ queryKey: ["lookup-catalog", "cancellation_reason"],
+ queryFn: () => getLookupCatalog("cancellation_reason"),
+ });
+
  // Calcular maxDate para campos datetime (días configurados en el template)
  const daysToIssue = action?.action_template?.days_to_issue || 0;
  const datetimeMaxDate = useMemo(() => {
@@ -1959,19 +1967,24 @@ function OwnField({
  }
 
  case "coord_motivo": {
- // Textarea para motivo de falla o desistimiento
+ // Select con motivos de cancellation_reason (lookup_catalog)
+ // Mismos motivos que el modal de cancelar/reagendar de la inspección
+ // → vinculación CIN ↔ INS
  return (
  <div className="flex flex-col gap-1">
  <Label className="app-field-label text-[11px]">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
- <textarea
- className="app-input min-h-[70px] resize-none"
- value={String(value || "")}
- onChange={(e) => onChange(field.id, e.target.value)}
- disabled={readOnly}
- placeholder={field.placeholder || "Motivo..."}
- />
+ <Select value={String(value || "") || null} onValueChange={(v) => onChange(field.id, v ?? "")}>
+ <SelectTrigger className="app-input h-8">
+ <SelectValue placeholder="Seleccionar motivo..." />
+ </SelectTrigger>
+ <SelectContent>
+ {cancellationReasons?.map((r) => (
+ <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
  </div>
  );
  }

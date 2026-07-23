@@ -1,10 +1,13 @@
-fix: motivos duplicados en modales de cancelar y reagendar
+feat: motivos de cancelacion en pantalla CIN vinculados con inspeccion
 
-- El Select de base-ui recibe items prop Y SelectItem children
-- Ambos se renderizan causando duplicacion visual
-- Removido items prop de todos los Select del modal de cancelacion y reagendamiento
-- Ahora solo se usan los SelectItem children (explicitos)
-- Afecta: motivo de cancelacion, motivo de reagendamiento, inspector, tipo
+- coord_motivo ahora es un Select con los mismos motivos de cancellation_reason
+  que el modal de cancelar/reagendar de la inspeccion
+- Mismos motivos en CIN e INS → vinculación completa
+- coord_motivo ahora guarda el ID del lookup_catalog (no el nombre)
+- rescheduleInspectionViaCIN y cancelInspectionViaCIN guardan el ID
+- issueClaimAction resuelve el nombre del ID para la descripcion
+  (helper resolveMotivoName)
+- useQuery movido al inicio de OwnField (rules of hooks)
 
 Generated with [Devin](https://devin.ai)
 

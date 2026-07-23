@@ -528,7 +528,7 @@ export async function rescheduleInspectionViaCIN(params: {
     description: `Reagendamiento generado desde inspección. Motivo: ${reasonName}`,
     action_data: {
       coord_result: "fallida",
-      coord_motivo: reasonName,
+      coord_motivo: reasonId, // ID del lookup_catalog (consistente con la pantalla CIN)
       coord_fecha_recoord: newOptions.scheduledAt,
       coord_inspection_type: newOptions.inspectionType,
       coord_inspector: newOptions.inspectorId || undefined,
@@ -540,7 +540,7 @@ export async function rescheduleInspectionViaCIN(params: {
   // 5. Emitir la CIN → issueClaimAction fallida crea nueva CIN (todo) para re-coordinar
   await issueClaimAction(newCin.id, userId, {
     coord_result: "fallida",
-    coord_motivo: reasonName,
+    coord_motivo: reasonId,
     coord_fecha_recoord: newOptions.scheduledAt,
     coord_inspection_type: newOptions.inspectionType,
     coord_inspector: newOptions.inspectorId || undefined,
@@ -599,7 +599,7 @@ export async function cancelInspectionViaCIN(params: {
     description: `Inspección desistida. Motivo: ${reasonName}`,
     action_data: {
       coord_result: "desistida",
-      coord_motivo: reasonName,
+      coord_motivo: reasonId, // ID del lookup_catalog (consistente con la pantalla CIN)
       coord_comentarios: notes || undefined,
     },
     issuer_id: userId,
@@ -608,7 +608,7 @@ export async function cancelInspectionViaCIN(params: {
   // 5. Emitir la CIN → desistida no crea nueva CIN
   await issueClaimAction(newCin.id, userId, {
     coord_result: "desistida",
-    coord_motivo: reasonName,
+    coord_motivo: reasonId,
     coord_comentarios: notes || undefined,
   });
 

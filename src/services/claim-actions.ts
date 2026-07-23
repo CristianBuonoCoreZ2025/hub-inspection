@@ -703,7 +703,7 @@ export async function issueClaimAction(actionId: string, userId?: string, action
             action_template_id: action.action_template_id || undefined,
             action_features_id: tpl.action_features_id,
             name: "Coordinación de Inspección (re-coordinación)",
-            description: `Re-coordinación generada por intento fallido. Motivo: ${data.coord_motivo || "no especificado"}`,
+            description: `Re-coordinación generada por intento fallido. Motivo: ${await resolveMotivoName(String(data.coord_motivo || ""))}`,
             expected_date: expectedDate,
           });
         }
@@ -730,6 +730,24 @@ export async function issueClaimAction(actionId: string, userId?: string, action
 
   return result;
 }
+/**
+ * Resuelve el nombre de un motivo de cancellation_reason desde su ID.
+ * Si no es un UUID válido o no se encuentra, retorna el valor original.
+ */
+async function resolveMotivoName(motivoValue: string): Promise<string> {
+  if (!motivoValue) return "no especificado";
+  // Si parece un UUID, buscar en lookup_catalog
+  if (motivoValue.length === 36 && motivoValue.includes("-")) {
+    try {
+      const row = await fetchById<{ name: string }>("lookup_catalog", motivoValue, "name");
+      return row?.name || motivoValue;
+    } catch {
+      return motivoValue;
+    }
+  }
+  return motivoValue;
+}
+
 /**
  * Valida que el usuario actual sea el responsable del nivel correspondiente.
  *
