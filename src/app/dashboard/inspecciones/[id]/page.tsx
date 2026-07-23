@@ -259,10 +259,20 @@ export default function InspectionDetailPage() {
  onError: (err: Error) => toast.error(err.message),
  });
 
- // Mutation silencioso para sincronizar el tab activo con el cliente (piloto automático)
+ // Sincronizar el tab activo con el cliente (piloto automático)
  const syncTabMutation = useMutation({
- mutationFn: ({ id, tab }: { id: string; tab: string }) =>
- updateInspectionSession(id, { active_tab: tab }),
+ mutationFn: async ({ id, tab }: { id: string; tab: string }) => {
+ const res = await fetch(`/api/inspection/sessions/${id}/active-tab`, {
+ method: "PATCH",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({ active_tab: tab }),
+ });
+ if (!res.ok) {
+ const err = await res.json().catch(() => ({}));
+ throw new Error(err.detail || err.error || `HTTP ${res.status}`);
+ }
+ return res.json();
+ },
  onError: () => {/* silencioso: no afecta al inspector si falla */},
  });
 
