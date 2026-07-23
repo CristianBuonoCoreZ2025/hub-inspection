@@ -229,7 +229,9 @@ export function GeoCapture({
             });
 
             // Guardar mapa(s) como evidencia automáticamente (segundo plano)
-            if (sessionId) {
+            // Sin proveedor de mapas (OSM roto) no intentamos para evitar URLs rotas
+            const isUsableMapUrl = !capturedMapUrl.includes("staticmap.openstreetmap.de");
+            if (sessionId && isUsableMapUrl) {
               try {
                 if (replaceEvidence && sessionToken) {
                   await fetch("/api/inspection/geo/reset-geo", {
@@ -504,7 +506,7 @@ export function GeoCapture({
       {/* Miniaturas de mapas guardados como evidencia */}
       {(mapEvidence || declaredMapEvidence) && (
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {mapEvidence && (
+          {mapEvidence && !mapEvidence.url.includes("staticmap.openstreetmap.de") && (
             <a
               href={mapEvidence.url}
               target="_blank"
@@ -524,7 +526,7 @@ export function GeoCapture({
               </div>
             </a>
           )}
-          {declaredMapEvidence && (
+          {declaredMapEvidence && !declaredMapEvidence.url.includes("staticmap.openstreetmap.de") && (
             <a
               href={declaredMapEvidence.url}
               target="_blank"
