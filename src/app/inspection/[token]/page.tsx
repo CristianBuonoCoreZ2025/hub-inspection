@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ClipboardCheck, Video, User, Calendar, WifiOff, Loader2,
@@ -9,8 +10,9 @@ import {
   ShieldCheck, MapPin, PenTool, XCircle,
 } from "lucide-react";
 import { DrawingCanvas } from "@/components/ui/drawing-canvas";
-import { GeoCapture } from "@/components/inspection/geo-capture";
 import { LiveVideoCall } from "@/components/inspection/live-video-call";
+
+const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
 
 // ═══════════════════════════════════════════════════════════════
 // Tipos

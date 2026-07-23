@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -14,8 +15,9 @@ import {
 import { updateClaimStatus } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getUsers } from "@/services/users";
-import { GeoCapture } from "@/components/inspection/geo-capture";
 import { usePermissions } from "@/hooks/use-permissions";
+
+const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import {
