@@ -1,30 +1,18 @@
-feat: motivos separados (fallida/desistida) + reagendar vincula sesion existente
+style: campos de fecha a 10px + fecha centrada + liquid glass obligatorio
 
-Motivos separados en dos categorias:
-- cancellation_reason_fallida: no_answer, reschedule, weather, access_denied,
-  insured_unavailable, other (para reagendamiento)
-- cancellation_reason_desistida: insured_refused, duplicate, cancelled_by_company,
-  no_longer_needed, other (para cancelacion)
-- Pantalla CIN: coord_motivo muestra combo segun coord_result
-- Modal reagendar (INS): usa cancellation_reason_fallida
-- Modal cancelar (INS): usa cancellation_reason_desistida
-- Dos mantenedores: motivos-fallida y motivos-desistida
+Regla obligatoria para todos los campos de fecha con calendario:
+- Trigger: 10px (antes 11px)
+- Calendario (días, meses, años, header): 10px (antes 11px)
+- Fecha mostrada: centrada (text-center, ya estaba)
+- Estilo Liquid Glass obligatorio (.rdp-calendar-glass)
+- Icono del calendario: h-3 w-3 (antes h-3.5 w-3.5)
 
-Reagendar vincula sesion existente (NO cancela, NO rechaza INS):
-- rescheduleInspectionViaCIN ahora:
-  1. NO cancela la sesion, NO rechaza la INS
-  2. Crea CIN con coord_result=fallida + existing_session_id
-  3. Emite CIN → issueClaimAction pasa existing_session_id a nueva CIN (todo)
-  4. Usuario completa nueva CIN como coordinada
-  5. cascade_workflow_on_issue ve existing_session_id → vincula INS existente
-  6. auto_create_inspection_session ve existing_session_id → actualiza sesion existente
-- La inspeccion en curso queda vinculada a la nueva coordinacion (cambia puntero)
-
-Migration 200:
-- Crea categorias cancellation_reason_fallida y cancellation_reason_desistida
-- Actualiza cascade_workflow_on_issue: si existing_session_id, vincula INS existente
-- Actualiza auto_create_inspection_session: si existing_session_id, actualiza sesion
-- Unique indexes para las nuevas categorias
+Cambios:
+- forms.css: .liquid-date-picker font-size 11px → 10px
+- forms.css: .rdp-calendar-glass font-size 11px → 10px (días, meses, header)
+- date-picker.tsx: span text-[11px] → text-[10px], icono h-3.5 → h-3
+- tipos-cambio: reemplazado <Input type="date"> nativo por <DatePicker>
+- AGENTS.md: documentada la regla obligatoria de 10px + liquid glass
 
 Generated with [Devin](https://devin.ai)
 

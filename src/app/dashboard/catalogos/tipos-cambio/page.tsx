@@ -13,6 +13,7 @@ import { ArrowRightLeft, Plus, Calendar, ChevronLeft, ChevronRight, Pencil } fro
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import {
  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -707,7 +708,7 @@ function TiposCambioContent() {
  </div>
  <div className="modal-field">
  <Label className="app-field-label">Fecha de Vigencia</Label>
- <Input type="date" value={form.effective_date} onChange={(e) => setForm({ ...form, effective_date: e.target.value })} className="app-input" />
+ <DatePicker value={form.effective_date} onChange={(v) => setForm({ ...form, effective_date: v })} className="w-full" />
  </div>
  <div className="modal-field">
  <Label className="app-field-label">Origen</Label>

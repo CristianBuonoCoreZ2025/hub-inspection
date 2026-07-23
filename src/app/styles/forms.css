@@ -249,7 +249,7 @@
     backdrop-filter: blur(8px) !important;
     -webkit-backdrop-filter: blur(8px) !important;
     color: var(--foreground) !important;
-    font-size: 11px !important;
+    font-size: 10px !important;
     font-weight: 500 !important;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04) !important;
     transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
@@ -288,18 +288,18 @@
   [data-slot="popover-content"] .rdp-calendar-glass {
     --rdp-accent-color: var(--primary);
     --rdp-accent-color-foreground: var(--primary-foreground);
-    font-size: 11px !important;
+    font-size: 10px !important;
   }
 
-  /* Todos los textos del calendario (días, meses, años, header) a 11px */
+  /* Todos los textos del calendario (días, meses, años, header) a 10px */
   [data-slot="popover-content"] .rdp-calendar-glass button,
   [data-slot="popover-content"] .rdp-calendar-glass span {
-    font-size: 11px !important;
+    font-size: 10px !important;
   }
 
-  /* Weekdays header (text-[10px] hardcoded en calendar.tsx) — alinear a 11px */
+  /* Weekdays header (text-[10px] hardcoded en calendar.tsx) — alinear a 10px */
   [data-slot="popover-content"] .rdp-calendar-glass .grid.grid-cols-7 > div {
-    font-size: 11px !important;
+    font-size: 10px !important;
   }
 
   /* Cuando está dentro de .modal-field, el gap maneja el espaciado */

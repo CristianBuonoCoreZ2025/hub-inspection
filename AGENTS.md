@@ -1538,6 +1538,14 @@ PATRÓN DE USO (date picker en listados):
   `.liquid-date-picker` (mismo estilo que Select, 28px, Liquid Glass).
   El calendario despliega en un Popover con fondo glass/blur.
 
+  REGLA OBLIGATORIA DE FECHAS:
+  - Todos los campos de fecha que despliegan calendario DEBEN usar 10px
+    en todos los sentidos (trigger + calendario + días + header).
+  - La fecha mostrada en el trigger DEBE estar centrada (text-center).
+  - El calendario DEBE usar el estilo Liquid Glass (clase .rdp-calendar-glass,
+    fondo glass/blur, sombra suave, border-radius 2xl).
+  - NUNCA usar `<input type="date">` nativo. Siempre DatePicker.
+
   <DatePicker
     value={dateFrom}
     onChange={setDateFrom}
