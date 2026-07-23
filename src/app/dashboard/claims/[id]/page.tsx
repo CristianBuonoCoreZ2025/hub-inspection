@@ -1150,7 +1150,7 @@ export default function ClaimDetailPage() {
  }
  const fa = a.fecha ? new Date(a.fecha).getTime() : 0;
  const fb = b.fecha ? new Date(b.fecha).getTime() : 0;
- return fb - fa;
+ return fa - fb;
  });
 
  if (gestiones.length === 0) {

@@ -80,7 +80,7 @@ export async function getMyGestiones(
     return [];
   }
 
-  const { data, error } = await query.order("created_on", { ascending: false });
+  const { data, error } = await query.order("created_on", { ascending: true });
   if (error || !data) return [];
 
   const rows = data as Array<{

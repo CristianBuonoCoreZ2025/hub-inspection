@@ -13,6 +13,7 @@
 @import "./styles/animations.css";
 @import "./styles/forms.css";
 @import "./styles/dashboard.css";
+@import "./styles/typography.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

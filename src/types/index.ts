@@ -158,6 +158,8 @@ export interface Claim {
   commune_id: string | null;
   // Datos del siniestro
   claim_address: string | null;
+  claim_latitude: number | null;
+  claim_longitude: number | null;
   owner_same_as_insured: boolean | null;
   // Datos de la póliza
   policy_id: string | null;

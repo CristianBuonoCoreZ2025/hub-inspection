@@ -6,6 +6,55 @@
 
 ---
 
+## 0. Tipografía — Tamaños Máximos Globales
+
+> **Fuente única de verdad:** `src/app/styles/typography.css`.  
+> **Nunca** se modifica pantalla a pantalla. Cualquier cambio a estos tamaños pasa por este archivo y por este documento.
+
+### Convención `Propercase`
+- Todos los textos regulados aquí usan `text-transform: capitalize`.
+- Cada palabra inicia con mayúscula: `"Gestión De Siniestros"`, `"Número De Póliza"`.
+- **Excepción:** inputs (`<input>`, `<textarea>`, selects) no transforman el texto tecleado/seleccionado.
+
+### Tabla de tamaños máximos
+
+| Elemento | Tamaño | Peso | Capitalización | Clase helper |
+|---|---:|---|---|---|
+| Títulos (página, modal, panel, dinámica) | `13px` | `600` semibold | Propercase | `.app-title`, `.app-page-title`, `.app-dynamic-title` |
+| Badges / píldoras | `12px` | `500` medium | Propercase | `.app-badge-text`, `.app-dynamic-badge` |
+| Tabs / sub-tabs | `12px` | `500` medium | Propercase | `.app-tab-text`, `.app-dynamic-tab` |
+| Texto de grillas | `11px` | `400` regular | Propercase | `.app-grid-text` |
+| Títulos de grillas | `11px` | `600` semibold | Propercase | `.app-grid-title` |
+| Texto general en pantalla | `11px` | — | — | `.app-text`, `.app-body` |
+| Botones (Liquid Glass / app) | `11px` | `600` semibold | Propercase | `.app-button-text` |
+| Pantallas dinámicas — título | `13px` | `600` semibold | Propercase | `.app-dynamic-title` |
+| Pantallas dinámicas — badges | `12px` | `500` medium | Propercase | `.app-dynamic-badge` |
+| Pantallas dinámicas — tabs | `12px` | `500` medium | Propercase | `.app-dynamic-tab` |
+| Pantallas dinámicas — items/valores | `11px` | `400` regular | — | `.app-dynamic-info`, `.app-dynamic-value` |
+
+### Implementación
+- Los ajustes se hacen en `src/app/styles/typography.css` mediante variables CSS:
+  ```css
+  :root {
+    --app-title-size: 13px;
+    --app-badge-size: 12px;
+    --app-tab-size: 12px;
+    --app-grid-size: 11px;
+    --app-grid-header-size: 11px;
+    --app-info-size: 11px;
+    --app-body-size: 11px;
+    --app-button-size: 11px;
+  }
+  ```
+- La hoja importa **después** de los demás módulos en `globals.css` para ganar en cascada.
+- Para componentes nuevos, preferir las clases helper del `@layer components`.
+- Para corregir componentes existentes, agregar el selector en la sección de **forzado global** (fuera de `@layer components`) con `!important`.
+
+### Excepción aprobada
+Valores numéricos métricos (`kpi-value`, `gauge-value`, `recent-claim-number`) pueden conservar tamaños mayores porque son **datos a destacar**, no texto de lectura continua. Cualquier otra excepción debe aprobarse y documentarse aquí.
+
+---
+
 ## 1. Botones
 
 ### Clase obligatoria
@@ -630,6 +679,7 @@ aplica solo a **elementos del mismo tipo agrupados**.
 □ ¿npx tsc --noEmit pasa sin errores?
 □ ¿npx eslint pasa sin errores ni warnings?
 □ ¿Los elementos similares agrupados tienen el mismo ancho (flex-1)?
+□ ¿Los tamaños de tipografía cumplen con la sección 0 (Tipografía)?
 ```
 
 **Si cualquier item del checklist falla, NO se considera terminado.**

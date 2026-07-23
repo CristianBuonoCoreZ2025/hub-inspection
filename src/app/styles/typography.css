@@ -1,0 +1,295 @@
+/*
+ * SISTEMA DE TIPOGRAFÍA — Claims Hub
+ * Tamaños máximos globales. Inmune a skins: todo con !important.
+ * Reglas definitivas documentadas en docs/DESIGN_SYSTEM.md.
+ *
+ * ESTE ARCHIVO ES LA FUENTE ÚNICA DE VERDAD DE TAMAÑOS DE TEXTO.
+ * No se modifica pantalla a pantalla. Cualquier excepción debe
+ * constar en DESIGN_SYSTEM.md con justificación.
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+ * VARIABLES DE TAMAÑO (px) — referencia centralizada
+ * ═══════════════════════════════════════════════════════════════ */
+:root {
+  --app-title-size: 13px;
+  --app-badge-size: 12px;
+  --app-tab-size: 12px;
+  --app-grid-size: 11px;
+  --app-grid-header-size: 11px;
+  --app-info-size: 11px;
+  --app-body-size: 11px;
+  --app-button-size: 11px;
+}
+
+@layer components {
+  /* ═══════════════════════════════════════════════════════════════
+   * PROPERCASE — convención de capitalización del sistema
+   * Cada palabra inicia con mayúscula: "Gestión De Siniestros"
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-propercase {
+    text-transform: capitalize !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * TÍTULOS (páginas, modales, paneles, tarjetas, dinámicas)
+   * 13px | semibold | sistema | Propercase
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-title,
+  .app-dynamic-title {
+    font-size: var(--app-title-size) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.3 !important;
+    text-transform: capitalize !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * BADGES (píldoras de estado, etiquetas, chips)
+   * 12px | medium | sistema | Propercase
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-badge-text,
+  .app-dynamic-badge {
+    font-size: var(--app-badge-size) !important;
+    font-weight: 500 !important;
+    line-height: 1.3 !important;
+    text-transform: capitalize !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * TABS (pestañas y sub-tabs)
+   * 12px | medium | sistema | Propercase
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-tab-text,
+  .app-dynamic-tab {
+    font-size: var(--app-tab-size) !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+    text-transform: capitalize !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * GRILLAS / TABLAS
+   * Texto de filas: 11px | regular | Propercase
+   * Títulos de columnas: 11px | semibold | Propercase
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-grid-text {
+    font-size: var(--app-grid-size) !important;
+    font-weight: 400 !important;
+    line-height: 1.4 !important;
+    text-transform: capitalize !important;
+  }
+
+  .app-grid-title {
+    font-size: var(--app-grid-header-size) !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    text-transform: capitalize !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * PANTALLAS DINÁMICAS — items y valores informativos
+   * 11px
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-dynamic-info,
+  .app-dynamic-label,
+  .app-dynamic-value {
+    font-size: var(--app-info-size) !important;
+    font-weight: 400 !important;
+    line-height: 1.4 !important;
+  }
+
+  .app-dynamic-label {
+    font-weight: 600 !important;
+    text-transform: capitalize !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * TEXTO GENERAL EN PANTALLA
+   * Todos los textos de UI: 11px máximo
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-text,
+  .app-body {
+    font-size: var(--app-body-size) !important;
+    line-height: 1.4 !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * BOTONES DE APLICACIÓN (Liquid Glass / primarios)
+   * 11px | semibold | Propercase
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-button-text {
+    font-size: var(--app-button-size) !important;
+    font-weight: 600 !important;
+    text-transform: capitalize !important;
+    letter-spacing: -0.01em !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * FUERA DE @layer components — FORZADO GLOBAL
+ * Estas reglas ganan a @layer utilities de Tailwind v4 y a cualquier
+ * estilo por componente. Son el mecanismo de regularización centralizada.
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Títulos: 13px semibold Propercase */
+.app-page-title,
+.app-modal-title,
+.app-panel-title,
+.app-section-title,
+.app-dynamic-title,
+.app-title,
+.glass-panel-title,
+.dash-section-title {
+  font-size: var(--app-title-size) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.3 !important;
+  text-transform: capitalize !important;
+}
+
+/* Badges / chips: 12px medium Propercase */
+.app-badge,
+.app-badge-text,
+.app-dynamic-badge,
+.StatusBadge,
+[data-status] {
+  font-size: var(--app-badge-size) !important;
+  font-weight: 500 !important;
+  line-height: 1.3 !important;
+  text-transform: capitalize !important;
+}
+
+/* Tabs: 12px medium Propercase */
+.app-tab,
+.app-sub-tab,
+.app-tab-text,
+.app-dynamic-tab,
+[role="tab"],
+[data-state="active"][role="tab"] {
+  font-size: var(--app-tab-size) !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  text-transform: capitalize !important;
+}
+
+/* Grillas / tablas: 11px Propercase */
+.app-data-table,
+.app-data-table td,
+.app-data-table tbody td,
+.app-data-grid,
+.app-data-grid-2,
+.app-data-grid-4,
+.app-body-text,
+.app-grid-text {
+  font-size: var(--app-grid-size) !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  text-transform: capitalize !important;
+}
+
+.app-data-table th,
+.app-data-table thead th,
+.app-grid-title {
+  font-size: var(--app-grid-header-size) !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  text-transform: capitalize !important;
+}
+
+/* Texto general en pantalla: 11px máximo */
+.app-text,
+.app-body,
+.app-page-lead,
+.app-data-label,
+.app-field-label,
+.app-empty-state,
+.app-inline-code,
+.app-grid-breadcrumbs,
+.app-grid-count,
+.auth-subtitle,
+.app-dynamic-info,
+.app-dynamic-value,
+.app-dynamic-label {
+  font-size: var(--app-body-size) !important;
+  line-height: 1.4 !important;
+}
+
+/* Botones: 11px semibold Propercase */
+.liquid-button,
+.liquid-button-outline,
+.pg-btn-platinum,
+.btn-solid,
+.btn-save,
+.btn-confirm,
+.btn-accept,
+.btn-create,
+.btn-new,
+.btn-emerald,
+.btn-run,
+.btn-execute,
+.btn-sky,
+.btn-homolog,
+.btn-ai,
+.btn-violet,
+.btn-review,
+.btn-violet-alt,
+.btn-warn,
+.btn-alert,
+.btn-amber,
+.btn-danger,
+.btn-delete,
+.btn-destructive-grad,
+.app-button-text,
+[data-slot="button"] {
+  font-size: var(--app-button-size) !important;
+  font-weight: 600 !important;
+  text-transform: capitalize !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Inputs, selects, placeholders — 11px (máximo de texto en pantalla) */
+[data-slot="input"],
+[data-slot="input"]::placeholder,
+[data-slot="select-trigger"],
+[data-slot="select-trigger"] [data-slot="select-value"],
+[data-slot="select-content"] [data-slot="select-label"] *,
+[data-slot="select-content"] [data-slot="select-item"],
+[data-slot="select-content"] [data-slot="select-item"] *,
+.app-input,
+.app-input::placeholder,
+.liquid-search,
+.liquid-search::placeholder,
+[data-slot="textarea"] {
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+}
+
+/* Títulos de auth y modales también encajan en la regla de 13px */
+.auth-title,
+.modal-title,
+[role="dialog"] h2 {
+  font-size: var(--app-title-size) !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  text-transform: capitalize !important;
+}
+
+/* Descripciones y párrafos de modales: 11px */
+.modal-field > p,
+[role="dialog"] p,
+[role="dialog"] [role="description"] {
+  font-size: var(--app-body-size) !important;
+  line-height: 1.4 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * EXCEPCIONES DOCUMENTADAS
+ * Solo valores numéricos métricos (KPI, gauges, contadores grandes)
+ * conservan tamaños mayores porque son datos, no texto de lectura.
+ * ═══════════════════════════════════════════════════════════════ */
+.kpi-value,
+.gauge-value,
+.recent-claim-number {
+  /* Sin override — documentado en DESIGN_SYSTEM.md */
+}

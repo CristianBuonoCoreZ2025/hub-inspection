@@ -13,6 +13,7 @@ import {
  Shield,
  Plus,
  FileCheck,
+ CheckCircle2,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,8 @@ import { getPolicies, createPolicy } from "@/services/policies";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { useAuth } from "@/hooks/use-auth";
 import { getUsersByRoleForCompany } from "@/services/users";
+import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
+import type { GeocodeCandidate } from "@/lib/geo";
 import type { Claim, ClaimsParticipant, UserOption as UserOptionType } from "@/types";
 
 // ──────────────────────────────────────────────────────────────
@@ -156,6 +159,8 @@ interface FormValues {
 
  // Tab Incidente
  claimAddress: string;
+ claimLatitude: number | undefined;
+ claimLongitude: number | undefined;
  countryId: string;
  regionId: string;
  cityId: string;
@@ -360,6 +365,7 @@ const tabs = [
 
 export default function EditClaimForm({ claim, participants, catalogs, onCancel, onSaved, initialTab = "siniestro" }: EditClaimFormProps) {
  const [activeTab, setActiveTab] = useState(initialTab);
+ const [locationSelectorOpen, setLocationSelectorOpen] = useState(false);
  const queryClient = useQueryClient();
  const { statusCode, codeToId } = useClaimStatuses();
  const currentStatusCode = statusCode(claim.status_id) ?? "created";
@@ -470,6 +476,8 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
 
  // Incidente
  claimAddress: claim.claim_address || "",
+ claimLatitude: claim.claim_latitude ?? undefined,
+ claimLongitude: claim.claim_longitude ?? undefined,
  countryId: claim.country_id || "",
  regionId: claim.region_id || "",
  cityId: claim.city_id || "",
@@ -520,6 +528,8 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  recovery_type_material: values.recoveryTypeMaterial,
  recovery_comments: values.recoveryComments || null,
  claim_address: values.claimAddress || null,
+ claim_latitude: values.claimLatitude ?? null,
+ claim_longitude: values.claimLongitude ?? null,
  country_id: values.countryId || null,
  region_id: values.regionId || null,
  city_id: values.cityId || null,
@@ -779,6 +789,8 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  const watchedCountryId = watch("countryId");
  const watchedRegionId = watch("regionId");
  const watchedCityId = watch("cityId");
+ const watchedCommuneId = watch("communeId");
+ const watchedClaimAddress = watch("claimAddress");
 
  // Participantes geo (text-based, usa nombres)
  const watchedInsuredCountry = useWatch({ control, name: "insuredCountry" });
@@ -919,6 +931,11 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  const regionItems = (regionsList ?? []).map((r) => ({ value: r.id, label: r.name }));
  const cityItems = (citiesList ?? []).map((c) => ({ value: c.id, label: c.name }));
  const communeItems = (communesList ?? []).map((c) => ({ value: c.id, label: c.name }));
+
+ const selectedCountryName = countryItems.find((c) => c.value === watchedCountryId)?.label;
+ const selectedRegionName = regionItems.find((r) => r.value === watchedRegionId)?.label;
+ const selectedCityName = cityItems.find((c) => c.value === watchedCityId)?.label;
+ const selectedCommuneName = communeItems.find((c) => c.value === watchedCommuneId)?.label;
 
  // ──────────────────────────────────────────────────────────────
  // Geo queries — Participantes (text-based, usa nombres)
@@ -2092,6 +2109,43 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  disabled={!watchedCityId || claimAddressLinked}
  />
  </div>
+ <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/50">
+ <div className="flex items-center gap-2 min-w-0">
+ <span className="text-[11px] font-medium shrink-0">Ubicación en mapa</span>
+ {watch("claimLatitude") && watch("claimLongitude") ? (
+ <div className="text-[11px] text-emerald-600 flex items-center gap-2 min-w-0">
+ <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+ <span className="truncate">
+ {Number(watch("claimLatitude")).toFixed(6)}, {Number(watch("claimLongitude")).toFixed(6)}
+ </span>
+ </div>
+ ) : (
+ <span className="text-[11px] text-muted-foreground">Sin ubicación confirmada</span>
+ )}
+ </div>
+ <Button
+ type="button"
+ variant="outline"
+ size="sm"
+ className="pg-btn-platinum h-6 text-[11px] shrink-0"
+ onClick={() => setLocationSelectorOpen(true)}
+ >
+ Buscar ubicación
+ </Button>
+ </div>
+ <ClaimLocationSelector
+ open={locationSelectorOpen}
+ onOpenChange={setLocationSelectorOpen}
+ address={watchedClaimAddress || ""}
+ commune={selectedCommuneName}
+ city={selectedCityName}
+ region={selectedRegionName}
+ country={selectedCountryName}
+ onSelect={(candidate: GeocodeCandidate) => {
+ setValue("claimLatitude", candidate.lat);
+ setValue("claimLongitude", candidate.lng);
+ }}
+ />
  </div>
 
  {/* Persona de Contacto */}

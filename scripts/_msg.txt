@@ -1,10 +1,17 @@
-feat: ordenadores de columnas en listado de gestiones del siniestro
+feat: georeferenciación del siniestro en tab Incidente
 
-En src/app/dashboard/claims/[id]/page.tsx, la tabla de gestiones ahora permite
-ordenar por Código, Nombre, Fecha Ejecución, Días Restantes y Estado. Cada
-cabecera es clickeable y alterna entre ascendente/descendente, mostrando el
-ícono de orden correspondiente. El orden por defecto sigue siendo por fecha de
-ejecución descendente.
+En src/app/dashboard/claims/[id]/edit-claim-form.tsx se agregó la captura y
+edición de la ubicación exacta del siniestro:
+- Nuevos campos claimLatitude/claimLongitude en FormValues y defaultValues.
+- Se persisten claim_latitude/claim_longitude en claimSet al guardar.
+- Botón "Buscar ubicación" en Dirección del Incidente que abre el
+  ClaimLocationSelector (selector manual con lista + mapa).
+- Muestra coordenadas confirmadas o "Sin ubicación confirmada".
+- Type Claim actualizado para incluir claim_latitude y claim_longitude.
+
+GeoCapture en inspección ya compara contra claim?.claim_latitude /
+claim?.claim_longitude, por lo que ahora la validación de proximidad usará
+la coordenada oficial del siniestro.
 
 Generado con [Devin](https://devin.ai)
 
