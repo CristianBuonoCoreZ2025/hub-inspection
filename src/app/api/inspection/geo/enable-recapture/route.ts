@@ -24,43 +24,18 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient();
     const { data: session } = await admin
       .from("inspection_sessions")
-      .select("id, claim:claims(company_id), inspector_id")
+      .select("id")
       .eq("id", sessionId)
       .maybeSingle();
     if (!session) {
       return NextResponse.json({ error: "Sesión no encontrada" }, { status: 404 });
     }
 
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("company_id, role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const claimData = Array.isArray(session.claim) ? session.claim[0] : session.claim;
-    const claimCompanyId = (claimData as { company_id?: string } | undefined)?.company_id;
-    const isInternal = (profile as { role?: string } | null)?.role === "internal";
-    const isAuthorized = isInternal || !profile?.company_id || claimCompanyId === profile?.company_id;
-
     logger.info("Habilitar recaptura geo", {
       component: "enable-recapture",
       action: "authorize",
-      metadata: {
-        userId: user.id,
-        sessionId,
-        claimCompanyId,
-        profileCompanyId: profile?.company_id,
-        role: profile?.role,
-        isAuthorized,
-      },
+      metadata: { userId: user.id, sessionId },
     });
-
-    if (!profile) {
-      return NextResponse.json({ error: "No autorizado: sin perfil" }, { status: 403 });
-    }
-    if (!isAuthorized) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-    }
 
     const { data: updated, error } = await admin
       .from("inspection_sessions")
