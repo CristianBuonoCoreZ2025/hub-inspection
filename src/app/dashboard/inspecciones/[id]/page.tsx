@@ -149,7 +149,15 @@ export default function InspectionDetailPage() {
  queryKey: ["users"],
  queryFn: () => getUsers(),
  });
- const inspectors = users?.filter((u) => u.role === "inspector") || [];
+ // Inspectores: usuarios con rol inspector o internal (también pueden ser inspectores)
+ const inspectors = users?.filter((u) => u.role === "inspector" || u.role === "internal") || [];
+
+ // Helper para buscar nombre de usuario sin depender del filtro de inspectores
+ const userName = (id?: string | null) => {
+   if (!id) return null;
+   const u = users?.find((u) => u.id === id);
+   return u?.full_name || u?.email || null;
+ };
 
  // Query: agenda del inspector para la fecha seleccionada (reagendamiento)
  const rescheduleDateForQuery = rescheduleDate ? new Date(`${rescheduleDate}T00:00:00`) : null;
@@ -506,7 +514,7 @@ export default function InspectionDetailPage() {
  </div>
  <div>
  <span className="app-data-label">Inspector</span>
- <p className="font-medium">{inspectors.find((i) => i.id === (session.inspector_id || claim?.inspector_id))?.full_name || "—"}</p>
+ <p className="font-medium">{userName(session.inspector_id || claim?.inspector_id) || "—"}</p>
  </div>
  <div>
  <span className="app-data-label">Gestión</span>
@@ -620,7 +628,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Datos de la Coordinación
  </h3>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2 text-[12px]">
+ <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
  <div>
  <span className="app-data-label">Tipo de Inspección</span>
  <p className="font-medium">{session.inspection_type === "remote" ? "Remota" : session.inspection_type === "onsite" ? "Presencial" : "—"}</p>
@@ -631,28 +639,28 @@ export default function InspectionDetailPage() {
  </div>
  <div>
  <span className="app-data-label">Inspector</span>
- <p className="font-medium">{inspectors.find((i) => i.id === session.inspector_id)?.full_name || "—"}</p>
+ <p className="font-medium">{userName(session.inspector_id) || "—"}</p>
  </div>
  {coordAclaracionDireccion && (
- <div className="col-span-2 md:col-span-3">
+ <div>
  <span className="app-data-label">Aclaración Dirección</span>
  <p className="font-medium whitespace-pre-wrap">{coordAclaracionDireccion}</p>
  </div>
  )}
  {coordOtrosContactos && (
- <div className="col-span-2 md:col-span-3">
+ <div>
  <span className="app-data-label">Otros Contactos</span>
  <p className="font-medium whitespace-pre-wrap">{coordOtrosContactos}</p>
  </div>
  )}
  {coordComentarios && (
- <div className="col-span-2 md:col-span-3">
+ <div>
  <span className="app-data-label">Comentarios</span>
  <p className="font-medium whitespace-pre-wrap">{coordComentarios}</p>
  </div>
  )}
  {session.inspector_observations && (
- <div className="col-span-2 md:col-span-3">
+ <div className="col-span-3">
  <span className="app-data-label">Observaciones del Inspector</span>
  <p className="font-medium whitespace-pre-wrap mt-0.5">{session.inspector_observations}</p>
  </div>

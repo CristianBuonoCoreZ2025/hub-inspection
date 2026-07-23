@@ -1,13 +1,11 @@
-fix: eliminar duplicacion y ordenar card Datos de la Coordinacion
+fix: card Datos de la Coordinacion en 3 columnas + inspector correcto
 
-- El trigger 198 ya NO copia los anexos del CIN en inspector_observations
-  (los anexos se leen directamente del parent_action_data del INS)
-- Card "Datos de la Coordinacion" ahora usa grilla de 2-4 columnas:
+- Grilla de 3 columnas para Datos de la Coordinacion:
   Tipo de Inspeccion, Fecha Agendada, Inspector, Aclaracion Direccion,
-  Otros Contactos, Comentarios
-- Observaciones del Inspector solo se muestra si el inspector escribio algo
-- Eliminadas todas las sesiones de inspeccion (incluida la nueva creada con duplicados)
-- L-141 reseteado para probar flujo limpio
+  Otros Contactos, Comentarios (uno al lado del otro, no apilados)
+- Inspector ahora se busca entre todos los usuarios (no solo role=inspector)
+- Inspectores tambien incluyen role=internal (el selector del CIN los permite)
+- Helper userName(id) para buscar nombre sin depender del filtro de inspectores
 
 Generated with [Devin](https://devin.ai)
 
