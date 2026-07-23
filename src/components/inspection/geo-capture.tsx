@@ -169,10 +169,7 @@ export function GeoCapture({
             description: data.evidence.description,
           } as SavedEvidence;
         }
-        return null;
-      } catch (err) {
-        console.warn("[GeoCapture] No se pudo guardar el mapa como evidencia:", err);
-        return null;
+        throw new Error("La API no devolvió evidencia");
       } finally {
         setSavingMap(false);
       }
