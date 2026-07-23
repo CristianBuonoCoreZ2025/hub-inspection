@@ -2,19 +2,58 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, MessageCircle, Mail, Send, Phone } from "lucide-react";
+import { Copy, MessageCircle, Mail, Send, Phone, RefreshCw, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { refreshMagicLink } from "@/services/inspections";
 
 interface MagicLinkSenderProps {
   token: string;
+  sessionId: string;
+  expiresAt?: string | null;
   contactName?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
 }
 
-export function MagicLinkSender({ token, contactName, contactEmail, contactPhone }: MagicLinkSenderProps) {
+export function MagicLinkSender({ token, sessionId, expiresAt, contactName, contactEmail, contactPhone }: MagicLinkSenderProps) {
+  const queryClient = useQueryClient();
   const [sending, setSending] = React.useState<"whatsapp" | "email" | null>(null);
-  const link = typeof window !== "undefined" ? `${window.location.origin}/inspection/${token}` : "";
+  const [currentToken, setCurrentToken] = React.useState(token);
+  const [currentExpiresAt, setCurrentExpiresAt] = React.useState(expiresAt);
+  const link = typeof window !== "undefined" ? `${window.location.origin}/inspection/${currentToken}` : "";
+
+  // Estado de expiración — Date.now() es impura, usar useState + useEffect
+  const [nowMs, setNowMs] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000); // actualizar cada 1 min
+    return () => clearInterval(id);
+  }, []);
+
+  const expiryInfo = React.useMemo(() => {
+    if (!currentExpiresAt) return { status: "unknown" as const, label: "Sin fecha de expiración" };
+    const expiry = new Date(currentExpiresAt).getTime();
+    const diffMs = expiry - nowMs;
+    if (diffMs <= 0) return { status: "expired" as const, label: "Expirado" };
+    const diffH = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffM = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    if (diffH < 1) return { status: "expiring" as const, label: `Expira en ${diffM} min` };
+    if (diffH < 4) return { status: "expiring" as const, label: `Expira en ${diffH}h ${diffM}m` };
+    return { status: "valid" as const, label: `Expira en ${diffH}h` };
+  }, [currentExpiresAt, nowMs]);
+
+  const refreshMutation = useMutation({
+    mutationFn: () => refreshMagicLink(sessionId),
+    onSuccess: (data) => {
+      if (data) {
+        setCurrentToken(data.magic_link_token!);
+        setCurrentExpiresAt(data.magic_link_expires_at);
+        queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+        toast.success("Link renovado — nuevo token generado (válido 24h)");
+      }
+    },
+    onError: (err: Error) => toast.error(err.message || "Error al renovar el link"),
+  });
 
   const copyLink = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -95,15 +134,45 @@ export function MagicLinkSender({ token, contactName, contactEmail, contactPhone
 
   const btnClass = "pg-btn-platinum h-7 text-[12px] gap-1.5 shrink-0";
 
+  const expiryConfig = {
+    valid: { icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" },
+    expiring: { icon: Clock, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
+    expired: { icon: AlertTriangle, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10" },
+    unknown: { icon: Clock, color: "text-muted-foreground", bg: "bg-muted/40" },
+  };
+  const ec = expiryConfig[expiryInfo.status];
+  const ExpiryIcon = ec.icon;
+
   return (
     <div className="space-y-2">
-      {/* Link + copiar */}
+      {/* Link + copiar + refrescar */}
       <div className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[12px]">
         <span className="text-violet-700 dark:text-violet-300 shrink-0">Link:</span>
         <code className="flex-1 truncate text-muted-foreground">{link}</code>
         <Button size="sm" variant="outline" className="btn-icon-sm shrink-0" onClick={copyLink}>
           <Copy className="h-3.5 w-3.5" />
         </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="btn-icon-sm shrink-0"
+          onClick={() => refreshMutation.mutate()}
+          disabled={refreshMutation.isPending}
+          title="Generar nuevo token y extender 24h"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
+        </Button>
+      </div>
+
+      {/* Indicador de expiración */}
+      <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium ${ec.bg} ${ec.color}`}>
+        <ExpiryIcon className="h-3 w-3" />
+        {expiryInfo.label}
+        {currentExpiresAt && (
+          <span className="text-muted-foreground/70 ml-1">
+            ({new Date(currentExpiresAt).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })})
+          </span>
+        )}
       </div>
 
       {/* Botones de envío */}

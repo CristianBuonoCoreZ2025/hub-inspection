@@ -1,56 +1,22 @@
-feat: separar flujos de georreferenciación presencial vs remota
+feat: botón para refrescar magic link + indicador de expiración
 
-## Cambios
+PROBLEMA: el magic link de inspección remota expira a las 24h y no había
+forma de generar uno nuevo sin reagendar la inspección.
 
-### GeoCapture (src/components/inspection/geo-capture.tsx)
-- **Presencial (onsite):** auto-captura al montar el componente (sin botón).
-  El inspector no necesita presionar nada — al iniciar la inspección se
-  captura la ubicación automáticamente.
-- **Remota (remote):** botón "Establecer mi ubicación" — el asegurado
-  decide cuándo compartir su ubicación.
-- **Remota + fuera de rango (>500m):** guarda 2 mapas como evidencia:
-  1. Mapa de la ubicación capturada (donde está el asegurado)
-  2. Mapa de la dirección declarada del siniestro
-  Esto deja evidencia de la discrepancia.
-- **Remota + verificada (≤500m):** guarda 1 solo mapa (ubicación capturada).
-- Eliminado el botón "Tomar foto del lugar" del GeoCapture — las fotos
-  se suben desde el tab de Evidencias, no desde el panel de geo.
-- Eliminada la prop `evidenceUploadUrl` (ya no se usa).
-
-### Upload route (src/app/api/inspection/evidences/upload/route.ts)
-- **NO se guarda lat/lng del dispositivo** en evidencias.
-- La geo de cada foto viene EXCLUSIVAMENTE de los metadatos EXIF GPS.
-- `lat`/`lng` ahora = `exif_lat`/`exif_lng` (mismo valor).
-- Si la foto no tiene GPS embebido, lat/lng = null (no hay error).
-
-### Evidences tab (src/app/dashboard/inspecciones/[id]/evidences-tab.tsx)
-- Eliminada la auto-captura de geo del dispositivo al montar.
-- Eliminado el envío de lat/lng en el FormData de subida.
-- Eliminado el indicador "Geo activa" del drop zone.
-- Eliminada la comparación device vs EXIF (geoMismatch).
-- Ahora se muestra un solo indicador GPS basado en EXIF:
-  - Azul si la foto tiene GPS embebido
-  - Gris si no tiene GPS (sin error, solo informativo)
-
-### Acta de Inspección (src/app/dashboard/inspecciones/[id]/acta-form.tsx)
-- Nuevo bloque "Validación Geográfica" en el paso 1 (Datos Generales).
-  Muestra:
-  - Dirección declarada del siniestro
-  - Coordenadas del siniestro (geocodificadas)
-  - Coordenadas capturadas
-  - Distancia entre ambos puntos
-  - Estado de validación (Verificada / Fuera de rango / Pendiente / Fallida)
-  - Fecha/hora de captura
-  - Tipo de inspección (Presencial / Remota)
-
-### save-map route (src/app/api/inspection/geo/save-map/route.ts)
-- Nuevo parámetro `label` ("captured" o "declared") para distinguir
-  los 2 mapas cuando hay discrepancia.
-
-## Principio
-- La georreferenciación inicial valida DESDE DÓNDE se hace la inspección.
-- La georreferenciación de las fotos valida DÓNDE fue tomada cada evidencia.
-- Son 2 procesos distintos y nunca se mezclan.
+FIX:
+- src/services/inspections.ts: nueva función refreshMagicLink(sessionId)
+  que genera un nuevo token (crypto.randomUUID) y extiende la expiración
+  24h desde ahora. El token anterior deja de funcionar inmediatamente.
+- src/components/ui/magic-link-sender.tsx:
+  - Botón Refrescar (icono RefreshCw) que regenera el token
+  - Indicador de expiración con código de color:
+    - Verde: válido (>4h restantes)
+    - Ámbar: expira pronto (<4h) o ya expirado
+    - Muestra fecha/hora exacta de expiración
+  - Se actualiza cada 1 min para mantener el indicador al día
+  - Nuevas props: sessionId, expiresAt
+- src/app/dashboard/inspecciones/[id]/page.tsx: pasa sessionId y
+  magic_link_expires_at al MagicLinkSender
 
 Generado con [Devin](https://devin.ai)
 

@@ -462,6 +462,26 @@ export async function updateInspectionSession(id: string, input: Partial<Inspect
   return updateRow<InspectionSession>("inspection_sessions", id, set, SESSION_SELECT);
 }
 
+/**
+ * Refresca el magic link de una inspección remota.
+ * Genera un nuevo token y extiende la expiración 24h desde ahora.
+ * El token anterior deja de funcionar inmediatamente.
+ */
+export async function refreshMagicLink(sessionId: string) {
+  const newToken = crypto.randomUUID();
+  const expires = new Date();
+  expires.setHours(expires.getHours() + 24);
+  return updateRow<InspectionSession>(
+    "inspection_sessions",
+    sessionId,
+    {
+      magic_link_token: newToken,
+      magic_link_expires_at: expires.toISOString(),
+    },
+    SESSION_SELECT,
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════
 // REAGENDAR / CANCELAR VÍA CIN (vinculación con coordinación)
 // ═══════════════════════════════════════════════════════════════
