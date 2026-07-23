@@ -161,6 +161,8 @@
 | Campo `source` (origen) | ✅ | Migration 202 |
 | Listado de evidencias por sesión | ✅ | `/api/inspection/evidences/session/[sessionId]` |
 | Eliminación de evidencias | ✅ | `/api/inspection/evidences/[evidenceId]` |
+| Modal de progreso de subida | ✅ | Igual que documentos del siniestro: %, KB/s, tiempo, estado por archivo |
+| Drag & drop múltiple archivos | ✅ | `evidences-tab.tsx` soporta múltiples evidencias con progreso individual |
 
 ### 5.2 Tipos de evidencia por origen
 

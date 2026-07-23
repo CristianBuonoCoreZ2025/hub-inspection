@@ -1,13 +1,18 @@
-refactor: umbral de geolocalización integrado directamente en Configuración > General
+feat: modal de progreso en subida de evidencias (igual que siniestro)
 
-Evita crear un componente nuevo aislado. El setting ahora vive
-inline en el GeneralTab existente de src/app/dashboard/configuracion/page.tsx,
-manteniendo la coherencia con la pantalla de configuración.
+La subida de evidencias de inspección ahora usa el mismo patrón que la
+subida de documentos del siniestro: modal con progreso real por archivo
+(% completado, KB/s, tiempo transcurrido, estado uploading/processing/done/error).
 
-- Elimina src/app/dashboard/configuracion/GeoThresholdSetting.tsx
-- Mueve la query, mutación, input y botón de guardado al GeneralTab
-- Mantiene la API /api/settings/geo-threshold y el servicio
-  getGeoThresholdMeters
+Cambios:
+- src/app/dashboard/inspecciones/[id]/evidences-tab.tsx:
+  - Reemplaza uploadMutation por XMLHttpRequest con callbacks de progreso
+  - Nuevo estado uploadQueue con lista de archivos subiendo
+  - Modal flotante que muestra progreso individual de cada evidencia
+  - Cierra automáticamente 1.5s después de que todas terminen
+  - Soporta drag & drop múltiple con progreso por archivo
+  - Mantiene el envío de EXIF GPS y sin lat/lng del dispositivo
+- docs/PLAN_INSPECCIONES.md: actualizada sección 5.1 con modal de progreso
 
 Generado con [Devin](https://devin.ai)
 

@@ -16,6 +16,38 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
+type UploadItem = {
+  id: string;
+  file: File;
+  fileName: string;
+  fileSize: number;
+  loaded: number;
+  speed: number; // KB/s
+  elapsed: number; // ms
+  status: "uploading" | "processing" | "done" | "error";
+  errorMsg?: string;
+  xhr?: XMLHttpRequest;
+};
+
+type UploadStatus = "uploading" | "processing" | "done" | "error";
+
+function formatFileSize(bytes: number | null | undefined): string {
+  if (!bytes) return "-";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function statusLabel(status: UploadStatus): string {
+  switch (status) {
+    case "uploading": return "Subiendo...";
+    case "processing": return "Procesando...";
+    case "done": return "Listo";
+    case "error": return "Error";
+    default: return "Subiendo...";
+  }
+}
+
 // ─── Tipos ───────────────────────────────────────────────────────
 
 interface EvidenceUploader {
@@ -101,12 +133,13 @@ function getInitials(name: string | null, email: string | null): string {
 export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: string; sessionStatus?: string }) {
   const queryClient = useQueryClient();
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadingCount, setUploadingCount] = useState(0);
+  const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [aiSummaryModal, setAiSummaryModal] = useState<{ visible: boolean; title: string; summary: string }>({ visible: false, title: "", summary: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
+  const uploadModalOpen = uploadQueue.length > 0;
 
   const { data: evidences, isLoading } = useQuery({
     queryKey: ["evidences", sessionId],
@@ -131,32 +164,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     },
   });
 
-  const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("sessionId", sessionId);
-      formData.append("originalName", file.name);
-      // No se envía lat/lng del dispositivo — la geo de la foto
-      // viene exclusivamente de los metadatos EXIF de la imagen.
-      const res = await fetch("/api/inspection/evidences/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Error al subir evidencia");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
-      queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
-      toast.success("Evidencia subida");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
   const deleteMutation = useMutation({
     mutationFn: deleteEvidence,
     onSuccess: () => {
@@ -167,18 +174,110 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleFile = useCallback(
-    async (file: File) => {
-      setUploadingCount((c) => c + 1);
-      try {
-        await uploadMutation.mutateAsync(file);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setUploadingCount((c) => c - 1);
+  const uploadFile = useCallback((file: File) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const xhr = new XMLHttpRequest();
+
+    const item: UploadItem = {
+      id,
+      file,
+      fileName: file.name,
+      fileSize: file.size,
+      loaded: 0,
+      speed: 0,
+      elapsed: 0,
+      status: "uploading",
+      xhr,
+    };
+    setUploadQueue((q) => [...q, item]);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("sessionId", sessionId);
+    formData.append("originalName", file.name);
+    const startTime = Date.now();
+
+    xhr.upload.addEventListener("progress", (e) => {
+      if (!e.lengthComputable) return;
+      const elapsed = Date.now() - startTime;
+      const speed = elapsed > 0 ? (e.loaded / 1024) / (elapsed / 1000) : 0;
+      setUploadQueue((q) =>
+        q.map((it) =>
+          it.id === id
+            ? {
+                ...it,
+                loaded: e.loaded,
+                fileSize: e.total,
+                speed,
+                elapsed,
+                status: "uploading",
+              }
+            : it,
+        ),
+      );
+    });
+
+    xhr.upload.addEventListener("load", () => {
+      const elapsed = Date.now() - startTime;
+      const finalSpeed = elapsed > 0 ? (file.size / 1024) / (elapsed / 1000) : 0;
+      setUploadQueue((q) =>
+        q.map((it) =>
+          it.id === id
+            ? { ...it, loaded: it.fileSize, speed: finalSpeed, elapsed, status: "uploading" }
+            : it,
+        ),
+      );
+      setTimeout(() => {
+        setUploadQueue((q) => q.map((it) => (it.id === id ? { ...it, status: "processing" } : it)));
+      }, 400);
+    });
+
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          JSON.parse(xhr.responseText);
+          setUploadQueue((q) => q.map((it) => (it.id === id ? { ...it, status: "done" } : it)));
+          queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
+          queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+          toast.success(`${file.name} subido`);
+        } catch {
+          setUploadQueue((q) =>
+            q.map((it) =>
+              it.id === id
+                ? { ...it, status: "error", errorMsg: "Respuesta inválida del servidor" }
+                : it,
+            ),
+          );
+        }
+      } else {
+        let msg = "Error al subir archivo";
+        try {
+          const body = JSON.parse(xhr.responseText);
+          msg = body.error || `Error ${xhr.status}`;
+        } catch {
+          msg = `Error ${xhr.status}: ${xhr.statusText}`;
+        }
+        setUploadQueue((q) => q.map((it) => (it.id === id ? { ...it, status: "error", errorMsg: msg } : it)));
       }
-    },
-    [uploadMutation]
+      // El cierre automático del modal se maneja en useEffect cuando
+      // todas las subidas llegan a done/error.
+    });
+
+    xhr.addEventListener("error", () => {
+      setUploadQueue((q) => q.map((it) => (it.id === id ? { ...it, status: "error", errorMsg: "Error de red" } : it)));
+    });
+
+    xhr.addEventListener("abort", () => {
+      setUploadQueue((q) => q.map((it) => (it.id === id ? { ...it, status: "error", errorMsg: "Cancelado" } : it)));
+    });
+
+    xhr.open("POST", "/api/inspection/evidences/upload");
+    xhr.send(formData);
+  }, [queryClient, sessionId]);
+
+  const handleFile = useCallback(
+    (file: File) => uploadFile(file),
+    [uploadFile],
   );
 
   const handleDrop = (e: React.DragEvent) => {
@@ -191,6 +290,25 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     Array.from(e.target.files || []).forEach(handleFile);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  const closeUploadModal = () => {
+    // Abortar las que aún estén subiendo
+    uploadQueue.forEach((it) => {
+      if (it.status === "uploading" && it.xhr) {
+        it.xhr.abort();
+      }
+    });
+    setUploadQueue([]);
+  };
+
+  // Cerrar modal automáticamente 1.5s después de que todas las subidas terminen
+  useEffect(() => {
+    if (uploadQueue.length === 0) return;
+    const allDone = uploadQueue.every((it) => it.status === "done" || it.status === "error");
+    if (!allDone) return;
+    const id = setTimeout(() => setUploadQueue([]), 1500);
+    return () => clearTimeout(id);
+  }, [uploadQueue]);
 
   const photos = evidences?.filter((e) => e.type === "photo") || [];
   const videos = evidences?.filter((e) => e.type === "video") || [];
@@ -243,13 +361,69 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           className="hidden"
           id="evidence-upload"
         />
-        {uploadingCount > 0 && (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-            Subiendo {uploadingCount}...
-          </div>
+        {uploadQueue.length > 0 && (
+          <button
+            type="button"
+            onClick={() => {}}
+            className="text-[11px] text-primary underline underline-offset-2 hover:text-primary/80"
+          >
+            Subiendo {uploadQueue.filter((it) => it.status === "uploading").length}...
+          </button>
         )}
       </div>
+      )}
+
+      {/* ═══ MODAL: Progreso de subida ═══ */}
+      {uploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold">Subiendo evidencias</h3>
+              <button
+                type="button"
+                onClick={closeUploadModal}
+                className="text-[11px] text-muted-foreground hover:text-foreground"
+              >
+                Cerrar
+              </button>
+            </div>
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+              {uploadQueue.map((it) => {
+                const progress = it.fileSize > 0 ? Math.round((it.loaded / it.fileSize) * 100) : 0;
+                return (
+                  <div key={it.id} className="rounded-xl border border-border bg-muted/30 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[12px] font-medium truncate flex-1" title={it.fileName}>
+                        {it.fileName}
+                      </span>
+                      <span
+                        className={`text-[11px] shrink-0 ${
+                          it.status === "error" ? "text-rose-600" : it.status === "done" ? "text-emerald-600" : "text-muted-foreground"
+                        }`}
+                      >
+                        {statusLabel(it.status)}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {formatFileSize(it.loaded)} / {formatFileSize(it.fileSize)} · {it.speed.toFixed(0)} KB/s · {Math.round(it.elapsed / 1000)}s
+                    </p>
+                    {it.errorMsg && (
+                      <p className="text-[10px] text-rose-600 mt-1">{it.errorMsg}</p>
+                    )}
+                    {it.status !== "done" && it.status !== "error" && (
+                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full bg-primary transition-all duration-200"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ─── Contenido ─── */}
