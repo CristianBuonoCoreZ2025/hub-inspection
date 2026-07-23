@@ -463,6 +463,205 @@ export async function updateInspectionSession(id: string, input: Partial<Inspect
 }
 
 // ═══════════════════════════════════════════════════════════════
+// REAGENDAR / CANCELAR VÍA CIN (vinculación con coordinación)
+// ═══════════════════════════════════════════════════════════════
+//
+// Principio: la inspección nace de la coordinación (CIN).
+// Reagendar o cancelar la inspección debe generar una gestión CIN
+// que registre el evento (fallida para reagendar, desistida para cancelar).
+// La gestión INS original queda rechazada.
+
+/**
+ * Reagendar una inspección vinculando con la coordinación.
+ * Flujo:
+ *   1. Cancela la sesión de inspección actual
+ *   2. Rechaza la gestión INS (status = rejected)
+ *   3. Crea una gestión CIN con coord_result=fallida y los nuevos datos
+ *   4. Emite la CIN → issueClaimAction crea una nueva CIN (todo) para re-coordinar
+ *
+ * El usuario luego completa la nueva CIN con los datos finales y la emite
+ * como coordinada → cascade crea nueva INS → trigger crea nueva sesión.
+ */
+export async function rescheduleInspectionViaCIN(params: {
+  sessionId: string;
+  claimId: string;
+  insActionId?: string | null;
+  reasonId: string;
+  notes?: string;
+  newOptions: {
+    inspectionType: "onsite" | "remote";
+    scheduledAt: string;
+    inspectorId?: string;
+  };
+  cancelledBy?: string;
+  userId?: string;
+}) {
+  const { sessionId, claimId, insActionId, reasonId, notes, newOptions, cancelledBy, userId } = params;
+
+  // 1. Cancelar la sesión actual
+  await cancelInspectionSession(sessionId, reasonId, notes, cancelledBy);
+
+  // 2. Rechazar la gestión INS (si existe)
+  if (insActionId) {
+    try {
+      const { rejectClaimAction } = await import("@/services/claim-actions");
+      await rejectClaimAction(insActionId, "issue", userId, notes || "Inspección reagendada");
+    } catch (err) {
+      console.warn("[rescheduleInspectionViaCIN] No se pudo rechazar INS:", err);
+    }
+  }
+
+  // 3. Encontrar el template CIN para este claim
+  const cinTemplate = await findCINTemplateForClaim(claimId);
+  if (!cinTemplate) {
+    throw new Error("No se encontró el template CIN para este siniestro");
+  }
+
+  // 4. Crear gestión CIN con coord_result=fallida y los nuevos datos
+  const { createClaimAction, issueClaimAction } = await import("@/services/claim-actions");
+  const reasonName = await getLookupName(reasonId);
+  const newCin = await createClaimAction({
+    claim_id: claimId,
+    action_template_id: cinTemplate.action_template_id,
+    action_features_id: cinTemplate.action_features_id,
+    name: "Coordinación de Inspección (reagendamiento)",
+    description: `Reagendamiento generado desde inspección. Motivo: ${reasonName}`,
+    action_data: {
+      coord_result: "fallida",
+      coord_motivo: reasonName,
+      coord_fecha_recoord: newOptions.scheduledAt,
+      coord_inspection_type: newOptions.inspectionType,
+      coord_inspector: newOptions.inspectorId || undefined,
+      coord_comentarios: notes || undefined,
+    },
+    issuer_id: userId,
+  });
+
+  // 5. Emitir la CIN → issueClaimAction fallida crea nueva CIN (todo) para re-coordinar
+  await issueClaimAction(newCin.id, userId, {
+    coord_result: "fallida",
+    coord_motivo: reasonName,
+    coord_fecha_recoord: newOptions.scheduledAt,
+    coord_inspection_type: newOptions.inspectionType,
+    coord_inspector: newOptions.inspectorId || undefined,
+    coord_comentarios: notes || undefined,
+  });
+
+  return { cancelledSessionId: sessionId, newCinId: newCin.id };
+}
+
+/**
+ * Cancelar una inspección vinculando con la coordinación.
+ * Flujo:
+ *   1. Cancela la sesión de inspección actual
+ *   2. Rechaza la gestión INS (status = rejected)
+ *   3. Crea una gestión CIN con coord_result=desistida
+ *   4. Emite la CIN → desistida no crea nueva CIN (rompe el flujo)
+ */
+export async function cancelInspectionViaCIN(params: {
+  sessionId: string;
+  claimId: string;
+  insActionId?: string | null;
+  reasonId: string;
+  notes?: string;
+  cancelledBy?: string;
+  userId?: string;
+}) {
+  const { sessionId, claimId, insActionId, reasonId, notes, cancelledBy, userId } = params;
+
+  // 1. Cancelar la sesión actual
+  await cancelInspectionSession(sessionId, reasonId, notes, cancelledBy);
+
+  // 2. Rechazar la gestión INS (si existe)
+  if (insActionId) {
+    try {
+      const { rejectClaimAction } = await import("@/services/claim-actions");
+      await rejectClaimAction(insActionId, "issue", userId, notes || "Inspección cancelada (desistida)");
+    } catch (err) {
+      console.warn("[cancelInspectionViaCIN] No se pudo rechazar INS:", err);
+    }
+  }
+
+  // 3. Encontrar el template CIN para este claim
+  const cinTemplate = await findCINTemplateForClaim(claimId);
+  if (!cinTemplate) {
+    throw new Error("No se encontró el template CIN para este siniestro");
+  }
+
+  // 4. Crear gestión CIN con coord_result=desistida
+  const { createClaimAction, issueClaimAction } = await import("@/services/claim-actions");
+  const reasonName = await getLookupName(reasonId);
+  const newCin = await createClaimAction({
+    claim_id: claimId,
+    action_template_id: cinTemplate.action_template_id,
+    action_features_id: cinTemplate.action_features_id,
+    name: "Coordinación de Inspección (desistida)",
+    description: `Inspección desistida. Motivo: ${reasonName}`,
+    action_data: {
+      coord_result: "desistida",
+      coord_motivo: reasonName,
+      coord_comentarios: notes || undefined,
+    },
+    issuer_id: userId,
+  });
+
+  // 5. Emitir la CIN → desistida no crea nueva CIN
+  await issueClaimAction(newCin.id, userId, {
+    coord_result: "desistida",
+    coord_motivo: reasonName,
+    coord_comentarios: notes || undefined,
+  });
+
+  return { cancelledSessionId: sessionId, newCinId: newCin.id };
+}
+
+/**
+ * Encuentra el template CIN para un claim.
+ * Busca entre las gestiones CIN existentes del claim (incluyendo rechazadas)
+ * para obtener action_template_id y action_features_id.
+ */
+async function findCINTemplateForClaim(claimId: string): Promise<{
+  action_template_id: string;
+  action_features_id: string;
+} | null> {
+  // Buscar cualquier gestión CIN existente (incluyendo rechazadas)
+  const { getClaimActions } = await import("@/services/claim-actions");
+  const actions = await getClaimActions(claimId, true); // includeRejected
+  const cinAction = actions.find((a) => a.action_template?.code === "CIN" && a.action_template_id);
+  if (cinAction?.action_template_id && cinAction.action_features_id) {
+    return {
+      action_template_id: cinAction.action_template_id,
+      action_features_id: cinAction.action_features_id,
+    };
+  }
+
+  // Fallback: buscar el template CIN directamente por código
+  const templates = await fetchAll<{ id: string; action_features_id: string }>(
+    "action_template",
+    {
+      select: "id, action_features_id",
+      eq: { code: "CIN", is_active: true },
+      limit: 1,
+    }
+  );
+  if (templates[0]) {
+    return {
+      action_template_id: templates[0].id,
+      action_features_id: templates[0].action_features_id,
+    };
+  }
+  return null;
+}
+
+/**
+ * Obtiene el nombre de un lookup_catalog por ID.
+ */
+async function getLookupName(id: string): Promise<string> {
+  const row = await fetchById<{ name: string }>("lookup_catalog", id, "name");
+  return row?.name || "Motivo no especificado";
+}
+
+// ═══════════════════════════════════════════════════════════════
 // PROPERTY RISK
 // ═══════════════════════════════════════════════════════════════
 

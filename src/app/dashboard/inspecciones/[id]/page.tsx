@@ -6,8 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
  getInspectionSessionById,
  updateInspectionSession,
- cancelInspectionSession,
- rescheduleInspectionSession,
+ rescheduleInspectionViaCIN,
+ cancelInspectionViaCIN,
  getInspectorSchedule,
 } from "@/services/inspections";
 import { updateClaimStatus } from "@/services/claims";
@@ -29,6 +29,7 @@ import {
  RotateCcw,
  CalendarClock,
  Video,
+ Play,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -255,12 +256,22 @@ export default function InspectionDetailPage() {
  });
 
  const cancelMutation = useMutation({
- mutationFn: ({ id, reasonId, notes }: { id: string; reasonId: string; notes?: string }) =>
- cancelInspectionSession(id, reasonId, notes),
+ mutationFn: ({ id, claimId, insActionId, reasonId, notes }: {
+ id: string; claimId: string; insActionId?: string | null; reasonId: string; notes?: string;
+ }) => cancelInspectionViaCIN({
+ sessionId: id,
+ claimId,
+ insActionId,
+ reasonId,
+ notes,
+ cancelledBy: profile?.id,
+ userId: profile?.id,
+ }),
  onSuccess: async () => {
- toast.success("Inspección cancelada");
+ toast.success("Inspección cancelada (desistida). Se generó gestión CIN de desistimiento.");
  queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
  queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+ queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
  setCancelModalOpen(false);
  setCancelReasonId("");
  setCancelNotes("");
@@ -275,31 +286,39 @@ export default function InspectionDetailPage() {
  } catch {}
  }
  }
+ // Volver al siniestro (la INS fue rechazada, no hay nueva inspección)
+ if (session?.claim_id) router.push(`/dashboard/claims/${session.claim_id}`);
  },
  onError: (err: Error) => toast.error(err.message),
  });
 
  const rescheduleMutation = useMutation({
- mutationFn: ({ currentId, claimId, reasonId, notes, newOptions }: {
- currentId: string;
- claimId: string;
- reasonId: string;
- notes?: string;
+ mutationFn: ({ currentId, claimId, insActionId, reasonId, notes, newOptions }: {
+ currentId: string; claimId: string; insActionId?: string | null;
+ reasonId: string; notes?: string;
  newOptions: { inspectionType: "onsite" | "remote"; scheduledAt: string; inspectorId?: string };
- }) => rescheduleInspectionSession(currentId, claimId, reasonId, notes, newOptions),
- onSuccess: (newSession) => {
- toast.success("Inspección reagendada");
+ }) => rescheduleInspectionViaCIN({
+ sessionId: currentId,
+ claimId,
+ insActionId,
+ reasonId,
+ notes,
+ newOptions,
+ cancelledBy: profile?.id,
+ userId: profile?.id,
+ }),
+ onSuccess: () => {
+ toast.success("Inspección reagendada. Se generó gestión CIN para re-coordinar.");
  queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+ queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
  setRescheduleModalOpen(false);
  setCancelReasonId("");
  setCancelNotes("");
  setRescheduleDate("");
  setRescheduleTime("");
  setRescheduleInspectorId("");
- // Navegar a la nueva inspección
- if (newSession?.id) {
- router.push(`/dashboard/inspecciones/${newSession.id}`);
- }
+ // Volver al siniestro — el usuario debe completar la nueva CIN
+ if (session?.claim_id) router.push(`/dashboard/claims/${session.claim_id}`);
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -670,6 +689,8 @@ export default function InspectionDetailPage() {
 
  {/* Estado de la Sesion + Acciones */}
  <div className="app-panel">
+ <div className="flex items-start justify-between gap-4">
+ <div className="flex-1 min-w-0">
  <h3 className="app-section-title">
  Estado de la Sesion
  </h3>
@@ -695,13 +716,15 @@ export default function InspectionDetailPage() {
  <p className="font-medium">{session.ended_at ? formatDateTime(session.ended_at) : "—"}</p>
  </div>
  </div>
+ </div>
 
- {/* Botones de acción según estado */}
+ {/* Botones de acción verticales con iconos (solo si está scheduled) */}
  {session.status === "scheduled" && (
- <div className="flex gap-2 mt-3 pt-3 border-t border-border">
+ <div className="flex flex-col gap-1.5 shrink-0">
  <Button
  size="sm"
- className="pg-btn-platinum"
+ className="pg-btn-platinum h-8 w-8 p-0"
+ title="Iniciar inspección"
  onClick={() => {
  const now = new Date();
  const dateStr = now.toISOString().split("T")[0];
@@ -717,12 +740,13 @@ export default function InspectionDetailPage() {
  });
  }}
  >
- Iniciar
+ <Play className="h-4 w-4" />
  </Button>
  <Button
  size="sm"
  variant="outline"
- className="pg-btn-platinum"
+ className="pg-btn-platinum h-8 w-8 p-0"
+ title="Reagendar (genera CIN de re-coordinación)"
  onClick={() => {
  const claimData = session?.claim as Record<string, unknown> | undefined;
  if (claimData?.inspector_id) {
@@ -731,18 +755,20 @@ export default function InspectionDetailPage() {
  setRescheduleModalOpen(true);
  }}
  >
- Reagendar
+ <CalendarClock className="h-4 w-4" />
  </Button>
  <Button
  size="sm"
  variant="outline"
- className="pg-btn-platinum"
+ className="pg-btn-platinum h-8 w-8 p-0"
+ title="Cancelar (genera CIN desistida, INS rechazada)"
  onClick={() => setCancelModalOpen(true)}
  >
- Cancelar
+ <XCircle className="h-4 w-4" />
  </Button>
  </div>
  )}
+ </div>
  </div>
 
  {/* Magic link */}
@@ -931,6 +957,8 @@ export default function InspectionDetailPage() {
  disabled={!cancelReasonId || cancelMutation.isPending}
  onClick={() => cancelMutation.mutate({
  id: session.id,
+ claimId: session.claim_id,
+ insActionId: session.claim_action_id,
  reasonId: cancelReasonId,
  notes: cancelNotes || undefined,
  })}
@@ -1080,6 +1108,7 @@ export default function InspectionDetailPage() {
  rescheduleMutation.mutate({
  currentId: session.id,
  claimId: session.claim_id,
+ insActionId: session.claim_action_id,
  reasonId: cancelReasonId,
  notes: cancelNotes || undefined,
  newOptions: { inspectionType: rescheduleType, scheduledAt, inspectorId: rescheduleInspectorId || undefined },
