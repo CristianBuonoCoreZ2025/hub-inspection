@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ClipboardCheck, Video, User, Calendar, WifiOff, Loader2,
   Camera, FileText, AlertTriangle, MessageSquare, Send,
-  ShieldCheck, MapPin, PenTool, XCircle,
+  ShieldCheck, MapPin, PenTool, XCircle, CheckCircle,
 } from "lucide-react";
 import { DrawingCanvas } from "@/components/ui/drawing-canvas";
 import { LiveVideoCall } from "@/components/inspection/live-video-call";
@@ -538,7 +538,8 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
     (isv && Object.keys(isv).length > 0) ||
     tp.length > 0 ||
     session.interviewed_name ||
-    session.inspector_observations;
+    session.inspector_observations ||
+    (actaStep === "datos" && !!session.geo_status);
 
   if (!hasData) {
     return (
@@ -582,6 +583,58 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       {/* Datos Generales */}
       {innerTab === "datos" && (
         <div className="space-y-2">
+          <Panel title="Validacion Geografica">
+            {(() => {
+              const geoStatus = session.geo_status || "pending";
+              const statusConfig: Record<string, { icon: typeof MapPin; color: string; bg: string; label: string }> = {
+                pending: { icon: MapPin, color: "text-slate-400", bg: "bg-slate-700/30", label: "Pendiente" },
+                verified: { icon: CheckCircle, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Ubicacion Verificada" },
+                out_of_range: { icon: AlertTriangle, color: "text-amber-400", bg: "bg-amber-500/10", label: "Fuera de rango" },
+                failed: { icon: XCircle, color: "text-rose-400", bg: "bg-rose-500/10", label: "Fallida" },
+              };
+              const sc = statusConfig[geoStatus] || statusConfig.pending;
+              const StatusIcon = sc.icon;
+              const claimLat = session.claim?.claim_latitude;
+              const claimLng = session.claim?.claim_longitude;
+              const geoLat = session.geo_latitude;
+              const geoLng = session.geo_longitude;
+              const claimCoords = claimLat != null && claimLng != null ? `${claimLat.toFixed(6)}, ${claimLng.toFixed(6)}` : "—";
+              const geoCoords = geoLat != null && geoLng != null ? `${geoLat.toFixed(6)}, ${geoLng.toFixed(6)}` : "—";
+              const capturedAt = session.geo_captured_at
+                ? new Date(session.geo_captured_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+                : "—";
+              const distance = session.geo_distance_meters != null ? `${session.geo_distance_meters} m` : "—";
+              return (
+                <div className="space-y-2">
+                  <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium ${sc.bg} ${sc.color}`}>
+                    <StatusIcon className="h-3 w-3" />
+                    {sc.label}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+                    <Field label="Direccion declarada" value={session.claim?.claim_address || "—"} />
+                    <Field label="Coords. siniestro" value={claimCoords} mono />
+                    <Field label="Coords. capturadas" value={geoCoords} mono />
+                    <Field label="Distancia" value={distance} />
+                    <Field label="Capturada en" value={capturedAt} />
+                    <Field label="Tipo inspeccion" value={session.inspection_type === "onsite" ? "Presencial" : "Remota"} />
+                  </div>
+                  {geoStatus === "verified" && (
+                    <p className="text-[11px] text-emerald-400">Ubicacion verificada: a {distance} de la direccion declarada.</p>
+                  )}
+                  {geoStatus === "out_of_range" && (
+                    <p className="text-[11px] text-amber-400">La ubicacion capturada esta a {distance} de la direccion declarada. Se permite continuar pero queda registrado para auditoria.</p>
+                  )}
+                  {geoStatus === "pending" && (
+                    <p className="text-[11px] text-slate-400">La geolocalizacion aun no ha sido capturada.</p>
+                  )}
+                  {geoStatus === "failed" && (
+                    <p className="text-[11px] text-rose-400">No se pudo obtener la geolocalizacion del dispositivo.</p>
+                  )}
+                </div>
+              );
+            })()}
+          </Panel>
+
           <Panel title="Datos Generales de la Inspeccion">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
               <Field label="Fecha Inspeccion" value={session.inspection_date || "—"} />
