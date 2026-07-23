@@ -226,21 +226,16 @@ export function generateStaticMapUrl(
   const height = options?.height ?? 400;
   const markerColor = options?.markerColor || "0x0095DA";
 
-  const provider = process.env.NEXT_PUBLIC_MAP_PROVIDER || "osm";
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const googleKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  if (provider === "google") {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (apiKey) {
-      return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=${width}x${height}&markers=color:${markerColor}|${lat},${lng}&key=${apiKey}`;
-    }
+  if (mapboxToken) {
+    const pinColor = markerColor.replace("0x", "%23");
+    return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+${pinColor}(${lng},${lat})/${lng},${lat},${zoom},0/${width}x${height}?access_token=${mapboxToken}`;
   }
 
-  if (provider === "mapbox") {
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (token) {
-      const pinColor = markerColor.replace("0x", "%23");
-      return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+${pinColor}(${lng},${lat})/${lng},${lat},${zoom},0/${width}x${height}?access_token=${token}`;
-    }
+  if (googleKey) {
+    return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=${width}x${height}&markers=color:${markerColor}|${lat},${lng}&key=${googleKey}`;
   }
 
   // Default: OpenStreetMap Static Map (via staticmap.openstreetmap.de)

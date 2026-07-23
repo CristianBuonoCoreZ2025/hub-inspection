@@ -437,12 +437,12 @@ export function GeoCapture({
           >
             <TileLayer
               url={
-                process.env.NEXT_PUBLIC_MAP_PROVIDER === "mapbox" && process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+                process.env.NEXT_PUBLIC_MAPBOX_TOKEN
                   ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
                   : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
               }
               attribution={
-                process.env.NEXT_PUBLIC_MAP_PROVIDER === "mapbox" && process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+                process.env.NEXT_PUBLIC_MAPBOX_TOKEN
                   ? '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
               }
