@@ -124,6 +124,22 @@ export function GeoCapture({
   const lastCapturedRef = React.useRef<{ coords: LatLng; mapUrl: string } | null>(null);
   const autoCaptureRef = React.useRef(false);
 
+  // Sincronizar con coordenadas iniciales cuando cambian (recaptura habilitada desde dashboard)
+  React.useEffect(() => {
+    if (!initialCoords) return;
+    const id = setTimeout(() => {
+      setCaptured(initialCoords);
+      if (initialDistance != null) {
+        setValidation({
+          distance: initialDistance,
+          status: initialStatus as GeoValidationResult["status"],
+          threshold,
+        });
+      }
+    }, 0);
+    return () => clearTimeout(id);
+  }, [initialCoords, initialDistance, initialStatus, threshold]);
+
   // Guardar el mapa estático como evidencia
   const saveMapAsEvidence = React.useCallback(
     async (sid: string, coords: LatLng, mapUrl: string, by?: string, label?: string) => {
@@ -319,27 +335,38 @@ export function GeoCapture({
       {/* Botón de captura — SOLO para inspecciones remotas.
           En presenciales, la captura es automática al montar el componente. */}
       {inspectionType === "remote" && (
-        <button
-          type="button"
-          disabled={disabled || loading}
-          onClick={handleCapture}
-          className="liquid-date-picker flex w-full items-center justify-center gap-2 mb-3"
-          style={{ height: "36px" }}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-[11px]">Obteniendo ubicación...</span>
-            </>
-          ) : (
-            <>
-              <Navigation className="h-4 w-4" />
-              <span className="text-[11px] font-medium">
-                {captured ? "Volver a establecer mi ubicación" : "Establecer mi ubicación"}
-              </span>
-            </>
+        <>
+          <button
+            type="button"
+            disabled={disabled || loading}
+            onClick={handleCapture}
+            className="liquid-date-picker flex w-full items-center justify-center gap-2 mb-3"
+            style={{ height: "36px" }}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-[11px]">Obteniendo ubicación...</span>
+              </>
+            ) : (
+              <>
+                <Navigation className="h-4 w-4" />
+                <span className="text-[11px] font-medium">
+                  {captured && disabled
+                    ? "Ubicación ya registrada"
+                    : captured
+                      ? "Volver a establecer mi ubicación"
+                      : "Establecer mi ubicación"}
+                </span>
+              </>
+            )}
+          </button>
+          {captured && disabled && (
+            <p className="mb-3 text-[10px] text-amber-600 dark:text-amber-400">
+              Ya se registró tu ubicación. El liquidador debe habilitar una nueva captura.
+            </p>
           )}
-        </button>
+        </>
       )}
 
       {/* Indicador de captura automática en curso (presencial) */}
