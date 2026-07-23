@@ -1,50 +1,42 @@
-feat: geolocalizacion de inspecciones (presencial + remota)
+feat: geolocalizacion completa - mapa evidencia + foto + bloqueo inicio
 
-Funcionalidad de geolocalización para inspecciones:
-- Presencial (onsite): el inspector captura su ubicación en el lugar
-- Remota (remote): el asegurado captura su ubicación via magic link
-- Coteja contra la dirección declarada del siniestro (haversine)
-- Umbral: 500 metros (warning no bloqueante si supera)
-- Mapa interactivo con Leaflet + OpenStreetMap
-- Marcadores: azul (capturada), rojo (dirección declarada)
-- Estado: pending → verified / out_of_range / failed
-- Imagen del mapa via Static Map API (configurable: osm/google/mapbox)
+Funcionalidades completadas:
 
-Migración 201:
-- claims: claim_latitude, claim_longitude (dirección geocodificada)
-- inspection_sessions: geo_latitude, geo_longitude, geo_captured_at,
-  geo_captured_by, geo_distance_meters, geo_status, geo_map_url
-- Catálogo geo_status: pending, verified, out_of_range, failed
+1. Geocodificacion automatica de direcciones de claims:
+   - createClaim: geocodifica en background al crear
+   - updateClaim: re-geocodifica si la direccion cambia
+   - createClaimMinimal: geocodifica en background al crear
+   - Script batch: scripts/geocode-claims.cjs (geocodifica claims existentes)
+   - Usa Nominatim (OpenStreetMap) con direccion completa (calle + comuna + ciudad + region + pais)
 
-src/lib/geo.ts:
-- haversine(a, b) → distancia en metros
-- validateGeoProximity(captured, claim, threshold) → resultado validación
-- geocodeAddress(address) → lat/lng (Nominatim/OpenStreetMap)
-- reverseGeocode(lat, lng) → dirección
-- generateStaticMapUrl(lat, lng) → URL imagen mapa (osm/google/mapbox)
-- buildClaimAddress(claim) → dirección completa
+2. Guardar mapa estatico como primera evidencia:
+   - API: /api/inspection/geo/save-map (descarga imagen + sube a R2 + inserta evidencia)
+   - GeoCapture: guarda el mapa automaticamente al capturar la geo
+   - metadata.source = "geo_map" para distinguirlo
+   - Muestra link a la evidencia guardada
 
-Componente GeoCapture:
-- Mapa Leaflet con marcadores (capturada + dirección declarada)
-- Botón "Capturar mi ubicación" (geolocation API)
-- Validación de cercanía (500m) con badge de estado
-- Warning no bloqueante si está fuera de rango
-- Callback onCapture con coords, distance, status, mapUrl
+3. Capturar foto del lugar (primera imagen del siniestro):
+   - Boton "Tomar foto del lugar" en GeoCapture
+   - Usa <input type="file" accept="image/*" capture="environment"> (camara del movil)
+   - Sube via API existente /api/inspection/evidences/upload
+   - Pasa las coords capturadas como lat/lng
+   - Muestra miniatura de la foto subida
 
-Integración:
-- Inspector (presencial): tab Resumen, GeoCapture con inspectionType=onsite
-- Cliente (remota): magic link /inspection/[token], tab Resumen,
-  GeoCapture con inspectionType=remote
-- API PATCH /api/inspection/live/[token] para guardar geo desde magic link
+4. GeoCapture como primera funcionalidad (presencial):
+   - Boton "Iniciar inspeccion" deshabilitado si geo_status es pending/failed
+   - Banner de aviso amarillo: "Para iniciar debes capturar tu geolocalizacion"
+   - Solo aplica a inspecciones presenciales (onsite)
+   - out_of_range NO bloquea (warning no bloqueante)
 
-Dependencias:
-- leaflet + react-leaflet + @types/leaflet
-- CSS de leaflet importado en globals.css
+5. Panel de info geo en Resumen:
+   - Inspector (presencial): GeoCapture en tab Resumen con mapa + coords + distancia + estado
+   - Cliente (remota): GeoCapture en magic link con misma info
+   - Miniaturas de evidencias (mapa + foto) con link a full-size
 
-Configuración (env vars opcionales):
-- NEXT_PUBLIC_MAP_PROVIDER: "osm" (default) | "google" | "mapbox"
-- NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: para Google Static Maps
-- NEXT_PUBLIC_MAPBOX_TOKEN: para Mapbox Static API
+Props nuevos en GeoCapture:
+- sessionId: para guardar mapa/foto como evidencia
+- capturedBy: ID del usuario que captura
+- evidenceUploadUrl: URL de la API de subida (default: /api/inspection/evidences/upload)
 
 Generated with [Devin](https://devin.ai)
 

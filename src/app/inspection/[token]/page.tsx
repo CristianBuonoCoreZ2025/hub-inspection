@@ -500,6 +500,7 @@ function ResumenTab({ session }: { session: LiveSession }) {
       <GeoCapture
         title="Verificación de Ubicación"
         inspectionType="remote"
+        sessionId={session.id}
         claimCoords={claim?.claim_latitude && claim?.claim_longitude ? { lat: claim.claim_latitude, lng: claim.claim_longitude } : null}
         claimAddress={claim?.claim_address || undefined}
         initialCoords={session.geo_latitude && session.geo_longitude ? { lat: session.geo_latitude, lng: session.geo_longitude } : null}

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { MapPin, Navigation, CheckCircle2, AlertTriangle, XCircle, Loader2, Camera } from "lucide-react";
+import { MapPin, Navigation, CheckCircle2, AlertTriangle, XCircle, Loader2, Camera, ImageIcon } from "lucide-react";
 import {
   GEO_THRESHOLD_METERS,
   validateGeoProximity,
@@ -68,6 +68,18 @@ interface GeoCaptureProps {
   disabled?: boolean;
   /** Título del componente */
   title?: string;
+  /** ID de la sesión (para guardar mapa como evidencia) */
+  sessionId?: string;
+  /** ID del usuario que captura (para metadata de evidencia) */
+  capturedBy?: string;
+  /** URL de la API para subir evidencias (default: /api/inspection/evidences/upload) */
+  evidenceUploadUrl?: string;
+}
+
+interface SavedEvidence {
+  id: string;
+  url: string;
+  description: string;
 }
 
 export function GeoCapture({
@@ -80,6 +92,9 @@ export function GeoCapture({
   onCapture,
   disabled,
   title,
+  sessionId,
+  capturedBy,
+  evidenceUploadUrl = "/api/inspection/evidences/upload",
 }: GeoCaptureProps) {
   const [captured, setCaptured] = React.useState<LatLng | null>(initialCoords || null);
   const [validation, setValidation] = React.useState<GeoValidationResult | null>(
@@ -89,6 +104,92 @@ export function GeoCapture({
   );
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [savingMap, setSavingMap] = React.useState(false);
+  const [mapEvidence, setMapEvidence] = React.useState<SavedEvidence | null>(null);
+  const [photoUploading, setPhotoUploading] = React.useState(false);
+  const [photoEvidence, setPhotoEvidence] = React.useState<SavedEvidence | null>(null);
+  const [photoError, setPhotoError] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const lastCapturedRef = React.useRef<{ coords: LatLng; mapUrl: string } | null>(null);
+
+  // Guardar el mapa estático como evidencia (primera evidencia del lugar)
+  const saveMapAsEvidence = React.useCallback(
+    async (sid: string, coords: LatLng, mapUrl: string, by?: string) => {
+      setSavingMap(true);
+      try {
+        const res = await fetch("/api/inspection/geo/save-map", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: sid,
+            lat: coords.lat,
+            lng: coords.lng,
+            mapUrl,
+            capturedBy: by,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.evidence) {
+          setMapEvidence({
+            id: data.evidence.id,
+            url: data.evidence.url,
+            description: data.evidence.description,
+          });
+        }
+      } catch (err) {
+        console.warn("[GeoCapture] No se pudo guardar el mapa como evidencia:", err);
+      } finally {
+        setSavingMap(false);
+      }
+    },
+    [],
+  );
+
+  // Subir foto del lugar como evidencia
+  const handlePhotoUpload = React.useCallback(
+    async (file: File) => {
+      if (!sessionId || !lastCapturedRef.current) {
+        setPhotoError("Primero debes capturar tu geolocalización.");
+        return;
+      }
+      setPhotoUploading(true);
+      setPhotoError(null);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("sessionId", sessionId);
+        formData.append("lat", String(lastCapturedRef.current.coords.lat));
+        formData.append("lng", String(lastCapturedRef.current.coords.lng));
+        formData.append("originalName", file.name);
+
+        const res = await fetch(evidenceUploadUrl, {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.evidence) {
+          setPhotoEvidence({
+            id: data.evidence.id,
+            url: data.evidence.url,
+            description: data.evidence.description,
+          });
+        }
+      } catch (err) {
+        setPhotoError(err instanceof Error ? err.message : "Error al subir la foto");
+      } finally {
+        setPhotoUploading(false);
+      }
+    },
+    [sessionId, evidenceUploadUrl],
+  );
 
   const handleCapture = React.useCallback(() => {
     if (!navigator.geolocation) {
@@ -130,6 +231,12 @@ export function GeoCapture({
           mapUrl: url,
         });
         setLoading(false);
+        lastCapturedRef.current = { coords, mapUrl: url };
+
+        // Guardar el mapa como evidencia automáticamente (si hay sessionId)
+        if (sessionId) {
+          void saveMapAsEvidence(sessionId, coords, url, capturedBy);
+        }
       },
       (err) => {
         setError(
@@ -145,7 +252,16 @@ export function GeoCapture({
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
-  }, [claimCoords, onCapture]);
+  }, [claimCoords, onCapture, sessionId, capturedBy, saveMapAsEvidence]);
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      void handlePhotoUpload(file);
+    }
+    // Reset para permitir subir la misma foto otra vez
+    e.target.value = "";
+  };
 
   const statusConfig = {
     pending: { icon: MapPin, color: "text-muted-foreground", bg: "bg-muted/40", label: "Pendiente" },
@@ -297,6 +413,117 @@ export function GeoCapture({
         <div className="mt-2 flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
           <Camera className="h-3 w-3" />
           {captured.lat.toFixed(6)}, {captured.lng.toFixed(6)}
+        </div>
+      )}
+
+      {/* Estado del guardado del mapa como evidencia */}
+      {captured && sessionId && (
+        <div className="mt-2 flex items-center gap-2 text-[10px]">
+          {savingMap ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+              <span className="text-muted-foreground">Guardando mapa como evidencia...</span>
+            </>
+          ) : mapEvidence ? (
+            <>
+              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+              <span className="text-emerald-600">Mapa guardado: </span>
+              <a
+                href={mapEvidence.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline hover:no-underline"
+              >
+                {mapEvidence.description}
+              </a>
+            </>
+          ) : (
+            <span className="text-muted-foreground">El mapa se guardará automáticamente como evidencia.</span>
+          )}
+        </div>
+      )}
+
+      {/* Botón para capturar foto del lugar (primera evidencia fotográfica) */}
+      {captured && sessionId && !disabled && (
+        <div className="mt-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={onFileChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            disabled={photoUploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="liquid-date-picker flex w-full items-center justify-center gap-2"
+            style={{ height: "36px" }}
+          >
+            {photoUploading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-[11px]">Subiendo foto...</span>
+              </>
+            ) : (
+              <>
+                <Camera className="h-4 w-4" />
+                <span className="text-[11px] font-medium">
+                  {photoEvidence ? "Tomar otra foto del lugar" : "Tomar foto del lugar"}
+                </span>
+              </>
+            )}
+          </button>
+          {photoError && (
+            <p className="text-[10px] text-rose-600 mt-1">{photoError}</p>
+          )}
+        </div>
+      )}
+
+      {/* Miniaturas de evidencias guardadas */}
+      {(mapEvidence || photoEvidence) && (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {mapEvidence && (
+            <a
+              href={mapEvidence.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative rounded-lg overflow-hidden border border-border/40 hover:border-primary/40 transition-colors"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- URL dinámica de R2 */}
+              <img
+                src={mapEvidence.url}
+                alt="Mapa del lugar"
+                className="w-full h-24 object-cover"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end p-1">
+                <span className="text-[9px] text-white bg-black/60 rounded px-1 py-0.5 flex items-center gap-1">
+                  <ImageIcon className="h-2.5 w-2.5" /> Mapa
+                </span>
+              </div>
+            </a>
+          )}
+          {photoEvidence && (
+            <a
+              href={photoEvidence.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative rounded-lg overflow-hidden border border-border/40 hover:border-primary/40 transition-colors"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- URL dinámica de R2 */}
+              <img
+                src={photoEvidence.url}
+                alt="Foto del lugar"
+                className="w-full h-24 object-cover"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end p-1">
+                <span className="text-[9px] text-white bg-black/60 rounded px-1 py-0.5 flex items-center gap-1">
+                  <Camera className="h-2.5 w-2.5" /> Foto
+                </span>
+              </div>
+            </a>
+          )}
         </div>
       )}
     </div>

@@ -31,6 +31,7 @@ import {
  CalendarClock,
  Video,
  Play,
+ AlertTriangle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -696,6 +697,19 @@ export default function InspectionDetailPage() {
  </div>
  </div>
 
+ {/* Aviso: capturar geo antes de iniciar (presencial) */}
+ {session.inspection_type === "onsite" && session.status === "scheduled" &&
+ (!session.geo_status || session.geo_status === "pending" || session.geo_status === "failed") && (
+ <div className="app-panel border-amber-500/30 bg-amber-500/5">
+ <div className="flex items-center gap-2">
+ <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+ <p className="text-[11px] text-amber-700 dark:text-amber-400">
+ Para iniciar la inspección presencial, primero debes <strong>capturar tu geolocalización</strong> en el lugar del siniestro (ver panel más abajo).
+ </p>
+ </div>
+ </div>
+ )}
+
  {/* Estado de la Sesion + Acciones */}
  <div className="app-panel">
  <div className="flex items-start justify-between gap-4">
@@ -733,7 +747,15 @@ export default function InspectionDetailPage() {
  <Button
  size="sm"
  className="pg-btn-platinum h-8 w-8 p-0"
- title="Iniciar inspección"
+ title={
+ session.inspection_type === "onsite" && (!session.geo_status || session.geo_status === "pending" || session.geo_status === "failed")
+ ? "Primero debes capturar tu geolocalización en el lugar"
+ : "Iniciar inspección"
+ }
+ disabled={
+ session.inspection_type === "onsite" &&
+ (!session.geo_status || session.geo_status === "pending" || session.geo_status === "failed")
+ }
  onClick={() => {
  const now = new Date();
  const dateStr = now.toISOString().split("T")[0];
@@ -785,6 +807,8 @@ export default function InspectionDetailPage() {
  <GeoCapture
  title="Geolocalización del Lugar del Siniestro"
  inspectionType="onsite"
+ sessionId={session.id}
+ capturedBy={profile?.id}
  claimCoords={claim?.claim_latitude && claim?.claim_longitude ? { lat: claim.claim_latitude, lng: claim.claim_longitude } : null}
  claimAddress={claim?.claim_address || undefined}
  initialCoords={session.geo_latitude && session.geo_longitude ? { lat: session.geo_latitude, lng: session.geo_longitude } : null}

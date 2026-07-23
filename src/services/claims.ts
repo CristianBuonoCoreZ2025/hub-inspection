@@ -1,5 +1,6 @@
 import { fetchAll, fetchById, insertRow, updateRow, deleteRow } from "@/lib/supabase/db";
 import type { Claim, ClaimInput, ClaimsParticipant } from "@/types";
+import { geocodeAddress } from "@/lib/geo";
 
 const CLAIM_SELECT =
   "id, claim_number, policy_number, policy_id, claim_date, status_id, report_date, assignment_date, client_reference, company_report_number, liquidation_number, is_special_claim, summary, event_id, internal_number, notes, company_id, assigned_adjuster_id, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, claim_cause_id, claim_type_id, business_line_id, insurance_product_id, country_id, region_id, city_id, commune_id, construction_type_id, destination_housing_id, damage_classification_id, habitability_id, type_id, currency_id, service_type_id, billing_type_id, claim_address, owner_same_as_insured, policy_item, policy_start_date, policy_end_date, policy_amount, policy_premium, recovery_type_legal, recovery_type_material, recovery_comments, broker_executive, created_at, updated_at, updated_by, disabled, disabled_reason, disabled_at, disabled_by, reopened_at, reopened_by, reopened_reason, inspection_sessions:inspection_sessions(id, claim_action_id, status, inspection_number, inspection_type, scheduled_at, started_at, ended_at, created_at), status:lookup_catalog!claims_status_id_fkey(id, category, code, name), assigned_adjuster:profiles!claims_assigned_adjuster_id_fkey(id, full_name, email), adjuster:profiles!claims_adjuster_id_fkey(id, full_name, email), inspector:profiles!claims_inspector_id_fkey(id, full_name, email), auditor:profiles!claims_auditor_id_fkey(id, full_name, email), dispatcher:profiles!claims_dispatcher_id_fkey(id, full_name, email), assistant:profiles!claims_assistant_id_fkey(id, full_name, email), broker:brokers!claims_broker_id_fkey(id, name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name), policy:policies!claims_policy_id_fkey(id, policy_number, policy_name, status, currency), currency:currencies!claims_currency_id_fkey(id, code, name, symbol, decimals), country:countries!claims_country_id_fkey(id, name), region:regions!claims_region_id_fkey(id, name), city:cities!claims_city_id_fkey(id, name), commune:communes!claims_commune_id_fkey(id, name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(id, name)";
@@ -297,7 +298,31 @@ function buildClaimObject(input: Partial<ClaimInput> & { company_id?: string }):
 }
 
 export async function createClaim(input: ClaimInput & { company_id: string }) {
-  return insertRow<Claim>("claims", { ...buildClaimObject(input) }, CLAIM_SELECT);
+  const claim = await insertRow<Claim>("claims", { ...buildClaimObject(input) }, CLAIM_SELECT);
+  // Geocodificar la dirección en background (no bloquea la creación)
+  if (claim && input.address) {
+    void geocodeAndSaveClaimAddress(claim.id, input.address);
+  }
+  return claim;
+}
+
+/**
+ * Geocodifica la dirección de un claim y guarda las coordenadas.
+ * Se ejecuta en background (fire-and-forget) — no bloquea ni falla la operación principal.
+ */
+async function geocodeAndSaveClaimAddress(claimId: string, address: string): Promise<void> {
+  try {
+    const coords = await geocodeAddress(address);
+    if (coords) {
+      await updateRow<Claim>("claims", claimId, {
+        claim_latitude: coords.lat,
+        claim_longitude: coords.lng,
+      }, "id");
+      console.log(`[claims] Geocodificado claim ${claimId}: ${coords.lat}, ${coords.lng}`);
+    }
+  } catch (err) {
+    console.warn(`[claims] No se pudo geocodificar claim ${claimId}:`, err);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -417,6 +442,11 @@ export async function createClaimMinimal(
     company_id: input.company_id,
   }, CLAIM_SELECT);
 
+  // Geocodificar la dirección del siniestro en background
+  if (claim && claimAddress.claimAddress) {
+    void geocodeAndSaveClaimAddress(claim.id, claimAddress.claimAddress);
+  }
+
   // 2. Crear participant insured
   await createClaimParticipant({
     claim_id: claim.id,
@@ -487,7 +517,14 @@ export async function updateClaim(id: string, input: Partial<ClaimInput>) {
     }
   }
 
-  return updateRow<Claim>("claims", id, set, CLAIM_SELECT);
+  const updated = await updateRow<Claim>("claims", id, set, CLAIM_SELECT);
+
+  // Re-geocodificar si la dirección cambió (en background)
+  if (input.address !== undefined) {
+    void geocodeAndSaveClaimAddress(id, input.address);
+  }
+
+  return updated;
 }
 
 /**
