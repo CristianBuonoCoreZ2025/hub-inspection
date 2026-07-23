@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, createAdminClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 
 /**
  * POST /api/inspection/geo/enable-recapture
@@ -20,7 +21,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "sessionId requerido" }, { status: 400 });
     }
 
-    // Verificar que el usuario pertenece a la misma compañía de la sesión (RLS no cubre auth externo)
     const admin = createAdminClient();
     const { data: session } = await admin
       .from("inspection_sessions")
@@ -36,18 +36,30 @@ export async function POST(req: NextRequest) {
       .select("company_id, role")
       .eq("id", user.id)
       .maybeSingle();
-    if (!profile) {
-      return NextResponse.json({ error: "No autorizado: sin perfil" }, { status: 403 });
-    }
+
     const claimData = Array.isArray(session.claim) ? session.claim[0] : session.claim;
     const claimCompanyId = (claimData as { company_id?: string } | undefined)?.company_id;
     const isInternal = (profile as { role?: string } | null)?.role === "internal";
-    const isAuthorized = isInternal || !claimCompanyId || claimCompanyId === profile.company_id;
+    const isAuthorized = isInternal || !profile?.company_id || claimCompanyId === profile?.company_id;
+
+    logger.info("Habilitar recaptura geo", {
+      component: "enable-recapture",
+      action: "authorize",
+      metadata: {
+        userId: user.id,
+        sessionId,
+        claimCompanyId,
+        profileCompanyId: profile?.company_id,
+        role: profile?.role,
+        isAuthorized,
+      },
+    });
+
+    if (!profile) {
+      return NextResponse.json({ error: "No autorizado: sin perfil" }, { status: 403 });
+    }
     if (!isAuthorized) {
-      return NextResponse.json(
-        { error: "No autorizado", debug: { profileCompanyId: profile.company_id, claimCompanyId, role: profile.role } },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
     const { data: updated, error } = await admin
@@ -61,6 +73,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ session: updated });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error al habilitar recaptura";
+    logger.error("Error al habilitar recaptura", err instanceof Error ? err : new Error(message), {
+      component: "enable-recapture",
+      action: "error",
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
