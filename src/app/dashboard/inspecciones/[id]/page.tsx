@@ -336,6 +336,9 @@ export default function InspectionDetailPage() {
  broker?: { name: string } | null;
  advisor?: { name: string } | null;
  claim_cause?: { name: string } | null;
+ country?: { name: string } | null;
+ region?: { name: string } | null;
+ city?: { name: string } | null;
  commune?: { name: string } | null;
  claims_participants?: Array<{ type: string; full_name: string | null; first_name: string | null; last_name: string | null; email: string | null; phone: string | null; cell_phone: string | null; rut?: string | null; address?: string | null; person_type?: string | null; country?: string | null; region?: string | null; city?: string | null; commune?: string | null }>;
  };
@@ -571,49 +574,82 @@ export default function InspectionDetailPage() {
  </div>
  </div>
 
- {/* Contacto del agendamiento (datos guardados al agendar) */}
+ {/* Datos del Siniestro — contacto y dirección del claim (NO se tocan) */}
  <div className="app-panel">
  <h3 className="app-section-title">
- Contacto de Inspección
+ Datos del Siniestro
  </h3>
  <div className="app-data-grid">
  <div>
  <span className="app-data-label">Nombre contacto</span>
- <p className="font-medium">{session.interviewed_name || contactParticipant?.full_name || "—"}</p>
+ <p className="font-medium">{contactParticipant?.full_name || insuredParticipant?.full_name || "—"}</p>
  </div>
  <div>
  <span className="app-data-label">Email</span>
- <p className="font-medium">{session.interviewed_email || contactParticipant?.email || insuredParticipant?.email || "—"}</p>
+ <p className="font-medium">{contactParticipant?.email || insuredParticipant?.email || "—"}</p>
  </div>
  <div>
  <span className="app-data-label">Teléfono</span>
  <p className="font-medium">{contactParticipant?.cell_phone || contactParticipant?.phone || insuredParticipant?.cell_phone || insuredParticipant?.phone || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Lugar inspección</span>
+ <span className="app-data-label">Dirección del Siniestro</span>
  <p className="font-medium">{claim?.claim_address || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">País</span>
+ <p className="font-medium">{claim?.country?.name || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Región</span>
+ <p className="font-medium">{claim?.region?.name || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Ciudad</span>
+ <p className="font-medium">{claim?.city?.name || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Comuna</span>
+ <p className="font-medium">{claim?.commune?.name || "—"}</p>
+ </div>
+ </div>
+ </div>
+
+ {/* Datos de la Coordinación — anexos capturados al agendar (CIN) */}
+ <div className="app-panel">
+ <h3 className="app-section-title">
+ Datos de la Coordinación
+ </h3>
+ <div className="app-data-grid">
+ <div>
+ <span className="app-data-label">Tipo de Inspección</span>
+ <p className="font-medium">{session.inspection_type === "remote" ? "Remota" : session.inspection_type === "onsite" ? "Presencial" : "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Fecha Agendada</span>
+ <p className="font-medium">{session.scheduled_at ? formatDateTime(session.scheduled_at) : "—"}</p>
  </div>
  {coordAclaracionDireccion && (
  <div className="col-span-2 md:col-span-3">
- <span className="app-data-label">Aclaración Dirección (de Coordinación)</span>
+ <span className="app-data-label">Aclaración Dirección</span>
  <p className="font-medium whitespace-pre-wrap">{coordAclaracionDireccion}</p>
  </div>
  )}
  {coordOtrosContactos && (
  <div className="col-span-2 md:col-span-3">
- <span className="app-data-label">Otros Contactos (de Coordinación)</span>
+ <span className="app-data-label">Otros Contactos</span>
  <p className="font-medium whitespace-pre-wrap">{coordOtrosContactos}</p>
  </div>
  )}
  {coordComentarios && (
  <div className="col-span-2 md:col-span-3">
- <span className="app-data-label">Comentarios (de Coordinación)</span>
+ <span className="app-data-label">Comentarios</span>
  <p className="font-medium whitespace-pre-wrap">{coordComentarios}</p>
  </div>
  )}
  {session.inspector_observations && (
  <div className="col-span-2 md:col-span-3">
- <span className="app-data-label">Comentarios del agendamiento</span>
+ <span className="app-data-label">Observaciones del Inspector</span>
  <p className="font-medium whitespace-pre-wrap mt-0.5">{session.inspector_observations}</p>
  </div>
  )}
