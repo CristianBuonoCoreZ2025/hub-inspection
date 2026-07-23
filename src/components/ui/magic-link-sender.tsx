@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, MessageCircle, Mail, Send, Phone, RefreshCw, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Copy, MessageCircle, Mail, Send, Phone, RefreshCw, Clock, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { refreshMagicLink } from "@/services/inspections";
@@ -132,8 +132,6 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
     }
   };
 
-  const btnClass = "pg-btn-platinum h-7 text-[11px] gap-1.5 shrink-0";
-
   const expiryConfig = {
     valid: { icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" },
     expiring: { icon: Clock, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
@@ -178,31 +176,37 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
       {/* Botones de envío */}
       <div className="flex flex-wrap items-center gap-2">
         <Button
-          className={btnClass}
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 w-7 p-0"
           onClick={sendWhatsAppMe}
           disabled={!contactPhone}
           title={!contactPhone ? "No hay teléfono" : "Abrir WhatsApp con mensaje pre-llenado"}
         >
           <MessageCircle className="h-3.5 w-3.5" />
-          WhatsApp
         </Button>
         <Button
-          className={btnClass}
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 w-7 p-0"
           onClick={sendWhatsAppCloud}
           disabled={!contactPhone || sending === "whatsapp"}
           title={!contactPhone ? "No hay teléfono" : "Enviar por WhatsApp Cloud API"}
         >
-          <Send className="h-3.5 w-3.5" />
-          {sending === "whatsapp" ? "Enviando..." : "Enviar WA"}
+          {sending === "whatsapp" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
         </Button>
         <Button
-          className={btnClass}
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 w-7 p-0"
           onClick={sendEmail}
           disabled={!contactEmail || sending === "email"}
           title={!contactEmail ? "No hay email" : "Enviar por email"}
         >
-          <Mail className="h-3.5 w-3.5" />
-          {sending === "email" ? "Enviando..." : "Email"}
+          {sending === "email" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
         </Button>
       </div>
 
