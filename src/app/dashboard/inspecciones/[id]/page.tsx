@@ -504,10 +504,10 @@ export default function InspectionDetailPage() {
  {/* ── TAB: RESUMEN ── */}
  {activeTab === "resumen" && (
  <div className="mt-4 app-stack">
- {/* Datos del Siniestro */}
+ {/* Información General */}
  <div className="app-panel">
  <h3 className="app-section-title">
- Datos del Siniestro
+ Información General
  </h3>
  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
  <div>

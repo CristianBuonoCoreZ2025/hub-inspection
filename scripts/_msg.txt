@@ -1,14 +1,9 @@
-fix: mejorar visualización de logos corporativos en Empresas
+fix: renombrar primera sección en resumen de inspección
 
-Los logos corporativos se recortaban en un cuadrado pequeño con
-object-cover. Ahora se muestran completos y legibles.
-
-Cambios en src/app/dashboard/companies/page.tsx:
-- Modal de empresa: preview del logo pasa a h-20 w-auto max-w-[220px]
-  con object-contain, fondo blanco y padding para logos con transparencia
-- Tabla de empresas: logo pasa a h-10 w-auto max-w-[100px] con
-  object-contain y fondo blanco
-- Mantenido el placeholder con iniciales cuando no hay logo
+En src/app/dashboard/inspecciones/[id]/page.tsx, la primera sección del
+Resumen de inspección tenía el mismo título "Datos del Siniestro" que una
+sección posterior. Se renombra la primera a "Información General" para
+evitar confusión.
 
 Generado con [Devin](https://devin.ai)
 
