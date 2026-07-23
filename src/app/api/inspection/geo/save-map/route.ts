@@ -101,13 +101,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ evidence });
   } catch (err) {
-    const error = err as Error;
+    const error = err instanceof Error ? err : new Error(String(err));
     logger.error("API /api/inspection/geo/save-map error", error, {
       component: "geo-save-map",
       action: "save.map.error",
     });
     return NextResponse.json(
-      { error: "No se pudo guardar el mapa", detail: error.message },
+      { error: "No se pudo guardar el mapa", detail: error.message || String(err) },
       { status: 500 }
     );
   }
