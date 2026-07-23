@@ -108,7 +108,32 @@ export function GeoCapture({
     },
     staleTime: 5 * 60 * 1000,
   });
+  const primary = mapProviders?.providers[0] || "osm";
+  const secondary = mapProviders?.providers[1] || "none";
   const mapboxToken = mapProviders?.tokens?.mapbox || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const [failedPrimary, setFailedPrimary] = React.useState(false);
+  const tileErrorRef = React.useRef(0);
+  const activeProvider: "osm" | "mapbox" = failedPrimary && secondary !== "none" ? secondary : primary;
+
+  const getTileUrl = React.useCallback(
+    (provider: "osm" | "mapbox") => {
+      if (provider === "mapbox" && mapboxToken) {
+        return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`;
+      }
+      return "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    },
+    [mapboxToken],
+  );
+
+  const getAttribution = React.useCallback(
+    (provider: "osm" | "mapbox") => {
+      if (provider === "mapbox" && mapboxToken) {
+        return '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+      }
+      return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+    },
+    [mapboxToken],
+  );
 
   const [captured, setCaptured] = React.useState<LatLng | null>(initialCoords || null);
   const [validation, setValidation] = React.useState<GeoValidationResult | null>(
@@ -352,16 +377,17 @@ export function GeoCapture({
             scrollWheelZoom={false}
           >
             <TileLayer
-              url={
-                mapboxToken
-                  ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`
-                  : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-              }
-              attribution={
-                mapboxToken
-                  ? '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              }
+              url={getTileUrl(activeProvider)}
+              attribution={getAttribution(activeProvider)}
+              eventHandlers={{
+                tileerror: () => {
+                  if (activeProvider !== primary || secondary === "none" || failedPrimary) return;
+                  tileErrorRef.current += 1;
+                  if (tileErrorRef.current > 4) {
+                    setFailedPrimary(true);
+                  }
+                },
+              }}
             />
             <Marker position={[captured.lat, captured.lng]} icon={blueIcon}>
               <Popup>
