@@ -424,7 +424,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  {/* ─── Datos de la gestión (entidades de acción) ─── */}
  {actionEntities.length > 0 && (
  <section className="app-panel p-2.5">
- <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-2.5">
+ <div className="grid grid-cols-60 gap-2.5">
  {actionEntities.map((field) => {
  if (!isFieldVisible(field, values)) return null;
  return (
@@ -440,7 +440,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  {/* ─── Otras entidades simples (cards del siniestro, informativos) ─── */}
  {otherEntities.length > 0 && (
  <section className="app-panel p-2.5">
- <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-2.5">
+ <div className="grid grid-cols-60 gap-2.5">
  {otherEntities.map((field) => {
  if (!isFieldVisible(field, values)) return null;
  return (
@@ -456,7 +456,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  {/* ─── Formulario (campos propios) ─── */}
  {filteredOwnFields.length > 0 && (
  <section className="app-panel p-2.5">
- <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-2.5">
+ <div className="grid grid-cols-60 gap-2.5">
  {filteredOwnFields.map((field) => {
  // Visibilidad condicional genérica via visibilityRule
  if (!isFieldVisible(field, values)) return null;
@@ -1107,7 +1107,7 @@ function LevelCard({
  {canReject && showRejectBox && (
  <div className="flex flex-col gap-1 pt-0.5">
  <textarea
- className="text-[9px] rounded border border-rose-300 dark:border-rose-700 bg-background px-1.5 py-1 text-foreground min-h-[40px] resize-none focus:outline-none focus:ring-1 focus:ring-rose-400"
+ className="text-[9px] rounded border border-rose-300 dark:border-rose-700 bg-background px-1.5 py-1 text-foreground min-h-10 resize-none focus:outline-none focus:ring-1 focus:ring-rose-400"
  placeholder="Motivo de rechazo..."
  value={rejectComment}
  onChange={(e) => setRejectComment(e.target.value)}
@@ -1471,7 +1471,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  <>
  <div className="fixed inset-0 z-60" onClick={() => setComboOpen(false)} />
  <div
- className="fixed z-70 rounded-md border border-border bg-popover shadow-lg max-h-[280px] overflow-hidden flex flex-col"
+ className="fixed z-70 rounded-md border border-border bg-popover shadow-lg max-h-70 overflow-hidden flex flex-col"
  style={{ top: comboPos.top, left: comboPos.left, width: comboPos.width }}
  >
  <div className="p-2 border-b">
@@ -1544,9 +1544,9 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  <thead className="bg-muted/50">
  <tr>
  <th className="px-2 py-1.5 text-left font-medium">Cobertura</th>
- <th className="px-2 py-1.5 text-right font-medium w-[100px]">Asegurado</th>
- <th className="px-2 py-1.5 text-right font-medium w-[100px]">Reclamado</th>
- <th className="px-2 py-1.5 text-right font-medium w-[90px]">Deducible</th>
+ <th className="px-2 py-1.5 text-right font-medium w-25">Asegurado</th>
+ <th className="px-2 py-1.5 text-right font-medium w-25">Reclamado</th>
+ <th className="px-2 py-1.5 text-right font-medium w-22.5">Deducible</th>
  {canEditCoverages && <th className="w-[32px]" />}
  </tr>
  </thead>
@@ -1566,7 +1566,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  {canEditCoverages ? (
  <Input
  type="number"
- className="app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto"
+ className="app-input h-7 text-[11px] text-right font-mono w-25 ml-auto"
  value={c.insured_amount ?? 0}
  onChange={(e) => updateCoverageMut.mutate({
  id: c.id,
@@ -2882,8 +2882,8 @@ function ReserveEditorForm({
  <th className="px-2 py-1.5 text-left font-medium">Cobertura</th>
  <th className="px-2 py-1.5 text-right font-medium w-[110px]">Reclamado</th>
  <th className="px-2 py-1.5 text-right font-medium w-[110px]">Reserva</th>
- <th className="px-2 py-1.5 text-right font-medium w-[100px]">Deducible</th>
- <th className="px-2 py-1.5 text-right font-medium w-[100px]">Neta</th>
+ <th className="px-2 py-1.5 text-right font-medium w-25">Deducible</th>
+ <th className="px-2 py-1.5 text-right font-medium w-25">Neta</th>
  </tr>
  </thead>
  <tbody>
@@ -2907,7 +2907,7 @@ function ReserveEditorForm({
  <Input
  type="text"
  inputMode="decimal"
- className={`app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto ${rowErrors[idx].claimed ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+ className={`app-input h-7 text-[11px] text-right font-mono w-25 ml-auto ${rowErrors[idx].claimed ? "border-red-500 focus-visible:ring-red-500" : ""}`}
  value={row.claimed}
  onChange={(e) => updateRow(idx, "claimed", parseNum(e.target.value))}
  title="El reclamado debe ser mayor o igual que 0"
@@ -2921,7 +2921,7 @@ function ReserveEditorForm({
  <Input
  type="text"
  inputMode="decimal"
- className={`app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto ${rowErrors[idx].reserved ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+ className={`app-input h-7 text-[11px] text-right font-mono w-25 ml-auto ${rowErrors[idx].reserved ? "border-red-500 focus-visible:ring-red-500" : ""}`}
  value={row.reserved}
  onChange={(e) => updateRow(idx, "reserved", parseNum(e.target.value))}
  title="La reserva no puede ser mayor que el reclamado"
@@ -3241,11 +3241,11 @@ function AdjustmentEditorForm({
  <thead className="bg-muted/50">
  <tr>
  <th className="px-2 py-1.5 text-left font-medium">Cobertura</th>
- <th className="px-2 py-1.5 text-right font-medium w-[100px]">Reservado</th>
+ <th className="px-2 py-1.5 text-right font-medium w-25">Reservado</th>
  <th className="px-2 py-1.5 text-right font-medium w-[90px]">Deducible</th>
  <th className="px-2 py-1.5 text-right font-medium w-[110px]">Ajustado</th>
- <th className="px-2 py-1.5 text-right font-medium w-[100px]">Ded. Ajuste</th>
- <th className="px-2 py-1.5 text-right font-medium w-[100px]">Final</th>
+ <th className="px-2 py-1.5 text-right font-medium w-25">Ded. Ajuste</th>
+ <th className="px-2 py-1.5 text-right font-medium w-25">Final</th>
  <th className="px-2 py-1.5 text-left font-medium w-[180px]">Notas Ajuste</th>
  </tr>
  </thead>
@@ -3271,7 +3271,7 @@ function AdjustmentEditorForm({
  <Input
  type="text"
  inputMode="decimal"
- className="app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto"
+ className="app-input h-7 text-[11px] text-right font-mono w-25 ml-auto"
  value={row.adjusted_amount}
  onChange={(e) => updateRow(idx, "adjusted_amount", parseNum(e.target.value))}
  />

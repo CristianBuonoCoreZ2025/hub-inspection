@@ -181,7 +181,7 @@ export default function CompaniesPage() {
  <img
  src={form.watch("logoUrl")}
  alt="Logo"
- className="h-20 w-auto max-w-[220px] rounded-xl border border-border/60 bg-white object-contain p-2 shadow-sm dark:bg-white"
+ className="h-20 w-auto max-w-55 rounded-xl border border-border/60 bg-white object-contain p-2 shadow-sm dark:bg-white"
  />
  ) : (
  <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-border/60 bg-muted/60 shadow-sm">
@@ -377,7 +377,7 @@ export default function CompaniesPage() {
  <img
  src={company.logo_url}
  alt={company.name}
- className="h-10 w-auto max-w-[100px] rounded-lg border border-border/60 bg-white object-contain p-1 dark:bg-white"
+ className="h-10 w-auto max-w-25 rounded-lg border border-border/60 bg-white object-contain p-1 dark:bg-white"
  />
  ) : (
  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-[11px] font-semibold text-muted-foreground">
