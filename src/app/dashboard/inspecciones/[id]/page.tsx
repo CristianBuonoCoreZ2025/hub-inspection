@@ -344,6 +344,26 @@ export default function InspectionDetailPage() {
  const insuredParticipant = participants.find((p) => p.type === "insured");
  const contactParticipant = participants.find((p) => p.type === "contact");
 
+ // ── Datos heredados de la coordinación (CIN) ──
+ // El claim_action (INS) tiene action_data.parent_action_data con los campos del CIN.
+ // Los campos tienen IDs con sufijos (coord_ubic_1, coord_cont_1, etc.).
+ const parentActionData = (session.claim_action?.action_data?.parent_action_data || {}) as Record<string, unknown>;
+ const findCoord = (prefixes: string[]): string | undefined => {
+   for (const key of Object.keys(parentActionData)) {
+     if (key.includes("recoord")) continue;
+     for (const prefix of prefixes) {
+       if (key.startsWith(prefix)) {
+         const v = parentActionData[key];
+         if (v && typeof v === "string" && v.trim()) return v;
+       }
+     }
+   }
+   return undefined;
+ };
+ const coordAclaracionDireccion = findCoord(["coord_ubic", "coord_ubicacion"]);
+ const coordOtrosContactos = findCoord(["coord_cont", "coord_contacto"]);
+ const coordComentarios = findCoord(["coord_com"]);
+
  const allTabs = [
  { id: "resumen", label: "Resumen", icon: FileText, section: "inspecciones_detalle" },
  { id: "acta", label: "Acta", icon: ClipboardCheck, section: "inspecciones_acta" },
@@ -563,12 +583,34 @@ export default function InspectionDetailPage() {
  </div>
  <div>
  <span className="app-data-label">Email</span>
- <p className="font-medium">{session.interviewed_email || contactParticipant?.email || "—"}</p>
+ <p className="font-medium">{session.interviewed_email || contactParticipant?.email || insuredParticipant?.email || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Teléfono</span>
+ <p className="font-medium">{contactParticipant?.cell_phone || contactParticipant?.phone || insuredParticipant?.cell_phone || insuredParticipant?.phone || "—"}</p>
  </div>
  <div>
  <span className="app-data-label">Lugar inspección</span>
  <p className="font-medium">{claim?.claim_address || "—"}</p>
  </div>
+ {coordAclaracionDireccion && (
+ <div className="col-span-2 md:col-span-3">
+ <span className="app-data-label">Aclaración Dirección (de Coordinación)</span>
+ <p className="font-medium whitespace-pre-wrap">{coordAclaracionDireccion}</p>
+ </div>
+ )}
+ {coordOtrosContactos && (
+ <div className="col-span-2 md:col-span-3">
+ <span className="app-data-label">Otros Contactos (de Coordinación)</span>
+ <p className="font-medium whitespace-pre-wrap">{coordOtrosContactos}</p>
+ </div>
+ )}
+ {coordComentarios && (
+ <div className="col-span-2 md:col-span-3">
+ <span className="app-data-label">Comentarios (de Coordinación)</span>
+ <p className="font-medium whitespace-pre-wrap">{coordComentarios}</p>
+ </div>
+ )}
  {session.inspector_observations && (
  <div className="col-span-2 md:col-span-3">
  <span className="app-data-label">Comentarios del agendamiento</span>

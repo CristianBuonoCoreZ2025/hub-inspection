@@ -1,11 +1,17 @@
-fix: trigger auto_create_inspection_session busca campos por prefijo
+fix: pagina de inspeccion muestra anexos del CIN (aclaracion direccion, otros contactos)
 
-- Los campos del CIN tienen IDs con sufijos (coord_type_1, coord_fecha_1, etc.)
-- El trigger buscabapor ID canonico (coord_inspection_type, coord_fecha) y no encontraba nada
-- Nueva funcion find_coord_field busca por prefijo en el JSONB
-- Excluye coord_fecha_recoord (no es la fecha de inspeccion)
-- Ahora la sesion de inspeccion se crea con tipo, fecha e inspector correctos
-- Migration 197
+- getInspectionSessionById ahora trae action_data del claim_action (INS)
+- La pagina de inspeccion extrae parent_action_data del INS
+- Busca por prefijo (coord_ubic_1, coord_cont_1, coord_com_1) como en el resto
+- Panel "Contacto de Inspeccion" ahora muestra:
+  * Nombre contacto (session.interviewed_name o contactParticipant)
+  * Email (session, contact o insured)
+  * Telefono (contact o insured)
+  * Lugar inspeccion (claim.claim_address)
+  * Aclaracion Direccion (de Coordinacion) — coord_ubic
+  * Otros Contactos (de Coordinacion) — coord_cont
+  * Comentarios (de Coordinacion) — coord_com
+  * Comentarios del agendamiento (session.inspector_observations)
 
 Generated with [Devin](https://devin.ai)
 

@@ -93,7 +93,7 @@ export interface SessionDetail extends Omit<InspectionSession, 'inspection_evide
   inspection_damages?: InspectionDamage[];
   inspection_signatures?: InspectionSignature[];
   damage_sketches?: DamageSketch[];
-  claim_action?: { id: string; code: string; action_status_id: string | null; issuer_id: string | null; issued_on: string | null; issued_by: string | null } | null;
+  claim_action?: { id: string; code: string; action_status_id: string | null; action_data?: Record<string, unknown> | null; issuer_id: string | null; issued_on: string | null; issued_by: string | null } | null;
   claim?: SessionClaim;
 }
 
@@ -220,7 +220,7 @@ export async function getInspectionSessionLive(token: string) {
 export async function getInspectionSessionById(id: string) {
   const session = await fetchById<SessionDetail>("inspection_sessions", id, `
     ${SESSION_SELECT}, created_at,
-    claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, issuer_id, issued_on, issued_by),
+    claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, action_data, issuer_id, issued_on, issued_by),
     action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
     claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, broker_executive, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
     inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, metadata, created_at),
