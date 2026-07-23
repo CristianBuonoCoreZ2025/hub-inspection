@@ -412,6 +412,7 @@ export interface InspectionSession {
   geo_distance_meters: number | null;
   geo_status: string | null;
   geo_map_url: string | null;
+  geo_recapture_enabled: boolean;
   property_risk?: ActaPropertyRisk | null;
   property_materiality?: ActaPropertyMateriality | null;
   security_measures?: ActaSecurityMeasures | null;

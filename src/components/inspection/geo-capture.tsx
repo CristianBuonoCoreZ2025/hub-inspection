@@ -71,6 +71,10 @@ interface GeoCaptureProps {
   title?: string;
   /** ID de la sesión (para guardar mapa como evidencia) */
   sessionId?: string;
+  /** Token del magic link (para resetear evidencias al recapturar) */
+  sessionToken?: string;
+  /** Si debe reemplazar (borrar) evidencias geo_map anteriores antes de guardar nuevas */
+  replaceEvidence?: boolean;
   /** ID del usuario que captura (para metadata de evidencia) */
   capturedBy?: string;
 }
@@ -92,6 +96,8 @@ export function GeoCapture({
   disabled,
   title,
   sessionId,
+  sessionToken,
+  replaceEvidence,
   capturedBy,
 }: GeoCaptureProps) {
   const { data: threshold = GEO_THRESHOLD_METERS } = useQuery({
@@ -202,23 +208,33 @@ export function GeoCapture({
 
         // Guardar mapa(s) como evidencia automáticamente
         if (sessionId) {
-          // Mapa de la ubicación capturada (siempre)
-          void saveMapAsEvidence(sessionId, coords, capturedMapUrl, capturedBy, "captured").then((ev) => {
-            if (ev) setMapEvidence(ev);
-          });
+          (async () => {
+            try {
+              if (replaceEvidence && sessionToken) {
+                await fetch("/api/inspection/geo/reset-geo", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ token: sessionToken }),
+                });
+              }
+              const ev = await saveMapAsEvidence(sessionId, coords, capturedMapUrl, capturedBy, "captured");
+              if (ev) setMapEvidence(ev);
 
-          // Si está fuera de rango Y tenemos coords del siniestro, guardar
-          // también el mapa de la dirección declarada (evidencia de discrepancia)
-          if (result.status === "out_of_range" && claimCoords) {
-            const declaredMapUrl = generateStaticMapUrl(claimCoords.lat, claimCoords.lng, {
-              zoom: 16,
-              width: 600,
-              height: 400,
-            });
-            void saveMapAsEvidence(sessionId, claimCoords, declaredMapUrl, capturedBy, "declared").then((ev) => {
-              if (ev) setDeclaredMapEvidence(ev);
-            });
-          }
+              // Si está fuera de rango Y tenemos coords del siniestro, guardar
+              // también el mapa de la dirección declarada (evidencia de discrepancia)
+              if (result.status === "out_of_range" && claimCoords) {
+                const declaredMapUrl = generateStaticMapUrl(claimCoords.lat, claimCoords.lng, {
+                  zoom: 16,
+                  width: 600,
+                  height: 400,
+                });
+                const dev = await saveMapAsEvidence(sessionId, claimCoords, declaredMapUrl, capturedBy, "declared");
+                if (dev) setDeclaredMapEvidence(dev);
+              }
+            } catch {
+              // no bloquear la captura si falla el guardado de evidencia
+            }
+          })();
         }
       },
       (err) => {
@@ -235,7 +251,7 @@ export function GeoCapture({
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
-  }, [claimCoords, onCapture, sessionId, capturedBy, saveMapAsEvidence, threshold]);
+  }, [claimCoords, onCapture, sessionId, sessionToken, replaceEvidence, capturedBy, saveMapAsEvidence, threshold]);
 
   // ── Auto-captura para inspecciones presenciales ──
   // El inspector no necesita presionar ningún botón: al montar el componente

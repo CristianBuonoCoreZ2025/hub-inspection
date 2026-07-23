@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, MessageCircle, Mail, Send, Phone, RefreshCw, Clock, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { Copy, MessageCircle, Mail, Send, Phone, RefreshCw, Clock, CheckCircle2, AlertTriangle, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { refreshMagicLink } from "@/services/inspections";
@@ -53,6 +53,26 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
       }
     },
     onError: (err: Error) => toast.error(err.message || "Error al renovar el link"),
+  });
+
+  const enableRecaptureMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/inspection/geo/enable-recapture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Error al habilitar recaptura");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+      toast.success("Recaptura de ubicación habilitada");
+    },
+    onError: (err: Error) => toast.error(err.message || "Error al habilitar recaptura"),
   });
 
   const copyLink = () => {
@@ -159,6 +179,16 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
           title="Generar nuevo token y extender 24h"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="btn-icon-sm shrink-0"
+          onClick={() => enableRecaptureMutation.mutate()}
+          disabled={enableRecaptureMutation.isPending}
+          title="Habilitar recaptura de ubicación"
+        >
+          {enableRecaptureMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
         </Button>
       </div>
 

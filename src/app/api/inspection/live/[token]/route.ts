@@ -32,7 +32,7 @@ export async function GET(
         firefighters_company, other_insurances, other_insurance_company,
         active_tab, acta_step,
         inspector_observations,
-        geo_latitude, geo_longitude, geo_captured_at, geo_distance_meters, geo_status, geo_map_url,
+        geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled,
         property_risk, property_materiality, security_measures,
         insured_statement, third_parties,
         action_template:action_template!inspection_sessions_action_template_id_fkey ( code ),
@@ -160,6 +160,8 @@ export async function PATCH(
     if (Object.keys(update).length === 0) {
       return NextResponse.json({ error: "No hay campos para actualizar" }, { status: 400 });
     }
+    // Cada nueva captura consume la autorización de recaptura
+    update.geo_recapture_enabled = false;
 
     const supabase = createAdminClient();
     const { error } = await supabase

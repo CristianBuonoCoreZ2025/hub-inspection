@@ -5,7 +5,7 @@ import type {
   InspectionDamage, InspectionEvidence, InspectionSignature,
 } from "@/types";
 
-const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, created_at, updated_at";
+const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, created_at, updated_at";
 
 // ═══════════════════════════════════════════════════════════════
 // SESSIONS
@@ -85,6 +85,14 @@ interface LiveSession {
   damage_sketches?: { id: string; sketch_url: string; label: string; created_at: string }[];
   claim?: SessionClaim;
   inspection_number?: string;
+  geo_latitude: number | null;
+  geo_longitude: number | null;
+  geo_captured_at: string | null;
+  geo_captured_by: string | null;
+  geo_distance_meters: number | null;
+  geo_status: string | null;
+  geo_map_url: string | null;
+  geo_recapture_enabled: boolean;
 }
 
 export interface SessionDetail extends Omit<InspectionSession, 'inspection_evidences' | 'inspection_checklists' | 'inspection_damages' | 'inspection_signatures' | 'damage_sketches'> {
@@ -161,7 +169,7 @@ export async function getInspectionSessionLive(token: string) {
       police_report_number, police_report_name, police_report_rut,
       firefighters_company, other_insurances, other_insurance_company,
       active_tab, acta_step, inspector_observations,
-      property_risk, property_materiality, security_measures, insured_statement, third_parties,
+      property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled,
       action_template:action_template!inspection_sessions_action_template_id_fkey(code),
       claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code),
       inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, created_at),
@@ -987,4 +995,8 @@ export async function updateReport(id: string, input: Partial<import("@/types").
     if (value !== undefined) set[key] = value;
   }
   return updateRow<import("@/types").InspectionReport>("inspection_reports", id, set, REPORT_SELECT);
+}
+
+export async function enableGeoRecapture(sessionId: string) {
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, { geo_recapture_enabled: true }, SESSION_SELECT);
 }

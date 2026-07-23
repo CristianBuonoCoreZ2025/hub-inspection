@@ -64,8 +64,8 @@ interface LiveSession {
   active_tab: string | null;
   acta_step: string | null;
   geo_latitude: number | null; geo_longitude: number | null;
-  geo_captured_at: string | null; geo_distance_meters: number | null;
-  geo_status: string | null; geo_map_url: string | null;
+  geo_captured_at: string | null; geo_captured_by: string | null; geo_distance_meters: number | null;
+  geo_status: string | null; geo_map_url: string | null; geo_recapture_enabled: boolean;
   property_risk: Record<string, unknown> | null;
   property_materiality: Record<string, unknown> | null;
   security_measures: Record<string, unknown> | null;
@@ -364,7 +364,7 @@ export default function MagicLinkPage() {
             </p>
           </div>
         )}
-        {effectiveTab === "resumen" && <ResumenTab session={session} />}
+        {effectiveTab === "resumen" && <ResumenTab session={session} token={token} />}
         {effectiveTab === "acta" && <ActaTab session={session} actaStep={session.acta_step || "datos"} />}
         {effectiveTab === "danos" && <DamagesTab damages={session.inspection_damages} />}
         {effectiveTab === "evidencias" && <EvidencesTab evidences={session.inspection_evidences} />}
@@ -423,7 +423,7 @@ export default function MagicLinkPage() {
 // ═══════════════════════════════════════════════════════════════
 // Tab: Resumen
 // ═══════════════════════════════════════════════════════════════
-function ResumenTab({ session }: { session: LiveSession }) {
+function ResumenTab({ session, token }: { session: LiveSession; token: string }) {
   const claim = session.claim;
   const insured = claim?.claims_participants?.find((p) => p.type === "insured");
   const queryClient = useQueryClient();
@@ -491,12 +491,18 @@ function ResumenTab({ session }: { session: LiveSession }) {
         title="Verificación de Ubicación"
         inspectionType="remote"
         sessionId={session.id}
+        sessionToken={token}
+        replaceEvidence
         claimCoords={claim?.claim_latitude && claim?.claim_longitude ? { lat: claim.claim_latitude, lng: claim.claim_longitude } : null}
         claimAddress={claim?.claim_address || undefined}
         initialCoords={session.geo_latitude && session.geo_longitude ? { lat: session.geo_latitude, lng: session.geo_longitude } : null}
         initialDistance={session.geo_distance_meters}
         initialStatus={(session.geo_status as "pending" | "verified" | "out_of_range" | "failed") || "pending"}
-        disabled={session.status === "completed" || session.status === "cancelled"}
+        disabled={
+          session.status === "completed" ||
+          session.status === "cancelled" ||
+          (!!session.geo_status && session.geo_status !== "pending" && !session.geo_recapture_enabled)
+        }
         onCapture={(result) => {
           updateGeoMutation.mutate({
             geo_latitude: result.coords.lat,
