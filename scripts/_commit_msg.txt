@@ -1,17 +1,14 @@
-fix: pagina de inspeccion muestra anexos del CIN (aclaracion direccion, otros contactos)
+fix: vinculacion profunda CIN → INS en trigger
 
-- getInspectionSessionById ahora trae action_data del claim_action (INS)
-- La pagina de inspeccion extrae parent_action_data del INS
-- Busca por prefijo (coord_ubic_1, coord_cont_1, coord_com_1) como en el resto
-- Panel "Contacto de Inspeccion" ahora muestra:
-  * Nombre contacto (session.interviewed_name o contactParticipant)
-  * Email (session, contact o insured)
-  * Telefono (contact o insured)
-  * Lugar inspeccion (claim.claim_address)
-  * Aclaracion Direccion (de Coordinacion) — coord_ubic
-  * Otros Contactos (de Coordinacion) — coord_cont
-  * Comentarios (de Coordinacion) — coord_com
-  * Comentarios del agendamiento (session.inspector_observations)
+- interviewed_name ahora viene del participante "contact" del claim
+  (o "insured" como fallback), no de coord_cont
+- interviewed_email tambien del participante del claim
+- Anexos del CIN (coord_ubic, coord_cont, coord_com) van a
+  inspector_observations con etiquetas claras:
+    "Aclaracion direccion: ..."
+    "Otros contactos: ..."
+    "Comentarios: ..."
+- Migration 198
 
 Generated with [Devin](https://devin.ai)
 
