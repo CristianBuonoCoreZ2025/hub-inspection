@@ -12,39 +12,58 @@ export async function getUserClients(userId: string): Promise<UserClient[]> {
 
 /**
  * Obtiene todos los usuarios (liquidadores, inspectores, operativos)
- * asociados a una empresa cliente vía la tabla user_clients.
+ * asociados a una empresa cliente.
+ *
+ * Combina dos fuentes:
+ *  1. profiles donde company_id = companyId (relación directa — la mayoría)
+ *  2. user_clients donde company_id = companyId (relación many-to-many — casos extra)
+ *
+ * Antes solo consultaba user_clients, que tenía muy pocos registros.
+ * Ahora consulta profiles por company_id directamente, que es donde
+ * realmente están los usuarios (33 en McLarens vs 1 en user_clients).
  */
 export async function getUsersByCompany(companyId: string): Promise<(Profile & { user_clients: UserClient[] })[]> {
+  // 1. Perfiles con company_id directo (la fuente principal)
+  const profiles = await fetchAll<Profile>("profiles", {
+    select: "id, user_id, company_id, full_name, email, phone, avatar_url, role, is_active, created_at, updated_at",
+    eq: { company_id: companyId },
+  });
+
+  // 2. user_clients para usuarios asociados vía many-to-many (sin company_id directo)
   const userClients = await fetchAll<UserClient>("user_clients", {
     select: USER_CLIENT_SELECT,
     eq: { company_id: companyId },
   });
 
-  if (userClients.length === 0) return [];
-
-  // Obtener los user_ids únicos
-  const userIds = [...new Set(userClients.map(uc => uc.user_id))];
-
-  // Buscar perfiles por user_id
-  const profiles = await fetchAll<Profile>("profiles", {
-    select: "id, user_id, company_id, full_name, email, phone, avatar_url, role, is_active, created_at, updated_at",
-    in: { user_id: userIds },
-  });
-
-  // Mapear perfiles con sus user_clients
+  // 3. Merge: perfiles directos + perfiles via user_clients que no tengan company_id
+  const seenProfileIds = new Set(profiles.map(p => p.id));
   const profilesByUserId = new Map(profiles.map(p => [p.user_id, p]));
-  const seen = new Set<string>();
-  const result: (Profile & { user_clients: UserClient[] })[] = [];
 
-  for (const uc of userClients) {
-    const profile = profilesByUserId.get(uc.user_id);
-    if (!profile || seen.has(profile.id)) continue;
-    seen.add(profile.id);
-    const userClientsForThisUser = userClients.filter(c => c.user_id === uc.user_id);
-    result.push({ ...profile, user_clients: userClientsForThisUser });
+  // Buscar perfiles de user_clients que no están ya incluidos
+  const extraUserIds = userClients
+    .map(uc => uc.user_id)
+    .filter(uid => !profilesByUserId.has(uid));
+
+  let allProfiles = profiles;
+  if (extraUserIds.length > 0) {
+    const extraProfiles = await fetchAll<Profile>("profiles", {
+      select: "id, user_id, company_id, full_name, email, phone, avatar_url, role, is_active, created_at, updated_at",
+      in: { user_id: extraUserIds },
+    });
+    for (const p of extraProfiles) {
+      if (!seenProfileIds.has(p.id)) {
+        seenProfileIds.add(p.id);
+        profilesByUserId.set(p.user_id, p);
+        allProfiles = [...allProfiles, p];
+      }
+    }
   }
 
-  return result;
+  // 4. Adjuntar user_clients a cada perfil (si los tiene)
+  return allProfiles.map(p => ({
+    ...p,
+    user_clients: userClients.filter(uc => uc.user_id === p.user_id),
+  }));
 }
 
 export async function addUserClient(userId: string, companyId: string): Promise<UserClient> {

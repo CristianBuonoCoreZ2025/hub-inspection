@@ -1,60 +1,12 @@
-feat: evidencias de inspección con IA en background (idéntico a claim_images)
+fix: usuarios autorizados de empresa ahora consulta profiles por company_id
 
-El proceso de toma de evidencias en inspección ahora es idéntico al de
-subida de imágenes del siniestro:
+Antes getUsersByCompany solo consultaba user_clients (tabla many-to-many)
+que tenía 1 registro para McLarens. Ahora consulta profiles por company_id
+directamente (33 usuarios para McLarens) + merge con user_clients para
+usuarios asociados via many-to-many sin company_id directo.
 
-  1. Subir archivo original a R2 (rápido, sin optimizar)
-  2. Extraer GPS de EXIF (síncrono, rápido — clave anti-fraude)
-  3. Insertar registro con ai_status='pending'
-  4. Responder al cliente inmediatamente
-  5. Background (after()):
-     - Optimizar imagen (sharp: max 1920px, quality 80)
-     - Re-subir versión optimizada a R2
-     - Extraer texto de PDF (primeras 10 páginas)
-     - Generar resumen con IA (visión / texto)
-     - Actualizar ai_summary + ai_model + ai_status='done'
-
-Controles nuevos en evidences-tab (iguales a claim-images-tab):
-  - Indicador "Analizando con IA..." mientras ai_status='pending'
-  - Click en el texto del resumen IA → abre modal con análisis completo
-  - Botón AiAnalysisButton deshabilitado mientras está pending
-  - Polling cada 5s automáticamente hasta que termine la IA
-
-Cambios:
-
-1. Migration 203: ai_status en inspection_evidences
-   - Valores: pending | done | skipped | error
-   - Backfill: existentes con ai_summary → 'done', sin ai_summary → 'skipped'
-   - Índice parcial en ai_status='pending' para polling eficiente
-
-2. src/lib/storage/inspection-upload.ts:
-   - uploadInspectionFileRaw() — sube sin optimizar (rápido)
-   - reuploadInspectionFileOptimized() — optimiza y re-sube en background
-
-3. src/app/api/inspection/evidences/upload/route.ts:
-   - Usa after() de next/server para procesamiento background
-   - Sube raw → inserta pending → responde → background optimiza + IA
-   - Mantiene EXIF + device geo (anti-fraude) en síncrono
-   - Mantiene PDF summary en background
-
-4. src/app/api/inspection/evidences/session/[sessionId]/route.ts:
-   - Incluye ai_status y source en el select
-
-5. src/app/dashboard/inspecciones/[id]/evidences-tab.tsx:
-   - Tipo Evidence: agrega ai_status y source
-   - Polling cada 5s mientras hay ai_status='pending'
-   - Modal de análisis IA (Dialog de shadcn/ui) — click en texto abre
-   - Indicador "Analizando con IA..." con Loader2 animado
-   - AiAnalysisButton deshabilitado mientras pending
-   - onShowSummary prop en EvidenceSection y EvidenceCard
-
-6. src/services/claim-images.ts:
-   - InspectionImageFromSession: agrega ai_status
-   - getInspectionPhotosByClaim: incluye ai_status en select
-
-7. src/app/dashboard/claims/[id]/claim-images-tab.tsx:
-   - Fotos de inspección muestran aiStatus real (antes era null)
-   - Polling cada 5s en inspection-photos-by-claim mientras hay pending
+Causa: la tabla user_clients estaba subutilizada (solo 1 registro para
+McLarens) mientras que profiles.company_id tenía los 33 usuarios reales.
 
 Generado con [Devin](https://devin.ai)
 
