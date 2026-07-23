@@ -1530,6 +1530,7 @@ export default function ClaimDetailPage() {
  <>
  <GestionScreenSwitcher
  screens={editingScreens}
+ claim={claim}
  action={{ ...editingAction, action_data: { ...editingAction.action_data, ...editingActionData } }}
  onChange={(data) => {
  const merged = { ...editingActionData, ...data };

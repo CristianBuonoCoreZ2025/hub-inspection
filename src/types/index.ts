@@ -208,6 +208,7 @@ export interface Claim {
   city?: { id: string; name: string } | null;
   commune?: { id: string; name: string } | null;
   destination_housing?: { id: string; name: string } | null;
+  claims_participants?: ClaimsParticipant[];
 }
 
 export interface ClaimsParticipant {

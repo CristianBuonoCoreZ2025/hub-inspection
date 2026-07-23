@@ -1,12 +1,10 @@
-fix: INS muestra datos heredados del CIN (fecha, tipo, inspector, etc.)
+fix: INS muestra direccion y contacto del siniestro + aclaraciones del CIN
 
-- Los campos del CIN tienen IDs con sufijos (coord_type_1, coord_fecha_1, etc.)
-  porque el editor de pantallas genera IDs unicos
-- index.tsx buscaba por IDs canonicos exactos (coord_inspection_type, coord_fecha)
-  y no encontraba los valores
-- Nuevo helper findCoord busca por ID canonico o por prefijo de tipo de campo
-- Excluye coord_fecha_recoord (no es la fecha de inspeccion)
-- Verificado con datos reales de L-141: tipo=remote, fecha=2026-07-23T15:00, etc.
+- Separar "Direccion del Siniestro" (del claim) de "Aclaracion Direccion" (coord_ubic)
+- Separar "Contacto del Siniestro" (claims_participants) de "Otros Contactos" (coord_cont)
+- GestionScreenSwitcher recibe prop claim para acceder a datos del siniestro
+- Tipo Claim ahora incluye claims_participants
+- Las etiquetas ahora reflejan correctamente que son anexos, no valores principales
 
 Generated with [Devin](https://devin.ai)
 

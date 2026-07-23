@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import type { GestionScreen as GestionScreenType, ClaimAction } from "@/types";
+import type { GestionScreen as GestionScreenType, ClaimAction, Claim } from "@/types";
 import DynamicScreen from "./DynamicScreen";
 import type { ScreenField } from "./DynamicScreen";
 import { getInspectionSessions } from "@/services/inspections";
@@ -10,13 +10,14 @@ import { getInspectionSessions } from "@/services/inspections";
 interface GestionScreenSwitcherProps {
   screens: GestionScreenType[];
   action: ClaimAction;
+  claim?: Claim;
   onChange?: (data: Record<string, unknown>) => void;
   readOnly?: boolean;
   onAdvance?: (level: "issuer" | "reviewer" | "approver") => void;
   onReject?: (level: "issuer" | "reviewer" | "approver", comment: string) => void;
 }
 
-export default function GestionScreenSwitcher({ screens, action, onChange, readOnly, onAdvance, onReject }: GestionScreenSwitcherProps) {
+export default function GestionScreenSwitcher({ screens, action, claim, onChange, readOnly, onAdvance, onReject }: GestionScreenSwitcherProps) {
   // Cargar sesiones de inspección del claim
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
     queryKey: ["inspection-sessions", action.claim_id],
@@ -74,10 +75,31 @@ export default function GestionScreenSwitcher({ screens, action, onChange, readO
     inspectionType: findCoord("coord_inspection_type", ["coord_type", "coord_inspection_type"]) as string | undefined,
     inspector: findCoord("coord_inspector", ["coord_inspector"]) as string | undefined,
     fecha: findCoord("coord_fecha", ["coord_fecha"]) as string | undefined,
-    contacto: findCoord("coord_contacto", ["coord_cont", "coord_contacto"]) as string | undefined,
-    ubicacion: findCoord("coord_ubicacion", ["coord_ubic", "coord_ubicacion"]) as string | undefined,
+    otrosContactos: findCoord("coord_contacto", ["coord_cont", "coord_contacto"]) as string | undefined,
+    aclaracionDireccion: findCoord("coord_ubicacion", ["coord_ubic", "coord_ubicacion"]) as string | undefined,
     comentarios: findCoord("coord_comentarios", ["coord_com"]) as string | undefined,
   };
+
+  // Dirección y contacto principal del siniestro (no vienen en action_data,
+  // se obtienen del claim directamente)
+  const claimAddress = claim ? [
+    claim.claim_address,
+    claim.commune?.name,
+    claim.city?.name,
+  ].filter(Boolean).join(", ") : "";
+
+  // Contacto: buscar participante de tipo "contact" o "insured"
+  const contactParticipant = claim?.claims_participants?.find(
+    (p) => p.type === "contact" && p.is_active
+  ) || claim?.claims_participants?.find(
+    (p) => p.type === "insured" && p.is_active
+  );
+  const claimContact = contactParticipant ? [
+    contactParticipant.full_name,
+    contactParticipant.phone,
+    contactParticipant.cell_phone,
+    contactParticipant.email,
+  ].filter(Boolean).join(" · ") : "";
 
   // Pantalla fija de inspección — mostrar datos y link directo
   if (!screen.is_dynamic && screen.code === "inspeccion") {
@@ -92,8 +114,14 @@ export default function GestionScreenSwitcher({ screens, action, onChange, readO
         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
           <div><span className="text-muted-foreground">Tipo:</span> {inherited.inspectionType === "remote" ? "Remota" : inherited.inspectionType === "onsite" ? "Presencial" : "—"}</div>
           <div><span className="text-muted-foreground">Fecha:</span> {inherited.fecha ? new Date(inherited.fecha).toLocaleString("es-CL") : "—"}</div>
-          <div><span className="text-muted-foreground">Contacto:</span> {inherited.contacto || "—"}</div>
-          <div><span className="text-muted-foreground">Ubicación:</span> {inherited.ubicacion || "—"}</div>
+          <div className="col-span-2"><span className="text-muted-foreground">Dirección del Siniestro:</span> {claimAddress || "—"}</div>
+          {inherited.aclaracionDireccion && (
+            <div className="col-span-2"><span className="text-muted-foreground">Aclaración Dirección:</span> {inherited.aclaracionDireccion}</div>
+          )}
+          <div className="col-span-2"><span className="text-muted-foreground">Contacto del Siniestro:</span> {claimContact || "—"}</div>
+          {inherited.otrosContactos && (
+            <div className="col-span-2"><span className="text-muted-foreground">Otros Contactos:</span> {inherited.otrosContactos}</div>
+          )}
           {inherited.comentarios && (
             <div className="col-span-2"><span className="text-muted-foreground">Comentarios:</span> {inherited.comentarios}</div>
           )}
