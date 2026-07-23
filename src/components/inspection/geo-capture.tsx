@@ -207,6 +207,10 @@ export function GeoCapture({
               result = validateGeoProximity(coords, claimCoords, threshold);
             }
 
+            // Mostrar inmediatamente la ubicación capturada en el mapa
+            setCaptured(coords);
+            setValidation(result);
+
             // Generar URL del mapa estático de la ubicación capturada
             const capturedMapUrl = generateStaticMapUrl(coords.lat, coords.lng, {
               zoom: 16,
@@ -243,9 +247,7 @@ export function GeoCapture({
               }
             }
 
-            // Actualizar estado y notificar al padre
-            setCaptured(coords);
-            setValidation(result);
+            // Notificar al padre con la URL real de la evidencia
             lastCapturedRef.current = { coords, mapUrl: capturedEvidenceUrl };
             onCapture({
               coords,
