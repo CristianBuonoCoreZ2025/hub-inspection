@@ -1547,7 +1547,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  <th className="px-2 py-1.5 text-right font-medium w-25">Asegurado</th>
  <th className="px-2 py-1.5 text-right font-medium w-25">Reclamado</th>
  <th className="px-2 py-1.5 text-right font-medium w-22.5">Deducible</th>
- {canEditCoverages && <th className="w-[32px]" />}
+ {canEditCoverages && <th className="w-8" />}
  </tr>
  </thead>
  <tbody>
@@ -1581,7 +1581,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  {canEditCoverages ? (
  <Input
  type="number"
- className="app-input h-7 text-[11px] text-right font-mono w-[90px] ml-auto"
+ className="app-input h-7 text-[11px] text-right font-mono w-22.5 ml-auto"
  value={c.claimed_amount ?? 0}
  onChange={(e) => updateCoverageMut.mutate({
  id: c.id,
@@ -1596,7 +1596,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  {canEditCoverages ? (
  <Input
  type="number"
- className="app-input h-7 text-[11px] text-right font-mono w-[80px] ml-auto"
+ className="app-input h-7 text-[11px] text-right font-mono w-20 ml-auto"
  value={c.deductible_amount ?? 0}
  onChange={(e) => updateCoverageMut.mutate({
  id: c.id,
@@ -2172,7 +2172,7 @@ function OwnField({
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Textarea
- className="app-input text-[11px] min-h-[60px]"
+ className="app-input text-[11px] min-h-15"
  value={String(value || "")}
  onChange={(e) => onChange(field.id, e.target.value)}
  disabled={readOnly}
@@ -2880,8 +2880,8 @@ function ReserveEditorForm({
  <thead className="bg-muted/50">
  <tr>
  <th className="px-2 py-1.5 text-left font-medium">Cobertura</th>
- <th className="px-2 py-1.5 text-right font-medium w-[110px]">Reclamado</th>
- <th className="px-2 py-1.5 text-right font-medium w-[110px]">Reserva</th>
+ <th className="px-2 py-1.5 text-right font-medium w-27.5">Reclamado</th>
+ <th className="px-2 py-1.5 text-right font-medium w-27.5">Reserva</th>
  <th className="px-2 py-1.5 text-right font-medium w-25">Deducible</th>
  <th className="px-2 py-1.5 text-right font-medium w-25">Neta</th>
  </tr>
@@ -2935,7 +2935,7 @@ function ReserveEditorForm({
  <Input
  type="text"
  inputMode="decimal"
- className={`app-input h-7 text-[11px] text-right font-mono w-[90px] ml-auto ${rowErrors[idx].deductible ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+ className={`app-input h-7 text-[11px] text-right font-mono w-22.5 ml-auto ${rowErrors[idx].deductible ? "border-red-500 focus-visible:ring-red-500" : ""}`}
  value={row.deductible}
  onChange={(e) => updateRow(idx, "deductible", parseNum(e.target.value))}
  title="El deducible no puede ser mayor que la reserva"
@@ -3242,11 +3242,11 @@ function AdjustmentEditorForm({
  <tr>
  <th className="px-2 py-1.5 text-left font-medium">Cobertura</th>
  <th className="px-2 py-1.5 text-right font-medium w-25">Reservado</th>
- <th className="px-2 py-1.5 text-right font-medium w-[90px]">Deducible</th>
- <th className="px-2 py-1.5 text-right font-medium w-[110px]">Ajustado</th>
+ <th className="px-2 py-1.5 text-right font-medium w-22.5">Deducible</th>
+ <th className="px-2 py-1.5 text-right font-medium w-27.5">Ajustado</th>
  <th className="px-2 py-1.5 text-right font-medium w-25">Ded. Ajuste</th>
  <th className="px-2 py-1.5 text-right font-medium w-25">Final</th>
- <th className="px-2 py-1.5 text-left font-medium w-[180px]">Notas Ajuste</th>
+ <th className="px-2 py-1.5 text-left font-medium w-45">Notas Ajuste</th>
  </tr>
  </thead>
  <tbody>
@@ -3284,7 +3284,7 @@ function AdjustmentEditorForm({
  <Input
  type="text"
  inputMode="decimal"
- className="app-input h-7 text-[11px] text-right font-mono w-[90px] ml-auto"
+ className="app-input h-7 text-[11px] text-right font-mono w-22.5 ml-auto"
  value={row.adjusted_deductible}
  onChange={(e) => updateRow(idx, "adjusted_deductible", parseNum(e.target.value))}
  />
@@ -4579,7 +4579,7 @@ function CoordScheduler({
  {/* Control doble: fecha centrada a la izquierda, slots a la derecha */}
  <div className="flex flex-col sm:flex-row gap-2">
  {/* Columna izquierda: date picker + fecha centrada verticalmente */}
- <div className="flex flex-col justify-center gap-1 sm:w-[110px] shrink-0">
+ <div className="flex flex-col justify-center gap-1 sm:w-27.5 shrink-0">
  <DatePicker
  value={selectedDate}
  onChange={(v) => setSelectedDate(v)}
