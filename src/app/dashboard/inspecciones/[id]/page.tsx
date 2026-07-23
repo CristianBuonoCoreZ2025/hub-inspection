@@ -709,12 +709,11 @@ export default function InspectionDetailPage() {
 
  {/* Estado de la Sesion + Acciones */}
  <div className="app-panel">
- <div className="flex items-start justify-between gap-4">
- <div className="flex-1 min-w-0">
  <h3 className="app-section-title">
  Estado de la Sesion
  </h3>
- <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[11px]">
+ <div className="flex items-start gap-4">
+ <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[11px] flex-1 min-w-0">
  <div>
  <span className="app-data-label">Estado</span>
  <p>
@@ -736,14 +735,13 @@ export default function InspectionDetailPage() {
  <p className="font-medium">{session.ended_at ? formatDateTime(session.ended_at) : "—"}</p>
  </div>
  </div>
- </div>
 
- {/* Botones de acción verticales con iconos (solo si está scheduled) */}
+ {/* Botones de acción horizontales (solo si está scheduled) */}
  {session.status === "scheduled" && (
- <div className="flex flex-col gap-1.5 shrink-0">
+ <div className="flex flex-row items-start gap-1.5 shrink-0">
  <Button
  size="sm"
- className="pg-btn-platinum h-8 w-8 p-0"
+ className="pg-btn-platinum h-7 w-7 p-0"
  title={
  session.inspection_type === "onsite" && (!session.geo_status || session.geo_status === "pending" || session.geo_status === "failed")
  ? "Primero debes capturar tu geolocalización en el lugar"
@@ -768,12 +766,12 @@ export default function InspectionDetailPage() {
  });
  }}
  >
- <Play className="h-4 w-4" />
+ <Play className="h-3.5 w-3.5" />
  </Button>
  <Button
  size="sm"
  variant="outline"
- className="pg-btn-platinum h-8 w-8 p-0"
+ className="pg-btn-platinum h-7 w-7 p-0"
  title="Reagendar (genera CIN de re-coordinación)"
  onClick={() => {
  const claimData = session?.claim as Record<string, unknown> | undefined;
@@ -783,16 +781,16 @@ export default function InspectionDetailPage() {
  setRescheduleModalOpen(true);
  }}
  >
- <CalendarClock className="h-4 w-4" />
+ <CalendarClock className="h-3.5 w-3.5" />
  </Button>
  <Button
  size="sm"
  variant="outline"
- className="pg-btn-platinum h-8 w-8 p-0"
+ className="pg-btn-platinum h-7 w-7 p-0"
  title="Cancelar (genera CIN desistida, INS rechazada)"
  onClick={() => setCancelModalOpen(true)}
  >
- <XCircle className="h-4 w-4" />
+ <XCircle className="h-3.5 w-3.5" />
  </Button>
  </div>
  )}

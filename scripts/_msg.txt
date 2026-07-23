@@ -1,19 +1,9 @@
-fix: unificar toda la tipografía del dashboard a 11px y limpiar lint
+fix: botones de Estado de la Sesión en línea horizontal
 
-Se reemplazó `text-[12px]` por `text-[11px]` en todo `src/` (.tsx, .ts, .css,
-.cjs) y se actualizaron las utilidades `app-data-grid`, `app-data-grid-2` y
-`app-data-grid-4` en `components.css` para usar 11px. De este modo títulos,
-labels y valores quedan al mismo tamaño en todas las pantallas.
-
-Además se aprovechó para arreglar los errores/warnings de ESLint que impedían
-un build limpio:
-- Imports no usados en rutas API y servicios.
-- `any` explícitos en `document-render.ts` y `voice-textarea.tsx`.
-- Llamada síncrona a `setState` dentro de un `useEffect` en `voice-textarea.tsx`.
-- `form.watch()` de react-hook-form en `claims/page.tsx` centralizado en una
-  única suscripción reactiva con `eslint-disable-next-line` documentado.
-
-`npx tsc --noEmit` y `npx eslint .` pasan con 0 errores/warnings.
+En src/app/dashboard/inspecciones/[id]/page.tsx, los tres botones de acción
+(Iniciar, Reagendar, Cancelar) ahora se muestran en una fila horizontal a la
+altura de la fila de datos, en lugar de apilados verticalmente. Se redujeron a
+h-7 w-7 con iconos h-3.5 w-3.5 para ocupar menos espacio.
 
 Generado con [Devin](https://devin.ai)
 
