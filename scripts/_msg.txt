@@ -1,22 +1,22 @@
-fix: estado real de integraciones en Configuración
+tool: script reutilizable reset-claim-workflow.cjs
 
-El tab Integraciones mostraba datos hardcodeados y desactualizados:
-- OpenRouter aparecía "Pendiente" aunque ya estaba implementado
-- Resend aparecía "Conectado" sin verificar si RESEND_API_KEY existía
-- Jitsi Meet aparecía aunque ya usamos WebRTC p2p
+Agrega scripts/reset-claim-workflow.cjs para resetear el workflow de
+cualquier siniestro por número de liquidación.
 
-Cambios:
-- src/app/api/integrations/status/route.ts: nuevo endpoint que lee
-  variables de entorno y devuelve estado real (Conectado / No configurado)
-  sin exponer secretos.
-- src/app/dashboard/configuracion/page.tsx: IntegracionesTab ahora consume
-  la API y muestra estado real con mensajes de configuración faltante.
-- Lista actualizada:
-  - Supabase, Cloudflare R2: Conectado
-  - OpenRouter: Conectado si OPENROUTER_API_KEY existe
-  - Resend: Conectado si RESEND_API_KEY existe; si falta, indica qué agregar
-  - WhatsApp Cloud API: Conectado si WHATSAPP_PHONE_NUMBER_ID y token existen
-  - WebRTC P2P: Conectado (reemplaza a Jitsi)
+Características:
+- Lee credenciales desde .env.local usando dotenv
+- Acepta argumento posicional o --liquidation=
+- Pide confirmación explícita (escribir SI) antes de borrar
+- Borra sesiones, evidencias, daños, notas, chat, firmas, documentos de
+  gestiones y las gestiones del claim
+- Resetea el estado del siniestro a 'created' y luego al original para
+  disparar el workflow automático según país + línea + evento + estado
+- Muestra las gestiones recreadas al finalizar
+
+Reemplaza al script ad-hoc reset-claim-L141.cjs.
+
+Uso:
+  node scripts/reset-claim-workflow.cjs L-000000141
 
 Generado con [Devin](https://devin.ai)
 
