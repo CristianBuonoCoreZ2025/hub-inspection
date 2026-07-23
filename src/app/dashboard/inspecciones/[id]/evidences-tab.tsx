@@ -124,6 +124,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
   // Pedir geolocalización al montar (una sola vez, solo si se puede subir)
+  // Sin toast — el indicador "Geo activa" en el drop zone es suficiente feedback
   useEffect(() => {
     if (geoRequestedRef.current || readOnly) return;
     geoRequestedRef.current = true;
@@ -131,7 +132,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
       if (g) {
         geoRef.current = g;
         setGeoActive(true);
-        toast.success("Ubicación capturada para evidencias", { duration: 2000 });
       }
     });
   }, [readOnly]);
@@ -139,11 +139,23 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   const { data: evidences, isLoading } = useQuery({
     queryKey: ["evidences", sessionId],
     queryFn: () => fetchEvidences(sessionId),
-    // Polling cada 5s mientras hay evidencias siendo procesadas por IA
+    // Polling cada 5s mientras hay evidencias siendo procesadas por IA.
+    // Timeout: deja de pollar después de 2 minutos (24 polls × 5s) para no
+    // quedar pegado infinitamente si el after() de Next.js falla.
     refetchInterval: (query) => {
       const evs = query.state.data;
-      if (evs && evs.some((e) => e.ai_status === "pending")) return 5000;
-      return false;
+      if (!evs || !evs.some((e) => e.ai_status === "pending")) return false;
+      // Calcular cuánto tiempo llevan las pending
+      const oldestPending = evs
+        .filter((e) => e.ai_status === "pending")
+        .reduce((oldest, e) => {
+          const t = new Date(e.created_at).getTime();
+          return t < oldest ? t : oldest;
+        }, Date.now());
+      const elapsedMs = Date.now() - oldestPending;
+      // Después de 2 minutos, dejar de pollar (el usuario puede reintentar manualmente)
+      if (elapsedMs > 120_000) return false;
+      return 5000;
     },
   });
 
@@ -434,6 +446,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummar
   sessionId: string;
 }) {
   const [showActions, setShowActions] = useState(false);
+  const [isAiStuck, setIsAiStuck] = useState(false);
   const isDoc = evidence.type === "pdf" || evidence.type === "document";
   const isVideo = evidence.type === "video";
   const isPhoto = evidence.type === "photo";
@@ -453,6 +466,15 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummar
     const dLng = Math.abs(evidence.lng! - evidence.exif_lng!);
     geoMismatch = dLat > 0.01 || dLng > 0.01; // ~1km
   }
+
+  // IA atascada: si está pending por más de 2 min, mostrar mensaje de retry
+  useEffect(() => {
+    if (evidence.ai_status !== "pending") return;
+    const elapsedMs = Date.now() - new Date(evidence.created_at).getTime();
+    const remaining = Math.max(0, 120_000 - elapsedMs);
+    const timer = setTimeout(() => setIsAiStuck(true), remaining);
+    return () => clearTimeout(timer);
+  }, [evidence.ai_status, evidence.created_at]);
 
   return (
     <div
@@ -519,7 +541,6 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummar
               fileName={evidence.description || evidence.type}
               hasSummary={!!evidence.ai_summary}
               queryKey={["evidences", sessionId]}
-              disabled={evidence.ai_status === "pending"}
             />
             <button
               onClick={() => { if (confirm("¿Eliminar esta evidencia?")) onDelete(evidence.id); }}
@@ -629,9 +650,19 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummar
 
         {/* Resumen IA */}
         {evidence.ai_status === "pending" ? (
-          <div className="mt-0.5 flex items-center gap-1 text-[9px] text-amber-600 dark:text-amber-400 pt-1">
-            <Loader2 className="h-2.5 w-2.5 shrink-0 animate-spin" />
-            <span className="font-medium">Analizando con IA...</span>
+          isAiStuck ? (
+            <div className="mt-0.5 flex items-center gap-1 text-[9px] text-red-500 dark:text-red-400 pt-1">
+              <span className="font-medium">IA timeout — usa el botón Brain para reintentar</span>
+            </div>
+          ) : (
+            <div className="mt-0.5 flex items-center gap-1 text-[9px] text-amber-600 dark:text-amber-400 pt-1">
+              <Loader2 className="h-2.5 w-2.5 shrink-0 animate-spin" />
+              <span className="font-medium">Analizando con IA...</span>
+            </div>
+          )
+        ) : evidence.ai_status === "error" ? (
+          <div className="mt-0.5 flex items-center gap-1 text-[9px] text-red-500 dark:text-red-400 pt-1">
+            <span className="font-medium">IA falló — usa el botón Brain para reintentar</span>
           </div>
         ) : evidence.ai_summary ? (
           <div

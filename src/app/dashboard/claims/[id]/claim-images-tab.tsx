@@ -88,11 +88,15 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
   const { data: claimImages, isLoading: imagesLoading } = useQuery({
     queryKey: ["claim-images", claimId],
     queryFn: () => getClaimImages(claimId),
-    // Polling cada 5s mientras hay imágenes siendo procesadas
+    // Polling cada 5s mientras hay imágenes siendo procesadas.
+    // Timeout: deja de pollar después de 2 min si el after() falló.
     refetchInterval: (query) => {
       const imgs = query.state.data;
-      if (imgs && imgs.some((i) => i.ai_status === "pending")) return 5000;
-      return false;
+      if (!imgs || !imgs.some((i) => i.ai_status === "pending")) return false;
+      const oldest = imgs.filter((i) => i.ai_status === "pending")
+        .reduce((min, i) => Math.min(min, new Date(i.created_at).getTime()), Date.now());
+      if (Date.now() - oldest > 120_000) return false;
+      return 5000;
     },
   });
 
@@ -102,8 +106,11 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
     // Polling cada 5s mientras hay fotos de inspección siendo procesadas por IA
     refetchInterval: (query) => {
       const photos = query.state.data;
-      if (photos && photos.some((p) => p.ai_status === "pending")) return 5000;
-      return false;
+      if (!photos || !photos.some((p) => p.ai_status === "pending")) return false;
+      const oldest = photos.filter((p) => p.ai_status === "pending")
+        .reduce((min, p) => Math.min(min, new Date(p.created_at).getTime()), Date.now());
+      if (Date.now() - oldest > 120_000) return false;
+      return 5000;
     },
   });
 
@@ -765,7 +772,6 @@ function UnifiedImageCard({
                   ? ["claim-images", claimId]
                   : ["inspection-photos-by-claim", claimId]
               }
-              disabled={isPending}
             />
           </div>
         )}

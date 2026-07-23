@@ -1,21 +1,22 @@
-fix: sincronizar user_clients con profiles.company_id (backfill + trigger)
+fix: evidencias atascadas en 'Analizando IA' + quitar toast confuso
 
-PROBLEMA DE RAIZ: dos fuentes de verdad sin sincronizar
-- profiles.company_id: 33 usuarios para McLarens (seteado al invitar)
-- user_clients: 1 usuario para McLarens (solo si se pasaban clientIds)
+PROBLEMA: evidencia L-000000141-HINS-001-EVI-0001 quedo pegada en
+ai_status='pending' para siempre. El after() de Next.js no ejecuto
+la IA (falla silenciosa conocida). El polling cada 5s corria infinito
+y el AiAnalysisButton estaba disabled, asi que el usuario no podia
+reintentar manualmente.
 
-Impacto del bug:
-- Modal "usuarios autorizados" de empresas: 1 en vez de 33
-- Filtro de inspectores/adjusters por empresa en claims: 1 en vez de 33
-- Lista de usuarios: "clientes" vacios para la mayoria
-
-Fix:
-- Migracion 204: backfill — inserta 32 filas faltantes en user_clients
-- Migracion 205: trigger sync_user_clients_on_profile_change
-  (AFTER INSERT y AFTER UPDATE OF company_id en profiles)
-  Asegura que user_clients siempre tenga la fila de company_id principal
-
-Verificado: McLarens ahora tiene 33 en user_clients, 0 faltantes.
+FIXES:
+1. DB: marcar evidencias atascadas (>5 min en pending) como error
+2. Quitar toast 'Ubicacion capturada para evidencias' (confuso, el
+   indicador 'Geo activa' en el drop zone es suficiente)
+3. Quitar disabled del AiAnalysisButton cuando pending — el usuario
+   puede hacer retry manual en cualquier momento
+4. Timeout al polling: deja de pollar despues de 2 min (120s)
+   Aplicado a evidences-tab y claim-images-tab
+5. Indicador visual: despues de 2 min muestra 'IA timeout — usa el
+   boton Brain para reintentar' en lugar del spinner infinito
+6. Estado 'error' muestra 'IA falo — usa el boton Brain para reintentar'
 
 Generado con [Devin](https://devin.ai)
 
