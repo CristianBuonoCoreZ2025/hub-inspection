@@ -33,13 +33,18 @@ export async function POST(req: NextRequest) {
 
     const { data: profile } = await admin
       .from("profiles")
-      .select("company_id")
+      .select("company_id, role")
       .eq("id", user.id)
       .maybeSingle();
     const claimData = Array.isArray(session.claim) ? session.claim[0] : session.claim;
     const claimCompanyId = (claimData as { company_id?: string } | undefined)?.company_id;
-    if (!profile || claimCompanyId !== profile.company_id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    const isInternal = (profile as { role?: string } | null)?.role === "internal";
+    const isAuthorized = isInternal || claimCompanyId === profile?.company_id;
+    if (!profile || !isAuthorized) {
+      return NextResponse.json(
+        { error: "No autorizado", debug: { profileCompanyId: profile?.company_id, claimCompanyId, role: profile?.role } },
+        { status: 403 }
+      );
     }
 
     const { data: updated, error } = await admin
