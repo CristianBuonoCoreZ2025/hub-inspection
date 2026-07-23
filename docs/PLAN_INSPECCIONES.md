@@ -42,24 +42,28 @@
 
 | Funcionalidad | Estado | Detalle |
 |---------------|--------|---------|
-| Captura de geolocalización del inspector | ✅ | `GeoCapture` con validación contra dirección del siniestro (500m) |
-| Bloqueo de "Iniciar inspección" sin geo | ✅ | Botón deshabilitado si `geo_status` es `pending` o `failed` |
-| Banner de aviso antes de iniciar | ✅ | "Primero debes capturar tu geolocalización" |
+| Captura automática al iniciar inspección | ✅ | Sin botón; `navigator.geolocation.getCurrentPosition()` se ejecuta al montar `GeoCapture` |
+| Botón "Capturar mi ubicación" | ❌ **Eliminado** | Presencial no tiene botón; la captura es automática |
+| Validación contra dirección del siniestro (500m) | ✅ | Haversine; `geo_status`: `verified` / `out_of_range` / `failed` |
 | `out_of_range` no bloquea | ✅ | Warning no bloqueante (queda registrado para auditoría) |
 | Mapa interactivo (Leaflet) | ✅ | OpenStreetMap, marcadores azul (capturada) + rojo (declarada) |
 | Guardado automático del mapa como evidencia | ✅ | API `/api/inspection/geo/save-map` → R2 con `source='geo_map'` |
-| Botón "Tomar foto del lugar" | ✅ | `<input capture="environment">` → upload a R2 |
-| Miniaturas de mapa + foto | ✅ | En el panel de GeoCapture |
+| Botón "Tomar foto del lugar" | ❌ **Eliminado** del `GeoCapture` | Las fotos se suben desde el tab de Evidencias, no desde el panel de geo |
+| Miniaturas de mapa | ✅ | En el panel de GeoCapture |
 | Videollamada | ⏳ | No aplica (presencial) |
 
 ### 2.2 Remota (`remote`)
 
 | Funcionalidad | Estado | Detalle |
 |---------------|--------|---------|
-| Captura de geolocalización del cliente | ✅ | `GeoCapture` en magic link, validación contra dirección del siniestro |
+| Botón "Establecer mi ubicación" | ✅ | El asegurado decide cuándo compartir su ubicación |
+| Captura automática sin botón | ❌ **Eliminado** | Remota requiere acción explícita del usuario |
+| Validación contra dirección del siniestro (500m) | ✅ | Haversine; `geo_status`: `verified` / `out_of_range` / `failed` |
+| 1 mapa cuando está dentro del rango (≤500m) | ✅ | Mapa de la ubicación capturada |
+| 2 mapas cuando está fuera de rango (>500m) | ✅ | Mapa de la ubicación capturada + mapa de la dirección declarada |
 | Mapa interactivo (Leaflet) | ✅ | Igual que presencial |
-| Guardado automático del mapa como evidencia | ✅ | Igual que presencial |
-| Botón "Tomar foto del lugar" | ✅ | Igual que presencial |
+| Guardado automático del mapa como evidencia | ✅ | API `/api/inspection/geo/save-map` → R2 con `source='geo_map'` |
+| Botón "Tomar foto del lugar" | ❌ **Eliminado** del `GeoCapture` | Las fotos se suben desde el tab de Evidencias |
 | **Videollamada WebRTC p2p** | ✅ | `LiveVideoCall` con signaling via Supabase Realtime |
 | **Captura de fotos desde video en vivo** | ✅ | `canvas.drawImage(video)` → R2 con `source='screenshot_*'` |
 | Ambos pueden capturar fotos | ✅ | Inspector y cliente tienen botón 📷 |
@@ -68,17 +72,20 @@
 
 ---
 
-## 3. Geolocalización (Fase completada)
+## 3. Geolocalización (En corrección — selección manual)
 
 ### 3.1 Geocodificación de direcciones de siniestros
 
 | Funcionalidad | Estado | Detalle |
 |---------------|--------|---------|
-| Auto-geocodificación al crear claim (`createClaim`) | ✅ | Background, no bloquea |
-| Auto-geocodificación al editar claim (`updateClaim`) | ✅ | Re-geocodifica si la dirección cambia |
-| Auto-geocodificación al crear claim mínimo (`createClaimMinimal`) | ✅ | Background |
-| Script batch para claims existentes | ✅ | `scripts/geocode-claims.cjs` |
-| Proveedor de geocoding | 🟡 | Nominatim (OpenStreetMap) — gratis pero limitado. 50/127 claims geocodificados. Mejoraría con Google/Mapbox. |
+| Geocodificación automática sin confirmación | ❌ **Eliminada** | Elige el primer resultado al azar; no usa contexto de país/región/ciudad/comuna; incorrecta cuando hay múltiples ubicaciones |
+| Query de geocodificación con dirección + comuna + ciudad + región + país | ✅ | `geocodeAddress` recibe contexto completo |
+| Múltiples candidatos (`limit=N`) | ✅ | Nominatim devuelve varios resultados posibles |
+| Selector manual de ubicación en formulario de claim | ✅ | Modal con lista + mapa; el usuario elige el punto correcto |
+| Guardado de coordenadas solo tras confirmación manual | ✅ | `claim_latitude` / `claim_longitude` se guardan cuando el usuario confirma |
+| Re-geocodificación al editar dirección | 🟡 | Disponible, requiere nueva confirmación manual |
+| Script batch para claims existentes | ⏳ | `scripts/geocode-claims.cjs` — requiere adaptarse al selector manual |
+| Proveedor de geocoding | 🟡 | Nominatim (OpenStreetMap) — gratis pero limitado. Para producción considerar Google/Mapbox. |
 
 ### 3.2 Captura de geolocalización en inspección
 
@@ -147,7 +154,8 @@
 | Numeración correlativa atómica | ✅ | `EVI-0001`, `EVI-0002`, ... |
 | Soporte foto, video, PDF, documento | ✅ | |
 | Extracción de GPS de EXIF | ✅ | `exif_lat`, `exif_lng` (anti-fraude) |
-| Geo del navegador | ✅ | `lat`, `lng` columnas dedicadas |
+| Ubicación GPS de la foto | ✅ | `lat` / `lng` = EXIF GPS (la foto conserva su propia georeferenciación) |
+| Geo del navegador para evidencias | ❌ **Eliminada** | El dispositivo del usuario ya no reemplaza la metadata EXIF de la foto |
 | Resumen automático con IA | ✅ | `ai_summary`, `ai_model` (OpenRouter) |
 | Resumen de PDF | ✅ | Primeras 10 páginas |
 | Campo `source` (origen) | ✅ | Migration 202 |

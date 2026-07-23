@@ -1,22 +1,33 @@
-feat: botón para refrescar magic link + indicador de expiración
+feat: geocodificación manual con selector de ubicación + correcciones al plan
 
-PROBLEMA: el magic link de inspección remota expira a las 24h y no había
-forma de generar uno nuevo sin reagendar la inspección.
+PROBLEMA: la geocodificación de direcciones de siniestros se hacía en
+background (fire-and-forget) sin contexto de país/región/ciudad/comuna,
+y elegía el primer resultado al azar. Si una dirección existía en
+múltiples lugares, el punto de referencia podía estar mal.
 
 FIX:
-- src/services/inspections.ts: nueva función refreshMagicLink(sessionId)
-  que genera un nuevo token (crypto.randomUUID) y extiende la expiración
-  24h desde ahora. El token anterior deja de funcionar inmediatamente.
-- src/components/ui/magic-link-sender.tsx:
-  - Botón Refrescar (icono RefreshCw) que regenera el token
-  - Indicador de expiración con código de color:
-    - Verde: válido (>4h restantes)
-    - Ámbar: expira pronto (<4h) o ya expirado
-    - Muestra fecha/hora exacta de expiración
-  - Se actualiza cada 1 min para mantener el indicador al día
-  - Nuevas props: sessionId, expiresAt
-- src/app/dashboard/inspecciones/[id]/page.tsx: pasa sessionId y
-  magic_link_expires_at al MagicLinkSender
+- src/lib/geo.ts: nuevo geocodeAddressCandidates(address, ctx) que arma
+  la query con dirección + comuna + ciudad + región + país y devuelve
+  hasta 5 candidatos. geocodeAddress queda como legacy wrapper.
+- src/components/claims/claim-location-selector.tsx: modal con lista de
+  candidatos + mapa interactivo (Leaflet) para que el usuario elija la
+  ubicación exacta.
+- src/app/dashboard/claims/page.tsx: integrado el selector en el wizard
+  de creación de siniestro. Botón "Buscar ubicación" en el paso de
+  dirección. Al confirmar se guardan claimLatitude y claimLongitude en
+  el formulario.
+- src/lib/validations.ts: agregados claimLatitude y claimLongitude al
+  schema claimCreateMinimalSchema.
+- src/services/claims.ts:
+  - createClaimMinimal ahora guarda claim_latitude y claim_longitude
+    si vienen en el input.
+  - eliminada geocodificación automática en createClaim y updateClaim.
+- docs/PLAN_INSPECCIONES.md: actualizado con los cambios de flujo de
+  geolocalización (presencial auto, remota botón, geo de fotos EXIF,
+  geocodificación manual).
+
+Principio: la dirección del siniestro solo se geocodifica con contexto
+completo y requiere confirmación manual. No más elección al azar.
 
 Generado con [Devin](https://devin.ai)
 

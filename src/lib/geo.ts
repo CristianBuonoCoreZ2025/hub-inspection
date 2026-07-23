@@ -20,6 +20,11 @@ export interface LatLng {
   lng: number;
 }
 
+export interface GeocodeCandidate extends LatLng {
+  label: string;
+  displayName: string;
+}
+
 export interface GeoValidationResult {
   distance: number; // metros
   status: "verified" | "out_of_range" | "failed";
@@ -59,27 +64,60 @@ export function validateGeoProximity(
 
 /**
  * Geocodifica una dirección usando Nominatim (OpenStreetMap).
- * Retorna lat/lng o null si no se encuentra.
+ * Retorna TODOS los candidatos (máx 5) para que el usuario elija.
+ *
+ * La query se construye con dirección + comuna + ciudad + región + país
+ * para reducir ambigüedad cuando hay múltiples ubicaciones con la misma
+ * calle.
  *
  * Nota: Nominatim tiene un rate limit de 1 request/segundo.
  * Para producción considerar usar un servicio con API key.
  */
-export async function geocodeAddress(address: string): Promise<LatLng | null> {
-  if (!address?.trim()) return null;
+export async function geocodeAddressCandidates(
+  address: string,
+  ctx?: {
+    commune?: string | null;
+    city?: string | null;
+    region?: string | null;
+    country?: string | null;
+  }
+): Promise<GeocodeCandidate[]> {
+  if (!address?.trim()) return [];
+
+  const parts = [address.trim()];
+  if (ctx?.commune?.trim()) parts.push(ctx.commune.trim());
+  if (ctx?.city?.trim()) parts.push(ctx.city.trim());
+  if (ctx?.region?.trim()) parts.push(ctx.region.trim());
+  if (ctx?.country?.trim()) parts.push(ctx.country.trim());
+  const q = parts.join(", ");
+
   try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`;
     const res = await fetch(url, {
       headers: { "User-Agent": "hub-inspection/1.0" },
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    }
-    return null;
+    if (!Array.isArray(data)) return [];
+
+    return data.map((item: { lat: string; lon: string; display_name: string }) => ({
+      lat: parseFloat(item.lat),
+      lng: parseFloat(item.lon),
+      displayName: item.display_name,
+      label: item.display_name.split(",")[0] || item.display_name,
+    }));
   } catch {
-    return null;
+    return [];
   }
+}
+
+/**
+ * Geocodifica una dirección y retorna el primer resultado.
+ * @deprecated Usar geocodeAddressCandidates + selector manual.
+ */
+export async function geocodeAddress(address: string): Promise<LatLng | null> {
+  const candidates = await geocodeAddressCandidates(address);
+  return candidates[0] || null;
 }
 
 /**

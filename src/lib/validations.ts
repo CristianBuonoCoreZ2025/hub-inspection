@@ -153,6 +153,8 @@ export const claimCreateMinimalSchema = z.object({
   claimRegion: z.string().optional().or(z.literal("")),
   claimCity: z.string().min(1, "Ciudad del siniestro requerida"),
   claimCommune: z.string().optional().or(z.literal("")),
+  claimLatitude: z.number().optional().or(z.literal(undefined)),
+  claimLongitude: z.number().optional().or(z.literal(undefined)),
   // Contratante
   contractorName: z.string().optional().or(z.literal("")),
   contractorLastName: z.string().optional().or(z.literal("")),

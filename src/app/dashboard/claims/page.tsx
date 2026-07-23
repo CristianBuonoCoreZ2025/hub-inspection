@@ -6,6 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
 import { getClaims, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
+import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
+import type { GeocodeCandidate } from "@/lib/geo";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
 import {
@@ -32,7 +34,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
-import { Search, Trash2, FileText, ClipboardCheck, Download, Check, Upload, ChevronDown, Shield } from "lucide-react";
+import { Search, Trash2, FileText, ClipboardCheck, Download, Check, Upload, ChevronDown, Shield, MapPin, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { getClaimTypeIcon } from "@/lib/claim-type-icons";
@@ -126,6 +128,7 @@ function ClaimsPageContent() {
  const [beneficiaryLinked, setBeneficiaryLinked] = useState(false);
  const [claimAddressLinked, setClaimAddressLinked] = useState(false);
  const [claimNumberWarning, setClaimNumberWarning] = useState<string | null>(null);
+ const [locationSelectorOpen, setLocationSelectorOpen] = useState(false);
  const [participantSuggestion, setParticipantSuggestion] = useState<{
  section: "insured" | "contractor" | "beneficiary";
  data: {
@@ -709,6 +712,8 @@ function ClaimsPageContent() {
  claimRegion: values.claimRegion || null,
  claimCity: values.claimCity,
  claimCommune: values.claimCommune || null,
+ claimLatitude: values.claimLatitude ?? null,
+ claimLongitude: values.claimLongitude ?? null,
  },
  values.contractorName
  ? {
@@ -1829,6 +1834,37 @@ function ClaimsPageContent() {
  <FieldError message={form.formState.errors.claimAddress?.message} />
  </div>
  </div>
+
+ {/* Geocodificación manual: el usuario confirma la ubicación exacta */}
+ <div className="flex flex-col gap-2 rounded-lg border border-border/50 p-3">
+ <div className="flex items-center justify-between">
+ <span className="text-[11px] font-medium">Ubicación en mapa</span>
+ <Button
+ type="button"
+ size="sm"
+ variant="outline"
+ className="pg-btn-platinum h-6 text-[11px]"
+ disabled={!form.watch("claimAddress") || !form.watch("claimCity")}
+ onClick={() => setLocationSelectorOpen(true)}
+ >
+ <MapPin className="h-3 w-3 mr-1" />
+ Buscar ubicación
+ </Button>
+ </div>
+ {(form.watch("claimLatitude") && form.watch("claimLongitude")) ? (
+ <div className="text-[11px] text-emerald-600 flex items-center gap-2">
+ <CheckCircle2 className="h-3.5 w-3.5" />
+ <span>
+ Ubicación confirmada: {Number(form.watch("claimLatitude")).toFixed(6)}, {Number(form.watch("claimLongitude")).toFixed(6)}
+ </span>
+ </div>
+ ) : (
+ <div className="text-[11px] text-amber-600 flex items-center gap-2">
+ <AlertTriangle className="h-3.5 w-3.5" />
+ <span>Falta confirmar la ubicación exacta en el mapa.</span>
+ </div>
+ )}
+ </div>
  <div className="grid grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
  <Label className="text-[10px] text-muted-foreground">País</Label>
@@ -2063,6 +2099,20 @@ function ClaimsPageContent() {
  </button>
  )}
  </div>
+
+ <ClaimLocationSelector
+ open={locationSelectorOpen}
+ onOpenChange={setLocationSelectorOpen}
+ address={form.watch("claimAddress") || ""}
+ commune={form.watch("claimCommune")}
+ city={form.watch("claimCity")}
+ region={form.watch("claimRegion")}
+ country={form.watch("claimCountry")}
+ onSelect={(candidate: GeocodeCandidate) => {
+ form.setValue("claimLatitude", candidate.lat);
+ form.setValue("claimLongitude", candidate.lng);
+ }}
+ />
  </DialogContent>
  </Dialog>
 
