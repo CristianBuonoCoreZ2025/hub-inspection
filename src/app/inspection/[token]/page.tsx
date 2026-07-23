@@ -119,12 +119,12 @@ function fmtDate(d: string | null) {
   if (!d) return "—";
   return new Date(d).toLocaleString("es-CL", {
     day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
   });
 }
 function fmtTime(d: string | null) {
   if (!d) return "—";
-  return new Date(d).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+  return new Date(d).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 function val(obj: Record<string, unknown> | null, key: string): string {
   const v = obj?.[key];

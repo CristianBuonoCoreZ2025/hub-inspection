@@ -106,6 +106,7 @@ function formatDateTime(dateStr: string | null) {
  year: "numeric",
  hour: "2-digit",
  minute: "2-digit",
+ hour12: false,
  });
 }
 
@@ -1198,7 +1199,7 @@ export default function InspectionDetailPage() {
  </p>
  )}
  <p className="text-[11px] text-muted-foreground mt-2">
- Cancelada el {new Date(session.cancelled_at).toLocaleString("es-CL")}
+ Cancelada el {new Date(session.cancelled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
  </p>
  </div>
  </div>

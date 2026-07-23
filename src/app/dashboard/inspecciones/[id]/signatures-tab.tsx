@@ -208,7 +208,7 @@ export default function SignaturesTab({ sessionId, sessionStatus }: { sessionId:
                     </div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={insuredSig.signature_url} alt="Firma asegurado" className="w-full h-[100px] object-contain bg-white rounded border" />
-                    <p className="text-[11px] text-muted-foreground mt-1">{new Date(insuredSig.signed_at).toLocaleString("es-CL")}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{new Date(insuredSig.signed_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</p>
                   </div>
                 )}
                 {adjusterSig && (
@@ -219,7 +219,7 @@ export default function SignaturesTab({ sessionId, sessionStatus }: { sessionId:
                     </div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={adjusterSig.signature_url} alt="Firma ajustador" className="w-full h-[100px] object-contain bg-white rounded border" />
-                    <p className="text-[11px] text-muted-foreground mt-1">{new Date(adjusterSig.signed_at).toLocaleString("es-CL")}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{new Date(adjusterSig.signed_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</p>
                   </div>
                 )}
               </div>

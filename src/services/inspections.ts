@@ -359,7 +359,7 @@ export async function createInspectionSession(claimId: string, options: {
     action_features_id: INSPECTION_FEATURE_ID,
     action_template_id: options.actionTemplateId,
     name: inspectionName,
-    description: `Inspección ${options.inspectionType === "remote" ? "remota" : "presencial"} programada para ${new Date(options.scheduledAt).toLocaleString("es-CL")}`,
+    description: `Inspección ${options.inspectionType === "remote" ? "remota" : "presencial"} programada para ${new Date(options.scheduledAt).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}`,
     issuer_id: options.inspectorId,
     expected_date: options.scheduledAt,
   });

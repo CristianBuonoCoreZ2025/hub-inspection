@@ -170,7 +170,7 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
         {expiryInfo.label}
         {currentExpiresAt && (
           <span className="text-muted-foreground/70 ml-1">
-            ({new Date(currentExpiresAt).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })})
+            ({new Date(currentExpiresAt).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })})
           </span>
         )}
       </div>

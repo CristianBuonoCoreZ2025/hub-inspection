@@ -409,7 +409,7 @@ function EventCard({
 }) {
  const router = useRouter();
  const time = session.scheduled_at
- ? new Date(session.scheduled_at).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
+ ? new Date(session.scheduled_at).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })
  : "";
  const isRemote = session.inspection_type === "remote";
  const style = isRemote ? typeStyles.remote : typeStyles.onsite;

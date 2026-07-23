@@ -741,9 +741,9 @@ function getActionEntityValue(type: string, action: ActionWithRelations | null, 
  case "action_approver":
  return action.approver?.name || action.approver?.email || "Aprobador asignado";
  case "action_created_at":
- return action.created_on ? new Date(action.created_on).toLocaleString("es-CL") : String(fallback || "");
+ return action.created_on ? new Date(action.created_on).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : String(fallback || "");
  case "action_updated_at":
- return action.updated_on ? new Date(action.updated_on).toLocaleString("es-CL") : String(fallback || "");
+ return action.updated_on ? new Date(action.updated_on).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : String(fallback || "");
  case "action_expected_date":
  return action.expected_date || String(fallback || "");
  default:
@@ -2314,7 +2314,7 @@ function CoordInspectionStatus({
  <span className="text-muted-foreground">Tipo:</span> {activeSession.inspection_type === "onsite" ? "Presencial" : "Remota"}
  </div>
  <div>
- <span className="text-muted-foreground">Fecha:</span> {activeSession.scheduled_at ? new Date(activeSession.scheduled_at).toLocaleString("es-CL") : "—"}
+ <span className="text-muted-foreground">Fecha:</span> {activeSession.scheduled_at ? new Date(activeSession.scheduled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
  </div>
  <div>
  <span className="text-muted-foreground">Contacto:</span> {activeSession.interviewed_name || "—"}
@@ -3973,7 +3973,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  const formatReceivedDate = (dateStr: string | null) => {
  if (!dateStr) return null;
  const d = new Date(dateStr);
- return d.toLocaleDateString("es-CL") + " " + d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+ return d.toLocaleDateString("es-CL") + " " + d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false });
  };
 
  return (
@@ -4237,15 +4237,15 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
  <div className="grid grid-cols-2 gap-2 text-[11px]">
  <div>
  <span className="text-muted-foreground">Agendada:</span>{" "}
- {session.scheduled_at ? new Date(session.scheduled_at).toLocaleString("es-CL") : "—"}
+ {session.scheduled_at ? new Date(session.scheduled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
  </div>
  <div>
  <span className="text-muted-foreground">Iniciada:</span>{" "}
- {session.started_at ? new Date(session.started_at).toLocaleString("es-CL") : "—"}
+ {session.started_at ? new Date(session.started_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
  </div>
  <div>
  <span className="text-muted-foreground">Finalizada:</span>{" "}
- {session.ended_at ? new Date(session.ended_at).toLocaleString("es-CL") : "—"}
+ {session.ended_at ? new Date(session.ended_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
  </div>
  <div>
  <span className="text-muted-foreground">Contacto:</span> {session.interviewed_name || "—"}
@@ -4423,7 +4423,7 @@ function CoordScheduler({
  />
  {currentValue && (
  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0 text-[11px]">
- {valDate ? valDate.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : ""}
+ {valDate ? valDate.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : ""}
  </Badge>
  )}
  </div>
@@ -4590,7 +4590,7 @@ function CoordScheduler({
  />
  {currentValue && valDate && (
  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 w-fit text-[11px] px-1 py-0">
- ✓ {valDate.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
+ ✓ {valDate.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
  </Badge>
  )}
  {selectedDateLabel && (
@@ -5451,7 +5451,7 @@ function formatFileSize(bytes: number | null | undefined): string {
 function formatDate(iso: string): string {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
   } catch {
     return iso;
   }

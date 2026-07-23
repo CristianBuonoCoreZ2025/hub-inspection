@@ -78,7 +78,7 @@ function formatDate(date: string | null) {
 
 function formatDateTime(date: string | null) {
  if (!date) return "—";
- return new Date(date).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+ return new Date(date).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function uniquePhones(...values: (string | null | undefined)[]): string {
@@ -1148,8 +1148,8 @@ export default function ClaimDetailPage() {
  if (av > bv) return gestionSort.direction === "asc" ? 1 : -1;
  return 0;
  }
- const fa = a.fecha ? new Date(a.fecha).getTime() : 0;
- const fb = b.fecha ? new Date(b.fecha).getTime() : 0;
+ const fa = a.createdOn ? new Date(a.createdOn).getTime() : 0;
+ const fb = b.createdOn ? new Date(b.createdOn).getTime() : 0;
  return fa - fb;
  });
 
@@ -1203,7 +1203,7 @@ export default function ClaimDetailPage() {
 
  // ── Semáforo: siempre 3 espacios (E, R, A) ──
  // state: "done" | "active" | "alert" | "late" | "rejected" | "pending" | "none"
- const fmtDate = (d: string | null) => d ? new Date(d).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }) : null;
+ const fmtDate = (d: string | null) => d ? new Date(d).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : null;
 
  type LightState = "done" | "active" | "alert" | "late" | "rejected" | "pending" | "none";
 
@@ -1707,7 +1707,7 @@ function ActionHistoryView({ actionId }: { actionId: string }) {
  {history.map((entry) => {
  const evt = EVENT_LABELS[entry.event_type] || { label: entry.event_type, icon: History, color: "text-slate-500" };
  const Icon = evt.icon;
- const date = new Date(entry.created_at).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" });
+ const date = new Date(entry.created_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
  const userName = entry.performed_by_name || entry.performed_by_profile?.full_name || "Sistema";
  return (
  <div key={entry.id} className="flex items-start gap-2 text-[11px]">

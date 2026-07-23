@@ -102,6 +102,7 @@ export default function ChatTab({ sessionId, compact = false }: { sessionId: str
  {new Date(msg.created_at).toLocaleString("es-CL", {
  hour: "2-digit",
  minute: "2-digit",
+ hour12: false,
  })}
  </p>
  </div>

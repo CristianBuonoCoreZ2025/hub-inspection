@@ -976,8 +976,12 @@ function GeoValidationBlock({
  <p className="font-medium">
  {session.geo_captured_at
  ? new Date(session.geo_captured_at).toLocaleString("es-CL", {
- dateStyle: "short",
- timeStyle: "short",
+ day: "2-digit",
+ month: "2-digit",
+ year: "numeric",
+ hour: "2-digit",
+ minute: "2-digit",
+ hour12: false,
  })
  : "—"}
  </p>

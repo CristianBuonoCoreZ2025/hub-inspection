@@ -13,7 +13,7 @@ export default function EmailViewScreen({ action }: GestionScreenProps) {
  <Label className="app-field-label text-[11px]">Creado</Label>
  <Input
  className="app-input h-8 bg-sky-50 dark:bg-sky-950"
- value={data.creado || action.issued_on ? new Date(action.issued_on || data.creado || "").toLocaleString("es-CL") : "—"}
+ value={data.creado || action.issued_on ? new Date(action.issued_on || data.creado || "").toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
  readOnly
  />
  </div>
