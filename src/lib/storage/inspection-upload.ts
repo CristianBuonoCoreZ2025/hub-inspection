@@ -197,7 +197,7 @@ export async function uploadInspectionFileRaw(
  * Re-sube un archivo de inspección optimizado a R2, reemplazando la versión raw.
  * Se usa después de la subida inicial para optimizar en background.
  *
- * @returns { url, key } — nueva URL y key en R2 (puede cambiar la extensión)
+ * @returns { url, key, optimizedSize } — nueva URL, key en R2 y tamaño optimizado en bytes
  */
 export async function reuploadInspectionFileOptimized(
   ctx: InspectionStorageContext,
@@ -206,7 +206,7 @@ export async function reuploadInspectionFileOptimized(
   contentType: string,
   fileType: InspectionFileType,
   ext: string
-): Promise<{ url: string; key: string }> {
+): Promise<{ url: string; key: string; optimizedSize: number }> {
   // Optimizar (imágenes se redimensionan y comprimen; PDFs/videos/docs se devuelven tal cual)
   const optimized = await optimizeFile(buffer, contentType, ext);
 
@@ -231,5 +231,5 @@ export async function reuploadInspectionFileOptimized(
     },
   });
 
-  return { url, key };
+  return { url, key, optimizedSize: optimized.buffer.length };
 }

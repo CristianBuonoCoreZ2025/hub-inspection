@@ -194,11 +194,12 @@ export async function POST(request: NextRequest) {
             ext || ".bin"
           );
 
-          // Actualizar url + metadata.optimized en la BD
+          // Actualizar url + metadata.fileSize con el tamaño optimizado real
           await supabase
             .from("inspection_evidences")
             .update({
               url: optimized.url,
+              metadata: { ...metadata, fileSize: optimized.optimizedSize, originalFileSize: file.size },
               updated_at: new Date().toISOString(),
             })
             .eq("id", evidenceId);

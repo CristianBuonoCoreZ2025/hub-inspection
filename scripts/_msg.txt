@@ -1,22 +1,17 @@
-fix: evidencias atascadas en 'Analizando IA' + quitar toast confuso
+fix: metadata.fileSize ahora refleja el tamaño optimizado, no el original
 
-PROBLEMA: evidencia L-000000141-HINS-001-EVI-0001 quedo pegada en
-ai_status='pending' para siempre. El after() de Next.js no ejecuto
-la IA (falla silenciosa conocida). El polling cada 5s corria infinito
-y el AiAnalysisButton estaba disabled, asi que el usuario no podia
-reintentar manualmente.
+PROBLEMA: la UI mostraba 2.5 MB para una imagen que en R2 pesa 220 KB.
+El after() optimizaba la imagen (sharp 1920px q80) y actualizaba la url,
+pero NUNCA actualizaba metadata.fileSize — quedaba con el tamaño original.
 
-FIXES:
-1. DB: marcar evidencias atascadas (>5 min en pending) como error
-2. Quitar toast 'Ubicacion capturada para evidencias' (confuso, el
-   indicador 'Geo activa' en el drop zone es suficiente)
-3. Quitar disabled del AiAnalysisButton cuando pending — el usuario
-   puede hacer retry manual en cualquier momento
-4. Timeout al polling: deja de pollar despues de 2 min (120s)
-   Aplicado a evidences-tab y claim-images-tab
-5. Indicador visual: despues de 2 min muestra 'IA timeout — usa el
-   boton Brain para reintentar' en lugar del spinner infinito
-6. Estado 'error' muestra 'IA falo — usa el boton Brain para reintentar'
+FIX:
+- reuploadInspectionFileOptimized ahora devuelve optimizedSize (bytes)
+- after() del upload route actualiza metadata con:
+  fileSize = tamaño optimizado (lo que realmente está en R2)
+  originalFileSize = tamaño original (preservado para auditoria)
+- BD: actualizada la evidencia L-000000141-EVI-0001
+  fileSize: 2,608,418 -> 220,925 (215.75 KB)
+  originalFileSize: 2,608,418 (preservado)
 
 Generado con [Devin](https://devin.ai)
 
