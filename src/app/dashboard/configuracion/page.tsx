@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -12,6 +13,8 @@ import {
   User,
   Shield,
   Save,
+  MapPin,
+  Loader2,
 } from "lucide-react";
 
 import { getCompanies, updateCompany } from "@/services/companies";
@@ -22,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DiagnosticLogToggle from "./DiagnosticLogToggle";
-import GeoThresholdSetting from "./GeoThresholdSetting";
+import { invalidateSystemSettingCache } from "@/services/settings";
 
 type ConfigTab = "general" | "marca" | "notificaciones" | "integraciones" | "perfiles";
 
@@ -137,10 +140,98 @@ export default function SettingsPage() {
 // Tab: General
 // ═══════════════════════════════════════════════════════════
 function GeneralTab() {
+  const queryClient = useQueryClient();
+  const [thresholdInput, setThresholdInput] = React.useState("500");
+
+  const { data: geoThreshold, isLoading: isLoadingThreshold } = useQuery({
+    queryKey: ["geo-threshold"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/geo-threshold");
+      const data = await res.json();
+      return typeof data.threshold === "number" ? data.threshold : 500;
+    },
+  });
+
+  React.useEffect(() => {
+    if (geoThreshold == null) return;
+    const id = setTimeout(() => setThresholdInput(String(geoThreshold)), 0);
+    return () => clearTimeout(id);
+  }, [geoThreshold]);
+
+  const updateThreshold = useMutation({
+    mutationFn: async (value: number) => {
+      const res = await fetch("/api/settings/geo-threshold", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Error al guardar");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      invalidateSystemSettingCache("geo_threshold_meters");
+      queryClient.invalidateQueries({ queryKey: ["geo-threshold"] });
+      toast.success("Umbral de geolocalización actualizado");
+    },
+    onError: (err: Error) => toast.error(err.message || "Error al guardar"),
+  });
+
+  const handleSaveThreshold = () => {
+    const parsed = Number(thresholdInput);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      toast.error("El umbral debe ser un número mayor a 0");
+      return;
+    }
+    updateThreshold.mutate(parsed);
+  };
+
   return (
     <div className="space-y-4">
       <DiagnosticLogToggle />
-      <GeoThresholdSetting />
+
+      <section className="app-panel">
+        <div className="flex items-center gap-2 mb-1">
+          <MapPin className="size-4 text-primary" />
+          <h2 className="text-sm font-semibold">Umbral de geolocalización</h2>
+        </div>
+        <p className="text-[13px] text-muted-foreground">
+          Distancia máxima en metros entre la ubicación capturada y la dirección del siniestro
+          para considerar la inspección como verificada.
+        </p>
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <Label className="text-[11px] text-muted-foreground">Metros</Label>
+            <Input
+              type="number"
+              min={1}
+              value={thresholdInput}
+              onChange={(e) => setThresholdInput(e.target.value)}
+              placeholder="500"
+              className="app-input"
+              disabled={isLoadingThreshold}
+            />
+          </div>
+          <Button
+            type="button"
+            className="pg-btn-platinum"
+            onClick={handleSaveThreshold}
+            disabled={isLoadingThreshold || updateThreshold.isPending}
+          >
+            {updateThreshold.isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Save className="size-3.5" />
+            )}
+            Guardar
+          </Button>
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Ejemplos: 10m, 100m, 500m (estándar), 5000m.
+        </p>
+      </section>
 
       <section className="app-panel">
         <h2 className="text-sm font-semibold">Información de la cuenta</h2>
