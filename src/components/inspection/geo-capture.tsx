@@ -99,6 +99,17 @@ export function GeoCapture({
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: mapProviders } = useQuery({
+    queryKey: ["map-providers"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/map-providers");
+      const data = await res.json();
+      return data as { providers: ("osm" | "mapbox")[]; tokens: Record<string, string | null> };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const mapboxToken = mapProviders?.tokens?.mapbox || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
   const [captured, setCaptured] = React.useState<LatLng | null>(initialCoords || null);
   const [validation, setValidation] = React.useState<GeoValidationResult | null>(
     initialCoords && initialDistance != null
@@ -342,12 +353,12 @@ export function GeoCapture({
           >
             <TileLayer
               url={
-                process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-                  ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+                mapboxToken
+                  ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`
                   : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
               }
               attribution={
-                process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+                mapboxToken
                   ? '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
               }
