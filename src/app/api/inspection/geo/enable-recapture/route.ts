@@ -36,13 +36,16 @@ export async function POST(req: NextRequest) {
       .select("company_id, role")
       .eq("id", user.id)
       .maybeSingle();
+    if (!profile) {
+      return NextResponse.json({ error: "No autorizado: sin perfil" }, { status: 403 });
+    }
     const claimData = Array.isArray(session.claim) ? session.claim[0] : session.claim;
     const claimCompanyId = (claimData as { company_id?: string } | undefined)?.company_id;
     const isInternal = (profile as { role?: string } | null)?.role === "internal";
-    const isAuthorized = isInternal || claimCompanyId === profile?.company_id;
-    if (!profile || !isAuthorized) {
+    const isAuthorized = isInternal || !claimCompanyId || claimCompanyId === profile.company_id;
+    if (!isAuthorized) {
       return NextResponse.json(
-        { error: "No autorizado", debug: { profileCompanyId: profile?.company_id, claimCompanyId, role: profile?.role } },
+        { error: "No autorizado", debug: { profileCompanyId: profile.company_id, claimCompanyId, role: profile.role } },
         { status: 403 }
       );
     }
