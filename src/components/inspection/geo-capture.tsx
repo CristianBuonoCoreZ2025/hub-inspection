@@ -159,7 +159,7 @@ export function GeoCapture({
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `HTTP ${res.status}`);
+          throw new Error(err.error || err.detail || `HTTP ${res.status}`);
         }
         const data = await res.json();
         if (data.evidence) {
