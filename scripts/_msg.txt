@@ -1,20 +1,22 @@
-fix: branding por empresa ahora se edita en Empresas, no en Configuración
+fix: estado real de integraciones en Configuración
 
-El branding (logo + color principal) estaba en el tab "Marca" de
-Configuración, pero corresponde a cada cliente/empresa (ej: Mclarens).
-Se movió al formulario de edición/creación de Empresas.
+El tab Integraciones mostraba datos hardcodeados y desactualizados:
+- OpenRouter aparecía "Pendiente" aunque ya estaba implementado
+- Resend aparecía "Conectado" sin verificar si RESEND_API_KEY existía
+- Jitsi Meet aparecía aunque ya usamos WebRTC p2p
 
 Cambios:
-- src/app/dashboard/configuracion/page.tsx:
-  - Eliminado tab "Marca" y componente MarcaTab
-  - Eliminados imports de getCompanies, updateCompany, type CompanyInput
-  - Limpieza de iconos y tipos no usados
-- src/app/dashboard/companies/page.tsx:
-  - Agregado primaryColor a defaultValues y form.reset
-  - Agregado input de color principal en el modal de empresa
-  - El logo ya existía; ahora están juntos logo + color
-
-Backend ya soportaba primary_color y logo_url en companies.
+- src/app/api/integrations/status/route.ts: nuevo endpoint que lee
+  variables de entorno y devuelve estado real (Conectado / No configurado)
+  sin exponer secretos.
+- src/app/dashboard/configuracion/page.tsx: IntegracionesTab ahora consume
+  la API y muestra estado real con mensajes de configuración faltante.
+- Lista actualizada:
+  - Supabase, Cloudflare R2: Conectado
+  - OpenRouter: Conectado si OPENROUTER_API_KEY existe
+  - Resend: Conectado si RESEND_API_KEY existe; si falta, indica qué agregar
+  - WhatsApp Cloud API: Conectado si WHATSAPP_PHONE_NUMBER_ID y token existen
+  - WebRTC P2P: Conectado (reemplaza a Jitsi)
 
 Generado con [Devin](https://devin.ai)
 

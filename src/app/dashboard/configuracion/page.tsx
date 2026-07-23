@@ -321,79 +321,68 @@ function NotificacionesTab() {
 // Tab: Integraciones
 // ═══════════════════════════════════════════════════════════
 function IntegracionesTab() {
-  const integrations = [
-    {
-      name: "Supabase",
-      category: "Backend",
-      status: "Conectado",
-      statusColor: "emerald",
-      desc: "Base de datos, autenticación y storage",
+  const { data, isLoading } = useQuery({
+    queryKey: ["integrations-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/integrations/status");
+      if (!res.ok) throw new Error("Error al cargar integraciones");
+      const data = await res.json();
+      return data as { integrations: { name: string; category: string; status: string; statusColor: string; desc: string; config?: string }[] };
     },
-    {
-      name: "Cloudflare R2",
-      category: "Storage",
-      status: "Conectado",
-      statusColor: "emerald",
-      desc: "Almacenamiento de archivos y evidencias",
-    },
-    {
-      name: "Resend",
-      category: "Email",
-      status: "Conectado",
-      statusColor: "emerald",
-      desc: "Envío de emails (magic links, reset password)",
-    },
-    {
-      name: "Jitsi Meet",
-      category: "Video",
-      status: "Conectado",
-      statusColor: "emerald",
-      desc: "Videollamadas para inspecciones remotas",
-    },
-    {
-      name: "OpenRouter",
-      category: "IA",
-      status: "Pendiente",
-      statusColor: "amber",
-      desc: "IA para análisis de daños y OCR",
-    },
-  ];
+  });
+
+  const integrations = data?.integrations || [];
 
   return (
     <section className="app-panel">
       <h2 className="text-sm font-semibold">Integraciones</h2>
       <p className="mt-1 text-[13px] text-muted-foreground">
-        Servicios conectados a la plataforma.
+        Servicios conectados a la plataforma. Estado basado en variables de entorno.
       </p>
       <div className="mt-4 space-y-2">
+        {isLoading && (
+          <div className="flex items-center gap-2 text-[13px] text-muted-foreground py-4">
+            <Loader2 className="size-4 animate-spin" />
+            Cargando estado de integraciones...
+          </div>
+        )}
         {integrations.map((int) => (
           <div
             key={int.name}
-            className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+            className="flex flex-col gap-1 rounded-lg border border-border bg-card p-3"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-muted/40">
-                <Plug className="size-4 text-muted-foreground" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-medium">{int.name}</span>
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
-                    {int.category}
-                  </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-muted/40">
+                  <Plug className="size-4 text-muted-foreground" />
                 </div>
-                <div className="text-[11px] text-muted-foreground">{int.desc}</div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-medium">{int.name}</span>
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
+                      {int.category}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">{int.desc}</div>
+                </div>
               </div>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium shrink-0 ${
+                  int.statusColor === "emerald"
+                    ? "bg-emerald-500/15 text-emerald-600"
+                    : int.statusColor === "rose"
+                      ? "bg-rose-500/15 text-rose-600"
+                      : "bg-amber-500/15 text-amber-600"
+                }`}
+              >
+                {int.status}
+              </span>
             </div>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
-                int.statusColor === "emerald"
-                  ? "bg-emerald-500/15 text-emerald-600"
-                  : "bg-amber-500/15 text-amber-600"
-              }`}
-            >
-              {int.status}
-            </span>
+            {int.config && (
+              <div className="text-[10px] text-rose-600 dark:text-rose-400 pl-12">
+                {int.config}
+              </div>
+            )}
           </div>
         ))}
       </div>
