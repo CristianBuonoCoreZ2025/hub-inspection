@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ClaimAction } from "@/types";
 import { CheckCircle, Clock, XCircle, AlertTriangle, Circle, ArrowRight, GitBranch } from "lucide-react";
 
@@ -20,12 +20,17 @@ const stateConfig: Record<NodeState, { color: string; bg: string; border: string
   none:     { color: "text-muted-foreground/40",               bg: "bg-transparent",                         border: "border-dashed border-white/10 dark:border-white/5", icon: Circle, label: "N/A" },
 };
 
-// Dependencias conocidas entre templates (usa feature codes)
+// Dependencias conocidas entre templates (child -> [parents]).
+// El primer padre existente en las gestiones se usa como nodo padre en el árbol.
 const DEPENDENCIES: Record<string, string[]> = {
   RES: ["COB"],
+  PCA: ["RES"],
   AJU: ["RES"],
+  INS: ["COI"],
   RTA: ["SOL"],
 };
+
+const ORDER = ["COB", "RES", "PCA", "AJU", "INS", "CIN", "SOL", "RTA", "CIE", "REA", "PRO", "IMP", "RIN"];
 
 const CLOSED_STATUSES = new Set(["issued", "reviewed", "approved", "dispatched"]);
 
@@ -36,7 +41,6 @@ function getActionState(action: ClaimAction): NodeState {
   if (status === "issued" || status === "reviewed" || status === "approved" || status === "dispatched") {
     return "done";
   }
-  // todo — verificar si está atrasada o en alerta
   const dti = action.action_template?.days_to_issue ?? 0;
   const created = new Date(action.created_on);
   const daysSince = Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24));
@@ -84,25 +88,96 @@ function getLevelState(action: ClaimAction, level: "issue" | "review" | "approve
   return "none";
 }
 
+function ActionRow({ action, onOpenAction }: { action: ClaimAction; onOpenAction?: (actionId: string) => void }) {
+  const state = getActionState(action);
+  const cfg = stateConfig[state];
+  const Icon = cfg.icon;
+  const issueState = getLevelState(action, "issue");
+  const reviewState = getLevelState(action, "review");
+  const approveState = getLevelState(action, "approve");
+  const levels = [
+    { label: "E", state: issueState, title: "Emisión" },
+    { label: "R", state: reviewState, title: "Revisión" },
+    { label: "A", state: approveState, title: "Aprobación" },
+  ];
+
+  return (
+    <div
+      className={`flex items-center gap-3 px-3 py-2 ${onOpenAction ? "cursor-pointer hover:bg-white/5 dark:hover:bg-white/5" : ""} transition-colors`}
+      onClick={() => onOpenAction?.(action.id)}
+    >
+      <div className={`flex items-center gap-1.5 ${cfg.color} shrink-0`}>
+        <Icon className="h-3.5 w-3.5" />
+      </div>
+
+      <span className="font-mono text-[10px] text-primary tabular-nums whitespace-nowrap shrink-0 w-[80px]">
+        {(action.code || "").split("-").slice(2).join("-") || "—"}
+      </span>
+
+      <span className="text-[11px] font-medium flex-1 truncate">{action.name}</span>
+
+      <div className="flex items-center gap-1 shrink-0">
+        {levels.map((lvl, i) => {
+          if (lvl.state === "none") return null;
+          const lcfg = stateConfig[lvl.state];
+          return (
+            <div key={i} className="flex items-center gap-0.5" title={`${lvl.title}: ${lcfg.label}`}>
+              {i > 0 && <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/40" />}
+              <div className={`flex items-center justify-center rounded-full ${lcfg.bg} ${lcfg.border} border backdrop-blur-sm w-5 h-5`}>
+                <span className={`text-[9px] font-bold ${lcfg.color}`}>{lvl.label}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.border} border backdrop-blur-sm ${cfg.color} shrink-0`}>
+        {cfg.label}
+      </span>
+    </div>
+  );
+}
+
 export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProps) {
-  // Agrupar acciones por template_code
-  const grouped = useMemo(() => {
-    const map = new Map<string, ClaimAction[]>();
+  const tree = useMemo(() => {
+    const codeToActions = new Map<string, ClaimAction[]>();
     for (const a of actions) {
       const code = a.action_template?.code || "GEN";
-      if (!map.has(code)) map.set(code, []);
-      map.get(code)!.push(a);
+      if (!codeToActions.has(code)) codeToActions.set(code, []);
+      codeToActions.get(code)!.push(a);
     }
-    return Array.from(map.entries()).sort((a, b) => {
-      // Ordenar por dependencias: COB antes que RES, etc
-      const order = ["COB", "RES", "AJU", "INS", "CIN", "SOL", "RTA", "CIE", "REA", "PRO", "IMP", "RIN"];
-      const ai = order.indexOf(a[0]);
-      const bi = order.indexOf(b[0]);
-      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-    });
+    for (const list of codeToActions.values()) {
+      list.sort((x, y) => new Date(x.created_on).getTime() - new Date(y.created_on).getTime());
+    }
+
+    const childMap = new Map<string, string[]>();
+    const childSet = new Set<string>();
+    for (const [code, deps] of Object.entries(DEPENDENCIES)) {
+      if (!codeToActions.has(code)) continue;
+      for (const dep of deps) {
+        if (codeToActions.has(dep)) {
+          if (!childMap.has(dep)) childMap.set(dep, []);
+          childMap.get(dep)!.push(code);
+          childSet.add(code);
+          break;
+        }
+      }
+    }
+
+    const orderIndex = (code: string) => {
+      const i = ORDER.indexOf(code);
+      return i === -1 ? 999 : i;
+    };
+
+    const roots = Array.from(codeToActions.keys()).filter(c => !childSet.has(c));
+    roots.sort((a, b) => orderIndex(a) - orderIndex(b));
+    for (const children of childMap.values()) {
+      children.sort((a, b) => orderIndex(a) - orderIndex(b));
+    }
+
+    return { codeToActions, childMap, roots };
   }, [actions]);
 
-  // Verificar si una dependencia está cumplida
   const isDependencyMet = (templateCode: string): { met: boolean; dep: string } => {
     const deps = DEPENDENCIES[templateCode];
     if (!deps) return { met: true, dep: "" };
@@ -112,6 +187,47 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
       if (!met) return { met: false, dep };
     }
     return { met: true, dep: deps.join(", ") };
+  };
+
+  const renderNode = (code: string): ReactNode => {
+    const groupActions = tree.codeToActions.get(code) || [];
+    const childCodes = tree.childMap.get(code) || [];
+    const dep = isDependencyMet(code);
+    const first = groupActions[0];
+
+    return (
+      <div key={code} className="rounded-xl border border-white/10 dark:border-white/5 bg-card/50 backdrop-blur-xl overflow-hidden shadow-sm">
+        <div className={`flex items-center justify-between px-3 py-2 bg-white/5 dark:bg-white/5 backdrop-blur-sm border-b border-white/10 dark:border-white/5 ${!dep.met ? "border-amber-500/30 dark:border-amber-500/20" : ""}`}>
+          <div className="flex items-center gap-2">
+            <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[11px] font-semibold">{code}</span>
+            <span className="text-[10px] text-muted-foreground">{first?.action_feature?.name || first?.name || ""}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {!dep.met && (
+              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                Requiere: {dep.dep}
+              </span>
+            )}
+            <span className="text-[10px] text-muted-foreground">{groupActions.length} gestión{groupActions.length > 1 ? "es" : ""}</span>
+          </div>
+        </div>
+
+        {groupActions.length > 0 && (
+          <div className="divide-y divide-white/5 dark:divide-white/5">
+            {groupActions.map(action => (
+              <ActionRow key={action.id} action={action} onOpenAction={onOpenAction} />
+            ))}
+          </div>
+        )}
+
+        {childCodes.length > 0 && (
+          <div className="space-y-2 p-2 border-t border-white/5 dark:border-white/5 pl-3 border-l border-white/10 dark:border-white/5">
+            {childCodes.map(child => renderNode(child))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (actions.length === 0) {
@@ -124,7 +240,7 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
 
   return (
     <div className="space-y-3">
-      {/* Leyenda — glass */}
+      {/* Leyenda */}
       <div className="flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground
                       rounded-lg border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/5
                       backdrop-blur-md px-3 py-2">
@@ -140,88 +256,9 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
         })}
       </div>
 
-      {/* Grupos de gestiones por tipo — glass */}
+      {/* Árbol de gestiones */}
       <div className="space-y-2">
-        {grouped.map(([templateCode, groupActions]) => {
-          const dep = isDependencyMet(templateCode);
-          return (
-            <div key={templateCode} className={`rounded-xl border ${dep.met ? "border-white/10 dark:border-white/5" : "border-amber-500/30 dark:border-amber-500/20"} bg-card/50 backdrop-blur-xl overflow-hidden shadow-sm`}>
-              {/* Header del grupo — glass */}
-              <div className="flex items-center justify-between px-3 py-2 bg-white/5 dark:bg-white/5 backdrop-blur-sm border-b border-white/10 dark:border-white/5">
-                <div className="flex items-center gap-2">
-                  <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-[11px] font-semibold">{templateCode}</span>
-                  <span className="text-[10px] text-muted-foreground">{groupActions[0].action_feature?.name || groupActions[0].name}</span>
-                </div>
-                {!dep.met && (
-                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                    Requiere: {dep.dep}
-                  </span>
-                )}
-                <span className="text-[10px] text-muted-foreground">{groupActions.length} gestión{groupActions.length > 1 ? "es" : ""}</span>
-              </div>
-
-              {/* Gestiones del grupo */}
-              <div className="divide-y divide-white/5 dark:divide-white/5">
-                {groupActions.map(action => {
-                  const state = getActionState(action);
-                  const cfg = stateConfig[state];
-                  const Icon = cfg.icon;
-                  const issueState = getLevelState(action, "issue");
-                  const reviewState = getLevelState(action, "review");
-                  const approveState = getLevelState(action, "approve");
-                  const levels = [
-                    { label: "E", state: issueState, title: "Emisión" },
-                    { label: "R", state: reviewState, title: "Revisión" },
-                    { label: "A", state: approveState, title: "Aprobación" },
-                  ];
-
-                  return (
-                    <div
-                      key={action.id}
-                      className={`flex items-center gap-3 px-3 py-2 ${onOpenAction ? "cursor-pointer hover:bg-white/5 dark:hover:bg-white/5" : ""} transition-colors`}
-                      onClick={() => onOpenAction?.(action.id)}
-                    >
-                      {/* Estado general */}
-                      <div className={`flex items-center gap-1.5 ${cfg.color} shrink-0`}>
-                        <Icon className="h-3.5 w-3.5" />
-                      </div>
-
-                      {/* Código */}
-                      <span className="font-mono text-[10px] text-primary tabular-nums whitespace-nowrap shrink-0 w-[80px]">
-                        {(action.code || "").split("-").slice(2).join("-") || "—"}
-                      </span>
-
-                      {/* Nombre */}
-                      <span className="text-[11px] font-medium flex-1 truncate">{action.name}</span>
-
-                      {/* Niveles E/R/A — glass circles */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        {levels.map((lvl, i) => {
-                          if (lvl.state === "none") return null;
-                          const lcfg = stateConfig[lvl.state];
-                          return (
-                            <div key={i} className="flex items-center gap-0.5" title={`${lvl.title}: ${lcfg.label}`}>
-                              {i > 0 && <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/40" />}
-                              <div className={`flex items-center justify-center rounded-full ${lcfg.bg} ${lcfg.border} border backdrop-blur-sm w-5 h-5`}>
-                                <span className={`text-[9px] font-bold ${lcfg.color}`}>{lvl.label}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Badge estado — glass */}
-                      <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.border} border backdrop-blur-sm ${cfg.color} shrink-0`}>
-                        {cfg.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+        {tree.roots.map(code => renderNode(code))}
       </div>
     </div>
   );
