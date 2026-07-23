@@ -222,7 +222,7 @@ export default function WorkflowView({ actions, onOpenAction }: WorkflowViewProp
         )}
 
         {childCodes.length > 0 && (
-          <div className="space-y-2 p-2 border-t border-white/5 dark:border-white/5 pl-3 border-l border-white/10 dark:border-white/5">
+          <div className="space-y-2 p-2 pl-3 border-t border-l border-white/5">
             {childCodes.map(child => renderNode(child))}
           </div>
         )}

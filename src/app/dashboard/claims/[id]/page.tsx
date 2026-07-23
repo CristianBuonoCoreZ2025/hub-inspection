@@ -1687,7 +1687,7 @@ export default function ClaimDetailPage() {
  {claim.claim_address || "Ubicación confirmada"} — {Number(claim.claim_latitude).toFixed(6)}, {Number(claim.claim_longitude).toFixed(6)}
  </DialogDescription>
  </DialogHeader>
- <div className="h-[400px]">
+ <div className="h-100">
  <MapContainer
  center={[claim.claim_latitude, claim.claim_longitude]}
  zoom={16}

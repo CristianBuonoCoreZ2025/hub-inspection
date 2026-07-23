@@ -3690,7 +3690,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  <div>
  <Label className="app-field-label text-[10px]">Notas de la solicitud</Label>
  <Textarea
- className="app-input text-[11px] min-h-[50px]"
+ className="app-input text-[11px] min-h-12.5"
  placeholder="Indicaciones para el asegurado o corredor..."
  value={notes}
  onChange={(e) => setNotes(e.target.value)}
@@ -4061,7 +4061,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  </span>
  )}
  {item.notes && (
- <span className="text-[9px] text-muted-foreground italic max-w-[220px] truncate" title={item.notes}>
+ <span className="text-[9px] text-muted-foreground italic max-w-55 truncate" title={item.notes}>
  &ldquo;{item.notes}&rdquo;
  </span>
  )}
@@ -4111,7 +4111,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  {/* Modal: Motivo "No necesario" — motivo obligatorio antes de grabar */}
  {notNeededTarget && createPortal(
  <div
- className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+ className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 p-4"
  onClick={cancelNotNeeded}
  >
  <div
@@ -4127,7 +4127,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  <div className="space-y-2">
  <Label className="text-[11px]">Motivo <span className="text-rose-600">*</span></Label>
  <Textarea
- className="min-h-[80px] text-[11px]"
+ className="min-h-20 text-[11px]"
  placeholder="Explique por qué este documento no es necesario..."
  value={notNeededReason}
  onChange={(e) => setNotNeededReason(e.target.value)}
@@ -4615,7 +4615,7 @@ function CoordScheduler({
  type="button"
  disabled={readOnly || !slot.available}
  onClick={() => assignSlot(slot.time)}
- className={`h-6 max-h-[24px] rounded text-[10px] font-medium transition-colors flex items-center justify-center gap-0.5 ${
+ className={`h-6 max-h-6 rounded text-[10px] font-medium transition-colors flex items-center justify-center gap-0.5 ${
  !slot.available
  ? "bg-muted/40 text-muted-foreground/40 cursor-not-allowed line-through border border-border/30"
  : slot.extra
