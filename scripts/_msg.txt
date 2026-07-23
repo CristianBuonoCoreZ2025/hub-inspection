@@ -1,0 +1,22 @@
+fix: sincronizar user_clients con profiles.company_id (backfill + trigger)
+
+PROBLEMA DE RAIZ: dos fuentes de verdad sin sincronizar
+- profiles.company_id: 33 usuarios para McLarens (seteado al invitar)
+- user_clients: 1 usuario para McLarens (solo si se pasaban clientIds)
+
+Impacto del bug:
+- Modal "usuarios autorizados" de empresas: 1 en vez de 33
+- Filtro de inspectores/adjusters por empresa en claims: 1 en vez de 33
+- Lista de usuarios: "clientes" vacios para la mayoria
+
+Fix:
+- Migracion 204: backfill — inserta 32 filas faltantes en user_clients
+- Migracion 205: trigger sync_user_clients_on_profile_change
+  (AFTER INSERT y AFTER UPDATE OF company_id en profiles)
+  Asegura que user_clients siempre tenga la fila de company_id principal
+
+Verificado: McLarens ahora tiene 33 en user_clients, 0 faltantes.
+
+Generado con [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>
