@@ -1,9 +1,10 @@
-fix: botones de Estado de la Sesión en línea horizontal
+feat: ordenadores de columnas en listado de gestiones del siniestro
 
-En src/app/dashboard/inspecciones/[id]/page.tsx, los tres botones de acción
-(Iniciar, Reagendar, Cancelar) ahora se muestran en una fila horizontal a la
-altura de la fila de datos, en lugar de apilados verticalmente. Se redujeron a
-h-7 w-7 con iconos h-3.5 w-3.5 para ocupar menos espacio.
+En src/app/dashboard/claims/[id]/page.tsx, la tabla de gestiones ahora permite
+ordenar por Código, Nombre, Fecha Ejecución, Días Restantes y Estado. Cada
+cabecera es clickeable y alterna entre ascendente/descendente, mostrando el
+ícono de orden correspondiente. El orden por defecto sigue siendo por fecha de
+ejecución descendente.
 
 Generado con [Devin](https://devin.ai)
 

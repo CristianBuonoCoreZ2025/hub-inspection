@@ -40,6 +40,9 @@ import {
  Undo2,
  Send,
  Image as ImageIcon,
+ ArrowUpDown,
+ ArrowUp,
+ ArrowDown,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -187,6 +190,7 @@ export default function ClaimDetailPage() {
  const [editingActionData, setEditingActionData] = useState<Record<string, unknown>>({});
  const [expectedDate, setExpectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
  const [gestionDescription, setGestionDescription] = useState<string>("");
+ const [gestionSort, setGestionSort] = useState<{ key: "codigo" | "nombre" | "fecha" | "dias" | "estado"; direction: "asc" | "desc" } | null>(null);
 
  // Filtrar tabs por permisos de sub-sección (con fallback al padre)
  const tabs = allTabs.filter(t => canView(t.section));
@@ -1118,7 +1122,32 @@ export default function ClaimDetailPage() {
  origin: a.origin || "M",
  }));
 
- const gestiones = actions.sort((a, b) => {
+ const gestiones = [...actions].sort((a, b) => {
+ if (gestionSort) {
+ const getVal = (g: typeof a) => {
+ switch (gestionSort.key) {
+ case "codigo":
+ return g.codigo || "";
+ case "nombre":
+ return g.nombre || "";
+ case "fecha":
+ return g.fecha ? new Date(g.fecha).getTime() : 0;
+ case "dias": {
+ const d = g.fecha ? Math.ceil((new Date(g.fecha).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+ return d === null ? Number.MAX_SAFE_INTEGER : d;
+ }
+ case "estado":
+ return g.estado || "";
+ default:
+ return 0;
+ }
+ };
+ const av = getVal(a);
+ const bv = getVal(b);
+ if (av < bv) return gestionSort.direction === "asc" ? -1 : 1;
+ if (av > bv) return gestionSort.direction === "asc" ? 1 : -1;
+ return 0;
+ }
  const fa = a.fecha ? new Date(a.fecha).getTime() : 0;
  const fb = b.fecha ? new Date(b.fecha).getTime() : 0;
  return fb - fa;
@@ -1132,16 +1161,37 @@ export default function ClaimDetailPage() {
  );
  }
 
+ const renderSortHeader = (sortKey: "codigo" | "nombre" | "fecha" | "dias" | "estado", label: string, className?: string, center?: boolean) => {
+ const isActive = gestionSort?.key === sortKey;
+ const dir = isActive ? gestionSort.direction : null;
+ const nextDir = dir === "asc" ? "desc" : "asc";
+ return (
+ <th
+ className={cn(className, center && "text-center", "cursor-pointer select-none hover:bg-muted/50")}
+ onClick={() => setGestionSort({ key: sortKey, direction: nextDir })}
+ >
+ <span className="inline-flex items-center gap-1">
+ {label}
+ {isActive ? (
+ dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+ ) : (
+ <ArrowUpDown className="h-3 w-3 opacity-40" />
+ )}
+ </span>
+ </th>
+ );
+ };
+
  return (
  <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
  <tr>
- <th className="w-[90px]">Código</th>
- <th>Nombre Gestión</th>
- <th>Fecha Ejecución</th>
- <th>Días Restantes</th>
- <th className="w-[110px] text-center">Estado</th>
+ {renderSortHeader("codigo", "Código", "w-[90px]")}
+ {renderSortHeader("nombre", "Nombre Gestión")}
+ {renderSortHeader("fecha", "Fecha Ejecución")}
+ {renderSortHeader("dias", "Días Restantes")}
+ {renderSortHeader("estado", "Estado", "w-[110px]", true)}
  <th className="w-[80px]"></th>
  </tr>
  </thead>
