@@ -509,7 +509,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Información General
  </h3>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[11px]">
  <div>
  <span className="app-data-label">N° Interno</span>
  <p className="font-mono font-semibold text-primary">
@@ -558,7 +558,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Asegurado
  </h3>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[11px]">
  <div>
  <span className="app-data-label">RUT</span>
  <p className="font-medium">{insuredParticipant?.rut || "—"}</p>
@@ -613,7 +613,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Datos del Siniestro
  </h3>
- <div className="app-data-grid">
+ <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-2 text-[11px]">
  <div>
  <span className="app-data-label">Nombre contacto</span>
  <p className="font-medium">{contactParticipant?.full_name || insuredParticipant?.full_name || "—"}</p>
@@ -654,7 +654,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Datos de la Coordinación
  </h3>
- <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-[12px]">
+ <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
  <div>
  <span className="app-data-label">Tipo de Inspección</span>
  <p className="font-medium">{session.inspection_type === "remote" ? "Remota" : session.inspection_type === "onsite" ? "Presencial" : "—"}</p>
@@ -714,7 +714,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Estado de la Sesion
  </h3>
- <div className="app-data-grid-4">
+ <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[11px]">
  <div>
  <span className="app-data-label">Estado</span>
  <p>

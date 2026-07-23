@@ -1,9 +1,16 @@
-fix: renombrar primera sección en resumen de inspección
+fix: unificar tipografía a 11px en Resumen de inspección
 
-En src/app/dashboard/inspecciones/[id]/page.tsx, la primera sección del
-Resumen de inspección tenía el mismo título "Datos del Siniestro" que una
-sección posterior. Se renombra la primera a "Información General" para
-evitar confusión.
+En src/app/dashboard/inspecciones/[id]/page.tsx, todas las secciones del
+Resumen de inspección ahora usan 11px tanto para títulos/secciones como
+para valores. Antes los títulos/labels estaban a 11px pero los valores a
+12px, lo que hacía que los títulos parecieran más pequeños.
+
+Cambios:
+- Información General: grid pasa a text-[11px]
+- Asegurado: grid pasa a text-[11px]
+- Datos del Siniestro: reemplazado app-data-grid por grid con text-[11px]
+- Datos de la Coordinación: grid pasa a text-[11px]
+- Estado de la Sesión: reemplazado app-data-grid-4 por grid con text-[11px]
 
 Generado con [Devin](https://devin.ai)
 
