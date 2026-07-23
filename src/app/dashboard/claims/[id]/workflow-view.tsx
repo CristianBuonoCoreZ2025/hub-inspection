@@ -27,6 +27,7 @@ const DEPENDENCIES: Record<string, string[]> = {
   PCA: ["RES"],
   AJU: ["RES"],
   INS: ["COI"],
+  CIN: ["INS"],
   RTA: ["SOL"],
 };
 
