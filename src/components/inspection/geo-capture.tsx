@@ -218,45 +218,46 @@ export function GeoCapture({
               height: 400,
             });
 
-            let capturedEvidenceUrl = capturedMapUrl;
-
-            // Guardar mapa(s) como evidencia automáticamente
-            if (sessionId) {
-              if (replaceEvidence && sessionToken) {
-                await fetch("/api/inspection/geo/reset-geo", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ token: sessionToken }),
-                });
-              }
-              const ev = await saveMapAsEvidence(sessionId, coords, capturedMapUrl, capturedBy, "captured");
-              if (!ev) throw new Error("No se pudo guardar la evidencia del mapa");
-              setMapEvidence(ev);
-              capturedEvidenceUrl = ev.url;
-
-              // Si está fuera de rango Y tenemos coords del siniestro, guardar
-              // también el mapa de la dirección declarada (evidencia de discrepancia)
-              if (result.status === "out_of_range" && claimCoords) {
-                const declaredMapUrl = generateStaticMapUrl(claimCoords.lat, claimCoords.lng, {
-                  zoom: 16,
-                  width: 600,
-                  height: 400,
-                });
-                const dev = await saveMapAsEvidence(sessionId, claimCoords, declaredMapUrl, capturedBy, "declared");
-                if (dev) setDeclaredMapEvidence(dev);
-              }
-            }
-
-            // Notificar al padre con la URL real de la evidencia
-            lastCapturedRef.current = { coords, mapUrl: capturedEvidenceUrl };
+            // Notificar al padre inmediatamente para guardar lat/long/status
+            // La evidencia del mapa se intenta después, pero nunca bloquea la captura
+            lastCapturedRef.current = { coords, mapUrl: capturedMapUrl };
             onCapture({
               coords,
               distance: result.distance,
               status: result.status,
-              mapUrl: capturedEvidenceUrl,
+              mapUrl: capturedMapUrl,
             });
+
+            // Guardar mapa(s) como evidencia automáticamente (segundo plano)
+            if (sessionId) {
+              try {
+                if (replaceEvidence && sessionToken) {
+                  await fetch("/api/inspection/geo/reset-geo", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: sessionToken }),
+                  });
+                }
+                const ev = await saveMapAsEvidence(sessionId, coords, capturedMapUrl, capturedBy, "captured");
+                if (ev) setMapEvidence(ev);
+
+                // Si está fuera de rango Y tenemos coords del siniestro, guardar
+                // también el mapa de la dirección declarada (evidencia de discrepancia)
+                if (result.status === "out_of_range" && claimCoords) {
+                  const declaredMapUrl = generateStaticMapUrl(claimCoords.lat, claimCoords.lng, {
+                    zoom: 16,
+                    width: 600,
+                    height: 400,
+                  });
+                  const dev = await saveMapAsEvidence(sessionId, claimCoords, declaredMapUrl, capturedBy, "declared");
+                  if (dev) setDeclaredMapEvidence(dev);
+                }
+              } catch (evErr) {
+                console.warn("[GeoCapture] No se pudo guardar evidencia del mapa:", evErr);
+              }
+            }
           } catch (err) {
-            const message = err instanceof Error ? err.message : "Error al guardar la evidencia";
+            const message = err instanceof Error ? err.message : "Error al guardar la ubicación";
             setError(message);
           } finally {
             setLoading(false);
