@@ -99,6 +99,12 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
   const { data: inspectionPhotos } = useQuery({
     queryKey: ["inspection-photos-by-claim", claimId],
     queryFn: () => getInspectionPhotosByClaim(claimId),
+    // Polling cada 5s mientras hay fotos de inspección siendo procesadas por IA
+    refetchInterval: (query) => {
+      const photos = query.state.data;
+      if (photos && photos.some((p) => p.ai_status === "pending")) return 5000;
+      return false;
+    },
   });
 
   const { data: inspectionSketches } = useQuery({
@@ -143,7 +149,7 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         url: photo.url,
         fileSize: photo.metadata?.fileSize || null,
         aiSummary: photo.ai_summary,
-        aiStatus: null, // las de inspección no tienen ai_status
+        aiStatus: photo.ai_status,
         canDelete: false,
         canAnalyze: true,
         table: "inspection_evidences",

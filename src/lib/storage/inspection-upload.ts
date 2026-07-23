@@ -146,3 +146,90 @@ export async function uploadInspectionFile(
 
   return { url, key, seq, fileCode };
 }
+
+/**
+ * Sube un archivo de inspección a R2 SIN optimizar (raw, rápido).
+ *
+ * Igual que uploadInspectionFile pero sin llamar a optimizeFile().
+ * Se usa para responder al cliente rápidamente y dejar la optimización
+ * para un proceso en background (after()).
+ *
+ * @returns { url, key, seq, fileCode, ctx } — URL, key, correlativo, código y contexto resuelto
+ */
+export async function uploadInspectionFileRaw(
+  sessionId: string,
+  buffer: Buffer,
+  contentType: string,
+  fileType: InspectionFileType,
+  ext: string
+): Promise<{ url: string; key: string; seq: number; fileCode: string; ctx: InspectionStorageContext }> {
+  const ctx = await resolveInspectionStorageContext(sessionId);
+  const seq = await nextFileSeq(ctx.claimActionId, fileType);
+
+  const key =
+    fileType === "DOC" || fileType === "CRO"
+      ? inspectionDocumentPath(ctx.actionCode, ctx.liquidationNumber, seq, ext, fileType)
+      : inspectionImagePath(ctx.actionCode, ctx.liquidationNumber, fileType, seq, ext);
+
+  const fileCode = key.split("/").pop()?.replace(/\.[^.]+$/, "") || "";
+
+  // Subir a R2 el buffer ORIGINAL (sin optimizar)
+  const url = await uploadToR2(buffer, key, contentType);
+
+  logger.info("Archivo de inspección subido (raw)", {
+    component: "inspection-upload",
+    action: "inspection.file.upload.raw",
+    metadata: {
+      sessionId,
+      actionCode: ctx.actionCode,
+      fileType,
+      seq,
+      key,
+      fileCode,
+      size: buffer.length,
+    },
+  });
+
+  return { url, key, seq, fileCode, ctx };
+}
+
+/**
+ * Re-sube un archivo de inspección optimizado a R2, reemplazando la versión raw.
+ * Se usa después de la subida inicial para optimizar en background.
+ *
+ * @returns { url, key } — nueva URL y key en R2 (puede cambiar la extensión)
+ */
+export async function reuploadInspectionFileOptimized(
+  ctx: InspectionStorageContext,
+  seq: number,
+  buffer: Buffer,
+  contentType: string,
+  fileType: InspectionFileType,
+  ext: string
+): Promise<{ url: string; key: string }> {
+  // Optimizar (imágenes se redimensionan y comprimen; PDFs/videos/docs se devuelven tal cual)
+  const optimized = await optimizeFile(buffer, contentType, ext);
+
+  const key =
+    fileType === "DOC" || fileType === "CRO"
+      ? inspectionDocumentPath(ctx.actionCode, ctx.liquidationNumber, seq, optimized.ext, fileType)
+      : inspectionImagePath(ctx.actionCode, ctx.liquidationNumber, fileType, seq, optimized.ext);
+
+  // Subir a R2 (reemplaza el archivo anterior si la key es la misma)
+  const url = await uploadToR2(optimized.buffer, key, optimized.mimeType);
+
+  logger.info("Archivo de inspección optimizado y re-subido", {
+    component: "inspection-upload",
+    action: "inspection.file.optimize",
+    metadata: {
+      actionCode: ctx.actionCode,
+      fileType,
+      seq,
+      key,
+      originalSize: buffer.length,
+      optimizedSize: optimized.buffer.length,
+    },
+  });
+
+  return { url, key };
+}

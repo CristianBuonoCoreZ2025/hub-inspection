@@ -25,7 +25,7 @@ export async function GET(
     const { data: evidences, error } = await supabase
       .from("inspection_evidences")
       .select(
-        "id, url, type, description, category, captured_at, created_at, metadata, captured_by, lat, lng, exif_lat, exif_lng, ai_summary, ai_model, uploader:profiles!inspection_evidences_captured_by_fkey(id, full_name, email)"
+        "id, url, type, description, category, captured_at, created_at, metadata, captured_by, lat, lng, exif_lat, exif_lng, ai_summary, ai_model, ai_status, source, uploader:profiles!inspection_evidences_captured_by_fkey(id, full_name, email)"
       )
       .eq("session_id", sessionId)
       .order("created_at", { ascending: false });

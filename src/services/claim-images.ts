@@ -101,6 +101,7 @@ export interface InspectionImageFromSession {
   created_at: string;
   ai_summary: string | null;
   ai_model: string | null;
+  ai_status: string | null;
   metadata: { originalName?: string; mimeType?: string; fileSize?: number } | null;
   session?: InspectionSessionSummary;
 }
@@ -147,7 +148,7 @@ export async function getInspectionPhotosByClaim(
   // 2. Traer todas las evidencias tipo photo de esas sesiones
   const evidences = await fetchAll<InspectionImageFromSession>("inspection_evidences", {
     select:
-      "id, session_id, type, url, description, captured_at, created_at, ai_summary, ai_model, metadata",
+      "id, session_id, type, url, description, captured_at, created_at, ai_summary, ai_model, ai_status, metadata",
     in: { session_id: sessionIds },
     eq: { type: "photo" },
     order: { column: "created_at", ascending: false },

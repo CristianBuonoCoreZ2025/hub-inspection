@@ -1,48 +1,60 @@
-feat: liquidation_number clickable → redirige al siniestro
+feat: evidencias de inspección con IA en background (idéntico a claim_images)
 
-Desde cualquier lugar donde aparezca el número de liquidación (L-000000141),
-al hacer click redirige al siniestro (/dashboard/claims/[id]).
+El proceso de toma de evidencias en inspección ahora es idéntico al de
+subida de imágenes del siniestro:
 
-Patrón aplicado: Link de next/link con onClick stopPropagation
-(para no triggerear el click de la fila/tarjeta contenedora).
+  1. Subir archivo original a R2 (rápido, sin optimizar)
+  2. Extraer GPS de EXIF (síncrono, rápido — clave anti-fraude)
+  3. Insertar registro con ai_status='pending'
+  4. Responder al cliente inmediatamente
+  5. Background (after()):
+     - Optimizar imagen (sharp: max 1920px, quality 80)
+     - Re-subir versión optimizada a R2
+     - Extraer texto de PDF (primeras 10 páginas)
+     - Generar resumen con IA (visión / texto)
+     - Actualizar ai_summary + ai_model + ai_status='done'
 
-Ubicaciones actualizadas:
+Controles nuevos en evidences-tab (iguales a claim-images-tab):
+  - Indicador "Analizando con IA..." mientras ai_status='pending'
+  - Click en el texto del resumen IA → abre modal con análisis completo
+  - Botón AiAnalysisButton deshabilitado mientras está pending
+  - Polling cada 5s automáticamente hasta que termine la IA
 
-1. src/app/dashboard/inspecciones/[id]/page.tsx (línea 514)
-   - Panel "Datos del Siniestro" → N° Interno
+Cambios:
 
-2. src/app/dashboard/inspecciones/page.tsx (línea 200)
-   - Tabla de inspecciones → columna Liquidación
-   - Usa session.claim_id (SessionClaim no tiene id)
+1. Migration 203: ai_status en inspection_evidences
+   - Valores: pending | done | skipped | error
+   - Backfill: existentes con ai_summary → 'done', sin ai_summary → 'skipped'
+   - Índice parcial en ai_status='pending' para polling eficiente
 
-3. src/app/dashboard/informes/page.tsx (línea 542)
-   - Tabla de informes → columna Liquidación
+2. src/lib/storage/inspection-upload.ts:
+   - uploadInspectionFileRaw() — sube sin optimizar (rápido)
+   - reuploadInspectionFileOptimized() — optimiza y re-sube en background
 
-4. src/app/dashboard/gestiones/page.tsx (línea 271)
-   - Tarjeta de gestión → Siniestro
-   - stopPropagation para no navegar a la gestión
+3. src/app/api/inspection/evidences/upload/route.ts:
+   - Usa after() de next/server para procesamiento background
+   - Sube raw → inserta pending → responde → background optimiza + IA
+   - Mantiene EXIF + device geo (anti-fraude) en síncrono
+   - Mantiene PDF summary en background
 
-5. src/app/dashboard/claims/page.tsx (línea 2158)
-   - Tabla de claims → columna Liquidación
-   - stopPropagation (la fila completa navega con ?edit=1)
+4. src/app/api/inspection/evidences/session/[sessionId]/route.ts:
+   - Incluye ai_status y source en el select
 
-6. src/app/dashboard/operaciones/reabrir/page.tsx (líneas 131, 222)
-   - Tabla de siniestros cerrados → columna Liquidación
-   - Tabla de siniestros reabiertos → columna Liquidación
+5. src/app/dashboard/inspecciones/[id]/evidences-tab.tsx:
+   - Tipo Evidence: agrega ai_status y source
+   - Polling cada 5s mientras hay ai_status='pending'
+   - Modal de análisis IA (Dialog de shadcn/ui) — click en texto abre
+   - Indicador "Analizando con IA..." con Loader2 animado
+   - AiAnalysisButton deshabilitado mientras pending
+   - onShowSummary prop en EvidenceSection y EvidenceCard
 
-7. src/app/dashboard/operaciones/inhabilitar/page.tsx (líneas 138, 233)
-   - Tabla de siniestros activos → columna Liquidación
-   - Tabla de siniestros inhabilitados → columna Liquidación
+6. src/services/claim-images.ts:
+   - InspectionImageFromSession: agrega ai_status
+   - getInspectionPhotosByClaim: incluye ai_status en select
 
-No se modificó:
-- src/app/inspection/[token]/page.tsx (magic link público)
-  → El cliente no tiene acceso al dashboard, se mantiene como texto
-- src/app/dashboard/mis-casos/page.tsx
-  → La tarjeta completa ya es un Link al siniestro
-- src/components/layout/top-bar.tsx
-  → Ya es clickable
-- src/app/dashboard/agenda/page.tsx
-  → Ya es clickable (usa query param ?liquidation=)
+7. src/app/dashboard/claims/[id]/claim-images-tab.tsx:
+   - Fotos de inspección muestran aiStatus real (antes era null)
+   - Polling cada 5s en inspection-photos-by-claim mientras hay pending
 
 Generado con [Devin](https://devin.ai)
 
