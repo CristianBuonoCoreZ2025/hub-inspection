@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
       .select("company_id")
       .eq("id", user.id)
       .maybeSingle();
-    if (!profile || (session.claim as unknown as { company_id: string } | null)?.company_id !== profile.company_id) {
+    const claimData = Array.isArray(session.claim) ? session.claim[0] : session.claim;
+    const claimCompanyId = (claimData as { company_id?: string } | undefined)?.company_id;
+    if (!profile || claimCompanyId !== profile.company_id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
