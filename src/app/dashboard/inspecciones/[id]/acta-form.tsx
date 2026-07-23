@@ -16,6 +16,9 @@ import {
  ClipboardList,
  CheckCircle,
  Lock,
+ MapPin,
+ AlertTriangle,
+ XCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -81,6 +84,8 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  const claim = session.claim as {
  claim_number?: string | null;
  claim_address?: string | null;
+ claim_latitude?: number | null;
+ claim_longitude?: number | null;
  claims_participants?: Array<{
  type: string;
  full_name: string | null;
@@ -373,6 +378,14 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  <p className="font-medium">{claim?.commune?.name || "—"}</p>
  </div>
  </div>
+ </div>
+
+ {/* Validación Geográfica */}
+ <div className="app-panel">
+ <h3 className="app-section-title">
+ Validación Geográfica
+ </h3>
+ <GeoValidationBlock session={session} claim={claim} />
  </div>
 
  <div className="app-panel">
@@ -889,5 +902,116 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  )}
  </fieldset>
  </form>
+ );
+}
+
+// ─── Bloque de Validación Geográfica (Acta paso 1) ───────────────
+function GeoValidationBlock({
+ session,
+ claim,
+}: {
+ session: SessionDetail;
+ claim: {
+ claim_address?: string | null;
+ claim_latitude?: number | null;
+ claim_longitude?: number | null;
+ } | null | undefined;
+}) {
+ const geoStatus = session.geo_status || "pending";
+ const geoLat = session.geo_latitude;
+ const geoLng = session.geo_longitude;
+ const geoDistance = session.geo_distance_meters;
+ const claimLat = claim?.claim_latitude;
+ const claimLng = claim?.claim_longitude;
+ const claimAddress = claim?.claim_address;
+
+ const statusConfig: Record<string, { icon: typeof MapPin; color: string; bg: string; label: string }> = {
+ pending: { icon: MapPin, color: "text-muted-foreground", bg: "bg-muted/40", label: "Pendiente" },
+ verified: { icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-500/10", label: "Ubicación Verificada" },
+ out_of_range: { icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-500/10", label: "Fuera de rango" },
+ failed: { icon: XCircle, color: "text-rose-600", bg: "bg-rose-500/10", label: "Fallida" },
+ };
+
+ const sc = statusConfig[geoStatus] || statusConfig.pending;
+ const StatusIcon = sc.icon;
+
+ return (
+ <div className="space-y-3">
+ {/* Estado de validación */}
+ <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium ${sc.bg} ${sc.color}`}>
+ <StatusIcon className="h-3 w-3" />
+ {sc.label}
+ </div>
+
+ {/* Datos de la validación */}
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 text-[12px]">
+ <div>
+ <span className="app-data-label">Dirección declarada</span>
+ <p className="font-medium">{claimAddress || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Coords. siniestro</span>
+ <p className="font-medium font-mono text-[11px]">
+ {claimLat != null && claimLng != null
+ ? `${claimLat.toFixed(6)}, ${claimLng.toFixed(6)}`
+ : "—"}
+ </p>
+ </div>
+ <div>
+ <span className="app-data-label">Coords. capturadas</span>
+ <p className="font-medium font-mono text-[11px]">
+ {geoLat != null && geoLng != null
+ ? `${geoLat.toFixed(6)}, ${geoLng.toFixed(6)}`
+ : "—"}
+ </p>
+ </div>
+ <div>
+ <span className="app-data-label">Distancia</span>
+ <p className="font-medium">
+ {geoDistance != null ? `${geoDistance} m` : "—"}
+ </p>
+ </div>
+ <div>
+ <span className="app-data-label">Capturada en</span>
+ <p className="font-medium">
+ {session.geo_captured_at
+ ? new Date(session.geo_captured_at).toLocaleString("es-CL", {
+ dateStyle: "short",
+ timeStyle: "short",
+ })
+ : "—"}
+ </p>
+ </div>
+ <div>
+ <span className="app-data-label">Tipo inspección</span>
+ <p className="font-medium">
+ {session.inspection_type === "onsite" ? "Presencial" : "Remota"}
+ </p>
+ </div>
+ </div>
+
+ {/* Mensaje según estado */}
+ {geoStatus === "verified" && (
+ <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+ Ubicación verificada: a {geoDistance} m de la dirección declarada.
+ </p>
+ )}
+ {geoStatus === "out_of_range" && (
+ <p className="text-[11px] text-amber-600 dark:text-amber-400">
+ La ubicación capturada está a {geoDistance} m de la dirección declarada.
+ Se permite continuar pero queda registrado para auditoría.
+ </p>
+ )}
+ {geoStatus === "pending" && (
+ <p className="text-[11px] text-muted-foreground">
+ La geolocalización aún no ha sido capturada.
+ </p>
+ )}
+ {geoStatus === "failed" && (
+ <p className="text-[11px] text-rose-600 dark:text-rose-400">
+ No se pudo obtener la geolocalización del dispositivo.
+ </p>
+ )}
+ </div>
  );
 }

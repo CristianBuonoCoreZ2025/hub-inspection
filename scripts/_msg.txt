@@ -1,18 +1,56 @@
-fix: scanner de huérfanos R2 + borrado de IMG-000001 duplicada
+feat: separar flujos de georreferenciación presencial vs remota
 
-PROBLEMA: L-000000141-IMG-000001.jpg existia en R2 (220 KB) sin
-registro en la BD — era una copia huérfana de la evidencia
-L-000000141-HINS-001-EVI-0001.jpg (mismo MD5). Los huérfanos
-desperdician almacenamiento en Cloudflare R2.
+## Cambios
 
-FIX:
-- scripts/r2-orphan-scanner.cjs: scanner permanente que lista todos
-  los objetos de R2 y los compara contra 9 tablas de la BD
-  (claim_images, inspection_evidences, claim_documents, policy_documents,
-   damage_sketches, claim_action_documents, companies, profiles,
-   document_templates). Soporta --delete para borrar huérfanos.
-- Borrado: L-000000141-IMG-000001.jpg (único huérfano real, 220 KB)
-- Verificado: 11 objetos en R2, 16 keys referenciadas, 0 huérfanos
+### GeoCapture (src/components/inspection/geo-capture.tsx)
+- **Presencial (onsite):** auto-captura al montar el componente (sin botón).
+  El inspector no necesita presionar nada — al iniciar la inspección se
+  captura la ubicación automáticamente.
+- **Remota (remote):** botón "Establecer mi ubicación" — el asegurado
+  decide cuándo compartir su ubicación.
+- **Remota + fuera de rango (>500m):** guarda 2 mapas como evidencia:
+  1. Mapa de la ubicación capturada (donde está el asegurado)
+  2. Mapa de la dirección declarada del siniestro
+  Esto deja evidencia de la discrepancia.
+- **Remota + verificada (≤500m):** guarda 1 solo mapa (ubicación capturada).
+- Eliminado el botón "Tomar foto del lugar" del GeoCapture — las fotos
+  se suben desde el tab de Evidencias, no desde el panel de geo.
+- Eliminada la prop `evidenceUploadUrl` (ya no se usa).
+
+### Upload route (src/app/api/inspection/evidences/upload/route.ts)
+- **NO se guarda lat/lng del dispositivo** en evidencias.
+- La geo de cada foto viene EXCLUSIVAMENTE de los metadatos EXIF GPS.
+- `lat`/`lng` ahora = `exif_lat`/`exif_lng` (mismo valor).
+- Si la foto no tiene GPS embebido, lat/lng = null (no hay error).
+
+### Evidences tab (src/app/dashboard/inspecciones/[id]/evidences-tab.tsx)
+- Eliminada la auto-captura de geo del dispositivo al montar.
+- Eliminado el envío de lat/lng en el FormData de subida.
+- Eliminado el indicador "Geo activa" del drop zone.
+- Eliminada la comparación device vs EXIF (geoMismatch).
+- Ahora se muestra un solo indicador GPS basado en EXIF:
+  - Azul si la foto tiene GPS embebido
+  - Gris si no tiene GPS (sin error, solo informativo)
+
+### Acta de Inspección (src/app/dashboard/inspecciones/[id]/acta-form.tsx)
+- Nuevo bloque "Validación Geográfica" en el paso 1 (Datos Generales).
+  Muestra:
+  - Dirección declarada del siniestro
+  - Coordenadas del siniestro (geocodificadas)
+  - Coordenadas capturadas
+  - Distancia entre ambos puntos
+  - Estado de validación (Verificada / Fuera de rango / Pendiente / Fallida)
+  - Fecha/hora de captura
+  - Tipo de inspección (Presencial / Remota)
+
+### save-map route (src/app/api/inspection/geo/save-map/route.ts)
+- Nuevo parámetro `label` ("captured" o "declared") para distinguir
+  los 2 mapas cuando hay discrepancia.
+
+## Principio
+- La georreferenciación inicial valida DESDE DÓNDE se hace la inspección.
+- La georreferenciación de las fotos valida DÓNDE fue tomada cada evidencia.
+- Son 2 procesos distintos y nunca se mezclan.
 
 Generado con [Devin](https://devin.ai)
 

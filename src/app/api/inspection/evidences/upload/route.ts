@@ -42,8 +42,6 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file");
     const sessionId = formData.get("sessionId");
-    const lat = formData.get("lat");
-    const lng = formData.get("lng");
     const originalName = formData.get("originalName");
     const source = formData.get("source");
 
@@ -127,9 +125,13 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get("user-agent") || null,
     };
 
-    // Geo del navegador → columnas lat/lng
-    const deviceLat = lat && typeof lat === "string" ? parseFloat(lat) : null;
-    const deviceLng = lng && typeof lng === "string" ? parseFloat(lng) : null;
+    // ── Geo de la foto: SOLO EXIF GPS ──
+    // La ubicación del dispositivo NO se guarda en evidencias.
+    // La georreferenciación de cada foto viene de sus metadatos EXIF.
+    // La georreferenciación inicial (¿desde dónde se hace la inspección?)
+    // es un proceso distinto manejado por GeoCapture.
+    const photoLat = exifGps?.lat ?? null;
+    const photoLng = exifGps?.lng ?? null;
 
     // ── PASO 4: Insertar registro con ai_status='pending' ──
     const supabase = createAdminClient();
@@ -147,8 +149,8 @@ export async function POST(request: NextRequest) {
         captured_at: new Date().toISOString(),
         source: sourceValue,
         metadata,
-        lat: deviceLat,
-        lng: deviceLng,
+        lat: photoLat,
+        lng: photoLng,
         exif_lat: exifGps?.lat ?? null,
         exif_lng: exifGps?.lng ?? null,
         ai_status: "pending",

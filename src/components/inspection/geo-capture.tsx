@@ -3,7 +3,7 @@
 import * as React from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { MapPin, Navigation, CheckCircle2, AlertTriangle, XCircle, Loader2, Camera, ImageIcon } from "lucide-react";
+import { MapPin, Navigation, CheckCircle2, AlertTriangle, XCircle, Loader2, ImageIcon } from "lucide-react";
 import {
   GEO_THRESHOLD_METERS,
   validateGeoProximity,
@@ -72,8 +72,6 @@ interface GeoCaptureProps {
   sessionId?: string;
   /** ID del usuario que captura (para metadata de evidencia) */
   capturedBy?: string;
-  /** URL de la API para subir evidencias (default: /api/inspection/evidences/upload) */
-  evidenceUploadUrl?: string;
 }
 
 interface SavedEvidence {
@@ -94,7 +92,6 @@ export function GeoCapture({
   title,
   sessionId,
   capturedBy,
-  evidenceUploadUrl = "/api/inspection/evidences/upload",
 }: GeoCaptureProps) {
   const [captured, setCaptured] = React.useState<LatLng | null>(initialCoords || null);
   const [validation, setValidation] = React.useState<GeoValidationResult | null>(
@@ -106,15 +103,13 @@ export function GeoCapture({
   const [error, setError] = React.useState<string | null>(null);
   const [savingMap, setSavingMap] = React.useState(false);
   const [mapEvidence, setMapEvidence] = React.useState<SavedEvidence | null>(null);
-  const [photoUploading, setPhotoUploading] = React.useState(false);
-  const [photoEvidence, setPhotoEvidence] = React.useState<SavedEvidence | null>(null);
-  const [photoError, setPhotoError] = React.useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [declaredMapEvidence, setDeclaredMapEvidence] = React.useState<SavedEvidence | null>(null);
   const lastCapturedRef = React.useRef<{ coords: LatLng; mapUrl: string } | null>(null);
+  const autoCaptureRef = React.useRef(false);
 
-  // Guardar el mapa estático como evidencia (primera evidencia del lugar)
+  // Guardar el mapa estático como evidencia
   const saveMapAsEvidence = React.useCallback(
-    async (sid: string, coords: LatLng, mapUrl: string, by?: string) => {
+    async (sid: string, coords: LatLng, mapUrl: string, by?: string, label?: string) => {
       setSavingMap(true);
       try {
         const res = await fetch("/api/inspection/geo/save-map", {
@@ -126,6 +121,7 @@ export function GeoCapture({
             lng: coords.lng,
             mapUrl,
             capturedBy: by,
+            label,
           }),
         });
         if (!res.ok) {
@@ -134,61 +130,21 @@ export function GeoCapture({
         }
         const data = await res.json();
         if (data.evidence) {
-          setMapEvidence({
+          return {
             id: data.evidence.id,
             url: data.evidence.url,
             description: data.evidence.description,
-          });
+          } as SavedEvidence;
         }
+        return null;
       } catch (err) {
         console.warn("[GeoCapture] No se pudo guardar el mapa como evidencia:", err);
+        return null;
       } finally {
         setSavingMap(false);
       }
     },
     [],
-  );
-
-  // Subir foto del lugar como evidencia
-  const handlePhotoUpload = React.useCallback(
-    async (file: File) => {
-      if (!sessionId || !lastCapturedRef.current) {
-        setPhotoError("Primero debes capturar tu geolocalización.");
-        return;
-      }
-      setPhotoUploading(true);
-      setPhotoError(null);
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("sessionId", sessionId);
-        formData.append("lat", String(lastCapturedRef.current.coords.lat));
-        formData.append("lng", String(lastCapturedRef.current.coords.lng));
-        formData.append("originalName", file.name);
-
-        const res = await fetch(evidenceUploadUrl, {
-          method: "POST",
-          body: formData,
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        if (data.evidence) {
-          setPhotoEvidence({
-            id: data.evidence.id,
-            url: data.evidence.url,
-            description: data.evidence.description,
-          });
-        }
-      } catch (err) {
-        setPhotoError(err instanceof Error ? err.message : "Error al subir la foto");
-      } finally {
-        setPhotoUploading(false);
-      }
-    },
-    [sessionId, evidenceUploadUrl],
   );
 
   const handleCapture = React.useCallback(() => {
@@ -217,8 +173,8 @@ export function GeoCapture({
         }
         setValidation(result);
 
-        // Generar URL del mapa estático
-        const url = generateStaticMapUrl(coords.lat, coords.lng, {
+        // Generar URL del mapa estático de la ubicación capturada
+        const capturedMapUrl = generateStaticMapUrl(coords.lat, coords.lng, {
           zoom: 16,
           width: 600,
           height: 400,
@@ -228,14 +184,30 @@ export function GeoCapture({
           coords,
           distance: result.distance,
           status: result.status,
-          mapUrl: url,
+          mapUrl: capturedMapUrl,
         });
         setLoading(false);
-        lastCapturedRef.current = { coords, mapUrl: url };
+        lastCapturedRef.current = { coords, mapUrl: capturedMapUrl };
 
-        // Guardar el mapa como evidencia automáticamente (si hay sessionId)
+        // Guardar mapa(s) como evidencia automáticamente
         if (sessionId) {
-          void saveMapAsEvidence(sessionId, coords, url, capturedBy);
+          // Mapa de la ubicación capturada (siempre)
+          void saveMapAsEvidence(sessionId, coords, capturedMapUrl, capturedBy, "captured").then((ev) => {
+            if (ev) setMapEvidence(ev);
+          });
+
+          // Si está fuera de rango Y tenemos coords del siniestro, guardar
+          // también el mapa de la dirección declarada (evidencia de discrepancia)
+          if (result.status === "out_of_range" && claimCoords) {
+            const declaredMapUrl = generateStaticMapUrl(claimCoords.lat, claimCoords.lng, {
+              zoom: 16,
+              width: 600,
+              height: 400,
+            });
+            void saveMapAsEvidence(sessionId, claimCoords, declaredMapUrl, capturedBy, "declared").then((ev) => {
+              if (ev) setDeclaredMapEvidence(ev);
+            });
+          }
         }
       },
       (err) => {
@@ -254,14 +226,20 @@ export function GeoCapture({
     );
   }, [claimCoords, onCapture, sessionId, capturedBy, saveMapAsEvidence]);
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      void handlePhotoUpload(file);
-    }
-    // Reset para permitir subir la misma foto otra vez
-    e.target.value = "";
-  };
+  // ── Auto-captura para inspecciones presenciales ──
+  // El inspector no necesita presionar ningún botón: al montar el componente
+  // (que ocurre al iniciar la inspección), se captura la ubicación automáticamente.
+  React.useEffect(() => {
+    if (autoCaptureRef.current) return;
+    if (inspectionType !== "onsite") return;
+    if (disabled) return;
+    if (initialCoords) return; // ya fue capturada antes
+    autoCaptureRef.current = true;
+    // Diferir al siguiente tick para evitar setState sincrónico dentro del effect
+    // (React Compiler: "Calling setState synchronously within an effect can trigger cascading renders")
+    const id = setTimeout(() => handleCapture(), 0);
+    return () => clearTimeout(id);
+  }, [inspectionType, disabled, initialCoords, handleCapture]);
 
   const statusConfig = {
     pending: { icon: MapPin, color: "text-muted-foreground", bg: "bg-muted/40", label: "Pendiente" },
@@ -294,8 +272,8 @@ export function GeoCapture({
       {/* Info del tipo de captura */}
       <p className="text-[11px] text-muted-foreground mb-3">
         {inspectionType === "onsite"
-          ? "El inspector debe capturar su ubicación en el lugar del siniestro."
-          : "El asegurado debe capturar su ubicación para verificar que está en el lugar del siniestro."}
+          ? "La ubicación se captura automáticamente al iniciar la inspección."
+          : "El asegurado debe compartir su ubicación para verificar que está en el lugar del siniestro."}
       </p>
 
       {/* Dirección del siniestro */}
@@ -311,28 +289,39 @@ export function GeoCapture({
         </div>
       )}
 
-      {/* Botón de captura */}
-      <button
-        type="button"
-        disabled={disabled || loading}
-        onClick={handleCapture}
-        className="liquid-date-picker flex w-full items-center justify-center gap-2 mb-3"
-        style={{ height: "36px" }}
-      >
-        {loading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-[11px]">Obteniendo ubicación...</span>
-          </>
-        ) : (
-          <>
-            <Navigation className="h-4 w-4" />
-            <span className="text-[11px] font-medium">
-              {captured ? "Volver a capturar ubicación" : "Capturar mi ubicación"}
-            </span>
-          </>
-        )}
-      </button>
+      {/* Botón de captura — SOLO para inspecciones remotas.
+          En presenciales, la captura es automática al montar el componente. */}
+      {inspectionType === "remote" && (
+        <button
+          type="button"
+          disabled={disabled || loading}
+          onClick={handleCapture}
+          className="liquid-date-picker flex w-full items-center justify-center gap-2 mb-3"
+          style={{ height: "36px" }}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-[11px]">Obteniendo ubicación...</span>
+            </>
+          ) : (
+            <>
+              <Navigation className="h-4 w-4" />
+              <span className="text-[11px] font-medium">
+                {captured ? "Volver a establecer mi ubicación" : "Establecer mi ubicación"}
+              </span>
+            </>
+          )}
+        </button>
+      )}
+
+      {/* Indicador de captura automática en curso (presencial) */}
+      {inspectionType === "onsite" && loading && (
+        <div className="flex items-center gap-2 mb-3 text-[11px] text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Capturando ubicación automáticamente...
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -411,7 +400,7 @@ export function GeoCapture({
       {/* Coordenadas capturadas */}
       {captured && (
         <div className="mt-2 flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
-          <Camera className="h-3 w-3" />
+          <MapPin className="h-3 w-3" />
           {captured.lat.toFixed(6)}, {captured.lng.toFixed(6)}
         </div>
       )}
@@ -422,20 +411,16 @@ export function GeoCapture({
           {savingMap ? (
             <>
               <Loader2 className="h-3 w-3 animate-spin text-primary" />
-              <span className="text-muted-foreground">Guardando mapa como evidencia...</span>
+              <span className="text-muted-foreground">
+                Guardando {validation?.status === "out_of_range" && claimCoords ? "mapas" : "mapa"} como evidencia...
+              </span>
             </>
           ) : mapEvidence ? (
             <>
               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-              <span className="text-emerald-600">Mapa guardado: </span>
-              <a
-                href={mapEvidence.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline hover:no-underline"
-              >
-                {mapEvidence.description}
-              </a>
+              <span className="text-emerald-600">
+                {declaredMapEvidence ? "Mapas guardados" : "Mapa guardado"}
+              </span>
             </>
           ) : (
             <span className="text-muted-foreground">El mapa se guardará automáticamente como evidencia.</span>
@@ -443,46 +428,8 @@ export function GeoCapture({
         </div>
       )}
 
-      {/* Botón para capturar foto del lugar (primera evidencia fotográfica) */}
-      {captured && sessionId && !disabled && (
-        <div className="mt-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={onFileChange}
-            className="hidden"
-          />
-          <button
-            type="button"
-            disabled={photoUploading}
-            onClick={() => fileInputRef.current?.click()}
-            className="liquid-date-picker flex w-full items-center justify-center gap-2"
-            style={{ height: "36px" }}
-          >
-            {photoUploading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-[11px]">Subiendo foto...</span>
-              </>
-            ) : (
-              <>
-                <Camera className="h-4 w-4" />
-                <span className="text-[11px] font-medium">
-                  {photoEvidence ? "Tomar otra foto del lugar" : "Tomar foto del lugar"}
-                </span>
-              </>
-            )}
-          </button>
-          {photoError && (
-            <p className="text-[10px] text-rose-600 mt-1">{photoError}</p>
-          )}
-        </div>
-      )}
-
-      {/* Miniaturas de evidencias guardadas */}
-      {(mapEvidence || photoEvidence) && (
+      {/* Miniaturas de mapas guardados como evidencia */}
+      {(mapEvidence || declaredMapEvidence) && (
         <div className="mt-3 grid grid-cols-2 gap-2">
           {mapEvidence && (
             <a
@@ -494,32 +441,32 @@ export function GeoCapture({
               {/* eslint-disable-next-line @next/next/no-img-element -- URL dinámica de R2 */}
               <img
                 src={mapEvidence.url}
-                alt="Mapa del lugar"
+                alt="Mapa de ubicación capturada"
                 className="w-full h-24 object-cover"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end p-1">
                 <span className="text-[9px] text-white bg-black/60 rounded px-1 py-0.5 flex items-center gap-1">
-                  <ImageIcon className="h-2.5 w-2.5" /> Mapa
+                  <ImageIcon className="h-2.5 w-2.5" /> {declaredMapEvidence ? "Capturada" : "Mapa"}
                 </span>
               </div>
             </a>
           )}
-          {photoEvidence && (
+          {declaredMapEvidence && (
             <a
-              href={photoEvidence.url}
+              href={declaredMapEvidence.url}
               target="_blank"
               rel="noopener noreferrer"
               className="group relative rounded-lg overflow-hidden border border-border/40 hover:border-primary/40 transition-colors"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- URL dinámica de R2 */}
               <img
-                src={photoEvidence.url}
-                alt="Foto del lugar"
+                src={declaredMapEvidence.url}
+                alt="Mapa de dirección declarada"
                 className="w-full h-24 object-cover"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end p-1">
                 <span className="text-[9px] text-white bg-black/60 rounded px-1 py-0.5 flex items-center gap-1">
-                  <Camera className="h-2.5 w-2.5" /> Foto
+                  <ImageIcon className="h-2.5 w-2.5" /> Declarada
                 </span>
               </div>
             </a>

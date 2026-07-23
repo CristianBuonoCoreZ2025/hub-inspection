@@ -24,7 +24,7 @@ import { logger } from "@/lib/logger";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, lat, lng, mapUrl, capturedBy } = body;
+    const { sessionId, lat, lng, mapUrl, capturedBy, label } = body;
 
     if (!sessionId || typeof sessionId !== "string") {
       return NextResponse.json({ error: "Falta sessionId" }, { status: 400 });
@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
           source: "geo_map",
           isGeoMap: true,
           mapUrl,
+          geoLabel: label || "captured",
           originalName: `${fileCode}.png`,
           fileSize: buffer.length,
           mimeType,

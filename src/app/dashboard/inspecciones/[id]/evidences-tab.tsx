@@ -60,18 +60,6 @@ async function fetchEvidences(sessionId: string): Promise<Evidence[]> {
   return data.evidences;
 }
 
-/** Intenta obtener la geolocalización del navegador (con permiso del usuario). */
-function getGeoLocation(): Promise<{ lat: number; lng: number } | null> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(null), // Si falla o se rechaza, subir sin geo
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
-    );
-  });
-}
-
 /** Formatea una fecha ISO a formato corto relativo. */
 function formatDate(iso: string | null): string {
   if (!iso) return "";
@@ -114,27 +102,11 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   const queryClient = useQueryClient();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingCount, setUploadingCount] = useState(0);
-  const [geoActive, setGeoActive] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [aiSummaryModal, setAiSummaryModal] = useState<{ visible: boolean; title: string; summary: string }>({ visible: false, title: "", summary: "" });
-  const geoRef = useRef<{ lat: number; lng: number } | null>(null);
-  const geoRequestedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
-
-  // Pedir geolocalización al montar (una sola vez, solo si se puede subir)
-  // Sin toast — el indicador "Geo activa" en el drop zone es suficiente feedback
-  useEffect(() => {
-    if (geoRequestedRef.current || readOnly) return;
-    geoRequestedRef.current = true;
-    getGeoLocation().then((g) => {
-      if (g) {
-        geoRef.current = g;
-        setGeoActive(true);
-      }
-    });
-  }, [readOnly]);
 
   const { data: evidences, isLoading } = useQuery({
     queryKey: ["evidences", sessionId],
@@ -165,10 +137,8 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
       formData.append("file", file);
       formData.append("sessionId", sessionId);
       formData.append("originalName", file.name);
-      if (geoRef.current) {
-        formData.append("lat", String(geoRef.current.lat));
-        formData.append("lng", String(geoRef.current.lng));
-      }
+      // No se envía lat/lng del dispositivo — la geo de la foto
+      // viene exclusivamente de los metadatos EXIF de la imagen.
       const res = await fetch("/api/inspection/evidences/upload", {
         method: "POST",
         body: formData,
@@ -277,12 +247,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
             Subiendo {uploadingCount}...
-          </div>
-        )}
-        {geoActive && (
-          <div className="hidden items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 sm:flex">
-            <MapPin className="h-3 w-3" />
-            Geo activa
           </div>
         )}
       </div>
@@ -455,17 +419,9 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummar
   const uploaderName = evidence.uploader?.full_name || evidence.uploader?.email || null;
   const dateStr = formatDate(evidence.captured_at || evidence.created_at);
   const sizeStr = formatSize(meta?.fileSize);
-  const hasDeviceGeo = evidence.lat != null && evidence.lng != null;
-  const hasExifGeo = evidence.exif_lat != null && evidence.exif_lng != null;
-
-  // Detectar discrepancia entre ubicación del dispositivo y EXIF de la foto
-  // Si la diferencia es > 1km (~0.01 grados), marcar como sospechosa
-  let geoMismatch = false;
-  if (hasDeviceGeo && hasExifGeo) {
-    const dLat = Math.abs(evidence.lat! - evidence.exif_lat!);
-    const dLng = Math.abs(evidence.lng! - evidence.exif_lng!);
-    geoMismatch = dLat > 0.01 || dLng > 0.01; // ~1km
-  }
+  // La geo de la foto viene exclusivamente del EXIF GPS (lat/lng = exif_lat/exif_lng).
+  // No se usa la ubicación del dispositivo para evidencias.
+  const hasGps = evidence.exif_lat != null && evidence.exif_lng != null;
 
   // IA atascada: si está pending por más de 2 min, mostrar mensaje de retry
   useEffect(() => {
@@ -615,34 +571,21 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummar
               Anónimo
             </span>
           )}
-          {/* Indicadores de ubicación: dispositivo + EXIF de la foto */}
+          {/* Indicador de GPS de la foto (EXIF) */}
           <div className="flex items-center gap-1">
-            {hasDeviceGeo && (
+            {hasGps ? (
               <span
-                className="flex items-center gap-0.5 text-[9px] text-emerald-600 dark:text-emerald-400"
-                title={`Ubicación del dispositivo: ${evidence.lat?.toFixed(6)}, ${evidence.lng?.toFixed(6)}`}
+                className="flex items-center gap-0.5 text-[9px] text-blue-600 dark:text-blue-400"
+                title={`GPS de la foto (EXIF): ${evidence.exif_lat?.toFixed(6)}, ${evidence.exif_lng?.toFixed(6)}`}
               >
                 <MapPin className="h-2.5 w-2.5" />
               </span>
-            )}
-            {hasExifGeo && (
+            ) : (
               <span
-                className={`flex items-center gap-0.5 text-[9px] ${
-                  geoMismatch
-                    ? "text-amber-600 dark:text-amber-400"
-                    : "text-blue-600 dark:text-blue-400"
-                }`}
-                title={`Ubicación de la foto (EXIF): ${evidence.exif_lat?.toFixed(6)}, ${evidence.exif_lng?.toFixed(6)}${geoMismatch ? " — DIFIERE del dispositivo" : ""}`}
+                className="flex items-center gap-0.5 text-[9px] text-muted-foreground/50"
+                title="La foto no contiene información GPS en sus metadatos EXIF"
               >
-                <Camera className="h-2.5 w-2.5" />
-              </span>
-            )}
-            {geoMismatch && (
-              <span
-                className="text-[8px] font-bold text-amber-600 dark:text-amber-400"
-                title="La ubicación de la foto no coincide con la del dispositivo"
-              >
-                ⚠
+                <MapPin className="h-2.5 w-2.5" />
               </span>
             )}
           </div>
