@@ -699,6 +699,9 @@ export interface InspectionDamage {
   materiality_type: string | null;
   unit: string | null;
   quantity: number | null;
+  length: number | null;
+  width: number | null;
+  height: number | null;
   damage_type: "building" | "content";
   product: string | null;
   brand_model: string | null;

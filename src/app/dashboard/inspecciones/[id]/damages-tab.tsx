@@ -49,6 +49,9 @@ interface DamageForm {
  materiality_type: string;
  unit: string;
  quantity: number;
+ length: number | null;
+ width: number | null;
+ height: number | null;
  damage_type: DamageType;
  product: string;
  brand_model: string;
@@ -74,6 +77,9 @@ function emptyForm(sessionId: string, type: DamageType): DamageForm {
  materiality_type: "",
  unit: "",
  quantity: 0,
+ length: null,
+ width: null,
+ height: null,
  damage_type: type,
  product: "",
  brand_model: "",
@@ -85,6 +91,12 @@ function emptyForm(sessionId: string, type: DamageType): DamageForm {
  content_good_type_id: "",
  building_damage_category_id: "",
  };
+}
+
+function computeQuantity(unit: string, length: number | null, width: number | null, height: number | null): number {
+  if (unit === "M2") return (length || 0) * (width || 0);
+  if (unit === "M3") return (length || 0) * (width || 0) * (height || 0);
+  return 0;
 }
 
 function damageToForm(d: InspectionDamage): DamageForm {
@@ -99,7 +111,13 @@ function damageToForm(d: InspectionDamage): DamageForm {
  sector: d.sector ?? "",
  materiality_type: d.materiality_type ?? "",
  unit: d.unit ?? "",
- quantity: d.quantity ?? 0,
+ quantity:
+   d.unit === "M2" || d.unit === "M3"
+     ? computeQuantity(d.unit, d.length, d.width, d.height)
+     : (d.quantity ?? 0),
+ length: d.length ?? null,
+ width: d.width ?? null,
+ height: d.height ?? null,
  damage_type: d.damage_type === "content" ? "content" : "building",
  product: d.product ?? "",
  brand_model: d.brand_model ?? "",
@@ -118,7 +136,48 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  const [editing, setEditing] = useState<string | null>(null);
  const [form, setForm] = useState<DamageForm>(emptyForm(sessionId, "building"));
  const [newType, setNewType] = useState<DamageType>("building");
+ const [amountRaw, setAmountRaw] = useState("");
+ const [amountFocused, setAmountFocused] = useState(false);
  const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
+
+ const formatAmount = (value: number) =>
+   new Intl.NumberFormat("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
+
+ const parseAmount = (value: string): number => {
+   if (!value) return 0;
+   if (value.includes(",")) {
+     const n = Number(value.replace(/\./g, "").replace(/,/g, "."));
+     return isNaN(n) ? 0 : n;
+   }
+   const parts = value.split(".");
+   if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+     const n = Number(value.replace(/\./g, ""));
+     return isNaN(n) ? 0 : n;
+   }
+   const n = Number(value);
+   return isNaN(n) ? 0 : n;
+ };
+
+ const handleDimensionChange = (field: "length" | "width" | "height", value: string) => {
+   setForm((prev) => {
+     const next = { ...prev, [field]: value ? Number(value) : null } as DamageForm;
+     const quantity =
+       next.unit === "M2" || next.unit === "M3"
+         ? computeQuantity(next.unit, next.length, next.width, next.height)
+         : prev.quantity;
+     return { ...next, quantity };
+   });
+ };
+
+ const handleUnitChange = (unit: string) => {
+   setForm((prev) => {
+     const quantity =
+       unit === "M2" || unit === "M3"
+         ? computeQuantity(unit, prev.length, prev.width, prev.height)
+         : prev.quantity;
+     return { ...prev, unit, quantity };
+   });
+ };
 
  const { data: damages, isLoading } = useQuery({
  queryKey: ["damages", sessionId],
@@ -410,21 +469,11 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  />
  </div>
  <div className="modal-field">
- <label className="app-field-label">Cantidad</label>
- <input
- type="number"
- value={form.quantity}
- onChange={(e) => setForm({ ...form, quantity: e.target.value ? Number(e.target.value) : 0 })}
- placeholder="0"
- className="app-input w-full"
- />
- </div>
- <div className="modal-field">
  <label className="app-field-label">Unidad</label>
  <Select
  value={form.unit}
  items={unitOptions.map((u) => ({ value: u, label: u }))}
- onValueChange={(v) => setForm({ ...form, unit: v || "" })}
+ onValueChange={(v) => handleUnitChange(v || "")}
  >
  <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Seleccionar..." />
@@ -433,6 +482,82 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  {unitOptions.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
  </SelectContent>
  </Select>
+ </div>
+ {form.unit === "M2" && (
+ <>
+ <div className="modal-field">
+ <label className="app-field-label">Largo (m)</label>
+ <input
+ type="number"
+ step="any"
+ value={form.length ?? ""}
+ onChange={(e) => handleDimensionChange("length", e.target.value)}
+ placeholder="0"
+ className="app-input w-full"
+ />
+ </div>
+ <div className="modal-field">
+ <label className="app-field-label">Ancho (m)</label>
+ <input
+ type="number"
+ step="any"
+ value={form.width ?? ""}
+ onChange={(e) => handleDimensionChange("width", e.target.value)}
+ placeholder="0"
+ className="app-input w-full"
+ />
+ </div>
+ </>
+ )}
+ {form.unit === "M3" && (
+ <>
+ <div className="modal-field">
+ <label className="app-field-label">Largo (m)</label>
+ <input
+ type="number"
+ step="any"
+ value={form.length ?? ""}
+ onChange={(e) => handleDimensionChange("length", e.target.value)}
+ placeholder="0"
+ className="app-input w-full"
+ />
+ </div>
+ <div className="modal-field">
+ <label className="app-field-label">Ancho (m)</label>
+ <input
+ type="number"
+ step="any"
+ value={form.width ?? ""}
+ onChange={(e) => handleDimensionChange("width", e.target.value)}
+ placeholder="0"
+ className="app-input w-full"
+ />
+ </div>
+ <div className="modal-field">
+ <label className="app-field-label">Alto (m)</label>
+ <input
+ type="number"
+ step="any"
+ value={form.height ?? ""}
+ onChange={(e) => handleDimensionChange("height", e.target.value)}
+ placeholder="0"
+ className="app-input w-full"
+ />
+ </div>
+ </>
+ )}
+ <div className="modal-field">
+ <label className="app-field-label">
+ {form.unit === "M2" || form.unit === "M3" ? "Cantidad (calculada)" : "Cantidad"}
+ </label>
+ <input
+ type="number"
+ value={form.quantity}
+ onChange={(e) => setForm({ ...form, quantity: e.target.value ? Number(e.target.value) : 0 })}
+ placeholder="0"
+ className="app-input w-full"
+ readOnly={form.unit === "M2" || form.unit === "M3"}
+ />
  </div>
  <div className="modal-field modal-field-full">
  <label className="app-field-label">Observaciones</label>
@@ -443,7 +568,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  className="app-input w-full"
  />
  </div>
- <div className="modal-field">
+ <div className="modal-field modal-field-full">
  <label className="app-field-label">Monto Estimado</label>
  <div className="flex gap-1.5">
  <Select
@@ -459,11 +584,20 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </SelectContent>
  </Select>
  <input
- type="number"
- value={form.estimated_amount}
- onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : 0 })}
+ type="text"
+ inputMode="decimal"
+ value={amountFocused ? amountRaw : formatAmount(form.estimated_amount)}
+ onFocus={() => {
+ setAmountFocused(true);
+ setAmountRaw(String(form.estimated_amount || ""));
+ }}
+ onBlur={() => setAmountFocused(false)}
+ onChange={(e) => {
+ setAmountRaw(e.target.value);
+ setForm({ ...form, estimated_amount: parseAmount(e.target.value) });
+ }}
  placeholder="0"
- className="app-input w-full"
+ className="app-input w-full text-right font-mono"
  />
  </div>
  </div>
@@ -592,7 +726,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </SelectContent>
  </Select>
  </div>
- <div className="modal-field">
+ <div className="modal-field modal-field-full">
  <label className="app-field-label">Monto Estimado</label>
  <div className="flex gap-1.5">
  <Select
@@ -608,11 +742,20 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </SelectContent>
  </Select>
  <input
- type="number"
- value={form.estimated_amount}
- onChange={(e) => setForm({ ...form, estimated_amount: e.target.value ? Number(e.target.value) : 0 })}
+ type="text"
+ inputMode="decimal"
+ value={amountFocused ? amountRaw : formatAmount(form.estimated_amount)}
+ onFocus={() => {
+ setAmountFocused(true);
+ setAmountRaw(String(form.estimated_amount || ""));
+ }}
+ onBlur={() => setAmountFocused(false)}
+ onChange={(e) => {
+ setAmountRaw(e.target.value);
+ setForm({ ...form, estimated_amount: parseAmount(e.target.value) });
+ }}
  placeholder="0"
- className="app-input w-full"
+ className="app-input w-full text-right font-mono"
  />
  </div>
  </div>
@@ -644,14 +787,14 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  {form.damage_type === "building" ? "Daño constructivo" : "Daño de contenido"}
  </div>
  <div className="flex gap-2">
- <button onClick={() => setEditing(null)} className="pg-btn-platinum">Cancelar</button>
- <button
+ <Button onClick={() => setEditing(null)} className="pg-btn-platinum">Cancelar</Button>
+ <Button
  onClick={handleSubmit}
  disabled={!form.description || createMutation.isPending || updateMutation.isPending}
  className="pg-btn-platinum"
  >
  {createMutation.isPending || updateMutation.isPending ? "Guardando..." : "Guardar"}
- </button>
+ </Button>
  </div>
  </div>
  </div>

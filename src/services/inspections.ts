@@ -872,7 +872,7 @@ export async function deleteDamageSketch(id: string) {
 
 const DAMAGE_SELECT = `
   id, session_id, category, subcategory, description, observations, severity,
-  dependency, sector, materiality_type, unit, quantity, damage_type,
+  dependency, sector, materiality_type, unit, quantity, length, width, height, damage_type,
   product, brand_model, purchase_date, estimated_amount, currency,
   third_party_id, space_id, content_good_type_id, building_damage_category_id,
   created_at, updated_at
