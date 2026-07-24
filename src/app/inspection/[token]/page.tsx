@@ -203,7 +203,11 @@ export default function MagicLinkPage() {
     );
   }
 
-  const isExpired = session.magic_link_expires_at && new Date(session.magic_link_expires_at) < now;
+  const scheduledAt = session.scheduled_at ? new Date(session.scheduled_at) : null;
+  const windowStart = scheduledAt ? new Date(scheduledAt.getTime() - 60 * 60 * 1000) : null;
+  const windowEnd = session.magic_link_expires_at ? new Date(session.magic_link_expires_at) : null;
+  const isNotYetActive = windowStart ? now < windowStart : false;
+  const isExpired = windowEnd ? now > windowEnd : false;
   const isScheduled = session.status === "scheduled";
   const isCompleted = session.status === "completed";
   const isCancelled = session.status === "cancelled";
@@ -211,6 +215,24 @@ export default function MagicLinkPage() {
   const hasAdjusterSignature = session.inspection_signatures?.some((s) => s.role === "adjuster");
   // El link se cierra solo cuando está completado Y ambas firmas existen
   const isFullyClosed = isCompleted && hasInsuredSignature && hasAdjusterSignature;
+
+  if (isNotYetActive) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="text-center max-w-md">
+          <Calendar className="h-12 w-12 mx-auto text-sky-500 mb-4" />
+          <h1 className="app-page-title text-white mb-2">Link aún no activo</h1>
+          <p className="text-slate-400 app-body">
+            Este link estará disponible desde <strong className="text-white">{windowStart ? fmtDate(windowStart.toISOString()) : "—"}</strong>{" "}
+            hasta <strong className="text-white">{windowEnd ? fmtDate(windowEnd.toISOString()) : "—"}</strong>.
+          </p>
+          <p className="text-slate-500 app-body mt-4">
+            Programada para: {scheduledAt ? fmtDate(session.scheduled_at) : "—"}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (isExpired || isCancelled || isFullyClosed) {
     return (
@@ -243,6 +265,9 @@ export default function MagicLinkPage() {
             <div>
               <h2 className="app-body font-semibold">Inspección programada</h2>
               <p className="app-body text-slate-400">Su inspector lo contactará a la hora indicada</p>
+              <p className="app-body text-slate-500 mt-1">
+                Link válido: {windowStart ? fmtDate(windowStart.toISOString()) : "—"} - {windowEnd ? fmtDate(windowEnd.toISOString()) : "—"}
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
