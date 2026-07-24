@@ -389,7 +389,6 @@ export default function MagicLinkPage() {
                     sessionId={session.id}
                     userId={`client:${token}`}
                     role="client"
-                    displayName={session.interviewed_name || "Cliente"}
                     compact
                     onHangup={() => setVideoCallOpen(false)}
                     onScreenshotSaved={() => refetch()}

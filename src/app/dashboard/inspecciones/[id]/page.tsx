@@ -959,7 +959,6 @@ export default function InspectionDetailPage() {
  sessionId={session.id}
  userId={profile.id}
  role="inspector"
- displayName="Inspector"
  compact
  onHangup={() => setVideoCallOpen(false)}
  onScreenshotSaved={() => {

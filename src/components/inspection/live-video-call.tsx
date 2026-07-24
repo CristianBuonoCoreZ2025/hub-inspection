@@ -26,7 +26,6 @@ interface LiveVideoCallProps {
   sessionId: string;
   userId: string;
   role: SignalingRole;
-  displayName: string;
   compact?: boolean;
   onHangup: () => void;
   onScreenshotSaved?: (evidence: { id: string; url: string; description: string }) => void;
@@ -46,7 +45,6 @@ export function LiveVideoCall({
   sessionId,
   userId,
   role,
-  displayName,
   compact: compactProp = false,
   onHangup,
   onScreenshotSaved,
@@ -528,7 +526,7 @@ export function LiveVideoCall({
             </button>
           )}
           <span className="app-body text-white/40 hidden sm:inline">
-            {displayName} · {role === "inspector" ? "Inspector" : "Cliente"}
+            {role === "inspector" ? "Inspector" : "Cliente"}
           </span>
         </div>
       </div>
