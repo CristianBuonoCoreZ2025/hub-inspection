@@ -311,8 +311,9 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
 
  const updateLocationMutation = useMutation({
  mutationFn: async (candidate: { lat: number; lng: number; displayName: string }) => {
+ // Corregimos solo lat/lng del siniestro. La dirección original se mantiene.
+ // La aclaración (coord_ubicacion) se guarda en action_data con el displayName del mapa.
  await updateClaimFields(action.claim_id, {
- claim_address: candidate.displayName,
  claim_latitude: candidate.lat,
  claim_longitude: candidate.lng,
  }, profile?.id);
@@ -2230,7 +2231,7 @@ function OwnField({
  <ClaimLocationSelector
  open={coordUbicacionOpen}
  onOpenChange={setCoordUbicacionOpen}
- address={claim?.claim_address || String(value || "") || ""}
+ address={claim?.claim_address || ""}
  commune={claim?.commune?.name}
  city={claim?.city?.name}
  region={claim?.region?.name}
@@ -2242,12 +2243,13 @@ function OwnField({
  setCoordUbicacionOpen(false);
  }}
  />
- <Input
- className="app-input h-8"
+ <Textarea
+ className="app-input min-h-[60px] py-2 text-[13px]"
  value={String(value || "")}
- onChange={(e) => onChange(field.id, e.target.value)}
+ readOnly
  disabled={readOnly}
- placeholder="Detalle adicional de la dirección..."
+ rows={2}
+ placeholder="La aclaración se completa automáticamente según el punto seleccionado en el mapa."
  />
  </div>
  );
