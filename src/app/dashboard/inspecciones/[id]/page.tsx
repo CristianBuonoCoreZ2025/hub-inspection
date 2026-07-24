@@ -169,8 +169,8 @@ export default function InspectionDetailPage() {
  queryKey: ["users"],
  queryFn: () => getUsers(),
  });
- // Inspectores: usuarios con rol inspector o internal (también pueden ser inspectores)
- const inspectors = users?.filter((u) => u.role === "inspector" || u.role === "internal") || [];
+ // Inspectores: rol principal o rol secundario inspector
+ const inspectors = users?.filter((u) => u.role === "inspector" || u.secondary_roles?.some((r) => r.role === "inspector")) || [];
 
  // Helper para buscar nombre de usuario sin depender del filtro de inspectores
  const userName = (id?: string | null) => {

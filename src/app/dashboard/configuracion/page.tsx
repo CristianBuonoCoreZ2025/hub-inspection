@@ -17,6 +17,7 @@ import {
 
 import { invalidateSystemSettingCache } from "@/services/settings";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,10 +79,10 @@ const profiles = [
 ];
 
 export default function SettingsPage() {
-  const { profile } = useAuth();
   const [tab, setTab] = useState<ConfigTab>("general");
 
-  const isInternal = profile?.role === "internal";
+  const { can } = usePermissions();
+  const canConfigureIntegrations = can("configuracion", "edit");
 
   const tabs: { id: ConfigTab; label: string; icon: typeof Settings; internalOnly?: boolean }[] = [
     { id: "general", label: "General", icon: Settings },
@@ -90,7 +91,7 @@ export default function SettingsPage() {
     { id: "perfiles", label: "Perfiles", icon: User },
   ];
 
-  const visibleTabs = tabs.filter((t) => !t.internalOnly || isInternal);
+  const visibleTabs = tabs.filter((t) => !t.internalOnly || canConfigureIntegrations);
 
   return (
     <div className="app-page">
@@ -124,7 +125,7 @@ export default function SettingsPage() {
 
       {tab === "general" && <GeneralTab />}
       {tab === "notificaciones" && <NotificacionesTab />}
-      {tab === "integraciones" && isInternal && <IntegracionesTab />}
+      {tab === "integraciones" && canConfigureIntegrations && <IntegracionesTab />}
       {tab === "perfiles" && <PerfilesTab />}
     </div>
   );
