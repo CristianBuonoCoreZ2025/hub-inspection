@@ -5,6 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getDocumentTemplates } from "@/services/document-templates";
 import type { GestionScreenProps } from "./types";
 
@@ -34,39 +41,47 @@ export default function EmailScreen({ action, onChange, readOnly }: GestionScree
  return (
  <div className="space-y-3">
  <div>
- <Label className="app-field-label text-[11px]">Contacto *</Label>
- <select
- className="app-input h-8 w-full"
- value={form.contacto}
- onChange={(e) => setForm({ ...form, contacto: e.target.value })}
+ <Label className="app-field-label">Contacto *</Label>
+ <Select
+ value={form.contacto || ""}
+ onValueChange={(v) => setForm({ ...form, contacto: v || "" })}
  disabled={readOnly}
  >
- <option value="">Seleccionar contacto...</option>
- <option value="asegurado">Asegurado - Nicanor Parra</option>
- <option value="contacto">Contacto</option>
- <option value="corredor">Corredor</option>
- </select>
+ <SelectTrigger className="app-input w-full h-7">
+ <SelectValue placeholder="Seleccionar contacto..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="">Seleccionar contacto...</SelectItem>
+ <SelectItem value="asegurado">Asegurado - Nicanor Parra</SelectItem>
+ <SelectItem value="contacto">Contacto</SelectItem>
+ <SelectItem value="corredor">Corredor</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
 
  <div>
- <Label className="app-field-label text-[11px]">Tipo de Contacto *</Label>
- <select
- className="app-input h-8 w-full"
- value={form.tipo_contacto}
- onChange={(e) => setForm({ ...form, tipo_contacto: e.target.value })}
+ <Label className="app-field-label">Tipo de Contacto *</Label>
+ <Select
+ value={form.tipo_contacto || ""}
+ onValueChange={(v) => setForm({ ...form, tipo_contacto: v || "" })}
  disabled={readOnly}
  >
- <option value="email">Email</option>
- <option value="sms">SMS</option>
- <option value="whatsapp">WhatsApp</option>
- </select>
+ <SelectTrigger className="app-input w-full h-7">
+ <SelectValue placeholder="Seleccionar tipo..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="email">Email</SelectItem>
+ <SelectItem value="sms">SMS</SelectItem>
+ <SelectItem value="whatsapp">WhatsApp</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
 
  <div>
- <Label className="app-field-label text-[11px]">Aviso *</Label>
+ <Label className="app-field-label">Aviso *</Label>
  <Input
  type="datetime-local"
- className="app-input h-8 "
+ className="app-input"
  value={form.aviso}
  onChange={(e) => setForm({ ...form, aviso: e.target.value })}
  disabled={readOnly}
@@ -74,9 +89,9 @@ export default function EmailScreen({ action, onChange, readOnly }: GestionScree
  </div>
 
  <div>
- <Label className="app-field-label text-[11px]">Detalles de Contacto *</Label>
+ <Label className="app-field-label">Detalles de Contacto *</Label>
  <Textarea
- className="app-input min-h-[60px]"
+ className="app-input h-auto! py-2! min-h-15"
  value={form.detalles}
  onChange={(e) => setForm({ ...form, detalles: e.target.value })}
  disabled={readOnly}
@@ -85,35 +100,43 @@ export default function EmailScreen({ action, onChange, readOnly }: GestionScree
  </div>
 
  <div>
- <Label className="app-field-label text-[11px]">Plantilla *</Label>
- <select
- className="app-input h-8 w-full"
- value={form.plantilla_id}
- onChange={(e) => {
- const tpl = templates?.find((t) => t.id === e.target.value);
+ <Label className="app-field-label">Plantilla *</Label>
+ <Select
+ value={form.plantilla_id || ""}
+ onValueChange={(v) => {
+ const tpl = templates?.find((t) => t.id === v);
  setForm({
  ...form,
- plantilla_id: e.target.value,
+ plantilla_id: v || "",
  plantilla_nombre: tpl?.name || "",
  preview: buildPreview(tpl?.name || "", form.contacto),
  });
  }}
  disabled={readOnly}
  >
- <option value="">Seleccionar plantilla...</option>
+ <SelectTrigger className="app-input w-full h-7">
+ <SelectValue placeholder="Seleccionar plantilla..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="">Seleccionar plantilla...</SelectItem>
  {templates?.map((tpl) => (
- <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+ <SelectItem key={tpl.id} value={tpl.id}>{tpl.name}</SelectItem>
  ))}
  {!templates?.length && (
- <option value="aviso-asignacion">Aviso de Asignación automática</option>
+ <SelectItem value="aviso-asignacion">Aviso de Asignación automática</SelectItem>
  )}
- </select>
+ </SelectContent>
+ </Select>
  </div>
 
  <div>
- <Label className="app-field-label text-[11px]">Preview del Mensaje</Label>
- <div className="rounded-md border border-border bg-white dark:bg-zinc-900 p-4 min-h-[180px] text-[13px] leading-relaxed whitespace-pre-wrap text-black dark:text-zinc-100">
- {form.preview || "Vista previa del mensaje..."}
+ <Label className="app-field-label">Preview del Mensaje</Label>
+ <div className="app-panel p-4 min-h-[180px]">
+ {form.preview ? (
+ <p className="app-body whitespace-pre-wrap">{form.preview}</p>
+ ) : (
+ <p className="app-body text-muted-foreground italic">Vista previa del mensaje...</p>
+ )}
  </div>
  </div>
  </div>
