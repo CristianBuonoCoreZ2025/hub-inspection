@@ -23,6 +23,7 @@ import {
 } from "@/server/actions/gestiones";
 import { getInsuranceCompanies, getCountries, getEvents } from "@/services/catalogs";
 import { getCompanies } from "@/services/companies";
+import { getEmailTemplates } from "@/services/email-templates";
 import { toast } from "sonner";
 import {
  Search, Pencil, Ban, FileSpreadsheet, Check,
@@ -60,6 +61,9 @@ interface FormState {
  is_blocker: boolean;
  review_levels: number;
  is_dispatch_applicable: boolean;
+ auto_complete: boolean;
+ auto_email: boolean;
+ auto_email_template_id: string;
  days_to_issue: number;
  days_to_review: number;
  days_to_approve: number;
@@ -85,6 +89,9 @@ const emptyForm: FormState = {
  is_blocker: false,
  review_levels: 1,
  is_dispatch_applicable: false,
+ auto_complete: false,
+ auto_email: false,
+ auto_email_template_id: "",
  days_to_issue: 1,
  days_to_review: 0,
  days_to_approve: 0,
@@ -143,6 +150,11 @@ export default function GestionesPage() {
  const { data: insuranceCompanies } = useQuery({ queryKey: ["insurance-companies-list"], queryFn: getInsuranceCompanies });
  const { data: countries } = useQuery({ queryKey: ["countries-list"], queryFn: getCountries });
  const { data: events } = useQuery({ queryKey: ["events-list"], queryFn: getEvents });
+ const { data: emailTemplates } = useQuery({
+ queryKey: ["email-templates", profile?.company_id],
+ queryFn: () => getEmailTemplates({ companyId: profile?.company_id || undefined, includeInactive: true }),
+ enabled: !!profile?.company_id,
+ });
 
  const createMut = useMutation({
  mutationFn: async (data: FormState) => {
@@ -238,6 +250,9 @@ export default function GestionesPage() {
  is_blocker: t.is_blocker,
  review_levels: t.review_levels ?? 1,
  is_dispatch_applicable: t.is_dispatch_applicable ?? false,
+ auto_complete: t.auto_complete ?? false,
+ auto_email: t.auto_email ?? false,
+ auto_email_template_id: t.auto_email_template_id || "",
  days_to_issue: t.days_to_issue,
  days_to_review: t.days_to_review,
  days_to_approve: t.days_to_approve,
@@ -666,6 +681,47 @@ export default function GestionesPage() {
  </div>
  );
  })()}
+ {/* Autocompletar y envío automático de e-mail */}
+ <div className="flex flex-col gap-1">
+ <Label className="app-body text-muted-foreground">Completar Automáticamente</Label>
+ <div className="flex h-7 items-center gap-2">
+ <ToggleChip
+ active={form.auto_complete}
+ onClick={(v) => setForm({ ...form, auto_complete: v, auto_email: v ? form.auto_email : false })}
+ disabled={isFieldDisabled("auto_complete")}
+ >
+ {form.auto_complete ? "Sí" : "No"}
+ </ToggleChip>
+ </div>
+ </div>
+ {form.auto_complete && (
+ <div className="flex flex-col gap-1">
+ <Label className="app-body text-muted-foreground">Enviar E-mail Automático</Label>
+ <div className="flex h-7 items-center gap-2">
+ <ToggleChip
+ active={form.auto_email}
+ onClick={(v) => setForm({ ...form, auto_email: v })}
+ disabled={isFieldDisabled("auto_email")}
+ >
+ {form.auto_email ? "Sí" : "No"}
+ </ToggleChip>
+ </div>
+ </div>
+ )}
+ {form.auto_email && (
+ <div className="flex flex-col gap-1">
+ <Label className="app-body text-muted-foreground">Plantilla E-mail</Label>
+ <Select
+ value={form.auto_email_template_id || "__none"}
+ onValueChange={(v) => setForm({ ...form, auto_email_template_id: v === "__none" || v === null ? "" : v })}
+ items={(emailTemplates || []).map((t) => ({ value: t.id, label: t.name }))}
+ disabled={isFieldDisabled("auto_email_template_id")}
+ >
+ <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar plantilla..." /></SelectTrigger>
+ <SelectContent><SelectItem value="__none">Sin selección</SelectItem>{emailTemplates?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+ </Select>
+ </div>
+ )}
  </div>
 
  {/* Descripción full-width */}

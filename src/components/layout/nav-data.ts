@@ -42,6 +42,7 @@ import {
   ArrowRightLeft,
   BarChart3,
   RotateCcw,
+  Mail,
   Menu as MenuIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -139,6 +140,7 @@ export const gestionCatalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/gestiones/caracteristicas", label: "Características", icon: Boxes },
   { href: "/dashboard/catalogos/pantallas", label: "Pantallas", icon: Monitor },
   { href: "/dashboard/catalogos/gestiones/gestiones", label: "Gestiones", icon: FileSpreadsheet },
+  { href: "/dashboard/catalogos/gestiones/email-templates", label: "Plantillas E-mail", icon: Mail },
   { href: "/dashboard/catalogos/gestiones/dependencias", label: "Dependencias", icon: Link2 },
   { href: "/dashboard/catalogos/gestiones/campos", label: "Campos Plantillas", icon: Code2 },
   { href: "/dashboard/catalogos/workflows", label: "Workflows", icon: Workflow },
