@@ -52,7 +52,7 @@ function DatePicker({
   const showClear = clearable && date
 
   return (
-    <div className={cn("relative inline-flex", className)}>
+    <div className={cn("relative flex w-full", className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
@@ -66,7 +66,7 @@ function DatePicker({
               )}
             >
               <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
-              <span className="truncate tabular-nums">{displayValue}</span>
+              <span className="truncate tabular-nums min-w-0 flex-1">{displayValue}</span>
             </button>
           }
         />
