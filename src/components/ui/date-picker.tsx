@@ -90,7 +90,7 @@ function DatePicker({
           type="button"
           disabled={disabled}
           onClick={() => onChange("")}
-          className="absolute right-1.5 top-[3px] inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none"
+          className="absolute right-1.5 top-0.75 inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none"
           aria-label="Limpiar fecha"
         >
           <X className="h-3 w-3" />
