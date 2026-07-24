@@ -105,6 +105,7 @@ export default function ScreenBuilderPage() {
           );
           // Invalidar queries de gestiones para que se recarguen con el nuevo snapshot
           queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
+          queryClient.invalidateQueries({ queryKey: ["claim-action"] });
         }
       } catch (err) {
         console.warn("[saveMut] No se pudieron refrescar snapshots prístinos:", err);
