@@ -186,6 +186,11 @@ Rango intermedio con correcciones sueltas (geolocalización, evidencias, daños,
 - Elimina las políticas viejas `*_company` que quedaron de la migración 212.
 - Deja solo las 4 políticas tenant (`select/insert/update/delete`).
 
+### 216 — company_tables_rls.sql
+- Crea `is_tenant_allowed(company_id uuid)` para RLS tenant.
+- Aplica 4 políticas (`select/insert/update/delete`) a todas las tablas con `company_id`.
+- Excluye `_migrations`, `companies` e `inspection_sessions` (ya migrada).
+
 ## Migraciones problemáticas históricas
 
 **137 — `workflow_unique.sql`**
