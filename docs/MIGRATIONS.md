@@ -165,3 +165,24 @@ Extiende `third_parties` con 5 columnas para soportar culpables y afectados:
 - `claim_number` — n° siniestro en su compañía
 - `notes` — notas adicionales
 - Normaliza `party_type` a "afectado"/"responsable" + RLS
+
+### 162-211 — Fixes, catálogos, currency, daños y sessions
+Rango intermedio con correcciones sueltas (geolocalización, evidencias, daños, currency system, etc.).
+
+### 212 — inspection_sessions_company_id_rls.sql
+- Agrega `company_id` a `inspection_sessions` (única tabla principal que no heredaba tenant de `claims`).
+- Backfill desde `claims.company_id` a través de `claim_id`.
+- Agrega FK a `companies`, índice y RLS por `company_id`.
+
+## Migraciones problemáticas históricas
+
+**137 — `workflow_unique.sql`**
+Borró los datos de `workflow_steps` y `workflow_configs` para poder re-crearlos con restricciones de unicidad:
+```sql
+DELETE FROM workflow_steps;
+DELETE FROM workflow_configs;
+```
+Esto **no debe repetirse** en producción. Si es necesario cambiar constraints, usar `UPDATE` o migrar datos preservando configuración existente.
+
+**Regla general**
+Ninguna migración puede contener `DELETE`, `TRUNCATE` o `DROP TABLE` de tablas con datos de producción o configuración. Las migraciones transforman; no demuelen.

@@ -79,8 +79,11 @@ Sin excepciones. Configuración, catálogos, transacciones, auditoría, todo.
 - Usar `@supabase/ssr` para autenticación en Next.js (cookies via middleware).
 
 ## Multi Tenant & Seguridad
-- Todas las tablas deben tener `company_id` o `tenant_id`.
-- Implementar **Row Level Security (RLS)** en TODAS las tablas desde el inicio.
+- Las tablas de **datos de negocio particionables por empresa** deben tener `company_id` o `tenant_id`.
+  - Ejemplos que SÍ: `claims`, `companies`, `profiles`, `inspection_sessions`.
+  - Ejemplos que NO (catálogos globales): `currencies`, `country_currencies`, `exchange_rates`, `system_settings`, `nav_menu_config`.
+  - Las tablas hijas que ya son alcanzables por relación a `claims`, `companies`, `users` u otra tabla tenant NO duplican `company_id`.
+- Implementar **Row Level Security (RLS)** en todas las tablas con datos sensibles/empresa.
 - Nunca usar bypass de seguridad (`security definer` solo en funciones controladas).
 - Usar `NHOST_ADMIN_SECRET` solo en server actions o Nhost Functions, nunca en cliente.
 - Auditoría completa: registrar quién crea/modifica/elimina registros.
