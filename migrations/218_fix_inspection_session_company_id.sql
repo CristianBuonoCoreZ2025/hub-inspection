@@ -6,8 +6,8 @@
 -- produciendo: null value in column "company_id" of relation
 -- "inspection_sessions" violates not-null constraint.
 --
--- Solución: Tomar company_id desde la acción (NEW.company_id) o, fallback,
--- desde claims.company_id, e insertarlo al crear/reactivar la sesión.
+-- Solución: Tomar company_id desde claims.company_id e insertarlo
+-- al crear/reactivar la sesión.
 -- ═════════════════════════════════════════════════════════════════
 
 DROP TRIGGER IF EXISTS trg_auto_create_inspection_session ON claim_actions;
@@ -61,7 +61,7 @@ BEGIN
   IF v_template_code <> 'INS' THEN RETURN NEW; END IF;
 
   -- company_id desde la acción, fallback al claim
-  v_company_id := COALESCE(NEW.company_id, (SELECT company_id FROM claims WHERE id = NEW.claim_id LIMIT 1));
+  v_company_id := (SELECT company_id FROM claims WHERE id = NEW.claim_id LIMIT 1);
 
   SELECT count(*) INTO v_existing_count
   FROM inspection_sessions

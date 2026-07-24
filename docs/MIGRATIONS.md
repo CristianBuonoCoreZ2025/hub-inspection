@@ -196,6 +196,11 @@ Rango intermedio con correcciones sueltas (geolocalización, evidencias, daños,
 - Aplica RLS tenant a tablas hijas sin `company_id` directo (joins a claims/sessions).
 - SIN borrar datos.
 
+### 218 — fix_inspection_session_company_id.sql
+- Corrige `auto_create_inspection_session` para tomar `company_id` desde `claims`.
+- Arregla error `record "new" has no field "company_id"` en trigger de `claim_actions`.
+- Backfill de sesiones sin `company_id`.
+
 ## Migraciones problemáticas históricas
 
 **137 — `workflow_unique.sql`**
