@@ -493,7 +493,7 @@ export default function PolicyDetailPage() {
  {/* Header */}
  <div className="app-page-header">
  <div className="flex items-center gap-3">
- <Button size="sm" className="btn-cancel btn-icon" onClick={() => router.push("/dashboard/catalogos/polizas")}>
+ <Button size="icon" className="btn-icon-sm" onClick={() => router.push("/dashboard/catalogos/polizas")}>
  <ArrowLeft className="h-4 w-4" />
  </Button>
  <div className="flex-1">

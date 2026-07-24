@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -141,15 +141,27 @@ export default function InspectionDetailPage() {
  const [rescheduleTime, setRescheduleTime] = useState<string>("");
  const [rescheduleType, setRescheduleType] = useState<"onsite" | "remote">("onsite");
  const [rescheduleInspectorId, setRescheduleInspectorId] = useState<string>("");
- const [chatPanelOpen, setChatPanelOpen] = useState(true);
+ const [chatPanelOpen, setChatPanelOpen] = useState(false);
  const [videoCallOpen, setVideoCallOpen] = useState(false);
+ const autoVideoOpenedRef = useRef(false);
  const { codeToId } = useClaimStatuses();
 
  const { data: session, isLoading, isError, error } = useQuery({
  queryKey: ["inspection-session", sessionId],
  queryFn: () => getInspectionSessionById(sessionId),
  retry: false,
+ refetchInterval: (query) => {
+ const s = query.state.data as InspectionSession | undefined;
+ return s?.inspection_type === "remote" && s?.status === "active" ? 2000 : false;
+ },
  });
+
+ useEffect(() => {
+ if (session && session.inspection_type === "remote" && session.status === "active" && !autoVideoOpenedRef.current) {
+ autoVideoOpenedRef.current = true;
+ setVideoCallOpen(true);
+ }
+ }, [session]);
 
  const { data: users } = useQuery({
  queryKey: ["users"],
@@ -480,6 +492,13 @@ export default function InspectionDetailPage() {
  // Invalidar queries de evidencias para que aparezca en la lista
  queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
+ }}
+ onPeerJoined={() => toast.success("El asegurado se ha conectado a la videollamada")}
+ onRecordingSaved={() => {
+ queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
+ if (session.magic_link_token) queryClient.invalidateQueries({ queryKey: ["magic-link-live", session.magic_link_token] });
+ toast.success("Grabación de sesión guardada como evidencia");
  }}
  />
  )}
@@ -907,7 +926,7 @@ export default function InspectionDetailPage() {
  {session.status === "scheduled" ? (
  <NotStartedNotice />
  ) : (
- <SketchesTab sessionId={session.id} sessionStatus={session.status} />
+ <SketchesTab sessionId={session.id} sessionStatus={session.status} magicLinkToken={session.magic_link_token || undefined} />
  )}
  </div>
  )}
@@ -918,7 +937,7 @@ export default function InspectionDetailPage() {
  {session.status === "scheduled" ? (
  <NotStartedNotice />
  ) : (
- <SignaturesTab sessionId={session.id} sessionStatus={session.status} />
+ <SignaturesTab sessionId={session.id} sessionStatus={session.status} magicLinkToken={session.magic_link_token || undefined} />
  )}
  </div>
  )}
@@ -959,7 +978,7 @@ export default function InspectionDetailPage() {
  <Button
  variant="ghost"
  size="icon"
- className="btn-neutral btn-icon"
+ className="btn-icon-sm"
  onClick={() => setChatPanelOpen(false)}
  >
  <XCircle className="h-3.5 w-3.5" />

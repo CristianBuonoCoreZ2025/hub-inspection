@@ -162,7 +162,7 @@ function MonedasTab() {
  <Button
  variant="ghost"
  size="icon"
- className="btn-neutral btn-icon"
+ className="btn-icon-sm"
  onClick={() => router.push(`/dashboard/catalogos/tipos-cambio?currency=${c.code}`)}
  title={`Ver tipos de cambio de ${c.code}`}
  >
@@ -172,7 +172,7 @@ function MonedasTab() {
  <Button
  variant="ghost"
  size="icon"
- className="btn-neutral btn-icon"
+ className="btn-icon-sm"
  onClick={() => openPaises(c.code, c.name)}
  title={`Asociar países a ${c.code}`}
  >
@@ -180,7 +180,7 @@ function MonedasTab() {
  </Button>
  {/* Editar */}
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => { setEditingId(c.id); setForm({ code: c.code, name: c.name, symbol: c.symbol || "", decimals: String(c.decimals) }); setOpen(true); }}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => { setEditingId(c.id); setForm({ code: c.code, name: c.name, symbol: c.symbol || "", decimals: String(c.decimals) }); setOpen(true); }}>
  <Pencil className="h-4 w-4" />
  </Button>
  )}

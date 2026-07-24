@@ -376,7 +376,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <div className="app-stack">
  {/* Banner de solo lectura */}
  {readOnly && (
- <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+ <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 app-body text-amber-700 dark:text-amber-300">
  <Lock className="h-3.5 w-3.5 shrink-0" />
  Inspección finalizada — los daños son de solo lectura
  </div>
@@ -384,7 +384,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
  {/* Header con totales por moneda */}
  <div className="flex items-center justify-between">
- <div className="text-sm text-muted-foreground">
+ <div className="app-body text-muted-foreground">
  {damages?.length || 0} registros ·{" "}
  {currencyTotals.length === 0 ? (
  <span className="font-semibold text-foreground">$0</span>
@@ -394,7 +394,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <span className="font-semibold text-foreground">
  {t.currency} {t.total.toLocaleString("es-CL")}
  </span>
- <span className="text-[11px] ml-1">
+ <span className="app-body ml-1">
  (Const: {t.currency} {t.building.toLocaleString("es-CL")} · Cont: {t.currency} {t.content.toLocaleString("es-CL")})
  </span>
  </span>
@@ -413,8 +413,8 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <Building2 className="h-5 w-5" />
  </div>
  <div className="min-w-0">
- <div className="text-[13px] font-semibold text-foreground">Daño Constructivo</div>
- <div className="text-[11px] text-muted-foreground truncate">Estructura, muros, pisos, techumbre, instalaciones</div>
+ <div className="app-title text-foreground">Daño Constructivo</div>
+ <div className="app-body text-muted-foreground truncate">Estructura, muros, pisos, techumbre, instalaciones</div>
  </div>
  </button>
  <button
@@ -425,8 +425,8 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <Package className="h-5 w-5" />
  </div>
  <div className="min-w-0">
- <div className="text-[13px] font-semibold text-foreground">Daño de Contenido</div>
- <div className="text-[11px] text-muted-foreground truncate">Electrodomésticos, electrónica, muebles, ropa, joyas</div>
+ <div className="app-title text-foreground">Daño de Contenido</div>
+ <div className="app-body text-muted-foreground truncate">Electrodomésticos, electrónica, muebles, ropa, joyas</div>
  </div>
  </button>
  </div>
@@ -878,7 +878,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
  {/* Botones */}
  <div className="flex items-center justify-between border-t border-border pt-3">
- <div className="text-[11px] text-muted-foreground">
+ <div className="app-body text-muted-foreground">
  {form.damage_type === "building" ? "Daño constructivo" : "Daño de contenido"}
  </div>
  <div className="flex gap-2">
@@ -902,14 +902,14 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <Building2 className="h-3.5 w-3.5" />
  </span>
  Daños Constructivos
- <span className="text-[11px] text-muted-foreground font-normal">
+ <span className="app-body text-muted-foreground font-normal">
  ({buildingDamages.length})
  </span>
  </h3>
  {isLoading ? (
- <div className="text-center py-6 text-muted-foreground text-sm">Cargando...</div>
+ <div className="text-center py-6 text-muted-foreground app-body">Cargando...</div>
  ) : buildingDamages.length === 0 ? (
- <div className="text-center py-6 text-muted-foreground text-[13px]">
+ <div className="text-center py-6 text-muted-foreground app-body">
  No hay daños constructivos registrados.
  </div>
  ) : (
@@ -928,11 +928,11 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <tbody>
  {buildingDamages.map((d) => (
  <tr key={d.id}>
- <td className="text-[11px]">{spaceName(d.space_id)}</td>
- <td className="text-[11px]">{bldCategoryName(d.building_damage_category_id)}</td>
- <td className="text-[11px] max-w-[200px] truncate">{d.description}</td>
+ <td className="app-body">{spaceName(d.space_id)}</td>
+ <td className="app-body">{bldCategoryName(d.building_damage_category_id)}</td>
+ <td className="app-body max-w-[200px] truncate">{d.description}</td>
  <td>
- <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+ <span className={`app-body font-medium px-2 py-0.5 rounded-full ${
  d.severity === "total" ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300" :
  d.severity === "high" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300" :
  d.severity === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300" :
@@ -941,15 +941,15 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  {severityLabels[d.severity] || d.severity}
  </span>
  </td>
- <td className="text-right font-medium text-[11px]">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
+ <td className="text-right font-medium app-body">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
  <td>
  <div className="app-row-actions">
  {!readOnly && (
  <>
- <Button variant="ghost" size="icon" className="btn-icon" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
  <Pencil className="h-3.5 w-3.5" />
  </Button>
- <Button variant="ghost" size="icon" className="btn-icon text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
  <Trash2 className="h-3.5 w-3.5" />
  </Button>
  </>
@@ -971,14 +971,14 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <Package className="h-3.5 w-3.5" />
  </span>
  Daños de Contenido
- <span className="text-[11px] text-muted-foreground font-normal">
+ <span className="app-body text-muted-foreground font-normal">
  ({contentDamages.length})
  </span>
  </h3>
  {isLoading ? (
- <div className="text-center py-6 text-muted-foreground text-sm">Cargando...</div>
+ <div className="text-center py-6 text-muted-foreground app-body">Cargando...</div>
  ) : contentDamages.length === 0 ? (
- <div className="text-center py-6 text-muted-foreground text-[13px]">
+ <div className="text-center py-6 text-muted-foreground app-body">
  No hay daños de contenido registrados.
  </div>
  ) : (
@@ -997,11 +997,11 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <tbody>
  {contentDamages.map((d) => (
  <tr key={d.id}>
- <td className="text-[11px]">{goodTypeName(d.content_good_type_id)}</td>
- <td className="text-[11px] max-w-[150px] truncate">{d.product || d.description}</td>
- <td className="text-[11px]">{d.brand_model || "—"}</td>
+ <td className="app-body">{goodTypeName(d.content_good_type_id)}</td>
+ <td className="app-body max-w-[150px] truncate">{d.product || d.description}</td>
+ <td className="app-body">{d.brand_model || "—"}</td>
  <td>
- <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+ <span className={`app-body font-medium px-2 py-0.5 rounded-full ${
  d.severity === "total" ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300" :
  d.severity === "high" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300" :
  d.severity === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300" :
@@ -1010,15 +1010,15 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  {severityLabels[d.severity] || d.severity}
  </span>
  </td>
- <td className="text-right font-medium text-[11px]">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
+ <td className="text-right font-medium app-body">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
  <td>
  <div className="app-row-actions">
  {!readOnly && (
  <>
- <Button variant="ghost" size="icon" className="btn-icon" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
  <Pencil className="h-3.5 w-3.5" />
  </Button>
- <Button variant="ghost" size="icon" className="btn-icon text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
  <Trash2 className="h-3.5 w-3.5" />
  </Button>
  </>

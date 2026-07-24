@@ -155,7 +155,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  <td>
  <div className="app-row-actions">
  {canEdit(section) && (
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon" onClick={() => {
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
  setEditingId(item.id);
  setFormData({ name: item.name || "", code: item.code || "" });
  setOpen(true);

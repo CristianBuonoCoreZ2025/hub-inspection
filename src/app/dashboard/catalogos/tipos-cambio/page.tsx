@@ -340,13 +340,13 @@ function TiposCambioContent() {
  {/* Navegación de mes (solo en modo mes) */}
  {viewMode === "month" && (
  <div className="flex items-center gap-1">
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon h-7 w-7" onClick={() => navigateMonth(-1)}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => navigateMonth(-1)}>
  <ChevronLeft className="h-4 w-4" />
  </Button>
  <span className="text-[11px] font-medium min-w-[90px] text-center">
  {MONTHS[parseInt(filterMonth)]} {filterYear}
  </span>
- <Button variant="ghost" size="icon" className="btn-neutral btn-icon h-7 w-7" onClick={() => navigateMonth(1)}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => navigateMonth(1)}>
  <ChevronRight className="h-4 w-4" />
  </Button>
  </div>
@@ -544,7 +544,7 @@ function TiposCambioContent() {
  <Button
  variant="ghost"
  size="icon"
- className="btn-neutral btn-icon"
+ className="btn-icon-sm"
  onClick={() => { setEditingId(r.id); setForm({ country_id: r.country_id, currency_code: r.currency_code, rate_to_base: String(r.rate_to_base), effective_date: r.effective_date, source: r.source || "manual" }); setOpen(true); }}
  >
  <Pencil className="h-3.5 w-3.5" />

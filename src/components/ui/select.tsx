@@ -86,7 +86,7 @@ function SelectContent({
         data-slot="select-content"
         data-align-trigger={alignItemWithTrigger}
         className={cn(
-          "relative isolate max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto",
+          "relative max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto",
           "rounded-[10px] border border-input",
           "bg-card/85 backdrop-blur-xl saturate-150",
           "shadow-[0_8px_32px_rgba(0,0,0,0.12)]",

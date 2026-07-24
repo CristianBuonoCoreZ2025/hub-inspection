@@ -116,15 +116,15 @@ export function RequestLogViewer() {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <Button onClick={downloadLogs} className="btn-cancel">
+          <Button onClick={downloadLogs} className="pg-btn-platinum-icon">
             <Download className="h-3 w-3" />
             Descargar
           </Button>
-          <Button onClick={() => requestLogger.clear()} className="btn-cancel">
+          <Button onClick={() => requestLogger.clear()} className="pg-btn-platinum-icon">
             <Trash2 className="h-3 w-3" />
             Eliminar
           </Button>
-          <Button onClick={() => setIsOpen(false)} className="btn-icon">
+          <Button onClick={() => setIsOpen(false)} className="btn-icon-sm">
             <X className="h-4 w-4" />
           </Button>
         </div>

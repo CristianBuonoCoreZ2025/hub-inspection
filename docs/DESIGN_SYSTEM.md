@@ -137,14 +137,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 ### Clases obligatorias
 ```tsx
-className="app-input"        // inputs de texto, número, fecha
+className="app-input"        // inputs de texto, número, fecha y selects
+className="liquid-search"    // buscadores en grillas / toolbars
 className="app-field-label"  // labels de campos
 ```
 
 ### Reglas
-- **TODOS** los inputs usan `app-input`.
+- **TODOS** los inputs de formulario/modal usan `app-input`.
+- **TODOS** los buscadores en grillas usan `liquid-search`.
 - **TODOS** los labels usan `app-field-label`.
-- **NO** usar `liquid-search` (deprecado).
+- `liquid-search` es el estilo Liquid Glass oficial para búsquedas.
 - Altura estándar: `h-7` (28px) en inputs dentro de modals y toolbars.
 - **Tamaño de fuente: 11px** en TODOS los inputs, selects (trigger + dropdown),
   placeholders y labels de formulario. Esta es la regla global definida en
@@ -371,9 +373,9 @@ RESEND_FROM_EMAIL=noreply@tudominio.com
 ```tsx
 <div className="app-toolbar">
   <div className="flex items-center gap-2">
-    <div className="relative w-[160px] shrink-0">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-      <Input placeholder="Buscar..." className="app-input pl-9" />
+    <div className="app-grid-search-wrap">
+      <Search />
+      <Input placeholder="Buscar..." className="liquid-search" />
     </div>
     <SelectTrigger className="app-input h-7 w-[180px]">...</SelectTrigger>
   </div>
@@ -382,7 +384,8 @@ RESEND_FROM_EMAIL=noreply@tudominio.com
 
 ### Reglas
 - Buscador con icono `Search` de lucide-react.
-- `app-input` en todos los filtros (no `liquid-search`).
+- Buscador en grilla: `liquid-search` dentro de `app-grid-search-wrap`.
+- Inputs y selects de formulario: `app-input`.
 - **Selects de filtro con ancho fijo** — definido globalmente en `forms.css`
   con `!important` para que pise cualquier `max-w-[...]` o `w-[...]` de Tailwind:
   - **Default (200px):** compañías, corredores, características, eventos, etc.
@@ -667,7 +670,8 @@ aplica solo a **elementos del mismo tipo agrupados**.
 ```
 □ ¿Leí docs/DESIGN_SYSTEM.md? (ESTE ARCHIVO)
 □ ¿Los botones usan pg-btn-platinum?
-□ ¿Los inputs usan app-input?
+□ ¿Los inputs de formulario usan app-input?
+□ ¿Los buscadores en grillas usan liquid-search?
 □ ¿Los labels usan app-field-label?
 □ ¿Los selects usan Portal + positionMethod="fixed" + z-9999?
 □ ¿No hay checkboxes?

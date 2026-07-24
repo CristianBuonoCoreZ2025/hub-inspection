@@ -225,8 +225,8 @@ export default function GestionDetailPage() {
  <div className="app-page-header">
  <div className="flex items-center gap-3">
  <Button
- size="sm"
- className="btn-cancel btn-icon"
+ size="icon"
+ className="btn-icon-sm"
  onClick={() => router.push(`/dashboard/claims/${claimId}`)}
  >
  <ArrowLeft className="h-4 w-4" />

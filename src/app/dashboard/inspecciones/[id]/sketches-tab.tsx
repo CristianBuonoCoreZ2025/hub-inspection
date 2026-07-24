@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Upload, Trash2, ImageIcon, Pencil, Check, X, PenTool, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: string; sessionStatus?: string }) {
+export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string }) {
  const queryClient = useQueryClient();
  const [uploading, setUploading] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -23,6 +23,12 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  const fileInputRef = useRef<HTMLInputElement>(null);
  const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
+ const syncSketches = () => {
+ queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+ if (magicLinkToken) queryClient.invalidateQueries({ queryKey: ["magic-link-live", magicLinkToken] });
+ };
+
  const { data: sketches, isLoading } = useQuery({
  queryKey: ["damage-sketches", sessionId],
  queryFn: () => getDamageSketches(sessionId),
@@ -32,7 +38,7 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  mutationFn: ({ id, label }: { id: string; label: string }) =>
  updateDamageSketch(id, { label }),
  onSuccess: () => {
- queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
+ syncSketches();
  setEditingId(null);
  toast.success("Croquis actualizado");
  },
@@ -42,7 +48,7 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  const deleteMutation = useMutation({
  mutationFn: deleteDamageSketch,
  onSuccess: () => {
- queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
+ syncSketches();
  toast.success("Croquis eliminado");
  },
  onError: (err: Error) => toast.error(err.message),
@@ -59,7 +65,7 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  return res.json();
  },
  onSuccess: () => {
- queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
+ syncSketches();
  setMode("view");
  setDrawEditingSketch(null);
  toast.success("Croquis guardado");
@@ -84,7 +90,7 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  return res.json();
  },
  onSuccess: () => {
- queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
+ syncSketches();
  toast.success("Croquis subido");
  },
  onError: (err: Error) => toast.error(err.message),
@@ -135,7 +141,7 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  if (isLoading) {
  return (
  <div className="app-panel">
- <p className="text-sm text-muted-foreground">Cargando croquis...</p>
+ <p className="app-body text-muted-foreground">Cargando croquis...</p>
  </div>
  );
  }
@@ -169,7 +175,7 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  <div className="app-stack">
  {/* Banner de solo lectura */}
  {readOnly && (
- <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+ <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 app-body text-amber-700 dark:text-amber-300">
  <Lock className="h-3.5 w-3.5 shrink-0" />
  Inspección finalizada — los croquis son de solo lectura
  </div>
@@ -178,20 +184,22 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  {/* Botones de acción (ocultos si readOnly) */}
  {!readOnly && (
  <div className="flex flex-wrap gap-2">
- <button
+ <Button
+ type="button"
  onClick={() => setMode("draw")}
- className="inline-flex items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-[13px] font-medium shadow-sm transition-colors hover:bg-accent"
+ className="pg-btn-platinum-icon"
  >
  <PenTool className="h-4 w-4" />
- Dibujar Croquis
- </button>
- <button
+ Dibujar
+ </Button>
+ <Button
+ type="button"
  onClick={() => fileInputRef.current?.click()}
- className="inline-flex items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-[13px] font-medium shadow-sm transition-colors hover:bg-accent"
+ className="pg-btn-platinum-icon"
  >
  <Upload className="h-4 w-4" />
- Subir Imagen
- </button>
+ Subir
+ </Button>
  <input
  ref={fileInputRef}
  type="file"
@@ -203,7 +211,7 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  </div>
  )}
 
- {uploading && <p className="text-xs text-muted-foreground">Subiendo...</p>}
+ {uploading && <p className="app-body text-muted-foreground">Subiendo...</p>}
 
  {/* Grid */}
  {sketches && sketches.length > 0 ? (
@@ -252,7 +260,7 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  </>
  ) : (
  <>
- <span className="flex-1 truncate text-sm font-medium">
+ <span className="flex-1 truncate app-body font-medium">
  {sketch.label || "Sin título"}
  </span>
  {!readOnly && (
@@ -301,7 +309,7 @@ export default function SketchesTab({ sessionId, sessionStatus }: { sessionId: s
  ) : (
  <div className="app-panel text-center py-8">
  <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground" />
- <p className="mt-2 text-sm text-muted-foreground">
+ <p className="mt-2 app-body text-muted-foreground">
  No hay croquis aún. Dibuja o sube uno.
  </p>
  </div>
