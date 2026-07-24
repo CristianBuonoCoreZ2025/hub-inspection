@@ -1,4 +1,4 @@
-import { fetchAll, fetchById, insertRow, updateRow, getSupabaseClient } from "@/lib/supabase/db";
+import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
 import type { ClaimAction, ActionTemplate, ActionFeature } from "@/types";
 import { logActionHistory } from "@/services/claim-action-history";
 import { getClaimCoveragesByAction } from "@/services/claim-coverages";
@@ -1024,6 +1024,13 @@ export async function deleteClaimAction(actionId: string, userId?: string, comme
 
   // 3. Rechazar desde emisión (no soft delete)
   await rejectClaimAction(actionId, "issue", userId, comment || "Gestión rechazada desde el listado");
+}
+
+// ═══ Eliminación física de una gestión (operaciones) ═══
+// No aplica reglas de negocio: elimina directamente la fila.
+// Las tablas hijas con ON DELETE CASCADE/SET NULL se limpian automáticamente.
+export async function hardDeleteClaimAction(actionId: string): Promise<void> {
+  await deleteRow<ClaimAction>("claim_actions", actionId);
 }
 
 // ═══ Obtener usuarios que pueden ser responsables según los roles configurados ═══

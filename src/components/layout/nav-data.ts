@@ -148,6 +148,7 @@ export const gestionCatalogLinks: NavLink[] = [
 export const operationLinks: NavLink[] = [
   { href: "/dashboard/operaciones/carga-siniestros", label: "Carga Siniestros", icon: Upload },
   { href: "/dashboard/operaciones/carga-catalogos", label: "Carga Catálogos", icon: Upload },
+  { href: "/dashboard/operaciones/gestiones", label: "Gestiones", icon: Ban },
   { href: "/dashboard/operaciones/inhabilitar", label: "Inhabilitar", icon: Ban },
   { href: "/dashboard/operaciones/reabrir", label: "Reabrir", icon: LockOpen },
 ];

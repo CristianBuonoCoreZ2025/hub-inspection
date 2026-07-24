@@ -193,7 +193,7 @@ export default function InhabilitarPage() {
  >
  Cancelar
  </Button>
- {canDelete("operaciones") && (
+ {canDelete("operaciones_inhabilitar") && (
  <Button
  size="sm"
  className="pg-btn-platinum"
@@ -255,7 +255,7 @@ export default function InhabilitarPage() {
  {claim.disabled_at ? new Date(claim.disabled_at).toLocaleDateString("es-CL") : "—"}
  </td>
  <td>
- {canEdit("operaciones") && (
+ {canEdit("operaciones_inhabilitar") && (
  <Button
  variant="ghost"
  size="sm"
