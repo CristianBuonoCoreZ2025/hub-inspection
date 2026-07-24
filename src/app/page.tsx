@@ -7,7 +7,6 @@ import {
   BrainCircuit,
   Workflow,
   CheckCircle2,
-  ArrowRight,
   Building2,
   Users,
   Lock,
@@ -18,8 +17,8 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { LoginButton } from "@/components/landing/login-button";
 
 const features = [
   {
@@ -113,9 +112,7 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button className="pg-btn-platinum" onClick={() => window.location.href = "/login"}>
-              Iniciar Sesión
-            </Button>
+            <LoginButton>Iniciar Sesión</LoginButton>
           </div>
         </div>
       </header>
@@ -142,10 +139,7 @@ export default function LandingPage() {
                   inspección remota con evidencias, y trazabilidad completa del expediente — todo en una plataforma.
                 </p>
                 <div className="flex flex-wrap gap-3">
-                  <Button className="pg-btn-platinum" onClick={() => window.location.href = "/login"}>
-                    Iniciar Sesión
-                    <ArrowRight className="ml-1.5 size-3.5" />
-                  </Button>
+                  <LoginButton showArrow>Iniciar Sesión</LoginButton>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 text-[11px] text-muted-foreground">
                   <span className="flex items-center gap-1.5">
@@ -502,10 +496,7 @@ export default function LandingPage() {
                   Inicia sesión para acceder a tu panel de gestión de siniestros.
                 </p>
                 <div className="mt-6">
-                  <Button className="pg-btn-platinum" onClick={() => window.location.href = "/login"}>
-                    Iniciar Sesión
-                    <ArrowRight className="ml-1.5 size-3.5" />
-                  </Button>
+                  <LoginButton showArrow>Iniciar Sesión</LoginButton>
                 </div>
               </div>
             </div>
