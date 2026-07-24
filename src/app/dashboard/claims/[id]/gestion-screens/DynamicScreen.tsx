@@ -2204,6 +2204,7 @@ function OwnField({
  <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
  <div className="rounded-lg border border-border p-3 text-[11px] space-y-1">
  <div className="flex items-start gap-2">
  <MapPin className="h-4 w-4 shrink-0 text-primary mt-0.5" />
@@ -2217,6 +2218,14 @@ function OwnField({
  )}
  </div>
  </div>
+ </div>
+ <Textarea
+ className="app-input min-h-15 py-2 text-[13px]"
+ value={String(value || "")}
+ readOnly
+ rows={2}
+ placeholder="Aclaración según el punto seleccionado en el mapa."
+ />
  </div>
  <Button
  type="button"
@@ -2242,14 +2251,6 @@ function OwnField({
  onChange(field.id, candidate.displayName);
  setCoordUbicacionOpen(false);
  }}
- />
- <Textarea
- className="app-input min-h-15 py-2 text-[13px]"
- value={String(value || "")}
- readOnly
- disabled={readOnly}
- rows={2}
- placeholder="La aclaración se completa automáticamente según el punto seleccionado en el mapa."
  />
  </div>
  );
