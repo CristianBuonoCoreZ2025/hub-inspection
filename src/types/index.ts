@@ -385,6 +385,7 @@ export interface InspectionSession {
   ended_at: string | null;
   magic_link_token: string | null;
   magic_link_expires_at: string | null;
+  magic_link_extended: boolean;
   status: "scheduled" | "active" | "completed" | "cancelled";
   inspection_type: "onsite" | "remote";
   inspection_date: string | null;

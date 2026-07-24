@@ -5,7 +5,7 @@ import type {
   InspectionDamage, InspectionEvidence, InspectionSignature,
 } from "@/types";
 
-const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, created_at, updated_at";
+const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, created_at, updated_at";
 
 // ═══════════════════════════════════════════════════════════════
 // SESSIONS
@@ -473,23 +473,25 @@ export async function updateInspectionSession(id: string, input: Partial<Inspect
 }
 
 /**
- * Refresca el magic link de una inspección remota.
- * Genera un nuevo token y extiende la expiración 24h desde ahora.
- * El token anterior deja de funcionar inmediatamente.
+ * Renueva el magic link de una inspección remota usando la función SQL
+ * `renew_inspection_magic_link`. Respeta la ventana de vigencia:
+ * - Antes de la ventana: nuevo token, mismo rango.
+ * - Dentro de la ventana: extiende una sola vez hasta scheduled_at + 2h.
+ * - Fuera del rango extendido: devuelve "expired".
  */
 export async function refreshMagicLink(sessionId: string) {
-  const newToken = crypto.randomUUID();
-  const expires = new Date();
-  expires.setHours(expires.getHours() + 24);
-  return updateRow<InspectionSession>(
-    "inspection_sessions",
-    sessionId,
-    {
-      magic_link_token: newToken,
-      magic_link_expires_at: expires.toISOString(),
-    },
-    SESSION_SELECT,
-  );
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.rpc("renew_inspection_magic_link", { p_session_id: sessionId });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data)
+    ? (data as Array<{ token: string; expires_at: string; message: string }>)[0]
+    : (data as { token: string; expires_at: string; message: string } | undefined);
+  if (!row) throw new Error("No se pudo renovar el link");
+  return {
+    magic_link_token: row.token,
+    magic_link_expires_at: row.expires_at,
+    message: row.message,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════

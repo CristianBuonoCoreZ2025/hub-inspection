@@ -836,7 +836,9 @@ export default function InspectionDetailPage() {
  <MagicLinkSender
  token={session.magic_link_token}
  sessionId={session.id}
+ scheduledAt={session.scheduled_at}
  expiresAt={session.magic_link_expires_at}
+ magicLinkExtended={session.magic_link_extended}
  contactName={session.interviewed_name || contactParticipant?.full_name}
  contactEmail={session.interviewed_email || contactParticipant?.email}
  contactPhone={contactParticipant?.cell_phone || contactParticipant?.phone || insuredParticipant?.cell_phone || insuredParticipant?.phone}
