@@ -151,7 +151,26 @@ className="app-field-label"  // labels de campos
 - **Tamaño de fuente: 11px** en TODOS los inputs, selects (trigger + dropdown),
   placeholders y labels de formulario. Esta es la regla global definida en
   `forms.css` — no sobreescribir con `text-[12px]` u otros tamaños.
+- **Excepción:** el `DatePicker` usa fuente a **10px** (`.liquid-date-picker`).
 - Placeholders en español, cortos y descriptivos.
+
+### DatePicker
+
+```tsx
+import { DatePicker } from "@/components/ui/date-picker";
+```
+
+- **SIEMPRE** usar el componente `DatePicker` centralizado. **NO** usar `<input type="date">` nativo.
+- El trigger lleva la clase `.liquid-date-picker`.
+- **Fuente del valor: 10px** (`forms.css` la fuerza por `!important`).
+- **Alineación:** ícono calendario a la izquierda, valor a su derecha. **NO centrar** el valor.
+- **Gap** entre ícono y valor: `gap-1.5` en el trigger.
+- **Botón limpiar (X):**
+  - Visible solo si `clearable` y hay fecha seleccionada.
+  - Tamaño 20px (`h-5 w-5`).
+  - Posición `right-1.5 top-0.75` (3px desde arriba).
+  - El trigger agrega `.has-clear` y reserva `padding-right: 30px` para que la X no se monte sobre el texto ni salga del borde.
+- Placeholder por defecto: `"dd-mm-aaaa"`.
 
 ---
 
@@ -672,6 +691,7 @@ aplica solo a **elementos del mismo tipo agrupados**.
 □ ¿Los botones usan pg-btn-platinum?
 □ ¿Los inputs de formulario usan app-input?
 □ ¿Los buscadores en grillas usan liquid-search?
+□ ¿Los date pickers usan el componente DatePicker con .liquid-date-picker?
 □ ¿Los labels usan app-field-label?
 □ ¿Los selects usan Portal + positionMethod="fixed" + z-9999?
 □ ¿No hay checkboxes?
