@@ -266,6 +266,10 @@
     box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
   }
 
+  .liquid-date-picker.has-clear {
+    padding-right: 30px !important;
+  }
+
   .dark .liquid-date-picker {
     background: color-mix(in srgb, var(--card) 70%, transparent) !important;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18) !important;

@@ -6,7 +6,6 @@ import { es } from "date-fns/locale"
 import { CalendarIcon, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
@@ -61,13 +60,13 @@ function DatePicker({
               type="button"
               disabled={disabled}
               className={cn(
-                "liquid-date-picker group/date-picker flex w-full items-center gap-2",
+                "liquid-date-picker group/date-picker flex w-full items-center gap-1.5",
                 !date && "text-muted-foreground",
-                showClear && "pr-7"
+                showClear && "has-clear"
               )}
             >
               <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
-              <span className="flex-1 text-center app-body tabular-nums">{displayValue}</span>
+              <span className="truncate tabular-nums">{displayValue}</span>
             </button>
           }
         />
@@ -87,15 +86,15 @@ function DatePicker({
         </PopoverContent>
       </Popover>
       {showClear && (
-        <Button
+        <button
           type="button"
           disabled={disabled}
           onClick={() => onChange("")}
-          className="btn-icon-sm absolute right-2 top-1/2 -translate-y-1/2"
+          className="absolute right-1.5 top-[3px] inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none"
           aria-label="Limpiar fecha"
         >
           <X className="h-3 w-3" />
-        </Button>
+        </button>
       )}
     </div>
   )
