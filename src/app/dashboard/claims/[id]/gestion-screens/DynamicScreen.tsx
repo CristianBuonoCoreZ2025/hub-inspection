@@ -24,7 +24,8 @@ import {
  updateClaimDocumentRequestNotes,
 } from "@/services/claim-documents";
 import { getPolicyCoveragesByPolicyId } from "@/services/policies";
-import { getClaimById, getClaimParticipants } from "@/services/claims";
+import { getClaimById, getClaimParticipants, updateClaimFields } from "@/services/claims";
+import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
 import { updateClaimAction, issueClaimAction } from "@/services/claim-actions";
 import { getUsersByRoleForCompany } from "@/services/users";
 import { getInspectionSessions, getInspectorSchedule } from "@/services/inspections";
@@ -33,7 +34,7 @@ import { getLookupCatalog } from "@/services/catalogs";
 import { getDocumentTemplates, type DocumentTemplate } from "@/services/document-templates";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Plus, Ban, ChevronDown, ChevronRight, Check, CheckCircle, Circle, Clock, X, XCircle, FileText, Download, Loader2, Play, Upload, History, Lock, LockOpen, AlertTriangle, Star, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw } from "lucide-react";
+import { Plus, Ban, ChevronDown, ChevronRight, Check, CheckCircle, Circle, Clock, X, XCircle, FileText, Download, Loader2, Play, Upload, History, Lock, LockOpen, AlertTriangle, Star, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { ClaimAction, Claim, ClaimsParticipant } from "@/types";
@@ -298,11 +299,36 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  // Cargar siniestro para entidades de tipo claim_* y para precargar inspector en coordinación
  const hasClaimEntities = allFields.some((f) => CLAIM_ENTITIES.some((e) => e.code === f.type));
  const hasCoordInspector = allFields.some((f) => f.id === "coord_inspector");
+ const hasCoordUbicacion = allFields.some((f) => f.type === "coord_ubicacion");
+ const [coordUbicacionOpen, setCoordUbicacionOpen] = useState(false);
+ const { profile } = useAuth();
+ const queryClient = useQueryClient();
  const { data: claim } = useQuery({
  queryKey: ["claim", action.claim_id],
  queryFn: () => getClaimById(action.claim_id),
- enabled: (hasClaimEntities || hasCoordInspector) && !!action.claim_id,
+ enabled: (hasClaimEntities || hasCoordInspector || hasCoordUbicacion) && !!action.claim_id,
  });
+
+ const updateLocationMutation = useMutation({
+ mutationFn: async (candidate: { lat: number; lng: number; displayName: string }) => {
+ await updateClaimFields(action.claim_id, {
+ claim_address: candidate.displayName,
+ claim_latitude: candidate.lat,
+ claim_longitude: candidate.lng,
+ }, profile?.id);
+ },
+ onSuccess: () => {
+ queryClient.invalidateQueries({ queryKey: ["claim", action.claim_id] });
+ toast.success("Ubicación del siniestro actualizada");
+ },
+ onError: () => {
+ toast.error("No se pudo actualizar la ubicación");
+ },
+ });
+
+ const handleSelectLocation = useCallback((candidate: { lat: number; lng: number; displayName: string }) => {
+ updateLocationMutation.mutate(candidate);
+ }, [updateLocationMutation]);
 
  // Cargar participantes del siniestro (para cards agrupadas: asegurado, contacto)
  const hasClaimCardEntities = allFields.some((f) => f.type === "claim_insured_card" || f.type === "claim_contact_card");
@@ -471,6 +497,10 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  onChange={updateValue}
  readOnly={readOnly}
  action={action}
+ claim={claim}
+ coordUbicacionOpen={coordUbicacionOpen}
+ setCoordUbicacionOpen={setCoordUbicacionOpen}
+ onSelectLocation={handleSelectLocation}
  />
  </div>
  );
@@ -1723,6 +1753,10 @@ function OwnField({
  onChange,
  readOnly,
  action,
+ claim,
+ coordUbicacionOpen,
+ setCoordUbicacionOpen,
+ onSelectLocation,
 }: {
  field: ScreenField;
  value: unknown;
@@ -1731,6 +1765,10 @@ function OwnField({
  onChange: (id: string, value: unknown) => void;
  readOnly?: boolean;
  action?: ActionWithRelations;
+ claim?: Claim | null;
+ coordUbicacionOpen: boolean;
+ setCoordUbicacionOpen: (open: boolean) => void;
+ onSelectLocation: (candidate: { lat: number; lng: number; displayName: string }) => void;
 }) {
  const inputClass = "app-input h-8 ";
 
@@ -2156,7 +2194,65 @@ function OwnField({
  case "coord_agendar":
  return <CoordInspectionStatus field={field} action={action} readOnly={readOnly} />;
 
- case "coord_ubicacion":
+ case "coord_ubicacion": {
+ const claimCoords = claim && Number.isFinite(claim.claim_latitude) && Number.isFinite(claim.claim_longitude)
+ ? { lat: claim.claim_latitude!, lng: claim.claim_longitude! }
+ : null;
+ return (
+ <div className="flex flex-col gap-2">
+ <Label className="app-field-label">
+ {field.label} {field.required && <span className="text-red-500">*</span>}
+ </Label>
+ <div className="rounded-lg border border-border p-3 text-[11px] space-y-1">
+ <div className="flex items-start gap-2">
+ <MapPin className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+ <div>
+ <p className="font-medium">Dirección del siniestro</p>
+ <p className="text-muted-foreground">{claim?.claim_address || "Sin dirección registrada"}</p>
+ {claimCoords && (
+ <p className="font-mono text-muted-foreground mt-1">
+ {claimCoords.lat.toFixed(6)}, {claimCoords.lng.toFixed(6)}
+ </p>
+ )}
+ </div>
+ </div>
+ </div>
+ <Button
+ type="button"
+ variant="outline"
+ size="sm"
+ className="w-fit"
+ disabled={readOnly}
+ onClick={() => setCoordUbicacionOpen(true)}
+ >
+ {claimCoords ? "Ver / corregir ubicación" : "Establecer ubicación"}
+ </Button>
+ <ClaimLocationSelector
+ open={coordUbicacionOpen}
+ onOpenChange={setCoordUbicacionOpen}
+ address={claim?.claim_address || String(value || "") || ""}
+ commune={claim?.commune?.name}
+ city={claim?.city?.name}
+ region={claim?.region?.name}
+ country={claim?.country?.name}
+ claimCoords={claimCoords}
+ onSelect={(candidate) => {
+ onSelectLocation(candidate);
+ onChange(field.id, candidate.displayName);
+ setCoordUbicacionOpen(false);
+ }}
+ />
+ <Input
+ className="app-input h-8"
+ value={String(value || "")}
+ onChange={(e) => onChange(field.id, e.target.value)}
+ disabled={readOnly}
+ placeholder="Detalle adicional de la dirección..."
+ />
+ </div>
+ );
+ }
+
  case "coord_contacto":
  return (
  <div className="flex flex-col gap-1">
@@ -2168,7 +2264,7 @@ function OwnField({
  value={String(value || "")}
  onChange={(e) => onChange(field.id, e.target.value)}
  disabled={readOnly}
- placeholder={field.type === "coord_ubicacion" ? "Detalle adicional de la dirección..." : "Nombre, teléfono, email..."}
+ placeholder="Nombre, teléfono, email..."
  />
  </div>
  );
@@ -4619,7 +4715,7 @@ function CoordScheduler({
  </Badge>
  )}
  {selectedDateLabel && (
- <p className="app-body text-muted-foreground capitalize leading-tight">{selectedDateLabel}</p>
+ <p className="app-body text-muted-foreground leading-tight">{selectedDateLabel}</p>
  )}
  </div>
 
