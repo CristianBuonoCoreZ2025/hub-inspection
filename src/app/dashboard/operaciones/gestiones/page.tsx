@@ -124,7 +124,7 @@ export default function GestionesPage() {
           </p>
         ) : (
           <>
-            <div className="app-data-table-wrap max-h-[300px]">
+            <div className="app-data-table-wrap max-h-75">
               <table className="app-data-table">
                 <thead>
                   <tr>
@@ -132,7 +132,7 @@ export default function GestionesPage() {
                     <SortableTh sortKey="liquidation_number" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Liquidación</SortableTh>
                     <SortableTh sortKey="client_reference" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Ref. Cliente</SortableTh>
                     <SortableTh sortKey="claim_date" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Fecha</SortableTh>
-                    <th className="w-[60px]"></th>
+                    <th className="w-15"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -195,7 +195,7 @@ export default function GestionesPage() {
                       <th>Nombre</th>
                       <th>Estado</th>
                       <th>Origen</th>
-                      <th className="w-[180px]">Acción</th>
+                      <th className="w-45">Acción</th>
                     </tr>
                   </thead>
                   <tbody>
