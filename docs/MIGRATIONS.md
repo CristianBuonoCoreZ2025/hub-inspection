@@ -178,6 +178,14 @@ Rango intermedio con correcciones sueltas (geolocalización, evidencias, daños,
 - Agrega FK `company_id -> companies` para `claim_document_requests` y `document_requirements`.
 - Corrige integridad referencial sin borrar datos.
 
+### 214 — inspection_sessions_rls_auth_uid.sql
+- Reemplaza políticas abiertas de `inspection_sessions` por RLS tenant con `auth.uid()`.
+- Usuarios `internal` ven todo; el resto solo su `company_id`.
+
+### 215 — drop_old_inspection_policies.sql
+- Elimina las políticas viejas `*_company` que quedaron de la migración 212.
+- Deja solo las 4 políticas tenant (`select/insert/update/delete`).
+
 ## Migraciones problemáticas históricas
 
 **137 — `workflow_unique.sql`**
