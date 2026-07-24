@@ -368,7 +368,7 @@ export default function MagicLinkPage() {
 
         {/* Panel lateral de Comunicación */}
         {chatPanelOpen && (
-          <div className="w-full lg:w-[300px] lg:shrink-0 flex flex-col py-6">
+          <div className="w-full lg:w-75 lg:shrink-0 flex flex-col py-6">
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 flex flex-col flex-1 sticky top-20" style={{ maxHeight: "calc(100vh - 100px)" }}>
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
                 <span className="app-body font-semibold text-slate-400 flex items-center gap-1.5">
