@@ -275,7 +275,7 @@ function TiposCambioContent() {
  <div className="app-panel">
  <div className="flex flex-wrap items-end gap-3">
  {/* País */}
- <div className="min-w-[180px]">
+ <div className="min-w-45">
  <Label className="app-field-label">País</Label>
  <Select
  value={filterCountry || "__none"}
@@ -291,7 +291,7 @@ function TiposCambioContent() {
  </div>
 
  {/* Moneda */}
- <div className="min-w-[160px]">
+ <div className="min-w-40">
  <Label className="app-field-label">Moneda</Label>
  <Select
  value={effectiveFilterCurrency || "__none"}
@@ -307,7 +307,7 @@ function TiposCambioContent() {
  </div>
 
  {/* Año */}
- <div className="min-w-[100px]">
+ <div className="min-w-25">
  <Label className="app-field-label">Año</Label>
  <Select
  value={filterYear}
@@ -343,7 +343,7 @@ function TiposCambioContent() {
  <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => navigateMonth(-1)}>
  <ChevronLeft className="h-4 w-4" />
  </Button>
- <span className="text-[11px] font-medium min-w-[90px] text-center">
+ <span className="text-[11px] font-medium min-w-22.5 text-center">
  {MONTHS[parseInt(filterMonth)]} {filterYear}
  </span>
  <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => navigateMonth(1)}>
@@ -478,7 +478,7 @@ function TiposCambioContent() {
  <thead>
  <tr>
  <th className="sticky left-0 z-10 bg-background w-10 text-center">Día</th>
- {MONTHS_SHORT.map(m => <th key={m} className="text-center min-w-[70px]">{m}</th>)}
+ {MONTHS_SHORT.map(m => <th key={m} className="text-center min-w-17.5">{m}</th>)}
  </tr>
  </thead>
  <tbody>
@@ -516,7 +516,7 @@ function TiposCambioContent() {
  <th className="text-right">Tasa → Base</th>
  <th>Fecha</th>
  <th>Origen</th>
- <th className="w-[60px]"></th>
+ <th className="w-15"></th>
  </tr>
  </thead>
  <tbody>
