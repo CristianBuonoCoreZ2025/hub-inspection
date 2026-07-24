@@ -201,6 +201,12 @@ Rango intermedio con correcciones sueltas (geolocalización, evidencias, daños,
 - Arregla error `record "new" has no field "company_id"` en trigger de `claim_actions`.
 - Backfill de sesiones sin `company_id`.
 
+### 219 — enforce_inspection_session_links.sql
+- Pone `ON DELETE CASCADE` en todas las FK hijas de `inspection_sessions`.
+- Elimina sesiones huérfanas (sin `claim_id` o `claim_action_id`).
+- Fuerza `claim_id` y `claim_action_id` NOT NULL.
+- Cambia FK `claim_action_id` a `ON DELETE CASCADE` para evitar inspecciones sin gestión.
+
 ## Migraciones problemáticas históricas
 
 **137 — `workflow_unique.sql`**
