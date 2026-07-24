@@ -2244,7 +2244,7 @@ function OwnField({
  }}
  />
  <Textarea
- className="app-input min-h-[60px] py-2 text-[13px]"
+ className="app-input min-h-15 py-2 text-[13px]"
  value={String(value || "")}
  readOnly
  disabled={readOnly}
