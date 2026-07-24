@@ -174,6 +174,10 @@ Rango intermedio con correcciones sueltas (geolocalización, evidencias, daños,
 - Backfill desde `claims.company_id` a través de `claim_id`.
 - Agrega FK a `companies`, índice y RLS por `company_id`.
 
+### 213 — fix_company_fks.sql
+- Agrega FK `company_id -> companies` para `claim_document_requests` y `document_requirements`.
+- Corrige integridad referencial sin borrar datos.
+
 ## Migraciones problemáticas históricas
 
 **137 — `workflow_unique.sql`**
