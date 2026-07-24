@@ -159,6 +159,7 @@ export default function InspectionDetailPage() {
  useEffect(() => {
  if (session && session.inspection_type === "remote" && session.status === "active" && !autoVideoOpenedRef.current) {
  autoVideoOpenedRef.current = true;
+ setChatPanelOpen(true);
  setVideoCallOpen(true);
  }
  }, [session]);
@@ -466,44 +467,10 @@ export default function InspectionDetailPage() {
  </Badge>
  )}
  </div>
- <div className="flex items-center gap-2 shrink-0">
- {(session.status === "active" && session.inspection_type === "remote") && (
- <Button
- variant="outline"
- size="sm"
- className="pg-btn-platinum"
- onClick={() => setVideoCallOpen(true)}
- >
- Videollamada
- </Button>
- )}
- </div>
+
  </div>
 
- {/* Modal Videollamada en vivo (WebRTC p2p) */}
- {videoCallOpen && profile?.id && (
- <LiveVideoCall
- sessionId={session.id}
- userId={profile.id}
- role="inspector"
- displayName="Inspector"
- onHangup={() => setVideoCallOpen(false)}
- onScreenshotSaved={() => {
- // Invalidar queries de evidencias para que aparezca en la lista
- queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
- queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
- }}
- onPeerJoined={() => toast.success("El asegurado se ha conectado a la videollamada")}
- onRecordingSaved={() => {
- queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
- queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
- if (session.magic_link_token) queryClient.invalidateQueries({ queryKey: ["magic-link-live", session.magic_link_token] });
- toast.success("Grabación de sesión guardada como evidencia");
- }}
- />
- )}
-
- {/* Layout principal: tabs a la izquierda, chat lateral a la derecha */}
+ {/* Layout principal: tabs a la izquierda, comunicación lateral a la derecha */}
  <div className="flex gap-4 flex-1">
  {/* Contenido principal (tabs) */}
  <div className="flex-1 min-w-0">
@@ -966,14 +933,14 @@ export default function InspectionDetailPage() {
 
  </div>
 
- {/* Panel lateral de Chat — solo para inspecciones remotas */}
+ {/* Panel lateral de Comunicación — solo para inspecciones remotas */}
  {chatPanelOpen && session.inspection_type === "remote" && (
  <div className="w-[340px] shrink-0 hidden lg:flex flex-col">
  <div className="app-panel flex flex-col flex-1" style={{ position: "sticky", top: "80px", maxHeight: "calc(100vh - 100px)" }}>
  <div className="flex items-center justify-between mb-3 pb-2 border-b">
  <h3 className="app-body font-semibold text-muted-foreground flex items-center gap-2">
  <MessageSquare className="h-4 w-4" />
- Chat
+ Comunicación
  </h3>
  <Button
  variant="ghost"
@@ -984,6 +951,31 @@ export default function InspectionDetailPage() {
  <XCircle className="h-3.5 w-3.5" />
  </Button>
  </div>
+
+ {videoCallOpen && session.status === "active" && profile?.id && (
+ <div className="h-64 shrink-0 mb-3 rounded-lg overflow-hidden border border-border">
+ <LiveVideoCall
+ sessionId={session.id}
+ userId={profile.id}
+ role="inspector"
+ displayName="Inspector"
+ compact
+ onHangup={() => setVideoCallOpen(false)}
+ onScreenshotSaved={() => {
+ queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
+ }}
+ onPeerJoined={() => toast.success("El asegurado se ha conectado a la videollamada")}
+ onRecordingSaved={() => {
+ queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
+ if (session.magic_link_token) queryClient.invalidateQueries({ queryKey: ["magic-link-live", session.magic_link_token] });
+ toast.success("Grabación de sesión guardada como evidencia");
+ }}
+ />
+ </div>
+ )}
+
  <div className="flex-1 overflow-hidden">
  <ChatTab sessionId={session.id} compact />
  </div>

@@ -19,12 +19,14 @@ import {
   Square,
 } from "lucide-react";
 import { joinSignalingChannel, ICE_SERVERS, type SignalingRole, type SignalingMessage } from "@/lib/webrtc/signaling";
+import { cn } from "@/lib/utils";
 
 interface LiveVideoCallProps {
   sessionId: string;
   userId: string;
   role: SignalingRole;
   displayName: string;
+  compact?: boolean;
   onHangup: () => void;
   onScreenshotSaved?: (evidence: { id: string; url: string; description: string }) => void;
   onPeerJoined?: () => void;
@@ -44,6 +46,7 @@ export function LiveVideoCall({
   userId,
   role,
   displayName,
+  compact = false,
   onHangup,
   onScreenshotSaved,
   onPeerJoined,
@@ -465,10 +468,13 @@ export function LiveVideoCall({
     failed: "text-rose-600",
   };
 
+  const ctrlBtn = compact ? "p-2" : "p-3";
+  const ctrlIcon = compact ? "h-4 w-4" : "h-5 w-5";
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
+    <div className={cn("flex flex-col bg-black/95", compact ? "relative h-full rounded-lg overflow-hidden" : "fixed inset-0 z-50")}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-black/40 border-b border-white/10">
+      <div className={cn("flex items-center justify-between bg-black/40 border-b border-white/10", compact ? "px-3 py-2" : "px-4 py-3")}>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             {state === "connected" ? (
@@ -533,7 +539,7 @@ export function LiveVideoCall({
         )}
 
         {/* Video local (PiP) */}
-        <div className="absolute bottom-4 right-4 w-32 sm:w-48 h-24 sm:h-36 rounded-lg overflow-hidden border-2 border-white/20 shadow-2xl bg-black">
+        <div className={cn("absolute overflow-hidden bg-black", compact ? "bottom-2 right-2 w-20 h-14 rounded border border-white/20" : "bottom-4 right-4 w-32 sm:w-48 h-24 sm:h-36 rounded-lg border-2 border-white/20 shadow-2xl")}>
           <video
             ref={localVideoRef}
             autoPlay
@@ -581,40 +587,40 @@ export function LiveVideoCall({
       )}
 
       {/* Controles inferiores */}
-      <div className="flex items-center justify-center gap-3 px-4 py-4 bg-black/40 border-t border-white/10">
+      <div className={cn("flex items-center justify-center bg-black/40 border-t border-white/10", compact ? "gap-2 px-2 py-2" : "gap-3 px-4 py-4")}>
         <button
           type="button"
           onClick={toggleAudio}
-          className={`p-3 rounded-full transition-colors ${
+          className={`${ctrlBtn} rounded-full transition-colors ${
             audioOn ? "bg-white/10 hover:bg-white/20 text-white" : "bg-rose-600 hover:bg-rose-700 text-white"
           }`}
           title={audioOn ? "Silenciar micrófono" : "Activar micrófono"}
         >
-          {audioOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+          {audioOn ? <Mic className={ctrlIcon} /> : <MicOff className={ctrlIcon} />}
         </button>
 
         <button
           type="button"
           onClick={toggleVideo}
-          className={`p-3 rounded-full transition-colors ${
+          className={`${ctrlBtn} rounded-full transition-colors ${
             videoOn ? "bg-white/10 hover:bg-white/20 text-white" : "bg-rose-600 hover:bg-rose-700 text-white"
           }`}
           title={videoOn ? "Apagar cámara" : "Encender cámara"}
         >
-          {videoOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+          {videoOn ? <Video className={ctrlIcon} /> : <VideoOff className={ctrlIcon} />}
         </button>
 
         <button
           type="button"
           onClick={captureScreenshot}
           disabled={!peerJoined || screenshotting}
-          className="p-3 rounded-full bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className={`${ctrlBtn} rounded-full bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
           title="Capturar foto del video en vivo"
         >
           {screenshotting ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader2 className={cn(ctrlIcon, "animate-spin")} />
           ) : (
-            <Camera className="h-5 w-5" />
+            <Camera className={ctrlIcon} />
           )}
         </button>
 
@@ -623,27 +629,27 @@ export function LiveVideoCall({
             type="button"
             onClick={recording ? stopRecording : startRecording}
             disabled={!peerJoined}
-            className={`p-3 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`${ctrlBtn} rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
               recording ? "bg-rose-600 hover:bg-rose-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
             }`}
             title={recording ? "Detener grabación" : "Grabar sesión"}
           >
-            {recording ? <Square className="h-5 w-5" /> : <Circle className="h-5 w-5 fill-white" />}
+            {recording ? <Square className={ctrlIcon} /> : <Circle className={cn(ctrlIcon, "fill-white")} />}
           </button>
         )}
 
         <button
           type="button"
           onClick={handleHangup}
-          className="p-3 rounded-full bg-rose-600 hover:bg-rose-700 text-white transition-colors"
+          className={`${ctrlBtn} rounded-full bg-rose-600 hover:bg-rose-700 text-white transition-colors`}
           title="Colgar"
         >
-          <PhoneOff className="h-5 w-5" />
+          <PhoneOff className={ctrlIcon} />
         </button>
       </div>
 
       {/* Hint de captura */}
-      {peerJoined && (
+      {!compact && peerJoined && (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-white/40 app-body flex items-center gap-1 pointer-events-none">
           <ImageIcon className="h-3 w-3" />
           Toca la cámara para capturar fotos del video en vivo
