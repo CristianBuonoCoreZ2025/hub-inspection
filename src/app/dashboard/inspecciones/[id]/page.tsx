@@ -30,6 +30,7 @@ import {
  Clock,
  ShieldCheck,
  MessageSquare,
+ Video,
  RotateCcw,
  CalendarClock,
  Play,
@@ -981,6 +982,20 @@ export default function InspectionDetailPage() {
  </div>
  </div>
  </div>
+ )}
+
+ {/* Botón flotante para reabrir videollamada — solo inspecciones remotas activas */}
+ {!videoCallOpen && session.inspection_type === "remote" && session.status === "active" && (
+ <button
+ onClick={() => {
+ setChatPanelOpen(true);
+ setVideoCallOpen(true);
+ }}
+ className="fixed bottom-20 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg hover:scale-105 transition-transform"
+ title="Reanudar videollamada"
+ >
+ <Video className="h-5 w-5" />
+ </button>
  )}
 
  {/* Botón flotante para reabrir chat — solo para inspecciones remotas */}

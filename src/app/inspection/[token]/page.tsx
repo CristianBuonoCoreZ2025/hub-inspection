@@ -413,6 +413,17 @@ export default function MagicLinkPage() {
         )}
       </div>
 
+      {/* Botón flotante para reabrir videollamada */}
+      {!videoCallOpen && session && session.status === "active" && session.inspection_type === "remote" && (
+        <button
+          onClick={() => setVideoCallOpen(true)}
+          className="fixed bottom-20 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg hover:scale-105 transition-transform"
+          title="Reanudar videollamada"
+        >
+          <Video className="h-5 w-5" />
+        </button>
+      )}
+
       {/* Botón flotante para reabrir chat */}
       {!chatPanelOpen && (
         <button
