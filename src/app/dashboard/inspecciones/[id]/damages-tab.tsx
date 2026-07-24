@@ -620,7 +620,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={currencyOptions}
  onValueChange={(v) => setForm({ ...form, currency: v || "CLP" })}
  >
- <SelectTrigger className="app-input w-[90px] shrink-0">
+ <SelectTrigger className="app-input w-16 shrink-0">
  <SelectValue />
  </SelectTrigger>
  <SelectContent>
@@ -778,7 +778,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={currencyOptions}
  onValueChange={(v) => setForm({ ...form, currency: v || "CLP" })}
  >
- <SelectTrigger className="app-input w-[90px] shrink-0">
+ <SelectTrigger className="app-input w-16 shrink-0">
  <SelectValue />
  </SelectTrigger>
  <SelectContent>
