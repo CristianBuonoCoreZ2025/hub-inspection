@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 import { invalidateSystemSettingCache } from "@/services/settings";
-import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -242,7 +241,7 @@ function GeneralTab() {
               <span className="app-body font-medium">Rol</span>
             </div>
             <span className="app-body text-muted-foreground">
-              {useAuth().profile?.role || "—"}
+              {usePermissions().profile?.role || "—"}
             </span>
           </div>
         </div>
