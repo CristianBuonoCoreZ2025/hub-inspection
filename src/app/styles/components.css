@@ -358,14 +358,14 @@
   }
 
   .app-data-table th {
-    @apply px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70;
+    @apply px-3 py-1.5 text-[11px] font-semibold normal-case text-muted-foreground/70;
     background: color-mix(in srgb, var(--muted) 30%, transparent) !important;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
   }
 
   .app-data-table td {
-    @apply px-3 py-2.5 text-[11px];
+    @apply px-3 py-1.5 text-[11px];
     border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
     transition: background-color 0.15s ease;
   }

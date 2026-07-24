@@ -165,7 +165,7 @@
 
 }
 
-/* Grillas / tablas: 11px Propercase */
+/* Grillas / tablas: 11px máximo, sin uppercase */
 .app-data-table,
 .app-data-table td,
 .app-data-table tbody td,
@@ -177,7 +177,7 @@
   font-size: var(--app-grid-size) !important;
   font-weight: 400 !important;
   line-height: 1.4 !important;
-
+  text-transform: none !important;
 }
 
 .app-data-table th,
@@ -186,7 +186,7 @@
   font-size: var(--app-grid-header-size) !important;
   font-weight: 600 !important;
   line-height: 1.4 !important;
-
+  text-transform: none !important;
 }
 
 /* Texto general en pantalla: 11px máximo */
