@@ -12,6 +12,7 @@ import {
   Wifi,
   WifiOff,
   Maximize2,
+  Minimize2,
   AlertTriangle,
   CheckCircle2,
   Image as ImageIcon,
@@ -46,7 +47,7 @@ export function LiveVideoCall({
   userId,
   role,
   displayName,
-  compact = false,
+  compact: compactProp = false,
   onHangup,
   onScreenshotSaved,
   onPeerJoined,
@@ -444,12 +445,18 @@ export function LiveVideoCall({
     }
   };
 
-  // ── Pantalla completa del video remoto ──
-  const goFullscreen = () => {
+  // ── Pantalla completa / ampliar video remoto ──
+  const goFullscreen = async () => {
     const video = remoteVideoRef.current;
     if (video && video.requestFullscreen) {
-      void video.requestFullscreen();
+      try {
+        await video.requestFullscreen();
+        return;
+      } catch {
+        // fallback a expandir el componente
+      }
     }
+    setExpanded(true);
   };
 
   const stateLabel: Record<ConnectionState, string> = {
@@ -467,6 +474,9 @@ export function LiveVideoCall({
     disconnected: "text-muted-foreground",
     failed: "text-rose-600",
   };
+
+  const [expanded, setExpanded] = React.useState(false);
+  const compact = compactProp && !expanded;
 
   const ctrlBtn = compact ? "p-2" : "p-3";
   const ctrlIcon = compact ? "h-4 w-4" : "h-5 w-5";
@@ -506,6 +516,16 @@ export function LiveVideoCall({
               <Camera className="h-3 w-3" />
               {screenshotCount} {screenshotCount === 1 ? "foto" : "fotos"}
             </span>
+          )}
+          {expanded && (
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="p-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white/80 transition-colors"
+              title="Volver a ventana pequeña"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </button>
           )}
           <span className="app-body text-white/40 hidden sm:inline">
             {displayName} · {role === "inspector" ? "Inspector" : "Cliente"}
