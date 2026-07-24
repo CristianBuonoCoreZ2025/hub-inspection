@@ -171,6 +171,7 @@ export default function MagicLinkPage() {
   useEffect(() => {
     if (session && session.status === "active" && session.inspection_type === "remote" && !autoVideoOpenedRef.current) {
       autoVideoOpenedRef.current = true;
+      setChatPanelOpen(true);
       setVideoCallOpen(true);
     }
   }, [session]);
@@ -315,21 +316,6 @@ export default function MagicLinkPage() {
         </div>
       </header>
 
-      {/* Modal Videollamada en vivo (WebRTC p2p) */}
-      {videoCallOpen && (
-        <LiveVideoCall
-          sessionId={session.id}
-          userId={`client:${token}`}
-          role="client"
-          displayName={session.interviewed_name || "Cliente"}
-          onHangup={() => setVideoCallOpen(false)}
-          onScreenshotSaved={() => {
-            // Refrescar datos de la sesión para ver la nueva evidencia
-            refetch();
-          }}
-        />
-      )}
-
       {/* Indicador de progreso (read-only, no clickeable) */}
       <div className="max-w-5xl mx-auto px-4 pt-4">
         <div className="flex gap-1 overflow-x-auto pb-2 border-b border-slate-800">
@@ -380,14 +366,14 @@ export default function MagicLinkPage() {
         {effectiveTab === "firmas" && <SignaturesTab session={session} />}
         </main>
 
-        {/* Panel lateral de Chat */}
+        {/* Panel lateral de Comunicación */}
         {chatPanelOpen && (
           <div className="w-[300px] shrink-0 hidden lg:flex flex-col py-6">
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 flex flex-col flex-1 sticky top-20" style={{ maxHeight: "calc(100vh - 100px)" }}>
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
                 <span className="app-body font-semibold text-slate-400 flex items-center gap-1.5">
                   <MessageSquare className="h-3.5 w-3.5" />
-                  Chat con Inspector
+                  Comunicación
                 </span>
                 <button
                   onClick={() => setChatPanelOpen(false)}
@@ -396,6 +382,21 @@ export default function MagicLinkPage() {
                   <XCircle className="h-4 w-4" />
                 </button>
               </div>
+
+              {videoCallOpen && session.status === "active" && session.inspection_type === "remote" && (
+                <div className="h-48 shrink-0 mb-3 rounded-lg overflow-hidden border border-slate-700">
+                  <LiveVideoCall
+                    sessionId={session.id}
+                    userId={`client:${token}`}
+                    role="client"
+                    displayName={session.interviewed_name || "Cliente"}
+                    compact
+                    onHangup={() => setVideoCallOpen(false)}
+                    onScreenshotSaved={() => refetch()}
+                  />
+                </div>
+              )}
+
               <div className="flex-1 overflow-hidden">
                 <ChatPanel session={session} />
               </div>
@@ -407,7 +408,10 @@ export default function MagicLinkPage() {
       {/* Botón flotante para reabrir videollamada */}
       {!videoCallOpen && session && session.status === "active" && session.inspection_type === "remote" && (
         <button
-          onClick={() => setVideoCallOpen(true)}
+          onClick={() => {
+            setChatPanelOpen(true);
+            setVideoCallOpen(true);
+          }}
           className="fixed bottom-20 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg hover:scale-105 transition-transform"
           title="Reanudar videollamada"
         >

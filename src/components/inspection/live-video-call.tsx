@@ -610,19 +610,21 @@ export function LiveVideoCall({
           {videoOn ? <Video className={ctrlIcon} /> : <VideoOff className={ctrlIcon} />}
         </button>
 
-        <button
-          type="button"
-          onClick={captureScreenshot}
-          disabled={!peerJoined || screenshotting}
-          className={`${ctrlBtn} rounded-full bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
-          title="Capturar foto del video en vivo"
-        >
-          {screenshotting ? (
-            <Loader2 className={cn(ctrlIcon, "animate-spin")} />
-          ) : (
-            <Camera className={ctrlIcon} />
-          )}
-        </button>
+        {role === "inspector" && (
+          <button
+            type="button"
+            onClick={captureScreenshot}
+            disabled={!peerJoined || screenshotting}
+            className={`${ctrlBtn} rounded-full bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+            title="Capturar foto del video en vivo"
+          >
+            {screenshotting ? (
+              <Loader2 className={cn(ctrlIcon, "animate-spin")} />
+            ) : (
+              <Camera className={ctrlIcon} />
+            )}
+          </button>
+        )}
 
         {role === "inspector" && (
           <button
@@ -649,7 +651,7 @@ export function LiveVideoCall({
       </div>
 
       {/* Hint de captura */}
-      {!compact && peerJoined && (
+      {!compact && peerJoined && role === "inspector" && (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-white/40 app-body flex items-center gap-1 pointer-events-none">
           <ImageIcon className="h-3 w-3" />
           Toca la cámara para capturar fotos del video en vivo

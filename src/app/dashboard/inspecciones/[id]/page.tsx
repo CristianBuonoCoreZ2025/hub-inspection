@@ -954,7 +954,7 @@ export default function InspectionDetailPage() {
  </div>
 
  {videoCallOpen && session.status === "active" && profile?.id && (
- <div className="h-64 shrink-0 mb-3 rounded-lg overflow-hidden border border-border">
+ <div className="h-48 shrink-0 mb-3 rounded-lg overflow-hidden border border-border">
  <LiveVideoCall
  sessionId={session.id}
  userId={profile.id}
