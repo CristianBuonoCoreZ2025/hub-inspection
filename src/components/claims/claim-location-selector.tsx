@@ -13,7 +13,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
-import { geocodeAddressCandidates, type GeocodeCandidate } from "@/lib/geo";
+import { geocodeAddressCandidates, reverseGeocode, type GeocodeCandidate, type LatLng, type MapProvider } from "@/lib/geo";
 
 // Fix iconos de Leaflet en Next.js (CDN)
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -62,6 +62,7 @@ interface ClaimLocationSelectorProps {
   city?: string | null;
   region?: string | null;
   country?: string | null;
+  claimCoords?: LatLng | null;
   onSelect: (candidate: GeocodeCandidate) => void;
 }
 
@@ -73,10 +74,12 @@ export function ClaimLocationSelector({
   city,
   region,
   country,
+  claimCoords,
   onSelect,
 }: ClaimLocationSelectorProps) {
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [manualPin, setManualPin] = React.useState<{ lat: number; lng: number } | null>(null);
+  const validClaimCoords = claimCoords && Number.isFinite(claimCoords.lat) && Number.isFinite(claimCoords.lng) ? claimCoords : null;
 
   // Reset selected index cuando se abre con una nueva dirección
   // Se difiere con setTimeout para evitar setState sincrónico dentro del effect.
@@ -87,17 +90,18 @@ export function ClaimLocationSelector({
       setManualPin(null);
     }, 0);
     return () => clearTimeout(id);
-  }, [open, address, commune, city, region, country]);
+  }, [open, address, commune, city, region, country, validClaimCoords]);
 
   const { data: mapProviders } = useQuery({
     queryKey: ["map-providers"],
     queryFn: async () => {
       const res = await fetch("/api/settings/map-providers");
       const data = await res.json();
-      return data as { providers: ("osm" | "mapbox")[]; tokens: Record<string, string | null> };
+      return data as { providers: MapProvider[]; tokens: Partial<Record<MapProvider, string | null>> };
     },
     enabled: open,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
   });
 
   const { data: candidates = [], isLoading } = useQuery({
@@ -110,18 +114,35 @@ export function ClaimLocationSelector({
     staleTime: 0,
   });
 
+  // Reverse geocode de las coordenadas ya registradas del siniestro
+  const { data: claimAddressFromCoords } = useQuery({
+    queryKey: ["reverse-geocode", validClaimCoords],
+    queryFn: () => reverseGeocode(validClaimCoords!.lat, validClaimCoords!.lng),
+    enabled: open && !!validClaimCoords,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Fallback: centrar el mapa manual en la comuna/ciudad/región/país
   const centerAddress = [city, commune, region, country].filter(Boolean).join(", ") || "Chile";
   const { data: centerCandidates = [] } = useQuery({
     queryKey: ["geocode-center", centerAddress],
     queryFn: () => geocodeAddressCandidates(centerAddress, {}),
-    enabled: open && !isLoading && candidates.length === 0,
+    enabled: open && !isLoading && candidates.length === 0 && !validClaimCoords,
     staleTime: 5 * 60 * 1000,
   });
 
-  const selected = candidates[selectedIndex];
+  const fallbackCandidate = validClaimCoords
+    ? {
+        lat: validClaimCoords.lat,
+        lng: validClaimCoords.lng,
+        label: "Ubicación registrada del siniestro",
+        displayName: claimAddressFromCoords || address || "Coordenadas registradas",
+      }
+    : null;
+  const allCandidates = candidates.length > 0 ? candidates : fallbackCandidate ? [fallbackCandidate] : [];
+  const selected = allCandidates[selectedIndex] || allCandidates[0] || null;
   const mapCenter = manualPin || selected || centerCandidates[0] || { lat: -33.44, lng: -70.66 };
-  const hasCandidates = candidates.length > 0;
+  const hasCandidates = allCandidates.length > 0;
 
   const handleConfirm = () => {
     if (manualPin) {
@@ -147,7 +168,7 @@ export function ClaimLocationSelector({
             {isLoading
               ? "Buscando ubicaciones..."
               : hasCandidates
-                ? `Se encontraron ${candidates.length} posibles ubicaciones. Elige la más cercana al siniestro.`
+                ? `Se encontraron ${allCandidates.length} posibles ubicaciones. Elige la más cercana al siniestro.`
                 : "No se encontraron ubicaciones automáticas. Haz clic en el mapa para marcar la ubicación."}
           </DialogDescription>
         </DialogHeader>
@@ -184,7 +205,7 @@ export function ClaimLocationSelector({
                   )}
                 </div>
               )}
-              {!isLoading && hasCandidates && candidates.map((c, i) => (
+              {!isLoading && hasCandidates && allCandidates.map((c, i) => (
                 <button
                   key={i}
                   type="button"
@@ -249,7 +270,7 @@ export function ClaimLocationSelector({
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 />
-                {candidates.map((c, i) => (
+                {allCandidates.map((c, i) => (
                   <Marker
                     key={i}
                     position={[c.lat, c.lng]}

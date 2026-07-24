@@ -656,7 +656,7 @@ export default function ClaimDetailPage() {
  <ArrowLeft className="h-5 w-5" />
  </Button>
  <div className="flex items-center gap-3">
- <h1 className="text-xl font-semibold">
+ <h1 className="app-page-title">
  Siniestro {claim.liquidation_number || "—"}
  {claim.client_reference && (
  <span className="text-muted-foreground font-normal"> / Ref.Cliente {claim.client_reference}</span>
@@ -702,10 +702,10 @@ export default function ClaimDetailPage() {
  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 backdrop-blur-xl p-4 flex items-start gap-3">
  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
  <div className="flex-1">
- <p className="text-[13px] font-semibold text-amber-900 dark:text-amber-200">
+ <p className="app-title text-amber-900 dark:text-amber-200">
  Siniestro sin póliza asignada
  </p>
- <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
+ <p className="app-body text-amber-700 dark:text-amber-300 mt-0.5">
  No se pueden ejecutar gestiones ni cambiar el estado del siniestro hasta que se asigne una póliza.
  Edita el siniestro para seleccionar una póliza existente o crear una nueva.
  </p>
@@ -928,7 +928,7 @@ export default function ClaimDetailPage() {
 
  {!insured && !contractor && !beneficiary && (
  <div className="app-panel text-center py-10">
- <p className="text-muted-foreground text-[13px]">No hay participantes registrados.</p>
+ <p className="text-muted-foreground app-body">No hay participantes registrados.</p>
  </div>
  )}
  </div>
@@ -1179,7 +1179,7 @@ export default function ClaimDetailPage() {
 
  if (gestiones.length === 0) {
  return (
- <div className="text-center py-8 text-muted-foreground text-[13px]">
+ <div className="text-center py-8 text-muted-foreground app-body">
  No hay gestiones registradas.
  </div>
  );
@@ -1350,18 +1350,18 @@ export default function ClaimDetailPage() {
  }
  }}
  >
- <td className="font-mono text-[10px] text-primary tabular-nums whitespace-nowrap">
+ <td className="font-mono app-body text-primary tabular-nums whitespace-nowrap">
  <span>{shortActionCode(g.codigo)}</span>
- <span className={`ml-1 inline-flex items-center justify-center rounded px-0.5 text-[8px] font-bold ${
+ <span className={`ml-1 inline-flex items-center justify-center rounded px-0.5 app-body font-bold ${
  g.origin === "W" ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
  }`}>{g.origin}</span>
  {g.isActive === false && (
- <span className="ml-1 inline-flex items-center justify-center rounded px-0.5 text-[8px] font-bold bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" title="Gestión deshabilitada">OFF</span>
+ <span className="ml-1 inline-flex items-center justify-center rounded px-0.5 app-body font-bold bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" title="Gestión deshabilitada">OFF</span>
  )}
  </td>
- <td className="font-medium text-[11px]">{g.nombre}</td>
- <td className="text-[11px] text-muted-foreground">{g.fecha ? formatDateTime(g.fecha) : "—"}</td>
- <td className="text-[11px]">
+ <td className="font-medium app-body">{g.nombre}</td>
+ <td className="app-body text-muted-foreground">{g.fecha ? formatDateTime(g.fecha) : "—"}</td>
+ <td className="app-body">
  {daysLeft !== null && daysLeft < 0 ? (
  <span className="text-red-600 font-medium">{daysLeft}</span>
  ) : daysLeft !== null ? (
@@ -1384,7 +1384,7 @@ export default function ClaimDetailPage() {
  className={`flex items-center justify-center rounded-full ${sty.dot} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
  style={{ width: 16, height: 16 }}
  />
- <span className={`text-[8px] font-bold leading-none ${sty.label}`}>
+ <span className={`app-body font-bold leading-none ${sty.label}`}>
  {light.letter}
  </span>
  </div>
@@ -1471,20 +1471,20 @@ export default function ClaimDetailPage() {
 
  <div className="modal-body space-y-3">
  {templatesLoading ? (
- <p className="text-muted-foreground text-sm py-8 text-center">Cargando gestiones...</p>
+ <p className="text-muted-foreground app-body py-8 text-center">Cargando gestiones...</p>
  ) : !chainFilteredTemplates || chainFilteredTemplates.length === 0 ? (
  <div className="text-center py-8">
- <p className="text-sm text-muted-foreground mb-1">
+ <p className="app-body text-muted-foreground mb-1">
  No hay gestiones disponibles para el estado actual del siniestro.
  </p>
- <p className="text-[11px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  Algunas gestiones requieren que se complete una gestión previa (ej: Reserva requiere Ingreso de Coberturas cerrado).
  </p>
  </div>
  ) : (
  <>
  <div>
- <label className="app-field-label text-[11px]">Tipo de Gestión *</label>
+ <label className="app-field-label app-body">Tipo de Gestión *</label>
  <Select
  value={selectedTemplate?.id || "__none"}
  onValueChange={(v) => {
@@ -1517,7 +1517,7 @@ export default function ClaimDetailPage() {
  const matchLabel = tags.length > 0 ? ` · ${tags.join("+")}` : " · General";
  return (
  <SelectItem key={tpl.id} value={tpl.id}>
- {tpl.name}<span className="text-[10px] text-muted-foreground">{matchLabel}</span>
+ {tpl.name}<span className="app-body text-muted-foreground">{matchLabel}</span>
  </SelectItem>
  );
  })}
@@ -1526,7 +1526,7 @@ export default function ClaimDetailPage() {
  </div>
 
  <div>
- <label className="app-field-label text-[11px]">Descripción</label>
+ <label className="app-field-label app-body">Descripción</label>
  <textarea
  className="app-input w-full min-h-[60px] resize-none"
  placeholder="Descripción de la gestión..."
@@ -1536,7 +1536,7 @@ export default function ClaimDetailPage() {
  </div>
 
  <div>
- <label className="app-field-label text-[11px]">Fecha *</label>
+ <label className="app-field-label app-body">Fecha *</label>
  <DatePicker
  value={expectedDate}
  onChange={(value) => setExpectedDate(value)}
@@ -1590,13 +1590,13 @@ export default function ClaimDetailPage() {
  <div className="modal-body">
  {!editingAction || !editingScreens ? (
  <div className="text-center py-8 space-y-2">
- <p className="text-sm text-muted-foreground">Cargando gestión...</p>
+ <p className="app-body text-muted-foreground">Cargando gestión...</p>
  {(editingActionError || editingScreensError) && (
- <p className="text-xs text-red-500">
+ <p className="app-body text-red-500">
  Error: {editingActionError?.message || editingScreensError?.message}
  </p>
  )}
- <p className="text-[10px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  action: {editingAction ? "OK" : "—"} | screens: {editingScreens ? `[${editingScreens.length}]` : "—"}
  </p>
  </div>
@@ -1645,7 +1645,7 @@ export default function ClaimDetailPage() {
  return (
  <div className="modal-footer">
  {!isClosed && autoSaveState !== "idle" && (
- <span className="text-[11px] text-muted-foreground flex items-center gap-1.5 mr-auto">
+ <span className="app-body text-muted-foreground flex items-center gap-1.5 mr-auto">
  {autoSaveState === "saving" ? (
  <>
  <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
@@ -1743,7 +1743,7 @@ function ActionHistoryView({ actionId }: { actionId: string }) {
  <button
  type="button"
  onClick={() => setShowHistory(!showHistory)}
- className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+ className="flex items-center gap-1.5 app-body text-muted-foreground hover:text-foreground transition-colors"
  >
  <History className="h-3.5 w-3.5" />
  {showHistory ? "Ocultar historial" : "Ver historial"}
@@ -1751,9 +1751,9 @@ function ActionHistoryView({ actionId }: { actionId: string }) {
  {showHistory && (
  <div className="mt-2 rounded-lg border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/5 backdrop-blur-md p-3 max-h-[200px] overflow-y-auto">
  {isLoading ? (
- <p className="text-[11px] text-muted-foreground text-center py-2">Cargando historial...</p>
+ <p className="app-body text-muted-foreground text-center py-2">Cargando historial...</p>
  ) : !history || history.length === 0 ? (
- <p className="text-[11px] text-muted-foreground text-center py-2">Sin eventos registrados.</p>
+ <p className="app-body text-muted-foreground text-center py-2">Sin eventos registrados.</p>
  ) : (
  <div className="space-y-2">
  {history.map((entry) => {
@@ -1762,21 +1762,21 @@ function ActionHistoryView({ actionId }: { actionId: string }) {
  const date = new Date(entry.created_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
  const userName = entry.performed_by_name || entry.performed_by_profile?.full_name || "Sistema";
  return (
- <div key={entry.id} className="flex items-start gap-2 text-[11px]">
+ <div key={entry.id} className="flex items-start gap-2 app-body">
  <Icon className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${evt.color}`} />
  <div className="flex-1 min-w-0">
  <div className="flex items-center gap-1.5 flex-wrap">
  <span className="font-medium">{evt.label}</span>
  <span className="text-muted-foreground">· {userName}</span>
  </div>
- <div className="text-[10px] text-muted-foreground">{date}</div>
+ <div className="app-body text-muted-foreground">{date}</div>
  {entry.comment && (
- <div className="text-[10px] text-rose-600 dark:text-rose-400 mt-0.5 italic">
+ <div className="app-body text-rose-600 dark:text-rose-400 mt-0.5 italic">
  &ldquo;{entry.comment}&rdquo;
  </div>
  )}
  {entry.previous_responsible_name && entry.new_responsible_name && (
- <div className="text-[10px] text-muted-foreground mt-0.5">
+ <div className="app-body text-muted-foreground mt-0.5">
  {entry.previous_responsible_name} → {entry.new_responsible_name}
  </div>
  )}

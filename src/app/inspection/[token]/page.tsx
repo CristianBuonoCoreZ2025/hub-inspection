@@ -153,8 +153,9 @@ export default function MagicLinkPage() {
   const params = useParams();
   const token = params.token as string;
   const [now, setNow] = useState(new Date());
-  const [chatPanelOpen, setChatPanelOpen] = useState(true);
+  const [chatPanelOpen, setChatPanelOpen] = useState(false);
   const [videoCallOpen, setVideoCallOpen] = useState(false);
+  const autoVideoOpenedRef = useRef(false);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -167,12 +168,19 @@ export default function MagicLinkPage() {
     refetchInterval: 2000,
   });
 
+  useEffect(() => {
+    if (session && session.status === "active" && session.inspection_type === "remote" && !autoVideoOpenedRef.current) {
+      autoVideoOpenedRef.current = true;
+      setVideoCallOpen(true);
+    }
+  }, [session]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-sky-400" />
-          <p className="text-slate-400 text-sm">Conectando a la inspección...</p>
+          <p className="text-slate-400 app-body">Conectando a la inspección...</p>
         </div>
       </div>
     );
@@ -185,8 +193,8 @@ export default function MagicLinkPage() {
           <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-rose-500/10 mb-4">
             <WifiOff className="h-8 w-8 text-rose-400" />
           </div>
-          <h1 className="text-xl font-semibold text-white mb-2">Link inválido o expirado</h1>
-          <p className="text-slate-400 text-sm">
+          <h1 className="app-page-title text-white mb-2">Link inválido o expirado</h1>
+          <p className="text-slate-400 app-body">
             El link de inspección no es válido o ha expirado. Contacte a su liquidador.
           </p>
         </div>
@@ -208,10 +216,10 @@ export default function MagicLinkPage() {
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="text-center max-w-md">
           <WifiOff className="h-12 w-12 mx-auto text-slate-500 mb-4" />
-          <h1 className="text-xl font-semibold text-white mb-2">
+          <h1 className="app-page-title text-white mb-2">
             {isExpired ? "Link expirado" : isCancelled ? "Inspección cancelada" : "Inspección completada"}
           </h1>
-          <p className="text-slate-400 text-sm">
+          <p className="text-slate-400 app-body">
             {isExpired
               ? "Este link ha expirado. Contacte a su liquidador para obtener uno nuevo."
               : isCancelled
@@ -232,27 +240,27 @@ export default function MagicLinkPage() {
               <Calendar className="h-5 w-5 text-sky-400" />
             </div>
             <div>
-              <h2 className="text-base font-semibold">Inspección programada</h2>
-              <p className="text-[11px] text-slate-400">Su inspector lo contactará a la hora indicada</p>
+              <h2 className="app-body font-semibold">Inspección programada</h2>
+              <p className="app-body text-slate-400">Su inspector lo contactará a la hora indicada</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
             <div className="flex items-center gap-2 rounded-lg bg-slate-900/50 p-3">
               <Calendar className="h-4 w-4 text-sky-400 shrink-0" />
               <div>
-                <p className="text-[10px] text-slate-500">Fecha y hora</p>
-                <p className="text-[13px] font-medium">{fmtDate(session.scheduled_at)}</p>
+                <p className="app-body text-slate-500">Fecha y hora</p>
+                <p className="app-body font-medium">{fmtDate(session.scheduled_at)}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-lg bg-slate-900/50 p-3">
               <Video className="h-4 w-4 text-violet-400 shrink-0" />
               <div>
-                <p className="text-[10px] text-slate-500">Modalidad</p>
-                <p className="text-[13px] font-medium">Remota (video llamada)</p>
+                <p className="app-body text-slate-500">Modalidad</p>
+                <p className="app-body font-medium">Remota (video llamada)</p>
               </div>
             </div>
           </div>
-          <div className="mt-4 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-[11px] text-amber-300">
+          <div className="mt-4 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 app-body text-amber-300">
             <strong>Importante:</strong> Mantenga esta pestaña abierta. Cuando el inspector inicie la sesión,
             verá la inspección en tiempo real aquí mismo.
           </div>
@@ -294,19 +302,19 @@ export default function MagicLinkPage() {
               <ClipboardCheck className="h-4 w-4 text-white" />
             </div>
             <div>
-              <p className="text-sm font-semibold">Inspección Remota</p>
-              <p className="text-[11px] text-slate-400 font-mono">{session.inspection_number}</p>
+              <p className="app-body font-semibold">Inspección Remota</p>
+              <p className="app-body text-slate-400 font-mono">{session.inspection_number}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-400">
+            <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 app-body font-medium text-emerald-400">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" /> En vivo
             </span>
             {/* Botón Videollamada */}
             {!isCompleted && (
               <button
                 onClick={() => setVideoCallOpen(true)}
-                className="flex items-center gap-1.5 rounded-full bg-sky-600 px-3 py-1 text-[11px] font-medium text-white hover:bg-sky-500 transition-colors"
+                className="flex items-center gap-1.5 rounded-full bg-sky-600 px-3 py-1 app-body font-medium text-white hover:bg-sky-500 transition-colors"
               >
                 <Video className="h-3.5 w-3.5" />
                 Videollamada
@@ -340,7 +348,7 @@ export default function MagicLinkPage() {
             return (
               <div
                 key={tab.id}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-medium ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 app-body font-medium ${
                   active
                     ? "bg-sky-500/15 text-sky-400"
                     : "text-slate-600"
@@ -361,15 +369,22 @@ export default function MagicLinkPage() {
         {/* Banner: inspección completada, falta firmar */}
         {isCompleted && !hasInsuredSignature && (
           <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
-            <p className="text-[14px] text-amber-300 font-medium">
+            <p className="app-body text-amber-300 font-medium">
               La inspección ha finalizado. Por favor firme en la pestaña &ldquo;Firmas&rdquo; para confirmar.
             </p>
           </div>
         )}
         {effectiveTab === "resumen" && <ResumenTab session={session} token={token} />}
-        {effectiveTab === "acta" && <ActaTab session={session} actaStep={session.acta_step || "datos"} />}
+        {effectiveTab === "acta" && <ActaTab key={String(session.insured_statement?.statement ?? "")} session={session} actaStep={session.acta_step || "datos"} />}
         {effectiveTab === "danos" && <DamagesTab damages={session.inspection_damages} />}
-        {effectiveTab === "evidencias" && <EvidencesTab evidences={session.inspection_evidences} />}
+        {effectiveTab === "evidencias" && (
+          <EvidencesTab
+            sessionId={session.id}
+            token={token}
+            sessionStatus={session.status}
+            evidences={session.inspection_evidences}
+          />
+        )}
         {effectiveTab === "croquis" && <SketchesTab sketches={session.damage_sketches} session={session} />}
         {effectiveTab === "firmas" && <SignaturesTab session={session} />}
         </main>
@@ -379,7 +394,7 @@ export default function MagicLinkPage() {
           <div className="w-[300px] shrink-0 hidden lg:flex flex-col py-6">
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 flex flex-col flex-1 sticky top-20" style={{ maxHeight: "calc(100vh - 100px)" }}>
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
-                <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
+                <span className="app-body font-semibold text-slate-400 flex items-center gap-1.5">
                   <MessageSquare className="h-3.5 w-3.5" />
                   Chat con Inspector
                 </span>
@@ -410,11 +425,11 @@ export default function MagicLinkPage() {
       )}
 
       <div className="text-center pb-6 pt-4">
-        <p className="text-[10px] text-slate-600">
+        <p className="app-body text-slate-600">
           Siguiendo al inspector en tiempo real · {tabs.find((t) => t.id === effectiveTab)?.label || "Resumen"}
           {effectiveTab === "acta" && innerTabForActa && ` · ${innerTabForActa}`}
         </p>
-        <p className="text-[10px] text-slate-700 mt-0.5">
+        <p className="app-body text-slate-700 mt-0.5">
           Esta página se actualiza automáticamente cada 2 segundos.
         </p>
       </div>
@@ -450,7 +465,7 @@ function ResumenTab({ session, token }: { session: LiveSession; token: string })
   return (
     <div className="space-y-2">
       <Panel title="Datos del Siniestro">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
           <Field label="N° Interno" value={claim?.liquidation_number || "—"} mono />
           <Field label="Ref. Cliente" value={claim?.client_reference || "—"} />
           <Field label="N° Siniestro Cía" value={claim?.claim_number || "—"} />
@@ -460,7 +475,7 @@ function ResumenTab({ session, token }: { session: LiveSession; token: string })
         </div>
       </Panel>
       <Panel title="Asegurado">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
           <Field label="Nombre" value={insured?.full_name || "—"} />
           <Field label="Email" value={insured?.email || "—"} />
           <Field label="Teléfono" value={insured?.phone || insured?.cell_phone || "—"} />
@@ -468,20 +483,20 @@ function ResumenTab({ session, token }: { session: LiveSession; token: string })
         </div>
       </Panel>
       <Panel title="Contacto de Inspección">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
           <Field label="Nombre contacto" value={session.interviewed_name || "—"} />
           <Field label="Email" value={session.interviewed_email || "—"} />
           <Field label="Lugar inspección" value={claim?.claim_address || "—"} />
           {session.inspector_observations && (
             <div className="col-span-2 md:col-span-3">
-              <p className="text-[10px] text-slate-500 mb-0.5">Comentarios</p>
-              <p className="font-medium whitespace-pre-wrap text-[11px]">{session.inspector_observations}</p>
+              <p className="app-body text-slate-500 mb-0.5">Comentarios</p>
+              <p className="font-medium whitespace-pre-wrap app-body">{session.inspector_observations}</p>
             </div>
           )}
         </div>
       </Panel>
       <Panel title="Estado de la Sesión">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-[11px]">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 app-body">
           <Field label="Estado" value={statusLabels[session.status] || session.status} />
           <Field label="Programada" value={fmtDate(session.scheduled_at)} />
           <Field label="Iniciada" value={fmtDate(session.started_at)} />
@@ -546,8 +561,8 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       <Panel>
         <div className="text-center py-8">
           <ClipboardCheck className="h-8 w-8 mx-auto text-slate-600 mb-2" />
-          <p className="text-[13px] text-slate-400">El inspector aún no ha completado el acta.</p>
-          <p className="text-[11px] text-slate-600 mt-1">Los datos aparecerán aquí automáticamente.</p>
+          <p className="app-body text-slate-400">El inspector aún no ha completado el acta.</p>
+          <p className="app-body text-slate-600 mt-1">Los datos aparecerán aquí automáticamente.</p>
         </div>
       </Panel>
     );
@@ -569,7 +584,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
         {innerTabs.map((tab) => (
           <div
             key={tab.id}
-            className={`flex shrink-0 items-center rounded-lg px-3 py-1.5 text-[11px] font-medium ${
+            className={`flex shrink-0 items-center rounded-lg px-3 py-1.5 app-body font-medium ${
               innerTab === tab.id
                 ? "bg-sky-500/15 text-sky-400"
                 : "text-slate-600"
@@ -606,11 +621,11 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
               const distance = session.geo_distance_meters != null ? `${session.geo_distance_meters} m` : "—";
               return (
                 <div className="space-y-2">
-                  <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium ${sc.bg} ${sc.color}`}>
+                  <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 app-body font-medium ${sc.bg} ${sc.color}`}>
                     <StatusIcon className="h-3 w-3" />
                     {sc.label}
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
                     <Field label="Direccion declarada" value={session.claim?.claim_address || "—"} />
                     <Field label="Coords. siniestro" value={claimCoords} mono />
                     <Field label="Coords. capturadas" value={geoCoords} mono />
@@ -619,16 +634,16 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
                     <Field label="Tipo inspeccion" value={session.inspection_type === "onsite" ? "Presencial" : "Remota"} />
                   </div>
                   {geoStatus === "verified" && (
-                    <p className="text-[11px] text-emerald-400">Ubicacion verificada: a {distance} de la direccion declarada.</p>
+                    <p className="app-body text-emerald-400">Ubicacion verificada: a {distance} de la direccion declarada.</p>
                   )}
                   {geoStatus === "out_of_range" && (
-                    <p className="text-[11px] text-amber-400">La ubicacion capturada esta a {distance} de la direccion declarada. Se permite continuar pero queda registrado para auditoria.</p>
+                    <p className="app-body text-amber-400">La ubicacion capturada esta a {distance} de la direccion declarada. Se permite continuar pero queda registrado para auditoria.</p>
                   )}
                   {geoStatus === "pending" && (
-                    <p className="text-[11px] text-slate-400">La geolocalizacion aun no ha sido capturada.</p>
+                    <p className="app-body text-slate-400">La geolocalizacion aun no ha sido capturada.</p>
                   )}
                   {geoStatus === "failed" && (
-                    <p className="text-[11px] text-rose-400">No se pudo obtener la geolocalizacion del dispositivo.</p>
+                    <p className="app-body text-rose-400">No se pudo obtener la geolocalizacion del dispositivo.</p>
                   )}
                 </div>
               );
@@ -636,7 +651,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
           </Panel>
 
           <Panel title="Datos Generales de la Inspeccion">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
               <Field label="Fecha Inspeccion" value={session.inspection_date || "—"} />
               <Field label="Hora Inspeccion" value={session.inspection_time || "—"} />
               <Field label="Nombre Entrevistado" value={session.interviewed_name || "—"} />
@@ -645,7 +660,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
             </div>
           </Panel>
           <Panel title="Parte Policial y Bomberos">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
               <Field label="N° Parte Policial" value={session.police_report_number || "—"} />
               <Field label="Nombre Denunciante" value={session.police_report_name || "—"} />
               <Field label="RUT Denunciante" value={session.police_report_rut || "—"} />
@@ -653,7 +668,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
             </div>
           </Panel>
           <Panel title="Otros Seguros y Observaciones">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
               <Field label="¿Presenta otros seguros?" value={session.other_insurances ? "Sí" : "No"} />
               {session.other_insurances && (
                 <Field label="Compañia" value={session.other_insurance_company || "—"} />
@@ -661,8 +676,8 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
             </div>
             {session.inspector_observations && (
               <div className="mt-3">
-                <p className="text-[10px] tracking-wide text-slate-500 mb-1">Observaciones del Inspector</p>
-                <p className="text-[13px] whitespace-pre-wrap">{session.inspector_observations}</p>
+                <p className="app-body tracking-wide text-slate-500 mb-1">Observaciones del Inspector</p>
+                <p className="app-body whitespace-pre-wrap">{session.inspector_observations}</p>
               </div>
             )}
           </Panel>
@@ -676,7 +691,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
             const riskClass = val(pr, "risk_class");
             const isResidential = riskClass === "Residencial";
             return (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
                 <Field label="Clasificacion del Bien" value={riskClass} />
                 <Field label="Destino del Bien" value={val(pr, "property_type")} />
                 <Field label="N° Dpto / Oficina" value={val(pr, "apartment_number")} />
@@ -701,7 +716,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       {/* Materialidad */}
       {innerTab === "materialidad" && (
         <Panel title="Materialidad">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
             <Field label="Muros" value={val(pm, "walls")} />
             <Field label="Cubierta / Techumbre" value={val(pm, "roof")} />
             <Field label="Pavimentos Interiores" value={val(pm, "interior_flooring")} />
@@ -717,7 +732,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       {/* Seguridad */}
       {innerTab === "seguridad" && (
         <Panel title="Medidas de Asegurabilidad">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
             <Field label="Protecciones Generales" value={boolVal(sm, "protections")} />
             <Field label="Chapas / Cerraduras de Seguridad" value={boolVal(sm, "security_locks")} />
             <Field label="Guardias de Seguridad" value={boolVal(sm, "security_guards")} />
@@ -731,8 +746,16 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       {/* Declaración del Asegurado */}
       {innerTab === "declaracion" && (
         <Panel title="Declaracion del Asegurado">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
-            <Field label="Relato de los Hechos" value={val(isv, "statement")} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 app-body">
+            <div className="md:col-span-2">
+              <div className="app-body font-medium text-slate-400 mb-1">Relato de los Hechos</div>
+              <div className="rounded-lg border border-slate-800 bg-slate-950 p-3 app-body text-slate-200 min-h-20 whitespace-pre-wrap">
+                {String(isv?.statement ?? "El inspector transcribirá su declaración. Espere mientras le pide que relate los hechos.").trim() || "El inspector transcribirá su declaración. Espere mientras le pide que relate los hechos."}
+              </div>
+              <p className="mt-2 app-body text-slate-500">
+                El inspector escribe/corrige aquí desde el dashboard. Usted solo habla cuando se lo indique.
+              </p>
+            </div>
             <Field label="Punto de Ingreso / Salida" value={val(isv, "entry_exit_point")} />
             <Field label="Activacion de Alarmas" value={val(isv, "alarm_activation")} />
             <Field label="Objetos Sustraidos (estimacion)" value={val(isv, "stolen_items_estimate")} />
@@ -746,11 +769,11 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       {innerTab === "terceros" && (
         <Panel title={`Terceros (${tp.length})`}>
           {tp.length === 0 ? (
-            <p className="text-[13px] text-slate-500 text-center py-4">No hay terceros registrados.</p>
+            <p className="app-body text-slate-500 text-center py-4">No hay terceros registrados.</p>
           ) : (
             <div className="space-y-2">
               {tp.map((t, i) => (
-                <div key={i} className="rounded-lg bg-slate-900/50 p-3 text-[11px]">
+                <div key={i} className="rounded-lg bg-slate-900/50 p-3 app-body">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     <Field label="Nombre" value={val(t, "name")} />
                     <Field label="RUT" value={val(t, "rut")} />
@@ -766,7 +789,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
       {/* Observaciones (siempre visible al final) */}
       {session.inspector_observations && (
         <Panel title="Observaciones del Inspector">
-          <p className="text-[13px] text-slate-300 whitespace-pre-wrap">{session.inspector_observations}</p>
+          <p className="app-body text-slate-300 whitespace-pre-wrap">{session.inspector_observations}</p>
         </Panel>
       )}
     </div>
@@ -784,12 +807,12 @@ function DamagesTab({ damages }: { damages: LiveDamage[] }) {
     <Panel>
       <div className="space-y-2">
         {damages.map((dmg) => (
-          <div key={dmg.id} className="rounded-lg bg-slate-900/50 p-3 text-[13px]">
+          <div key={dmg.id} className="rounded-lg bg-slate-900/50 p-3 app-body">
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-slate-200">{dmg.description}</p>
-                <div className="flex flex-wrap gap-2 mt-1 text-[10px]">
+                <div className="flex flex-wrap gap-2 mt-1 app-body">
                   {dmg.category && (
                     <span className="text-sky-400/80">
                       {damageCategoryLabels[dmg.category] || dmg.category}
@@ -803,7 +826,7 @@ function DamagesTab({ damages }: { damages: LiveDamage[] }) {
                   )}
                 </div>
                 {dmg.observations && (
-                  <p className="text-[11px] text-slate-500 mt-1">{dmg.observations}</p>
+                  <p className="app-body text-slate-500 mt-1">{dmg.observations}</p>
                 )}
               </div>
             </div>
@@ -815,33 +838,110 @@ function DamagesTab({ damages }: { damages: LiveDamage[] }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Tab: Evidencias (read-only)
+// Tab: Evidencias (subida desde Magic Link)
 // ═══════════════════════════════════════════════════════════════
-function EvidencesTab({ evidences }: { evidences: LiveEvidence[] }) {
-  if (!evidences.length) {
-    return <EmptyState icon={Camera} text="No hay evidencias aún. El inspector las subirá durante la inspección." />;
-  }
+function EvidencesTab({
+  sessionId,
+  token,
+  sessionStatus,
+  evidences,
+}: {
+  sessionId: string;
+  token: string;
+  sessionStatus: string;
+  evidences: LiveEvidence[];
+}) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+  const isReadOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0 || isReadOnly) return;
+    setUploading(true);
+    setUploadCount(files.length);
+    try {
+      let completed = 0;
+      await Promise.all(
+        Array.from(files).map(async (file) => {
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await fetch(`/api/inspection/live/${token}/evidence`, {
+            method: "POST",
+            body: formData,
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.error || "Error al subir archivo");
+          }
+          completed += 1;
+          setUploadCount((n) => n - 1 + completed); // rough feedback
+        }),
+      );
+      queryClient.invalidateQueries({ queryKey: ["magic-link-live", token] });
+      queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Error al subir evidencia");
+    } finally {
+      setUploading(false);
+      setUploadCount(0);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <Panel>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {evidences.map((ev) => (
-          <div key={ev.id} className="rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
-            {ev.url && ev.type === "photo" ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={ev.url} alt={ev.description || ""} className="w-full h-32 object-cover" />
-            ) : ev.url && ev.type === "video" ? (
-              <video src={ev.url} className="w-full h-32 object-cover" controls />
-            ) : (
-              <div className="w-full h-32 flex items-center justify-center bg-slate-900">
-                <FileText className="h-8 w-8 text-slate-600" />
-              </div>
-            )}
-            {ev.description && (
-              <p className="text-[10px] text-slate-400 p-2 truncate">{ev.description}</p>
-            )}
-          </div>
-        ))}
-      </div>
+      {!isReadOnly && (
+        <div className="mb-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*,.pdf"
+            multiple
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white px-3 py-2 app-body"
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+            {uploading ? `Subiendo ${uploadCount} archivo(s)...` : "Subir foto / video / PDF"}
+          </button>
+          <p className="app-body text-slate-500 mt-1">
+            La evidencia se sube inmediatamente. El análisis con IA lo hará el inspector después.
+          </p>
+        </div>
+      )}
+      {evidences.length === 0 ? (
+        <EmptyState
+          icon={Camera}
+          text={isReadOnly ? "No hay evidencias registradas." : "Aún no hay evidencias. Puedes subir fotos o videos desde aquí."}
+        />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {evidences.map((ev) => (
+            <div key={ev.id} className="rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
+              {ev.url && ev.type === "photo" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={ev.url} alt={ev.description || ""} className="w-full h-32 object-cover" />
+              ) : ev.url && ev.type === "video" ? (
+                <video src={ev.url} className="w-full h-32 object-cover" controls />
+              ) : (
+                <div className="w-full h-32 flex items-center justify-center bg-slate-900">
+                  <FileText className="h-8 w-8 text-slate-600" />
+                </div>
+              )}
+              {ev.description && (
+                <p className="app-body text-slate-400 p-2 truncate">{ev.description}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </Panel>
   );
 }
@@ -889,13 +989,13 @@ function SketchesTab({ sketches, session }: { sketches: LiveSketch[]; session: L
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-[14px] font-semibold text-slate-200 flex items-center gap-2">
+          <h3 className="app-body font-semibold text-slate-200 flex items-center gap-2">
             <PenTool className="h-4 w-4 text-sky-400" />
             {editingSketch ? "Editar Croquis" : "Dibujar Croquis del Bien Siniestrado"}
           </h3>
           <button
             onClick={() => { setMode("view"); setEditingSketch(null); }}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] text-slate-300 hover:bg-slate-800"
+            className="rounded-lg border border-slate-700 px-3 py-1.5 app-body text-slate-300 hover:bg-slate-800"
           >
             Cancelar
           </button>
@@ -917,7 +1017,7 @@ function SketchesTab({ sketches, session }: { sketches: LiveSketch[]; session: L
       {/* Botón dibujar */}
       <button
         onClick={() => { setEditingSketch(null); setMode("draw"); }}
-        className="w-full rounded-lg border-2 border-dashed border-slate-700 py-4 text-[13px] text-slate-300 hover:border-sky-500/50 hover:bg-sky-950/20 transition-colors flex items-center justify-center gap-2"
+        className="w-full rounded-lg border-2 border-dashed border-slate-700 py-4 app-body text-slate-300 hover:border-sky-500/50 hover:bg-sky-950/20 transition-colors flex items-center justify-center gap-2"
       >
         <PenTool className="h-4 w-4" />
         Dibujar Croquis
@@ -931,10 +1031,10 @@ function SketchesTab({ sketches, session }: { sketches: LiveSketch[]; session: L
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={sk.sketch_url} alt={sk.label || "Croquis"} className="w-full h-48 object-contain bg-white" />
               <div className="flex items-center justify-between p-2">
-                <p className="text-[11px] text-slate-400 truncate">{sk.label}</p>
+                <p className="app-body text-slate-400 truncate">{sk.label}</p>
                 <button
                   onClick={() => { setEditingSketch({ id: sk.id, url: sk.sketch_url, label: sk.label || "" }); setMode("draw"); }}
-                  className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center gap-1"
+                  className="app-body text-sky-400 hover:text-sky-300 flex items-center gap-1"
                 >
                   <PenTool className="h-3 w-3" /> Editar
                 </button>
@@ -1081,22 +1181,22 @@ function SignaturesTab({ session }: { session: LiveSession }) {
               <div className="rounded-lg border border-slate-800 p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <User className="h-4 w-4 text-sky-400" />
-                  <span className="text-[13px] font-medium">Asegurado</span>
+                  <span className="app-body font-medium">Asegurado</span>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={insuredSig.signature_url} alt="Firma asegurado" className="w-full h-[100px] object-contain bg-white rounded border border-slate-800" />
-                <p className="text-[11px] text-slate-500 mt-1">{fmtDate(insuredSig.signed_at)}</p>
+                <p className="app-body text-slate-500 mt-1">{fmtDate(insuredSig.signed_at)}</p>
               </div>
             )}
             {adjusterSig && (
               <div className="rounded-lg border border-slate-800 p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <ShieldCheck className="h-4 w-4 text-violet-400" />
-                  <span className="text-[13px] font-medium">Ajustador</span>
+                  <span className="app-body font-medium">Ajustador</span>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={adjusterSig.signature_url} alt="Firma ajustador" className="w-full h-[100px] object-contain bg-white rounded border border-slate-800" />
-                <p className="text-[11px] text-slate-500 mt-1">{fmtDate(adjusterSig.signed_at)}</p>
+                <p className="app-body text-slate-500 mt-1">{fmtDate(adjusterSig.signed_at)}</p>
               </div>
             )}
           </div>
@@ -1120,13 +1220,13 @@ function SignaturesTab({ session }: { session: LiveSession }) {
             />
           </div>
           <div className="flex gap-2">
-            <button onClick={clear} className="rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] text-slate-300 hover:bg-slate-800">
+            <button onClick={clear} className="rounded-lg border border-slate-700 px-3 py-1.5 app-body text-slate-300 hover:bg-slate-800">
               Limpiar
             </button>
             <button
               onClick={save}
               disabled={saving}
-              className="rounded-lg bg-sky-600 px-3 py-1.5 text-[11px] text-white hover:bg-sky-500 disabled:opacity-50 flex items-center gap-1.5"
+              className="rounded-lg bg-sky-600 px-3 py-1.5 app-body text-white hover:bg-sky-500 disabled:opacity-50 flex items-center gap-1.5"
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PenTool className="h-3.5 w-3.5" />}
               Firmar
@@ -1137,7 +1237,7 @@ function SignaturesTab({ session }: { session: LiveSession }) {
 
       {insuredSig && !adjusterSig && (
         <Panel>
-          <p className="text-[13px] text-slate-400 text-center py-4">
+          <p className="app-body text-slate-400 text-center py-4">
             Su firma ha sido registrada. Esperando la firma del ajustador...
           </p>
         </Panel>
@@ -1183,18 +1283,18 @@ function ChatPanel({ session }: { session: LiveSession }) {
     <div className="flex flex-col gap-2 h-full">
         <div className="flex-1 space-y-2 overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 220px)" }}>
           {messages.length === 0 ? (
-            <p className="text-[11px] text-slate-500 text-center py-8">
+            <p className="app-body text-slate-500 text-center py-8">
               No hay mensajes aún. Puede escribir un mensaje al inspector.
             </p>
           ) : (
             messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.sender_role === "client" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] rounded-lg px-3 py-2 text-[13px] ${
-                  msg.sender_role === "client" ? "bg-sky-600 text-white" : "bg-slate-800 text-slate-200"
+              <div key={msg.id} className={`flex ${msg.sender_role?.trim().toLowerCase() === "client" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] rounded-lg px-3 py-2 app-body ${
+                  msg.sender_role?.trim().toLowerCase() === "client" ? "bg-sky-600 text-white" : "bg-slate-800 text-slate-200"
                 }`}>
-                  <p className="text-[10px] opacity-70 mb-0.5">{msg.sender_name || "Inspector"}</p>
+                  <p className="app-body opacity-70 mb-0.5">{msg.sender_role?.trim().toLowerCase() === "client" ? "Cliente" : (msg.sender_name || "Inspector")}</p>
                   <p className="whitespace-pre-wrap">{msg.content}</p>
-                  <p className="text-[9px] opacity-50 mt-0.5">{fmtTime(msg.created_at)}</p>
+                  <p className="app-body opacity-50 mt-0.5">{fmtTime(msg.created_at)}</p>
                 </div>
               </div>
             ))
@@ -1207,7 +1307,7 @@ function ChatPanel({ session }: { session: LiveSession }) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Escribir mensaje al inspector..."
-            className="flex-1 rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-[13px] text-white placeholder:text-slate-600 outline-none focus:border-sky-500"
+            className="flex-1 rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 app-body text-white placeholder:text-slate-600 outline-none focus:border-sky-500"
             onKeyDown={(e) => {
               if (e.key === "Enter" && message.trim()) {
                 sendMutation.mutate(message.trim());
@@ -1235,7 +1335,7 @@ function Panel({ title, children }: { title?: string; children: React.ReactNode 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
       {title && (
-        <h3 className="text-[11px] font-semibold text-slate-400 mb-2">{title}</h3>
+        <h3 className="app-body font-semibold text-slate-400 mb-2">{title}</h3>
       )}
       {children}
     </div>
@@ -1245,8 +1345,8 @@ function Panel({ title, children }: { title?: string; children: React.ReactNode 
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold text-slate-300 mb-0.5">{label}</p>
-      <p className={`text-[11px] font-medium ${mono ? "font-mono text-sky-400" : ""}`}>{value}</p>
+      <p className="app-body font-semibold text-slate-300 mb-0.5">{label}</p>
+      <p className={`app-body font-medium ${mono ? "font-mono text-sky-400" : ""}`}>{value}</p>
     </div>
   );
 }
@@ -1256,7 +1356,7 @@ function EmptyState({ icon: Icon, text }: { icon: React.ElementType; text: strin
     <Panel>
       <div className="text-center py-8">
         <Icon className="h-8 w-8 mx-auto text-slate-600 mb-2" />
-        <p className="text-[13px] text-slate-400">{text}</p>
+        <p className="app-body text-slate-400">{text}</p>
       </div>
     </Panel>
   );

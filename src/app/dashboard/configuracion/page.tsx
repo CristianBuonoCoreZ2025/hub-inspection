@@ -109,7 +109,7 @@ export default function SettingsPage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium transition-colors border-b-2 ${
+              className={`flex items-center gap-1.5 px-3 py-2 app-body font-medium transition-colors border-b-2 ${
                 tab === t.id
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -189,15 +189,15 @@ function GeneralTab() {
       <section className="app-panel">
         <div className="flex items-center gap-2 mb-1">
           <MapPin className="size-4 text-primary" />
-          <h2 className="text-sm font-semibold">Umbral de geolocalización</h2>
+          <h2 className="app-body font-semibold">Umbral de geolocalización</h2>
         </div>
-        <p className="text-[13px] text-muted-foreground">
+        <p className="app-body text-muted-foreground">
           Distancia máxima en metros entre la ubicación capturada y la dirección del siniestro
           para considerar la inspección como verificada.
         </p>
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <Label className="text-[11px] text-muted-foreground">Metros</Label>
+            <Label className="app-body text-muted-foreground">Metros</Label>
             <Input
               type="number"
               min={1}
@@ -222,7 +222,7 @@ function GeneralTab() {
             Guardar
           </Button>
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">
+        <p className="mt-2 app-body text-muted-foreground">
           Ejemplos: 10m, 100m, 500m (estándar), 5000m.
         </p>
       </section>
@@ -230,17 +230,17 @@ function GeneralTab() {
       <MapProvidersSection />
 
       <section className="app-panel">
-        <h2 className="text-sm font-semibold">Información de la cuenta</h2>
-        <p className="mt-1 text-[13px] text-muted-foreground">
+        <h2 className="app-body font-semibold">Información de la cuenta</h2>
+        <p className="mt-1 app-body text-muted-foreground">
           Datos básicos de tu sesión activa.
         </p>
         <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between rounded-lg border border-border bg-card p-3">
             <div className="flex items-center gap-2">
               <Shield className="size-4 text-primary" />
-              <span className="text-[13px] font-medium">Rol</span>
+              <span className="app-body font-medium">Rol</span>
             </div>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="app-body text-muted-foreground">
               {useAuth().profile?.role || "—"}
             </span>
           </div>
@@ -311,17 +311,17 @@ function MapProvidersSection() {
     <section className="app-panel">
       <div className="flex items-center gap-2 mb-1">
         <MapPin className="size-4 text-primary" />
-        <h2 className="text-sm font-semibold">Proveedores de mapas</h2>
+        <h2 className="app-body font-semibold">Proveedores de mapas</h2>
       </div>
-      <p className="text-[13px] text-muted-foreground">
+      <p className="app-body text-muted-foreground">
         Define el orden de proveedores para geocodificación. Si el primero no encuentra resultados,
         se intenta con el segundo.
       </p>
       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <Label className="text-[11px] text-muted-foreground">Proveedor primario</Label>
+          <Label className="app-body text-muted-foreground">Proveedor primario</Label>
           <select
-            className="app-input mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 text-[13px]"
+            className="app-input mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 app-body"
             value={primary}
             onChange={(e) => setPrimary(e.target.value as MapProvider)}
             disabled={isLoading}
@@ -331,9 +331,9 @@ function MapProvidersSection() {
           </select>
         </div>
         <div>
-          <Label className="text-[11px] text-muted-foreground">Proveedor secundario (fallback)</Label>
+          <Label className="app-body text-muted-foreground">Proveedor secundario (fallback)</Label>
           <select
-            className="app-input mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 text-[13px]"
+            className="app-input mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 app-body"
             value={secondary}
             onChange={(e) => setSecondary(e.target.value as MapProvider | "none")}
             disabled={isLoading}
@@ -346,7 +346,7 @@ function MapProvidersSection() {
       </div>
       {primary === "mapbox" || secondary === "mapbox" ? (
         <div className="mt-3">
-          <Label className="text-[11px] text-muted-foreground">Token de Mapbox</Label>
+          <Label className="app-body text-muted-foreground">Token de Mapbox</Label>
           <Input
             type="text"
             value={mapboxToken}
@@ -355,7 +355,7 @@ function MapProvidersSection() {
             className="app-input mt-1"
             disabled={isLoading}
           />
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 app-body text-muted-foreground">
             El token es obligatorio si seleccionás Mapbox. Se guarda cifrado en la base de datos.
           </p>
         </div>
@@ -417,8 +417,8 @@ function NotificacionesTab() {
 
   return (
     <section className="app-panel">
-      <h2 className="text-sm font-semibold">Preferencias de notificaciones</h2>
-      <p className="mt-1 text-[13px] text-muted-foreground">
+      <h2 className="app-body font-semibold">Preferencias de notificaciones</h2>
+      <p className="mt-1 app-body text-muted-foreground">
         Define qué eventos te notifican. Las notificaciones por email requieren configurar el módulo de Email.
       </p>
       <div className="mt-4 space-y-2">
@@ -428,8 +428,8 @@ function NotificacionesTab() {
             className="flex items-center justify-between rounded-lg border border-border bg-card p-3 cursor-pointer hover:bg-muted/30 transition-colors"
           >
             <div>
-              <div className="text-[13px] font-medium">{item.label}</div>
-              <div className="text-[11px] text-muted-foreground">{item.desc}</div>
+              <div className="app-body font-medium">{item.label}</div>
+              <div className="app-body text-muted-foreground">{item.desc}</div>
             </div>
             <input
               type="checkbox"
@@ -462,13 +462,13 @@ function IntegracionesTab() {
 
   return (
     <section className="app-panel">
-      <h2 className="text-sm font-semibold">Integraciones</h2>
-      <p className="mt-1 text-[13px] text-muted-foreground">
+      <h2 className="app-body font-semibold">Integraciones</h2>
+      <p className="mt-1 app-body text-muted-foreground">
         Servicios conectados a la plataforma. Estado basado en variables de entorno.
       </p>
       <div className="mt-4 space-y-2">
         {isLoading && (
-          <div className="flex items-center gap-2 text-[13px] text-muted-foreground py-4">
+          <div className="flex items-center gap-2 app-body text-muted-foreground py-4">
             <Loader2 className="size-4 animate-spin" />
             Cargando estado de integraciones...
           </div>
@@ -485,16 +485,16 @@ function IntegracionesTab() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-medium">{int.name}</span>
-                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
+                    <span className="app-body font-medium">{int.name}</span>
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 app-body font-medium text-muted-foreground">
                       {int.category}
                     </span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground">{int.desc}</div>
+                  <div className="app-body text-muted-foreground">{int.desc}</div>
                 </div>
               </div>
               <span
-                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium shrink-0 ${
+                className={`rounded-full px-2.5 py-0.5 app-body font-medium shrink-0 ${
                   int.statusColor === "emerald"
                     ? "bg-emerald-500/15 text-emerald-600"
                     : int.statusColor === "rose"
@@ -506,7 +506,7 @@ function IntegracionesTab() {
               </span>
             </div>
             {int.config && (
-              <div className="text-[10px] text-rose-600 dark:text-rose-400 pl-12">
+              <div className="app-body text-rose-600 dark:text-rose-400 pl-12">
                 {int.config}
               </div>
             )}
@@ -523,8 +523,8 @@ function IntegracionesTab() {
 function PerfilesTab() {
   return (
     <section className="app-panel">
-      <h2 className="text-sm font-semibold">Perfiles de usuario</h2>
-      <p className="mt-1 text-[13px] text-muted-foreground">
+      <h2 className="app-body font-semibold">Perfiles de usuario</h2>
+      <p className="mt-1 app-body text-muted-foreground">
         Cuatro tipos de usuario definen el acceso y las capacidades dentro de Claims Hub.
       </p>
       <div className="mt-4 space-y-2">
@@ -534,19 +534,19 @@ function PerfilesTab() {
             className="rounded-xl border border-border bg-card p-4 shadow-(--shadow-card)"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-[14px] font-semibold text-foreground">{p.role}</h3>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+              <h3 className="app-body font-semibold text-foreground">{p.role}</h3>
+              <span className="rounded-full bg-muted px-2 py-0.5 app-body font-medium text-muted-foreground">
                 {p.badge}
               </span>
             </div>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+            <p className="mt-1.5 app-body leading-relaxed text-muted-foreground">
               {p.description}
             </p>
             <ul className="mt-2 space-y-1">
               {p.permissions.map((perm) => (
                 <li
                   key={perm}
-                  className="flex items-center gap-2 text-[11px] text-muted-foreground"
+                  className="flex items-center gap-2 app-body text-muted-foreground"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   {perm}

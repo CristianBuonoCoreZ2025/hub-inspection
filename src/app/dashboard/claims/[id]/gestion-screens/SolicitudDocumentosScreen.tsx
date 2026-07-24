@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import { DatePicker } from "@/components/ui/date-picker";
 import type { GestionScreenProps } from "./types";
 
@@ -25,13 +25,13 @@ export default function SolicitudDocumentosScreen({ action, onChange, readOnly }
 
  return (
  <div className="space-y-2">
- <p className="text-[11px] font-semibold">Documentos Requeridos</p>
+ <p className="app-title">Documentos Requeridos</p>
  {docs.map((doc, idx) => (
  <div key={idx} className="grid grid-cols-5 gap-2 items-end rounded-md border border-border p-2">
  <div className="col-span-2">
- <Label className="app-field-label text-[10px]">Documento</Label>
+ <Label className="app-field-label">Documento</Label>
  <Input
- className="app-input h-7 text-[11px]"
+ className="app-input h-7"
  value={doc.nombre}
  onChange={(e) => {
  const next = [...docs];
@@ -42,31 +42,33 @@ export default function SolicitudDocumentosScreen({ action, onChange, readOnly }
  />
  </div>
  <div className="flex items-center gap-1 pb-1.5">
- <Checkbox
- checked={doc.solicitado}
- onChange={(e) => {
+ <ToggleChip
+ active={doc.solicitado}
+ onClick={(v) => {
  const next = [...docs];
- next[idx].solicitado = (e.target as HTMLInputElement).checked;
+ next[idx].solicitado = v;
  setDocs(next);
  }}
  disabled={readOnly}
- />
- <span className="text-[11px]">Solicitado</span>
+ >
+ Solicitado
+ </ToggleChip>
  </div>
  <div className="flex items-center gap-1 pb-1.5">
- <Checkbox
- checked={doc.recibido}
- onChange={(e) => {
+ <ToggleChip
+ active={doc.recibido}
+ onClick={(v) => {
  const next = [...docs];
- next[idx].recibido = (e.target as HTMLInputElement).checked;
+ next[idx].recibido = v;
  setDocs(next);
  }}
  disabled={readOnly}
- />
- <span className="text-[11px]">Recibido</span>
+ >
+ Recibido
+ </ToggleChip>
  </div>
  <div>
- <Label className="app-field-label text-[10px]">Fecha Recibido</Label>
+ <Label className="app-field-label">Fecha Recibido</Label>
  <DatePicker
  value={doc.fechaRecibido}
  onChange={(value) => {
@@ -82,7 +84,7 @@ export default function SolicitudDocumentosScreen({ action, onChange, readOnly }
  ))}
  {!readOnly && (
  <button
- className="text-[11px] text-primary hover:underline"
+ className="app-body text-primary hover:underline"
  onClick={() => setDocs([...docs, { nombre: "", solicitado: false, recibido: false, fechaSolicitado: "", fechaRecibido: "" }])}
  >
  + Agregar documento

@@ -91,12 +91,12 @@ export function RequestLogViewer() {
         <Clock className="h-4 w-4" />
         Logs ({stats.total})
         {stats.pending > 0 && (
-          <span className="h-5 min-w-5 px-1 rounded bg-gray-200 text-xs">
+          <span className="h-5 min-w-5 px-1 rounded bg-gray-200 app-body">
             {stats.pending}
           </span>
         )}
         {stats.error > 0 && (
-          <span className="h-5 min-w-5 px-1 rounded bg-red-500 text-white text-xs">
+          <span className="h-5 min-w-5 px-1 rounded bg-red-500 text-white app-body">
             {stats.error}
           </span>
         )}
@@ -107,8 +107,8 @@ export function RequestLogViewer() {
       <div className="flex items-center justify-between p-2 border-b bg-white rounded-t-lg shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Clock className="h-4 w-4 text-gray-500 shrink-0" />
-          <span className="font-semibold text-sm truncate">Log de diagnostico</span>
-          <div className="flex items-center gap-1 text-[10px]">
+          <span className="app-title truncate">Log de diagnostico</span>
+          <div className="flex items-center gap-1 app-body">
             <span className="px-1.5 py-0.5 rounded bg-gray-200">{stats.total}</span>
             <span className="px-1.5 py-0.5 rounded border text-yellow-600">{stats.pending}</span>
             <span className="px-1.5 py-0.5 rounded border text-green-600">{stats.success}</span>
@@ -143,14 +143,14 @@ export function RequestLogViewer() {
             key={v.key}
             variant={view === v.key ? 'secondary' : 'ghost'}
             size="sm"
-            className="h-6 text-[10px] capitalize px-1.5"
+            className="h-6 app-body capitalize px-1.5"
             onClick={() => setView(v.key)}
           >
             {v.label}
           </Button>
         ))}
         <div className="flex-1" />
-        <label className="flex items-center gap-1 text-[10px] cursor-pointer">
+        <label className="flex items-center gap-1 app-body cursor-pointer">
           <Checkbox
             checked={autoScroll}
             onChange={(e) => setAutoScroll(e.target.checked)}
@@ -159,7 +159,7 @@ export function RequestLogViewer() {
         </label>
       </div>
       {session && (
-        <div className="px-2 py-1 text-[10px] bg-slate-200 text-slate-700 border-b truncate" title={session.route}>
+        <div className="px-2 py-1 app-body bg-slate-200 text-slate-700 border-b truncate" title={session.route}>
           {session.route} &middot; {session.eventCount} eventos &middot; {session.errorCount} errores &middot; {session.slowCount} lentos &middot; {session.duplicateCount} dup
         </div>
       )}
@@ -176,7 +176,7 @@ export function RequestLogViewer() {
               <div
                 key={log.id}
                 className={cn(
-                  'p-2 text-xs hover:bg-white transition-colors border-b border-slate-200',
+                  'p-2 app-body hover:bg-white transition-colors border-b border-slate-200',
                   log.status === 'error' && 'bg-red-50',
                   log.status === 'pending' && 'bg-amber-50'
                 )}
@@ -184,23 +184,23 @@ export function RequestLogViewer() {
                 <div className="flex items-start gap-2">
                   <div className="flex items-center gap-1 mt-0.5">
                     {getStatusIcon(log.status)}
-                    <span className={cn('px-1 rounded text-[9px] font-medium', getTypeColor(log.type))}>
+                    <span className={cn('px-1 rounded app-body font-medium', getTypeColor(log.type))}>
                       {log.type}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{log.action}</div>
                     {log.duration !== undefined && (
-                      <div className="text-[10px] text-gray-500">{Math.round(log.duration)}ms</div>
+                      <div className="app-body text-gray-500">{Math.round(log.duration)}ms</div>
                     )}
                     {log.pathname && (
-                      <div className="text-[10px] text-gray-400 truncate">{log.pathname}</div>
+                      <div className="app-body text-gray-400 truncate">{log.pathname}</div>
                     )}
                     {log.error && (
-                      <div className="text-[10px] text-red-600 truncate">{log.error}</div>
+                      <div className="app-body text-red-600 truncate">{log.error}</div>
                     )}
                     {log.isDuplicate && (
-                      <span className="inline-block mt-0.5 px-1 rounded bg-amber-100 text-amber-800 text-[9px]">
+                      <span className="inline-block mt-0.5 px-1 rounded bg-amber-100 text-amber-800 app-body">
                         dup x{log.sessionCallCount}
                       </span>
                     )}

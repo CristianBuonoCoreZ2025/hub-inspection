@@ -215,7 +215,7 @@ export default function CompaniesPage() {
  }}
  />
  <label htmlFor="logo-upload" className="cursor-pointer">
- <span className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs font-medium shadow-sm transition-colors hover:bg-muted">
+ <span className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-2.5 py-1.5 app-body font-medium shadow-sm transition-colors hover:bg-muted">
  <Upload className="mr-1.5 h-3 w-3" />
  {logoUploading ? "Subiendo..." : "Subir logo"}
  </span>
@@ -223,7 +223,7 @@ export default function CompaniesPage() {
  {form.watch("logoUrl") && (
  <button
  type="button"
- className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-600 transition-colors"
+ className="inline-flex items-center gap-1 app-body text-red-500 hover:text-red-600 transition-colors"
  onClick={() => form.setValue("logoUrl", "")}
  >
  <X className="h-3 w-3" />
@@ -257,7 +257,7 @@ export default function CompaniesPage() {
  <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
  <Input {...form.register("name")} placeholder="Mapfre Seguros" className="app-input" />
  {form.formState.errors.name && (
- <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>
+ <p className="app-body text-red-500">{form.formState.errors.name.message}</p>
  )}
  </div>
 
@@ -289,14 +289,14 @@ export default function CompaniesPage() {
  )}
  />
  {form.formState.errors.countryId && (
- <p className="text-xs text-red-500">{form.formState.errors.countryId.message}</p>
+ <p className="app-body text-red-500">{form.formState.errors.countryId.message}</p>
  )}
  </div>
  <div className="modal-field">
  <Label className="app-field-label">{isChile ? "RUT" : "ID tributario"}</Label>
  <Input {...form.register("rut")} placeholder={isChile ? "12.345.678-9" : "Ej: 123456789"} className="app-input" />
  {form.formState.errors.rut && (
- <p className="text-xs text-red-500">{form.formState.errors.rut.message}</p>
+ <p className="app-body text-red-500">{form.formState.errors.rut.message}</p>
  )}
  </div>
 
@@ -305,7 +305,7 @@ export default function CompaniesPage() {
  <Label className="app-field-label">Email</Label>
  <Input {...form.register("email")} type="email" placeholder="contacto@empresa.cl" className="app-input" />
  {form.formState.errors.email && (
- <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
+ <p className="app-body text-red-500">{form.formState.errors.email.message}</p>
  )}
  </div>
 
@@ -380,7 +380,7 @@ export default function CompaniesPage() {
  className="h-10 w-auto max-w-25 rounded-lg border border-border/60 bg-white object-contain p-1 dark:bg-white"
  />
  ) : (
- <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-[11px] font-semibold text-muted-foreground">
+ <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted app-body font-semibold text-muted-foreground">
  {company.name.slice(0, 2).toUpperCase()}
  </div>
  )}
@@ -418,7 +418,7 @@ export default function CompaniesPage() {
  <button
  type="button"
  onClick={() => setUsersModalCompany({ id: company.id, name: company.name })}
- className="inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
+ className="inline-flex items-center gap-1.5 app-body font-medium text-primary hover:underline"
  >
  <Users className="h-3.5 w-3.5" />
  Ver
@@ -489,7 +489,7 @@ export default function CompaniesPage() {
  <td className="font-medium">{user.full_name || "—"}</td>
  <td>{user.email || "—"}</td>
  <td>
- <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+ <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 app-body font-medium text-muted-foreground">
  {userTypeLabel[user.role as keyof typeof userTypeLabel] || user.role}
  </span>
  </td>

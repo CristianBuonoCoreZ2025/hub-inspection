@@ -117,7 +117,7 @@ function NotStartedNotice() {
  <div className="app-panel">
  <h3 className="app-section-title">Pendiente</h3>
  <div className="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30">
- <p className="text-sm text-amber-950 dark:text-amber-100">
+ <p className="app-body text-amber-950 dark:text-amber-100">
  Inicia la inspección desde la pestaña Resumen para acceder a esta sección.
  </p>
  </div>
@@ -373,7 +373,7 @@ export default function InspectionDetailPage() {
  <p className="text-muted-foreground py-20 text-center">
  No se encontro la sesion de inspeccion.
  {isError && (
- <span className="block mt-2 text-rose-500 text-[11px]">
+ <span className="block mt-2 text-rose-500 app-body">
  Error: {(error as Error)?.message || "desconocido"}
  </span>
  )}
@@ -454,7 +454,7 @@ export default function InspectionDetailPage() {
  >
  <ArrowLeft className="h-4 w-4" />
  </Button>
- <p className="text-sm font-semibold truncate">
+ <p className="app-body font-semibold truncate">
  {session.inspection_number || `Inspección ${session.id.slice(0, 8)}`}
  </p>
  <Badge className={sessionStatusColors[session.status]}>
@@ -519,7 +519,7 @@ export default function InspectionDetailPage() {
  setActiveTab(t.id);
  syncTabMutation.mutate({ id: session.id, tab: t.id });
  }}
- className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
+ className={`flex items-center gap-2 px-4 py-2.5 app-body font-medium border-b-2 transition-colors whitespace-nowrap ${
  isActive
  ? "border-primary text-primary"
  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
@@ -541,7 +541,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Información General
  </h3>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[11px]">
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 app-body">
  <div>
  <span className="app-data-label">N° Interno</span>
  <p className="font-mono font-semibold text-primary">
@@ -590,7 +590,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Asegurado
  </h3>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[11px]">
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 app-body">
  <div>
  <span className="app-data-label">RUT</span>
  <p className="font-medium">{insuredParticipant?.rut || "—"}</p>
@@ -645,7 +645,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Datos del Siniestro
  </h3>
- <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-2 text-[11px]">
+ <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-2 app-body">
  <div>
  <span className="app-data-label">Nombre contacto</span>
  <p className="font-medium">{contactParticipant?.full_name || insuredParticipant?.full_name || "—"}</p>
@@ -686,7 +686,7 @@ export default function InspectionDetailPage() {
  <h3 className="app-section-title">
  Datos de la Coordinación
  </h3>
- <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-[11px]">
+ <div className="grid grid-cols-3 gap-x-4 gap-y-2 app-body">
  <div>
  <span className="app-data-label">Tipo de Inspección</span>
  <p className="font-medium">{session.inspection_type === "remote" ? "Remota" : session.inspection_type === "onsite" ? "Presencial" : "—"}</p>
@@ -732,7 +732,7 @@ export default function InspectionDetailPage() {
  <div className="app-panel border-amber-500/30 bg-amber-500/5">
  <div className="flex items-center gap-2">
  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
- <p className="text-[11px] text-amber-700 dark:text-amber-400">
+ <p className="app-body text-amber-700 dark:text-amber-400">
  Para iniciar la inspección presencial, primero debes <strong>capturar tu geolocalización</strong> en el lugar del siniestro (ver panel más abajo).
  </p>
  </div>
@@ -745,7 +745,7 @@ export default function InspectionDetailPage() {
  Estado de la Sesion
  </h3>
  <div className="flex items-start gap-4">
- <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 text-[11px] flex-1 min-w-0">
+ <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 app-body flex-1 min-w-0">
  <div>
  <span className="app-data-label">Estado</span>
  <p>
@@ -887,7 +887,7 @@ export default function InspectionDetailPage() {
  Acta de Inspeccion
  </h3>
  <div className="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30">
- <p className="text-sm text-amber-950 dark:text-amber-100">
+ <p className="app-body text-amber-950 dark:text-amber-100">
  Inicia la inspeccion para acceder al formulario del Acta.
  </p>
  </div>
@@ -971,7 +971,7 @@ export default function InspectionDetailPage() {
  <div className="w-[340px] shrink-0 hidden lg:flex flex-col">
  <div className="app-panel flex flex-col flex-1" style={{ position: "sticky", top: "80px", maxHeight: "calc(100vh - 100px)" }}>
  <div className="flex items-center justify-between mb-3 pb-2 border-b">
- <h3 className="text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
+ <h3 className="app-body font-semibold text-muted-foreground flex items-center gap-2">
  <MessageSquare className="h-4 w-4" />
  Chat
  </h3>
@@ -1117,17 +1117,17 @@ export default function InspectionDetailPage() {
  <CalendarClock className="h-3.5 w-3.5" />
  Disponibilidad
  </Label>
- <span className="text-[11px] text-muted-foreground">
+ <span className="app-body text-muted-foreground">
  {rescheduleType === "onsite" ? "Bloques de 2h" : "Bloques de 30min"} · Normal 9-18 · Extra 6-9 / 18-22
  </span>
  </div>
  {rescheduleScheduleLoading ? (
  <div className="flex items-center justify-center py-4">
  <Clock className="h-4 w-4 animate-spin text-muted-foreground" />
- <span className="ml-2 text-sm text-muted-foreground">Cargando...</span>
+ <span className="ml-2 app-body text-muted-foreground">Cargando...</span>
  </div>
  ) : rescheduleSlots.length === 0 ? (
- <p className="text-sm text-muted-foreground text-center py-4">Sin horarios disponibles.</p>
+ <p className="app-body text-muted-foreground text-center py-4">Sin horarios disponibles.</p>
  ) : (
  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[160px] overflow-y-auto p-1">
  {rescheduleSlots.map((slot) => (
@@ -1137,7 +1137,7 @@ export default function InspectionDetailPage() {
  disabled={!slot.available}
  title={slot.bookedInfo ? `Ocupado: ${slot.bookedInfo}` : slot.extra ? "Extra horario" : "Disponible"}
  onClick={() => setRescheduleTime(slot.time)}
- className={`rounded-lg border px-3 py-2 text-[11px] font-medium transition-all text-center ${
+ className={`rounded-lg border px-3 py-2 app-body font-medium transition-all text-center ${
  !slot.available
  ? "border-rose-500/20 bg-rose-500/5 text-rose-400 cursor-not-allowed line-through"
  : rescheduleTime === slot.time
@@ -1151,7 +1151,7 @@ export default function InspectionDetailPage() {
  >
  {slot.label}
  {slot.extra && slot.available && (
- <span className="block text-[9px] font-normal text-amber-500/70 truncate mt-0.5">extra</span>
+ <span className="block app-body font-normal text-amber-500/70 truncate mt-0.5">extra</span>
  )}
  </button>
  ))}
@@ -1159,7 +1159,7 @@ export default function InspectionDetailPage() {
  )}
  </div>
  ) : (
- <div className="rounded-lg border border-dashed border-border p-4 text-center text-[11px] text-muted-foreground">
+ <div className="rounded-lg border border-dashed border-border p-4 text-center app-body text-muted-foreground">
  Selecciona inspector y fecha para ver la disponibilidad.
  </div>
  )}
@@ -1218,18 +1218,18 @@ export default function InspectionDetailPage() {
  <div className="flex items-start gap-3">
  <XCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
  <div className="flex-1">
- <h3 className="text-[13px] font-semibold text-rose-700 dark:text-rose-300">
+ <h3 className="app-title text-rose-700 dark:text-rose-300">
  Inspección Cancelada
  </h3>
- <p className="text-[11px] text-muted-foreground mt-1">
+ <p className="app-body text-muted-foreground mt-1">
  {allCancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || "Motivo no registrado"}
  </p>
  {session.cancellation_notes && (
- <p className="text-[11px] text-muted-foreground mt-1 italic">
+ <p className="app-body text-muted-foreground mt-1 italic">
  &ldquo;{session.cancellation_notes}&rdquo;
  </p>
  )}
- <p className="text-[11px] text-muted-foreground mt-2">
+ <p className="app-body text-muted-foreground mt-2">
  Cancelada el {new Date(session.cancelled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
  </p>
  </div>

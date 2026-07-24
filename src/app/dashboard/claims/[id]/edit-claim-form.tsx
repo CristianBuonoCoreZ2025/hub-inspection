@@ -325,7 +325,7 @@ function EditSelect<T extends FieldValues = FieldValues>({
  className={item.isInternal ? "bg-amber-50 dark:bg-amber-950/20" : ""}
  >
  {item.label}
- {item.isInternal && <span className="text-[9px] text-amber-600 ml-1">· Interno</span>}
+ {item.isInternal && <span className="app-body text-amber-600 ml-1">· Interno</span>}
  </SelectItem>
  ))}
  </FormSelect>
@@ -1417,7 +1417,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  key={t.id}
  type="button"
  onClick={() => setActiveTab(t.id)}
- className={`flex items-center gap-2 px-4 py-2.5 text-[11px] font-medium border-b-2 transition-colors whitespace-nowrap ${
+ className={`flex items-center gap-2 px-4 py-2.5 app-body font-medium border-b-2 transition-colors whitespace-nowrap ${
  isActive
  ? "border-primary text-primary"
  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
@@ -1517,7 +1517,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  <button
  type="button"
  onClick={() => setOpenPolicyModal(true)}
- className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5"
+ className="app-body text-primary hover:text-primary/80 flex items-center gap-0.5"
  title="Crear nueva póliza"
  >
  <Plus className="h-3 w-3" />
@@ -1638,7 +1638,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  {/* Asegurado (no colapsable) */}
  <div className="app-panel">
  <div className="w-full flex items-center pb-2">
- <span className="app-section-title text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
+ <span className="app-section-title app-body font-semibold text-muted-foreground flex items-center gap-2">
  <User className="h-4 w-4" />
  Asegurado
  </span>
@@ -1647,7 +1647,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  {participantSuggestion?.section === "insured" && participantSuggestion.person && (
  <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 space-y-2">
  <div className="flex items-center justify-between gap-2">
- <div className="text-[11px] text-sky-800">
+ <div className="app-body text-sky-800">
  <span className="font-semibold">Persona encontrada:</span>{" "}
  {personDisplayName(participantSuggestion.person)}
  </div>
@@ -1661,13 +1661,13 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  </div>
  {participantSuggestion.person.person_addresses.length > 0 && (
  <div className="flex flex-wrap gap-1.5">
- <span className="text-[10px] text-sky-600">Direcciones previas:</span>
+ <span className="app-body text-sky-600">Direcciones previas:</span>
  {participantSuggestion.person.person_addresses.map((addr, idx) => (
  <button
  key={addr.id}
  type="button"
  onClick={() => selectAddress("insured", idx)}
- className={`text-[10px] rounded px-1.5 py-0.5 border transition-colors ${
+ className={`app-body rounded px-1.5 py-0.5 border transition-colors ${
  selectedAddressIdx.insured === idx
  ? "bg-sky-600 text-white border-sky-600"
  : "bg-white text-sky-700 border-sky-300 hover:bg-sky-100"
@@ -1761,12 +1761,12 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  {/* Contractor */}
  <div className="app-panel">
  <div className="w-full flex items-center justify-between pb-2">
- <span className="app-section-title text-[11px] font-semibold text-muted-foreground">Contratante</span>
+ <span className="app-section-title app-body font-semibold text-muted-foreground">Contratante</span>
  <Button
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 text-[11px] w-[150px] justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-[150px] justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={toggleContractorLink}
  >
  {contractorLinked ? "Desligar" : "Copiar"}
@@ -1776,7 +1776,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  {participantSuggestion?.section === "contractor" && !contractorLinked && participantSuggestion.person && (
  <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 space-y-2">
  <div className="flex items-center justify-between gap-2">
- <div className="text-[11px] text-sky-800">
+ <div className="app-body text-sky-800">
  <span className="font-semibold">Persona encontrada:</span>{" "}
  {personDisplayName(participantSuggestion.person)}
  </div>
@@ -1790,13 +1790,13 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  </div>
  {participantSuggestion.person.person_addresses.length > 0 && (
  <div className="flex flex-wrap gap-1.5">
- <span className="text-[10px] text-sky-600">Direcciones previas:</span>
+ <span className="app-body text-sky-600">Direcciones previas:</span>
  {participantSuggestion.person.person_addresses.map((addr, idx) => (
  <button
  key={addr.id}
  type="button"
  onClick={() => selectAddress("contractor", idx)}
- className={`text-[10px] rounded px-1.5 py-0.5 border transition-colors ${
+ className={`app-body rounded px-1.5 py-0.5 border transition-colors ${
  selectedAddressIdx.contractor === idx
  ? "bg-sky-600 text-white border-sky-600"
  : "bg-white text-sky-700 border-sky-300 hover:bg-sky-100"
@@ -1892,12 +1892,12 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  {/* Beneficiary */}
  <div className="app-panel">
  <div className="w-full flex items-center justify-between pb-2">
- <span className="app-section-title text-[11px] font-semibold text-muted-foreground">Beneficiario</span>
+ <span className="app-section-title app-body font-semibold text-muted-foreground">Beneficiario</span>
  <Button
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 text-[11px] w-[150px] justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-[150px] justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={toggleBeneficiaryLink}
  >
  {beneficiaryLinked ? "Desligar" : "Copiar"}
@@ -1907,7 +1907,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  {participantSuggestion?.section === "beneficiary" && !beneficiaryLinked && participantSuggestion.person && (
  <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 space-y-2">
  <div className="flex items-center justify-between gap-2">
- <div className="text-[11px] text-sky-800">
+ <div className="app-body text-sky-800">
  <span className="font-semibold">Persona encontrada:</span>{" "}
  {personDisplayName(participantSuggestion.person)}
  </div>
@@ -1921,13 +1921,13 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  </div>
  {participantSuggestion.person.person_addresses.length > 0 && (
  <div className="flex flex-wrap gap-1.5">
- <span className="text-[10px] text-sky-600">Direcciones previas:</span>
+ <span className="app-body text-sky-600">Direcciones previas:</span>
  {participantSuggestion.person.person_addresses.map((addr, idx) => (
  <button
  key={addr.id}
  type="button"
  onClick={() => selectAddress("beneficiary", idx)}
- className={`text-[10px] rounded px-1.5 py-0.5 border transition-colors ${
+ className={`app-body rounded px-1.5 py-0.5 border transition-colors ${
  selectedAddressIdx.beneficiary === idx
  ? "bg-sky-600 text-white border-sky-600"
  : "bg-white text-sky-700 border-sky-300 hover:bg-sky-100"
@@ -2022,10 +2022,10 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
 
  {contact && !insured && !contractor && !beneficiary && (
  <div className="app-panel text-center py-6">
- <p className="text-muted-foreground text-[11px]">
+ <p className="text-muted-foreground app-body">
  Persona de Contacto: {contact.full_name} — {contact.email || contact.phone || "—"}
  </p>
- <p className="text-muted-foreground text-xs mt-1">(editable en tab Incidente)</p>
+ <p className="text-muted-foreground app-body mt-1">(editable en tab Incidente)</p>
  </div>
  )}
  </div>
@@ -2037,7 +2037,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  {/* Dirección del Incidente */}
  <div className="app-panel">
  <div className="flex items-center justify-between pb-2">
- <h3 className="app-section-title text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
+ <h3 className="app-section-title app-body font-semibold text-muted-foreground flex items-center gap-2">
  <MapPin className="h-4 w-4" />
  Dirección del Incidente
  </h3>
@@ -2045,7 +2045,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 text-[11px] w-[150px] justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-[150px] justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={toggleClaimAddressLink}
  >
  {claimAddressLinked ? "Desligar" : "Copiar"}
@@ -2111,23 +2111,23 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  </div>
  <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/50">
  <div className="flex items-center gap-2 min-w-0">
- <span className="text-[11px] font-medium shrink-0">Ubicación en mapa</span>
+ <span className="app-body font-medium shrink-0">Ubicación en mapa</span>
  {watch("claimLatitude") && watch("claimLongitude") ? (
- <div className="text-[11px] text-emerald-600 flex items-center gap-2 min-w-0">
+ <div className="app-body text-emerald-600 flex items-center gap-2 min-w-0">
  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
  <span className="truncate">
  {Number(watch("claimLatitude")).toFixed(6)}, {Number(watch("claimLongitude")).toFixed(6)}
  </span>
  </div>
  ) : (
- <span className="text-[11px] text-muted-foreground">Sin ubicación confirmada</span>
+ <span className="app-body text-muted-foreground">Sin ubicación confirmada</span>
  )}
  </div>
  <Button
  type="button"
  variant="outline"
  size="sm"
- className="pg-btn-platinum h-6 text-[11px] shrink-0"
+ className="pg-btn-platinum h-6 app-body shrink-0"
  onClick={() => setLocationSelectorOpen(true)}
  >
  Buscar ubicación
@@ -2141,6 +2141,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  city={selectedCityName}
  region={selectedRegionName}
  country={selectedCountryName}
+ claimCoords={watch("claimLatitude") && watch("claimLongitude") ? { lat: Number(watch("claimLatitude")), lng: Number(watch("claimLongitude")) } : null}
  onSelect={(candidate: GeocodeCandidate) => {
  setValue("claimLatitude", candidate.lat);
  setValue("claimLongitude", candidate.lng);
@@ -2254,8 +2255,8 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  : "border-border hover:border-primary/40"
  }`}
  >
- <div className="text-[11px] font-semibold">Pendiente</div>
- <div className="text-[10px] text-muted-foreground mt-0.5">
+ <div className="app-body font-semibold">Pendiente</div>
+ <div className="app-body text-muted-foreground mt-0.5">
  Póliza sin número. El siniestro queda detenido hasta asignar el número correcto.
  </div>
  </button>
@@ -2268,8 +2269,8 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  : "border-border hover:border-primary/40"
  }`}
  >
- <div className="text-[11px] font-semibold">N° Pendiente</div>
- <div className="text-[10px] text-muted-foreground mt-0.5">
+ <div className="app-body font-semibold">N° Pendiente</div>
+ <div className="app-body text-muted-foreground mt-0.5">
  Póliza genérica para la compañía. Permite cargar cualquier cobertura.
  </div>
  </button>

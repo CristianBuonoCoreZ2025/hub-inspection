@@ -38,7 +38,6 @@ import { getFieldPermissions, type FieldPermission } from "@/services/field-perm
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -394,16 +393,16 @@ export default function GestionesPage() {
  <span className={`flex h-5 w-5 items-center justify-center rounded-md ${sty.bg} ${sty.color} shrink-0`}>
  {cfg.icon}
  </span>
- <span className={`text-[11px] font-semibold ${sty.color}`}>{cfg.title}</span>
+ <span className={`app-title ${sty.color}`}>{cfg.title}</span>
  </div>
  {/* Body */}
  <div className="p-3 space-y-3">
  {/* Roles — chips clicables con pelotita verde de "por defecto" */}
  <div className="space-y-1.5">
  <div className="flex items-center justify-between">
- <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">Roles</span>
+ <span className="app-body font-medium uppercase tracking-wide text-muted-foreground/70">Roles</span>
  {selectedRoles.length > 0 && (
- <span className="text-[9px] text-muted-foreground/50">Click en la pelotita verde para marcar el rol por defecto</span>
+ <span className="app-body text-muted-foreground/50">Click en la pelotita verde para marcar el rol por defecto</span>
  )}
  </div>
  <div className="flex flex-wrap gap-1">
@@ -416,7 +415,7 @@ export default function GestionesPage() {
  type="button"
  onClick={() => !rolesDisabled && toggleRole(cfg.rolesField, r.value)}
  disabled={rolesDisabled}
- className={`px-2 py-0.5 pr-6 rounded-md text-[11px] font-medium border transition-all ${
+ className={`px-2 py-0.5 pr-6 rounded-md app-body font-medium border transition-all ${
  active
  ? `${sty.checkBorder} ${sty.checkBg} ${sty.color}`
  : "border-border text-muted-foreground hover:bg-muted/50 hover:border-border/80"
@@ -452,7 +451,7 @@ export default function GestionesPage() {
  <div className="flex items-center justify-between gap-2">
  <div className="flex items-center gap-1.5">
  <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
- <span className="text-[11px] text-muted-foreground">Vence</span>
+ <span className="app-body text-muted-foreground">Vence</span>
  </div>
  <div className="flex items-center gap-1">
  <Input
@@ -469,14 +468,14 @@ export default function GestionesPage() {
  style={{ borderRadius: "6px", height: "28px", width: "56px", padding: 0, fontSize: "12px" }}
  className="border border-border bg-card text-center font-semibold tabular-nums focus-visible:ring-1 focus-visible:ring-primary/30"
  />
- <span className="text-[10px] text-muted-foreground shrink-0 w-6">días</span>
+ <span className="app-body text-muted-foreground shrink-0 w-6">días</span>
  </div>
  </div>
  {/* Alerta */}
  <div className="flex items-center justify-between gap-2">
  <div className="flex items-center gap-1.5">
  <AlertTriangle className={`h-3.5 w-3.5 shrink-0 ${alertInvalid ? "text-red-500" : "text-muted-foreground"}`} />
- <span className="text-[11px] text-muted-foreground">Alerta</span>
+ <span className="app-body text-muted-foreground">Alerta</span>
  </div>
  <div className="flex items-center gap-1">
  <Input
@@ -491,7 +490,7 @@ export default function GestionesPage() {
  alertInvalid ? "border-red-500/60" : "border-border"
  }`}
  />
- <span className="text-[10px] text-muted-foreground shrink-0 w-6">días</span>
+ <span className="app-body text-muted-foreground shrink-0 w-6">días</span>
  </div>
  </div>
  </div>
@@ -503,7 +502,7 @@ export default function GestionesPage() {
  return (
  <div className="app-page">
  {/* Breadcrumbs */}
- <nav className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-3">
+ <nav className="flex items-center gap-1.5 app-body text-muted-foreground mb-3">
  <button type="button" onClick={cancelEdit} className="hover:text-foreground transition-colors">
  Gestiones
  </button>
@@ -561,7 +560,7 @@ export default function GestionesPage() {
  <div className="flex items-center justify-between border-b border-border/60 px-4 py-2.5 bg-muted/30">
  <div className="flex items-center gap-2">
  <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
- <h3 className="text-[11px] font-semibold text-foreground">Configuración</h3>
+ <h3 className="app-title text-foreground">Configuración</h3>
  </div>
  </div>
  {/* Body */}
@@ -569,7 +568,7 @@ export default function GestionesPage() {
  {/* Fila 1: Código + Nombre + Tipo (3 cols) */}
  <div className="grid grid-cols-3 gap-x-4 gap-y-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Código</Label>
+ <Label className="app-body text-muted-foreground">Código</Label>
  <div className="app-input flex items-center px-2 font-mono text-muted-foreground bg-muted/40">
  {(() => {
  const feat = features?.find(f => f.id === form.action_features_id);
@@ -581,13 +580,13 @@ export default function GestionesPage() {
  </div>
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Nombre <span className="text-red-500">*</span>
  </Label>
  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej: Coordinación de Inspección" className="app-input" disabled={isFieldDisabled("name")} />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Tipo <span className="text-red-500">*</span>
  </Label>
  <Select value={form.action_type_id || null} onValueChange={(v) => setForm({ ...form, action_type_id: v ?? "" })} items={types?.map(t => ({ value: t.id, label: t.name })) || []}>
@@ -600,7 +599,7 @@ export default function GestionesPage() {
  {/* Fila 2: Característica + Línea + Despacho (3 cols) */}
  <div className="grid grid-cols-3 gap-x-4 gap-y-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Característica <span className="text-red-500">*</span>
  {editingId && <span className="text-amber-600 ml-1">(inmutable)</span>}
  </Label>
@@ -632,7 +631,7 @@ export default function GestionesPage() {
  })()}
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Línea de Negocio
  {editingId && <span className="text-amber-600 ml-1">(inmutable)</span>}
  </Label>
@@ -652,16 +651,17 @@ export default function GestionesPage() {
  if (!feat?.has_template) return <div />; // celda vacía para mantener el grid de 3
  return (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground" title="Si está activo, solo el perfil Despachador puede convertir el documento a PDF después de completar todas las revisiones">
+ <Label className="app-body text-muted-foreground" title="Si está activo, solo el perfil Despachador puede convertir el documento a PDF después de completar todas las revisiones">
  Solo despachador convierte a PDF
  </Label>
  <div className="flex h-7 items-center gap-2">
- <Switch
- checked={form.is_dispatch_applicable}
- onCheckedChange={(v) => setForm({ ...form, is_dispatch_applicable: v })}
+ <ToggleChip
+ active={form.is_dispatch_applicable}
+ onClick={(v) => setForm({ ...form, is_dispatch_applicable: v })}
  disabled={isFieldDisabled("is_dispatch_applicable")}
- />
- <span className="text-[11px] text-muted-foreground">{form.is_dispatch_applicable ? "Sí" : "No"}</span>
+ >
+ {form.is_dispatch_applicable ? "Sí" : "No"}
+ </ToggleChip>
  </div>
  </div>
  );
@@ -670,7 +670,7 @@ export default function GestionesPage() {
 
  {/* Descripción full-width */}
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Descripción</Label>
+ <Label className="app-body text-muted-foreground">Descripción</Label>
  <Textarea
  value={form.description}
  onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -696,17 +696,17 @@ export default function GestionesPage() {
  Bloqueante
  </ToggleChip>
  {canBlock && form.is_blocker && (
- <span className="text-[10px] text-muted-foreground">Bloquea login si hay tareas atrasadas</span>
+ <span className="app-body text-muted-foreground">Bloquea login si hay tareas atrasadas</span>
  )}
  {!canBlock && (
- <span className="text-[10px] text-amber-600">Requiere workflow con días &gt; 0</span>
+ <span className="app-body text-amber-600">Requiere workflow con días &gt; 0</span>
  )}
  </div>
  );
  })()}
  {/* Estados de liquidación donde aplica */}
  <div>
- <Label className="text-[10px] text-muted-foreground mb-1.5 block">
+ <Label className="app-body text-muted-foreground mb-1.5 block">
  Estados de liquidación donde aplica
  </Label>
  <div className="flex flex-wrap gap-1.5">
@@ -717,7 +717,7 @@ export default function GestionesPage() {
  key={cs.id}
  type="button"
  onClick={() => toggleStatus(cs.id)}
- className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] transition-colors ${
+ className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 app-body transition-colors ${
  active
  ? "border-primary bg-primary/10 text-primary font-medium"
  : "border-border text-muted-foreground hover:bg-muted/50"
@@ -729,7 +729,7 @@ export default function GestionesPage() {
  );
  })}
  {(!claimStatuses || claimStatuses.length === 0) && (
- <span className="text-[10px] text-muted-foreground">No hay estados configurados.</span>
+ <span className="app-body text-muted-foreground">No hay estados configurados.</span>
  )}
  </div>
  </div>
@@ -744,7 +744,7 @@ export default function GestionesPage() {
 
  {/* Selector de niveles — segmented control profesional */}
  <div className="mb-4">
- <Label className="text-[10px] text-muted-foreground mb-2 block">
+ <Label className="app-body text-muted-foreground mb-2 block">
  Niveles de revisión
  {(() => {
  const feat = features?.find(f => f.id === form.action_features_id);
@@ -775,7 +775,7 @@ export default function GestionesPage() {
  type="button"
  disabled={disabled}
  onClick={() => setForm({ ...form, review_levels: opt.value })}
- className={`px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-all ${
+ className={`px-3 py-1.5 rounded-lg app-body font-medium border transition-all ${
  active
  ? "border-primary bg-primary/10 text-primary"
  : "border-border text-muted-foreground hover:bg-muted/50"
@@ -792,7 +792,7 @@ export default function GestionesPage() {
 
  {/* Steps según el nivel seleccionado — 3 tarjetas lado a lado */}
  {form.review_levels === 0 ? (
- <div className="rounded-lg border border-dashed border-border/60 p-4 text-center text-[11px] text-muted-foreground">
+ <div className="rounded-lg border border-dashed border-border/60 p-4 text-center app-body text-muted-foreground">
  Esta gestión no tiene workflow de revisión.
  </div>
  ) : (
@@ -846,7 +846,7 @@ export default function GestionesPage() {
  <div className="app-empty-state flex flex-col items-center gap-2">
  <AlertTriangle className="h-5 w-5 text-amber-500" />
  <span>Esta característica no soporta templates.</span>
- <span className="text-[10px]">
+ <span className="app-body">
  La pantalla asociada no tiene flujo de templates. Asigná una pantalla con campo &laquo;Templates&raquo; en el catálogo de pantallas para habilitar esta sección.
  </span>
  </div>
@@ -956,7 +956,7 @@ export default function GestionesPage() {
  Inactivas
  </ToggleChip>
  {(filterFeature || filterLine || search) && (
- <Button variant="ghost" size="sm" className="h-8 text-[11px] text-muted-foreground px-2" onClick={() => { setFilterFeature(""); setFilterLine(""); setSearch(""); setPage(1); }}>
+ <Button variant="ghost" size="sm" className="h-8 app-body text-muted-foreground px-2" onClick={() => { setFilterFeature(""); setFilterLine(""); setSearch(""); setPage(1); }}>
  <X className="h-3.5 w-3.5" /> Limpiar
  </Button>
  )}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -134,8 +134,8 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  <LayoutTemplate className="h-5 w-5" />
  </div>
  <div>
- <h3 className="text-sm font-semibold">Diseñar pantalla</h3>
- <p className="text-[11px] text-muted-foreground">{screen?.name || "Pantalla"}</p>
+ <h3 className="app-title">Diseñar pantalla</h3>
+ <p className="app-body text-muted-foreground">{screen?.name || "Pantalla"}</p>
  </div>
  </div>
  <div className="flex items-center gap-2">
@@ -156,10 +156,10 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  <div className="flex flex-col gap-4 border-r bg-muted/20 p-3 overflow-y-auto">
  {/* Campos propios */}
  <div>
- <p className="text-[11px] font-semibold mb-2 flex items-center gap-1.5">
+ <p className="app-title mb-2 flex items-center gap-1.5">
  <Pencil className="h-3 w-3" /> Campos propios
  </p>
- <p className="text-[9px] text-muted-foreground mb-2">
+ <p className="app-body text-muted-foreground mb-2">
  Editables. El usuario completa estos datos.
  </p>
  <div className="space-y-1">
@@ -169,12 +169,12 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  type="button"
  onClick={() => addField("own", t.code, t.label)}
  title={t.desc}
- className="w-full flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-[11px] text-left hover:bg-muted/50 transition-colors"
+ className="w-full flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 app-body text-left hover:bg-muted/50 transition-colors"
  >
- <span className="text-[14px] w-4 text-center shrink-0">{t.icon}</span>
+ <span className="app-body w-4 text-center shrink-0">{t.icon}</span>
  <div className="flex-1 min-w-0">
  <div className="truncate">{t.label}</div>
- <div className="text-[9px] text-muted-foreground truncate">{t.desc}</div>
+ <div className="app-body text-muted-foreground truncate">{t.desc}</div>
  </div>
  </button>
  ))}
@@ -183,10 +183,10 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
 
  {/* Entidades del siniestro */}
  <div>
- <p className="text-[11px] font-semibold mb-2 flex items-center gap-1.5">
+ <p className="app-title mb-2 flex items-center gap-1.5">
  <Database className="h-3 w-3" /> Datos del siniestro
  </p>
- <p className="text-[9px] text-muted-foreground mb-2">
+ <p className="app-body text-muted-foreground mb-2">
  Solo vista. Datos del siniestro.
  </p>
  <div className="space-y-1">
@@ -196,12 +196,12 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  type="button"
  onClick={() => addField("simple_entity", t.code, t.label)}
  title={t.desc}
- className="w-full flex items-center gap-2 rounded-md border border-dashed border-border bg-card px-2 py-1.5 text-[11px] text-left hover:bg-muted/50 transition-colors"
+ className="w-full flex items-center gap-2 rounded-md border border-dashed border-border bg-card px-2 py-1.5 app-body text-left hover:bg-muted/50 transition-colors"
  >
- <span className="text-[14px] w-4 text-center shrink-0">{t.icon}</span>
+ <span className="app-body w-4 text-center shrink-0">{t.icon}</span>
  <div className="flex-1 min-w-0">
  <div className="truncate">{t.label}</div>
- <div className="text-[9px] text-muted-foreground truncate">{t.desc}</div>
+ <div className="app-body text-muted-foreground truncate">{t.desc}</div>
  </div>
  </button>
  ))}
@@ -210,10 +210,10 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
 
  {/* Entidades de la gestión */}
  <div>
- <p className="text-[11px] font-semibold mb-2 flex items-center gap-1.5">
+ <p className="app-title mb-2 flex items-center gap-1.5">
  <Database className="h-3 w-3" /> Datos de la gestión
  </p>
- <p className="text-[9px] text-muted-foreground mb-2">
+ <p className="app-body text-muted-foreground mb-2">
  Solo vista. Emisor, revisor, aprobador, fechas de la gestión.
  </p>
  <div className="space-y-1">
@@ -223,12 +223,12 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  type="button"
  onClick={() => addField("simple_entity", t.code, t.label)}
  title={t.desc}
- className="w-full flex items-center gap-2 rounded-md border border-dashed border-border bg-card px-2 py-1.5 text-[11px] text-left hover:bg-muted/50 transition-colors"
+ className="w-full flex items-center gap-2 rounded-md border border-dashed border-border bg-card px-2 py-1.5 app-body text-left hover:bg-muted/50 transition-colors"
  >
- <span className="text-[14px] w-4 text-center shrink-0">{t.icon}</span>
+ <span className="app-body w-4 text-center shrink-0">{t.icon}</span>
  <div className="flex-1 min-w-0">
  <div className="truncate">{t.label}</div>
- <div className="text-[9px] text-muted-foreground truncate">{t.desc}</div>
+ <div className="app-body text-muted-foreground truncate">{t.desc}</div>
  </div>
  </button>
  ))}
@@ -237,10 +237,10 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
 
  {/* Entidades complejas */}
  <div>
- <p className="text-[11px] font-semibold mb-2 flex items-center gap-1.5">
+ <p className="app-title mb-2 flex items-center gap-1.5">
  <Boxes className="h-3 w-3" /> Entidades complejas
  </p>
- <p className="text-[9px] text-muted-foreground mb-2">
+ <p className="app-body text-muted-foreground mb-2">
  Solo vista. Estructuras completas del siniestro.
  </p>
  <div className="space-y-1">
@@ -250,12 +250,12 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  type="button"
  onClick={() => addField("complex_entity", t.code, t.label)}
  title={t.desc}
- className="w-full flex items-center gap-2 rounded-md border border-dashed border-violet-300 bg-violet-50/50 dark:bg-violet-900/10 px-2 py-1.5 text-[11px] text-left hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
+ className="w-full flex items-center gap-2 rounded-md border border-dashed border-violet-300 bg-violet-50/50 dark:bg-violet-900/10 px-2 py-1.5 app-body text-left hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
  >
- <span className="text-[14px] w-4 text-center shrink-0">{t.icon}</span>
+ <span className="app-body w-4 text-center shrink-0">{t.icon}</span>
  <div className="flex-1 min-w-0">
  <div className="truncate">{t.label}</div>
- <div className="text-[9px] text-muted-foreground truncate">{t.desc}</div>
+ <div className="app-body text-muted-foreground truncate">{t.desc}</div>
  </div>
  </button>
  ))}
@@ -268,15 +268,15 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  ═════════════════════════════════════════════════════════ */}
  <div className="flex flex-col overflow-hidden bg-white dark:bg-zinc-950">
  <div className="border-b px-4 py-2 flex items-center justify-between bg-muted/20">
- <p className="text-[11px] font-semibold text-muted-foreground">Vista del formulario</p>
- <span className="text-[10px] text-muted-foreground">{fields.length} campo(s)</span>
+ <p className="app-title text-muted-foreground">Vista del formulario</p>
+ <span className="app-body text-muted-foreground">{fields.length} campo(s)</span>
  </div>
  <div className="flex-1 overflow-y-auto p-5 space-y-3">
  {fields.length === 0 && (
  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-2 py-12">
  <LayoutTemplate className="h-10 w-10 opacity-20" />
- <p className="text-[11px]">El formulario está vacío</p>
- <p className="text-[11px]">Agrega campos desde el lateral izquierdo</p>
+ <p className="app-body">El formulario está vacío</p>
+ <p className="app-body">Agrega campos desde el lateral izquierdo</p>
  </div>
  )}
  {fields.map((field, idx) => (
@@ -299,7 +299,7 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  ═════════════════════════════════════════════════════════ */}
  <div className="flex flex-col border-l bg-muted/20 overflow-hidden">
  <div className="border-b px-4 py-2">
- <p className="text-[11px] font-semibold text-muted-foreground">Propiedades</p>
+ <p className="app-title text-muted-foreground">Propiedades</p>
  </div>
  <div className="flex-1 overflow-y-auto p-3">
  {selectedField ? (
@@ -313,7 +313,7 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  ) : (
  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-2">
  <Pencil className="h-8 w-8 opacity-20" />
- <p className="text-[11px]">Selecciona un campo del formulario para editar sus propiedades</p>
+ <p className="app-body">Selecciona un campo del formulario para editar sus propiedades</p>
  </div>
  )}
  </div>
@@ -347,7 +347,7 @@ function PropertiesPanel({
  return (
  <div className="space-y-3">
  {/* Tipo y categoría */}
- <div className="rounded-md border border-border bg-card p-2 text-[11px]">
+ <div className="rounded-md border border-border bg-card p-2 app-body">
  <div className="flex items-center justify-between">
  <span className="text-muted-foreground">Tipo:</span>
  <span className="font-medium uppercase">{field.type}</span>
@@ -361,7 +361,7 @@ function PropertiesPanel({
  </span>
  </div>
  {isEntity && (
- <p className="text-[10px] text-muted-foreground mt-1.5 pt-1.5 border-t">
+ <p className="app-body text-muted-foreground mt-1.5 pt-1.5 border-t">
  {isActionEntity
  ? "Solo vista. Se muestra automáticamente con datos de la gestión."
  : "Solo vista. Se muestra automáticamente con datos del siniestro."}
@@ -371,9 +371,9 @@ function PropertiesPanel({
 
  {/* Etiqueta */}
  <div>
- <Label className="app-field-label text-[10px]">Etiqueta visible</Label>
+ <Label className="app-field-label app-body">Etiqueta visible</Label>
  <Input
- className="app-input h-8 text-[11px]"
+ className="app-input h-8 app-body"
  value={field.label}
  onChange={(e) => onUpdate(index, { label: e.target.value })}
  />
@@ -381,33 +381,34 @@ function PropertiesPanel({
 
  {/* ID técnico */}
  <div>
- <Label className="app-field-label text-[10px]">ID técnico</Label>
+ <Label className="app-field-label app-body">ID técnico</Label>
  <Input
- className="app-input h-8 text-[11px] font-mono"
+ className="app-input h-8 app-body font-mono"
  value={field.id}
  onChange={(e) => onUpdate(index, { id: e.target.value })}
  />
- <p className="text-[9px] text-muted-foreground mt-0.5">Identificador único para guardar el dato</p>
+ <p className="app-body text-muted-foreground mt-0.5">Identificador único para guardar el dato</p>
  </div>
 
  {/* ─── Propiedades de campos propios ─── */}
  {!isEntity && field.type !== "section" && (
- <label className="flex items-center gap-2 text-[11px]">
- <Checkbox
- checked={!!field.required}
- onChange={(e) => onUpdate(index, { required: (e.target as HTMLInputElement).checked })}
- />
+ <div className="flex items-center gap-2">
+ <ToggleChip
+ active={!!field.required}
+ onClick={(v) => onUpdate(index, { required: v })}
+ >
  Campo obligatorio
- </label>
+ </ToggleChip>
+ </div>
  )}
 
  {/* Texto: alfanumérico/numérico + largo */}
  {!isEntity && (field.type === "text" || field.type === "textarea") && (
  <>
  <div>
- <Label className="app-field-label text-[10px]">Tipo de contenido</Label>
+ <Label className="app-field-label app-body">Tipo de contenido</Label>
  <select
- className="app-input h-8 text-[11px] w-full"
+ className="app-input h-8 app-body w-full"
  value={field.inputType || "alphanumeric"}
  onChange={(e) => onUpdate(index, { inputType: e.target.value as "alphanumeric" | "numeric" })}
  >
@@ -416,14 +417,14 @@ function PropertiesPanel({
  </select>
  </div>
  <div>
- <Label className="app-field-label text-[10px]">Largo máximo</Label>
+ <Label className="app-field-label app-body">Largo máximo</Label>
  <Input
  type="number"
- className="app-input h-8 text-[11px]"
+ className="app-input h-8 app-body"
  value={field.maxLength || ""}
  onChange={(e) => onUpdate(index, { maxLength: Number(e.target.value) || undefined })}
  />
- <p className="text-[9px] text-muted-foreground mt-0.5">Cantidad máxima de caracteres</p>
+ <p className="app-body text-muted-foreground mt-0.5">Cantidad máxima de caracteres</p>
  </div>
  </>
  )}
@@ -431,9 +432,9 @@ function PropertiesPanel({
  {/* Placeholder para texto/textarea */}
  {!isEntity && (field.type === "text" || field.type === "textarea") && (
  <div>
- <Label className="app-field-label text-[10px]">Placeholder</Label>
+ <Label className="app-field-label app-body">Placeholder</Label>
  <Input
- className="app-input h-8 text-[11px]"
+ className="app-input h-8 app-body"
  value={field.placeholder || ""}
  onChange={(e) => onUpdate(index, { placeholder: e.target.value })}
  />
@@ -443,10 +444,10 @@ function PropertiesPanel({
  {/* Filas para textarea */}
  {!isEntity && field.type === "textarea" && (
  <div>
- <Label className="app-field-label text-[10px]">Filas de altura</Label>
+ <Label className="app-field-label app-body">Filas de altura</Label>
  <Input
  type="number"
- className="app-input h-8 text-[11px]"
+ className="app-input h-8 app-body"
  value={field.rows || 3}
  onChange={(e) => onUpdate(index, { rows: Number(e.target.value) })}
  />
@@ -457,9 +458,9 @@ function PropertiesPanel({
  {!isEntity && field.type === "date" && (
  <>
  <div>
- <Label className="app-field-label text-[10px]">Tipo de fecha</Label>
+ <Label className="app-field-label app-body">Tipo de fecha</Label>
  <select
- className="app-input h-8 text-[11px] w-full"
+ className="app-input h-8 app-body w-full"
  value={field.dateType || "date"}
  onChange={(e) => onUpdate(index, { dateType: e.target.value as "date" | "datetime" })}
  >
@@ -469,8 +470,8 @@ function PropertiesPanel({
  </div>
 
  <div>
- <Label className="app-field-label text-[10px]">Validación de fecha</Label>
- <p className="text-[9px] text-muted-foreground mb-1">Opcional. Valida contra otra fecha o la actual.</p>
+ <Label className="app-field-label app-body">Validación de fecha</Label>
+ <p className="app-body text-muted-foreground mb-1">Opcional. Valida contra otra fecha o la actual.</p>
  <Select
  value={field.dateValidation?.type || "__none"}
  onValueChange={(v) => {
@@ -501,7 +502,7 @@ function PropertiesPanel({
  {field.dateValidation?.type && field.dateValidation.type.includes("than") &&
  !field.dateValidation.type.includes("today") && (
  <div>
- <Label className="app-field-label text-[10px]">Comparar con</Label>
+ <Label className="app-field-label app-body">Comparar con</Label>
  <Select
  value={field.dateValidation.compareField || "__none"}
  onValueChange={(v) => onUpdate(index, {
@@ -519,7 +520,7 @@ function PropertiesPanel({
  ))}
  </SelectContent>
  </Select>
- <p className="text-[9px] text-muted-foreground mt-0.5">
+ <p className="app-body text-muted-foreground mt-0.5">
  Solo campos de fecha del formulario
  </p>
  </div>
@@ -530,10 +531,10 @@ function PropertiesPanel({
  {/* ─── Select: opciones ─── */}
  {!isEntity && (field.type === "select") && (
  <div>
- <Label className="app-field-label text-[10px]">Opciones</Label>
- <p className="text-[9px] text-muted-foreground mb-1">Una por línea. Formato: valor=Etiqueta</p>
+ <Label className="app-field-label app-body">Opciones</Label>
+ <p className="app-body text-muted-foreground mb-1">Una por línea. Formato: valor=Etiqueta</p>
  <Textarea
- className="app-input text-[11px]"
+ className="app-input app-body"
  value={field.options?.map((o) => `${o.value}=${o.label}`).join("\n") || ""}
  onChange={(e) => {
  const options = e.target.value
@@ -553,10 +554,10 @@ function PropertiesPanel({
  {/* ─── Tabla: columnas ─── */}
  {!isEntity && field.type === "table" && (
  <div>
- <Label className="app-field-label text-[10px]">Columnas</Label>
- <p className="text-[9px] text-muted-foreground mb-1">Una columna por línea</p>
+ <Label className="app-field-label app-body">Columnas</Label>
+ <p className="app-body text-muted-foreground mb-1">Una columna por línea</p>
  <Textarea
- className="app-input text-[11px]"
+ className="app-input app-body"
  value={field.columns?.join("\n") || ""}
  onChange={(e) => {
  const columns = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean);
@@ -570,37 +571,34 @@ function PropertiesPanel({
  {/* Configuración específica para Recepción de Documentos (claim_document_receipt) */}
  {field.type === "claim_document_receipt" && (
  <div className="space-y-2 pt-2 border-t">
- <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Comportamiento</p>
- <label className="flex items-start gap-2 cursor-pointer">
- <Checkbox
- checked={field.config?.blockEmitUntilAllResolved !== false}
- onChange={(e) => onUpdate(index, { config: { ...field.config, blockEmitUntilAllResolved: e.target.checked } })}
- />
- <div>
- <span className="text-[11px] font-medium">Bloquear emisión hasta recibir todos</span>
- <p className="text-[9px] text-muted-foreground">No permite emitir manualmente hasta que todos los documentos estén recibidos o no necesarios</p>
+ <p className="app-body font-semibold text-muted-foreground uppercase tracking-wide">Comportamiento</p>
+ <div className="flex flex-col gap-1">
+ <ToggleChip
+ active={field.config?.blockEmitUntilAllResolved !== false}
+ onClick={(v) => onUpdate(index, { config: { ...field.config, blockEmitUntilAllResolved: v } })}
+ >
+ Bloquear emisión hasta recibir todos
+ </ToggleChip>
+ <p className="app-body text-muted-foreground">No permite emitir manualmente hasta que todos los documentos estén recibidos o no necesarios</p>
  </div>
- </label>
- <label className="flex items-start gap-2 cursor-pointer">
- <Checkbox
- checked={field.config?.notNeededRequiresReason !== false}
- onChange={(e) => onUpdate(index, { config: { ...field.config, notNeededRequiresReason: e.target.checked } })}
- />
- <div>
- <span className="text-[11px] font-medium">&ldquo;No necesario&rdquo; requiere motivo</span>
- <p className="text-[9px] text-muted-foreground">Al marcar como no necesario, abre un modal pidiendo el motivo obligatorio</p>
+ <div className="flex flex-col gap-1">
+ <ToggleChip
+ active={field.config?.notNeededRequiresReason !== false}
+ onClick={(v) => onUpdate(index, { config: { ...field.config, notNeededRequiresReason: v } })}
+ >
+ &ldquo;No necesario&rdquo; requiere motivo
+ </ToggleChip>
+ <p className="app-body text-muted-foreground">Al marcar como no necesario, abre un modal pidiendo el motivo obligatorio</p>
  </div>
- </label>
- <label className="flex items-start gap-2 cursor-pointer">
- <Checkbox
- checked={field.config?.notNeededOnlyIssuers !== false}
- onChange={(e) => onUpdate(index, { config: { ...field.config, notNeededOnlyIssuers: e.target.checked } })}
- />
- <div>
- <span className="text-[11px] font-medium">&ldquo;No necesario&rdquo; solo emisores</span>
- <p className="text-[9px] text-muted-foreground">Solo los usuarios en el combo de emisores pueden marcar como no necesario</p>
+ <div className="flex flex-col gap-1">
+ <ToggleChip
+ active={field.config?.notNeededOnlyIssuers !== false}
+ onClick={(v) => onUpdate(index, { config: { ...field.config, notNeededOnlyIssuers: v } })}
+ >
+ &ldquo;No necesario&rdquo; solo emisores
+ </ToggleChip>
+ <p className="app-body text-muted-foreground">Solo los usuarios en el combo de emisores pueden marcar como no necesario</p>
  </div>
- </label>
  </div>
  )}
 
@@ -700,35 +698,35 @@ function CanvasFieldPreview({ field, allFields }: { field: ScreenField; allField
  if (field.type === "section") {
  return (
  <div className="pt-1">
- <p className="text-[13px] font-semibold border-b pb-1">{field.label}</p>
+ <p className="app-title border-b pb-1">{field.label}</p>
  </div>
  );
  }
 
  const badge = isComplex
- ? <span className="text-[9px] rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-1.5 py-0">Entidad compleja</span>
+ ? <span className="app-body rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-1.5 py-0">Entidad compleja</span>
  : isActionEntity
- ? <span className="text-[9px] rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-1.5 py-0">Dato de la gestión</span>
+ ? <span className="app-body rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-1.5 py-0">Dato de la gestión</span>
  : isEntity
- ? <span className="text-[9px] rounded bg-muted text-muted-foreground px-1.5 py-0">Dato del siniestro</span>
+ ? <span className="app-body rounded bg-muted text-muted-foreground px-1.5 py-0">Dato del siniestro</span>
  : null;
 
  const label = (
  <div className="flex items-center gap-1.5 mb-1.5">
- <span className="text-[11px] font-medium">{field.label}</span>
- {field.required && <span className="text-red-500 text-[10px]">*</span>}
+ <span className="app-body font-medium">{field.label}</span>
+ {field.required && <span className="text-red-500 app-body">*</span>}
  {badge}
  </div>
  );
 
- const inputClass = "w-full rounded-md border border-input bg-muted/30 px-2 py-1.5 text-[11px] text-muted-foreground";
+ const inputClass = "w-full rounded-md border border-input bg-muted/30 px-2 py-1.5 app-body text-muted-foreground";
 
  // Entidad compleja
  if (isComplex) {
  return (
  <div>
  {label}
- <div className="rounded-md border border-dashed border-violet-300 bg-violet-50/30 dark:bg-violet-900/10 p-2 text-[10px] text-muted-foreground">
+ <div className="rounded-md border border-dashed border-violet-300 bg-violet-50/30 dark:bg-violet-900/10 p-2 app-body text-muted-foreground">
  {getComplexEntityPreview(field.type)}
  </div>
  </div>
@@ -764,7 +762,7 @@ function CanvasFieldPreview({ field, allFields }: { field: ScreenField; allField
  {label}
  <div className={inputClass}>{field.placeholder || "..."}</div>
  {field.maxLength && (
- <p className="text-[9px] text-muted-foreground mt-0.5">
+ <p className="app-body text-muted-foreground mt-0.5">
  Máx {field.maxLength} · {field.inputType === "numeric" ? "Numérico" : "Alfanumérico"}
  </p>
  )}
@@ -779,7 +777,7 @@ function CanvasFieldPreview({ field, allFields }: { field: ScreenField; allField
  {label}
  <div className={inputClass + " min-h-[64px]"}>{field.placeholder || "Texto libre..."}</div>
  {field.maxLength && (
- <p className="text-[9px] text-muted-foreground mt-0.5">Máx {field.maxLength} caracteres</p>
+ <p className="app-body text-muted-foreground mt-0.5">Máx {field.maxLength} caracteres</p>
  )}
  </div>
  );
@@ -795,7 +793,7 @@ function CanvasFieldPreview({ field, allFields }: { field: ScreenField; allField
  <span>📅</span>
  </div>
  {field.dateValidation && (
- <p className="text-[9px] text-amber-600 mt-0.5">
+ <p className="app-body text-amber-600 mt-0.5">
  ⚠ {getDateValidationShort(field.dateValidation, allFields)}
  </p>
  )}
@@ -819,7 +817,7 @@ function CanvasFieldPreview({ field, allFields }: { field: ScreenField; allField
  // Checkbox (renderizado como toggle)
  if (field.type === "checkbox") {
  return (
- <label className="flex items-center gap-2 text-[11px]">
+ <label className="flex items-center gap-2 app-body">
  <span className="inline-flex h-[18px] w-[32px] items-center rounded-full bg-input">
  <span className="ml-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-sm" />
  </span>

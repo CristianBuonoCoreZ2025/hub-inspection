@@ -22,35 +22,35 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
   if (field.type === "section") {
     return (
       <div className="pt-1">
-        <p className="text-[13px] font-semibold border-b pb-1">{field.label}</p>
+        <p className="app-title border-b pb-1">{field.label}</p>
       </div>
     );
   }
 
   const badge = isComplex ? (
-    <span className="text-[9px] rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-1.5 py-0">
+    <span className="app-body rounded bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-1.5 py-0">
       Compleja
     </span>
   ) : isActionEntity ? (
-    <span className="text-[9px] rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-1.5 py-0">
+    <span className="app-body rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-1.5 py-0">
       Gestión
     </span>
   ) : isEntity ? (
-    <span className="text-[9px] rounded bg-muted text-muted-foreground px-1.5 py-0">Siniestro</span>
+    <span className="app-body rounded bg-muted text-muted-foreground px-1.5 py-0">Siniestro</span>
   ) : null;
 
   const label = (
     <div className="flex items-center gap-1.5 mb-1.5">
-      <span className="text-[11px] font-medium">{field.label}</span>
-      {field.required && <span className="text-red-500 text-[10px]">*</span>}
+      <span className="app-body font-medium">{field.label}</span>
+      {field.required && <span className="text-red-500 app-body">*</span>}
       {field.requiredRule && (
         <span title={`Obligatorio cuando ${field.requiredRule.field} ${field.requiredRule.operator} ${Array.isArray(field.requiredRule.value) ? field.requiredRule.value.join(",") : field.requiredRule.value}`}>
-          <span className="text-[9px] rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1 py-0">⚠ req</span>
+          <span className="app-body rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1 py-0">⚠ req</span>
         </span>
       )}
       {field.visibilityRule && (
         <span title={`Visible cuando ${field.visibilityRule.field} ${field.visibilityRule.operator} ${Array.isArray(field.visibilityRule.value) ? field.visibilityRule.value.join(",") : field.visibilityRule.value}`}>
-          <span className="text-[9px] rounded bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-1 py-0">👁 if</span>
+          <span className="app-body rounded bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-1 py-0">👁 if</span>
         </span>
       )}
       {badge}
@@ -58,7 +58,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
   );
 
   const inputClass =
-    "w-full rounded-md border border-input bg-muted/30 px-2 py-1.5 text-[11px] text-muted-foreground";
+    "w-full rounded-md border border-input bg-muted/30 px-2 py-1.5 app-body text-muted-foreground";
 
   // Entidad compleja
   if (isComplex) {
@@ -67,14 +67,14 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
     return (
       <div>
         {label}
-        <div className="rounded-md border border-dashed border-violet-300 bg-violet-50/30 dark:bg-violet-900/10 p-2 text-[10px] text-muted-foreground">
+        <div className="rounded-md border border-dashed border-violet-300 bg-violet-50/30 dark:bg-violet-900/10 p-2 app-body text-muted-foreground">
           {getComplexEntityPreview(field.type)}
         </div>
 
         {/* Sub-campos por cobertura */}
         {hasSubFields && (
           <div className="mt-2">
-            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+            <p className="app-body font-semibold text-muted-foreground uppercase tracking-wide mb-1">
               Campos por cobertura ({field.fields!.length})
             </p>
             <div className="rounded-md border border-border overflow-hidden">
@@ -104,7 +104,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
             {field.fields!.filter(f => !f.column).length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {field.fields!.filter(f => !f.column).map((sf) => (
-                  <span key={sf.id} className="text-[8px] rounded bg-muted px-1 py-0.5 text-muted-foreground">
+                  <span key={sf.id} className="app-body rounded bg-muted px-1 py-0.5 text-muted-foreground">
                     {sf.label}
                   </span>
                 ))}
@@ -127,13 +127,13 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
           <div className="rounded-md border border-violet-300/50 dark:border-violet-700/40 bg-violet-50/40 dark:bg-violet-900/10 p-2">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Layers className="h-3 w-3 text-violet-600 dark:text-violet-400" />
-              <span className="text-[9px] font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-wide">
+              <span className="app-body font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-wide">
                 Card agrupada · {cardFields.length} campos
               </span>
             </div>
             <div className="flex flex-wrap gap-1">
               {cardFields.map((cf) => (
-                <span key={cf.code} className="text-[9px] rounded bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/50">
+                <span key={cf.code} className="app-body rounded bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/50">
                   {cf.label}
                 </span>
               ))}
@@ -170,7 +170,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
         {label}
         <div className={inputClass}>{field.placeholder || "..."}</div>
         {field.maxLength && (
-          <p className="text-[9px] text-muted-foreground mt-0.5">
+          <p className="app-body text-muted-foreground mt-0.5">
             Máx {field.maxLength} · {field.inputType === "numeric" ? "Numérico" : "Alfanumérico"}
           </p>
         )}
@@ -185,7 +185,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
         {label}
         <div className={inputClass + " min-h-[64px]"}>{field.placeholder || "Texto libre..."}</div>
         {field.maxLength && (
-          <p className="text-[9px] text-muted-foreground mt-0.5">Máx {field.maxLength} caracteres</p>
+          <p className="app-body text-muted-foreground mt-0.5">Máx {field.maxLength} caracteres</p>
         )}
       </div>
     );
@@ -201,7 +201,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
           <span>📅</span>
         </div>
         {field.dateValidation && (
-          <p className="text-[9px] text-amber-600 mt-0.5">
+          <p className="app-body text-amber-600 mt-0.5">
             ⚠ {getDateValidationShort(field.dateValidation, allFields)}
           </p>
         )}
@@ -219,7 +219,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
           <span>▼</span>
         </div>
         {field.options && field.options.length > 0 && (
-          <p className="text-[9px] text-muted-foreground mt-0.5">
+          <p className="app-body text-muted-foreground mt-0.5">
             {field.options.length} opción{field.options.length !== 1 ? "es" : ""}
           </p>
         )}
@@ -230,7 +230,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
   // Checkbox (renderizado como toggle)
   if (field.type === "checkbox") {
     return (
-      <label className="flex items-center gap-2 text-[11px]">
+      <label className="flex items-center gap-2 app-body">
         <span className="inline-flex h-[18px] w-[32px] items-center rounded-full bg-input">
           <span className="ml-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-sm" />
         </span>
@@ -288,18 +288,18 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
         <div className="flex flex-col sm:flex-row gap-1.5">
           {/* Input date pequeño */}
           <div className="flex flex-col gap-0.5 sm:w-[80px] shrink-0">
-            <div className="h-5 rounded border border-border bg-background px-1 text-[9px] text-muted-foreground flex items-center">
+            <div className="h-5 rounded border border-border bg-background px-1 app-body text-muted-foreground flex items-center">
               📅 {new Date().toISOString().split("T")[0]}
             </div>
-            <p className="text-[7px] text-muted-foreground capitalize leading-tight">
+            <p className="app-body text-muted-foreground capitalize leading-tight">
               {new Date().toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}
             </p>
           </div>
           {/* Slots grid */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-0.5">
-              <span className="text-[8px] font-medium text-foreground/80">Horarios</span>
-              <div className="flex items-center gap-1.5 text-[6px] text-muted-foreground ml-auto">
+              <span className="app-body font-medium text-foreground/80">Horarios</span>
+              <div className="flex items-center gap-1.5 app-body text-muted-foreground ml-auto">
                 <span className="flex items-center gap-0.5"><span className="w-1 h-1 rounded bg-emerald-500/40" /> 09-19</span>
                 <span className="flex items-center gap-0.5"><span className="w-1 h-1 rounded bg-muted" /> Ocup</span>
               </div>
@@ -308,7 +308,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
               {["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30"].map((t, i) => (
                 <div
                   key={t}
-                  className={`h-4 rounded text-[7px] font-medium flex items-center justify-center ${
+                  className={`h-4 rounded app-body font-medium flex items-center justify-center ${
                     i === 6
                       ? "ring-1 ring-primary bg-primary/5 text-primary"
                       : i < 2
@@ -322,7 +322,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
             </div>
           </div>
         </div>
-        <p className="text-[9px] text-muted-foreground mt-0.5">
+        <p className="app-body text-muted-foreground mt-0.5">
           {field.type === "coord_fecha_recoord" ? "Fecha tentativa de próxima coordinación" : "Input date + slots de disponibilidad"}
         </p>
       </div>
@@ -338,7 +338,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
           <span>{coordPreview.text}</span>
           <span className="text-muted-foreground">{coordPreview.icon}</span>
         </div>
-        <p className="text-[9px] text-muted-foreground mt-0.5">{coordPreview.hint}</p>
+        <p className="app-body text-muted-foreground mt-0.5">{coordPreview.hint}</p>
       </div>
     );
   }

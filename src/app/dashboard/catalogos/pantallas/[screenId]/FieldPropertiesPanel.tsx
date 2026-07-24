@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Ungroup, Copy, Trash2, Lock, Hash, Type, AlignLeft, Calendar, ChevronDown, CheckSquare, Table, Section as SectionIcon, User, MapPin, Phone, Mail, Globe, Building2 } from "lucide-react";
 
@@ -45,7 +45,7 @@ function FieldIcon({ type, className }: { type: string; className?: string }) {
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 pt-1">
-      <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="app-body font-semibold uppercase tracking-wider text-muted-foreground">
         {children}
       </span>
       <div className="flex-1 h-px bg-border/60" />
@@ -106,8 +106,8 @@ export function FieldPropertiesPanel({
  </div>
  <div className="flex-1 min-w-0">
  <div className="flex items-center gap-1.5 flex-wrap">
- <span className="font-mono text-[10px] font-medium uppercase text-foreground/80 truncate">{field.type}</span>
- <span className={`text-[9px] font-medium px-1.5 py-0 rounded-full ${
+ <span className="font-mono app-body font-medium uppercase text-foreground/80 truncate">{field.type}</span>
+ <span className={`app-body font-medium px-1.5 py-0 rounded-full ${
  field.category === "own"
  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
  : field.category === "simple_entity"
@@ -120,13 +120,13 @@ export function FieldPropertiesPanel({
  </span>
  </div>
  {isEntity && (
- <p className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
+ <p className="app-body text-muted-foreground mt-1 flex items-center gap-1">
  <Lock className="h-2.5 w-2.5" />
  {isActionEntity ? "Solo vista · Datos de la gestión" : "Solo vista · Datos del siniestro"}
  </p>
  )}
  {isGroupedCard && (
- <p className="text-[9px] text-violet-600 dark:text-violet-400 mt-1">
+ <p className="app-body text-violet-600 dark:text-violet-400 mt-1">
  Card agrupada · {CARD_FIELD_MAP[field.type]?.length || 0} campos internos
  </p>
  )}
@@ -137,13 +137,13 @@ export function FieldPropertiesPanel({
  {/* ─── Sub-campos por cobertura (entidades complejas) ─── */}
  {field.category === "complex_entity" && field.fields && field.fields.length > 0 && (
  <div className="rounded-lg border border-violet-300/40 dark:border-violet-700/30 bg-violet-50/30 dark:bg-violet-900/10 p-2.5">
- <p className="text-[10px] font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-wide mb-1.5">
+ <p className="app-body font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-wide mb-1.5">
  Campos por cobertura ({field.fields.length})
  </p>
- <p className="text-[9px] text-muted-foreground mb-2">Cada cobertura del siniestro tiene estos campos</p>
+ <p className="app-body text-muted-foreground mb-2">Cada cobertura del siniestro tiene estos campos</p>
  <div className="space-y-1">
  {field.fields.map((sf) => (
- <div key={sf.id} className="flex items-center justify-between text-[10px] py-0.5">
+ <div key={sf.id} className="flex items-center justify-between app-body py-0.5">
  <div className="flex items-center gap-1.5">
  <span className={`font-medium ${sf.editable ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
  {sf.editable ? "✎" : "🔒"}
@@ -153,13 +153,13 @@ export function FieldPropertiesPanel({
  </div>
  <div className="flex items-center gap-1.5">
  {sf.formula && (
- <span className="text-[8px] rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-1 py-0">
+ <span className="app-body rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-1 py-0">
  = {sf.formula}
  </span>
  )}
- <span className="text-[8px] text-muted-foreground uppercase">{sf.type}</span>
+ <span className="app-body text-muted-foreground uppercase">{sf.type}</span>
  {sf.column && (
- <span className="text-[8px] rounded bg-muted px-1 py-0 text-muted-foreground">
+ <span className="app-body rounded bg-muted px-1 py-0 text-muted-foreground">
  col: {sf.column}
  </span>
  )}
@@ -173,7 +173,7 @@ export function FieldPropertiesPanel({
  {/* ─── Info de entidad compleja sin sub-campos ─── */}
  {field.category === "complex_entity" && (!field.fields || field.fields.length === 0) && (
  <div className="rounded-lg border border-violet-300/40 dark:border-violet-700/30 bg-violet-50/30 dark:bg-violet-900/10 p-2.5">
- <p className="text-[10px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  {COMPLEX_ENTITIES.find((e) => e.code === field.type)?.desc || "Entidad compleja del sistema."}
  </p>
  </div>
@@ -183,7 +183,7 @@ export function FieldPropertiesPanel({
  <div className="space-y-2">
  <SectionHeader>Identificación</SectionHeader>
  <div>
- <Label className="app-field-label text-[10px]">Etiqueta visible</Label>
+ <Label className="app-field-label app-body">Etiqueta visible</Label>
  <Input
  className="app-input h-7"
  value={field.label}
@@ -191,13 +191,13 @@ export function FieldPropertiesPanel({
  />
  </div>
  <div>
- <Label className="app-field-label text-[10px]">ID técnico</Label>
+ <Label className="app-field-label app-body">ID técnico</Label>
  <Input
- className="app-input h-7 text-[11px] font-mono"
+ className="app-input h-7 app-body font-mono"
  value={field.id}
  onChange={(e) => onUpdate({ id: e.target.value })}
  />
- <p className="text-[9px] text-muted-foreground mt-0.5">Identificador único del campo</p>
+ <p className="app-body text-muted-foreground mt-0.5">Identificador único del campo</p>
  </div>
  </div>
 
@@ -208,7 +208,7 @@ export function FieldPropertiesPanel({
 
  {/* Ancho de columna — visual 12-grid */}
  <div>
- <Label className="app-field-label text-[10px]">Ancho de columna</Label>
+ <Label className="app-field-label app-body">Ancho de columna</Label>
  {/* Visual: 12 barritas que se llenan según el ancho seleccionado (aproximado a 12) */}
  <div className="mt-1.5 mb-2">
  <div className="flex gap-0.5 h-5">
@@ -228,7 +228,7 @@ export function FieldPropertiesPanel({
  );
  })}
  </div>
- <div className="flex justify-between text-[8px] text-muted-foreground mt-0.5">
+ <div className="flex justify-between app-body text-muted-foreground mt-0.5">
  <span>1</span>
  <span>12 columnas</span>
  </div>
@@ -239,31 +239,32 @@ export function FieldPropertiesPanel({
  key={opt.value}
  type="button"
  onClick={() => onUpdate({ width: opt.value })}
- className={`flex flex-col items-center gap-0.5 rounded-md border py-1.5 text-[10px] transition-all ${
+ className={`flex flex-col items-center gap-0.5 rounded-md border py-1.5 app-body transition-all ${
  (field.width || "full") === opt.value
  ? "border-primary bg-primary/10 text-primary font-medium shadow-sm"
  : "border-border/60 bg-card/30 text-muted-foreground hover:border-muted-foreground/40 hover:bg-card/60"
  }`}
  >
  <span className="font-medium">{opt.label}</span>
- <span className="text-[8px] opacity-60">{opt.cols}</span>
+ <span className="app-body opacity-60">{opt.cols}</span>
  </button>
  ))}
  </div>
- <p className="text-[9px] text-muted-foreground mt-1">
+ <p className="app-body text-muted-foreground mt-1">
  Ej: 2 campos con 1/2 van en la misma fila.
  </p>
  </div>
 
  {/* Campo obligatorio */}
  {!isEntity && field.type !== "section" && (
- <label className="flex items-center gap-2 text-[11px] cursor-pointer py-0.5">
- <Checkbox
- checked={!!field.required}
- onChange={(e) => onUpdate({ required: (e.target as HTMLInputElement).checked })}
- />
+ <div className="flex items-center gap-2 py-0.5">
+ <ToggleChip
+ active={!!field.required}
+ onClick={(v) => onUpdate({ required: v })}
+ >
  Campo obligatorio
- </label>
+ </ToggleChip>
+ </div>
  )}
  </div>
  )}
@@ -273,9 +274,9 @@ export function FieldPropertiesPanel({
  <div className="space-y-2">
  <SectionHeader>Contenido</SectionHeader>
  <div>
- <Label className="app-field-label text-[10px]">Tipo de contenido</Label>
+ <Label className="app-field-label app-body">Tipo de contenido</Label>
  <select
- className="app-input h-7 text-[11px] w-full"
+ className="app-input h-7 app-body w-full"
  value={field.inputType || "alphanumeric"}
  onChange={(e) => onUpdate({ inputType: e.target.value as "alphanumeric" | "numeric" })}
  >
@@ -284,28 +285,28 @@ export function FieldPropertiesPanel({
  </select>
  </div>
  <div>
- <Label className="app-field-label text-[10px]">Largo máximo</Label>
+ <Label className="app-field-label app-body">Largo máximo</Label>
  <Input
  type="number"
- className="app-input h-7 text-[11px]"
+ className="app-input h-7 app-body"
  value={field.maxLength || ""}
  onChange={(e) => onUpdate({ maxLength: Number(e.target.value) || undefined })}
  />
  </div>
  <div>
- <Label className="app-field-label text-[10px]">Placeholder</Label>
+ <Label className="app-field-label app-body">Placeholder</Label>
  <Input
- className="app-input h-7 text-[11px]"
+ className="app-input h-7 app-body"
  value={field.placeholder || ""}
  onChange={(e) => onUpdate({ placeholder: e.target.value })}
  />
  </div>
  {field.type === "textarea" && (
  <div>
- <Label className="app-field-label text-[10px]">Filas de altura</Label>
+ <Label className="app-field-label app-body">Filas de altura</Label>
  <Input
  type="number"
- className="app-input h-7 text-[11px]"
+ className="app-input h-7 app-body"
  value={field.rows || 3}
  onChange={(e) => onUpdate({ rows: Number(e.target.value) })}
  />
@@ -319,9 +320,9 @@ export function FieldPropertiesPanel({
  <div className="space-y-2">
  <SectionHeader>Validación de fecha</SectionHeader>
  <div>
- <Label className="app-field-label text-[10px]">Tipo de fecha</Label>
+ <Label className="app-field-label app-body">Tipo de fecha</Label>
  <select
- className="app-input h-7 text-[11px] w-full"
+ className="app-input h-7 app-body w-full"
  value={field.dateType || "date"}
  onChange={(e) => onUpdate({ dateType: e.target.value as "date" | "datetime" })}
  >
@@ -330,7 +331,7 @@ export function FieldPropertiesPanel({
  </select>
  </div>
  <div>
- <Label className="app-field-label text-[10px]">Validación</Label>
+ <Label className="app-field-label app-body">Validación</Label>
  <Select
  value={field.dateValidation?.type || "__none"}
  onValueChange={(v) => {
@@ -360,7 +361,7 @@ export function FieldPropertiesPanel({
  field.dateValidation.type.includes("than") &&
  !field.dateValidation.type.includes("today") && (
  <div>
- <Label className="app-field-label text-[10px]">Comparar con</Label>
+ <Label className="app-field-label app-body">Comparar con</Label>
  <Select
  value={field.dateValidation.compareField || "__none"}
  onValueChange={(v) =>
@@ -395,9 +396,9 @@ export function FieldPropertiesPanel({
  <div className="space-y-2">
  <SectionHeader>Opciones</SectionHeader>
  <div>
- <p className="text-[9px] text-muted-foreground mb-1">Una por línea. Formato: valor=Etiqueta</p>
+ <p className="app-body text-muted-foreground mb-1">Una por línea. Formato: valor=Etiqueta</p>
  <Textarea
- className="app-input text-[11px]"
+ className="app-input app-body"
  value={field.options?.map((o) => `${o.value}=${o.label}`).join("\n") || ""}
  onChange={(e) => {
  const options = e.target.value
@@ -420,9 +421,9 @@ export function FieldPropertiesPanel({
  <div className="space-y-2">
  <SectionHeader>Columnas</SectionHeader>
  <div>
- <p className="text-[9px] text-muted-foreground mb-1">Una columna por línea</p>
+ <p className="app-body text-muted-foreground mb-1">Una columna por línea</p>
  <Textarea
- className="app-input text-[11px]"
+ className="app-input app-body"
  value={field.columns?.join("\n") || ""}
  onChange={(e) => {
  const columns = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean);
@@ -520,24 +521,22 @@ function ConditionalRulesSection({
  ) => {
  if (!enabled) {
  return (
- <label className="flex items-center gap-2 text-[11px] cursor-pointer py-0.5">
- <Checkbox checked={false} onChange={(e) => onToggle((e.target as HTMLInputElement).checked)} />
+ <ToggleChip active={false} onClick={(v) => onToggle(v)}>
  {label}
- </label>
+ </ToggleChip>
  );
  }
  const currentRule = rule || { field: "", operator: "equals" as const, value: "" };
  const isMulti = currentRule.operator === "in" || currentRule.operator === "not_in";
  return (
  <div className="space-y-1.5 p-2 rounded-md border border-border/60 bg-muted/20">
- <label className="flex items-center gap-2 text-[11px] cursor-pointer py-0.5">
- <Checkbox checked={true} onChange={(e) => onToggle((e.target as HTMLInputElement).checked)} />
- <span className="font-medium">{label}</span>
- </label>
+ <ToggleChip active={true} onClick={(v) => onToggle(v)}>
+ {label}
+ </ToggleChip>
  <div>
- <Label className="app-field-label text-[10px]">Campo controlador</Label>
+ <Label className="app-field-label app-body">Campo controlador</Label>
  <select
- className="app-input h-7 text-[11px] w-full"
+ className="app-input h-7 app-body w-full"
  value={currentRule.field}
  onChange={(e) => onChange({ ...currentRule, field: e.target.value })}
  >
@@ -550,9 +549,9 @@ function ConditionalRulesSection({
  </select>
  </div>
  <div>
- <Label className="app-field-label text-[10px]">Operador</Label>
+ <Label className="app-field-label app-body">Operador</Label>
  <select
- className="app-input h-7 text-[11px] w-full"
+ className="app-input h-7 app-body w-full"
  value={currentRule.operator}
  onChange={(e) =>
  onChange({
@@ -570,7 +569,7 @@ function ConditionalRulesSection({
  </select>
  </div>
  <div>
- <Label className="app-field-label text-[10px]">
+ <Label className="app-field-label app-body">
  {isMulti ? "Valores" : "Valor"}
  </Label>
  {(() => {
@@ -590,19 +589,19 @@ function ConditionalRulesSection({
  return (
  <div className="space-y-1 max-h-32 overflow-y-auto rounded border border-border/60 p-1.5 bg-muted/20">
  {availableOptions.map((opt) => (
- <label key={opt.value} className="flex items-center gap-1.5 text-[11px] cursor-pointer">
- <Checkbox
- checked={selectedValues.includes(opt.value)}
- onChange={(e) => {
- const checked = (e.target as HTMLInputElement).checked;
- const newValues = checked
+ <div key={opt.value}>
+ <ToggleChip
+ active={selectedValues.includes(opt.value)}
+ onClick={(v) => {
+ const newValues = v
  ? [...selectedValues, opt.value]
- : selectedValues.filter(v => v !== opt.value);
+ : selectedValues.filter((x) => x !== opt.value);
  onChange({ ...currentRule, value: newValues });
  }}
- />
+ >
  {opt.label}
- </label>
+ </ToggleChip>
+ </div>
  ))}
  </div>
  );
@@ -610,7 +609,7 @@ function ConditionalRulesSection({
  // Single select
  return (
  <select
- className="app-input h-7 text-[11px] w-full"
+ className="app-input h-7 app-body w-full"
  value={String(currentRule.value || "")}
  onChange={(e) => onChange({ ...currentRule, value: e.target.value })}
  >
@@ -624,7 +623,7 @@ function ConditionalRulesSection({
  // Input de texto libre (para campos text/date/etc sin options)
  return (
  <Input
- className="app-input h-7 text-[11px]"
+ className="app-input h-7 app-body"
  value={Array.isArray(currentRule.value) ? currentRule.value.join(", ") : String(currentRule.value || "")}
  onChange={(e) => {
  const raw = e.target.value;
@@ -664,7 +663,7 @@ function ConditionalRulesSection({
  hasRequired,
  (enabled) => setRequiredRule(enabled ? { field: "", operator: "equals", value: "" } : undefined)
  )}
- <p className="text-[9px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  Permite que este campo se muestre o sea obligatorio según el valor de otro campo.
  </p>
  </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import type { GestionScreenProps } from "./types";
 
 export default function CoberturasScreen({ action, onChange, readOnly }: GestionScreenProps) {
@@ -23,13 +23,13 @@ export default function CoberturasScreen({ action, onChange, readOnly }: Gestion
 
  return (
  <div className="space-y-2">
- <p className="text-[11px] font-semibold">Coberturas Afectadas</p>
+ <p className="app-title">Coberturas Afectadas</p>
  {rows.map((row, idx) => (
  <div key={idx} className="grid grid-cols-5 gap-2 items-end rounded-md border border-border p-2">
  <div className="col-span-2">
- <Label className="app-field-label text-[10px]">Cobertura</Label>
+ <Label className="app-field-label">Cobertura</Label>
  <Input
- className="app-input h-7 text-[11px]"
+ className="app-input h-7"
  value={row.cobertura}
  onChange={(e) => {
  const next = [...rows];
@@ -40,9 +40,9 @@ export default function CoberturasScreen({ action, onChange, readOnly }: Gestion
  />
  </div>
  <div>
- <Label className="app-field-label text-[10px]">Mto. Asegurado</Label>
+ <Label className="app-field-label">Mto. Asegurado</Label>
  <Input
- className="app-input h-7 text-[11px]"
+ className="app-input h-7"
  value={row.montoAsegurado}
  onChange={(e) => {
  const next = [...rows];
@@ -53,9 +53,9 @@ export default function CoberturasScreen({ action, onChange, readOnly }: Gestion
  />
  </div>
  <div>
- <Label className="app-field-label text-[10px]">Mto. Afectado</Label>
+ <Label className="app-field-label">Mto. Afectado</Label>
  <Input
- className="app-input h-7 text-[11px]"
+ className="app-input h-7"
  value={row.montoAfectado}
  onChange={(e) => {
  const next = [...rows];
@@ -66,22 +66,23 @@ export default function CoberturasScreen({ action, onChange, readOnly }: Gestion
  />
  </div>
  <div className="flex items-center gap-1 pb-1.5">
- <Checkbox
- checked={row.aplica}
- onChange={(e) => {
+ <ToggleChip
+ active={row.aplica}
+ onClick={(v) => {
  const next = [...rows];
- next[idx].aplica = (e.target as HTMLInputElement).checked;
+ next[idx].aplica = v;
  setRows(next);
  }}
  disabled={readOnly}
- />
- <span className="text-[11px]">Aplica</span>
+ >
+ Aplica
+ </ToggleChip>
  </div>
  </div>
  ))}
  {!readOnly && (
  <button
- className="text-[11px] text-primary hover:underline"
+ className="app-body text-primary hover:underline"
  onClick={() => setRows([...rows, { cobertura: "", subcobertura: "", montoAsegurado: "", montoAfectado: "", aplica: false }])}
  >
  + Agregar cobertura

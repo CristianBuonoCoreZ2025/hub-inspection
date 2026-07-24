@@ -314,8 +314,8 @@ export default function ReportTab({
   // Estilos compartidos para campos
   const fieldRow = (label: string, value: string | undefined | null, key?: string) => (
     <div key={key} className="field-row flex mb-0.5">
-      <span className="field-label font-semibold text-muted-foreground min-w-[200px] text-[10px] uppercase">{label}:</span>
-      <span className="field-value flex-1 text-[10px]">{value || "—"}</span>
+      <span className="field-label font-semibold text-muted-foreground min-w-[200px] app-body uppercase">{label}:</span>
+      <span className="field-value flex-1 app-body">{value || "—"}</span>
     </div>
   );
 
@@ -369,7 +369,7 @@ export default function ReportTab({
             </Button>
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="h-5 w-5" />
-              <span className="text-sm font-semibold">Acta Definitiva</span>
+              <span className="app-body font-semibold">Acta Definitiva</span>
             </div>
           </>
         )}
@@ -377,7 +377,7 @@ export default function ReportTab({
 
       {/* Preview del acta — vista tipo PDF con scroll */}
       {isLoading ? (
-        <div className="app-panel text-center py-8 text-muted-foreground text-sm">Cargando...</div>
+        <div className="app-panel text-center py-8 text-muted-foreground app-body">Cargando...</div>
       ) : (
         <div className="pdf-viewer rounded-lg p-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)", backgroundColor: "#e5e7eb" }}>
           <div className="pdf-page shadow-lg mx-auto relative" ref={printRef} style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: "800px", padding: "30px 40px", backgroundColor: "#ffffff", color: "#1a1a1a" }}>
@@ -385,7 +385,7 @@ export default function ReportTab({
           {/* Marca de agua BORRADOR */}
           {!isFinal && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-              <span className="text-6xl font-bold text-gray-300 opacity-30 select-none" style={{ transform: "rotate(-30deg)", letterSpacing: "8px" }}>
+              <span className="app-page-title font-bold text-gray-300 opacity-30 select-none" style={{ transform: "rotate(-30deg)", letterSpacing: "8px" }}>
                 BORRADOR
               </span>
             </div>
@@ -398,14 +398,14 @@ export default function ReportTab({
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={companyLogo} alt={companyName} className="logo h-14 w-auto" />
               ) : (
-                <div className="logo-text text-sm font-bold">{companyName}</div>
+                <div className="logo-text app-body font-bold">{companyName}</div>
               )}
-              {companyPhone && <p className="text-[9px] text-gray-500 mt-1">Tel: {companyPhone}</p>}
-              {companyAddress && <p className="text-[9px] text-gray-500">{companyAddress}</p>}
-              {companyEmail && <p className="text-[9px] text-gray-500">{companyEmail}</p>}
+              {companyPhone && <p className="app-body text-gray-500 mt-1">Tel: {companyPhone}</p>}
+              {companyAddress && <p className="app-body text-gray-500">{companyAddress}</p>}
+              {companyEmail && <p className="app-body text-gray-500">{companyEmail}</p>}
             </div>
             <div className="header-info text-right">
-              <h1 className="text-base font-bold text-gray-900">ACTA DE INSPECCIÓN</h1>
+              <h1 className="app-body font-bold text-gray-900">ACTA DE INSPECCIÓN</h1>
               <p>Correlativo: {claimLiquidationNumber || "—"}</p>
               <p>Siniestro: {claimNumber || "—"}</p>
               <p>Inspección: {session.inspection_number || "—"}</p>
@@ -415,7 +415,7 @@ export default function ReportTab({
           {/* ═══ CANCELACIÓN ═══ */}
           {isCancellation && (
             <div className="cancellation-box border-2 border-rose-600 bg-rose-50 p-3 rounded mb-3">
-              <h3 className="text-rose-700 font-bold text-xs mb-1">Inspección Cancelada</h3>
+              <h3 className="text-rose-700 font-bold app-body mb-1">Inspección Cancelada</h3>
               {fieldRow("Motivo", cancellationReason)}
               {fieldRow("Notas", cancellationNotes)}
               {fieldRow("Fecha", fmtDateTime(cancelledAt))}
@@ -423,7 +423,7 @@ export default function ReportTab({
           )}
 
           {/* ═══ ANTECEDENTES GENERALES ═══ */}
-          <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+          <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
             Antecedentes Generales
           </div>
           {fieldRow("Aseguradora", session.claim?.insurance_company?.name)}
@@ -432,7 +432,7 @@ export default function ReportTab({
           {fieldRow("Fecha de Inspección", fmtDateTime(session.inspection_date ? `${session.inspection_date}T${session.inspection_time || "00:00"}` : session.scheduled_at))}
 
           {/* ═══ ANTECEDENTES DEL ASEGURADO ═══ */}
-          <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+          <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
             Antecedentes del Asegurado
           </div>
           {fieldRow("Razón Social", insuredName)}
@@ -449,10 +449,10 @@ export default function ReportTab({
           {/* ═══ DETALLE DE LOS HECHOS ═══ */}
           {session.insured_statement?.statement && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Detalle de los Hechos
               </div>
-              <p className="text-[10px] text-gray-800 whitespace-pre-wrap leading-relaxed mb-3">
+              <p className="app-body text-gray-800 whitespace-pre-wrap leading-relaxed mb-3">
                 {session.insured_statement.statement}
               </p>
             </>
@@ -461,7 +461,7 @@ export default function ReportTab({
           {/* ═══ ANTECEDENTES DEL RIESGO ═══ */}
           {session.property_risk && Object.keys(session.property_risk).length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Antecedentes del Riesgo
               </div>
               {fieldRow("Materia Afectada", session.property_risk.property_type)}
@@ -478,7 +478,7 @@ export default function ReportTab({
           {/* ═══ CARACTERÍSTICAS DE LA CONSTRUCCIÓN ═══ */}
           {session.property_materiality && Object.keys(session.property_materiality).length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Características de la Construcción
               </div>
               {fieldRow("Sistema Estructural", null)}
@@ -496,7 +496,7 @@ export default function ReportTab({
           {/* ═══ MEDIDAS DE SEGURIDAD ═══ */}
           {session.security_measures && Object.keys(session.security_measures).length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Medidas de Seguridad
               </div>
               {Object.entries(session.security_measures).map(([key, val]) => {
@@ -514,7 +514,7 @@ export default function ReportTab({
           {/* ═══ ANTECEDENTES POLICIALES ═══ */}
           {(session.police_report_number || session.firefighters_company) && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Antecedentes Policiales / Bomberos
               </div>
               {fieldRow("Parte Carabineros", session.police_report_number)}
@@ -527,27 +527,27 @@ export default function ReportTab({
           {/* ═══ TERCEROS ═══ */}
           {session.third_parties && session.third_parties.length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Terceros Afectados
               </div>
               <table className="w-full border-collapse my-1.5">
                 <thead>
                   <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Tipo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Nombre</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">RUT</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Teléfono</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Seguro</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Tipo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Nombre</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">RUT</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Teléfono</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Seguro</th>
                   </tr>
                 </thead>
                 <tbody>
                   {session.third_parties.map((tp, i) => (
                     <tr key={i}>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{tp.party_type}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{tp.full_name || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{tp.rut || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{tp.phone || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{tp.has_insurance ? tp.insurance_company || "Sí" : "No"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{tp.party_type}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{tp.full_name || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{tp.rut || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{tp.phone || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{tp.has_insurance ? tp.insurance_company || "Sí" : "No"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -558,31 +558,31 @@ export default function ReportTab({
           {/* ═══ REGISTRO DE DAÑOS ═══ */}
           {damages.length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Registro de Daños ({damages.length})
               </div>
               <table className="w-full border-collapse my-1.5">
                 <thead>
                   <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Tipo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Severidad</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Espacio</th>
-                    <th className="text-right p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Cant.</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Unidad</th>
-                    <th className="text-right p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Monto Est.</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Tipo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Descripción</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Severidad</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Espacio</th>
+                    <th className="text-right p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Cant.</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Unidad</th>
+                    <th className="text-right p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Monto Est.</th>
                   </tr>
                 </thead>
                 <tbody>
                   {damages.map((d) => (
                     <tr key={d.id}>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{DAMAGE_TYPE_LABELS[d.damage_type] || d.damage_type}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.description}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{SEVERITY_LABELS[d.severity] || d.severity}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.dependency || "—"}</td>
-                      <td className="text-right p-1.5 border border-gray-300 text-[9px]">{d.quantity ?? "—"}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.unit || "—"}</td>
-                      <td className="text-right p-1.5 border border-gray-300 text-[9px]">{fmtMoney(d.estimated_amount, d.currency)}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{DAMAGE_TYPE_LABELS[d.damage_type] || d.damage_type}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{d.description}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{SEVERITY_LABELS[d.severity] || d.severity}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{d.dependency || "—"}</td>
+                      <td className="text-right p-1.5 border border-gray-300 app-body">{d.quantity ?? "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{d.unit || "—"}</td>
+                      <td className="text-right p-1.5 border border-gray-300 app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -593,10 +593,10 @@ export default function ReportTab({
           {/* ═══ OBSERVACIONES DEL INSPECTOR ═══ */}
           {session.inspector_observations && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Observaciones del Inspector
               </div>
-              <p className="text-[10px] text-gray-800 whitespace-pre-wrap leading-relaxed mb-3">
+              <p className="app-body text-gray-800 whitespace-pre-wrap leading-relaxed mb-3">
                 {session.inspector_observations}
               </p>
             </>
@@ -605,25 +605,25 @@ export default function ReportTab({
           {/* ═══ RESUMEN DE EVIDENCIAS ═══ */}
           {evidences.length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Resumen de Evidencias ({evidences.length})
               </div>
               <table className="w-full border-collapse my-1.5">
                 <thead>
                   <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">N°</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Tipo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Archivo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">N°</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Tipo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Archivo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Descripción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {evidences.map((ev, idx) => (
                     <tr key={ev.id}>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px] capitalize">{ev.type}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{ev.metadata?.originalName || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{ev.description || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{idx + 1}</td>
+                      <td className="p-1.5 border border-gray-300 app-body capitalize">{ev.type}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{ev.metadata?.originalName || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{ev.description || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -634,7 +634,7 @@ export default function ReportTab({
           {/* ═══ EVIDENCIAS FOTOGRÁFICAS ═══ */}
           {photos.length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Evidencias Fotográficas ({photos.length})
               </div>
               <div className="photo-grid grid grid-cols-3 gap-1.5 my-1.5">
@@ -642,7 +642,7 @@ export default function ReportTab({
                   <div key={ev.id} className="border border-gray-300 p-1 bg-gray-50">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={ev.url} alt={`Foto ${idx + 1}`} className="w-full h-32 object-contain" />
-                    <p className="photo-label text-[8px] text-gray-600 text-center mt-0.5">
+                    <p className="photo-label app-body text-gray-600 text-center mt-0.5">
                       Foto {idx + 1}{ev.description ? ` — ${ev.description}` : ""}
                     </p>
                   </div>
@@ -654,23 +654,23 @@ export default function ReportTab({
           {/* ═══ VIDEOS ═══ */}
           {videos.length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Videos ({videos.length})
               </div>
               <table className="w-full border-collapse my-1.5">
                 <thead>
                   <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">N°</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Archivo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">N°</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Archivo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Descripción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {videos.map((v, idx) => (
                     <tr key={v.id}>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{v.metadata?.originalName || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{v.description || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{idx + 1}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{v.metadata?.originalName || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{v.description || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -681,7 +681,7 @@ export default function ReportTab({
           {/* ═══ DOCUMENTOS ADJUNTOS ═══ */}
           {docs.length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Documentos Adjuntos ({docs.length})
               </div>
               {docs.map((d, idx) => {
@@ -692,15 +692,15 @@ export default function ReportTab({
                 const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName);
                 return (
                   <div key={d.id} className="border border-gray-300 p-2 mb-2 bg-gray-50">
-                    <p className="text-[10px] font-semibold text-gray-700 mb-1">
+                    <p className="app-body font-semibold text-gray-700 mb-1">
                       Documento {idx + 1}: {fileName}
                       {pageCount ? ` (${pageCount} ${pageCount === 1 ? "página" : "páginas"})` : ""}
                     </p>
                     {d.description && (
-                      <p className="text-[9px] text-gray-600 mb-1">{d.description}</p>
+                      <p className="app-body text-gray-600 mb-1">{d.description}</p>
                     )}
                     {pdfSummary && (
-                      <p className="text-[9px] text-gray-700 italic mb-1 border-l-2 border-gray-300 pl-2">
+                      <p className="app-body text-gray-700 italic mb-1 border-l-2 border-gray-300 pl-2">
                         {pdfSummary}
                       </p>
                     )}
@@ -708,7 +708,7 @@ export default function ReportTab({
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={d.url} alt={fileName} className="w-full max-h-48 object-contain border border-gray-200" />
                     ) : !pdfSummary && (
-                      <p className="text-[9px] text-gray-500 italic">
+                      <p className="app-body text-gray-500 italic">
                         Documento {mimeType || "adjunto"} — {d.metadata?.fileSize ? `${(d.metadata.fileSize as number / 1024).toFixed(0)} KB` : ""}
                       </p>
                     )}
@@ -721,25 +721,25 @@ export default function ReportTab({
           {/* ═══ OTRAS EVIDENCIAS ═══ */}
           {otherEvidences.length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Otras Evidencias ({otherEvidences.length})
               </div>
               <table className="w-full border-collapse my-1.5">
                 <thead>
                   <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">N°</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Tipo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Archivo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 text-[9px] font-bold uppercase">Descripción</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">N°</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Tipo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Archivo</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Descripción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {otherEvidences.map((d, idx) => (
                     <tr key={d.id}>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{idx + 1}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px] capitalize">{d.type}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.metadata?.originalName || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 text-[9px]">{d.description || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{idx + 1}</td>
+                      <td className="p-1.5 border border-gray-300 app-body capitalize">{d.type}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{d.metadata?.originalName || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{d.description || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -750,7 +750,7 @@ export default function ReportTab({
           {/* ═══ CROQUIS ═══ */}
           {sketches.length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Croquis ({sketches.length})
               </div>
               <div className="sketch-grid grid grid-cols-2 gap-1.5 my-1.5">
@@ -758,7 +758,7 @@ export default function ReportTab({
                   <div key={sk.id}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={sk.sketch_url} alt={`Croquis ${idx + 1}`} className="w-full h-36 object-contain border border-gray-300 bg-white" />
-                    <p className="photo-label text-[8px] text-gray-600 text-center mt-0.5">
+                    <p className="photo-label app-body text-gray-600 text-center mt-0.5">
                       Croquis {idx + 1}{sk.label ? ` — ${sk.label}` : ""}
                     </p>
                   </div>
@@ -770,7 +770,7 @@ export default function ReportTab({
           {/* ═══ FIRMAS ═══ */}
           {uniqueSignatures.length > 0 && (
             <>
-              <div className="acta-title text-[13px] font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
                 Firmas
               </div>
               <div className="sig-grid grid grid-cols-2 gap-5 mt-6">
@@ -778,10 +778,10 @@ export default function ReportTab({
                   <div key={sig.id} className="sig-box text-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={sig.signature_url} alt={`Firma ${sig.role}`} className="max-h-16 max-w-[180px] border-b border-gray-700 pb-1 mx-auto" />
-                    <p className="name text-[10px] font-semibold mt-1">
+                    <p className="name app-body font-semibold mt-1">
                       {sig.role === "insured" ? "Asegurado" : "Inspector"}
                     </p>
-                    <p className="role text-[9px] text-gray-500">{fmtDateTime(sig.signed_at)}</p>
+                    <p className="role app-body text-gray-500">{fmtDateTime(sig.signed_at)}</p>
                   </div>
                 ))}
               </div>
@@ -789,7 +789,7 @@ export default function ReportTab({
           )}
 
           {/* ═══ FOOTER ═══ */}
-          <div className="footer mt-8 pt-2.5 border-t border-gray-300 text-center text-[8px] text-gray-400">
+          <div className="footer mt-8 pt-2.5 border-t border-gray-300 text-center app-body text-gray-400">
             Documento {isFinal ? "definitivo" : "en borrador"} emitido por {companyName} · {new Date().toLocaleDateString("es-CL")}
             {isFinal && report?.generated_at && ` · Finalizado el ${fmtDateTime(report.generated_at)}`}
           </div>

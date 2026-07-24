@@ -319,12 +319,12 @@ export default function ScreenBuilderPage() {
               <LayoutTemplate className="h-4 w-4" />
             </div>
             <div className="leading-tight">
-              <h1 className="text-[13px] font-semibold">{screen.name}</h1>
-              <p className="text-[10px] text-muted-foreground font-mono">{screen.code}</p>
+              <h1 className="app-title">{screen.name}</h1>
+              <p className="app-body text-muted-foreground font-mono">{screen.code}</p>
             </div>
           </div>
           {dirty && (
-            <span className="ml-2 flex items-center gap-1 text-[10px] text-amber-600">
+            <span className="ml-2 flex items-center gap-1 app-body text-amber-600">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" /> Sin guardar
             </span>
           )}
@@ -341,7 +341,7 @@ export default function ScreenBuilderPage() {
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all ${
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 app-body font-medium transition-all ${
                   viewMode === mode
                     ? "bg-card/80 backdrop-blur-sm text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-white/5"
@@ -388,7 +388,7 @@ export default function ScreenBuilderPage() {
           ═══════════════════════════════════════════════════════════ */}
       {viewMode === "json" ? (
         <div className="flex-1 overflow-auto bg-zinc-950 p-6">
-          <pre className="text-[11px] text-zinc-300 font-mono leading-relaxed">
+          <pre className="app-body text-zinc-300 font-mono leading-relaxed">
             {JSON.stringify({ fields }, null, 2)}
           </pre>
         </div>
@@ -406,8 +406,8 @@ export default function ScreenBuilderPage() {
             <aside className="flex w-[260px] shrink-0 flex-col border-r border-white/10 dark:border-white/5
                                bg-muted/20 backdrop-blur-2xl saturate-150">
               <div className="border-b border-white/10 dark:border-white/5 px-3 py-2">
-                <p className="text-[11px] font-semibold text-muted-foreground">Componentes</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Arrastra al lienzo →</p>
+                <p className="app-body font-semibold text-muted-foreground">Componentes</p>
+                <p className="app-body text-muted-foreground/70 mt-0.5">Arrastra al lienzo →</p>
               </div>
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
                 {/* Campos propios */}
@@ -480,14 +480,14 @@ export default function ScreenBuilderPage() {
               <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/10 dark:border-white/5
                                bg-card/40 backdrop-blur-xl px-4">
                 <div className="flex items-center gap-3">
-                  <p className="text-[11px] font-medium text-muted-foreground">Lienzo</p>
-                  <span className="text-[10px] text-muted-foreground">
+                  <p className="app-body font-medium text-muted-foreground">Lienzo</p>
+                  <span className="app-body text-muted-foreground">
                     {fields.length} campo{fields.length !== 1 ? "s" : ""}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                <div className="flex items-center gap-2 app-body text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <kbd className="rounded border border-white/10 bg-white/5 backdrop-blur-sm px-1 py-0.5 text-[9px]">Espacio</kbd>
+                    <kbd className="rounded border border-white/10 bg-white/5 backdrop-blur-sm px-1 py-0.5 app-body">Espacio</kbd>
                     arrastrar
                   </span>
                 </div>
@@ -500,8 +500,8 @@ export default function ScreenBuilderPage() {
                                 bg-card/70 backdrop-blur-2xl saturate-150
                                 shadow-[0_8px_40px_rgba(0,0,0,0.08)]">
                   <div className="border-b border-white/10 dark:border-white/5 px-5 py-3">
-                    <p className="text-[13px] font-semibold">{screen.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{screen.description || "Vista previa del formulario"}</p>
+                    <p className="app-title">{screen.name}</p>
+                    <p className="app-body text-muted-foreground">{screen.description || "Vista previa del formulario"}</p>
                   </div>
 
                   {fields.length === 0 ? (
@@ -534,7 +534,7 @@ export default function ScreenBuilderPage() {
             <aside className="flex w-[300px] shrink-0 flex-col border-l border-white/10 dark:border-white/5
                                bg-muted/20 backdrop-blur-2xl saturate-150">
               <div className="border-b border-white/10 dark:border-white/5 px-3 py-2">
-                <p className="text-[11px] font-semibold text-muted-foreground">Propiedades</p>
+                <p className="app-body font-semibold text-muted-foreground">Propiedades</p>
               </div>
               <div className="flex-1 overflow-y-auto p-3">
                 {selectedField ? (
@@ -550,7 +550,7 @@ export default function ScreenBuilderPage() {
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-muted-foreground">
                     <LayoutTemplate className="h-8 w-8 opacity-20" />
-                    <p className="text-[11px] px-4">
+                    <p className="app-body px-4">
                       Selecciona un campo del lienzo para editar sus propiedades
                     </p>
                   </div>
@@ -565,8 +565,8 @@ export default function ScreenBuilderPage() {
               <div className="flex items-center gap-2 rounded-lg border-2 border-primary/50
                               bg-card/80 backdrop-blur-2xl saturate-150 px-3 py-2
                               shadow-[0_8px_30px_rgba(0,0,0,0.12)] opacity-90">
-                <span className="text-[14px]">{activeDrag.icon}</span>
-                <span className="text-[11px] font-medium">{activeDrag.label}</span>
+                <span className="app-body">{activeDrag.icon}</span>
+                <span className="app-body font-medium">{activeDrag.label}</span>
               </div>
             ) : null}
           </DragOverlay>
@@ -603,8 +603,8 @@ function PaletteSection({
   return (
     <div className={`rounded-lg border p-2.5 space-y-2.5 ${themeClasses[theme]}`}>
       <div>
-        <p className="text-[11px] font-semibold text-foreground/90">{title}</p>
-        <p className="text-[9px] text-muted-foreground">{subtitle}</p>
+        <p className="app-body font-semibold text-foreground/90">{title}</p>
+        <p className="app-body text-muted-foreground">{subtitle}</p>
       </div>
       <div className="space-y-1">{children}</div>
     </div>
@@ -621,7 +621,7 @@ function PaletteSubSection({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
-        <span className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">{title}</span>
+        <span className="app-body font-medium uppercase tracking-wide text-muted-foreground">{title}</span>
         <div className="flex-1 h-px bg-border/40" />
       </div>
       <div className="space-y-1">{children}</div>
@@ -641,8 +641,8 @@ function DropEmptyZone({ onAdd }: { onAdd: (cat: FieldCategory, type: string, la
         <LayoutTemplate className="h-8 w-8 text-muted-foreground/40" />
       </div>
       <div>
-        <p className="text-[13px] font-medium text-muted-foreground">El lienzo está vacío</p>
-        <p className="text-[11px] text-muted-foreground/70 mt-1">
+        <p className="app-body font-medium text-muted-foreground">El lienzo está vacío</p>
+        <p className="app-body text-muted-foreground/70 mt-1">
           Arrastra componentes desde el panel izquierdo
         </p>
       </div>
@@ -652,7 +652,7 @@ function DropEmptyZone({ onAdd }: { onAdd: (cat: FieldCategory, type: string, la
             key={t.code}
             onClick={() => onAdd("own", t.code, t.label)}
             className="flex items-center gap-1.5 rounded-md border border-white/10 dark:border-white/5
-                       bg-card/60 backdrop-blur-md px-2.5 py-1.5 text-[11px]
+                       bg-card/60 backdrop-blur-md px-2.5 py-1.5 app-body
                        hover:border-primary/40 hover:bg-primary/5 transition-all"
           >
             <span>{t.icon}</span> {t.label}
@@ -669,7 +669,7 @@ function DropEmptyZone({ onAdd }: { onAdd: (cat: FieldCategory, type: string, la
 
 function DropZone() {
   return (
-    <div className="flex items-center justify-center rounded-lg border border-dashed border-border/50 py-3 text-[10px] text-muted-foreground/50">
+    <div className="flex items-center justify-center rounded-lg border border-dashed border-border/50 py-3 app-body text-muted-foreground/50">
       Suelta aquí para agregar al final
     </div>
   );
@@ -690,12 +690,12 @@ function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName
         <div className="rounded-xl border border-white/15 dark:border-white/10
                         bg-card/70 backdrop-blur-2xl saturate-150 p-5
                         shadow-[0_8px_40px_rgba(0,0,0,0.08)]">
-          <h2 className="text-base font-semibold mb-1">{screenName}</h2>
-          <p className="text-[11px] text-muted-foreground mb-4">Vista previa del formulario</p>
+          <h2 className="app-body font-semibold mb-1">{screenName}</h2>
+          <p className="app-body text-muted-foreground mb-4">Vista previa del formulario</p>
 
           {simpleEntities.length > 0 && (
             <section className="mb-4">
-              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
+              <h4 className="app-body font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
                 Datos del Siniestro / Gestión
               </h4>
               <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-3">
@@ -710,7 +710,7 @@ function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName
 
           {ownFields.length > 0 && (
             <section className="mb-4">
-              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
+              <h4 className="app-body font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
                 Formulario
               </h4>
               <div className="grid grid-cols-[repeat(60,minmax(0,1fr))] gap-3">
@@ -725,7 +725,7 @@ function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName
 
           {complexEntities.length > 0 && (
             <section>
-              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
+              <h4 className="app-body font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">
                 Entidades Complejas
               </h4>
               <div className="space-y-3">
@@ -741,7 +741,7 @@ function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName
           {fields.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <LayoutTemplate className="h-10 w-10 opacity-20" />
-              <p className="text-[11px] mt-2">Sin campos para previsualizar</p>
+              <p className="app-body mt-2">Sin campos para previsualizar</p>
             </div>
           )}
         </div>

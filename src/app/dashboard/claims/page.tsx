@@ -71,7 +71,7 @@ function getParticipant(claim: { claims_participants?: Participant[] }, type: st
 
 function FieldError({ message }: { message?: string }) {
  if (!message) return null;
- return <p className="text-[10px] text-red-500 leading-tight">{message}</p>;
+ return <p className="app-body text-red-500 leading-tight">{message}</p>;
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -945,13 +945,13 @@ function ClaimsPageContent() {
  <div className="flex items-center gap-1.5">
  <div
  className={cn(
- "flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold transition-colors",
+ "flex h-5 w-5 items-center justify-center rounded-full app-body font-bold transition-colors",
  step > s.id ? "bg-emerald-500 text-white" : step === s.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
  )}
  >
  {step > s.id ? <Check className="h-3 w-3" /> : s.id}
  </div>
- <span className={cn("text-[11px] font-medium", step >= s.id ? "text-foreground" : "text-muted-foreground")}>
+ <span className={cn("app-body font-medium", step >= s.id ? "text-foreground" : "text-muted-foreground")}>
  {s.label}
  </span>
  </div>
@@ -975,7 +975,7 @@ function ClaimsPageContent() {
  <h3 className="app-section-title">Datos del Siniestro</h3>
  <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  País del Siniestro <span className="text-red-500">*</span>
  </Label>
  <FormSelect
@@ -1000,7 +1000,7 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Empresa (Cliente) <span className="text-red-500">*</span>
  </Label>
  <FormSelect
@@ -1020,7 +1020,7 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Compañía de Seguros <span className="text-red-500">*</span>
  </Label>
  <FormSelect
@@ -1040,18 +1040,18 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">N° Interno Cliente</Label>
+ <Label className="app-body text-muted-foreground">N° Interno Cliente</Label>
  <input {...form.register("clientReference")} placeholder="MCL-XXXX" className="app-input" />
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  N° Siniestro (Compañía) <span className="text-red-500">*</span>
  </Label>
  <input {...form.register("claimNumber")} placeholder="Ej: 12345678" className={`app-input ${claimNumberWarning ? "border-amber-500 ring-1 ring-amber-500/30" : ""}`} />
  <FieldError message={form.formState.errors.claimNumber?.message} />
  {claimNumberWarning && (
- <p className="text-[10px] text-amber-600 leading-tight flex items-center gap-1">
+ <p className="app-body text-amber-600 leading-tight flex items-center gap-1">
  <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
  {claimNumberWarning}
  </p>
@@ -1059,7 +1059,7 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  N° Póliza <span className="text-red-500">*</span>
  </Label>
  <input {...form.register("policyNumber")} placeholder="Ej: POL-2026-001" className="app-input" />
@@ -1067,7 +1067,7 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Fecha Siniestro <span className="text-red-500">*</span>
  </Label>
  <FormDatePicker control={form.control} name="claimDate" className="w-[130px]" />
@@ -1075,12 +1075,12 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Fecha Denuncio</Label>
+ <Label className="app-body text-muted-foreground">Fecha Denuncio</Label>
  <FormDatePicker control={form.control} name="reportDate" className="w-[130px]" />
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Fecha Asignación</Label>
+ <Label className="app-body text-muted-foreground">Fecha Asignación</Label>
  <FormDatePicker control={form.control} name="assignmentDate" className="w-[130px]" />
  </div>
  </div>
@@ -1091,7 +1091,7 @@ function ClaimsPageContent() {
  <h3 className="app-section-title">Clasificación</h3>
  <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Tipo de Siniestro <span className="text-red-500">*</span>
  </Label>
  <FormSelect
@@ -1115,7 +1115,7 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Línea de Negocios</Label>
+ <Label className="app-body text-muted-foreground">Línea de Negocios</Label>
  <FormSelect
  control={form.control}
  name="businessLineId"
@@ -1134,7 +1134,7 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Ramo/Producto</Label>
+ <Label className="app-body text-muted-foreground">Ramo/Producto</Label>
  <FormSelect
  control={form.control}
  name="insuranceProductId"
@@ -1153,7 +1153,7 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Evento</Label>
+ <Label className="app-body text-muted-foreground">Evento</Label>
  <FormSelect
  control={form.control}
  name="eventId"
@@ -1171,7 +1171,7 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Asesor</Label>
+ <Label className="app-body text-muted-foreground">Asesor</Label>
  <FormSelect
  control={form.control}
  name="advisorId"
@@ -1189,7 +1189,7 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Corredor</Label>
+ <Label className="app-body text-muted-foreground">Corredor</Label>
  <FormSelect
  control={form.control}
  name="brokerId"
@@ -1213,7 +1213,7 @@ function ClaimsPageContent() {
  <h3 className="app-section-title">Asignación</h3>
  <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Inspector <span className="text-red-500">*</span>
  </Label>
  <FormSelect
@@ -1233,7 +1233,7 @@ function ClaimsPageContent() {
  </div>
 
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Ajustador / Liquidador</Label>
+ <Label className="app-body text-muted-foreground">Ajustador / Liquidador</Label>
  <FormSelect
  control={form.control}
  name="adjusterId"
@@ -1262,7 +1262,7 @@ function ClaimsPageContent() {
  <h3 className="app-section-title">Asegurado</h3>
  {participantSuggestion?.section === "insured" && (
  <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
- <div className="text-[11px] text-sky-800">
+ <div className="app-body text-sky-800">
  <span className="font-semibold">Persona encontrada:</span>{" "}
  {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
  {participantSuggestion.data.address && (
@@ -1280,44 +1280,44 @@ function ClaimsPageContent() {
  )}
  <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">RUT</Label>
+ <Label className="app-body text-muted-foreground">RUT</Label>
  <input {...form.register("rut")} placeholder="14185994k" className="app-input" />
  <FieldError message={form.formState.errors.rut?.message} />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Nombre <span className="text-red-500">*</span>
  </Label>
  <input {...form.register("insuredName")} placeholder="Cristian" className="app-input" />
  <FieldError message={form.formState.errors.insuredName?.message} />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Apellido</Label>
+ <Label className="app-body text-muted-foreground">Apellido</Label>
  <input {...form.register("lastName")} placeholder="Zárate" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Email</Label>
+ <Label className="app-body text-muted-foreground">Email</Label>
  <input {...form.register("insuredEmail")} type="email" placeholder="asegurado@email.com" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Celular <span className="text-red-500">*</span>
  </Label>
  <input {...form.register("cellPhone")} placeholder="9 9999 9999" className="app-input" />
  <FieldError message={form.formState.errors.cellPhone?.message} />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Teléfono</Label>
+ <Label className="app-body text-muted-foreground">Teléfono</Label>
  <input {...form.register("insuredPhone")} placeholder="X XXXX XXXX" className="app-input" />
  </div>
  <div className="flex flex-col gap-1 col-span-full">
- <Label className="text-[10px] text-muted-foreground">Dirección</Label>
+ <Label className="app-body text-muted-foreground">Dirección</Label>
  <input {...form.register("insuredAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
  </div>
  </div>
  <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">País</Label>
+ <Label className="app-body text-muted-foreground">País</Label>
  <FormSelect
  control={form.control}
  name="insuredCountry"
@@ -1338,7 +1338,7 @@ function ClaimsPageContent() {
  </div>
  {hasInsuredRegions && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Región</Label>
+ <Label className="app-body text-muted-foreground">Región</Label>
  <FormSelect
  control={form.control}
  name="insuredRegion"
@@ -1360,7 +1360,7 @@ function ClaimsPageContent() {
  )}
  {hasInsuredCities && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Ciudad</Label>
+ <Label className="app-body text-muted-foreground">Ciudad</Label>
  <FormSelect
  control={form.control}
  name="insuredCity"
@@ -1379,7 +1379,7 @@ function ClaimsPageContent() {
  )}
  {hasInsuredCommunes && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Comuna</Label>
+ <Label className="app-body text-muted-foreground">Comuna</Label>
  <FormSelect
  control={form.control}
  name="insuredCommune"
@@ -1414,7 +1414,7 @@ function ClaimsPageContent() {
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 text-[11px] w-[150px] justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-[150px] justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={() => toggleContractorLink()}
  >
  {contractorLinked ? "Desligar" : "Copiar"}
@@ -1425,7 +1425,7 @@ function ClaimsPageContent() {
  <div className="px-3 pb-3 space-y-2">
  {participantSuggestion?.section === "contractor" && !contractorLinked && (
  <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
- <div className="text-[11px] text-sky-800">
+ <div className="app-body text-sky-800">
  <span className="font-semibold">Persona encontrada:</span>{" "}
  {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
  {participantSuggestion.data.address && (
@@ -1443,38 +1443,38 @@ function ClaimsPageContent() {
  )}
  <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">RUT</Label>
+ <Label className="app-body text-muted-foreground">RUT</Label>
  <input {...form.register("contractorRut")} readOnly={contractorLinked} placeholder="14185994k" className="app-input" />
  <FieldError message={form.formState.errors.contractorRut?.message} />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Nombre</Label>
+ <Label className="app-body text-muted-foreground">Nombre</Label>
  <input {...form.register("contractorName")} readOnly={contractorLinked} placeholder="Cristian" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Apellido</Label>
+ <Label className="app-body text-muted-foreground">Apellido</Label>
  <input {...form.register("contractorLastName")} readOnly={contractorLinked} placeholder="Zárate" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Email</Label>
+ <Label className="app-body text-muted-foreground">Email</Label>
  <input {...form.register("contractorEmail")} readOnly={contractorLinked} type="email" placeholder="contratante@email.com" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Celular</Label>
+ <Label className="app-body text-muted-foreground">Celular</Label>
  <input {...form.register("contractorCellPhone")} readOnly={contractorLinked} placeholder="9 9999 9999" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Teléfono</Label>
+ <Label className="app-body text-muted-foreground">Teléfono</Label>
  <input {...form.register("contractorPhone")} readOnly={contractorLinked} placeholder="X XXXX XXXX" className="app-input" />
  </div>
  <div className="flex flex-col gap-1 col-span-full">
- <Label className="text-[10px] text-muted-foreground">Dirección</Label>
+ <Label className="app-body text-muted-foreground">Dirección</Label>
  <input {...form.register("contractorAddress")} readOnly={contractorLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
  </div>
  </div>
  <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">País</Label>
+ <Label className="app-body text-muted-foreground">País</Label>
  <FormSelect
  control={form.control}
  name="contractorCountry"
@@ -1496,7 +1496,7 @@ function ClaimsPageContent() {
  </div>
  {hasContractorRegions && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Región</Label>
+ <Label className="app-body text-muted-foreground">Región</Label>
  <FormSelect
  control={form.control}
  name="contractorRegion"
@@ -1518,7 +1518,7 @@ function ClaimsPageContent() {
  )}
  {hasContractorCities && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Ciudad</Label>
+ <Label className="app-body text-muted-foreground">Ciudad</Label>
  <FormSelect
  control={form.control}
  name="contractorCity"
@@ -1537,7 +1537,7 @@ function ClaimsPageContent() {
  )}
  {hasContractorCommunes && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Comuna</Label>
+ <Label className="app-body text-muted-foreground">Comuna</Label>
  <FormSelect
  control={form.control}
  name="contractorCommune"
@@ -1574,7 +1574,7 @@ function ClaimsPageContent() {
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 text-[11px] w-[150px] justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-[150px] justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={() => toggleBeneficiaryLink()}
  >
  {beneficiaryLinked ? "Desligar" : "Copiar"}
@@ -1585,7 +1585,7 @@ function ClaimsPageContent() {
  <div className="px-3 pb-3 space-y-2">
  {participantSuggestion?.section === "beneficiary" && !beneficiaryLinked && (
  <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
- <div className="text-[11px] text-sky-800">
+ <div className="app-body text-sky-800">
  <span className="font-semibold">Persona encontrada:</span>{" "}
  {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
  {participantSuggestion.data.address && (
@@ -1603,38 +1603,38 @@ function ClaimsPageContent() {
  )}
  <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">RUT</Label>
+ <Label className="app-body text-muted-foreground">RUT</Label>
  <input {...form.register("beneficiaryRut")} readOnly={beneficiaryLinked} placeholder="14185994k" className="app-input" />
  <FieldError message={form.formState.errors.beneficiaryRut?.message} />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Nombre</Label>
+ <Label className="app-body text-muted-foreground">Nombre</Label>
  <input {...form.register("beneficiaryName")} readOnly={beneficiaryLinked} placeholder="Cristian" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Apellido</Label>
+ <Label className="app-body text-muted-foreground">Apellido</Label>
  <input {...form.register("beneficiaryLastName")} readOnly={beneficiaryLinked} placeholder="Zárate" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Email</Label>
+ <Label className="app-body text-muted-foreground">Email</Label>
  <input {...form.register("beneficiaryEmail")} readOnly={beneficiaryLinked} type="email" placeholder="beneficiario@email.com" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Celular</Label>
+ <Label className="app-body text-muted-foreground">Celular</Label>
  <input {...form.register("beneficiaryCellPhone")} readOnly={beneficiaryLinked} placeholder="9 9999 9999" className="app-input" />
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Teléfono</Label>
+ <Label className="app-body text-muted-foreground">Teléfono</Label>
  <input {...form.register("beneficiaryPhone")} readOnly={beneficiaryLinked} placeholder="X XXXX XXXX" className="app-input" />
  </div>
  <div className="flex flex-col gap-1 col-span-full">
- <Label className="text-[10px] text-muted-foreground">Dirección</Label>
+ <Label className="app-body text-muted-foreground">Dirección</Label>
  <input {...form.register("beneficiaryAddress")} readOnly={beneficiaryLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
  </div>
  </div>
  <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">País</Label>
+ <Label className="app-body text-muted-foreground">País</Label>
  <FormSelect
  control={form.control}
  name="beneficiaryCountry"
@@ -1656,7 +1656,7 @@ function ClaimsPageContent() {
  </div>
  {hasBeneficiaryRegions && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Región</Label>
+ <Label className="app-body text-muted-foreground">Región</Label>
  <FormSelect
  control={form.control}
  name="beneficiaryRegion"
@@ -1678,7 +1678,7 @@ function ClaimsPageContent() {
  )}
  {hasBeneficiaryCities && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Ciudad</Label>
+ <Label className="app-body text-muted-foreground">Ciudad</Label>
  <FormSelect
  control={form.control}
  name="beneficiaryCity"
@@ -1697,7 +1697,7 @@ function ClaimsPageContent() {
  )}
  {hasBeneficiaryCommunes && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Comuna</Label>
+ <Label className="app-body text-muted-foreground">Comuna</Label>
  <FormSelect
  control={form.control}
  name="beneficiaryCommune"
@@ -1728,7 +1728,7 @@ function ClaimsPageContent() {
  <h3 className="app-section-title">Incidente</h3>
  <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Causal del Siniestro</Label>
+ <Label className="app-body text-muted-foreground">Causal del Siniestro</Label>
  <FormSelect
  control={form.control}
  name="claimCauseId"
@@ -1743,7 +1743,7 @@ function ClaimsPageContent() {
  </FormSelect>
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Tipo de Construcción</Label>
+ <Label className="app-body text-muted-foreground">Tipo de Construcción</Label>
  <FormSelect
  control={form.control}
  name="constructionTypeId"
@@ -1758,7 +1758,7 @@ function ClaimsPageContent() {
  </FormSelect>
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Habitabilidad</Label>
+ <Label className="app-body text-muted-foreground">Habitabilidad</Label>
  <FormSelect
  control={form.control}
  name="habitabilityId"
@@ -1773,7 +1773,7 @@ function ClaimsPageContent() {
  </FormSelect>
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Destino</Label>
+ <Label className="app-body text-muted-foreground">Destino</Label>
  <FormSelect
  control={form.control}
  name="destinationHousingId"
@@ -1788,7 +1788,7 @@ function ClaimsPageContent() {
  </FormSelect>
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Asegurado/Propietario</Label>
+ <Label className="app-body text-muted-foreground">Asegurado/Propietario</Label>
  <FormSelect
  control={form.control}
  name="ownerType"
@@ -1801,7 +1801,7 @@ function ClaimsPageContent() {
  </FormSelect>
  </div>
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Clasificación del Daño</Label>
+ <Label className="app-body text-muted-foreground">Clasificación del Daño</Label>
  <FormSelect
  control={form.control}
  name="damageClassificationId"
@@ -1816,7 +1816,7 @@ function ClaimsPageContent() {
  </FormSelect>
  </div>
  <div className="flex flex-col gap-1 col-span-full">
- <Label className="text-[10px] text-muted-foreground">Resumen</Label>
+ <Label className="app-body text-muted-foreground">Resumen</Label>
  <textarea {...form.register("summary")} rows={2} className="app-input resize-none" placeholder="Descripción breve del siniestro..." />
  </div>
  </div>
@@ -1830,7 +1830,7 @@ function ClaimsPageContent() {
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 text-[11px] w-[150px] justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-[150px] justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={() => toggleClaimAddressLink()}
  >
  {claimAddressLinked ? "Desligar" : "Copiar"}
@@ -1838,7 +1838,7 @@ function ClaimsPageContent() {
  </div>
  <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1 col-span-full">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Dirección <span className="text-red-500">*</span>
  </Label>
  <input {...form.register("claimAddress")} readOnly={claimAddressLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
@@ -1849,12 +1849,12 @@ function ClaimsPageContent() {
  {/* Geocodificación manual: el usuario confirma la ubicación exacta */}
  <div className="flex flex-col gap-2 rounded-lg border border-border/50 p-3">
  <div className="flex items-center justify-between">
- <span className="text-[11px] font-medium">Ubicación en mapa</span>
+ <span className="app-body font-medium">Ubicación en mapa</span>
  <Button
  type="button"
  size="sm"
  variant="outline"
- className="pg-btn-platinum h-6 text-[11px]"
+ className="pg-btn-platinum h-6 app-body"
  disabled={!claimAddressW || !claimCityW}
  onClick={() => setLocationSelectorOpen(true)}
  >
@@ -1863,14 +1863,14 @@ function ClaimsPageContent() {
  </Button>
  </div>
  {(claimLatitudeW && claimLongitudeW) ? (
- <div className="text-[11px] text-emerald-600 flex items-center gap-2">
+ <div className="app-body text-emerald-600 flex items-center gap-2">
  <CheckCircle2 className="h-3.5 w-3.5" />
  <span>
  Ubicación confirmada: {Number(claimLatitudeW).toFixed(6)}, {Number(claimLongitudeW).toFixed(6)}
  </span>
  </div>
  ) : (
- <div className="text-[11px] text-amber-600 flex items-center gap-2">
+ <div className="app-body text-amber-600 flex items-center gap-2">
  <AlertTriangle className="h-3.5 w-3.5" />
  <span>Falta confirmar la ubicación exacta en el mapa.</span>
  </div>
@@ -1878,7 +1878,7 @@ function ClaimsPageContent() {
  </div>
  <div className="grid grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">País</Label>
+ <Label className="app-body text-muted-foreground">País</Label>
  <FormSelect
  control={form.control}
  name="claimCountry"
@@ -1899,7 +1899,7 @@ function ClaimsPageContent() {
  </div>
  {hasClaimRegions && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Región</Label>
+ <Label className="app-body text-muted-foreground">Región</Label>
  <FormSelect
  control={form.control}
  name="claimRegion"
@@ -1921,7 +1921,7 @@ function ClaimsPageContent() {
  )}
  {hasClaimCities && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">
+ <Label className="app-body text-muted-foreground">
  Ciudad <span className="text-red-500">*</span>
  </Label>
  <FormSelect
@@ -1942,7 +1942,7 @@ function ClaimsPageContent() {
  )}
  {hasClaimCommunes && (
  <div className="flex flex-col gap-1">
- <Label className="text-[10px] text-muted-foreground">Comuna</Label>
+ <Label className="app-body text-muted-foreground">Comuna</Label>
  <FormSelect
  control={form.control}
  name="claimCommune"
@@ -1976,7 +1976,7 @@ function ClaimsPageContent() {
  onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files); }}
  >
  <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
- <p className="text-muted-foreground text-[13px]">
+ <p className="text-muted-foreground app-body">
  Arrastra archivo(s) aquí o{" "}
  <label className="cursor-pointer text-primary hover:underline">
  haz clic para seleccionar
@@ -1988,7 +1988,7 @@ function ClaimsPageContent() {
  />
  </label>
  </p>
- <p className="text-muted-foreground text-xs mt-1">
+ <p className="text-muted-foreground app-body mt-1">
  Acepta archivos PDF, Word y Excel de hasta 10 MB
  </p>
  </div>
@@ -2018,7 +2018,7 @@ function ClaimsPageContent() {
  onChange={(e) =>
  updateDocument(doc.id, { name: e.target.value })
  }
- className="h-8 text-[13px]"
+ className="h-8 app-body"
  placeholder="Nombre de documento"
  />
  </td>
@@ -2027,7 +2027,7 @@ function ClaimsPageContent() {
  control={form.control}
  name={`documentType-${doc.id}`}
  placeholder="Tipo..."
- className="h-8 text-[13px]"
+ className="h-8 app-body"
  onValueChange={(v) => updateDocument(doc.id, { type: v })}
  items={documentTypesCatalog?.map((t) => ({ value: t.id, label: t.name })) || []}
  >
@@ -2038,7 +2038,7 @@ function ClaimsPageContent() {
  ))}
  </FormSelect>
  </td>
- <td className="text-[11px] text-muted-foreground truncate max-w-[180px]">
+ <td className="app-body text-muted-foreground truncate max-w-[180px]">
  {doc.file.name}
  </td>
  <td>
@@ -2173,7 +2173,7 @@ function ClaimsPageContent() {
  {(statusFilter || dateFrom || dateTo) && (
  <button
  onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
- className="text-[11px] text-muted-foreground hover:text-foreground px-2"
+ className="app-body text-muted-foreground hover:text-foreground px-2"
  >
  Limpiar
  </button>
@@ -2256,7 +2256,7 @@ function ClaimsPageContent() {
  </table>
  </div>
  <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
- <div className="text-center text-[10px] text-muted-foreground/70 -mt-1 pb-0.5">
+ <div className="text-center app-body text-muted-foreground/70 -mt-1 pb-0.5">
  {total} siniestro{total !== 1 ? "s" : ""}
  </div>
  </div>

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 
 export default function ChatTab({ sessionId, compact = false }: { sessionId: string; compact?: boolean }) {
  const queryClient = useQueryClient();
- const { user } = useAuth();
+ const { user, profile } = useAuth();
  const [message, setMessage] = useState("");
  const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -25,8 +25,8 @@ export default function ChatTab({ sessionId, compact = false }: { sessionId: str
  sendChatMessage(
  sessionId,
  message.trim(),
- user?.id || null,
- user?.email || "Usuario",
+ profile?.id || null,
+ profile?.full_name || user?.email || "Usuario",
  undefined
  ),
  onSuccess: () => {
@@ -67,7 +67,7 @@ export default function ChatTab({ sessionId, compact = false }: { sessionId: str
  <div className="flex-1 space-y-3 overflow-y-auto pr-1" style={{ maxHeight: compact ? "calc(100vh - 220px)" : "400px" }}>
  {messages && messages.length > 0 ? (
  messages.map((msg) => {
- const isCurrentUser = msg.sender_id === user?.id;
+ const isCurrentUser = msg.sender_id === profile?.id;
  return (
  <div
  key={msg.id}
@@ -85,9 +85,9 @@ export default function ChatTab({ sessionId, compact = false }: { sessionId: str
  >
  <div className="flex items-center gap-1.5 mb-0.5">
  <span className="text-[11px] font-semibold opacity-80">
- {msg.sender_name || "Usuario"}
+ {msg.sender_role?.trim().toLowerCase() === "client" ? "Cliente" : (msg.sender_name || "Usuario")}
  </span>
- {msg.sender_role && (
+ {msg.sender_role && msg.sender_role.trim().toLowerCase() !== "client" && (
  <span className="text-[10px] opacity-60">
  ({msg.sender_role})
  </span>

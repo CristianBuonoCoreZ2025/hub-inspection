@@ -146,7 +146,7 @@ function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => Promi
   );
 }
 
-export default function SignaturesTab({ sessionId, sessionStatus }: { sessionId: string; sessionStatus?: string }) {
+export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string }) {
   const queryClient = useQueryClient();
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
@@ -171,8 +171,10 @@ export default function SignaturesTab({ sessionId, sessionStatus }: { sessionId:
       toast.error(body.error || "Error al subir firma");
       throw new Error(body.error || "Error al subir firma");
     }
-    // Invalidar y esperar a que el query se refresque para que el canvas se oculte
+    // Invalidar queries para sincronizar dashboard y magic link
     await queryClient.invalidateQueries({ queryKey: ["signatures", sessionId] });
+    await queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+    if (magicLinkToken) await queryClient.invalidateQueries({ queryKey: ["magic-link-live", magicLinkToken] });
     toast.success("Firma guardada");
   };
 

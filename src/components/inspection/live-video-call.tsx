@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Image as ImageIcon,
+  Circle,
+  Square,
 } from "lucide-react";
 import { joinSignalingChannel, ICE_SERVERS, type SignalingRole, type SignalingMessage } from "@/lib/webrtc/signaling";
 
@@ -25,6 +27,8 @@ interface LiveVideoCallProps {
   displayName: string;
   onHangup: () => void;
   onScreenshotSaved?: (evidence: { id: string; url: string; description: string }) => void;
+  onPeerJoined?: () => void;
+  onRecordingSaved?: (evidence: { id: string; url: string; description: string }) => void;
 }
 
 interface SavedEvidence {
@@ -42,6 +46,8 @@ export function LiveVideoCall({
   displayName,
   onHangup,
   onScreenshotSaved,
+  onPeerJoined,
+  onRecordingSaved,
 }: LiveVideoCallProps) {
   const localVideoRef = React.useRef<HTMLVideoElement>(null);
   const remoteVideoRef = React.useRef<HTMLVideoElement>(null);
@@ -62,6 +68,12 @@ export function LiveVideoCall({
   const [screenshotting, setScreenshotting] = React.useState(false);
   const [lastScreenshot, setLastScreenshot] = React.useState<SavedEvidence | null>(null);
   const [screenshotCount, setScreenshotCount] = React.useState(0);
+  const [recording, setRecording] = React.useState(false);
+  const [recordingTime, setRecordingTime] = React.useState(0);
+  const peerJoinedNotifiedRef = React.useRef(false);
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = React.useRef<Blob[]>([]);
+  const recordingTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Inicializar media local ──
   const initLocalMedia = React.useCallback(async () => {
@@ -148,6 +160,10 @@ export function LiveVideoCall({
       try {
         if (msg.type === "ready") {
           setPeerJoined(true);
+          if (msg.role !== role && !peerJoinedNotifiedRef.current) {
+            peerJoinedNotifiedRef.current = true;
+            onPeerJoined?.();
+          }
           // El inspector (impolite) inicia la oferta cuando el cliente se une
           if (role === "inspector" && localStreamRef.current) {
             // Forzar renegotiación agregando tracks si no están
@@ -160,6 +176,10 @@ export function LiveVideoCall({
           }
         } else if (msg.type === "offer") {
           setPeerJoined(true);
+          if (msg.role !== role && !peerJoinedNotifiedRef.current) {
+            peerJoinedNotifiedRef.current = true;
+            onPeerJoined?.();
+          }
           const offerCollision = makingOfferRef.current;
           ignoreOfferRef.current = !politeRef.current && offerCollision;
           if (ignoreOfferRef.current) return;
@@ -203,7 +223,7 @@ export function LiveVideoCall({
         console.error("[LiveVideoCall] Error procesando signaling:", msg.type, err);
       }
     },
-    [role, userId],
+    [role, userId, onPeerJoined],
   );
 
   // ── Inicializar todo al montar ──
@@ -255,6 +275,13 @@ export function LiveVideoCall({
       if (remoteStreamRef.current) {
         remoteStreamRef.current.getTracks().forEach((t) => t.stop());
         remoteStreamRef.current = null;
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -354,6 +381,66 @@ export function LiveVideoCall({
     }
   };
 
+  // ── Grabación de sesión (solo inspector) ──
+  const startRecording = () => {
+    if (!remoteStreamRef.current) return;
+    recordedChunksRef.current = [];
+    const combined = new MediaStream();
+    remoteStreamRef.current.getTracks().forEach((track) => combined.addTrack(track));
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach((track) => combined.addTrack(track));
+    }
+    const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", ""].find((t) =>
+      t ? MediaRecorder.isTypeSupported(t) : true,
+    );
+    const recorder = new MediaRecorder(combined, { mimeType: mimeType || undefined });
+    mediaRecorderRef.current = recorder;
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunksRef.current.push(e.data);
+    };
+    recorder.onstop = () => {
+      void uploadRecording();
+    };
+    recorder.start(1000);
+    setRecording(true);
+    setRecordingTime(0);
+    recordingTimerRef.current = setInterval(() => setRecordingTime((t) => t + 1), 1000);
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    setRecording(false);
+  };
+
+  const uploadRecording = async () => {
+    const chunks = recordedChunksRef.current;
+    if (chunks.length === 0) return;
+    const blob = new Blob(chunks, { type: chunks[0]?.type || "video/webm" });
+    const ext = blob.type.includes("mp4") ? ".mp4" : ".webm";
+    const file = new File([blob], `grabacion-sesion-${Date.now()}${ext}`, { type: blob.type });
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("sessionId", sessionId);
+    formData.append("source", "live_video");
+    formData.append("originalName", file.name);
+    try {
+      const res = await fetch("/api/inspection/evidences/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.evidence) {
+        onRecordingSaved?.({ id: data.evidence.id, url: data.evidence.url, description: data.evidence.description });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al subir grabación");
+    }
+  };
+
   // ── Pantalla completa del video remoto ──
   const goFullscreen = () => {
     const video = remoteVideoRef.current;
@@ -391,24 +478,30 @@ export function LiveVideoCall({
             ) : (
               <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
             )}
-            <span className={`text-sm font-medium ${stateColor[state]}`}>
+            <span className={`app-body font-medium ${stateColor[state]}`}>
               {stateLabel[state]}
             </span>
           </div>
           {!peerJoined && state !== "failed" && (
-            <span className="text-xs text-white/60">
+            <span className="app-body text-white/60">
               Esperando a que el {role === "inspector" ? "cliente" : "inspector"} se conecte...
+            </span>
+          )}
+          {recording && (
+            <span className="flex items-center gap-1.5 app-body font-medium text-rose-400">
+              <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+              REC {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, "0")}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
           {screenshotCount > 0 && (
-            <span className="text-xs text-white/60 flex items-center gap-1">
+            <span className="app-body text-white/60 flex items-center gap-1">
               <Camera className="h-3 w-3" />
               {screenshotCount} {screenshotCount === 1 ? "foto" : "fotos"}
             </span>
           )}
-          <span className="text-xs text-white/40 hidden sm:inline">
+          <span className="app-body text-white/40 hidden sm:inline">
             {displayName} · {role === "inspector" ? "Inspector" : "Cliente"}
           </span>
         </div>
@@ -426,7 +519,7 @@ export function LiveVideoCall({
         {!peerJoined && state !== "failed" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50">
             <Video className="h-12 w-12 mb-3 opacity-50" />
-            <p className="text-sm">
+            <p className="app-body">
               {state === "connecting" ? "Esperando al otro participante..." : "Listo para conectar"}
             </p>
           </div>
@@ -434,8 +527,8 @@ export function LiveVideoCall({
         {state === "failed" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70">
             <AlertTriangle className="h-12 w-12 mb-3 text-rose-500" />
-            <p className="text-sm font-medium">No se pudo establecer la conexión</p>
-            <p className="text-xs text-white/50 mt-1">{error}</p>
+            <p className="app-body font-medium">No se pudo establecer la conexión</p>
+            <p className="app-body text-white/50 mt-1">{error}</p>
           </div>
         )}
 
@@ -453,7 +546,7 @@ export function LiveVideoCall({
               <VideoOff className="h-6 w-6 text-white/60" />
             </div>
           )}
-          <div className="absolute bottom-1 left-1 text-[9px] text-white/80 bg-black/60 rounded px-1 py-0.5">
+          <div className="absolute bottom-1 left-1 app-body text-white/80 bg-black/60 rounded px-1 py-0.5">
             Tú
           </div>
         </div>
@@ -475,7 +568,7 @@ export function LiveVideoCall({
       {lastScreenshot && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-emerald-600/90 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-pulse">
           <CheckCircle2 className="h-4 w-4" />
-          <span className="text-xs font-medium">Foto capturada: {lastScreenshot.description}</span>
+          <span className="app-body font-medium">Foto capturada: {lastScreenshot.description}</span>
         </div>
       )}
 
@@ -483,7 +576,7 @@ export function LiveVideoCall({
       {error && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-rose-600/90 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 max-w-md">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          <span className="text-xs">{error}</span>
+          <span className="app-body">{error}</span>
         </div>
       )}
 
@@ -525,6 +618,20 @@ export function LiveVideoCall({
           )}
         </button>
 
+        {role === "inspector" && (
+          <button
+            type="button"
+            onClick={recording ? stopRecording : startRecording}
+            disabled={!peerJoined}
+            className={`p-3 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              recording ? "bg-rose-600 hover:bg-rose-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
+            }`}
+            title={recording ? "Detener grabación" : "Grabar sesión"}
+          >
+            {recording ? <Square className="h-5 w-5" /> : <Circle className="h-5 w-5 fill-white" />}
+          </button>
+        )}
+
         <button
           type="button"
           onClick={handleHangup}
@@ -537,7 +644,7 @@ export function LiveVideoCall({
 
       {/* Hint de captura */}
       {peerJoined && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-white/40 text-[10px] flex items-center gap-1 pointer-events-none">
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-white/40 app-body flex items-center gap-1 pointer-events-none">
           <ImageIcon className="h-3 w-3" />
           Toca la cámara para capturar fotos del video en vivo
         </div>
