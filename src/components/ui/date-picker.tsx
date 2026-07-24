@@ -6,6 +6,7 @@ import { es } from "date-fns/locale"
 import { CalendarIcon, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
@@ -66,7 +67,7 @@ function DatePicker({
               )}
             >
               <CalendarIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
-              <span className="flex-1 text-center text-[10px] tabular-nums">{displayValue}</span>
+              <span className="flex-1 text-center app-body tabular-nums">{displayValue}</span>
             </button>
           }
         />
@@ -86,15 +87,15 @@ function DatePicker({
         </PopoverContent>
       </Popover>
       {showClear && (
-        <button
+        <Button
           type="button"
           disabled={disabled}
           onClick={() => onChange("")}
-          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center rounded-full p-0.5 text-muted-foreground hover:text-foreground hover:bg-white/20 focus-visible:outline-hidden disabled:pointer-events-none"
+          className="btn-icon-sm absolute right-2 top-1/2 -translate-y-1/2"
           aria-label="Limpiar fecha"
         >
           <X className="h-3 w-3" />
-        </button>
+        </Button>
       )}
     </div>
   )

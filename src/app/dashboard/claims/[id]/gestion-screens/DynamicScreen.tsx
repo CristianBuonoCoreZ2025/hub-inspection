@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,7 +33,7 @@ import { getLookupCatalog } from "@/services/catalogs";
 import { getDocumentTemplates, type DocumentTemplate } from "@/services/document-templates";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Plus, Ban, ChevronDown, Check, CheckCircle, X, FileText, Download, Loader2, Play, Upload, History, Lock, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw } from "lucide-react";
+import { Plus, Ban, ChevronDown, ChevronRight, Check, CheckCircle, Circle, Clock, X, XCircle, FileText, Download, Loader2, Play, Upload, History, Lock, LockOpen, AlertTriangle, Star, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { ClaimAction, Claim, ClaimsParticipant } from "@/types";
@@ -398,7 +398,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  return (
  <div className="space-y-3">
  {/* ─── Barra de fechas (siempre visible, horario militar 24h) ─── */}
- <div className="grid grid-cols-2 gap-3 text-[10px] text-muted-foreground px-1 pb-1">
+ <div className="grid grid-cols-2 gap-3 app-body text-muted-foreground px-1 pb-1">
  <div>
  <span>Creación: </span>
  <span className="font-mono">{action.created_on ? new Date(action.created_on).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</span>
@@ -414,7 +414,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  <div className="space-y-3">
  {sortedComplexEntities.map((field) => (
  <section key={field.id} className="app-panel p-2.5">
- <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">{field.label}</h4>
+ <h4 className="app-body font-semibold text-muted-foreground uppercase tracking-wide mb-2">{field.label}</h4>
  <ComplexEntityView type={field.type} field={field} action={action} readOnly={readOnly} values={values} onAdvance={onAdvance} onReject={onReject} onChange={onChange} />
  </section>
  ))}
@@ -525,8 +525,8 @@ function EntityField({ field, value, action, reserveData, claim, claimParticipan
  if (!insured) return <CardEmpty label={field.label} />;
  return (
  <div className="rounded-md border border-border/60 p-1.5 space-y-1 bg-muted/20">
- <p className="text-[10px] font-semibold text-muted-foreground">{field.label || "Datos del Asegurado"}</p>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-3 gap-y-0.5 text-[10px]">
+ <p className="app-dynamic-title text-muted-foreground">{field.label || "Datos del Asegurado"}</p>
+ <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-3 gap-y-0.5 app-body">
  <div><span className="app-data-label">RUT</span><p className="font-medium truncate">{insured.rut || "—"}</p></div>
  <div><span className="app-data-label">Tipo</span><p className="font-medium">{insured.person_type === "legal" ? "P. Jurídica" : insured.person_type === "natural" ? "P. Natural" : "—"}</p></div>
  <div><span className="app-data-label">Nombre</span><p className="font-medium truncate">{insured.first_name || "—"}</p></div>
@@ -547,8 +547,8 @@ function EntityField({ field, value, action, reserveData, claim, claimParticipan
  if (!claim) return <CardEmpty label={field.label} />;
  return (
  <div className="rounded-md border border-border/60 p-1.5 space-y-1 bg-muted/20">
- <p className="text-[10px] font-semibold text-muted-foreground">{field.label || "Dirección del Siniestro"}</p>
- <div className="grid grid-cols-3 gap-x-3 gap-y-0.5 text-[10px]">
+ <p className="app-dynamic-title text-muted-foreground">{field.label || "Dirección del Siniestro"}</p>
+ <div className="grid grid-cols-3 gap-x-3 gap-y-0.5 app-body">
  <div><span className="app-data-label">Dirección</span><p className="font-medium truncate">{claim.claim_address || "—"}</p></div>
  <div><span className="app-data-label">Tipo</span><p className="font-medium truncate">{claim.destination_housing?.name || "—"}</p></div>
  <div><span className="app-data-label">País</span><p className="font-medium truncate">{claim.country?.name || "—"}</p></div>
@@ -565,8 +565,8 @@ function EntityField({ field, value, action, reserveData, claim, claimParticipan
  if (!contact) return <CardEmpty label={field.label} />;
  return (
  <div className="rounded-md border border-border/60 p-1.5 space-y-1 bg-muted/20">
- <p className="text-[10px] font-semibold text-muted-foreground">{field.label || "Persona de Contacto"}</p>
- <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 text-[10px]">
+ <p className="app-dynamic-title text-muted-foreground">{field.label || "Persona de Contacto"}</p>
+ <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 app-body">
  <div><span className="app-data-label">Nombre</span><p className="font-medium truncate">{contact.first_name || "—"}</p></div>
  <div><span className="app-data-label">Apellido</span><p className="font-medium truncate">{contact.last_name || "—"}</p></div>
  <div><span className="app-data-label">Email</span><p className="font-medium truncate">{contact.email || "—"}</p></div>
@@ -589,10 +589,10 @@ function EntityField({ field, value, action, reserveData, claim, claimParticipan
 
  return (
  <div className="flex flex-col gap-0.5">
- <Label className="text-[10px] text-muted-foreground">{field.label}</Label>
+ <Label className="app-body text-muted-foreground">{field.label}</Label>
  <Input
  type="text"
- className="h-7 text-[10px] bg-muted/30 border-dashed border-border/60 px-2 text-muted-foreground"
+ className="h-7 app-body bg-muted/30 border-dashed border-border/60 px-2 text-muted-foreground"
  value={displayValue}
  readOnly
  placeholder={`Se completa automáticamente`}
@@ -604,8 +604,8 @@ function EntityField({ field, value, action, reserveData, claim, claimParticipan
 function CardEmpty({ label }: { label: string }) {
  return (
  <div className="rounded-lg border border-dashed border-border p-3 text-center">
- <p className="text-[11px] font-semibold text-muted-foreground">{label}</p>
- <p className="text-[10px] text-muted-foreground mt-1">Sin datos disponibles</p>
+ <p className="app-dynamic-title text-muted-foreground">{label}</p>
+ <p className="app-body text-muted-foreground mt-1">Sin datos disponibles</p>
  </div>
  );
 }
@@ -843,16 +843,16 @@ function ReviewLevelsView({ action, onAdvance, onReject, receiptFieldConfig, req
  return (
  <div className="rounded-lg border border-border bg-muted/20 p-3">
  <div className="flex items-center justify-between mb-2">
- <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+ <span className="app-dynamic-title text-muted-foreground">
  {levels.length} nivel{levels.length !== 1 ? "es" : ""} de revisión
  </span>
  {isClosed && (
- <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+ <span className="flex items-center gap-1 app-body text-emerald-600 font-medium">
  <CheckCircle className="h-3 w-3" /> Emitida — cerrada
  </span>
  )}
  {allDone && !isClosed && (
- <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+ <span className="flex items-center gap-1 app-body text-emerald-600 font-medium">
  <CheckCircle className="h-3 w-3" /> Completada
  </span>
  )}
@@ -1026,7 +1026,7 @@ function LevelCard({
  };
 
  return (
- <div className={`flex flex-col gap-1 rounded-md px-2.5 py-1.5 text-[11px] ${sty}`}>
+ <div className={`flex flex-col gap-1 rounded-md px-2.5 py-1.5 app-body ${sty}`}>
  <div className="flex items-center gap-1.5">
  {level.done ? (
  <CheckCircle className="h-3 w-3" />
@@ -1037,14 +1037,14 @@ function LevelCard({
  )}
  <span className="font-semibold">{level.label}</span>
  {isCurrentUser && (
- <Badge variant="outline" className="h-3.5 text-[8px] px-1 py-0">Tú</Badge>
+ <Badge variant="outline" className="app-dynamic-badge h-3.5 px-1 py-0">Tú</Badge>
  )}
  </div>
  <div className="flex items-center gap-1.5">
  {level.currentId ? (
- <span className="text-[10px] opacity-80">{level.personName}</span>
+ <span className="opacity-80">{level.personName}</span>
  ) : (
- <span className="text-[10px] opacity-50 italic">Por asignar</span>
+ <span className="opacity-50 italic">Por asignar</span>
  )}
  </div>
  {/* Panel de asignación cuando:
@@ -1053,82 +1053,88 @@ function LevelCard({
     (puede reasignarse a sí mismo para poder actuar) */}
  {level.active && !level.done && (!level.currentId || (!isCurrentUser && isCandidate)) && (
  <div className="flex flex-col gap-1 pt-0.5">
- <select
- className="text-[10px] rounded border border-border bg-background px-1.5 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
+ <Select
  value=""
- onChange={(e) => {
- if (e.target.value) assignMut.mutate(e.target.value);
+ onValueChange={(v: string | null) => {
+ if (v) assignMut.mutate(v);
  }}
  disabled={assignMut.isPending}
+ items={allCandidates.map((c) => ({ value: c.id, label: c.full_name || c.email || c.id.slice(0, 8) }))}
  >
- <option value="" disabled>{level.currentId ? "Tomar la gestión..." : "Seleccionar persona..."}</option>
+ <SelectTrigger className="app-input w-full h-7">
+ <SelectValue placeholder={level.currentId ? "Tomar la gestión..." : "Seleccionar persona..."} />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="" disabled>{level.currentId ? "Tomar la gestión..." : "Seleccionar persona..."}</SelectItem>
  {(allCandidates || []).map((c) => (
- <option key={c.id} value={c.id}>
- {c.source === "internal" ? "★ " : ""}{c.full_name || c.email || c.id.slice(0, 8)}{c.source === "internal" ? " (Interno)" : ""}
- </option>
+ <SelectItem key={c.id} value={c.id}>
+ {c.full_name || c.email || c.id.slice(0, 8)}
+ {c.source === "internal" && <span className="app-body text-amber-600 ml-1">· Interno</span>}
+ </SelectItem>
  ))}
- </select>
+ </SelectContent>
+ </Select>
  </div>
  )}
- {/* Botones de acción: ✓ avanzar (solo si canAdvance) / ✗ rechazar (si canReject) */}
+ {/* Botones de acción: avanzar (solo si canAdvance) / rechazar (si canReject) */}
  {(canAdvance || canReject) && !showRejectBox && (
  <div className="flex gap-1 pt-0.5">
  {canAdvance && (
- <button
+ <Button
  type="button"
  onClick={handleAdvance}
  title={advanceLabel}
- className="flex-1 flex items-center justify-center h-5 rounded text-[9px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+ className="btn-icon-sm"
  >
- <Check className="h-3 w-3" />
- </button>
+ <Check className="h-3.5 w-3.5" />
+ </Button>
  )}
  {canReject && (
- <button
+ <Button
  type="button"
  onClick={() => setShowRejectBox(true)}
  title="Rechazar"
- className="flex-1 flex items-center justify-center h-5 rounded text-[9px] font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 transition-colors"
+ className="btn-icon-sm"
  >
- <X className="h-3 w-3" />
- </button>
+ <X className="h-3.5 w-3.5" />
+ </Button>
  )}
  </div>
  )}
  {/* Bloqueo de emisión para RTA: mostrar motivo cuando no se puede emitir */}
  {isIssueBlocked && level.active && !level.done && (
- <div className="pt-0.5">
- <p className="text-[9px] text-amber-600 dark:text-amber-400 italic" title={issueBlockedReason}>
- 🔒 {issueBlockedReason}
- </p>
+ <div className="flex items-center gap-1 pt-0.5" title={issueBlockedReason}>
+ <Lock className="h-3 w-3 text-amber-600" />
+ <span className="app-body text-amber-600 dark:text-amber-400 italic">{issueBlockedReason}</span>
  </div>
  )}
  {/* Caja de rechazo con motivo */}
  {canReject && showRejectBox && (
  <div className="flex flex-col gap-1 pt-0.5">
- <textarea
- className="text-[9px] rounded border border-rose-300 dark:border-rose-700 bg-background px-1.5 py-1 text-foreground min-h-10 resize-none focus:outline-none focus:ring-1 focus:ring-rose-400"
+ <Textarea
+ className="app-input h-auto! py-2! min-h-10"
  placeholder="Motivo de rechazo..."
  value={rejectComment}
  onChange={(e) => setRejectComment(e.target.value)}
  autoFocus
+ rows={2}
  />
- <div className="flex gap-1">
- <button
+ <div className="flex flex-col gap-1">
+ <Button
  type="button"
  onClick={() => { setShowRejectBox(false); setRejectComment(""); }}
- className="flex-1 flex items-center justify-center h-5 rounded text-[9px] font-medium bg-muted text-muted-foreground border border-border hover:bg-muted/80 transition-colors"
+ className="pg-btn-platinum"
  >
  Cancelar
- </button>
- <button
+ </Button>
+ <Button
  type="button"
  onClick={handleConfirmReject}
  disabled={!rejectComment.trim()}
- className="flex-1 flex items-center justify-center h-5 rounded text-[9px] font-medium bg-rose-500 text-white border border-rose-600 hover:bg-rose-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+ className="pg-btn-platinum"
  >
  Confirmar
- </button>
+ </Button>
  </div>
  </div>
  )}
@@ -1154,11 +1160,11 @@ function CollapsibleBottomSection({ field, action, readOnly, values, onAdvance, 
   className="flex items-center justify-between w-full text-left mb-2.5 group"
   aria-expanded={open}
   >
-  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide group-hover:text-foreground transition-colors">
+  <h4 className="app-dynamic-title text-muted-foreground group-hover:text-foreground transition-colors">
   {field.label}
   </h4>
-  <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">
-  {open ? "▼" : "▶"}
+  <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+  {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
   </span>
   </button>
   {open && (
@@ -1189,11 +1195,11 @@ function ComplexEntityView({ type, field, action, readOnly, values, onAdvance, o
  case "inspection_session_view":
  return <InspectionSessionView claimId={action?.claim_id} readOnly={readOnly} />;
  case "claim_participants":
- return <div className="text-[11px] text-muted-foreground py-3 text-center">👥 Participantes del siniestro (próximamente)</div>;
+ return <div className="app-body text-muted-foreground py-3 text-center">Participantes del siniestro (próximamente)</div>;
  case "claim_history":
- return <div className="text-[11px] text-muted-foreground py-3 text-center">📋 Historial de gestiones (próximamente)</div>;
+ return <div className="app-body text-muted-foreground py-3 text-center">Historial de gestiones (próximamente)</div>;
  default:
- return <div className="text-[11px] text-muted-foreground py-3 text-center">Datos del siniestro</div>;
+ return <div className="app-body text-muted-foreground py-3 text-center">Datos del siniestro</div>;
  }
 }
 
@@ -1228,13 +1234,13 @@ function CoverageCell({
  const hasSub = !!subcoverageName || !!subcoverageCode;
  return (
  <div>
- <div className="font-medium text-[11px]">
- {coverageCode && <span className="text-muted-foreground font-mono text-[10px] mr-1">{coverageCode}</span>}
- {hasSub && subcoverageCode && <span className="text-muted-foreground font-mono text-[10px]">/ {subcoverageCode}</span>}
+ <div className="font-medium app-body">
+ {coverageCode && <span className="text-muted-foreground font-mono app-body mr-1">{coverageCode}</span>}
+ {hasSub && subcoverageCode && <span className="text-muted-foreground font-mono app-body">/ {subcoverageCode}</span>}
  {!hasSub && <span>{coverageName || "—"}</span>}
  </div>
  {hasSub && (
- <div className="text-[10px] text-muted-foreground leading-tight">
+ <div className="app-body text-muted-foreground leading-tight">
  {subcoverageName || ""}
  </div>
  )}
@@ -1431,17 +1437,17 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  );
 
  if (loadingPolicy || loadingClaim || loadingCatalog) {
- return <div className="text-[11px] text-muted-foreground py-2">Cargando coberturas...</div>;
+ return <div className="app-body text-muted-foreground py-2">Cargando coberturas...</div>;
  }
 
  // Sin póliza → bloquear
  if (policyType === "none") {
  return (
  <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4 text-center">
- <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400">
+ <p className="app-body font-medium text-amber-700 dark:text-amber-400">
  Sin Póliza asignada
  </p>
- <p className="text-[11px] text-muted-foreground mt-1">
+ <p className="app-body text-muted-foreground mt-1">
  Debe asociar el siniestro a una póliza con coberturas para ejecutar esta acción.
  Seleccione una póliza existente o use &ldquo;En Emisión de Número&rdquo; en el formulario del siniestro.
  </p>
@@ -1458,7 +1464,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  ref={comboBtnRef}
  type="button"
  onClick={() => setComboOpen(!comboOpen)}
- className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-[11px] text-muted-foreground hover:border-primary/40 transition-colors"
+ className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 app-body text-muted-foreground hover:border-primary/40 transition-colors"
  >
  <span className="flex items-center gap-2">
  <Plus className="h-3.5 w-3.5" />
@@ -1485,7 +1491,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  </div>
  <div className="overflow-y-auto flex-1">
  {availableCoverages.length === 0 ? (
- <p className="text-[11px] text-muted-foreground text-center py-4">
+ <p className="app-body text-muted-foreground text-center py-4">
  {policyCoverages && policyCoverages.length === 0
  ? "La póliza no tiene coberturas configuradas."
  : "No hay coberturas disponibles para agregar."}
@@ -1497,22 +1503,22 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  type="button"
  onClick={() => addCoverageMut.mutate(pc.id)}
  disabled={addCoverageMut.isPending}
- className="flex w-full items-center justify-between px-3 py-2 text-left text-[11px] hover:bg-accent transition-colors disabled:opacity-50"
+ className="flex w-full items-center justify-between px-3 py-2 text-left app-body hover:bg-accent transition-colors disabled:opacity-50"
  >
  <div className="min-w-0 flex-1">
  <div className="font-medium truncate">
- {pc.coverage_catalog?.code && <span className="text-muted-foreground font-mono text-[10px] mr-1.5">{pc.coverage_catalog.code}</span>}
+ {pc.coverage_catalog?.code && <span className="text-muted-foreground font-mono app-body mr-1.5">{pc.coverage_catalog.code}</span>}
  {pc.coverage_name}
  </div>
  {pc.subcoverage_name && (
- <div className="text-[10px] text-muted-foreground truncate">
+ <div className="app-body text-muted-foreground truncate">
  {pc.subcoverage_catalog?.code && <span className="font-mono mr-1">{pc.subcoverage_catalog.code}</span>}
  {pc.subcoverage_name}
  </div>
  )}
  </div>
  <div className="text-right shrink-0 ml-2">
- <div className="text-[10px] text-muted-foreground font-mono">
+ <div className="app-body text-muted-foreground font-mono">
  {formatMoney(pc.insured_amount)}
  </div>
  </div>
@@ -1530,7 +1536,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  {/* Grid de coberturas del siniestro */}
  {(!claimCoverages || claimCoverages.length === 0) ? (
  <div className="rounded-lg border border-dashed border-border py-6 text-center">
- <p className="text-[11px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  {canEditCoverages ? "Selecciona coberturas de la póliza para agregarlas al siniestro." :
  !readOnly && currentResponsibleId && currentResponsibleName ? `Solo ${currentResponsibleName} (responsable de ${currentStageLabel}) puede agregar coberturas.` :
  !readOnly && currentResponsibleId && !currentResponsibleName ? `Solo el responsable asignado de ${currentStageLabel} puede agregar coberturas.` :
@@ -1566,7 +1572,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  {canEditCoverages ? (
  <Input
  type="number"
- className="app-input h-7 text-[11px] text-right font-mono w-25 ml-auto"
+ className="app-input h-7 text-right font-mono w-25 ml-auto"
  value={c.insured_amount ?? 0}
  onChange={(e) => updateCoverageMut.mutate({
  id: c.id,
@@ -1581,7 +1587,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  {canEditCoverages ? (
  <Input
  type="number"
- className="app-input h-7 text-[11px] text-right font-mono w-22.5 ml-auto"
+ className="app-input h-7 text-right font-mono w-22.5 ml-auto"
  value={c.claimed_amount ?? 0}
  onChange={(e) => updateCoverageMut.mutate({
  id: c.id,
@@ -1596,7 +1602,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  {canEditCoverages ? (
  <Input
  type="number"
- className="app-input h-7 text-[11px] text-right font-mono w-20 ml-auto"
+ className="app-input h-7 text-right font-mono w-20 ml-auto"
  value={c.deductible_amount ?? 0}
  onChange={(e) => updateCoverageMut.mutate({
  id: c.id,
@@ -1629,7 +1635,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
 
  {/* Resumen */}
  {claimCoverages && claimCoverages.length > 0 && (
- <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+ <div className="flex items-center justify-between app-body text-muted-foreground">
  <span>{claimCoverages.length} cobertura{claimCoverages.length !== 1 ? "s" : ""} cargada{claimCoverages.length !== 1 ? "s" : ""}</span>
  {!canEditCoverages && !readOnly && (
  <span className="flex items-center gap-1 text-amber-600">
@@ -1649,9 +1655,9 @@ function ClaimReservesView({ claimId }: { claimId: string }) {
  enabled: !!claimId,
  });
 
- if (isLoading) return <div className="text-[11px] text-muted-foreground py-2">Cargando reservas...</div>;
+ if (isLoading) return <div className="app-body text-muted-foreground py-2">Cargando reservas...</div>;
  if (!data || data.length === 0) {
- return <div className="text-[11px] text-muted-foreground py-3 text-center">No hay reservas creadas en este siniestro.</div>;
+ return <div className="app-body text-muted-foreground py-3 text-center">No hay reservas creadas en este siniestro.</div>;
  }
 
  return (
@@ -1659,10 +1665,10 @@ function ClaimReservesView({ claimId }: { claimId: string }) {
  {data.map((r) => (
  <div key={r.id} className="rounded-lg border border-border p-3">
  <div className="flex items-center justify-between mb-2">
- <span className="text-[11px] font-semibold">Reserva {r.reserve_number || r.id.slice(0, 8)}</span>
- <span className="text-[11px] text-muted-foreground">{r.currency}</span>
+ <span className="app-body font-semibold">Reserva {r.reserve_number || r.id.slice(0, 8)}</span>
+ <span className="app-body text-muted-foreground">{r.currency}</span>
  </div>
- <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] mb-2">
+ <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 app-body mb-2">
  <div><span className="text-muted-foreground">Capital:</span> <span className="font-mono">{formatMoney(r.capital_amount)}</span></div>
  <div><span className="text-muted-foreground">Reclamado:</span> <span className="font-mono">{formatMoney(r.claimed_amount)}</span></div>
  <div><span className="text-muted-foreground">Reserva:</span> <span className="font-mono">{formatMoney(r.reserve_amount)}</span></div>
@@ -1769,14 +1775,14 @@ function OwnField({
  case "section":
  return (
  <div className="pt-2 pb-1 border-b border-border">
- <p className="text-[13px] font-semibold">{field.label}</p>
+ <p className="app-dynamic-title">{field.label}</p>
  </div>
  );
 
  case "text":
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Input
@@ -1795,7 +1801,7 @@ function OwnField({
  maxLength={field.maxLength}
  />
  {field.maxLength && (
- <p className="text-[9px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  Máx {field.maxLength} · {field.inputType === "numeric" ? "Numérico" : "Alfanumérico"}
  </p>
  )}
@@ -1805,7 +1811,7 @@ function OwnField({
  case "number":
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Input
@@ -1862,7 +1868,7 @@ function OwnField({
  case "textarea":
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Textarea
@@ -1878,7 +1884,7 @@ function OwnField({
  rows={field.rows || 3}
  />
  {field.maxLength && (
- <p className="text-[9px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  {String(value || "").length}/{field.maxLength} caracteres
  </p>
  )}
@@ -1892,7 +1898,7 @@ function OwnField({
  ];
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Select
@@ -1922,14 +1928,15 @@ function OwnField({
 
  case "checkbox":
  return (
- <label className="flex items-center gap-2 text-[11px] py-1">
- <Checkbox
- checked={!!value}
- onChange={(e) => onChange(field.id, (e.target as HTMLInputElement).checked)}
+ <div className="py-1">
+ <ToggleChip
+ active={!!value}
+ onClick={(v) => onChange(field.id, v)}
  disabled={readOnly}
- />
+ >
  {field.label}
- </label>
+ </ToggleChip>
+ </div>
  );
 
  case "table":
@@ -1939,13 +1946,13 @@ function OwnField({
  // Select de resultado de coordinación: Coordinada / Fallida / Desistida
  const resultItems = [
  { value: "__none", label: "Seleccionar resultado..." },
- { value: "coordinada", label: "✓ Coordinada (contacto exitoso)" },
- { value: "fallida", label: "⚠ Fallida (no se pudo contactar)" },
- { value: "desistida", label: "✗ Desistida (asegurado desiste)" },
+ { value: "coordinada", label: "Coordinada (contacto exitoso)" },
+ { value: "fallida", label: "Fallida (no se pudo contactar)" },
+ { value: "desistida", label: "Desistida (asegurado desiste)" },
  ];
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Select
@@ -1964,9 +1971,9 @@ function OwnField({
  </SelectTrigger>
  <SelectContent>
  <SelectItem value="__none">Seleccionar resultado...</SelectItem>
- <SelectItem value="coordinada">✓ Coordinada (contacto exitoso)</SelectItem>
- <SelectItem value="fallida">⚠ Fallida (no se pudo contactar)</SelectItem>
- <SelectItem value="desistida">✗ Desistida (asegurado desiste)</SelectItem>
+ <SelectItem value="coordinada">Coordinada (contacto exitoso)</SelectItem>
+ <SelectItem value="fallida">Fallida (no se pudo contactar)</SelectItem>
+ <SelectItem value="desistida">Desistida (asegurado desiste)</SelectItem>
  </SelectContent>
  </Select>
  </div>
@@ -1982,7 +1989,7 @@ function OwnField({
  const motivos = coordResult === "desistida" ? desistidaReasons : fallidaReasons;
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Select value={String(value || "") || null} onValueChange={(v) => onChange(field.id, v ?? "")}>
@@ -2005,7 +2012,7 @@ function OwnField({
  const todayStr = new Date().toISOString().slice(0, 10);
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <DatePicker
@@ -2017,7 +2024,7 @@ function OwnField({
  maxDate={slaMaxDate || undefined}
  />
  {slaMaxDate && (
- <p className="text-[9px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  Máximo: {slaMaxDate} (SLA de la acción)
  </p>
  )}
@@ -2086,7 +2093,7 @@ function OwnField({
  const minLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Input
@@ -2099,13 +2106,14 @@ function OwnField({
  disabled={readOnly}
  />
  {hasAlert && (
- <p className="text-[9px] text-red-600 font-medium">
- {isPast && "⚠ La fecha no puede ser en el pasado. "}
- {isOverMax && `⚠ La fecha excede el máximo de ${daysToIssue} días configurados para esta gestión.`}
+ <p className="app-body text-red-600 font-medium flex items-center gap-1">
+ <AlertTriangle className="h-3 w-3" />
+ {isPast && "La fecha no puede ser en el pasado. "}
+ {isOverMax && `La fecha excede el máximo de ${daysToIssue} días configurados para esta gestión.`}
  </p>
  )}
  {daysToIssue > 0 && !hasAlert && (
- <p className="text-[9px] text-muted-foreground">Máx: {daysToIssue} días desde hoy</p>
+ <p className="app-body text-muted-foreground">Máx: {daysToIssue} días desde hoy</p>
  )}
  </div>
  );
@@ -2120,7 +2128,7 @@ function OwnField({
  case "coord_inspection_type":
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Select
@@ -2152,7 +2160,7 @@ function OwnField({
  case "coord_contacto":
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Input
@@ -2168,11 +2176,11 @@ function OwnField({
  case "coord_comentarios":
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Textarea
- className="app-input text-[11px] min-h-15"
+ className="app-input h-auto! py-2! min-h-15"
  value={String(value || "")}
  onChange={(e) => onChange(field.id, e.target.value)}
  disabled={readOnly}
@@ -2183,7 +2191,7 @@ function OwnField({
  );
 
  default:
- return <div className="text-[11px] text-amber-600">Tipo no soportado: <strong>{field.type}</strong></div>;
+ return <div className="app-body text-amber-600">Tipo no soportado: <strong>{field.type}</strong></div>;
  }
 }
 
@@ -2232,7 +2240,7 @@ function InspectorSelectField({
 
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <Select
@@ -2262,7 +2270,7 @@ function InspectorSelectField({
  >
  {p.full_name || p.email}
  {isClaimInspector && claimInspectorName && " (Inspector del siniestro)"}
- {isInternal && <span className="text-[9px] text-amber-600 ml-1">· Interno</span>}
+ {isInternal && <span className="app-body text-amber-600 ml-1">· Interno</span>}
  </SelectItem>
  );
  })}
@@ -2296,7 +2304,7 @@ function CoordInspectionStatus({
  const activeSession = sessions?.find((s) => s.status === "scheduled" || s.status === "active") || null;
 
  if (isLoading) {
- return <div className="text-[11px] text-muted-foreground py-2">Cargando estado de inspección...</div>;
+ return <div className="app-body text-muted-foreground py-2">Cargando estado de inspección...</div>;
  }
 
  // Si ya hay inspección agendada, mostrar el panel informativo
@@ -2305,11 +2313,11 @@ function CoordInspectionStatus({
  <div className="rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-3">
  <div className="flex items-center gap-2 mb-1.5">
  <CheckCircle className="w-4 h-4 text-emerald-600" />
- <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+ <span className="app-body font-semibold text-emerald-700 dark:text-emerald-400">
  Inspección {activeSession.status === "scheduled" ? "agendada" : "en curso"}
  </span>
  </div>
- <div className="grid grid-cols-2 gap-2 text-[11px]">
+ <div className="grid grid-cols-2 gap-2 app-body">
  <div>
  <span className="text-muted-foreground">Tipo:</span> {activeSession.inspection_type === "onsite" ? "Presencial" : "Remota"}
  </div>
@@ -2320,10 +2328,10 @@ function CoordInspectionStatus({
  <span className="text-muted-foreground">Contacto:</span> {activeSession.interviewed_name || "—"}
  </div>
  <div>
- <span className="text-muted-foreground">Estado:</span> <Badge variant="outline" className="text-[10px] h-4">{activeSession.status}</Badge>
+ <span className="text-muted-foreground">Estado:</span> <Badge variant="outline" className="app-dynamic-badge h-4">{activeSession.status}</Badge>
  </div>
  </div>
- <p className="text-[10px] text-muted-foreground text-center mt-2">
+ <p className="app-body text-muted-foreground text-center mt-2">
  Esta inspección está disponible en la gestión de Inspección.
  </p>
  </div>
@@ -2335,7 +2343,7 @@ function CoordInspectionStatus({
  if (isIssued) {
  return (
  <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-3 text-center">
- <p className="text-[11px] text-amber-700 dark:text-amber-400">
+ <p className="app-body text-amber-700 dark:text-amber-400">
  La gestión fue emitida pero no se creó la sesión de inspección.
  </p>
  </div>
@@ -2345,7 +2353,7 @@ function CoordInspectionStatus({
  // Si no hay inspección y la gestión está pendiente, mostrar mensaje informativo
  return (
  <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-center">
- <p className="text-[11px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  Al <strong>emitir</strong> esta gestión se agendará automáticamente la inspección
  con los datos de coordinación capturados arriba.
  </p>
@@ -2407,7 +2415,7 @@ function DateField({
 
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  <DatePicker
@@ -2422,26 +2430,39 @@ function DateField({
  maxDate={maxDate}
  />
  {field.dateValidation && !isAutoFilled && (
- <p className="text-[10px] text-amber-600">⚠ {getDateValidationLabel(field.dateValidation, allFields)}</p>
- )}
- {maxDate && !isAutoFilled && (
- <p className="text-[9px] text-muted-foreground">Máx permitido: {formatDateDisplay(maxDate)} (SLA)</p>
- )}
- {proposedDate && !isAutoFilled && !effectiveReadOnly && !effectiveValue && (
- <button
- type="button"
- onClick={() => { onChange(field.id, proposedDate); validate(proposedDate); }}
- className="text-[10px] text-primary hover:underline w-fit"
- >
- Sugerir: {formatDateDisplay(proposedDate)}
- </button>
- )}
- {slaHint && (
- <p className={`text-[10px] ${slaHint.type === "late" ? "text-red-500" : slaHint.type === "warning" ? "text-amber-600" : "text-emerald-600"}`}>
- {slaHint.type === "late" ? "⛔" : slaHint.type === "warning" ? "⚠" : "✓"} {slaHint.text}
+ <p className="app-body text-amber-600">
+ <AlertTriangle className="inline h-3 w-3 mr-1" />
+ {getDateValidationLabel(field.dateValidation, allFields)}
  </p>
  )}
- {error && <p className="text-[10px] text-red-500">{error}</p>}
+ {maxDate && !isAutoFilled && (
+ <p className="app-body text-muted-foreground">Máx permitido: {formatDateDisplay(maxDate)} (SLA)</p>
+ )}
+ {proposedDate && !isAutoFilled && !effectiveReadOnly && !effectiveValue && (
+ <div className="flex items-center gap-2">
+ <span className="app-body">{formatDateDisplay(proposedDate)}</span>
+ <Button
+ type="button"
+ onClick={() => { onChange(field.id, proposedDate); validate(proposedDate); }}
+ className="pg-btn-platinum"
+ >
+ Sugerir
+ </Button>
+ </div>
+ )}
+ {slaHint && (
+ <p className={`app-body ${slaHint.type === "late" ? "text-red-500" : slaHint.type === "warning" ? "text-amber-600" : "text-emerald-600"}`}>
+ {slaHint.type === "late" ? (
+ <XCircle className="inline h-3 w-3 mr-1" />
+ ) : slaHint.type === "warning" ? (
+ <AlertTriangle className="inline h-3 w-3 mr-1" />
+ ) : (
+ <CheckCircle className="inline h-3 w-3 mr-1" />
+ )}
+ {slaHint.text}
+ </p>
+ )}
+ {error && <p className="app-body text-red-500">{error}</p>}
  </div>
  );
 }
@@ -2496,7 +2517,7 @@ function TableField({
 
  return (
  <div className="flex flex-col gap-1.5">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  {rows.length > 0 && (
@@ -2516,7 +2537,7 @@ function TableField({
  {columns.map((c) => (
  <td key={c} className="px-1 py-0.5">
  <Input
- className="h-7 text-[11px] border-0 bg-transparent px-1"
+ className="h-7 app-body border-0 bg-transparent px-1"
  value={String(row[c] || "")}
  onChange={(e) => updateCell(idx, c, e.target.value)}
  disabled={readOnly}
@@ -2525,14 +2546,14 @@ function TableField({
  ))}
  {!readOnly && (
  <td className="px-1 py-0.5 text-center">
- <button
+ <Button
  type="button"
  onClick={() => removeRow(idx)}
- className="text-[10px] text-red-500 hover:text-red-700"
+ className="btn-icon-sm btn-danger-hover"
  title="Eliminar fila"
  >
- ✕
- </button>
+ <X className="h-3.5 w-3.5" />
+ </Button>
  </td>
  )}
  </tr>
@@ -2542,9 +2563,9 @@ function TableField({
  </div>
  )}
  {!readOnly && (
- <button type="button" className="text-[11px] text-primary hover:underline w-fit" onClick={addRow}>
- + Agregar fila
- </button>
+ <Button type="button" className="pg-btn-platinum" onClick={addRow} title="Agregar fila">
+ Agregar
+ </Button>
  )}
  </div>
  );
@@ -2626,16 +2647,16 @@ function ReserveEditorView({ claimId, actionId, readOnly, generalValues, action,
  const claimCoverages = snapshotCoverages || dbCoverages;
 
  if (loadingCov || loadingRes) {
- return <div className="text-[11px] text-muted-foreground py-2">Cargando...</div>;
+ return <div className="app-body text-muted-foreground py-2">Cargando...</div>;
  }
 
  if (!claimCoverages || claimCoverages.length === 0) {
  return (
  <div className="rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-4 text-center">
- <p className="text-[11px] font-medium text-red-700 dark:text-red-400">
+ <p className="app-body font-medium text-red-700 dark:text-red-400">
  Inconsistencia de datos
  </p>
- <p className="text-[11px] text-muted-foreground mt-1">
+ <p className="app-body text-muted-foreground mt-1">
  La reserva existe pero no se encontraron coberturas del Ingreso de Coberturas.
  Esto indica una inconsistencia en los datos. Contacte al administrador.
  </p>
@@ -2812,7 +2833,7 @@ function ReserveEditorForm({
  {/* Campos superiores: Moneda, Fecha de Resolución, Notas */}
  <div className="grid grid-cols-4 gap-3 p-3 rounded-lg border border-border bg-muted/20">
  <div className="space-y-1">
- <Label className="app-field-label text-[10px]">Moneda</Label>
+ <Label className="app-field-label">Moneda</Label>
  {readOnly ? (
  <Input className="app-input h-7 bg-muted/30" value={currency} readOnly />
  ) : (
@@ -2842,7 +2863,7 @@ function ReserveEditorForm({
  )}
  </div>
  <div className="space-y-1">
- <Label className="app-field-label text-[10px]">Fecha Resolución</Label>
+ <Label className="app-field-label">Fecha Resolución</Label>
  {readOnly ? (
  <Input className="app-input h-7 bg-muted/30" value={formatDateDisplay(paymentDate)} readOnly />
  ) : (
@@ -2860,7 +2881,7 @@ function ReserveEditorForm({
  )}
  </div>
  <div className="space-y-1 col-span-2">
- <Label className="app-field-label text-[10px]">Notas</Label>
+ <Label className="app-field-label">Notas</Label>
  <Input
  className="app-input h-7 "
  value={notes}
@@ -2907,7 +2928,7 @@ function ReserveEditorForm({
  <Input
  type="text"
  inputMode="decimal"
- className={`app-input h-7 text-[11px] text-right font-mono w-25 ml-auto ${rowErrors[idx].claimed ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+ className={`app-input h-7 text-right font-mono w-25 ml-auto ${rowErrors[idx].claimed ? "border-red-500 focus-visible:ring-red-500" : ""}`}
  value={row.claimed}
  onChange={(e) => updateRow(idx, "claimed", parseNum(e.target.value))}
  title="El reclamado debe ser mayor o igual que 0"
@@ -2921,7 +2942,7 @@ function ReserveEditorForm({
  <Input
  type="text"
  inputMode="decimal"
- className={`app-input h-7 text-[11px] text-right font-mono w-25 ml-auto ${rowErrors[idx].reserved ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+ className={`app-input h-7 text-right font-mono w-25 ml-auto ${rowErrors[idx].reserved ? "border-red-500 focus-visible:ring-red-500" : ""}`}
  value={row.reserved}
  onChange={(e) => updateRow(idx, "reserved", parseNum(e.target.value))}
  title="La reserva no puede ser mayor que el reclamado"
@@ -2935,7 +2956,7 @@ function ReserveEditorForm({
  <Input
  type="text"
  inputMode="decimal"
- className={`app-input h-7 text-[11px] text-right font-mono w-22.5 ml-auto ${rowErrors[idx].deductible ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+ className={`app-input h-7 text-right font-mono w-22.5 ml-auto ${rowErrors[idx].deductible ? "border-red-500 focus-visible:ring-red-500" : ""}`}
  value={row.deductible}
  onChange={(e) => updateRow(idx, "deductible", parseNum(e.target.value))}
  title="El deducible no puede ser mayor que la reserva"
@@ -2960,7 +2981,7 @@ function ReserveEditorForm({
  </div>
 
  {readOnly && (
- <p className="text-[10px] text-muted-foreground text-center">
+ <p className="app-body text-muted-foreground text-center">
  Reserva emitida — solo lectura
  </p>
  )}
@@ -3036,13 +3057,13 @@ function AdjustmentEditorView({ claimId, readOnly, generalValues, action, onChan
  : null;
 
  if (loadingRes) {
- return <div className="text-[11px] text-muted-foreground py-2">Cargando...</div>;
+ return <div className="app-body text-muted-foreground py-2">Cargando...</div>;
  }
 
  if (!reserve) {
  return (
  <div className="rounded-lg border border-dashed border-border py-6 text-center">
- <p className="text-[11px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  No hay reserva creada en el siniestro. Crea una reserva primero.
  </p>
  </div>
@@ -3052,7 +3073,7 @@ function AdjustmentEditorView({ claimId, readOnly, generalValues, action, onChan
  if (!reserve.reserve_coverages || reserve.reserve_coverages.length === 0) {
  return (
  <div className="rounded-lg border border-dashed border-border py-6 text-center">
- <p className="text-[11px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  La reserva no tiene coberturas detalladas.
  </p>
  </div>
@@ -3199,11 +3220,11 @@ function AdjustmentEditorForm({
  {/* Campos superiores: Moneda, Fecha Resolución, Notas (igual que reserva) */}
  <div className="grid grid-cols-4 gap-3 p-3 rounded-lg border border-border bg-muted/20">
  <div className="space-y-1">
- <Label className="app-field-label text-[10px]">Moneda</Label>
+ <Label className="app-field-label">Moneda</Label>
  <Input className="app-input h-7 bg-muted/30" value={currency} readOnly />
  </div>
  <div className="space-y-1">
- <Label className="app-field-label text-[10px]">Fecha Resolución</Label>
+ <Label className="app-field-label">Fecha Resolución</Label>
  {readOnly ? (
  <Input className="app-input h-7 bg-muted/30" value={formatDateDisplay(adjustmentDate)} readOnly />
  ) : (
@@ -3221,7 +3242,7 @@ function AdjustmentEditorForm({
  )}
  </div>
  <div className="space-y-1 col-span-2">
- <Label className="app-field-label text-[10px]">Notas</Label>
+ <Label className="app-field-label">Notas</Label>
  <Input
  className="app-input h-7 "
  value={notes}
@@ -3271,7 +3292,7 @@ function AdjustmentEditorForm({
  <Input
  type="text"
  inputMode="decimal"
- className="app-input h-7 text-[11px] text-right font-mono w-25 ml-auto"
+ className="app-input h-7 text-right font-mono w-25 ml-auto"
  value={row.adjusted_amount}
  onChange={(e) => updateRow(idx, "adjusted_amount", parseNum(e.target.value))}
  />
@@ -3284,7 +3305,7 @@ function AdjustmentEditorForm({
  <Input
  type="text"
  inputMode="decimal"
- className="app-input h-7 text-[11px] text-right font-mono w-22.5 ml-auto"
+ className="app-input h-7 text-right font-mono w-22.5 ml-auto"
  value={row.adjusted_deductible}
  onChange={(e) => updateRow(idx, "adjusted_deductible", parseNum(e.target.value))}
  />
@@ -3293,7 +3314,7 @@ function AdjustmentEditorForm({
  <td className="px-2 py-1.5 text-right font-mono font-semibold">{formatMoney(final)}</td>
  <td className="px-2 py-1.5">
  {readOnly ? (
- <span className="text-[10px] text-muted-foreground">{row.adjustment_notes || "—"}</span>
+ <span className="app-body text-muted-foreground">{row.adjustment_notes || "—"}</span>
  ) : (
  <Input
  className="app-input w-full"
@@ -3318,10 +3339,10 @@ function AdjustmentEditorForm({
  <td className="px-2 py-1.5"></td>
  </tr>
  <tr className="border-t border-border">
- <td className="px-2 py-1.5 text-[10px] text-muted-foreground" colSpan={5}>Reserva Neta vs Ajuste Final</td>
- <td className="px-2 py-1.5 text-right font-mono text-[11px] text-muted-foreground">{formatMoney(totalNetReserve)}</td>
+ <td className="px-2 py-1.5 app-body text-muted-foreground" colSpan={5}>Reserva Neta vs Ajuste Final</td>
+ <td className="px-2 py-1.5 text-right font-mono app-body text-muted-foreground">{formatMoney(totalNetReserve)}</td>
  <td className="px-2 py-1.5 text-right">
- <span className={`font-mono text-[11px] font-semibold ${difference < 0 ? "text-rose-600" : difference > 0 ? "text-emerald-600" : "text-muted-foreground"}`}>
+ <span className={`font-mono app-body font-semibold ${difference < 0 ? "text-rose-600" : difference > 0 ? "text-emerald-600" : "text-muted-foreground"}`}>
  {difference >= 0 ? "+" : ""}{formatMoney(difference)}
  </span>
  </td>
@@ -3331,7 +3352,7 @@ function AdjustmentEditorForm({
  </div>
 
  {readOnly && (
- <p className="text-[10px] text-muted-foreground text-center">
+ <p className="app-body text-muted-foreground text-center">
  Ajuste emitido — solo lectura
  </p>
  )}
@@ -3527,7 +3548,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  );
 
  if (loadingReq || loadingEx) {
- return <div className="text-[11px] text-muted-foreground py-2">Cargando...</div>;
+ return <div className="app-body text-muted-foreground py-2">Cargando...</div>;
  }
 
  // ── Construir filas unificadas: TODOS los docs de la línea en una grilla ──
@@ -3628,7 +3649,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  if (rows.length === 0) {
  return (
  <div className="rounded-lg border border-dashed border-border py-6 text-center">
- <p className="text-[11px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  No hay documentos configurados para esta línea de negocio.
  </p>
  </div>
@@ -3638,7 +3659,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  return (
  <div className="space-y-2">
  {/* Header de la solicitud */}
- <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
+ <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 app-body">
  <span className="font-medium">Gestión: {actionCode || "—"}</span>
  <Badge className={
  existingRequest?.status === "closed" ? "bg-emerald-100 text-emerald-700" :
@@ -3679,7 +3700,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  ) : row.isOn ? (
  <Badge className="bg-amber-100 text-amber-700">Solicitado</Badge>
  ) : (
- <span className="text-[10px] text-muted-foreground">Disponible</span>
+ <span className="app-body text-muted-foreground">Disponible</span>
  )}
  </div>
  ))}
@@ -3688,9 +3709,9 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  {/* Notas */}
  {!readOnly && (
  <div>
- <Label className="app-field-label text-[10px]">Notas de la solicitud</Label>
+ <Label className="app-field-label">Notas de la solicitud</Label>
  <Textarea
- className="app-input text-[11px] min-h-12.5"
+ className="app-input h-auto! py-2! min-h-12.5"
  placeholder="Indicaciones para el asegurado o corredor..."
  value={notes}
  onChange={(e) => setNotes(e.target.value)}
@@ -3846,13 +3867,13 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  });
 
  if (isLoading) {
- return <div className="text-[11px] text-muted-foreground py-2">Cargando...</div>;
+ return <div className="app-body text-muted-foreground py-2">Cargando...</div>;
  }
 
  if (!activeRequest) {
  return (
  <div className="rounded-lg border border-dashed border-border py-6 text-center">
- <p className="text-[11px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  No hay solicitudes de documentos para este siniestro. La gestión NSA debe crear una solicitud primero.
  </p>
  </div>
@@ -3979,7 +4000,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  return (
  <div className="space-y-2">
  {/* Header */}
- <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 text-[11px]">
+ <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted/20 app-body">
  <span className="font-medium">Gestión: {actionCode || "—"}</span>
  <Badge className={
  isIssued ? "bg-emerald-100 text-emerald-700" :
@@ -3995,10 +4016,10 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  </div>
 
  {/* Resumen de progreso */}
- <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
- <span className="text-emerald-600 font-medium">✓ {receivedCount} recibidos</span>
- {notNeededCount > 0 && <span className="text-muted-foreground font-medium">○ {notNeededCount} no necesarios</span>}
- {pendingCount > 0 && <span className="text-amber-600 font-medium">● {pendingCount} pendientes</span>}
+ <div className="flex items-center gap-3 app-body text-muted-foreground">
+ <span className="flex items-center text-emerald-600 font-medium"><CheckCircle className="inline h-3 w-3 mr-1" /> {receivedCount} recibidos</span>
+ {notNeededCount > 0 && <span className="flex items-center text-muted-foreground font-medium"><Circle className="inline h-3 w-3 mr-1" /> {notNeededCount} no necesarios</span>}
+ {pendingCount > 0 && <span className="flex items-center text-amber-600 font-medium"><Clock className="inline h-3 w-3 mr-1" /> {pendingCount} pendientes</span>}
  <span className="ml-auto">{items.length} total</span>
  </div>
 
@@ -4036,7 +4057,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  {item.document_name}
  </ToggleChip>
  {isRequired && (
- <Badge className="bg-rose-100 text-rose-700 text-[9px]">Obligatorio</Badge>
+ <Badge className="bg-rose-100 text-rose-700 app-body">Obligatorio</Badge>
  )}
  </div>
 
@@ -4046,7 +4067,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  <div className="flex flex-col items-end gap-0.5">
  <Badge className="bg-emerald-100 text-emerald-700">Recibido</Badge>
  {item.received_at && (
- <span className="text-[9px] text-muted-foreground" title={`Recibido por ${getUserName(item.received_by) || "—"}`}>
+ <span className="app-body text-muted-foreground" title={`Recibido por ${getUserName(item.received_by) || "—"}`}>
  por {getUserName(item.received_by) || "—"} · {formatReceivedDate(item.received_at)}
  </span>
  )}
@@ -4056,12 +4077,12 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  <div className="flex flex-col items-end gap-0.5">
  <Badge className="bg-muted text-muted-foreground">No necesario</Badge>
  {item.not_needed_at && (
- <span className="text-[9px] text-muted-foreground" title={`Marcado por ${getUserName(item.not_needed_by) || "—"}`}>
+ <span className="app-body text-muted-foreground" title={`Marcado por ${getUserName(item.not_needed_by) || "—"}`}>
  por {getUserName(item.not_needed_by) || "—"} · {formatReceivedDate(item.not_needed_at)}
  </span>
  )}
  {item.notes && (
- <span className="text-[9px] text-muted-foreground italic max-w-55 truncate" title={item.notes}>
+ <span className="app-body text-muted-foreground italic max-w-55 truncate" title={item.notes}>
  &ldquo;{item.notes}&rdquo;
  </span>
  )}
@@ -4074,7 +4095,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  {canMarkNotNeeded && !isRequired && (
  <button
  type="button"
- className="text-[10px] text-muted-foreground hover:text-rose-600 transition-colors px-1.5 py-0.5 rounded border border-border hover:border-rose-300"
+ className="app-body text-muted-foreground hover:text-rose-600 transition-colors px-1.5 py-0.5 rounded border border-border hover:border-rose-300"
  onClick={() => openNotNeededModal(item.id, item.document_type_code, item.document_name)}
  disabled={updateItemMut.isPending}
  title="Marcar como no necesario"
@@ -4092,20 +4113,22 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
 
  {/* Mensaje de auto-emisión */}
  {allResolved && !isIssued && (
- <p className="text-[10px] text-emerald-600 text-center font-medium py-1">
- ✓ Todos los documentos recibidos — la gestión se emitirá automáticamente...
+ <p className="app-body text-emerald-600 text-center font-medium py-1">
+ <CheckCircle className="inline h-3 w-3 mr-1" />
+ Todos los documentos recibidos — la gestión se emitirá automáticamente...
  </p>
  )}
 
  {isIssued && (
- <p className="text-[10px] text-emerald-600 text-center font-medium py-1">
- ✓ Recepción completada — gestión emitida por {action?.issuer?.full_name || action?.issuer?.email || "—"}
+ <p className="app-body text-emerald-600 text-center font-medium py-1">
+ <CheckCircle className="inline h-3 w-3 mr-1" />
+ Recepción completada — gestión emitida por {action?.issuer?.full_name || action?.issuer?.email || "—"}
  </p>
  )}
 
  {/* Notas de la solicitud */}
  {activeRequest.notes && (
- <p className="text-[10px] text-muted-foreground italic px-1">{activeRequest.notes}</p>
+ <p className="app-body text-muted-foreground italic px-1">{activeRequest.notes}</p>
  )}
 
  {/* Modal: Motivo "No necesario" — motivo obligatorio antes de grabar */}
@@ -4119,15 +4142,15 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  onClick={(e) => e.stopPropagation()}
  >
  <div className="mb-3">
- <h3 className="text-[13px] font-semibold">Marcar como “No necesario”</h3>
- <p className="text-[11px] text-muted-foreground mt-0.5">
+ <h3 className="app-dynamic-title">Marcar como “No necesario”</h3>
+ <p className="app-body text-muted-foreground mt-0.5">
  Documento: <strong>{notNeededTarget.docName}</strong>
  </p>
  </div>
  <div className="space-y-2">
- <Label className="text-[11px]">Motivo <span className="text-rose-600">*</span></Label>
+ <Label className="app-field-label">Motivo <span className="text-rose-600">*</span></Label>
  <Textarea
- className="min-h-20 text-[11px]"
+ className="app-input h-auto! py-2! min-h-20"
  placeholder="Explique por qué este documento no es necesario..."
  value={notNeededReason}
  onChange={(e) => setNotNeededReason(e.target.value)}
@@ -4136,29 +4159,29 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) confirmNotNeeded();
  }}
  />
- <p className="text-[10px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  {notNeededReason.trim().length === 0
  ? "Debe ingresar un motivo para poder grabar."
  : "Si este era el último documento pendiente, la RTA se emitirá automáticamente a su nombre."}
  </p>
  </div>
  <div className="flex justify-end gap-2 mt-3">
- <button
+ <Button
  type="button"
- className="px-3 py-1.5 text-[11px] rounded border border-border text-muted-foreground hover:bg-muted/30"
+ className="pg-btn-platinum"
  onClick={cancelNotNeeded}
  disabled={updateItemMut.isPending}
  >
  Cancelar
- </button>
- <button
+ </Button>
+ <Button
  type="button"
- className="px-3 py-1.5 text-[11px] rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+ className="pg-btn-platinum"
  onClick={confirmNotNeeded}
  disabled={updateItemMut.isPending || notNeededReason.trim().length === 0}
  >
  {updateItemMut.isPending ? "Grabando..." : "Grabar"}
- </button>
+ </Button>
  </div>
  </div>
  </div>,
@@ -4189,13 +4212,13 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
  });
 
  if (isLoading) {
- return <div className="text-[11px] text-muted-foreground py-2">Cargando...</div>;
+ return <div className="app-body text-muted-foreground py-2">Cargando...</div>;
  }
 
  if (!sessions || sessions.length === 0) {
  return (
  <div className="rounded-lg border border-dashed border-border py-6 text-center">
- <p className="text-[11px] text-muted-foreground">
+ <p className="app-body text-muted-foreground">
  No hay inspecciones registradas. Completa primero la Coordinación de Inspección.
  </p>
  </div>
@@ -4222,19 +4245,19 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
  <div key={session.id} className="rounded-lg border border-border p-3 space-y-2">
  <div className="flex items-center justify-between">
  <div className="flex items-center gap-2">
- <span className="text-[11px] font-semibold">
+ <span className="app-body font-semibold">
  {session.inspection_number || `Inspección`}
  </span>
- <Badge variant="outline" className={`text-[10px] h-4 ${statusColors[session.status] || ""}`}>
+ <Badge variant="outline" className={`app-dynamic-badge h-4 ${statusColors[session.status] || ""}`}>
  {statusLabels[session.status] || session.status}
  </Badge>
  </div>
- <span className="text-[10px] text-muted-foreground">
+ <span className="app-body text-muted-foreground">
  {session.inspection_type === "onsite" ? "Presencial" : "Remota"}
  </span>
  </div>
 
- <div className="grid grid-cols-2 gap-2 text-[11px]">
+ <div className="grid grid-cols-2 gap-2 app-body">
  <div>
  <span className="text-muted-foreground">Agendada:</span>{" "}
  {session.scheduled_at ? new Date(session.scheduled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
@@ -4253,13 +4276,13 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
  </div>
 
  {session.inspector_observations && (
- <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
+ <div className="app-body text-muted-foreground border-t border-border pt-2">
  <span className="font-medium">Observaciones:</span> {session.inspector_observations}
  </div>
  )}
 
  {session.status === "cancelled" && session.cancellation_notes && (
- <div className="text-[11px] text-rose-600 border-t border-border pt-2">
+ <div className="app-body text-rose-600 border-t border-border pt-2">
  <span className="font-medium">Cancelación:</span> {session.cancellation_notes}
  </div>
  )}
@@ -4268,7 +4291,7 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
  <div className="border-t border-border pt-2 flex gap-2">
  <a
  href={`/dashboard/inspecciones/${session.id}`}
- className="text-[11px] text-sky-600 hover:underline"
+ className="app-body text-sky-600 hover:underline"
  >
  Ver detalles →
  </a>
@@ -4408,7 +4431,7 @@ function CoordScheduler({
 
  return (
  <div className="flex flex-col gap-2">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  <span className="text-muted-foreground ml-2">({slotLabel} por inspección)</span>
  </Label>
@@ -4422,24 +4445,24 @@ function CoordScheduler({
  className={isOverMax ? "border-amber-500" : ""}
  />
  {currentValue && (
- <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0 text-[11px]">
+ <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0 app-body">
  {valDate ? valDate.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : ""}
  </Badge>
  )}
  </div>
  {!inspectorId && selectedDate && (
- <p className="text-[10px] text-amber-600">⚠ Seleccione un inspector para ver disponibilidades.</p>
+ <p className="app-body text-amber-600">Seleccione un inspector para ver disponibilidades.</p>
  )}
  {isPast && (
- <p className="text-[9px] text-red-600 font-medium">⚠ La fecha no puede ser en el pasado.</p>
+ <p className="app-body text-red-600 font-medium">La fecha no puede ser en el pasado.</p>
  )}
  {isOverMax && (
- <p className="text-[9px] text-amber-600 font-medium">
- ⚠ La fecha excede el máximo recomendado de {daysToIssue} días. Se permite pero requiere justificación.
+ <p className="app-body text-amber-600 font-medium">
+ La fecha excede el máximo recomendado de {daysToIssue} días. Se permite pero requiere justificación.
  </p>
  )}
  {daysToIssue && daysToIssue > 0 && !isOverMax && (
- <p className="text-[9px] text-muted-foreground">Máx recomendado: {daysToIssue} días</p>
+ <p className="app-body text-muted-foreground">Máx recomendado: {daysToIssue} días</p>
  )}
  </div>
  );
@@ -4450,33 +4473,33 @@ function CoordScheduler({
  if (!selectedDate) {
  return (
  <div className="flex flex-col gap-2">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  Disponibilidad
  </Label>
- <p className="text-[11px] text-muted-foreground py-2">Seleccione una fecha para ver horarios.</p>
+ <p className="app-body text-muted-foreground py-2">Seleccione una fecha para ver horarios.</p>
  </div>
  );
  }
  if (!inspectorId) {
  return (
  <div className="flex flex-col gap-2">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  Disponibilidad
  </Label>
- <p className="text-[11px] text-amber-600 py-2">⚠ Seleccione un inspector para ver disponibilidades.</p>
+ <p className="app-body text-amber-600 py-2">Seleccione un inspector para ver disponibilidades.</p>
  </div>
  );
  }
  return (
  <div className="flex flex-col gap-2">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  Disponibilidad {slotLabel}
  </Label>
  <div className="rounded-lg border border-border p-2">
  {scheduleLoading ? (
- <p className="text-[11px] text-muted-foreground text-center py-2">Cargando disponibilidades...</p>
+ <p className="app-body text-muted-foreground text-center py-2">Cargando disponibilidades...</p>
  ) : slots.length === 0 ? (
- <p className="text-[11px] text-muted-foreground text-center py-2">No hay slots disponibles para esta fecha.</p>
+ <p className="app-body text-muted-foreground text-center py-2">No hay slots disponibles para esta fecha.</p>
  ) : (
  <>
  <div className="flex flex-wrap gap-1.5">
@@ -4486,7 +4509,7 @@ function CoordScheduler({
  type="button"
  disabled={readOnly || !slot.available}
  onClick={() => assignSlot(slot.time)}
- className={`px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
+ className={`px-2 py-1 rounded-md app-body font-medium transition-colors ${
  !slot.available
  ? "bg-muted/50 text-muted-foreground/50 cursor-not-allowed line-through"
  : slot.extra
@@ -4496,13 +4519,13 @@ function CoordScheduler({
  title={slot.bookedInfo || (slot.extra ? "Horario extra (fuera de 09-19)" : "Horario normal")}
  >
  {slot.time}
- {slot.extra && <span className="ml-1 text-[8px]">★</span>}
+ {slot.extra && <Star className="ml-1 h-3 w-3 text-amber-500" />}
  </button>
  ))}
  </div>
- <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border text-[9px] text-muted-foreground">
+ <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border app-body text-muted-foreground">
  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-emerald-500/30" /> Normal 09-19</span>
- <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-amber-500/30" /> Extra ★</span>
+ <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-amber-500/30" /> Extra <Star className="h-3 w-3 text-amber-500" /></span>
  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-muted" /> Ocupado</span>
  </div>
  </>
@@ -4512,42 +4535,43 @@ function CoordScheduler({
  {!readOnly && (
  <div className="mt-2 pt-2 border-t border-border">
  {!showCustomTime ? (
- <button
+ <Button
  type="button"
  onClick={() => setShowCustomTime(true)}
- className="text-[10px] text-sky-600 hover:underline"
+ className="pg-btn-platinum"
+ title="Asignar horario personalizado"
  >
- + Asignar horario personalizado
- </button>
+ Personalizado
+ </Button>
  ) : (
- <div className="flex items-center gap-2">
+ <div className="flex flex-wrap items-center gap-2">
  <Input
  type="time"
- className="app-input h-7 text-[11px] w-auto"
+ className="app-input h-7 w-auto"
  value={customTime}
  onChange={(e) => setCustomTime(e.target.value)}
  />
- <button
+ <Button
  type="button"
  onClick={assignCustom}
- className="px-2 py-1 rounded-md text-[10px] font-medium bg-sky-500/10 text-sky-700 hover:bg-sky-500/20 border border-sky-500/20"
+ className="pg-btn-platinum"
  >
  Asignar
- </button>
- <button
+ </Button>
+ <Button
  type="button"
  onClick={() => setShowCustomTime(false)}
- className="text-[10px] text-muted-foreground hover:underline"
+ className="pg-btn-platinum"
  >
  Cancelar
- </button>
+ </Button>
  </div>
  )}
  </div>
  )}
  </div>
  {daysToIssue && daysToIssue > 0 && !isPast && (
- <p className="text-[9px] text-muted-foreground">Máx: {daysToIssue} días desde hoy</p>
+ <p className="app-body text-muted-foreground">Máx: {daysToIssue} días desde hoy</p>
  )}
  </div>
  );
@@ -4571,7 +4595,7 @@ function CoordScheduler({
  <div className="flex flex-col gap-1.5">
  {/* Label arriba */}
  <div className="flex items-center justify-between">
- <Label className="app-field-label text-[11px]">
+ <Label className="app-field-label">
  {field.label} {field.required && <span className="text-red-500">*</span>}
  </Label>
  </div>
@@ -4589,12 +4613,13 @@ function CoordScheduler({
  className={`w-full ${isOverMaxDate ? "border-amber-500" : ""}`}
  />
  {currentValue && valDate && (
- <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 w-fit text-[11px] px-1 py-0">
- ✓ {valDate.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+ <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 w-fit app-body px-1 py-0">
+ <CheckCircle className="inline h-3 w-3 mr-1" />
+ {valDate.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
  </Badge>
  )}
  {selectedDateLabel && (
- <p className="text-[10px] text-muted-foreground capitalize leading-tight">{selectedDateLabel}</p>
+ <p className="app-body text-muted-foreground capitalize leading-tight">{selectedDateLabel}</p>
  )}
  </div>
 
@@ -4602,9 +4627,9 @@ function CoordScheduler({
  {inspectorId && selectedDate ? (
  <div className="flex-1 min-w-0 flex flex-col gap-1">
  {scheduleLoading ? (
- <p className="text-[10px] text-muted-foreground py-2">Cargando disponibilidades...</p>
+ <p className="app-body text-muted-foreground py-2">Cargando disponibilidades...</p>
  ) : slots.length === 0 ? (
- <p className="text-[10px] text-muted-foreground py-2">No hay slots disponibles.</p>
+ <p className="app-body text-muted-foreground py-2">No hay slots disponibles.</p>
  ) : (
  <>
  {/* Grid de slots — 12 columnas, compactos (24px) */}
@@ -4615,7 +4640,7 @@ function CoordScheduler({
  type="button"
  disabled={readOnly || !slot.available}
  onClick={() => assignSlot(slot.time)}
- className={`h-6 max-h-6 rounded text-[10px] font-medium transition-colors flex items-center justify-center gap-0.5 ${
+ className={`h-6 max-h-6 rounded app-body font-medium transition-colors flex items-center justify-center gap-0.5 ${
  !slot.available
  ? "bg-muted/40 text-muted-foreground/40 cursor-not-allowed line-through border border-border/30"
  : slot.extra
@@ -4625,18 +4650,18 @@ function CoordScheduler({
  title={slot.bookedInfo || `${slot.label}${slot.extra ? " (extra)" : ""}`}
  >
  {slot.time}
- {slot.extra && <span className="text-[7px]">★</span>}
+ {slot.extra && <Star className="h-3 w-3 text-amber-500" />}
  </button>
  ))}
  </div>
  {/* Barra inferior: tipo + leyenda + horario personalizado */}
- <div className="flex flex-wrap items-center gap-2 mt-0.5 pt-1 border-t border-border/30 text-[9px] text-muted-foreground">
+ <div className="flex flex-wrap items-center gap-2 mt-0.5 pt-1 border-t border-border/30 app-body text-muted-foreground">
  <span className="font-medium text-foreground/80">
  {inspectionType === "remote" ? "Remota · 30 min" : "Presencial · 3 hrs"}
  </span>
  <div className="flex flex-wrap items-center gap-2 ml-auto">
  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded bg-emerald-500/40" /> 09-19</span>
- <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded bg-amber-500/40" /> Extra ★</span>
+ <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded bg-amber-500/40" /> Extra <Star className="h-3 w-3 text-amber-500" /></span>
  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded bg-muted" /> Ocupado</span>
  </div>
  {!readOnly && (
@@ -4653,21 +4678,21 @@ function CoordScheduler({
  <div className="flex items-center gap-1.5">
  <Input
  type="time"
- className="app-input h-6 text-[10px] w-auto"
+ className="app-input h-6 app-body w-auto"
  value={customTime}
  onChange={(e) => setCustomTime(e.target.value)}
  />
  <button
  type="button"
  onClick={assignCustom}
- className="px-2 py-0.5 rounded text-[9px] font-medium bg-sky-500/10 text-sky-700 hover:bg-sky-500/20 border border-sky-500/20"
+ className="px-2 py-0.5 rounded app-body font-medium bg-sky-500/10 text-sky-700 hover:bg-sky-500/20 border border-sky-500/20"
  >
  Asignar
  </button>
  <button
  type="button"
  onClick={() => setShowCustomTime(false)}
- className="text-[9px] text-muted-foreground hover:underline"
+ className="app-body text-muted-foreground hover:underline"
  >
  Cancelar
  </button>
@@ -4677,11 +4702,11 @@ function CoordScheduler({
  )}
  </div>
  ) : !selectedDate ? (
- <div className="flex-1 flex items-center justify-center text-[10px] text-muted-foreground py-2">
+ <div className="flex-1 flex items-center justify-center app-body text-muted-foreground py-2">
  Seleccione una fecha para ver horarios.
  </div>
  ) : (
- <div className="flex-1 flex items-center justify-center text-[10px] text-muted-foreground py-2">
+ <div className="flex-1 flex items-center justify-center app-body text-muted-foreground py-2">
  Seleccione un inspector para ver disponibilidades.
  </div>
  )}
@@ -4689,9 +4714,9 @@ function CoordScheduler({
 
  {/* Alertas compactas abajo */}
  {(isPast || isOverMaxDate || (daysToIssue && daysToIssue > 0 && !isPast && !isOverMaxDate)) && (
- <div className="flex flex-wrap gap-2 text-[9px]">
- {isPast && <span className="text-red-600 font-medium">⚠ Fecha en el pasado.</span>}
- {isOverMaxDate && <span className="text-amber-600 font-medium">⚠ Excede máx {daysToIssue} días.</span>}
+ <div className="flex flex-wrap gap-2 app-body">
+ {isPast && <span className="text-red-600 font-medium">Fecha en el pasado.</span>}
+ {isOverMaxDate && <span className="text-amber-600 font-medium">Excede máx {daysToIssue} días.</span>}
  {daysToIssue && daysToIssue > 0 && !isPast && !isOverMaxDate && (
  <span className="text-muted-foreground">Máx: {daysToIssue} días</span>
  )}
@@ -4927,7 +4952,7 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
 
   if (docLoading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground text-[11px]">
+      <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground app-body">
         <Loader2 className="h-4 w-4 animate-spin" />
         Cargando documento...
       </div>
@@ -4939,7 +4964,7 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
     return (
       <div className="space-y-2">
         {readOnly && (
-          <p className="text-[10px] text-muted-foreground italic">
+          <p className="app-body text-muted-foreground italic">
             La gestión no tiene documento.
           </p>
         )}
@@ -4954,8 +4979,8 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
               <FileText className="h-4 w-4 text-[#0095DA]" />
             </div>
             <div>
-              <p className="text-[11px] font-medium">Plantilla del sistema</p>
-              <p className="text-[10px] text-muted-foreground">Generar Word/Excel/PPT con datos del siniestro</p>
+              <p className="app-body font-medium">Plantilla del sistema</p>
+              <p className="app-body text-muted-foreground">Generar Word/Excel/PPT con datos del siniestro</p>
             </div>
           </button>
 
@@ -4969,8 +4994,8 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
               <Upload className="h-4 w-4 text-emerald-600" />
             </div>
             <div>
-              <p className="text-[11px] font-medium">Subir documento</p>
-              <p className="text-[10px] text-muted-foreground">Word, Excel o PowerPoint</p>
+              <p className="app-body font-medium">Subir documento</p>
+              <p className="app-body text-muted-foreground">Word, Excel o PowerPoint</p>
             </div>
           </button>
         </div>
@@ -5017,60 +5042,62 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-[11px] font-medium truncate">
+              <p className="app-body font-medium truncate">
                 {currentDoc.original_filename || currentDoc.file_name}
               </p>
-              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 uppercase">
+              <Badge variant="outline" className="app-body px-1 py-0 h-4 uppercase">
                 v{currentDoc.version}
               </Badge>
               {currentDoc.file_type === "pdf" && (
-                <Badge className="text-[9px] px-1 py-0 h-4 bg-red-500/10 text-red-600 border-red-200 dark:border-red-900/50">
+                <Badge className="app-body px-1 py-0 h-4 bg-red-500/10 text-red-600 border-red-200 dark:border-red-900/50">
                   PDF Final
                 </Badge>
               )}
             </div>
-            <p className="text-[10px] text-muted-foreground truncate">
+            <p className="app-body text-muted-foreground truncate">
               {currentDoc.file_name} · {formatFileSize(currentDoc.file_size)} · {formatDate(currentDoc.created_at)}
               {currentDoc.created_by_user && ` · ${currentDoc.created_by_user.full_name}`}
             </p>
           </div>
-          <button
+          <Button
             type="button"
             onClick={() => setShowHistory(true)}
-            className="btn-neutral btn-icon shrink-0"
+            className="btn-icon-sm"
             title="Historial de versiones"
           >
             <History className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </div>
 
         {/* Indicador de lock */}
         {currentDoc.locked_by && (
           <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 px-2 py-1.5">
             <Lock className="h-3.5 w-3.5 text-amber-600" />
-            <span className="text-[10px] text-amber-700 dark:text-amber-400 flex-1">
+            <span className="app-body text-amber-700 dark:text-amber-400 flex-1">
               Bloqueado por {currentDoc.locked_by_user?.full_name || "otro usuario"}
               {currentDoc.lock_expires_at && ` · expira ${formatDate(currentDoc.lock_expires_at)}`}
             </span>
             {isLockedByMe && (
-              <button
+              <Button
                 type="button"
                 onClick={() => unlockMut.mutate()}
                 disabled={unlockMut.isPending}
-                className="text-[10px] text-amber-700 dark:text-amber-400 hover:underline"
+                className="btn-icon-sm"
+                title="Desbloquear"
               >
-                Desbloquear
-              </button>
+                <LockOpen className="h-3.5 w-3.5 text-amber-600" />
+              </Button>
             )}
             {isLockedByOther && (
-              <button
+              <Button
                 type="button"
                 onClick={() => forceUnlockMut.mutate()}
                 disabled={forceUnlockMut.isPending}
-                className="text-[10px] text-red-600 hover:underline"
+                className="btn-icon-sm btn-danger-hover"
+                title="Forzar desbloqueo"
               >
-                Forzar desbloqueo
-              </button>
+                <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+              </Button>
             )}
           </div>
         )}
@@ -5080,7 +5107,7 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
             {/* Descargar (con lock) — solo para documentos editables */}
             {hasEditable && !currentDoc.locked_by && (
-              <button
+              <Button
                 type="button"
                 onClick={() => lockAndDownloadMut.mutate()}
                 disabled={lockAndDownloadMut.isPending}
@@ -5089,12 +5116,12 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
               >
                 <Download className="h-3.5 w-3.5" />
                 Descargar
-              </button>
+              </Button>
             )}
 
             {/* Subir nueva versión — solo para documentos editables */}
             {hasEditable && (
-              <button
+              <Button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadMut.isPending}
@@ -5103,12 +5130,12 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
               >
                 <Upload className="h-3.5 w-3.5" />
                 Subir
-              </button>
+              </Button>
             )}
 
             {/* Convertir a PDF — solo para documentos editables, después del último nivel */}
             {hasEditable && (
-              <button
+              <Button
                 type="button"
                 onClick={() => convertPdfMut.mutate()}
                 disabled={convertPdfMut.isPending}
@@ -5117,7 +5144,7 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
               >
                 {convertPdfMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileIcon className="h-3.5 w-3.5" />}
                 PDF
-              </button>
+              </Button>
             )}
 
             {/* Descargar PDF — solo para PDFs */}
@@ -5152,7 +5179,7 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
         {hasPdf && (
           <div className="flex items-center gap-2 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 px-2 py-1.5">
             <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="text-[10px] text-emerald-700 dark:text-emerald-400">
+            <span className="app-body text-emerald-700 dark:text-emerald-400">
               Gestión cerrada y publicada — el PDF es el documento final
             </span>
           </div>
@@ -5195,14 +5222,14 @@ function DocumentTemplatePicker({
         </div>
         <div className="modal-body space-y-2">
           {isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-[11px]">
+            <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground app-body">
               <Loader2 className="h-4 w-4 animate-spin" />
               Cargando plantillas...
             </div>
           ) : templates.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-[11px] text-muted-foreground">No hay plantillas configuradas para esta gestión.</p>
-              <p className="text-[10px] text-muted-foreground mt-1">
+              <p className="app-body text-muted-foreground">No hay plantillas configuradas para esta gestión.</p>
+              <p className="app-body text-muted-foreground mt-1">
                 Configurá plantillas en Catálogos → Gestiones → Plantillas de Documento
               </p>
             </div>
@@ -5223,8 +5250,8 @@ function DocumentTemplatePicker({
                     <Icon className="h-4 w-4 text-[#0095DA]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-medium truncate">{tpl.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">
+                    <p className="app-body font-medium truncate">{tpl.name}</p>
+                    <p className="app-body text-muted-foreground truncate">
                       {tpl.file_name}
                       {placeholders.length > 0 && ` · ${placeholders.length} placeholder${placeholders.length !== 1 ? "s" : ""}`}
                     </p>
@@ -5282,10 +5309,10 @@ function DocumentUploadDialog({
             className="cursor-pointer rounded-lg border-2 border-dashed border-border p-6 text-center hover:border-[#0095DA]/50 hover:bg-[#0095DA]/5 transition-colors"
           >
             <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-[11px] text-muted-foreground">
+            <p className="app-body text-muted-foreground">
               {selectedFile ? selectedFile.name : "Hacé click para seleccionar un archivo"}
             </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="app-body text-muted-foreground mt-1">
               Formatos aceptados: {accept}
             </p>
             <input
@@ -5362,12 +5389,12 @@ function DocumentVersionHistory({ actionId, onClose }: { actionId: string; onClo
         </div>
         <div className="modal-body space-y-1.5">
           {isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-[11px]">
+            <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground app-body">
               <Loader2 className="h-4 w-4 animate-spin" />
               Cargando historial...
             </div>
           ) : !data?.documents || data.documents.length === 0 ? (
-            <p className="text-center py-8 text-[11px] text-muted-foreground">No hay versiones</p>
+            <p className="text-center py-8 app-body text-muted-foreground">No hay versiones</p>
           ) : (
             data.documents.map((doc) => {
               const Icon = doc.file_type === "xlsx" ? FileSpreadsheet : doc.file_type === "pptx" ? Presentation : doc.file_type === "pdf" ? FileIcon : FileText;
@@ -5389,17 +5416,17 @@ function DocumentVersionHistory({ actionId, onClose }: { actionId: string; onClo
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-[11px] font-medium">v{doc.version}</p>
-                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+                      <p className="app-body font-medium">v{doc.version}</p>
+                      <Badge variant="outline" className="app-body px-1 py-0 h-4">
                         {sourceLabel}
                       </Badge>
                       {doc.is_current && (
-                        <Badge className="text-[9px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-900/50">
+                        <Badge className="app-body px-1 py-0 h-4 bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-900/50">
                           Actual
                         </Badge>
                       )}
                     </div>
-                    <p className="text-[10px] text-muted-foreground truncate">
+                    <p className="app-body text-muted-foreground truncate">
                       {doc.original_filename || doc.file_name} · {formatFileSize(doc.file_size)} · {formatDate(doc.created_at)}
                       {doc.created_by_user && ` · ${doc.created_by_user.full_name}`}
                     </p>
@@ -5409,21 +5436,21 @@ function DocumentVersionHistory({ actionId, onClose }: { actionId: string; onClo
                       href={doc.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-neutral btn-icon"
+                      className="btn-icon-sm"
                       title="Descargar"
                     >
                       <Download className="h-3.5 w-3.5" />
                     </a>
                     {!doc.is_current && doc.file_type !== "pdf" && (
-                      <button
+                      <Button
                         type="button"
                         onClick={() => restoreMut.mutate(doc.id)}
                         disabled={restoreMut.isPending}
-                        className="btn-neutral btn-icon"
+                        className="btn-icon-sm"
                         title="Restaurar esta versión"
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>

@@ -30,7 +30,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
 
   if (!screens || screens.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground text-center py-8">
+      <p className="app-body text-muted-foreground text-center py-8">
         No hay pantalla configurada para esta característica.
       </p>
     );
@@ -38,8 +38,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
 
   const screen = screens[0];
 
-  // DEBUG: ver qué llega
-  console.log("[GestionScreenSwitcher] screens:", screens?.length, "screen:", screen?.code, "is_dynamic:", screen?.is_dynamic, "action.action_data:", action.action_data);
+
 
   // Datos heredados de la coordinación (parent_action_data)
   // Los campos del CIN pueden tener IDs con sufijos (coord_type_1, coord_fecha_1, etc.)
@@ -104,13 +103,13 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
   // Pantalla fija de inspección — mostrar datos y link directo
   if (!screen.is_dynamic && screen.code === "inspeccion") {
     if (sessionsLoading) {
-      return <p className="text-sm text-muted-foreground text-center py-8">Cargando inspección...</p>;
+      return <p className="app-body text-muted-foreground text-center py-8">Cargando inspección...</p>;
     }
 
     // Resumen de datos heredados de la coordinación
     const coordSummary = (
-      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5 text-[11px] mb-4">
-        <p className="font-medium text-foreground text-[13px] mb-1">Datos de la Coordinación</p>
+      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5 app-body mb-4">
+        <p className="app-dynamic-title text-foreground mb-1">Datos de la Coordinación</p>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
           <div><span className="text-muted-foreground">Tipo:</span> {inherited.inspectionType === "remote" ? "Remota" : inherited.inspectionType === "onsite" ? "Presencial" : "—"}</div>
           <div><span className="text-muted-foreground">Fecha:</span> {inherited.fecha ? new Date(inherited.fecha).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</div>
@@ -134,12 +133,12 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
         <div className="py-4 space-y-3">
           {coordSummary}
           <div className="text-center space-y-3">
-            <p className="text-sm text-muted-foreground">
+            <p className="app-body text-muted-foreground">
               Inspección <strong>{linkedSession.inspection_number || linkedSession.id.slice(0, 8)}</strong>
               {" — "}
               {linkedSession.inspection_type === "onsite" ? "Presencial" : "Remota"}
             </p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="app-body text-muted-foreground">
               Estado: {linkedSession.status}
               {linkedSession.scheduled_at && ` · Programada: ${new Date(linkedSession.scheduled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}`}
             </p>
@@ -149,7 +148,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
                 window.location.href = `/dashboard/inspecciones/${linkedSession.id}`;
               }}
             >
-              Ir a Inspección
+              Inspección
             </Button>
           </div>
         </div>
@@ -160,7 +159,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
     return (
       <div className="py-4 space-y-3">
         {coordSummary}
-        <p className="text-sm text-amber-600 text-center">
+        <p className="app-body text-amber-600 text-center">
           La sesión de inspección no se creó automáticamente. Recargue la página o contacte al administrador.
         </p>
       </div>
@@ -172,7 +171,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
     // form_schema ni snapshot. Se renderizan con su propio componente fijo
     // (el flujo de inspección está manejado más arriba, líneas 56-113).
     return (
-      <p className="text-sm text-muted-foreground text-center py-8">
+      <p className="app-body text-muted-foreground text-center py-8">
         La pantalla <strong>{screen.name}</strong> es un componente fijo no configurable.
       </p>
     );
@@ -207,7 +206,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
   }
 
   return (
-    <p className="text-sm text-muted-foreground text-center py-8">
+    <p className="app-body text-muted-foreground text-center py-8">
       La pantalla <strong>{screen.name}</strong> no tiene campos configurados. Usa el constructor para diseñarla.
     </p>
   );
