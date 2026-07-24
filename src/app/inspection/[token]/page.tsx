@@ -310,16 +310,7 @@ export default function MagicLinkPage() {
             <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 app-body font-medium text-emerald-400">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" /> En vivo
             </span>
-            {/* Botón Videollamada */}
-            {!isCompleted && (
-              <button
-                onClick={() => setVideoCallOpen(true)}
-                className="flex items-center gap-1.5 rounded-full bg-sky-600 px-3 py-1 app-body font-medium text-white hover:bg-sky-500 transition-colors"
-              >
-                <Video className="h-3.5 w-3.5" />
-                Videollamada
-              </button>
-            )}
+
           </div>
         </div>
       </header>
