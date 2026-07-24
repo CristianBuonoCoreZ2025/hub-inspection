@@ -3,8 +3,9 @@
 import * as React from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import { MapPin, Loader2, AlertTriangle, CheckCircle2, MousePointer2 } from "lucide-react";
+import { MapPin, Loader2, AlertTriangle, CheckCircle2, MousePointer2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -79,18 +80,42 @@ export function ClaimLocationSelector({
 }: ClaimLocationSelectorProps) {
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [manualPin, setManualPin] = React.useState<{ lat: number; lng: number } | null>(null);
+  const [manualPinAddress, setManualPinAddress] = React.useState<string | null>(null);
+  const [draftQuery, setDraftQuery] = React.useState(address);
+  const [searchQuery, setSearchQuery] = React.useState(address);
   const validClaimCoords = claimCoords && Number.isFinite(claimCoords.lat) && Number.isFinite(claimCoords.lng) ? claimCoords : null;
 
-  // Reset selected index y pin manual cuando se abre con una nueva dirección
+  // Reset selected index y búsqueda cuando se abre con una nueva dirección
   // Se difiere con setTimeout para evitar setState sincrónico dentro del effect.
   React.useEffect(() => {
     if (!open) return;
     const id = setTimeout(() => {
       setSelectedIndex(0);
       setManualPin(null);
+      setManualPinAddress(null);
+      setDraftQuery(address);
+      setSearchQuery(address);
     }, 0);
     return () => clearTimeout(id);
   }, [open, address, commune, city, region, country, validClaimCoords]);
+
+  const handleSearch = () => {
+    setSearchQuery(draftQuery);
+    setSelectedIndex(0);
+    setManualPin(null);
+    setManualPinAddress(null);
+  };
+
+  const handleMapClick = async (latlng: { lat: number; lng: number }) => {
+    setManualPin(latlng);
+    setManualPinAddress(null);
+    setSelectedIndex(-1);
+    const addr = await reverseGeocode(latlng.lat, latlng.lng);
+    if (addr) {
+      setManualPinAddress(addr);
+      setDraftQuery(addr);
+    }
+  };
 
   const { data: mapProviders } = useQuery({
     queryKey: ["map-providers"],
@@ -105,12 +130,12 @@ export function ClaimLocationSelector({
   });
 
   const { data: candidates = [], isLoading } = useQuery({
-    queryKey: ["geocode-candidates", address, commune, city, region, country, mapProviders],
-    queryFn: () => geocodeAddressCandidates(address, { commune, city, region, country }, {
+    queryKey: ["geocode-candidates", searchQuery, commune, city, region, country, mapProviders],
+    queryFn: () => geocodeAddressCandidates(searchQuery, { commune, city, region, country }, {
       providers: mapProviders?.providers,
       tokens: mapProviders?.tokens,
     }),
-    enabled: open && !!address?.trim() && !!mapProviders,
+    enabled: open && !!searchQuery?.trim() && !!mapProviders,
     staleTime: 0,
   });
 
@@ -140,7 +165,7 @@ export function ClaimLocationSelector({
       }
     : null;
   const allCandidates = candidates.length > 0 ? candidates : fallbackCandidate ? [fallbackCandidate] : [];
-  const selected = allCandidates[selectedIndex] || allCandidates[0] || null;
+  const selected = selectedIndex >= 0 ? allCandidates[selectedIndex] || null : null;
   const mapCenter = manualPin || selected || centerCandidates[0] || { lat: -33.44, lng: -70.66 };
   const hasCandidates = allCandidates.length > 0;
 
@@ -150,7 +175,7 @@ export function ClaimLocationSelector({
         lat: manualPin.lat,
         lng: manualPin.lng,
         label: "Ubicación manual",
-        displayName: "Ubicación manual seleccionada en mapa",
+        displayName: manualPinAddress || "Ubicación manual seleccionada en mapa",
       });
       onOpenChange(false);
     } else if (selected) {
@@ -161,7 +186,7 @@ export function ClaimLocationSelector({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden">
+      <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-hidden">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle className="app-section-title">Seleccionar ubicación exacta</DialogTitle>
           <DialogDescription className="modal-subtitle">
@@ -171,9 +196,21 @@ export function ClaimLocationSelector({
                 ? `Se encontraron ${allCandidates.length} posibles ubicaciones. Elige la más cercana al siniestro.`
                 : "No se encontraron ubicaciones automáticas. Haz clic en el mapa para marcar la ubicación."}
           </DialogDescription>
+          <div className="mt-3 flex items-center gap-2">
+            <Input
+              className="app-input h-8 flex-1"
+              value={draftQuery}
+              onChange={(e) => setDraftQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Editar dirección de búsqueda"
+            />
+            <Button type="button" variant="outline" className="h-8 px-3" onClick={handleSearch}>
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 h-125">
+        <div className="grid grid-cols-1 md:grid-cols-2 h-[75vh]">
           {/* Lista de candidatos */}
           <div className="flex flex-col border-r border-border">
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -201,6 +238,11 @@ export function ClaimLocationSelector({
                       <p className="font-mono text-muted-foreground">
                         {manualPin.lat.toFixed(6)}, {manualPin.lng.toFixed(6)}
                       </p>
+                      {manualPinAddress && (
+                        <p className="text-[10px] text-muted-foreground line-clamp-2">
+                          {manualPinAddress}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -212,6 +254,7 @@ export function ClaimLocationSelector({
                   onClick={() => {
                     setSelectedIndex(i);
                     setManualPin(null);
+                    setManualPinAddress(null);
                   }}
                   className={`w-full text-left rounded-lg border p-3 text-[11px] transition-colors ${
                     i === selectedIndex && !manualPin
@@ -259,7 +302,7 @@ export function ClaimLocationSelector({
 
           {/* Mapa */}
           <div className="relative h-full min-h-75 md:min-h-0">
-            {(selected || !hasCandidates) ? (
+            {(selected || !hasCandidates || manualPin) ? (
               <MapContainer
                 center={[mapCenter.lat, mapCenter.lng]}
                 zoom={16}
@@ -279,6 +322,7 @@ export function ClaimLocationSelector({
                       click: () => {
                         setSelectedIndex(i);
                         setManualPin(null);
+                        setManualPinAddress(null);
                       },
                     }}
                   />
@@ -289,7 +333,7 @@ export function ClaimLocationSelector({
                     icon={blueIcon}
                   />
                 )}
-                <MapClickHandler onClick={setManualPin} />
+                <MapClickHandler onClick={handleMapClick} />
                 <Recenter center={mapCenter} />
               </MapContainer>
             ) : (

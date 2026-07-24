@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { getGeoThresholdMeters, invalidateSystemSettingCache } from "@/services/settings";
+import { invalidateSystemSettingCache } from "@/services/settings";
 
 /**
  * GET /api/settings/geo-threshold
@@ -9,7 +9,22 @@ import { getGeoThresholdMeters, invalidateSystemSettingCache } from "@/services/
  */
 export async function GET() {
   try {
-    const threshold = await getGeoThresholdMeters();
+    const admin = createAdminClient();
+    const { data: rows, error } = await admin
+      .from("system_settings")
+      .select("value")
+      .eq("key", "geo_threshold_meters")
+      .eq("is_active", true)
+      .limit(1);
+    if (error) throw new Error(error.message);
+
+    const raw = rows?.[0]?.value ?? null;
+    let threshold = 500;
+    if (raw) {
+      const parsed = Number(raw);
+      if (!Number.isNaN(parsed) && parsed > 0) threshold = parsed;
+    }
+
     return NextResponse.json({ threshold });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error al leer configuración";

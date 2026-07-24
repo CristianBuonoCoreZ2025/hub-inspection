@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { getMapProviders, invalidateSystemSettingCache } from "@/services/settings";
+import { invalidateSystemSettingCache } from "@/services/settings";
 
 export type MapProvider = "osm" | "mapbox";
 
@@ -20,7 +20,35 @@ const DEFAULT_CONFIG: MapProvidersConfig = {
  */
 export async function GET() {
   try {
-    const config = await getMapProviders();
+    const admin = createAdminClient();
+    const { data: rows, error } = await admin
+      .from("system_settings")
+      .select("value")
+      .eq("key", "map_providers")
+      .eq("is_active", true)
+      .limit(1);
+    if (error) throw new Error(error.message);
+
+    const raw = rows?.[0]?.value ?? null;
+    let config: MapProvidersConfig = DEFAULT_CONFIG;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as Partial<MapProvidersConfig>;
+        const providers = Array.isArray(parsed.providers)
+          ? parsed.providers.filter((p): p is MapProvider => p === "osm" || p === "mapbox")
+          : DEFAULT_CONFIG.providers;
+        config = {
+          providers: providers.length > 0 ? providers : DEFAULT_CONFIG.providers,
+          tokens: {
+            osm: null,
+            mapbox: typeof parsed.tokens?.mapbox === "string" ? parsed.tokens.mapbox : null,
+          },
+        };
+      } catch {
+        // mantener default
+      }
+    }
+
     return NextResponse.json(config);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error al leer configuración";

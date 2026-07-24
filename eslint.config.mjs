@@ -5,6 +5,13 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // Marcar variables usadas en JSX como utilizadas (evita falsos no-unused-vars)
+  {
+    files: ["**/*.{js,jsx,ts,tsx}"],
+    rules: {
+      "react/jsx-uses-vars": "error",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

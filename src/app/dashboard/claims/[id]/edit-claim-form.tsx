@@ -2145,6 +2145,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  onSelect={(candidate: GeocodeCandidate) => {
  setValue("claimLatitude", candidate.lat);
  setValue("claimLongitude", candidate.lng);
+setValue("claimAddress", candidate.displayName || candidate.label);
  }}
  />
  </div>

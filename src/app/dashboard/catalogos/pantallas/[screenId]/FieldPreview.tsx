@@ -291,7 +291,7 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
             <div className="h-5 rounded border border-border bg-background px-1 app-body text-muted-foreground flex items-center">
               📅 {new Date().toISOString().split("T")[0]}
             </div>
-            <p className="app-body text-muted-foreground capitalize leading-tight">
+            <p className="app-body text-muted-foreground leading-tight">
               {new Date().toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}
             </p>
           </div>

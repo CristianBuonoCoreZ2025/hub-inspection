@@ -621,7 +621,7 @@ export default function ReportTab({
                   {evidences.map((ev, idx) => (
                     <tr key={ev.id}>
                       <td className="p-1.5 border border-gray-300 app-body">{idx + 1}</td>
-                      <td className="p-1.5 border border-gray-300 app-body capitalize">{ev.type}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{ev.type}</td>
                       <td className="p-1.5 border border-gray-300 app-body">{ev.metadata?.originalName || "—"}</td>
                       <td className="p-1.5 border border-gray-300 app-body">{ev.description || "—"}</td>
                     </tr>
@@ -737,7 +737,7 @@ export default function ReportTab({
                   {otherEvidences.map((d, idx) => (
                     <tr key={d.id}>
                       <td className="p-1.5 border border-gray-300 app-body">{idx + 1}</td>
-                      <td className="p-1.5 border border-gray-300 app-body capitalize">{d.type}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{d.type}</td>
                       <td className="p-1.5 border border-gray-300 app-body">{d.metadata?.originalName || "—"}</td>
                       <td className="p-1.5 border border-gray-300 app-body">{d.description || "—"}</td>
                     </tr>

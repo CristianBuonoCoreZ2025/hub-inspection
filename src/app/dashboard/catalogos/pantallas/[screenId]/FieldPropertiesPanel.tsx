@@ -1,5 +1,7 @@
 "use client";
 
+import { toLabelCase } from "@/lib/utils";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -188,6 +190,7 @@ export function FieldPropertiesPanel({
  className="app-input h-7"
  value={field.label}
  onChange={(e) => onUpdate({ label: e.target.value })}
+onBlur={(e) => onUpdate({ label: toLabelCase(e.target.value) })}
  />
  </div>
  <div>

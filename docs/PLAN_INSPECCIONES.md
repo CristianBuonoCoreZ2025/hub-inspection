@@ -65,10 +65,12 @@
 | Guardado automático del mapa como evidencia | ✅ | API `/api/inspection/geo/save-map` → R2 con `source='geo_map'` |
 | Botón "Tomar foto del lugar" | ❌ **Eliminado** del `GeoCapture` | Las fotos se suben desde el tab de Evidencias |
 | **Videollamada WebRTC p2p** | ✅ | `LiveVideoCall` con signaling via Supabase Realtime |
+| **Inicio automático de videollamada al activar inspección remota** | ✅ | Tanto inspector (dashboard) como asegurado (Magic Link) abren `LiveVideoCall` cuando `status=active` |
 | **Captura de fotos desde video en vivo** | ✅ | `canvas.drawImage(video)` → R2 con `source='screenshot_*'` |
 | Ambos pueden capturar fotos | ✅ | Inspector y cliente tienen botón 📷 |
 | Grabación de video de la sesión | ⏳ | Fase 8 pendiente (MediaRecorder) |
-| Chat en vivo | ✅ | `ChatTab` + `ChatPanel` con Supabase Realtime |
+| Chat en vivo (respaldo) | ✅ | `ChatTab` + `ChatPanel` con Supabase Realtime; panel oculto por defecto, se abre vía botón flotante |
+| **Declaración del asegurado por voz (Magic Link)** | ✅ | `VoiceTextarea` en `acta → declaracion` transcribe y guarda `insured_statement.statement` vía PATCH `/api/inspection/live/{token}` |
 
 ---
 
@@ -140,6 +142,17 @@
 | Grabación con `MediaRecorder` | ⏳ | Fase 8 — pendiente |
 | Upload del video completo a R2 | ⏳ | `source='live_video'` |
 | Indicador "Grabando" | ⏳ | |
+
+### 4.4 Flujo de videollamada remota (inicio automático)
+
+| Funcionalidad | Estado | Detalle |
+|---------------|--------|---------|
+| Inicio automático en dashboard del inspector | ✅ | Al cambiar `status` a `active` se abre `LiveVideoCall` con `role=inspector` |
+| Inicio automático en Magic Link del asegurado | ✅ | Al cambiar `status` a `active` se abre `LiveVideoCall` con `role=client` |
+| Sincronización en tiempo real dashboard ↔ Magic Link | ✅ | Dashboard hace polling cada 2s cuando la sesión remota está `active` |
+| Chat como canal de respaldo | ✅ | Panel oculto por defecto; botón flotante para reabrir si se corta la llamada |
+| Declaración del asegurado en Magic Link | ✅ | `VoiceTextarea` en `acta → declaracion` transcribe y auto-guarda con debounce `insured_statement.statement` |
+| Declaración es del asegurado, no del inspector | ✅ | Inspector visualiza y edita en `acta-form`; asegurado la dicta/desde Magic Link |
 
 ---
 

@@ -170,7 +170,7 @@
   .topbar-user-role {
     font-size: 10px;
     color: var(--muted-foreground);
-    text-transform: capitalize;
+
   }
 
   /* ── Centro: chips icon-only tipo Apple toolbar ── */

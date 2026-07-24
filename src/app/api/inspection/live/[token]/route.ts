@@ -133,8 +133,9 @@ export async function GET(
 }
 
 /**
- * PATCH — Actualizar geolocalización de la sesión desde el magic link (cliente).
- * Solo permite actualizar campos geo_* (no otros campos de la sesión).
+ * PATCH — Actualizar campos permitidos de la sesión desde el magic link (cliente):
+ * - geo_* (geolocalización)
+ * - insured_statement (declaración del asegurado)
  */
 export async function PATCH(
   request: NextRequest,
@@ -157,13 +158,30 @@ export async function PATCH(
         update[field] = body[field];
       }
     }
+    // Cada nueva captura consume la autorización de recaptura
+    if (Object.keys(update).some((k) => k.startsWith("geo_"))) {
+      update.geo_recapture_enabled = false;
+    }
+
+    const supabase = createAdminClient();
+
+    // declaración del asegurado: merge con el objeto existente
+    if (body.insured_statement !== undefined && typeof body.insured_statement === "object") {
+      const { data: existing } = await supabase
+        .from("inspection_sessions")
+        .select("insured_statement")
+        .eq("magic_link_token", token)
+        .single();
+      update.insured_statement = {
+        ...(existing?.insured_statement || {}),
+        ...body.insured_statement,
+      };
+    }
+
     if (Object.keys(update).length === 0) {
       return NextResponse.json({ error: "No hay campos para actualizar" }, { status: 400 });
     }
-    // Cada nueva captura consume la autorización de recaptura
-    update.geo_recapture_enabled = false;
 
-    const supabase = createAdminClient();
     const { error } = await supabase
       .from("inspection_sessions")
       .update(update)
@@ -179,7 +197,7 @@ export async function PATCH(
       action: "patch.geo",
     });
     return NextResponse.json(
-      { error: "No se pudo guardar la geolocalización" },
+      { error: "No se pudo guardar la información" },
       { status: 500 }
     );
   }

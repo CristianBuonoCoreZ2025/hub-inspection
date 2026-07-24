@@ -1,5 +1,7 @@
 "use client";
 
+import { toLabelCase } from "@/lib/utils";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -376,6 +378,7 @@ function PropertiesPanel({
  className="app-input h-8 app-body"
  value={field.label}
  onChange={(e) => onUpdate(index, { label: e.target.value })}
+onBlur={(e) => onUpdate(index, { label: toLabelCase(e.target.value) })}
  />
  </div>
 

@@ -143,7 +143,7 @@ export function RequestLogViewer() {
             key={v.key}
             variant={view === v.key ? 'secondary' : 'ghost'}
             size="sm"
-            className="h-6 app-body capitalize px-1.5"
+            className="h-6 app-body px-1.5"
             onClick={() => setView(v.key)}
           >
             {v.label}

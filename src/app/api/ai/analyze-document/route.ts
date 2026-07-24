@@ -112,6 +112,8 @@ export async function POST(request: NextRequest) {
     // Analizar con IA
     let aiSummary: string | null = null;
     let aiModel: string | null = null;
+    const hasAiStatusCol = table !== "policy_documents";
+
     try {
       const ai = await summarizeFile(buffer, mimeType, record.document_name || record.name || record.original_filename);
       if (ai.ok) {
@@ -124,6 +126,9 @@ export async function POST(request: NextRequest) {
           action: "ai.summary.skipped",
           metadata: { table, id, mimeType, reason: ai.reason },
         });
+        const updatesSkipped: Record<string, unknown> = { updated_at: new Date().toISOString() };
+        if (hasAiStatusCol) updatesSkipped.ai_status = "skipped";
+        await supabase.from(table).update(updatesSkipped).eq("id", id);
         return NextResponse.json(
           { error: ai.reason },
           { status: 422 }
@@ -135,6 +140,9 @@ export async function POST(request: NextRequest) {
         action: "ai.summary",
         metadata: { table, id, error: String(aiErr) },
       });
+      const updatesError: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (hasAiStatusCol) updatesError.ai_status = "error";
+      await supabase.from(table).update(updatesError).eq("id", id);
       return NextResponse.json(
         { error: "No se pudo generar el análisis con IA" },
         { status: 500 }
@@ -142,12 +150,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Guardar en la BD
+    const updatesDone: Record<string, unknown> = {
+      ai_summary: aiSummary,
+      ai_model: aiModel,
+      updated_at: new Date().toISOString(),
+    };
+    if (hasAiStatusCol) updatesDone.ai_status = "done";
     const { error: updateErr } = await supabase
       .from(table)
-      .update({
-        ai_summary: aiSummary,
-        ai_model: aiModel,
-      })
+      .update(updatesDone)
       .eq("id", id);
 
     if (updateErr) {

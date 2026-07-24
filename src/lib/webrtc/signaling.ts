@@ -114,12 +114,13 @@ export function joinSignalingChannel(
 /**
  * Configuración de servidores STUN/TURN.
  * STUN público de Google (gratis) — suficiente para la mayoría de conexiones p2p.
- * Para redes muy restrictivas (NAT simétrico) se necesitaría TURN, pero
- * eso requiere servidor con costo.
+ * TURN gratuito de FreeTURN añadido para redes restrictivas / NAT simétrico.
  */
 export const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
   { urls: "stun:stun2.l.google.com:19302" },
   { urls: "stun:stun3.l.google.com:19302" },
+  { urls: "stun:freeturn.net:3478" },
+  { urls: "turn:freeturn.net:3478", username: "free", credential: "free" },
 ];
