@@ -286,9 +286,9 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
       <div>
         {label}
         <div className="flex flex-col sm:flex-row gap-1.5">
-          {/* Input date pequeño */}
-          <div className="flex flex-col gap-0.5 sm:w-[80px] shrink-0">
-            <div className="h-5 rounded border border-border bg-background px-1 app-body text-muted-foreground flex items-center">
+          {/* Input date */}
+          <div className="flex flex-col gap-0.5 sm:w-40 shrink-0">
+            <div className="h-6 rounded border border-border bg-background px-1.5 app-body text-muted-foreground flex items-center">
               📅 {new Date().toISOString().split("T")[0]}
             </div>
             <p className="app-body text-muted-foreground leading-tight">
