@@ -1,5 +1,8 @@
 ﻿"use client";
 
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import { editClaimSchema, type EditClaimInput } from "@/lib/validations";
+
 import { useState, useEffect, useRef } from "react";
 import { useForm, useWatch, type Control, type FieldValues } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -83,106 +86,7 @@ interface EditClaimFormProps {
  initialTab?: string;
 }
 
-interface FormValues {
- // Tab Siniestro
- claimNumber: string;
- policyId: string;
- policyNumber: string;
- policyItem: string;
- clientReference: string;
- claimDate: string;
- reportDate: string;
- assignmentDate: string;
- claimTypeId: string;
- claimCauseId: string;
- eventId: string;
- summary: string;
- companyId: string;
- // Póliza
- currencyId: string;
- policyAmount: string;
- policyPremium: string;
- policyStartDate: string;
- policyEndDate: string;
- // Recovery
- recoveryTypeLegal: boolean;
- recoveryTypeMaterial: boolean;
- recoveryComments: string;
-
- // Tab Asegurado
- insuredPersonType: string;
- insuredFirstName: string;
- insuredLastName: string;
- insuredBusinessName: string;
- insuredRut: string;
- insuredEmail: string;
- insuredPhones: string;
- insuredAddress: string;
- insuredCountry: string;
- insuredRegion: string;
- insuredCity: string;
- insuredCommune: string;
-
- // Tab Participantes — Contractor
- contractorPersonType: string;
- contractorFirstName: string;
- contractorLastName: string;
- contractorBusinessName: string;
- contractorRut: string;
- contractorEmail: string;
- contractorPhones: string;
- contractorAddress: string;
- contractorCountry: string;
- contractorRegion: string;
- contractorCity: string;
- contractorCommune: string;
-
- // Tab Participantes — Beneficiary
- beneficiaryPersonType: string;
- beneficiaryFirstName: string;
- beneficiaryLastName: string;
- beneficiaryBusinessName: string;
- beneficiaryRut: string;
- beneficiaryEmail: string;
- beneficiaryPhones: string;
- beneficiaryAddress: string;
- beneficiaryCountry: string;
- beneficiaryRegion: string;
- beneficiaryCity: string;
- beneficiaryCommune: string;
-
- // Tab Incidente — Persona de Contacto
- contactFirstName: string;
- contactLastName: string;
- contactEmail: string;
- contactPhones: string;
-
- // Tab Incidente
- claimAddress: string;
- claimLatitude: number | undefined;
- claimLongitude: number | undefined;
- countryId: string;
- regionId: string;
- cityId: string;
- communeId: string;
- constructionTypeId: string;
- destinationHousingId: string;
- damageClassificationId: string;
- habitabilityId: string;
- ownerSameAsInsured: string;
-
- // Tab Asignaciones
- insuranceCompanyId: string;
- businessLineId: string;
- insuranceProductId: string;
- brokerId: string;
- advisorId: string;
- inspectorId: string;
- adjusterId: string;
- auditorId: string;
- dispatcherId: string;
- assistantId: string;
-}
+type FormValues = EditClaimInput;
 
 // ──────────────────────────────────────────────────────────────
 // Helpers
@@ -400,6 +304,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  const contact = getParticipant(participants, "contact");
 
  const form = useForm<FormValues>({
+  resolver: standardSchemaResolver(editClaimSchema),
  defaultValues: {
  // Siniestro
  claimNumber: claim.claim_number || "",
