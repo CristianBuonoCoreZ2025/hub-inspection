@@ -192,3 +192,17 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- Permitir a los roles de Supabase ejecutar las funciones auxiliares
+GRANT EXECUTE ON FUNCTION
+  is_tenant_allowed(uuid),
+  is_claim_tenant_allowed(uuid),
+  is_session_tenant_allowed(uuid),
+  is_claim_action_tenant_allowed(uuid),
+  is_claim_document_tenant_allowed(uuid),
+  is_claim_document_request_tenant_allowed(uuid),
+  is_inspection_damage_tenant_allowed(uuid),
+  is_claim_reserve_tenant_allowed(uuid),
+  is_document_template_tenant_allowed(uuid),
+  is_action_template_tenant_allowed(uuid)
+TO authenticated, anon;
