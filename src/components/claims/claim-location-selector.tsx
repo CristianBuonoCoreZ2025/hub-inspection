@@ -81,7 +81,7 @@ export function ClaimLocationSelector({
   const [manualPin, setManualPin] = React.useState<{ lat: number; lng: number } | null>(null);
   const validClaimCoords = claimCoords && Number.isFinite(claimCoords.lat) && Number.isFinite(claimCoords.lng) ? claimCoords : null;
 
-  // Reset selected index cuando se abre con una nueva dirección
+  // Reset selected index y pin manual cuando se abre con una nueva dirección
   // Se difiere con setTimeout para evitar setState sincrónico dentro del effect.
   React.useEffect(() => {
     if (!open) return;
