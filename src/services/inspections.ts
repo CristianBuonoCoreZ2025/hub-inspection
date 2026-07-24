@@ -78,7 +78,7 @@ interface LiveSession {
   third_parties: ThirdParty[];
   action_template?: { code: string } | null;
   claim_action?: { code: string } | null;
-  inspection_evidences?: { id: string; url: string; type: string; description: string; category: string; metadata: { originalName?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number } | null; created_at: string }[];
+  inspection_evidences?: { id: string; url: string; type: string; description: string; category: string; damage_id: string | null; metadata: { originalName?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number } | null; created_at: string }[];
   inspection_notes?: { id: string; content: string; created_at: string }[];
   inspection_checklists?: { id: string; area: string; item: string; status: string; notes: string; created_at: string }[];
   inspection_damages?: { id: string; category: string; subcategory: string; description: string; observations: string; severity: string; dependency: string; sector: string; materiality_type: string; unit: string; quantity: string; damage_type: string; product: string; brand_model: string; purchase_date: string; estimated_amount: string; created_at: string }[];
@@ -174,7 +174,7 @@ export async function getInspectionSessionLive(token: string) {
       property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled,
       action_template:action_template!inspection_sessions_action_template_id_fkey(code),
       claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code),
-      inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, created_at),
+      inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, created_at),
       inspection_notes:inspection_notes!inspection_notes_session_id_fkey(id, content, created_at),
       inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status, notes, created_at),
       inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, observations, severity, dependency, sector, materiality_type, unit, quantity, damage_type, product, brand_model, purchase_date, estimated_amount, created_at),
@@ -233,7 +233,7 @@ export async function getInspectionSessionById(id: string) {
     claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, action_data, issuer_id, issued_on, issued_by),
     action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
     claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
-    inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, metadata, created_at),
+    inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, metadata, created_at),
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
     inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, description, severity, damage_type, dependency, sector, unit, quantity, estimated_amount, currency, observations, product, brand_model, created_at),
     inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
@@ -934,7 +934,7 @@ export async function deleteChecklistItem(id: string) {
 //  EVIDENCES
 // ═══════════════════════════════════════════════════════════════
 
-const EVIDENCE_SELECT = `id, session_id, type, url, description, created_at`;
+const EVIDENCE_SELECT = `id, session_id, type, url, description, category, damage_id, created_at`;
 
 export async function getEvidences(sessionId: string) {
   return fetchAll<import("@/types").InspectionEvidence>("inspection_evidences", {

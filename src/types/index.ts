@@ -563,6 +563,8 @@ export interface InspectionEvidence {
   type: "photo" | "video" | "document";
   url: string;
   description: string | null;
+  category: string | null;
+  damage_id: string | null;
   source: EvidenceSource | null;
   metadata: { originalName?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number; source?: string; lat?: number; lng?: number; capturedBy?: string } | null;
   created_at: string;

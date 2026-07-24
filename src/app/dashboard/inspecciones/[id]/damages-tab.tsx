@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDamages, createDamage, updateDamage, deleteDamage, getThirdParties } from "@/services/inspections";
+import { getDamages, createDamage, updateDamage, deleteDamage, getThirdParties, getEvidences } from "@/services/inspections";
 import { getDamageSpaces, getContentGoodTypes, getBuildingDamageCategories, getCountryCurrencies } from "@/services/catalogs";
 import { toast } from "sonner";
 import { Trash2, Pencil, Building2, Package, Lock } from "lucide-react";
@@ -138,6 +138,8 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  const [newType, setNewType] = useState<DamageType>("building");
  const [amountRaw, setAmountRaw] = useState("");
  const [amountFocused, setAmountFocused] = useState(false);
+ const [contentDocType, setContentDocType] = useState("Boleta");
+ const [contentDocFile, setContentDocFile] = useState<File | null>(null);
  const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
  const formatAmount = (value: number) =>
@@ -184,6 +186,12 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  queryFn: () => getDamages(sessionId),
  });
 
+ const { data: evidences } = useQuery({
+ queryKey: ["evidences", sessionId],
+ queryFn: () => getEvidences(sessionId),
+ enabled: !!sessionId,
+ });
+
  const { data: spaces = [] } = useQuery({
  queryKey: ["damage-spaces"],
  queryFn: getDamageSpaces,
@@ -226,6 +234,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
  // Terceros afectados (para asociar daños)
  const affectedThirdParties = thirdParties.filter((t) => t.party_type === "afectado");
+ const evidenceDocs = (evidences || []).filter((e) => e.damage_id === editing);
 
  // Filtrar espacios según la clasificación del inmueble
  const filteredSpaces = propertyClassification
@@ -264,6 +273,41 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  onSuccess: () => {
  queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
  toast.success("Daño eliminado");
+ },
+ onError: (err: Error) => toast.error(err.message),
+ });
+
+ const uploadDocMutation = useMutation({
+ mutationFn: async ({
+   file,
+   documentType,
+   damageId,
+ }: {
+   file: File;
+   documentType: string;
+   damageId: string;
+ }) => {
+   const data = new FormData();
+   data.append("file", file);
+   data.append("sessionId", sessionId);
+   data.append("damageId", damageId);
+   data.append("documentType", documentType);
+   data.append("originalName", file.name);
+   const res = await fetch("/api/inspection/evidences/upload", {
+     method: "POST",
+     body: data,
+   });
+   if (!res.ok) {
+     const err = await res.json().catch(() => ({ error: "Error al subir comprobante" }));
+     throw new Error(err.error || "Error al subir comprobante");
+   }
+   return res.json();
+ },
+ onSuccess: () => {
+   toast.success("Comprobante subido");
+   setContentDocFile(null);
+   queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
+   queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -776,6 +820,57 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  ))}
  </SelectContent>
  </Select>
+ </div>
+ )}
+ {editing !== "new" && (
+ <div className="modal-field modal-field-full">
+ <label className="app-field-label">Comprobantes</label>
+ <div className="app-panel p-3 space-y-3">
+ {evidenceDocs.length > 0 && (
+ <ul className="space-y-2">
+ {evidenceDocs.map((doc) => (
+ <li key={doc.id}>
+ <a href={doc.url} target="_blank" rel="noopener noreferrer" className="app-body text-blue-600 hover:underline">
+ {doc.description || "Documento"}
+ </a>
+ </li>
+ ))}
+ </ul>
+ )}
+ <div className="flex flex-col sm:flex-row flex-wrap items-end gap-2">
+ <div className="w-full sm:w-40">
+ <label className="app-field-label">Tipo</label>
+ <Select value={contentDocType} onValueChange={(v) => setContentDocType(v || "Boleta")}>
+ <SelectTrigger className="app-input w-full">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ {["Boleta", "Factura", "Certificado", "Otro"].map((t) => (
+ <SelectItem key={t} value={t}>{t}</SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
+ </div>
+ <div className="flex-1 min-w-40">
+ <input
+ type="file"
+ accept=".pdf,.jpg,.jpeg,.png"
+ onChange={(e) => setContentDocFile(e.target.files?.[0] || null)}
+ className="app-input w-full"
+ />
+ </div>
+ <Button
+ onClick={() => {
+ if (!contentDocFile || !editing) return;
+ uploadDocMutation.mutate({ file: contentDocFile, documentType: contentDocType, damageId: editing });
+ }}
+ disabled={!contentDocFile || uploadDocMutation.isPending}
+ className="pg-btn-platinum"
+ >
+ {uploadDocMutation.isPending ? "Subiendo..." : "Subir"}
+ </Button>
+ </div>
+ </div>
  </div>
  )}
  </div>

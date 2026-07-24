@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
     const sessionId = formData.get("sessionId");
     const originalName = formData.get("originalName");
     const source = formData.get("source");
+    const damageId = formData.get("damageId");
+    const documentType = formData.get("documentType");
 
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "No se encontró el archivo" }, { status: 400 });
@@ -122,6 +124,7 @@ export async function POST(request: NextRequest) {
       originalName: typeof originalName === "string" ? originalName : file.name,
       fileSize: file.size,
       mimeType,
+      fileCode,
       userAgent: request.headers.get("user-agent") || null,
     };
 
@@ -138,13 +141,18 @@ export async function POST(request: NextRequest) {
     const validSources = ["upload", "screenshot_inspector", "screenshot_client", "live_video", "geo_map"];
     const sourceValue = source && typeof source === "string" && validSources.includes(source) ? source : "upload";
 
+    const documentTypeValue = typeof documentType === "string" && documentType.trim() ? documentType.trim() : null;
+    const damageIdValue = typeof damageId === "string" && /^[0-9a-fA-F-]{36}$/.test(damageId) ? damageId : null;
+
     const { data: evidence, error } = await supabase
       .from("inspection_evidences")
       .insert({
         session_id: sessionId,
         type: dbType,
         url,
-        description: fileCode,
+        description: documentTypeValue || fileCode,
+        category: documentTypeValue,
+        damage_id: damageIdValue,
         captured_by: userId,
         captured_at: new Date().toISOString(),
         source: sourceValue,
@@ -153,9 +161,9 @@ export async function POST(request: NextRequest) {
         lng: photoLng,
         exif_lat: exifGps?.lat ?? null,
         exif_lng: exifGps?.lng ?? null,
-        ai_status: "pending",
+        ai_status: sourceValue === "live_video" ? "skipped" : "pending",
       })
-      .select("id, url, type, description, created_at, lat, lng, exif_lat, exif_lng, ai_summary, ai_model, ai_status, source")
+      .select("id, url, type, description, category, damage_id, created_at, lat, lng, exif_lat, exif_lng, ai_summary, ai_model, ai_status, source")
       .single();
 
     if (error) {
@@ -184,6 +192,8 @@ export async function POST(request: NextRequest) {
     // Si falla, no afecta al usuario — la evidencia ya está subida y registrada.
     after(async () => {
       const evidenceId = evidence.id;
+      // Las grabaciones de sesión no se optimizan ni analizan con IA
+      if (sourceValue === "live_video") return;
       try {
         // ── Optimización: re-subir versión optimizada ──
         try {
