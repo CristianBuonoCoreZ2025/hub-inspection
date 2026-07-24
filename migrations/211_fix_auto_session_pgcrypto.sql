@@ -1,23 +1,21 @@
 -- ═══════════════════════════════════════════════════════════════
--- Migration 210: auto_create_inspection_session cancela sesiones previas con claim_action_id NULL
+-- Migration 211: auto_create_inspection_session sin pgcrypto
 --
--- Problema: Si una sesión previa tiene claim_action_id IS NULL, el UPDATE
--- usaba "claim_action_id <> NEW.id" y en SQL "NULL <> X" es NULL (falso),
--- por lo que nunca se cancelaba, violando el índice único
--- inspection_sessions_one_active_per_claim al insertar la nueva sesión.
+-- Problema: La función aplicada en 210 usa encode(gen_random_bytes(32), 'hex'),
+-- que depende de la extensión pgcrypto. En entornos donde pgcrypto no está
+-- instalada, el trigger falla con:
+--   "function gen_random_bytes(integer) does not exist"
+-- al insertar una nueva sesión de inspección.
 --
--- Solución: Usar "claim_action_id IS DISTINCT FROM NEW.id" para capturar
--- tanto valores distintos como NULL. También se ejecuta como SECURITY DEFINER
--- para que el trigger pueda cancelar/actualizar sesiones sin depender de RLS.
+-- Solución: Reemplazar gen_random_bytes por gen_random_uuid(), que es nativa
+-- de PostgreSQL (>=13) y no requiere extensiones. Se recrea la función para
+-- asegurar que el cambio se aplique.
 -- ═══════════════════════════════════════════════════════════════
 
 DROP TRIGGER IF EXISTS trg_auto_create_inspection_session ON claim_actions;
 DROP FUNCTION IF EXISTS auto_create_inspection_session() CASCADE;
-DROP FUNCTION IF EXISTS find_coord_field(jsonb, text[]) CASCADE;
 
--- Función helper: busca el primer valor en un JSONB cuya key empiece con
--- alguno de los prefijos dados (excluyendo keys que contengan "recoord").
--- Retorna NULL si no encuentra nada.
+-- Helper find_coord_field (idempotente)
 CREATE OR REPLACE FUNCTION find_coord_field(p_data JSONB, VARIADIC p_prefixes TEXT[])
 RETURNS TEXT LANGUAGE plpgsql STABLE AS $$
 DECLARE
@@ -39,9 +37,6 @@ BEGIN
   RETURN NULL;
 END;
 $$;
-
-COMMENT ON FUNCTION find_coord_field IS
-'Busca el primer valor no-vacio en un JSONB cuya key empiece con alguno de los prefijos. Excluye keys con "recoord". Migration 210.';
 
 CREATE OR REPLACE FUNCTION auto_create_inspection_session()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
@@ -197,8 +192,11 @@ END;
 $$;
 
 COMMENT ON FUNCTION auto_create_inspection_session IS
-'Creates inspection session when INS action is inserted. Cancels any prior active session for the same claim, including sessions with claim_action_id IS NULL. Runs as SECURITY DEFINER to bypass RLS. Migration 210.';
+'Creates inspection session when INS action is inserted. Uses gen_random_uuid() (no pgcrypto). Cancels prior active session. Migration 211.';
 
 CREATE TRIGGER trg_auto_create_inspection_session
   AFTER INSERT ON claim_actions
   FOR EACH ROW EXECUTE FUNCTION auto_create_inspection_session();
+
+INSERT INTO _migrations (filename) VALUES ('211_fix_auto_session_pgcrypto.sql')
+ON CONFLICT (filename) DO NOTHING;
