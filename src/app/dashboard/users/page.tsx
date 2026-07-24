@@ -152,8 +152,8 @@ export default function UsersPage() {
  if (rolesWithClients.includes(data.role as UserRole)) {
  await setUserClients(userId, clientIds);
  }
- // Si el usuario pasa a internal, eliminar todos sus roles secundarios
- if (data.role === "internal") {
+ // Si el nuevo rol no requiere clientes, eliminar todos sus roles secundarios
+ if (!rolesWithClients.includes(data.role as UserRole)) {
  for (const srId of secondaryRoleIds) {
  await removeSecondaryRole(srId);
  }
@@ -455,8 +455,6 @@ export default function UsersPage() {
  setEditForm({ ...editForm, role });
  // Al cambiar el perfil principal, limpiar todos los roles secundarios
  setSecondaryRoles([]);
- // Si cambia a internal, limpiar también la vinculación con clientes
- if (role === "internal") setSelectedClientIds([]);
  } else {
  form.setValue("role", role);
  }
@@ -657,7 +655,7 @@ export default function UsersPage() {
  <td className="text-muted-foreground">
  {user.user_clients && user.user_clients.length > 0
  ? user.user_clients.map((uc: UserClient) => uc.company?.name).filter(Boolean).join(", ")
- : user.role === "internal" ? "—" : "Sin asignar"}
+ : !rolesWithClients.includes(user.role) ? "—" : "Sin asignar"}
  </td>
  <td>
  <StatusBadge status={user.is_active ? "active" : "inactive"} label={user.is_active ? "Activo" : "Inactivo"} />

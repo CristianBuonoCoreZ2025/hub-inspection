@@ -28,6 +28,7 @@ import { useSyncExternalStore } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMounted } from "@/hooks/use-mounted";
 import { getTopbarStats } from "@/services/topbar-stats";
+import { userTypeLabels } from "@/services/permissions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -307,12 +308,7 @@ export function TopBar() {
               {profile?.full_name || user?.email || "Usuario"}
             </span>
             <span className="topbar-user-role">
-              {profile?.role === "internal" ? "Interno" :
-                profile?.role === "adjuster" ? "Liquidador" :
-                profile?.role === "inspector" ? "Inspector" :
-                profile?.role === "assistant" ? "Asistente" :
-                profile?.role === "auditor" ? "Auditor" :
-                profile?.role === "dispatcher" ? "Despachador" : ""}
+              {profile?.role ? userTypeLabels[profile.role] : ""}
             </span>
           </div>
         </div>

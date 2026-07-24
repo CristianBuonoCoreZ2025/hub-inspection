@@ -7,6 +7,7 @@ import { getInspectionSessions } from "@/services/inspections";
 import { getRecentAuditLogs } from "@/services/audit-logs";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
+import { userTypeLabels } from "@/services/permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
 import {
@@ -51,15 +52,6 @@ const STATUS_LABELS: Record<string, string> = {
   reopened: "Reabierto",
 };
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  internal: "Usuario Interno",
-  adjuster: "Liquidador",
-  inspector: "Inspector",
-  assistant: "Asistente",
-  auditor: "Auditor",
-  dispatcher: "Despachador",
-};
-
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
@@ -97,7 +89,7 @@ function getActivityIcon(log: AuditLog) {
 
 /**
  * Filtra los claims según el rol del usuario:
- * - internal: ve todo
+ * - global user (sin compañía): ve todo
  * - adjuster: claims donde es assigned_adjuster, adjuster, auditor o dispatcher
  * - inspector: claims donde es inspector
  * - assistant: claims donde es assistant
@@ -107,7 +99,7 @@ function filterClaimsForUser(
   profile: { id: string; role: UserRole; company_id: string | null } | null | undefined
 ): Claim[] {
   if (!profile) return [];
-  if (profile.role === "internal") return allClaims;
+  if (!profile.company_id) return allClaims;
 
   // adjuster, inspector, assistant, auditor, dispatcher: filtrar por asignación personal
   const pid = profile.id;
@@ -137,8 +129,8 @@ export default function DashboardPage() {
   useRealtime("inspection_sessions", [["inspection-sessions"], ["inspection-sessions-all"]]);
   useRealtime("audit_logs", [["recent-activity"]]);
 
-  const isInternal = profile?.role === "internal";
-  const roleLabel = profile ? ROLE_LABELS[profile.role] : "";
+  const isGlobalUser = !profile?.company_id;
+  const roleLabel = profile ? userTypeLabels[profile.role] : "";
 
   const { data: claims } = useQuery({
     queryKey: ["claims"],
@@ -158,13 +150,13 @@ export default function DashboardPage() {
   const { data: companies } = useQuery({
     queryKey: ["companies"],
     queryFn: () => getCompanies(),
-    enabled: isInternal,
+    enabled: isGlobalUser,
   });
 
   const { data: users } = useQuery({
     queryKey: ["users"],
     queryFn: () => getUsers(),
-    enabled: isInternal,
+    enabled: isGlobalUser,
   });
 
   // Filtrar claims según el rol del usuario
@@ -180,9 +172,9 @@ export default function DashboardPage() {
   );
 
   const mySessions = useMemo(() => {
-    if (isInternal) return sessions ?? [];
+    if (isGlobalUser) return sessions ?? [];
     return (sessions ?? []).filter((s: InspectionSession) => myClaimIds.has(s.claim_id));
-  }, [sessions, myClaimIds, isInternal]);
+  }, [sessions, myClaimIds, isGlobalUser]);
 
   const stats = useMemo(() => {
     const allClaims = myClaims;
@@ -343,7 +335,7 @@ export default function DashboardPage() {
     })) ?? [];
 
   // KPIs dinámicos según el rol
-  const kpis = isInternal
+  const kpis = isGlobalUser
     ? [
         {
           label: "Siniestros Totales",
@@ -440,12 +432,12 @@ export default function DashboardPage() {
       ];
 
   // Subtítulo contextual según el rol
-  const subtitle = isInternal
+  const subtitle = isGlobalUser
     ? "Panel de gestión visual — métricas globales en tiempo real"
     : `Tus casos asignados — ${roleLabel.toLowerCase()}`;
 
   // ¿Mostrar sección de sistema (top compañías + actividad)?
-  const showSystemSection = isInternal || profile?.role === "adjuster";
+  const showSystemSection = isGlobalUser || profile?.role === "adjuster";
 
   return (
     <div className="space-y-4">
@@ -453,12 +445,12 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-            {isInternal ? "Dashboard" : "Mi Panel"}
+            {isGlobalUser ? "Dashboard" : "Mi Panel"}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">{subtitle}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {!isInternal && profile && (
+          {!isGlobalUser && profile && (
             <div className="glass-panel px-3 py-2 flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-primary" />
               <span className="text-xs font-medium">{profile.full_name}</span>
@@ -476,7 +468,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards — resumen rápido */}
-      <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${isInternal ? "lg:grid-cols-6" : "lg:grid-cols-4"}`}>
+      <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${isGlobalUser ? "lg:grid-cols-6" : "lg:grid-cols-4"}`}>
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
@@ -506,7 +498,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Empty state para usuarios sin casos */}
-      {stats.totalClaims === 0 && !isInternal && (
+      {stats.totalClaims === 0 && !isGlobalUser && (
         <div className="glass-panel" style={{ ["--glass-glow" as string]: "rgba(59, 130, 246, 0.04)" }}>
           <div className="glass-panel-body flex flex-col items-center justify-center py-16">
             <Briefcase className="h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -537,7 +529,7 @@ export default function DashboardPage() {
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <FileText className="h-4 w-4" />
-                  {isInternal ? "Por Estado" : "Mis Casos por Estado"}
+                  {isGlobalUser ? "Por Estado" : "Mis Casos por Estado"}
                 </div>
               </div>
               <div className="glass-panel-body">
@@ -632,7 +624,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {isInternal ? "Promedio de cierre" : "Promedio de cierre de tus casos"}
+                  {isGlobalUser ? "Promedio de cierre" : "Promedio de cierre de tus casos"}
                 </p>
                 <div className="mt-3 w-full flex items-center gap-2">
                   <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
@@ -661,7 +653,7 @@ export default function DashboardPage() {
               <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
                 <span className="text-4xl font-bold tracking-tight">{stats.createdClaims}</span>
                 <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {isInternal ? "Recién ingresados" : "Casos recién ingresados"}
+                  {isGlobalUser ? "Recién ingresados" : "Casos recién ingresados"}
                 </p>
                 <div className="mt-3 flex items-center gap-2">
                   <div className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20">
@@ -684,7 +676,7 @@ export default function DashboardPage() {
               <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
                 <span className="text-4xl font-bold tracking-tight">{stats.adjustmentClaims}</span>
                 <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {isInternal ? "En proceso de ajuste" : "Casos en proceso de ajuste"}
+                  {isGlobalUser ? "En proceso de ajuste" : "Casos en proceso de ajuste"}
                 </p>
                 <div className="mt-3 flex items-center gap-2">
                   <div className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20">
@@ -795,7 +787,7 @@ export default function DashboardPage() {
         <>
           <div className="dash-section-header">
             <Building2 className="h-[18px] w-[18px]" />
-            <span className="dash-section-title">{isInternal ? "Sistema" : "Mis Compañías"}</span>
+            <span className="dash-section-title">{isGlobalUser ? "Sistema" : "Mis Compañías"}</span>
             <div className="dash-section-line" />
           </div>
 
@@ -804,7 +796,7 @@ export default function DashboardPage() {
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Building2 className="h-4 w-4" />
-                  {isInternal ? "Top Compañías" : "Mis Casos por Compañía"}
+                  {isGlobalUser ? "Top Compañías" : "Mis Casos por Compañía"}
                 </div>
               </div>
               <div className="glass-panel-body">

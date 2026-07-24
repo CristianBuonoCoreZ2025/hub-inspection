@@ -129,8 +129,8 @@ export async function getTopbarStats(
 
     // Filtro por rol
     {
-      // adjuster, internal, inspector, assistant, auditor, dispatcher — filtrar por asignación
-      if (profile.role === "adjuster" || profile.role === "internal") {
+      // adjuster, usuarios globales (sin compañía), inspector, assistant, auditor, dispatcher — filtrar por asignación
+      if (profile.role === "adjuster" || !profile.company_id) {
         actionsQuery = actionsQuery.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
       } else if (profile.role === "inspector") {
         actionsQuery = actionsQuery.eq("issuer_id", pid);

@@ -70,7 +70,7 @@ export async function getMyGestiones(
     .eq("is_active", true);
 
   // Filtro por rol
-  if (profile.role === "adjuster" || profile.role === "internal") {
+  if (profile.role === "adjuster" || !profile.company_id) {
     query = query.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
   } else if (profile.role === "inspector") {
     query = query.eq("issuer_id", pid);
