@@ -191,6 +191,11 @@ Rango intermedio con correcciones sueltas (geolocalización, evidencias, daños,
 - Aplica 4 políticas (`select/insert/update/delete`) a todas las tablas con `company_id`.
 - Excluye `_migrations`, `companies` e `inspection_sessions` (ya migrada).
 
+### 217 — child_tables_rls.sql
+- Crea funciones helper (`is_claim_tenant_allowed`, `is_session_tenant_allowed`, etc.).
+- Aplica RLS tenant a tablas hijas sin `company_id` directo (joins a claims/sessions).
+- SIN borrar datos.
+
 ## Migraciones problemáticas históricas
 
 **137 — `workflow_unique.sql`**
