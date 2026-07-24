@@ -182,7 +182,7 @@
 
   .liquid-search {
     width: 100% !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
     height: 28px !important;
     padding: 0 12px 0 32px !important;
     border-radius: 999px !important;
@@ -202,7 +202,7 @@
   .liquid-search::placeholder {
     color: var(--muted-foreground) !important;
     opacity: 0.7 !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
   }
 
   .dark .liquid-search {
