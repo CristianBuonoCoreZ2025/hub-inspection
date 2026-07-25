@@ -135,16 +135,19 @@ export default function DashboardPage() {
   const { data: claims } = useQuery({
     queryKey: ["claims"],
     queryFn: () => getClaims(),
+    enabled: !!profile,
   });
 
   const { data: sessions } = useQuery({
     queryKey: ["inspection-sessions"],
     queryFn: () => getInspectionSessions(),
+    enabled: !!profile,
   });
 
   const { data: auditLogs } = useQuery({
     queryKey: ["recent-activity"],
     queryFn: () => getRecentAuditLogs(undefined, 8),
+    enabled: !!profile,
   });
 
   const { data: companies } = useQuery({
