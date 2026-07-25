@@ -298,7 +298,13 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
    DAMAGE_CATEGORIES.find((c) => c.label === form.subcategory)?.requires_detail ?? false;
  const currentMaterialityItems = materialityCatalogs[materialityCategoryCode] || [];
  const selectedMaterialityItem = currentMaterialityItems.find((i) => i.name === form.materiality_type);
- const requiresDetail = selectedCategoryRequiresDetail || !!selectedMaterialityItem?.requires_detail;
+ const selectedGoodType = goodTypes.find((g) => g.id === form.content_good_type_id);
+ // requiresDetail aplica a daños constructivos (categoría/materialidad) y a
+ // daños de contenido (Tipo de Bien con requires_detail=true).
+ const requiresDetail =
+   selectedCategoryRequiresDetail ||
+   !!selectedMaterialityItem?.requires_detail ||
+   !!selectedGoodType?.requires_detail;
  const materialitySelectValue = selectedMaterialityItem?.id || "";
 
  // Monedas filtradas por país del siniestro
@@ -786,7 +792,12 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={goodTypes.map((g) => ({ value: g.id, label: g.name }))}
  onValueChange={(v) => {
  const gt = goodTypes.find((g) => g.id === v);
- setForm({ ...form, content_good_type_id: v || "", category: gt?.name || form.category });
+ setForm({
+ ...form,
+ content_good_type_id: v || "",
+ category: gt?.name || form.category,
+ description: gt?.requires_detail ? form.description : "",
+ });
  }}
  >
  <SelectTrigger className="app-input w-full">
@@ -853,8 +864,8 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <input
  value={form.description}
  onChange={(e) => setForm({ ...form, description: e.target.value })}
- placeholder="Ej. Pantalla rota por impacto, quemado total..."
- className="app-input w-full"
+ placeholder={requiresDetail ? "Especificar (requerido por el Tipo de Bien)..." : "Ej. Pantalla rota por impacto, quemado total..."}
+ className={`app-input w-full ${requiresDetail && !form.description?.trim() ? "app-input-required" : ""}`}
  />
  </div>
  <div className="modal-field modal-field-full">

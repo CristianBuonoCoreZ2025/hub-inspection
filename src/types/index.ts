@@ -734,6 +734,7 @@ export interface ContentGoodType {
   id: string;
   name: string;
   description: string | null;
+  requires_detail: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;

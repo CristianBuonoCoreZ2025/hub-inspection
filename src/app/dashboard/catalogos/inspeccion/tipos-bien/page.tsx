@@ -2,56 +2,68 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePagination } from "@/hooks/use-pagination";
+import { useTableSort } from "@/hooks/use-table-sort";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { getContentGoodTypes, createContentGoodType, updateContentGoodType, deleteContentGoodType } from "@/services/catalogs";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Package, Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Search, Pencil, Trash2, Package } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import type { ContentGoodType } from "@/types";
+import { ToggleChip } from "@/components/ui/toggle-chip";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+const SECTION = "catalogos_inspeccion";
+
+interface FormState {
+  name: string;
+  description: string;
+  requires_detail: boolean;
+}
+
+const EMPTY_FORM: FormState = { name: "", description: "", requires_detail: false };
 
 export default function TiposBienPage() {
   const queryClient = useQueryClient();
   const { canCreate, canEdit, canDelete } = usePermissions();
-
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [formData, setFormData] = useState<FormState>(EMPTY_FORM);
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["content-good-types"],
     queryFn: getContentGoodTypes,
   });
 
-  const filtered = useMemo(() => {
-    if (!search) return items || [];
-    return (items || []).filter((i) =>
-      `${i.name} ${i.description || ""}`.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [items, search]);
-
   const createMutation = useMutation({
     mutationFn: createContentGoodType,
     onSuccess: () => {
       toast.success("Tipo de bien creado");
       queryClient.invalidateQueries({ queryKey: ["content-good-types"] });
-      resetForm();
       setOpen(false);
+      setFormData(EMPTY_FORM);
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<ContentGoodType> }) => updateContentGoodType(id, input),
+    mutationFn: ({ id, input }: { id: string; input: { name: string; description?: string | null; requires_detail: boolean } }) =>
+      updateContentGoodType(id, input),
     onSuccess: () => {
       toast.success("Tipo de bien actualizado");
       queryClient.invalidateQueries({ queryKey: ["content-good-types"] });
-      resetForm();
       setOpen(false);
+      setEditingId(null);
+      setFormData(EMPTY_FORM);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -59,36 +71,38 @@ export default function TiposBienPage() {
   const deleteMutation = useMutation({
     mutationFn: deleteContentGoodType,
     onSuccess: () => {
-      toast.success("Tipo de bien eliminado");
+      toast.success("Tipo de bien desactivado");
       queryClient.invalidateQueries({ queryKey: ["content-good-types"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const resetForm = () => {
-    setEditingId(null);
-    setName("");
-    setDescription("");
-  };
+  const filtered = useMemo(
+    () =>
+      (items || []).filter((i) =>
+        `${i.name} ${i.description || ""}`.toLowerCase().includes(search.toLowerCase())
+      ),
+    [items, search]
+  );
 
-  const openNew = () => {
-    resetForm();
-    setOpen(true);
-  };
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
+    name: (i) => i.name,
+    description: (i) => i.description || "",
+  }, "name");
 
-  const openEdit = (item: ContentGoodType) => {
-    setEditingId(item.id);
-    setName(item.name);
-    setDescription(item.description || "");
-    setOpen(true);
-  };
+  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      toast.error("El nombre es obligatorio");
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      toast.error("Nombre es requerido");
       return;
     }
-    const payload = { name: name.trim(), description: description.trim() || null };
+    const payload = {
+      name: formData.name.trim(),
+      description: formData.description.trim() || null,
+      requires_detail: formData.requires_detail,
+    };
     if (editingId) {
       updateMutation.mutate({ id: editingId, input: payload });
     } else {
@@ -97,63 +111,73 @@ export default function TiposBienPage() {
   };
 
   return (
-    <div className="app-panel space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="app-section-title flex items-center gap-2">
-          <Package className="h-4 w-4" />
+    <div className="app-page">
+      <div className="app-grid-header">
+        <h1 className="app-page-title flex items-center gap-2 shrink-0">
+          <Package className="h-5 w-5" />
           Tipos de Bien
-        </h2>
-        {canCreate("catalogos_inspeccion") && (
-          <Button onClick={openNew} className="pg-btn-platinum">
-            <Plus className="h-3.5 w-3.5 mr-1" />
-            Nuevo
+        </h1>
+        <div className="app-grid-filters">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Input
+            placeholder="Buscar..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="app-input h-8 w-full sm:max-w-[180px]"
+          />
+        </div>
+        {canCreate(SECTION) && (
+          <Button
+            onClick={() => { setEditingId(null); setFormData(EMPTY_FORM); setOpen(true); }}
+            className="pg-btn-platinum"
+          >
+            Agregar
           </Button>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <Search className="h-3.5 w-3.5 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar..."
-          className="app-input w-full max-w-xs"
-        />
-      </div>
-
-      <div className="app-data-table-wrap overflow-auto">
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+      <div className="app-data-table-wrap">
         <table className="app-data-table">
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Descripción</th>
-              <th className="w-[80px]">Acciones</th>
+              <th className="w-10"></th>
+              <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
+              <SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripción</SortableTh>
+              <th className="text-center">Detalle</th>
+              <th className="w-[80px]"></th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={3} className="text-center app-body py-4">Cargando...</td>
-              </tr>
+              <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="text-center app-body py-4 text-muted-foreground">Sin tipos de bien registrados.</td>
-              </tr>
+              <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
             ) : (
-              filtered.map((item) => (
+              paginatedData.map((item) => (
                 <tr key={item.id}>
-                  <td className="app-body font-medium">{item.name}</td>
-                  <td className="app-body text-muted-foreground">{item.description || "—"}</td>
+                  <td><span className={`app-status-dot ${item.is_active ? "app-status-on" : "app-status-off"}`} /></td>
+                  <td className="font-medium">{item.name}</td>
+                  <td className="text-muted-foreground">{item.description || "—"}</td>
+                  <td className="text-center text-muted-foreground">{item.requires_detail ? "Sí" : "—"}</td>
                   <td>
                     <div className="app-row-actions">
-                      {canEdit("catalogos_inspeccion") && (
-                        <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => openEdit(item)}>
-                          <Pencil className="h-3.5 w-3.5" />
+                      {canEdit(SECTION) && (
+                        <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
+                          setEditingId(item.id);
+                          setFormData({
+                            name: item.name || "",
+                            description: item.description || "",
+                            requires_detail: item.requires_detail || false,
+                          });
+                          setOpen(true);
+                        }}>
+                          <Pencil className="h-4 w-4" />
                         </Button>
                       )}
-                      {canDelete("catalogos_inspeccion") && (
-                        <Button variant="ghost" size="icon" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este tipo de bien?")) deleteMutation.mutate(item.id); }}>
-                          <Trash2 className="h-3.5 w-3.5" />
+                      {canDelete(SECTION) && (
+                        <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar?")) deleteMutation.mutate(item.id); }}>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
@@ -164,24 +188,55 @@ export default function TiposBienPage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogTitle>{editingId ? "Editar Tipo de Bien" : "Nuevo Tipo de Bien"}</DialogTitle>
-          <div className="space-y-3 py-2">
-            <div className="modal-field">
-              <Label className="app-field-label">Nombre</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} className="app-input w-full" />
-            </div>
-            <div className="modal-field">
-              <Label className="app-field-label">Descripción</Label>
-              <Input value={description} onChange={(e) => setDescription(e.target.value)} className="app-input w-full" />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
-              <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending} className="pg-btn-platinum">Guardar</Button>
-            </div>
+      <Dialog open={open} onOpenChange={setOpen} dismissible={false}>
+        <DialogContent className="modal-md" showCloseButton={false}>
+          <div className="modal-header">
+            <DialogTitle className="modal-title flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+                <Package className="h-4 w-4" />
+              </div>
+              {editingId ? "Editar" : "Nuevo"} Tipo de Bien
+            </DialogTitle>
           </div>
+          <form onSubmit={handleSubmit}>
+            <div className="modal-body space-y-2">
+              <div className="modal-field">
+                <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Nombre"
+                  className="app-input"
+                />
+              </div>
+              <div className="modal-field">
+                <Label className="app-field-label">Descripción</Label>
+                <Input
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Descripción (opcional)"
+                  className="app-input"
+                />
+              </div>
+              <div className="modal-field">
+                <Label className="app-field-label">Comportamiento</Label>
+                <ToggleChip
+                  active={formData.requires_detail}
+                  onClick={(v) => setFormData({ ...formData, requires_detail: v })}
+                >
+                  Requiere detalle al seleccionar
+                </ToggleChip>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createMutation.isPending || updateMutation.isPending} className="pg-btn-platinum">
+                {createMutation.isPending || updateMutation.isPending ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

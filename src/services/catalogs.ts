@@ -811,24 +811,25 @@ export async function updateDamageSpaceClassifications(updates: { id: string; ap
 
 export async function getContentGoodTypes() {
   return fetchAllSorted<ContentGoodType>("content_good_types", {
-    select: "id, name, description, is_active, created_at, updated_at",
+    select: "id, name, description, requires_detail, is_active, created_at, updated_at",
     eq: { is_active: true },
   });
 }
 
-export async function createContentGoodType(input: { name: string; description?: string | null }) {
+export async function createContentGoodType(input: { name: string; description?: string | null; requires_detail?: boolean }) {
   return insertRow<ContentGoodType>("content_good_types", {
     ...input,
     is_active: true,
-  }, "id, name, description, is_active, created_at, updated_at");
+  }, "id, name, description, requires_detail, is_active, created_at, updated_at");
 }
 
 export async function updateContentGoodType(id: string, input: Partial<ContentGoodType>) {
   const set: Record<string, unknown> = {};
   if (input.name !== undefined) set.name = input.name;
   if (input.description !== undefined) set.description = input.description;
+  if (input.requires_detail !== undefined) set.requires_detail = input.requires_detail;
   if (input.is_active !== undefined) set.is_active = input.is_active;
-  return updateRow<ContentGoodType>("content_good_types", id, set, "id, name, description, is_active, created_at, updated_at");
+  return updateRow<ContentGoodType>("content_good_types", id, set, "id, name, description, requires_detail, is_active, created_at, updated_at");
 }
 
 export async function deleteContentGoodType(id: string) {
