@@ -99,7 +99,7 @@ function filterClaimsForUser(
   profile: { id: string; role: UserRole; company_id: string | null } | null | undefined
 ): Claim[] {
   if (!profile) return [];
-  if (!profile.company_id) return allClaims;
+  if (!profile.company_id || profile.role === "internal") return allClaims;
 
   // adjuster, inspector, assistant, auditor, dispatcher: filtrar por asignación personal
   const pid = profile.id;
