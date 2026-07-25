@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -64,6 +64,8 @@ interface FormState {
  auto_complete: boolean;
  auto_email: boolean;
  auto_email_template_id: string;
+ auto_email_recipients: string[];
+ auto_field_mapping: Record<string, string>;
  days_to_issue: number;
  days_to_review: number;
  days_to_approve: number;
@@ -92,6 +94,8 @@ const emptyForm: FormState = {
  auto_complete: false,
  auto_email: false,
  auto_email_template_id: "",
+ auto_email_recipients: [],
+ auto_field_mapping: {},
  days_to_issue: 1,
  days_to_review: 0,
  days_to_approve: 0,
@@ -155,6 +159,34 @@ export default function GestionesPage() {
  queryFn: () => getEmailTemplates({ companyId: profile?.company_id || undefined, includeInactive: true }),
  enabled: !!profile?.company_id,
  });
+
+ const selectedFeature = useMemo(() => features?.find(f => f.id === form.action_features_id), [features, form.action_features_id]);
+ const screenFields = useMemo(() => {
+   const schema = selectedFeature?.screen?.form_schema as { fields?: { id: string; type: string; label: string; category?: string }[] } | undefined;
+   return (schema?.fields || []).filter(f => f.category === "own" || !f.category);
+ }, [selectedFeature]);
+
+ const recipientOptions = [
+   { value: "insured", label: "Asegurado" },
+   { value: "contractor", label: "Contratante" },
+   { value: "beneficiary", label: "Beneficiario" },
+   { value: "contact", label: "Contacto" },
+   { value: "adjuster", label: "Liquidador" },
+   { value: "inspector", label: "Inspector" },
+ ];
+
+ const fieldSources = [
+   { value: "", label: "Sin asignar" },
+   { value: "created_on", label: "Fecha de creación" },
+   { value: "updated_on", label: "Fecha de actualización" },
+   { value: "claim_date", label: "Fecha del siniestro" },
+   { value: "claim.inspector_id", label: "Inspector del siniestro" },
+   { value: "claim.adjuster_id", label: "Liquidador del siniestro" },
+   { value: "claim.assigned_adjuster_id", label: "Liquidador asignado" },
+   { value: "claim.dispatcher_id", label: "Despachador" },
+   { value: "claim.assistant_id", label: "Asistente" },
+   { value: "current_user_id", label: "Usuario actual (sistema)" },
+ ];
 
  const createMut = useMutation({
  mutationFn: async (data: FormState) => {
@@ -253,6 +285,8 @@ export default function GestionesPage() {
  auto_complete: t.auto_complete ?? false,
  auto_email: t.auto_email ?? false,
  auto_email_template_id: t.auto_email_template_id || "",
+ auto_email_recipients: t.auto_email_recipients || [],
+ auto_field_mapping: t.auto_field_mapping || {},
  days_to_issue: t.days_to_issue,
  days_to_review: t.days_to_review,
  days_to_approve: t.days_to_approve,
@@ -720,6 +754,49 @@ export default function GestionesPage() {
  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar plantilla..." /></SelectTrigger>
  <SelectContent><SelectItem value="__none">Sin selección</SelectItem>{emailTemplates?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
  </Select>
+ </div>
+ )}
+ {form.auto_email && (
+ <div className="flex flex-col gap-1 md:col-span-2">
+ <Label className="app-body text-muted-foreground">Destinatarios del envío automático</Label>
+ <div className="flex flex-wrap gap-2">
+ {recipientOptions.map((r) => {
+ const active = form.auto_email_recipients.includes(r.value);
+ return (
+ <ToggleChip
+ key={r.value}
+ active={active}
+ onClick={() => {
+ const next = active ? form.auto_email_recipients.filter(x => x !== r.value) : [...form.auto_email_recipients, r.value];
+ setForm({ ...form, auto_email_recipients: next });
+ }}
+ disabled={isFieldDisabled("auto_email_recipients")}
+ >
+ {r.label}
+ </ToggleChip>
+ );
+ })}
+ </div>
+ </div>
+ )}
+ {form.auto_complete && screenFields.length > 0 && (
+ <div className="flex flex-col gap-2 md:col-span-2">
+ <Label className="app-body text-muted-foreground">Mapeo de campos para auto-emisión</Label>
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-lg border border-border p-2 bg-muted/10">
+ {screenFields.map((f) => (
+ <div key={f.id} className="flex items-center gap-2">
+ <span className="app-body shrink-0 w-1/2 truncate" title={f.label}>{f.label || f.id}</span>
+ <select
+ className="app-input h-7 w-1/2 text-[12px]"
+ value={form.auto_field_mapping[f.id] || ""}
+ onChange={(e) => setForm({ ...form, auto_field_mapping: { ...form.auto_field_mapping, [f.id]: e.target.value } })}
+ disabled={isFieldDisabled("auto_field_mapping")}
+ >
+ {fieldSources.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+ </select>
+ </div>
+ ))}
+ </div>
  </div>
  )}
  </div>
