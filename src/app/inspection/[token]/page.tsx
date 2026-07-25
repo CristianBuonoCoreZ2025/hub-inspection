@@ -26,7 +26,12 @@ interface LiveDamage {
   id: string; category: string | null; subcategory: string | null;
   description: string; observations: string | null; severity: string;
   dependency: string | null; sector: string | null; materiality_type: string | null;
-  damage_type: string | null; created_at: string;
+  unit: string | null; quantity: number | null;
+  length: number | null; width: number | null; height: number | null;
+  damage_type: string | null;
+  product: string | null; brand_model: string | null; purchase_date: string | null;
+  estimated_amount: number | null; currency: string | null;
+  created_at: string;
 }
 interface LiveChatMessage {
   id: string; content: string; sender_name: string | null;
@@ -829,6 +834,22 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
 // ═══════════════════════════════════════════════════════════════
 // Tab: Daños (read-only)
 // ═══════════════════════════════════════════════════════════════
+function fmtDamageAmount(value: number | null, currency: string | null) {
+  if (value === null || value === undefined) return "—";
+  return `${currency || "CLP"} ${value.toLocaleString("es-CL")}`;
+}
+
+function damageQuantity(dmg: LiveDamage) {
+  if (dmg.quantity === null || dmg.quantity === undefined) return null;
+  const dim =
+    dmg.unit === "M2" && (dmg.length || dmg.width)
+      ? ` (${dmg.length || 0}x${dmg.width || 0})`
+      : dmg.unit === "M3" && (dmg.length || dmg.width || dmg.height)
+      ? ` (${dmg.length || 0}x${dmg.width || 0}x${dmg.height || 0})`
+      : "";
+  return `${dmg.quantity.toLocaleString("es-CL")} ${dmg.unit || ""}${dim}`;
+}
+
 function DamagesTab({ damages }: { damages: LiveDamage[] }) {
   if (!damages.length) {
     return <EmptyState icon={ShieldCheck} text="No hay daños registrados aún." />;
@@ -855,9 +876,29 @@ function DamagesTab({ damages }: { damages: LiveDamage[] }) {
                     </span>
                   )}
                 </div>
+
+                {(dmg.product || dmg.brand_model) && (
+                  <p className="app-body text-slate-400 mt-1">
+                    {dmg.product} {dmg.brand_model ? `— ${dmg.brand_model}` : ""}
+                  </p>
+                )}
+
                 {dmg.observations && (
                   <p className="app-body text-slate-500 mt-1">{dmg.observations}</p>
                 )}
+
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 app-body">
+                  {damageQuantity(dmg) && (
+                    <div>
+                      <span className="text-slate-500">Cantidad:</span>{" "}
+                      <span className="text-slate-300">{damageQuantity(dmg)}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-slate-500">Monto Estimado:</span>{" "}
+                    <span className="text-slate-300 font-medium">{fmtDamageAmount(dmg.estimated_amount, dmg.currency)}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
