@@ -673,7 +673,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  setForm({ ...form, estimated_amount: parseAmount(e.target.value) });
  }}
  placeholder="0"
- className="app-input w-full text-right font-mono"
+ className="app-input app-amount-input font-mono"
  />
  </div>
  </div>
@@ -831,7 +831,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  setForm({ ...form, estimated_amount: parseAmount(e.target.value) });
  }}
  placeholder="0"
- className="app-input w-full text-right font-mono"
+ className="app-input app-amount-input font-mono"
  />
  </div>
  </div>
