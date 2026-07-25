@@ -15,6 +15,7 @@ import {
  SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { amountInWords } from "@/lib/amount-words";
 import type { InspectionDamage } from "@/types";
 
 const severityLabels: Record<string, string> = {
@@ -676,6 +677,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  className="app-input app-amount-input font-mono"
  />
  </div>
+ <p className="app-amount-words">{amountInWords(form.estimated_amount, form.currency)}</p>
  </div>
  {affectedThirdParties.length > 0 && (
  <div className="modal-field">
@@ -834,6 +836,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  className="app-input app-amount-input font-mono"
  />
  </div>
+ <p className="app-amount-words">{amountInWords(form.estimated_amount, form.currency)}</p>
  </div>
  {affectedThirdParties.length > 0 && (
  <div className="modal-field">
