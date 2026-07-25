@@ -3487,3 +3487,35 @@ Las tablas de historial, auditoría y actividad SIEMPRE usan filas expandibles.
 Cada fila CERRADA debe mostrar un resumen concreto del cambio, nunca un texto genérico.
 Los modales se reservan para edición, acciones destructivas o contenido que no cabe en una fila.
 ```
+
+---
+
+## 23. Daños de Inspección: Moneda, Cantidad y Monto — Fix Definitivo
+
+### Problema
+En `src/app/dashboard/inspecciones/[id]/damages-tab.tsx`:
+- El `parseAmount` no manejaba correctamente separadores de miles/distintos formatos, provocando montos 0 o incorrectos.
+- En las tablas de daños constructivos y de contenido no se mostraba la **cantidad/tamaño** del daño.
+- Solo se veía `Monto` sin la dimensión física (`quantity`, `unit`, `length`, `width`, `height`).
+
+### Solución Definitiva
+1. `parseAmount` soporta formatos mixtos:
+   - `1.000.000` → 1.000.000 (Chile, separador de miles por punto).
+   - `1,000,000` → 1.000.000 (USA/otros, separador de miles por coma).
+   - `1.000,5` / `1,000.5` → 1.000,5 (último separador es decimal).
+   - `1,5` / `1.5` → 1,5.
+2. Nueva función `formatQuantity(d: InspectionDamage)` que muestra:
+   - `quantity` + `unit`.
+   - Para `M2`: `(largo x ancho)`.
+   - Para `M3`: `(largo x ancho x alto)`.
+3. Las tablas de **Daños Constructivos** y **Daños de Contenido** incluyen columna `Cantidad` antes de `Monto`.
+
+### Archivos
+- `src/app/dashboard/inspecciones/[id]/damages-tab.tsx`
+
+### Regla
+```
+Toda tabla de daños debe mostrar moneda + monto + cantidad/tamaño.
+El parser de montos debe aceptar tanto punto como coma como separadores
+sin perder la distinción entre miles y decimales.
+```
