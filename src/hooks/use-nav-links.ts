@@ -143,13 +143,26 @@ export function useNavLinks() {
       }
     }
     for (const g of navGroups) {
-      if (usedKeys.has(`group:${g.section}`)) continue;
       if (!isGroupVisible(g.section)) continue;
-      const childLinks = g.links.filter(isLinkVisible);
-      if (childLinks.length > 0) {
-        const children: VisibleNavChild[] = childLinks.map(link => ({ kind: "link", link }));
+      // Links de este grupo que no fueron procesados por la config
+      const missingLinks = g.links.filter(l => !usedKeys.has(`link:${l.href}`) && isLinkVisible(l));
+      if (missingLinks.length === 0) continue;
+
+      if (usedKeys.has(`group:${g.section}`)) {
+        // El grupo ya está procesado: inyectar links faltantes al final
+        const existing = visibleGroups.find(vg => vg.section === g.section);
+        if (existing) {
+          for (const link of missingLinks) {
+            existing.children.push({ kind: "link", link });
+            usedKeys.add(`link:${link.href}`);
+          }
+        }
+      } else {
+        // El grupo no está en la config: crearlo con los links faltantes
+        const children: VisibleNavChild[] = missingLinks.map(link => ({ kind: "link", link }));
         visibleGroups.push({ title: g.title, section: g.section, icon: g.icon, children });
         usedKeys.add(`group:${g.section}`);
+        for (const link of missingLinks) usedKeys.add(`link:${link.href}`);
       }
     }
   } else {

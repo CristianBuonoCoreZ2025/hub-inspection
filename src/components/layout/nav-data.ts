@@ -23,6 +23,7 @@ import {
   Heart,
   Zap,
   Hammer,
+  HardHat,
   Layers,
   Square,
   Paintbrush,
@@ -112,6 +113,7 @@ export const catalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/tipos-documentos", label: "Tipos Documentos", icon: FileText },
   { href: "/dashboard/catalogos/monedas", label: "Monedas", icon: Coins },
   { href: "/dashboard/catalogos/tipos-cambio", label: "Tipos de Cambio", icon: ArrowRightLeft },
+  { href: "/dashboard/catalogos/tempario", label: "Tempario", icon: HardHat },
 ];
 
 // ── Catálogos de Inspección ──

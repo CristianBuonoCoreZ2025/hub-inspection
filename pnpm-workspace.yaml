@@ -10,6 +10,7 @@ supportedArchitectures:
     - glibc
 allowBuilds:
   bcrypt: true
+  canvas: set this to true or false
   core-js: set this to true or false
   esbuild: true
   sharp: true

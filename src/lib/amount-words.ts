@@ -20,7 +20,7 @@ function baseWords(n: number): string {
   const c = Math.floor(n / 100);
   const r = n % 100;
   if (r === 0) return CENTENAS[c];
-  return `${CENTENAS[c]} ${UNIDADES[r]}`;
+  return `${CENTENAS[c]} ${baseWords(r)}`;
 }
 
 function words(n: number): string {
@@ -31,10 +31,16 @@ function words(n: number): string {
     const prefix = t === 1 ? "mil" : `${words(t)} mil`;
     return r === 0 ? prefix : `${prefix} ${words(r)}`;
   }
-  if (n < 1_000_000_000) {
+  if (n < 1_000_000_000_000) {
     const m = Math.floor(n / 1_000_000);
     const r = n % 1_000_000;
     const prefix = m === 1 ? "un millón" : `${words(m)} millones`;
+    return r === 0 ? prefix : `${prefix} ${words(r)}`;
+  }
+  if (n < 1_000_000_000_000_000) {
+    const b = Math.floor(n / 1_000_000_000_000);
+    const r = n % 1_000_000_000_000;
+    const prefix = b === 1 ? "un billón" : `${words(b)} billones`;
     return r === 0 ? prefix : `${prefix} ${words(r)}`;
   }
   return String(n);

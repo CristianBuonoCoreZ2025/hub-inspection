@@ -248,6 +248,7 @@ export interface LookupCatalog {
   description: string | null;
   sort_order: number;
   is_active: boolean;
+  requires_detail: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -798,6 +799,7 @@ export interface PropertyClassification {
 export interface DamageClassification {
   id: string;
   name: string;
+  code: string | null;
   description: string | null;
   is_active: boolean;
   created_at: string;
@@ -965,6 +967,17 @@ export interface ActionTemplateClaimStatus {
 }
 
 export type GestionScreenType = GestionScreen;
+
+// ── Tempario (DS27 Chile) ──
+export type {
+  TemparioChapter,
+  TemparioSubchapter,
+  TemparioTask,
+  TemparioPrice,
+  TemparioTaskWithPrice,
+  TemparioComplexity,
+} from "./tempario";
+export { TEMPARIO_COMPLEXITY_LABELS, TEMPARIO_UNITS, TEMPARIO_SOURCES } from "./tempario";
 
 export type ClaimActionStatus =
   | "todo"

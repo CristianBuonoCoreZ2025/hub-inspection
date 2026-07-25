@@ -394,7 +394,7 @@ export async function deletePropertyClassification(id: string) {
 
 export async function getDamageClassifications() {
   return fetchAllSorted<DamageClassification>("damage_classifications", {
-    select: "id, name, description, is_active, created_at, updated_at",
+    select: "id, name, code, description, is_active, created_at, updated_at",
     eq: { is_active: true },
   });
 }
@@ -585,7 +585,7 @@ export async function getCountries() {
 
 export async function getLookupCatalog(category: string) {
   return fetchAllSorted<LookupCatalog>("lookup_catalog", {
-    select: "id, country_id, category, code, name, description, sort_order, is_active",
+    select: "id, country_id, category, code, name, description, sort_order, is_active, requires_detail",
     eq: { category, is_active: true },
     order: { column: "sort_order", ascending: true },
   }).then((rows) => rows.sort((a, b) => {
@@ -665,16 +665,17 @@ export async function getCountryCurrencies(countryId: string | null | undefined)
   }));
 }
 
-export async function createLookupCatalogItem(input: { category: string; name: string; code?: string; sort_order?: number }) {
+export async function createLookupCatalogItem(input: { category: string; name: string; code?: string; sort_order?: number; requires_detail?: boolean }) {
   return insertRow<LookupCatalog>("lookup_catalog", {
     ...input,
     is_active: true,
     sort_order: input.sort_order ?? 0,
-  }, "id, category, code, name, sort_order, is_active");
+    requires_detail: input.requires_detail ?? false,
+  }, "id, category, code, name, sort_order, is_active, requires_detail");
 }
 
-export async function updateLookupCatalogItem(id: string, input: Partial<{ name: string; code: string; sort_order: number; is_active: boolean }>) {
-  return updateRow<LookupCatalog>("lookup_catalog", id, input, "id, name, code, sort_order, is_active");
+export async function updateLookupCatalogItem(id: string, input: Partial<{ name: string; code: string; sort_order: number; is_active: boolean; requires_detail: boolean }>) {
+  return updateRow<LookupCatalog>("lookup_catalog", id, input, "id, name, code, sort_order, is_active, requires_detail");
 }
 
 export async function deleteLookupCatalogItem(id: string) {

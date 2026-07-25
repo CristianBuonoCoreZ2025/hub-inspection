@@ -131,6 +131,17 @@
     box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
   }
 
+  /* Campo que requiere completarse (ej: aclaración en daños).
+     Fondo amarillo muy sutil + borde ámbar para que no parezca desactivado. */
+  .app-input.app-input-required {
+    background: color-mix(in srgb, #FEF9C3 35%, transparent) !important;
+    border-color: color-mix(in srgb, #F59E0B 50%, var(--input)) !important;
+  }
+  .app-input.app-input-required:focus {
+    border-color: #F59E0B !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15) !important;
+  }
+
   /* Selector de moneda en formularios de daños */
   .app-input.app-currency-select {
     width: 200px !important;
@@ -154,6 +165,9 @@
     text-align: right !important;
     margin-top: 0 !important;
     line-height: 1.1 !important;
+    max-width: 100% !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
   }
 
   /* Select trigger (combobox) — misma altura y fuente que app-input.

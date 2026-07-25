@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDamages, createDamage, updateDamage, deleteDamage, getThirdParties, getEvidences } from "@/services/inspections";
-import { getDamageSpaces, getContentGoodTypes, getBuildingDamageCategories, getCountryCurrencies } from "@/services/catalogs";
+import { getDamageSpaces, getContentGoodTypes, getCountryCurrencies, getDamageClassifications } from "@/services/catalogs";
+import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
 import { toast } from "sonner";
 import { Trash2, Pencil, Building2, Package, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,21 +19,34 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { amountInWords } from "@/lib/amount-words";
 import type { InspectionDamage } from "@/types";
 
-const severityLabels: Record<string, string> = {
- low: "Leve",
- medium: "Moderado",
- high: "Grave",
- total: "Total",
-};
+const unitOptions = ["UND", "M2", "M3", "KG", "LT", "MT", "GLB"];
 
-const severityOptions = [
- { value: "low", label: "Leve" },
- { value: "medium", label: "Moderado" },
- { value: "high", label: "Grave" },
- { value: "total", label: "Total" },
+// Catálogos de materialidad (mismo patrón del acta)
+const MATERIALITY_CATALOGS = [
+ "materiality_walls",
+ "materiality_roof",
+ "materiality_flooring",
+ "materiality_ceiling",
+ "materiality_interior_finish",
+ "materiality_exterior_finish",
+ "materiality_closure",
 ];
 
-const unitOptions = ["UND", "M2", "M3", "KG", "LT", "MT", "GLB"];
+const MATERIALITY_CATALOG_LABELS: Record<string, string> = {
+ materiality_walls: "Muros",
+ materiality_roof: "Cubierta / Techumbre",
+ materiality_flooring: "Pavimentos Interiores",
+ materiality_ceiling: "Cielos Interiores",
+ materiality_interior_finish: "Terminaciones Interiores",
+ materiality_exterior_finish: "Terminaciones Exteriores",
+ materiality_closure: "Cierre Perimetral",
+};
+
+// Categorías de daño constructivo: mismos títulos del acta + Otros
+const DAMAGE_CATEGORIES: { label: string; requires_detail: boolean }[] = [
+ ...MATERIALITY_CATALOGS.map((c) => ({ label: MATERIALITY_CATALOG_LABELS[c], requires_detail: false })),
+ { label: "Otros", requires_detail: true },
+];
 
 // Opciones de moneda se construyen dinámicamente desde countryCurrencies en el componente
 
@@ -146,7 +160,19 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  const formatAmount = (value: number) =>
    new Intl.NumberFormat("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
 
+ const formatMoney = (value: number, currency = "CLP") =>
+   new Intl.NumberFormat("es-CL", {
+     style: "currency",
+     currency,
+     currencyDisplay: "code",
+     minimumFractionDigits: 0,
+     maximumFractionDigits: 2,
+   }).format(value || 0);
+
+ const MAX_ESTIMATED_AMOUNT = 999_999_999_999_999;
+
  const parseAmount = (value: string): number => {
+   const clampAmount = (v: number) => (isNaN(v) ? 0 : Math.min(v, MAX_ESTIMATED_AMOUNT));
    if (!value) return 0;
    const hasDot = value.includes(".");
    const hasComma = value.includes(",");
@@ -159,27 +185,34 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
        lastComma > lastDot
          ? Number(value.replace(/\./g, "").replace(/,/g, "."))
          : Number(value.replace(/,/g, ""));
-     return isNaN(n) ? 0 : n;
+     return isNaN(n) ? 0 : clampAmount(n);
    }
 
    if (hasComma) {
      const parts = value.split(",");
      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
-       return Number(value.replace(/,/g, ""));
+       return clampAmount(Number(value.replace(/,/g, "")));
      }
-     return Number(value.replace(/,/g, "."));
+     return clampAmount(Number(value.replace(/,/g, ".")));
    }
 
    if (hasDot) {
      const parts = value.split(".");
      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
-       return Number(value.replace(/\./g, ""));
+       return clampAmount(Number(value.replace(/\./g, "")));
      }
-     return Number(value);
+     return clampAmount(Number(value));
    }
 
    const n = Number(value);
-   return isNaN(n) ? 0 : n;
+   return isNaN(n) ? 0 : clampAmount(n);
+ };
+
+ const MAX_QUANTITY = 999_999_999_999;
+ const MAX_DIMENSION = 9_999_999;
+ const parseQuantity = (value: string): number => {
+   const n = Number(value);
+   return value ? (isNaN(n) ? 0 : Math.min(n, MAX_QUANTITY)) : 0;
  };
 
  const formatQuantity = (d: InspectionDamage) => {
@@ -195,7 +228,9 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
  const handleDimensionChange = (field: "length" | "width" | "height", value: string) => {
    setForm((prev) => {
-     const next = { ...prev, [field]: value ? Number(value) : null } as DamageForm;
+     const raw = value ? Number(value) : null;
+     const clamped = raw == null || isNaN(raw) ? null : Math.min(raw, MAX_DIMENSION);
+     const next = { ...prev, [field]: clamped } as DamageForm;
      const quantity =
        next.unit === "M2" || next.unit === "M3"
          ? computeQuantity(next.unit, next.length, next.width, next.height)
@@ -237,11 +272,34 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  staleTime: 1000 * 60 * 30,
  });
 
- const { data: buildingCategories = [] } = useQuery({
- queryKey: ["building-damage-categories"],
- queryFn: getBuildingDamageCategories,
+ const { data: damageClassifications = [] } = useQuery({
+ queryKey: ["damage-classifications"],
+ queryFn: getDamageClassifications,
  staleTime: 1000 * 60 * 30,
  });
+
+ const severityOptions = damageClassifications
+   .filter((d) => d.code)
+   .map((d) => ({
+     value: d.code?.toLowerCase() || "",
+     label: d.name,
+   }));
+ const severityLabelMap = Object.fromEntries(
+   damageClassifications
+     .filter((d) => d.code)
+     .map((d) => [d.code?.toLowerCase() || "", d.name])
+ );
+
+ const { catalogs: materialityCatalogs } = useLookupCatalogs(MATERIALITY_CATALOGS);
+
+ const materialityCategoryCode =
+   MATERIALITY_CATALOGS.find((c) => MATERIALITY_CATALOG_LABELS[c] === form.subcategory) || "";
+ const selectedCategoryRequiresDetail =
+   DAMAGE_CATEGORIES.find((c) => c.label === form.subcategory)?.requires_detail ?? false;
+ const currentMaterialityItems = materialityCatalogs[materialityCategoryCode] || [];
+ const selectedMaterialityItem = currentMaterialityItems.find((i) => i.name === form.materiality_type);
+ const requiresDetail = selectedCategoryRequiresDetail || !!selectedMaterialityItem?.requires_detail;
+ const materialitySelectValue = selectedMaterialityItem?.id || "";
 
  // Monedas filtradas por país del siniestro
  const { data: countryCurrencies = [] } = useQuery({
@@ -274,10 +332,9 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  ? spaces.filter((s) =>
  !s.applicable_classifications ||
  s.applicable_classifications.length === 0 ||
- s.applicable_classifications.includes(propertyClassification) ||
- s.applicable_classifications.includes("Otros")
+ s.applicable_classifications.includes(propertyClassification)
  )
- : spaces;
+ : [];
 
  const createMutation = useMutation({
  mutationFn: createDamage,
@@ -369,7 +426,6 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
  const spaceName = (id: string | null) => spaces.find((s) => s.id === id)?.name || "—";
  const goodTypeName = (id: string | null) => goodTypes.find((g) => g.id === id)?.name || "—";
- const bldCategoryName = (id: string | null) => buildingCategories.find((c) => c.id === id)?.name || "—";
 
  const handleSubmit = () => {
  // Convertir "" y 0 a null para campos opcionales de la API
@@ -420,15 +476,15 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <div className="app-body text-muted-foreground">
  {damages?.length || 0} registros ·{" "}
  {currencyTotals.length === 0 ? (
- <span className="font-semibold text-foreground">$0</span>
+ <span className="font-semibold text-foreground">{formatMoney(0, "CLP")}</span>
  ) : currencyTotals.map((t, i) => (
  <span key={t.currency}>
  {i > 0 && " · "}
  <span className="font-semibold text-foreground">
- {t.currency} {t.total.toLocaleString("es-CL")}
+ {formatMoney(t.total, t.currency)}
  </span>
  <span className="app-body ml-1">
- (Const: {t.currency} {t.building.toLocaleString("es-CL")} · Cont: {t.currency} {t.content.toLocaleString("es-CL")})
+ (Const: {formatMoney(t.building, t.currency)} · Cont: {formatMoney(t.content, t.currency)})
  </span>
  </span>
  ))}
@@ -440,14 +496,16 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <div className="grid grid-cols-2 gap-3">
  <button
  onClick={() => startNew("building")}
- className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-blue-400/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/20"
+ disabled={!propertyClassification}
+ title={propertyClassification ? "Nuevo daño constructivo" : "Selecciona la clasificación del inmueble en el acta"}
+ className={`group flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-blue-400/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 ${!propertyClassification ? "opacity-50 cursor-not-allowed" : ""}`}
  >
- <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400 transition-colors group-hover:bg-blue-500 group-hover:text-white">
+ <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${propertyClassification ? "bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400 group-hover:bg-blue-500 group-hover:text-white" : "bg-muted text-muted-foreground"}`}>
  <Building2 className="h-5 w-5" />
  </div>
  <div className="min-w-0">
  <div className="app-title text-foreground">Daño Constructivo</div>
- <div className="app-body text-muted-foreground truncate">Estructura, muros, pisos, techumbre, instalaciones</div>
+ <div className="app-body text-muted-foreground truncate">{propertyClassification ? "Estructura, muros, pisos, techumbre, instalaciones" : "Requiere clasificación del inmueble"}</div>
  </div>
  </button>
  <button
@@ -475,7 +533,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
  {form.damage_type === "building" ? (
  /* ── FORMULARIO CONSTRUCTIVO ── */
- <div className="modal-grid-3" key="building-form">
+ <div className="modal-grid-5" key="building-form">
  <div className="modal-field">
  <label className="app-field-label">Espacio / Recinto</label>
  <Select
@@ -486,8 +544,8 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  setForm({ ...form, space_id: v || "", dependency: space?.name || "" });
  }}
  >
- <SelectTrigger className="app-input w-full">
- <SelectValue placeholder="Seleccionar..." />
+ <SelectTrigger className="app-input w-full" disabled={!propertyClassification}>
+ <SelectValue>{propertyClassification ? (form.space_id ? spaceName(form.space_id) : "Seleccionar...") : "Selecciona clasificación del inmueble..."}</SelectValue>
  </SelectTrigger>
  <SelectContent>
  {filteredSpaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -497,53 +555,67 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <div className="modal-field">
  <label className="app-field-label">Categoría del Daño</label>
  <Select
- value={form.building_damage_category_id || ""}
- items={buildingCategories.map((c) => ({ value: c.id, label: c.name }))}
+ value={form.subcategory || ""}
  onValueChange={(v) => {
- const cat = buildingCategories.find((c) => c.id === v);
- setForm({ ...form, building_damage_category_id: v || "", category: cat?.name || form.category });
+ const categoryRequiresDetail = DAMAGE_CATEGORIES.find((c) => c.label === v)?.requires_detail ?? false;
+ setForm({ ...form, subcategory: v || "", materiality_type: "", description: categoryRequiresDetail ? form.description : "" });
  }}
  >
  <SelectTrigger className="app-input w-full">
  <SelectValue placeholder="Seleccionar..." />
  </SelectTrigger>
  <SelectContent>
- {buildingCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+ {DAMAGE_CATEGORIES.map((c) => <SelectItem key={c.label} value={c.label}>{c.label}</SelectItem>)}
  </SelectContent>
  </Select>
  </div>
  <div className="modal-field">
- <label className="app-field-label">Severidad</label>
+ <label className="app-field-label">Materialidad</label>
+ <Select
+   value={materialitySelectValue}
+   onValueChange={(v) => {
+     const item = currentMaterialityItems.find((i) => i.id === v);
+     setForm({
+       ...form,
+       materiality_type: item?.name || "",
+       description: item?.requires_detail ? form.description : "",
+     });
+   }}
+ >
+   <SelectTrigger className="app-input w-full" disabled={selectedCategoryRequiresDetail}>
+     <SelectValue>{selectedMaterialityItem?.name || (selectedCategoryRequiresDetail ? "—" : "Seleccionar...")}</SelectValue>
+   </SelectTrigger>
+   <SelectContent>
+     {currentMaterialityItems.map((item) => (
+       <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+     ))}
+   </SelectContent>
+ </Select>
+ </div>
+ <div className="modal-field">
+ <label className="app-field-label">Aclaración</label>
+ <input
+   value={form.description || ""}
+   onChange={(e) => setForm({ ...form, description: e.target.value })}
+   placeholder={requiresDetail ? "Especificar..." : "No requiere"}
+   disabled={!requiresDetail}
+   className={`app-input w-full ${requiresDetail && !form.description?.trim() ? "app-input-required" : ""}`}
+ />
+ </div>
+ <div className="modal-field">
+ <label className="app-field-label">Clasificación del Daño</label>
  <Select
  value={form.severity || "low"}
  items={severityOptions}
  onValueChange={(v) => setForm({ ...form, severity: (v || "low") as InspectionDamage["severity"] })}
  >
  <SelectTrigger className="app-input w-full">
- <SelectValue />
+ <SelectValue>{severityLabelMap[form.severity] || "Seleccionar..."}</SelectValue>
  </SelectTrigger>
  <SelectContent>
  {severityOptions.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
  </SelectContent>
  </Select>
- </div>
- <div className="modal-field modal-field-full">
- <label className="app-field-label">Descripción</label>
- <input
- value={form.description || ""}
- onChange={(e) => setForm({ ...form, description: e.target.value })}
- placeholder="Ej. Grieta en muro de carga, filtración en techumbre..."
- className="app-input w-full"
- />
- </div>
- <div className="modal-field">
- <label className="app-field-label">Materialidad</label>
- <input
- value={form.materiality_type}
- onChange={(e) => setForm({ ...form, materiality_type: e.target.value })}
- placeholder="Ej. Hormigón, Albañilería..."
- className="app-input w-full"
- />
  </div>
  <div className="modal-field">
  <label className="app-field-label">Unidad</label>
@@ -630,36 +702,30 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <input
  type="number"
  value={form.quantity}
- onChange={(e) => setForm({ ...form, quantity: e.target.value ? Number(e.target.value) : 0 })}
+ onChange={(e) => setForm({ ...form, quantity: parseQuantity(e.target.value) })}
  placeholder="0"
  className="app-input w-full"
  readOnly={form.unit === "M2" || form.unit === "M3"}
  />
  </div>
- <div className="modal-field modal-field-full">
- <label className="app-field-label">Observaciones</label>
- <input
- value={form.observations}
- onChange={(e) => setForm({ ...form, observations: e.target.value })}
- placeholder="Observaciones adicionales..."
- className="app-input w-full"
- />
- </div>
- <div className="modal-field modal-field-full">
- <label className="app-field-label">Monto Estimado</label>
- <div className="flex gap-1.5">
+ <div className="modal-field col-span-1 col-start-1">
+ <label className="app-field-label">Moneda</label>
  <Select
  value={form.currency}
  items={currencyOptions}
  onValueChange={(v) => setForm({ ...form, currency: v || "CLP" })}
  >
- <SelectTrigger className="app-input app-currency-select">
+ <SelectTrigger className="app-input w-full">
  <SelectValue />
  </SelectTrigger>
  <SelectContent>
  {currencyOptions.map((c) => <SelectItem key={c.value} value={c.value}>{c.value}</SelectItem>)}
  </SelectContent>
  </Select>
+ </div>
+ <div className="modal-field col-span-4">
+ <label className="app-field-label">Monto Estimado</label>
+ <div className="flex items-center gap-1.5">
  <input
  type="text"
  inputMode="decimal"
@@ -670,14 +736,25 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  }}
  onBlur={() => setAmountFocused(false)}
  onChange={(e) => {
- setAmountRaw(e.target.value);
- setForm({ ...form, estimated_amount: parseAmount(e.target.value) });
+ const raw = e.target.value;
+ const parsed = parseAmount(raw);
+ setAmountRaw(parsed >= MAX_ESTIMATED_AMOUNT ? String(MAX_ESTIMATED_AMOUNT) : raw);
+ setForm({ ...form, estimated_amount: parsed });
  }}
  placeholder="0"
  className="app-input app-amount-input font-mono"
  />
+ <p className="app-amount-words flex-1 min-w-0 self-center">{amountInWords(form.estimated_amount, form.currency)}</p>
  </div>
- <p className="app-amount-words">{amountInWords(form.estimated_amount, form.currency)}</p>
+ </div>
+ <div className="modal-field modal-field-full">
+ <label className="app-field-label">Observaciones</label>
+ <input
+ value={form.observations}
+ onChange={(e) => setForm({ ...form, observations: e.target.value })}
+ placeholder="Ej. El asegurado indicó que el cerámico fue colocado con productos traídos del extranjero..."
+ className="app-input w-full"
+ />
  </div>
  {affectedThirdParties.length > 0 && (
  <div className="modal-field">
@@ -688,7 +765,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  onValueChange={(v) => setForm({ ...form, third_party_id: v || "" })}
  >
  <SelectTrigger className="app-input w-full">
- <SelectValue placeholder="Si es daño de un tercero..." />
+ <SelectValue>{affectedThirdParties.find((t) => t.id === form.third_party_id)?.full_name || "Si es daño de un tercero..."}</SelectValue>
  </SelectTrigger>
  <SelectContent>
  {affectedThirdParties.map((t) => (
@@ -713,7 +790,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  }}
  >
  <SelectTrigger className="app-input w-full">
- <SelectValue placeholder="Seleccionar..." />
+ <SelectValue>{form.content_good_type_id ? goodTypeName(form.content_good_type_id) : "Seleccionar..."}</SelectValue>
  </SelectTrigger>
  <SelectContent>
  {goodTypes.map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
@@ -739,14 +816,14 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  />
  </div>
  <div className="modal-field">
- <label className="app-field-label">Severidad</label>
+ <label className="app-field-label">Clasificación del Daño</label>
  <Select
  value={form.severity || "low"}
  items={severityOptions}
  onValueChange={(v) => setForm({ ...form, severity: (v || "low") as InspectionDamage["severity"] })}
  >
  <SelectTrigger className="app-input w-full">
- <SelectValue />
+ <SelectValue>{severityLabelMap[form.severity] || "Seleccionar..."}</SelectValue>
  </SelectTrigger>
  <SelectContent>
  {severityOptions.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
@@ -758,7 +835,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <input
  type="number"
  value={form.quantity}
- onChange={(e) => setForm({ ...form, quantity: e.target.value ? Number(e.target.value) : 0 })}
+ onChange={(e) => setForm({ ...form, quantity: parseQuantity(e.target.value) })}
  placeholder="1"
  className="app-input w-full"
  />
@@ -796,8 +873,8 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  items={filteredSpaces.map((s) => ({ value: s.id, label: s.name }))}
  onValueChange={(v) => setForm({ ...form, space_id: v || "" })}
  >
- <SelectTrigger className="app-input w-full">
- <SelectValue placeholder="Si se puede ubicar..." />
+ <SelectTrigger className="app-input w-full" disabled={!propertyClassification}>
+ <SelectValue>{propertyClassification ? (form.space_id ? spaceName(form.space_id) : "Si se puede ubicar...") : "Selecciona clasificación del inmueble..."}</SelectValue>
  </SelectTrigger>
  <SelectContent>
  {filteredSpaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -806,7 +883,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  <div className="modal-field modal-field-full">
  <label className="app-field-label">Monto Estimado</label>
- <div className="flex gap-1.5">
+ <div className="flex items-center gap-1.5">
  <Select
  value={form.currency}
  items={currencyOptions}
@@ -829,14 +906,16 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  }}
  onBlur={() => setAmountFocused(false)}
  onChange={(e) => {
- setAmountRaw(e.target.value);
- setForm({ ...form, estimated_amount: parseAmount(e.target.value) });
+ const raw = e.target.value;
+ const parsed = parseAmount(raw);
+ setAmountRaw(parsed >= MAX_ESTIMATED_AMOUNT ? String(MAX_ESTIMATED_AMOUNT) : raw);
+ setForm({ ...form, estimated_amount: parsed });
  }}
  placeholder="0"
  className="app-input app-amount-input font-mono"
  />
+ <p className="app-amount-words flex-1 min-w-0 self-center">{amountInWords(form.estimated_amount, form.currency)}</p>
  </div>
- <p className="app-amount-words">{amountInWords(form.estimated_amount, form.currency)}</p>
  </div>
  {affectedThirdParties.length > 0 && (
  <div className="modal-field">
@@ -847,7 +926,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  onValueChange={(v) => setForm({ ...form, third_party_id: v || "" })}
  >
  <SelectTrigger className="app-input w-full">
- <SelectValue placeholder="Si es daño de un tercero..." />
+ <SelectValue>{affectedThirdParties.find((t) => t.id === form.third_party_id)?.full_name || "Si es daño de un tercero..."}</SelectValue>
  </SelectTrigger>
  <SelectContent>
  {affectedThirdParties.map((t) => (
@@ -920,7 +999,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <Button onClick={() => setEditing(null)} className="pg-btn-platinum">Cancelar</Button>
  <Button
  onClick={handleSubmit}
- disabled={!form.description || createMutation.isPending || updateMutation.isPending}
+ disabled={(requiresDetail && !form.description?.trim()) || createMutation.isPending || updateMutation.isPending}
  className="pg-btn-platinum"
  >
  {createMutation.isPending || updateMutation.isPending ? "Guardando..." : "Guardar"}
@@ -954,31 +1033,20 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <tr>
  <th>Espacio</th>
  <th>Categoría</th>
- <th>Descripción</th>
- <th>Severidad</th>
+ <th>Materialidad / Aclaración</th>
  <th className="text-right">Cantidad</th>
  <th className="text-right">Monto</th>
  <th className="w-[80px]">Acciones</th>
  </tr>
  </thead>
  <tbody>
- {buildingDamages.map((d) => (
- <tr key={d.id}>
+ {buildingDamages.map((d) => [
+ <tr key={d.id} className={d.observations ? "with-observation" : ""}>
  <td className="app-body">{spaceName(d.space_id)}</td>
- <td className="app-body">{bldCategoryName(d.building_damage_category_id)}</td>
- <td className="app-body max-w-[200px] truncate">{d.description}</td>
- <td>
- <span className={`app-body font-medium px-2 py-0.5 rounded-full ${
- d.severity === "total" ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300" :
- d.severity === "high" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300" :
- d.severity === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300" :
- "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
- }`}>
- {severityLabels[d.severity] || d.severity}
- </span>
- </td>
+ <td className="app-body">{d.subcategory || "—"}</td>
+ <td className="app-body max-w-[200px] truncate">{d.description || d.materiality_type || "—"}</td>
  <td className="text-right app-body">{formatQuantity(d)}</td>
- <td className="text-right font-medium app-body">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
+ <td className="text-right font-medium app-body">{formatMoney(d.estimated_amount || 0, d.currency || "CLP")}</td>
  <td>
  <div className="app-row-actions">
  {!readOnly && (
@@ -993,8 +1061,15 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  )}
  </div>
  </td>
- </tr>
- ))}
+ </tr>,
+ d.observations ? (
+   <tr key={`${d.id}-obs`} className="observation-row">
+     <td colSpan={6} className="grid-observation">
+       {d.observations}
+     </td>
+   </tr>
+ ) : null,
+ ])}
  </tbody>
  </table>
  </div>
@@ -1026,7 +1101,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <th>Tipo de Bien</th>
  <th>Producto</th>
  <th>Marca/Modelo</th>
- <th>Severidad</th>
+ <th>Clasificación del Daño</th>
  <th className="text-right">Cantidad</th>
  <th className="text-right">Monto</th>
  <th className="w-[80px]">Acciones</th>
@@ -1045,11 +1120,11 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  d.severity === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300" :
  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
  }`}>
- {severityLabels[d.severity] || d.severity}
+ {severityLabelMap[d.severity] || d.severity}
  </span>
  </td>
  <td className="text-right app-body">{formatQuantity(d)}</td>
- <td className="text-right font-medium app-body">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
+ <td className="text-right font-medium app-body">{formatMoney(d.estimated_amount || 0, d.currency || "CLP")}</td>
  <td>
  <div className="app-row-actions">
  {!readOnly && (
