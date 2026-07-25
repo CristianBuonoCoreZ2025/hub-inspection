@@ -129,7 +129,7 @@ export default function DashboardPage() {
   useRealtime("inspection_sessions", [["inspection-sessions"], ["inspection-sessions-all"]]);
   useRealtime("audit_logs", [["recent-activity"]]);
 
-  const isGlobalUser = !profile?.company_id;
+  const isGlobalUser = !profile?.company_id || profile?.role === "internal";
   const roleLabel = profile ? userTypeLabels[profile.role] : "";
 
   const { data: claims } = useQuery({
