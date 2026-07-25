@@ -647,18 +647,20 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <div className="modal-field modal-field-full">
  <label className="app-field-label">Monto Estimado</label>
  <div className="flex gap-1.5">
+ <div className="w-16 shrink-0">
  <Select
  value={form.currency}
  items={currencyOptions}
  onValueChange={(v) => setForm({ ...form, currency: v || "CLP" })}
  >
- <SelectTrigger className="app-input w-16 shrink-0">
+ <SelectTrigger className="app-input">
  <SelectValue />
  </SelectTrigger>
  <SelectContent>
  {currencyOptions.map((c) => <SelectItem key={c.value} value={c.value}>{c.value}</SelectItem>)}
  </SelectContent>
  </Select>
+ </div>
  <input
  type="text"
  inputMode="decimal"
@@ -805,18 +807,20 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <div className="modal-field modal-field-full">
  <label className="app-field-label">Monto Estimado</label>
  <div className="flex gap-1.5">
+ <div className="w-16 shrink-0">
  <Select
  value={form.currency}
  items={currencyOptions}
  onValueChange={(v) => setForm({ ...form, currency: v || "CLP" })}
  >
- <SelectTrigger className="app-input w-16 shrink-0">
+ <SelectTrigger className="app-input">
  <SelectValue />
  </SelectTrigger>
  <SelectContent>
  {currencyOptions.map((c) => <SelectItem key={c.value} value={c.value}>{c.value}</SelectItem>)}
  </SelectContent>
  </Select>
+ </div>
  <input
  type="text"
  inputMode="decimal"
