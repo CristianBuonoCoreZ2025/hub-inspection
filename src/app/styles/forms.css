@@ -131,6 +131,14 @@
     box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
   }
 
+  /* Selector de moneda en formularios de daños */
+  .app-input.app-currency-select {
+    width: 4rem !important;
+    min-width: 4rem !important;
+    max-width: 4rem !important;
+    padding: 0 6px !important;
+  }
+
   /* Select trigger (combobox) — misma altura y fuente que app-input.
      Esta regla pisaba antes solo .app-input; ahora la regla global
      completa está FUERA de @layer (al final del archivo) para que
