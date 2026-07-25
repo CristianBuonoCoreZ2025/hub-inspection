@@ -99,27 +99,9 @@ function filterClaimsForUser(
   profile: { id: string; role: UserRole; company_id: string | null } | null | undefined
 ): Claim[] {
   if (!profile) return [];
-  if (!profile.company_id || profile.role === "internal") return allClaims;
-
-  // adjuster, inspector, assistant, auditor, dispatcher: filtrar por asignación personal
-  const pid = profile.id;
-  return allClaims.filter((c) => {
-    if (profile.role === "adjuster") {
-      return (
-        c.assigned_adjuster_id === pid ||
-        c.adjuster_id === pid ||
-        c.auditor_id === pid ||
-        c.dispatcher_id === pid
-      );
-    }
-    if (profile.role === "inspector") {
-      return c.inspector_id === pid;
-    }
-    if (profile.role === "assistant") {
-      return c.assistant_id === pid;
-    }
-    return false;
-  });
+  // Los datos ya vienen filtrados por RLS según las compañías visibles para el usuario.
+  // No se aplica filtro adicional por rol para que todos vean el mismo dashboard global.
+  return allClaims;
 }
 
 export default function DashboardPage() {
@@ -129,7 +111,7 @@ export default function DashboardPage() {
   useRealtime("inspection_sessions", [["inspection-sessions"], ["inspection-sessions-all"]]);
   useRealtime("audit_logs", [["recent-activity"]]);
 
-  const isGlobalUser = !profile?.company_id || profile?.role === "internal";
+  const isGlobalUser = true;
   const roleLabel = profile ? userTypeLabels[profile.role] : "";
 
   const { data: claims } = useQuery({
@@ -153,13 +135,13 @@ export default function DashboardPage() {
   const { data: companies } = useQuery({
     queryKey: ["companies"],
     queryFn: () => getCompanies(),
-    enabled: isGlobalUser,
+    enabled: !!profile,
   });
 
   const { data: users } = useQuery({
     queryKey: ["users"],
     queryFn: () => getUsers(),
-    enabled: isGlobalUser,
+    enabled: !!profile,
   });
 
   // Filtrar claims según el rol del usuario
@@ -175,9 +157,8 @@ export default function DashboardPage() {
   );
 
   const mySessions = useMemo(() => {
-    if (isGlobalUser) return sessions ?? [];
     return (sessions ?? []).filter((s: InspectionSession) => myClaimIds.has(s.claim_id));
-  }, [sessions, myClaimIds, isGlobalUser]);
+  }, [sessions, myClaimIds]);
 
   const stats = useMemo(() => {
     const allClaims = myClaims;
