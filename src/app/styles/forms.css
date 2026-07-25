@@ -148,11 +148,12 @@
   }
 
   .app-amount-words {
-    font-size: 8px !important;
+    font-size: 11px !important;
     font-style: italic !important;
     color: var(--muted-foreground) !important;
     text-align: right !important;
-    margin-top: 2px !important;
+    margin-top: 0 !important;
+    line-height: 1.1 !important;
   }
 
   /* Select trigger (combobox) — misma altura y fuente que app-input.
