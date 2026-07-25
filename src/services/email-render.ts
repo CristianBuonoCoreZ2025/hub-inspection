@@ -1,5 +1,3 @@
-"use server";
-
 // ──────────────────────────────────────────────────────────────
 // Renderizado de plantillas de e-mail
 // Soporta placeholders en formato <placeholder>, [PLACEHOLDER] y {{placeholder}}
