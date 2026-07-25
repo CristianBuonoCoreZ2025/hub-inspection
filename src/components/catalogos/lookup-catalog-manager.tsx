@@ -14,6 +14,7 @@ import { Search, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import {
  Dialog,
  DialogContent,
@@ -33,7 +34,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
- const [formData, setFormData] = useState({ name: "", code: "" });
+ const [formData, setFormData] = useState({ name: "", code: "", requires_detail: false });
 
  const { data: items, isLoading } = useQuery({
  queryKey: ["lookup-catalog-manage", category],
@@ -41,7 +42,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  });
 
  const createMutation = useMutation({
- mutationFn: (input: { category: string; name: string; code?: string }) =>
+ mutationFn: (input: { category: string; name: string; code?: string; requires_detail: boolean }) =>
  createLookupCatalogItem({ ...input, code: input.code || undefined }),
  onSuccess: () => {
  toast.success(`${title} creado`);
@@ -49,14 +50,14 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  queryClient.invalidateQueries({ queryKey: ["lookup-catalog", category] });
  queryClient.invalidateQueries({ queryKey: ["lookup-catalogs"] });
  setOpen(false);
- setFormData({ name: "", code: "" });
+ setFormData({ name: "", code: "", requires_detail: false });
  },
  onError: (err: Error) => toast.error(err.message),
  });
 
  const updateMutation = useMutation({
- mutationFn: ({ id, input }: { id: string; input: { name: string; code?: string } }) =>
- updateLookupCatalogItem(id, { name: input.name, code: input.code || undefined }),
+ mutationFn: ({ id, input }: { id: string; input: { name: string; code?: string; requires_detail: boolean } }) =>
+ updateLookupCatalogItem(id, { name: input.name, code: input.code || undefined, requires_detail: input.requires_detail }),
  onSuccess: () => {
  toast.success(`${title} actualizado`);
  queryClient.invalidateQueries({ queryKey: ["lookup-catalog-manage", category] });
@@ -64,7 +65,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  queryClient.invalidateQueries({ queryKey: ["lookup-catalogs"] });
  setOpen(false);
  setEditingId(null);
- setFormData({ name: "", code: "" });
+ setFormData({ name: "", code: "", requires_detail: false });
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -122,7 +123,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  </div>
  {canCreate(section) && (
  <Button
- onClick={() => { setEditingId(null); setFormData({ name: "", code: "" }); setOpen(true); }}
+ onClick={() => { setEditingId(null); setFormData({ name: "", code: "", requires_detail: false }); setOpen(true); }}
  className="pg-btn-platinum"
  >
  Agregar
@@ -138,26 +139,28 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  <th className="w-10"></th>
  <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
  <SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Código</SortableTh>
+ <th className="text-center">Detalle</th>
  <th className="w-[80px]"></th>
  </tr>
  </thead>
  <tbody>
  {isLoading ? (
- <tr><td colSpan={4} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+ <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
  ) : filtered?.length === 0 ? (
- <tr><td colSpan={4} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
+ <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
  ) : (
  paginatedData.map((item) => (
  <tr key={item.id}>
  <td><span className={`app-status-dot ${item.is_active ? "app-status-on" : "app-status-off"}`} /></td>
  <td className="font-medium">{item.name}</td>
  <td className="text-muted-foreground">{item.code || "—"}</td>
+ <td className="text-center text-muted-foreground">{item.requires_detail ? "Sí" : "—"}</td>
  <td>
  <div className="app-row-actions">
  {canEdit(section) && (
  <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
  setEditingId(item.id);
- setFormData({ name: item.name || "", code: item.code || "" });
+ setFormData({ name: item.name || "", code: item.code || "", requires_detail: item.requires_detail || false });
  setOpen(true);
  }}><Pencil className="h-4 w-4" /></Button>
  )}
@@ -195,6 +198,15 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  <div className="modal-field">
  <Label className="app-field-label">Codigo</Label>
  <Input value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="Codigo (opcional)" className="app-input" />
+ </div>
+ <div className="modal-field">
+ <Label className="app-field-label">Comportamiento</Label>
+ <ToggleChip
+ active={formData.requires_detail}
+ onClick={(v) => setFormData({ ...formData, requires_detail: v })}
+ >
+ Requiere detalle al seleccionar
+ </ToggleChip>
  </div>
  </div>
  <div className="modal-footer">

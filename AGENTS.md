@@ -3519,3 +3519,21 @@ Toda tabla de daños debe mostrar moneda + monto + cantidad/tamaño.
 El parser de montos debe aceptar tanto punto como coma como separadores
 sin perder la distinción entre miles y decimales.
 ```
+
+---
+
+## 24. Reglas de Interacción y Verificación
+
+### 1. No decir "está listo" sin verificación
+- Si el usuario pide hacer algo, NO decir que está OK hasta que se haya verificado realmente.
+- Antes de declararlo listo: ejecutar lint/build/typecheck/tests según corresponda y confirmar el resultado.
+- "OK" solo cuando la verificación pase sin errores.
+
+### 2. Documentar antes de actuar
+- Antes de iniciar una tarea, registrar el plan/pasos y el contexto en `AGENTS.md` o en el sistema de tareas.
+- La memoria de sesión no es persistente; la documentación es la fuente de verdad.
+
+### 3. No perder el hilo ante preguntas
+- Si el usuario hace una pregunta mientras hay una tarea activa, responder brevemente y retomar inmediatamente el paso en curso.
+- NO desviarse ni iniciar exploraciones nuevas por una pregunta intermedia.
+

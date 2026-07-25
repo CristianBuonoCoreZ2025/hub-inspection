@@ -386,6 +386,42 @@
     border-bottom: none !important;
   }
 
+  /* Observaciones dentro de la fila de la grilla */
+  .grid-observation {
+    font-size: 9px !important;
+    font-style: italic !important;
+    color: #6d28d9 !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Observaciones dentro del informe/PDF */
+  .report-observation {
+    font-size: 9px !important;
+    font-style: italic !important;
+    color: #111827 !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Agrupar fila de daño con su observación en el informe/PDF sin separación */
+  .report-with-observation td {
+    border-bottom-width: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  .report-observation-row td {
+    border-top-width: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  /* Agrupar fila de daño con su observación sin separación visual */
+  .app-data-table tbody tr.with-observation td {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+  }
+  .app-data-table tbody tr.observation-row td {
+    border-top: none !important;
+    padding-top: 0 !important;
+  }
+
   .app-inline-code {
     @apply rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/80;
   }

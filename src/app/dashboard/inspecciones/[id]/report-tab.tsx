@@ -11,13 +11,6 @@ import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download } from "luci
 import { Button } from "@/components/ui/button";
 import type { SessionDetail } from "@/services/inspections";
 
-const SEVERITY_LABELS: Record<string, string> = {
-  low: "Leve",
-  medium: "Medio",
-  high: "Alto",
-  total: "Pérdida Total",
-};
-
 const DAMAGE_TYPE_LABELS: Record<string, string> = {
   building: "Daño Constructivo",
   content: "Daño de Contenido",
@@ -30,8 +23,17 @@ function fmtDateTime(s?: string | null): string {
 
 function fmtMoney(amount?: number | null, currency?: string | null): string {
   if (amount == null) return "—";
-  const formatted = new Intl.NumberFormat("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
-  return `${formatted} ${currency || "CLP"}`;
+  try {
+    return new Intl.NumberFormat("es-CL", {
+      style: "currency",
+      currency: currency || "CLP",
+      currencyDisplay: "code",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${amount.toLocaleString("es-CL")} ${currency || "CLP"}`;
+  }
 }
 
 export default function ReportTab({
@@ -565,26 +567,33 @@ export default function ReportTab({
                 <thead>
                   <tr>
                     <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Tipo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Descripción</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Severidad</th>
                     <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Espacio</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Categoría</th>
+                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Materialidad / Aclaración</th>
                     <th className="text-right p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Cant.</th>
                     <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Unidad</th>
                     <th className="text-right p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Monto Est.</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {damages.map((d) => (
-                    <tr key={d.id}>
+                  {damages.map((d) => [
+                    <tr key={d.id} className={d.observations ? "report-with-observation" : ""}>
                       <td className="p-1.5 border border-gray-300 app-body">{DAMAGE_TYPE_LABELS[d.damage_type] || d.damage_type}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{d.description}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{SEVERITY_LABELS[d.severity] || d.severity}</td>
                       <td className="p-1.5 border border-gray-300 app-body">{d.dependency || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{d.subcategory || "—"}</td>
+                      <td className="p-1.5 border border-gray-300 app-body">{d.description || d.materiality_type || "—"}</td>
                       <td className="text-right p-1.5 border border-gray-300 app-body">{d.quantity ?? "—"}</td>
                       <td className="p-1.5 border border-gray-300 app-body">{d.unit || "—"}</td>
                       <td className="text-right p-1.5 border border-gray-300 app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
-                    </tr>
-                  ))}
+                    </tr>,
+                    d.observations ? (
+                      <tr key={`${d.id}-obs`} className="report-observation-row">
+                        <td colSpan={7} className="p-1.5 border border-gray-300 report-observation">
+                          {d.observations}
+                        </td>
+                      </tr>
+                    ) : null,
+                  ])}
                 </tbody>
               </table>
             </>

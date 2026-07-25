@@ -201,6 +201,28 @@
   }
 }
 
+.modal-grid-6 {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 10px 12px !important;
+  margin-top: 6px !important;
+}
+@media (min-width: 640px) {
+  .modal-grid-6 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+@media (min-width: 768px) {
+  .modal-grid-6 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+@media (min-width: 1280px) {
+  .modal-grid-6 {
+    grid-template-columns: repeat(6, 1fr) !important;
+  }
+}
+
 .modal-field {
   display: flex !important;
   flex-direction: column !important;
