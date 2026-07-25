@@ -816,6 +816,25 @@ export async function getContentGoodTypes() {
   });
 }
 
+export async function createContentGoodType(input: { name: string; description?: string | null }) {
+  return insertRow<ContentGoodType>("content_good_types", {
+    ...input,
+    is_active: true,
+  }, "id, name, description, is_active, created_at, updated_at");
+}
+
+export async function updateContentGoodType(id: string, input: Partial<ContentGoodType>) {
+  const set: Record<string, unknown> = {};
+  if (input.name !== undefined) set.name = input.name;
+  if (input.description !== undefined) set.description = input.description;
+  if (input.is_active !== undefined) set.is_active = input.is_active;
+  return updateRow<ContentGoodType>("content_good_types", id, set, "id, name, description, is_active, created_at, updated_at");
+}
+
+export async function deleteContentGoodType(id: string) {
+  return updateRow("content_good_types", id, { is_active: false }, "id");
+}
+
 // ═══════════════════════════════════════════════════════════════
 // BUILDING DAMAGE CATEGORIES (Categorías de daño constructivo)
 // ═══════════════════════════════════════════════════════════════
