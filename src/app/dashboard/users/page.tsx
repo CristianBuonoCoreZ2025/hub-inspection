@@ -73,8 +73,8 @@ const secondaryRoleOptions: { value: SecondaryRole; label: string }[] = [
  { value: "dispatcher", label: "Despachador" },
 ];
 
-// Roles que requieren asignar clientes
-const rolesWithClients: UserRole[] = ["adjuster", "inspector", "assistant", "auditor", "dispatcher"];
+// Roles que requieren asignar clientes (incluye internal para usuarios admin multi-company)
+const rolesWithClients: UserRole[] = ["internal", "adjuster", "inspector", "assistant", "auditor", "dispatcher"];
 
 export default function UsersPage() {
  const queryClient = useQueryClient();
