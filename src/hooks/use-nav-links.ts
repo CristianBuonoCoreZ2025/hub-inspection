@@ -149,12 +149,29 @@ export function useNavLinks() {
       if (missingLinks.length === 0) continue;
 
       if (usedKeys.has(`group:${g.section}`)) {
-        // El grupo ya está procesado: inyectar links faltantes al final
+        // El grupo ya está procesado: inyectar links faltantes al final.
+        // Puede ser un grupo top-level (en visibleGroups) o un subgrupo
+        // anidado dentro de los children de otro grupo.
         const existing = visibleGroups.find(vg => vg.section === g.section);
         if (existing) {
           for (const link of missingLinks) {
             existing.children.push({ kind: "link", link });
             usedKeys.add(`link:${link.href}`);
+          }
+        } else {
+          // Buscar el subgrupo dentro de los children de algún grupo top-level
+          for (const vg of visibleGroups) {
+            const subIdx = vg.children.findIndex(c => c.kind === "subgroup" && c.subgroup.section === g.section);
+            if (subIdx >= 0) {
+              const sub = vg.children[subIdx];
+              if (sub.kind === "subgroup") {
+                for (const link of missingLinks) {
+                  sub.subgroup.visibleLinks.push(link);
+                  usedKeys.add(`link:${link.href}`);
+                }
+              }
+              break;
+            }
           }
         }
       } else {
