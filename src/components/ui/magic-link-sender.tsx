@@ -10,46 +10,85 @@ import { refreshMagicLink } from "@/services/inspections";
 interface MagicLinkSenderProps {
   token: string;
   sessionId: string;
+  scheduledAt?: string | null;
   expiresAt?: string | null;
+  magicLinkExtended?: boolean;
   contactName?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
 }
 
-export function MagicLinkSender({ token, sessionId, expiresAt, contactName, contactEmail, contactPhone }: MagicLinkSenderProps) {
+function fmt(d: string | null | undefined) {
+  if (!d) return "—";
+  return new Date(d).toLocaleString("es-CL", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+}
+
+export function MagicLinkSender({
+  token,
+  sessionId,
+  scheduledAt,
+  expiresAt,
+  magicLinkExtended = false,
+  contactName,
+  contactEmail,
+  contactPhone,
+}: MagicLinkSenderProps) {
   const queryClient = useQueryClient();
   const [sending, setSending] = React.useState<"whatsapp" | "email" | null>(null);
-  const [currentToken, setCurrentToken] = React.useState(token);
-  const [currentExpiresAt, setCurrentExpiresAt] = React.useState(expiresAt);
-  const link = typeof window !== "undefined" ? `${window.location.origin}/inspection/${currentToken}` : "";
+  const link = typeof window !== "undefined" ? `${window.location.origin}/inspection/${token}` : "";
 
-  // Estado de expiración — Date.now() es impura, usar useState + useEffect
+  // Hora local para el cálculo de estados — se actualiza cada minuto
   const [nowMs, setNowMs] = React.useState(() => Date.now());
   React.useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 60_000); // actualizar cada 1 min
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
 
+  const scheduled = scheduledAt ? new Date(scheduledAt).getTime() : null;
+  const windowStart = scheduled ? scheduled - 60 * 60 * 1000 : null;
+  const windowEnd = expiresAt ? new Date(expiresAt).getTime() : null;
+
   const expiryInfo = React.useMemo(() => {
-    if (!currentExpiresAt) return { status: "unknown" as const, label: "Sin fecha de expiración" };
-    const expiry = new Date(currentExpiresAt).getTime();
-    const diffMs = expiry - nowMs;
-    if (diffMs <= 0) return { status: "expired" as const, label: "Expirado" };
-    const diffH = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffM = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    if (diffH < 1) return { status: "expiring" as const, label: `Expira en ${diffM} min` };
-    if (diffH < 4) return { status: "expiring" as const, label: `Expira en ${diffH}h ${diffM}m` };
-    return { status: "valid" as const, label: `Expira en ${diffH}h` };
-  }, [currentExpiresAt, nowMs]);
+    if (!scheduled) return { status: "unknown" as const, label: "Sin inspección programada" };
+    if (windowStart && nowMs < windowStart) {
+      return { status: "not-active" as const, label: `Aún no activo (se activa ${fmt(new Date(windowStart).toISOString())})` };
+    }
+    if (windowEnd && nowMs > windowEnd) {
+      return { status: "expired" as const, label: "Expirado" };
+    }
+    if (windowEnd) {
+      const diffMs = windowEnd - nowMs;
+      const diffM = Math.max(0, Math.floor(diffMs / (1000 * 60)));
+      const diffH = Math.floor(diffM / 60);
+      const restM = diffM % 60;
+      const until = `expira en ${diffH > 0 ? `${diffH}h ` : ""}${restM}m`;
+      return {
+        status: magicLinkExtended ? "extended" as const : "valid" as const,
+        label: magicLinkExtended ? `Extendido — ${until}` : `Activo — ${until}`,
+      };
+    }
+    return { status: "unknown" as const, label: "Sin fecha de expiración" };
+  }, [scheduled, windowStart, windowEnd, nowMs, magicLinkExtended]);
 
   const refreshMutation = useMutation({
     mutationFn: () => refreshMagicLink(sessionId),
     onSuccess: (data) => {
       if (data) {
-        setCurrentToken(data.magic_link_token!);
-        setCurrentExpiresAt(data.magic_link_expires_at);
         queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
-        toast.success("Link renovado — nuevo token generado (válido 24h)");
+        const messages: Record<string, string> = {
+          new: "Nuevo magic link generado",
+          extended: "Magic link extendido 1 hora",
+          "already-extended": "Ya fue extendido una vez",
+          active: "Magic link activo",
+          expired: "El magic link ya expiró",
+        };
+        const msg = messages[data.message] || data.message;
+        if (data.message === "expired" || data.message === "already-extended") toast.info(msg);
+        else if (data.message === "new" || data.message === "extended") toast.success(msg);
+        else toast.info(msg);
       }
     },
     onError: (err: Error) => toast.error(err.message || "Error al renovar el link"),
@@ -82,7 +121,6 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
     }
   };
 
-  // 1. wa.me — abre WhatsApp con mensaje pre-llenado (sin costo, sin backend)
   const sendWhatsAppMe = () => {
     if (!contactPhone) {
       toast.error("No hay teléfono de contacto");
@@ -94,7 +132,6 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
     toast.success("Abriendo WhatsApp...");
   };
 
-  // 2. WhatsApp Cloud API — envía directo desde el backend (1000 gratis/mes)
   const sendWhatsAppCloud = async () => {
     if (!contactPhone) {
       toast.error("No hay teléfono de contacto");
@@ -105,12 +142,7 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
       const res = await fetch("/api/send-magic-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          method: "whatsapp",
-          phone: contactPhone,
-          name: contactName,
-          link,
-        }),
+        body: JSON.stringify({ method: "whatsapp", phone: contactPhone, name: contactName, link }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error enviando WhatsApp");
@@ -123,7 +155,6 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
     }
   };
 
-  // 3. Email via Resend — envía desde el backend (3000 gratis/mes)
   const sendEmail = async () => {
     if (!contactEmail) {
       toast.error("No hay email de contacto");
@@ -134,12 +165,7 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
       const res = await fetch("/api/send-magic-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          method: "email",
-          email: contactEmail,
-          name: contactName,
-          link,
-        }),
+        body: JSON.stringify({ method: "email", email: contactEmail, name: contactName, link }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error enviando email");
@@ -154,9 +180,10 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
 
   const expiryConfig = {
     valid: { icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" },
-    expiring: { icon: Clock, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
+    extended: { icon: CheckCircle2, color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-500/10" },
     expired: { icon: AlertTriangle, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10" },
     unknown: { icon: Clock, color: "text-muted-foreground", bg: "bg-muted/40" },
+    "not-active": { icon: Clock, color: "text-slate-500 dark:text-slate-400", bg: "bg-slate-500/10" },
   };
   const ec = expiryConfig[expiryInfo.status];
   const ExpiryIcon = ec.icon;
@@ -176,7 +203,7 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
           className="btn-icon-sm shrink-0"
           onClick={() => refreshMutation.mutate()}
           disabled={refreshMutation.isPending}
-          title="Generar nuevo token y extender 24h"
+          title="Renovar magic link"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
         </Button>
@@ -192,50 +219,33 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
         </Button>
       </div>
 
-      {/* Indicador de expiración */}
+      {/* Indicador de estado */}
       <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium ${ec.bg} ${ec.color}`}>
         <ExpiryIcon className="h-3 w-3" />
         {expiryInfo.label}
-        {currentExpiresAt && (
-          <span className="text-muted-foreground/70 ml-1">
-            ({new Date(currentExpiresAt).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })})
-          </span>
-        )}
       </div>
+
+      {/* Ventana del link */}
+      {scheduledAt && (
+        <div className="text-[11px] text-muted-foreground space-y-0.5">
+          <p><span className="font-medium text-foreground">Programado:</span> {fmt(scheduledAt)}</p>
+          <p>
+            <span className="font-medium text-foreground">Ventana:</span>{" "}
+            {fmt(windowStart ? new Date(windowStart).toISOString() : null)} - {fmt(expiresAt)}
+          </p>
+          {magicLinkExtended && <p className="text-sky-600 dark:text-sky-400">Extensión usada</p>}
+        </div>
+      )}
 
       {/* Botones de envío */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 w-7 p-0"
-          onClick={sendWhatsAppMe}
-          disabled={!contactPhone}
-          title={!contactPhone ? "No hay teléfono" : "Abrir WhatsApp con mensaje pre-llenado"}
-        >
+        <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={sendWhatsAppMe} disabled={!contactPhone} title={!contactPhone ? "No hay teléfono" : "Abrir WhatsApp con mensaje pre-llenado"}>
           <MessageCircle className="h-3.5 w-3.5" />
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 w-7 p-0"
-          onClick={sendWhatsAppCloud}
-          disabled={!contactPhone || sending === "whatsapp"}
-          title={!contactPhone ? "No hay teléfono" : "Enviar por WhatsApp Cloud API"}
-        >
+        <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={sendWhatsAppCloud} disabled={!contactPhone || sending === "whatsapp"} title={!contactPhone ? "No hay teléfono" : "Enviar por WhatsApp Cloud API"}>
           {sending === "whatsapp" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 w-7 p-0"
-          onClick={sendEmail}
-          disabled={!contactEmail || sending === "email"}
-          title={!contactEmail ? "No hay email" : "Enviar por email"}
-        >
+        <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={sendEmail} disabled={!contactEmail || sending === "email"} title={!contactEmail ? "No hay email" : "Enviar por email"}>
           {sending === "email" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
         </Button>
       </div>
@@ -243,16 +253,12 @@ export function MagicLinkSender({ token, sessionId, expiresAt, contactName, cont
       {/* Info de contacto disponible */}
       <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
         {contactPhone ? (
-          <span className="flex items-center gap-1">
-            <Phone className="h-3 w-3" /> {contactPhone}
-          </span>
+          <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {contactPhone}</span>
         ) : (
           <span className="text-amber-500">Sin teléfono</span>
         )}
         {contactEmail ? (
-          <span className="flex items-center gap-1">
-            <Mail className="h-3 w-3" /> {contactEmail}
-          </span>
+          <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {contactEmail}</span>
         ) : (
           <span className="text-amber-500">Sin email</span>
         )}

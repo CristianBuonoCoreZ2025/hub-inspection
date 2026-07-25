@@ -385,6 +385,7 @@ export interface InspectionSession {
   ended_at: string | null;
   magic_link_token: string | null;
   magic_link_expires_at: string | null;
+  magic_link_extended: boolean;
   status: "scheduled" | "active" | "completed" | "cancelled";
   inspection_type: "onsite" | "remote";
   inspection_date: string | null;
@@ -861,6 +862,7 @@ export interface ActionFeature {
   has_issue: boolean;
   has_review: boolean;
   has_approve: boolean;
+  email_template: boolean;
   is_active: boolean;
   sort_order: number;
   screen_id: string | null;
@@ -914,6 +916,11 @@ export interface ActionTemplate {
   default_approver_role: string | null;
   code: string | null;
   is_dispatch_applicable: boolean | null;
+  auto_complete: boolean;
+  auto_email: boolean;
+  auto_email_template_id: string | null;
+  auto_email_recipients: string[];
+  auto_field_mapping: Record<string, string>;
   company_id: string | null;
   event_id: string | null;
   sort_order: number;
@@ -971,6 +978,7 @@ export type ClaimActionStatus =
 export interface ClaimAction {
   id: string;
   claim_id: string;
+  company_id: string;
   action_type_id: string | null;
   action_features_id: string;
   action_template_id: string | null;

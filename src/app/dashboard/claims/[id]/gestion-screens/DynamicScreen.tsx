@@ -26,6 +26,7 @@ import {
 import { getPolicyCoveragesByPolicyId } from "@/services/policies";
 import { getClaimById, getClaimParticipants, updateClaimFields } from "@/services/claims";
 import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
+import { SendEmailPanel } from "@/components/claims/send-email-panel";
 import { updateClaimAction, issueClaimAction } from "@/services/claim-actions";
 import { getUsersByRoleForCompany } from "@/services/users";
 import { getInspectionSessions, getInspectorSchedule } from "@/services/inspections";
@@ -300,13 +301,14 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  const hasClaimEntities = allFields.some((f) => CLAIM_ENTITIES.some((e) => e.code === f.type));
  const hasCoordInspector = allFields.some((f) => f.id === "coord_inspector");
  const hasCoordUbicacion = allFields.some((f) => f.type === "coord_ubicacion");
+ const hasEmailFeature = action.action_feature?.email_template === true;
  const [coordUbicacionOpen, setCoordUbicacionOpen] = useState(false);
  const { profile } = useAuth();
  const queryClient = useQueryClient();
  const { data: claim } = useQuery({
  queryKey: ["claim", action.claim_id],
  queryFn: () => getClaimById(action.claim_id),
- enabled: (hasClaimEntities || hasCoordInspector || hasCoordUbicacion) && !!action.claim_id,
+ enabled: (hasClaimEntities || hasCoordInspector || hasCoordUbicacion || hasEmailFeature) && !!action.claim_id,
  });
 
  const updateLocationMutation = useMutation({
@@ -435,6 +437,22 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  <span className="font-mono">{action.updated_on ? new Date(action.updated_on).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</span>
  </div>
  </div>
+
+ {hasEmailFeature && (
+ <div className="flex justify-end">
+ <SendEmailPanel
+ action={{
+ id: action.id,
+ company_id: action.company_id,
+ claim_id: action.claim_id,
+ action_template_id: action.action_template_id || "",
+ action_data: action.action_data,
+ }}
+ businessLineId={claim?.business_line_id}
+ claim={(claim ?? null) as unknown as Record<string, unknown> | null}
+ />
+ </div>
+ )}
 
  {/* ─── Entidades complejas (coberturas primero, review_levels al final) ─── */}
  {sortedComplexEntities.length > 0 && (

@@ -27,7 +27,7 @@ export interface ActionFeature {
   is_active: boolean;
   sort_order: number;
   screen_id: string | null;
-  screen?: { id: string; code: string; name: string; is_dynamic?: boolean } | null;
+  screen?: { id: string; code: string; name: string; is_dynamic?: boolean; form_schema?: Record<string, unknown> | null } | null;
   characteristics: Characteristic[];
 }
 
@@ -74,6 +74,11 @@ export interface ActionTemplate {
   default_approver_role: string | null;
   code: string | null;
   is_dispatch_applicable: boolean | null;
+  auto_complete: boolean;
+  auto_email: boolean;
+  auto_email_template_id: string | null;
+  auto_email_recipients: string[];
+  auto_field_mapping: Record<string, string>;
   company_id: string | null;
   insurance_company_id: string | null;
   event_id: string | null;
@@ -139,7 +144,7 @@ export async function deleteActionType(id: string) {
 
 export async function getActionFeatures(): Promise<ActionFeature[]> {
   return fetchAll<ActionFeature>("action_features", {
-    select: "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, screen:gestion_screens!action_features_screen_id_fkey(id, code, name, is_dynamic), characteristics:characteristic!characteristic_action_feature_id_fkey(id, action_feature_id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order)",
+    select: "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, screen:gestion_screens!action_features_screen_id_fkey(id, code, name, is_dynamic, form_schema), characteristics:characteristic!characteristic_action_feature_id_fkey(id, action_feature_id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order)",
     eq: { is_active: true },
     order: { column: "name", ascending: true },
   }).then((rows) => {
@@ -263,7 +268,7 @@ export async function deleteCharacteristic(id: string) {
 // ──────────────────────────────────────────────────────────────
 
 const ACTION_TEMPLATE_FIELDS =
-  "id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, review_levels, issuer_roles, reviewer_roles, approver_roles, default_issuer_role, default_reviewer_role, default_approver_role, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, code, is_dispatch_applicable, company_id, insurance_company_id, event_id, country_id, sort_order, action_feature:action_features!action_template_action_features_id_fkey(id, name, code), line_business:business_lines!action_template_line_business_id_fkey(id, name, code_prefix), company:companies!action_template_company_id_fkey(id, name), event:events!action_template_event_id_fkey(id, name), claim_statuses:action_template_claim_status!action_template_claim_status_action_template_id_fkey(claim_status_id, is_active)";
+  "id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, review_levels, issuer_roles, reviewer_roles, approver_roles, default_issuer_role, default_reviewer_role, default_approver_role, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, code, is_dispatch_applicable, auto_complete, auto_email, auto_email_template_id, auto_email_recipients, auto_field_mapping, company_id, insurance_company_id, event_id, country_id, sort_order, action_feature:action_features!action_template_action_features_id_fkey(id, name, code), line_business:business_lines!action_template_line_business_id_fkey(id, name, code_prefix), company:companies!action_template_company_id_fkey(id, name), event:events!action_template_event_id_fkey(id, name), claim_statuses:action_template_claim_status!action_template_claim_status_action_template_id_fkey(claim_status_id, is_active)";
 
 export async function getActionTemplates(includeInactive = true): Promise<ActionTemplate[]> {
   const options: Parameters<typeof fetchAll>[1] = {
@@ -317,6 +322,11 @@ export async function createActionTemplate(input: {
   issuer_roles?: string[];
   reviewer_roles?: string[];
   approver_roles?: string[];
+  auto_complete?: boolean;
+  auto_email?: boolean;
+  auto_email_template_id?: string | null;
+  auto_email_recipients?: string[];
+  auto_field_mapping?: Record<string, string>;
   company_id?: string;
   insurance_company_id?: string;
   event_id?: string;
@@ -343,11 +353,16 @@ export async function createActionTemplate(input: {
     issuer_roles: input.issuer_roles || [],
     reviewer_roles: input.reviewer_roles || [],
     approver_roles: input.approver_roles || [],
+    auto_complete: input.auto_complete ?? false,
+    auto_email: input.auto_email ?? false,
+    auto_email_template_id: input.auto_email_template_id || null,
+    auto_email_recipients: input.auto_email_recipients ?? [],
+    auto_field_mapping: input.auto_field_mapping ?? {},
     company_id: input.company_id || null,
     insurance_company_id: input.insurance_company_id || null,
     event_id: input.event_id || null,
     country_id: input.country_id || null,
-  }, "id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, review_levels, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, code, is_dispatch_applicable, company_id, event_id, sort_order");
+  }, "id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, review_levels, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, code, is_dispatch_applicable, auto_complete, auto_email, auto_email_template_id, auto_email_recipients, auto_field_mapping, company_id, event_id, sort_order");
 }
 
 export async function updateActionTemplate(id: string, input: Partial<{
@@ -372,6 +387,11 @@ export async function updateActionTemplate(id: string, input: Partial<{
   reviewer_roles: string[];
   approver_roles: string[];
   is_active: boolean;
+  auto_complete: boolean;
+  auto_email: boolean;
+  auto_email_template_id: string | null;
+  auto_email_recipients: string[];
+  auto_field_mapping: Record<string, string>;
   company_id: string;
   insurance_company_id: string;
   event_id: string;
