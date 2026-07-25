@@ -147,6 +147,14 @@
     text-align: right !important;
   }
 
+  .app-amount-words {
+    font-size: 8px !important;
+    font-style: italic !important;
+    color: var(--muted-foreground) !important;
+    text-align: right !important;
+    margin-top: 2px !important;
+  }
+
   /* Select trigger (combobox) — misma altura y fuente que app-input.
      Esta regla pisaba antes solo .app-input; ahora la regla global
      completa está FUERA de @layer (al final del archivo) para que
