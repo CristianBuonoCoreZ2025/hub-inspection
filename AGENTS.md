@@ -183,10 +183,10 @@ COB (Ingreso de Coberturas)
   ↓ requiere COB cerrada
 RES (Reserva)
   ↓ requiere RES cerrada
-PCA (Planilla Cuadro de Ajuste)
+AJU (Planilla Cuadro de Ajuste)
 
-NSA (Notificación y Solicitud de Antecedentes)
-  ↓ requiere NSA cerrada
+SOL (Notificación y Solicitud de Antecedentes)
+  ↓ requiere SOL cerrada
 RTA (Recepción Total de Antecedentes)
 ```
 
@@ -384,7 +384,7 @@ El combo de pólizas del siniestro siempre muestra 2 opciones especiales
 3. **Póliza Normal** — póliza con número, `status=active`
    - Solo permite cargar coberturas de `policy_coverages` de esa póliza
 
-### Cadena COB → RES → PCA
+### Cadena COB → RES → AJU
 ```
 COB (Ingreso de Coberturas)
   → selecciona coberturas (de póliza o del catálogo si es emisión)
@@ -396,7 +396,7 @@ RES (Reserva)
   → edita montos reservados/deducibles
   → crea claim_reserves + reserve_coverages
 
-PCA (Ajuste)
+AJU (Ajuste)
   → carga reserve_coverages del RES
   → ajusta montos
   → actualiza reserve_coverages
@@ -692,7 +692,7 @@ Cada gestión tiene **3 niveles** que se resuelven en secuencia:
 ### Ejemplo Real — 3 Usuarios, 3 Niveles
 
 ```
-Gestión: HPCA-001 (Planilla Cuadro de Ajuste)
+Gestión: HAJU-001 (Planilla Cuadro de Ajuste)
   issuer_roles:    [adjuster, assistant]    → issuer_id:    usuario_A (adjuster)
   reviewer_roles:  [auditor]                → reviewer_id:  usuario_C (auditor)
   approver_roles:  [adjuster]               → approver_id:  usuario_A (adjuster)
@@ -781,9 +781,9 @@ No ver    = no estar en el combo →  modo lectura.
 
 ### Concepto
 La gestión **RTA** (Recepción Total de Antecedentes) es la continuación
-natural de la gestión **NSA** (Notificación y Solicitud de Antecedentes).
+natural de la gestión **SOL** (Notificación y Solicitud de Antecedentes).
 NO es una gestión independiente que sube documentos nuevos. Su función es
-**controlar la recepción de los documentos que se solicitaron en la NSA**.
+**controlar la recepción de los documentos que se solicitaron en la SOL**.
 
 > **No hay responsable real en la RTA.** Cualquier usuario puede marcar
 > un documento como recibido. La RTA solo controla y muestra cuándo se
@@ -791,7 +791,7 @@ NO es una gestión independiente que sube documentos nuevos. Su función es
 
 ### Flujo
 ```
-NSA (Notificación y Solicitud de Antecedentes)
+SOL (Notificación y Solicitud de Antecedentes)
   → crea claim_document_request con los documentos a solicitar
   → cada documento tiene status: requested | received | not_needed
   → el asegurado/corredor sube los documentos al sistema
@@ -799,8 +799,8 @@ NSA (Notificación y Solicitud de Antecedentes)
 
 RTA (Recepción Total de Antecedentes)
   → NO sube documentos nuevos
-  → Muestra EXACTAMENTE los mismos documentos de la solicitud NSA
-  → Si la NSA pidió 5 documentos, la RTA muestra esos 5 documentos
+  → Muestra EXACTAMENTE los mismos documentos de la solicitud SOL
+  → Si la SOL pidió 5 documentos, la RTA muestra esos 5 documentos
   → Controla cuáles se han recibido y cuáles faltan
   → Muestra la fecha/hora en que cada documento fue recibido
   → Cuando el ÚLTIMO documento solicitado se recibe → auto-emite la RTA
@@ -886,9 +886,9 @@ El emisor de la RTA puede ser diferente al que subió los documentos anteriores:
 
 ### Regla
 ```
-RTA = control de recepción de documentos solicitados en NSA.
+RTA = control de recepción de documentos solicitados en SOL.
 No sube documentos nuevos.
-Muestra exactamente los documentos de la solicitud NSA.
+Muestra exactamente los documentos de la solicitud SOL.
 No hay responsable real — cualquiera puede marcar recibido.
 Auto-emite cuando todos los documentos están received o not_needed.
 issued_by = usuario que completó el último documento.
@@ -1995,15 +1995,15 @@ empresas/{company_id}/logos/logo.png
 ### Codificación
 - **Liquidación**: `L-NNNNNNNNN` (9 dígitos, secuencia global)
 - **Línea de negocios**: 1 letra en `business_lines.code_prefix` (H, C, R, V, T)
-- **Característica**: 3 letras en `action_features.code` (INS, ILI, PCA, RES, etc.)
-- **Compuesto**: Línea + Característica = HILI, CILI, HINS, PCA
+- **Característica**: 3 letras en `action_features.code` (INS, ILI, AJU, RES, etc.)
+- **Compuesto**: Línea + Característica = HILI, CILI, HINS, AJU
 - **Template**: 5 dígitos por código compuesto (00001)
 - **Instancia de gestión**: 4 dígitos por siniestro + código compuesto (0001)
 
 ### 4 Tipos de Gestiones
 | Tipo | Template | Workflow | Pantalla | Ejemplo |
 |------|----------|----------|----------|---------|
-| Con template + workflow | Sí | 0-3 niveles | No | ILI, PCA |
+| Con template + workflow | Sí | 0-3 niveles | No | ILI, AJU |
 | Con pantalla, sin template | No | 0-3 niveles | Sí | INS, CIN |
 | Híbrida | Sí | 0-3 niveles | Sí | RES |
 | Gestión muerta | No | 0 niveles | No | IMP, RTA |
@@ -2832,7 +2832,7 @@ action_data = {
    - `deductible_amount` (deducible)
    - La columna "Neta" se calcula: `reservado - deducible`
 4. **Autoguardado**: Los cambios se guardan automáticamente (debounce 500ms)
-5. **Emisión**: Al emitir, se crea la gestión PCA con el snapshot de la reserva
+5. **Emisión**: Al emitir, se crea la gestión AJU con el snapshot de la reserva
 
 ### Datos creados
 - `claim_reserves` (una fila por reserva)
@@ -2856,18 +2856,18 @@ action_data = {
 Al emitir el RES, el trigger copia:
 - La reserva completa (`claim_reserves`)
 - Todas las `reserve_coverages` con sus montos
-- Todo se guarda en `action_data.parent_snapshot` de la acción PCA
+- Todo se guarda en `action_data.parent_snapshot` de la acción AJU
 
 ---
 
-## Flujo 4: Ajuste de Reserva (PCA)
+## Flujo 4: Ajuste de Reserva (AJU)
 
 ### Contexto
 El ajuste toma los datos de la reserva (RES) y permite ajustar los montos.
 Es una **copia inmutable** de los datos del RES.
 
 ### Arquitectura: Snapshot del Padre
-La acción PCA recibe en `action_data.parent_snapshot` una copia completa
+La acción AJU recibe en `action_data.parent_snapshot` una copia completa
 de la reserva y sus `reserve_coverages` al momento de la emisión del RES.
 
 ```
@@ -2885,7 +2885,7 @@ action_data = {
 
 ### Paso a paso
 
-1. **Apertura**: El usuario abre la gestión PCA
+1. **Apertura**: El usuario abre la gestión AJU
 2. **Carga de datos**: Lee la reserva del `parent_snapshot` (no de la DB)
    - Fallback a DB query solo si no hay snapshot (acciones antiguas)
 3. **Edición**: Por cada cobertura, el usuario edita:
@@ -2918,12 +2918,12 @@ action_data = {
 
 ---
 
-## Flujo 5: Cadena Completa COB → RES → PCA
+## Flujo 5: Cadena Completa COB → RES → AJU
 
 ### Diagrama
 ```
 ┌─────────┐     snapshot      ┌─────────┐     snapshot      ┌─────────┐
-│   COB   │ ───────────────→ │   RES   │ ───────────────→ │   PCA   │
+│   COB   │ ───────────────→ │   RES   │ ───────────────→ │   AJU   │
 │ (Ingreso│   coberturas     │(Reserva)│   reserva +      │(Ajuste) │
 │  Cobert)│   como JSON      │         │   coverages      │         │
 └─────────┘                  └─────────┘   como JSON      └─────────┘
@@ -2976,7 +2976,7 @@ claim_coverages              claim_reserves              claim_reserves
 }]
 ```
 
-**RES → PCA** (`parent_snapshot` en PCA):
+**RES → AJU** (`parent_snapshot` en AJU):
 ```json
 [{
   "id": "uuid-claim-reserve",
@@ -3020,7 +3020,7 @@ se ejecuta automáticamente con debounce de 500ms.
 - **COB**: coberturas (agregar/eliminar/editar montos)
 - **RES**: `reserve_currency`, `reserve_payment_date`, `reserve_notes`,
   montos por cobertura (`reserved_amount`, `deductible_amount`)
-- **PCA**: `adjustment_notes`, montos por cobertura (`adjusted_amount`,
+- **AJU**: `adjustment_notes`, montos por cobertura (`adjusted_amount`,
   `adjusted_deductible`, `adjustment_notes` por fila)
 - **Documentos**: solicitudes y recibos
 
