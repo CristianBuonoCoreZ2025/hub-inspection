@@ -133,10 +133,18 @@
 
   /* Selector de moneda en formularios de daños */
   .app-input.app-currency-select {
-    width: 4rem !important;
-    min-width: 4rem !important;
-    max-width: 4rem !important;
+    width: 100px !important;
+    min-width: 100px !important;
+    max-width: 100px !important;
     padding: 0 6px !important;
+  }
+
+  /* Input de monto estimado en formularios de daños */
+  .app-input.app-amount-input {
+    width: 150px !important;
+    min-width: 150px !important;
+    max-width: 150px !important;
+    text-align: right !important;
   }
 
   /* Select trigger (combobox) — misma altura y fuente que app-input.
