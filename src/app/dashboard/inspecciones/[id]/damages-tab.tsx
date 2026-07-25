@@ -147,17 +147,49 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
  const parseAmount = (value: string): number => {
    if (!value) return 0;
-   if (value.includes(",")) {
-     const n = Number(value.replace(/\./g, "").replace(/,/g, "."));
+   const hasDot = value.includes(".");
+   const hasComma = value.includes(",");
+
+   // Ambos separadores: el último es el decimal
+   if (hasDot && hasComma) {
+     const lastDot = value.lastIndexOf(".");
+     const lastComma = value.lastIndexOf(",");
+     const n =
+       lastComma > lastDot
+         ? Number(value.replace(/\./g, "").replace(/,/g, "."))
+         : Number(value.replace(/,/g, ""));
      return isNaN(n) ? 0 : n;
    }
-   const parts = value.split(".");
-   if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
-     const n = Number(value.replace(/\./g, ""));
-     return isNaN(n) ? 0 : n;
+
+   if (hasComma) {
+     const parts = value.split(",");
+     if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+       return Number(value.replace(/,/g, ""));
+     }
+     return Number(value.replace(/,/g, "."));
    }
+
+   if (hasDot) {
+     const parts = value.split(".");
+     if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+       return Number(value.replace(/\./g, ""));
+     }
+     return Number(value);
+   }
+
    const n = Number(value);
    return isNaN(n) ? 0 : n;
+ };
+
+ const formatQuantity = (d: InspectionDamage) => {
+   if (d.quantity == null || d.quantity === 0) return "—";
+   const dimension =
+     d.unit === "M2" && (d.length || d.width)
+       ? ` (${d.length || 0}x${d.width || 0})`
+       : d.unit === "M3" && (d.length || d.width || d.height)
+       ? ` (${d.length || 0}x${d.width || 0}x${d.height || 0})`
+       : "";
+   return `${d.quantity.toLocaleString("es-CL")} ${d.unit || ""}${dimension}`;
  };
 
  const handleDimensionChange = (field: "length" | "width" | "height", value: string) => {
@@ -921,6 +953,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <th>Categoría</th>
  <th>Descripción</th>
  <th>Severidad</th>
+ <th className="text-right">Cantidad</th>
  <th className="text-right">Monto</th>
  <th className="w-[80px]">Acciones</th>
  </tr>
@@ -941,6 +974,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  {severityLabels[d.severity] || d.severity}
  </span>
  </td>
+ <td className="text-right app-body">{formatQuantity(d)}</td>
  <td className="text-right font-medium app-body">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
  <td>
  <div className="app-row-actions">
@@ -990,6 +1024,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <th>Producto</th>
  <th>Marca/Modelo</th>
  <th>Severidad</th>
+ <th className="text-right">Cantidad</th>
  <th className="text-right">Monto</th>
  <th className="w-[80px]">Acciones</th>
  </tr>
@@ -1010,6 +1045,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  {severityLabels[d.severity] || d.severity}
  </span>
  </td>
+ <td className="text-right app-body">{formatQuantity(d)}</td>
  <td className="text-right font-medium app-body">{d.currency || "CLP"} {(d.estimated_amount || 0).toLocaleString("es-CL")}</td>
  <td>
  <div className="app-row-actions">
