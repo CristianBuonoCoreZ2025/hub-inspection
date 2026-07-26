@@ -2,6 +2,7 @@ import "server-only";
 
 import { fetchById, fetchAll } from "@/lib/supabase/db";
 import type { DocumentData, ParticipantData, UserData, CatalogRef, ActionSummary } from "@/lib/document-fields";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Obtiene los datos completos de un siniestro con todos los joins resueltos
@@ -95,6 +96,16 @@ interface RawAction {
   action_template: { code: string } | null;
 }
 
+interface RawInspectionSession {
+  id: string;
+  magic_link_token: string | null;
+  magic_link_expires_at: string | null;
+  scheduled_at: string | null;
+  created_at: string;
+  inspection_type: "onsite" | "remote" | null;
+  status: string;
+}
+
 /** Mapea un participante crudo a ParticipantData */
 function toParticipant(p: RawParticipant): ParticipantData {
   return {
@@ -124,19 +135,49 @@ function toUser(u: { id: string; full_name: string; email: string | null } | nul
  * Construye el objeto DocumentData para un siniestro dado.
  * Resuelve todos los joins a strings y obtiene TODOS los participantes.
  */
-export async function buildDocumentDataForClaim(claimId: string): Promise<DocumentData> {
-  const [rawClaim, participants, rawActions] = await Promise.all([
-    fetchById<Record<string, unknown>>("claims", claimId, CLAIM_SELECT),
-    fetchAll<RawParticipant>("claim_participants", {
-      select: "type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, notes",
-      eq: { claim_id: claimId, is_active: true },
-    }),
-    fetchAll<RawAction>("claim_actions", {
-      select: "id, code, issued_on, action_data, action_template:action_template!claim_actions_action_template_id_fkey(code)",
-      eq: { claim_id: claimId, is_active: true },
-      order: { column: "issued_on", ascending: false },
-    }),
-  ]);
+export async function buildDocumentDataForClaim(
+  claimId: string,
+  supabase?: SupabaseClient
+): Promise<DocumentData> {
+  // Si se pasa un cliente (ej: createServerClient en API routes), usarlo directo
+  // para que las queries respeten RLS con el contexto de auth del usuario.
+  // Si no, usar los helpers de db.ts (browser client).
+  const [rawClaim, participants, rawActions, rawSessions] = supabase
+    ? await Promise.all([
+        supabase.from("claims").select(CLAIM_SELECT).eq("id", claimId).maybeSingle().then((r) => r.data as Record<string, unknown> | null),
+        supabase.from("claims_participants")
+          .select("type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, notes")
+          .eq("claim_id", claimId).eq("is_active", true)
+          .then((r) => (r.data ?? []) as RawParticipant[]),
+        supabase.from("claim_actions")
+          .select("id, code, issued_on, action_data, action_template:action_template!claim_actions_action_template_id_fkey(code)")
+          .eq("claim_id", claimId).eq("is_active", true)
+          .order("issued_on", { ascending: false })
+          .then((r) => (r.data ?? []) as unknown as RawAction[]),
+        supabase.from("inspection_sessions")
+          .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
+          .eq("claim_id", claimId)
+          .order("created_at", { ascending: false }).limit(1)
+          .then((r) => (r.data ?? []) as RawInspectionSession[]),
+      ])
+    : await Promise.all([
+        fetchById<Record<string, unknown>>("claims", claimId, CLAIM_SELECT),
+        fetchAll<RawParticipant>("claims_participants", {
+          select: "type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, notes",
+          eq: { claim_id: claimId, is_active: true },
+        }),
+        fetchAll<RawAction>("claim_actions", {
+          select: "id, code, issued_on, action_data, action_template:action_template!claim_actions_action_template_id_fkey(code)",
+          eq: { claim_id: claimId, is_active: true },
+          order: { column: "issued_on", ascending: false },
+        }),
+        fetchAll<RawInspectionSession>("inspection_sessions", {
+          select: "id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status",
+          eq: { claim_id: claimId },
+          order: { column: "created_at", ascending: false },
+          limit: 1,
+        }),
+      ]);
 
   if (!rawClaim) {
     throw new Error("Siniestro no encontrado");
@@ -213,6 +254,8 @@ export async function buildDocumentDataForClaim(claimId: string): Promise<Docume
     assistant: toUser(claim.assistant_user),
     // Gestiones del siniestro (mapa code → última gestión emitida)
     actions,
+    // Última sesión de inspección (para magic link y validez)
+    last_inspection_session: rawSessions[0] ?? null,
     today: new Date().toLocaleDateString("es-CL", {
       day: "2-digit",
       month: "2-digit",

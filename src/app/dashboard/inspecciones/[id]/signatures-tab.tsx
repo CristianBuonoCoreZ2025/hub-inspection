@@ -146,7 +146,7 @@ function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => Promi
   );
 }
 
-export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string }) {
+export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken, inspectionType }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string; inspectionType?: "onsite" | "remote" }) {
   const queryClient = useQueryClient();
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
@@ -228,9 +228,14 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
             </div>
           )}
 
-          {/* Canvas de firma (oculto si readOnly) */}
-          {!readOnly && !insuredSig && (
+          {/* Canvas de firma (oculto si readOnly o remota) */}
+          {!readOnly && !insuredSig && inspectionType !== "remote" && (
             <SignatureCanvas label="Firma del Asegurado" onSave={(url) => handleSave("insured", url)} />
+          )}
+          {!readOnly && !insuredSig && inspectionType === "remote" && (
+            <div className="app-panel text-muted-foreground app-body">
+              La firma del asegurado se realiza desde el enlace mágico.
+            </div>
           )}
           {!readOnly && !adjusterSig && (
             <SignatureCanvas label="Firma del Ajustador" onSave={(url) => handleSave("adjuster", url)} />

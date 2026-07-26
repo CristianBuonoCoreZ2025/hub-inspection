@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_CONFIG } from "@/lib/config";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PaginationProps {
   page: number;
@@ -201,16 +202,19 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
         </span>
 
         {onPageSizeChange && (
-          <select
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="h-6 rounded-md border border-border bg-background px-1 text-[11px] text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-1 focus:ring-primary"
-            title="Registros por página"
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => onPageSizeChange(Number(v))}
           >
-            {APP_CONFIG.pagination.pageSizeOptions.map((opt) => (
-              <option key={opt} value={opt}>{opt} / pág</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-6 rounded-md border border-border bg-background px-1 text-[11px] text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-1 focus:ring-primary" title="Registros por página">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {APP_CONFIG.pagination.pageSizeOptions.map((opt) => (
+                <SelectItem key={opt} value={String(opt)}>{opt} / pág</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
       </div>
 

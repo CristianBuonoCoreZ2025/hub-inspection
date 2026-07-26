@@ -133,6 +133,7 @@ export async function POST(request: NextRequest) {
     // ── PASO 4-8: Procesamiento en background (optimización + IA) ──
     // after() ejecuta después de que la respuesta se envía al cliente.
     // Si falla, no afecta al usuario — la imagen ya está subida y registrada.
+    // La IA es un EXTRA: se dispara en segundo plano para no bloquear nuevas subidas.
     after(async () => {
       const imageId = image.id;
       try {
@@ -170,8 +171,20 @@ export async function POST(request: NextRequest) {
             },
           });
         }
+      } catch (bgErr) {
+        logger.error("Background processing falló", bgErr as Error, {
+          component: "claim-image-upload",
+          action: "background.error",
+          metadata: { imageId },
+        });
+      }
 
-        // ── IA: descripción automática de la imagen ──
+      // ── IA: descripción automática de la imagen (EXTRA — no bloquea) ──
+      // Se ejecuta después de la optimización. Si falla, no afecta al usuario:
+      // la imagen ya está subida y visible. El usuario puede reintentar manualmente.
+      // Usar setImmediate para ceder el event loop y permitir que otras
+      // peticiones (nuevas subidas) se procesen primero.
+      setImmediate(async () => {
         let aiStatus: "done" | "error" | "skipped" = "error";
         try {
           const ai = await summarizeFile(buffer, mimeType, file.name);
@@ -217,13 +230,7 @@ export async function POST(request: NextRequest) {
             },
           });
         }
-      } catch (bgErr) {
-        logger.error("Background processing falló", bgErr as Error, {
-          component: "claim-image-upload",
-          action: "background.error",
-          metadata: { imageId },
-        });
-      }
+      });
     });
 
     return response;

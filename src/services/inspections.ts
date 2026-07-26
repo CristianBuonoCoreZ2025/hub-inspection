@@ -1,4 +1,5 @@
 import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
+import { formatUserDateTime } from "@/lib/timezone";
 import type {
   InspectionSession, PropertyRisk, PropertyMateriality,
   SecurityMeasures, InsuredStatement, ThirdParty, DamageSketch,
@@ -15,11 +16,14 @@ export interface SessionClaim {
   claim_number?: string;
   policy_number?: string;
   claim_date?: string;
+  report_date?: string | null;
+  assignment_date?: string | null;
   client_reference?: string;
   claim_address?: string;
   claim_latitude?: number | null;
   claim_longitude?: number | null;
   liquidation_number?: string;
+  company_id?: string;
   inspector_id?: string;
   broker_executive?: string;
   adjuster_id?: string;
@@ -232,10 +236,10 @@ export async function getInspectionSessionById(id: string) {
     ${SESSION_SELECT}, created_at,
     claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, action_data, issuer_id, issued_on, issued_by),
     action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
-    claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
+    claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, report_date, assignment_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, company_id, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
     inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, metadata, created_at),
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
-    inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, estimated_amount, currency, observations, product, brand_model, created_at),
+    inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at),
     inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
     damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at)
   `);
@@ -369,7 +373,7 @@ export async function createInspectionSession(claimId: string, options: {
     action_features_id: INSPECTION_FEATURE_ID,
     action_template_id: options.actionTemplateId,
     name: inspectionName,
-    description: `Inspección ${options.inspectionType === "remote" ? "remota" : "presencial"} programada para ${new Date(options.scheduledAt).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}`,
+    description: `Inspección ${options.inspectionType === "remote" ? "remota" : "presencial"} programada para ${formatUserDateTime(options.scheduledAt)}`,
     issuer_id: options.inspectorId,
     expected_date: options.scheduledAt,
   });
@@ -505,14 +509,15 @@ export async function refreshMagicLink(sessionId: string) {
 
 /**
  * Reagendar una inspección vinculando con la coordinación.
- * Flujo (NO cancela la sesión, NO rechaza la INS):
- *   1. Crea una gestión CIN con coord_result=fallida + existing_session_id
- *   2. Emite la CIN → issueClaimAction fallida crea nueva CIN (todo) con existing_session_id
- *   3. El usuario completa la nueva CIN como coordinada
- *   4. El trigger cascade vincula la INS existente (no crea nueva)
- *   5. El trigger auto_create actualiza la sesión existente (no crea nueva)
- *
- * La inspección en curso queda vinculada a la nueva coordinación (cambia el puntero).
+ * Flujo:
+ *   1. Valida fecha (no pasado, máx days_to_issue del CIN, calendario del inspector)
+ *   2. Cancela la sesión de inspección en curso
+ *   3. Rechaza la gestión INS original (no se concretó)
+ *   4. Crea y emite una CIN coordinada (origen A = automático) con los datos nuevos
+ *   5. El trigger cascade_workflow_on_issue crea la nueva INS (origen W) y copia
+ *      el action_data del CIN a parent_action_data de la INS
+ *   6. El trigger auto_create_inspection_session lee parent_action_data y crea
+ *      la inspection_session con tipo, fecha, inspector, contacto, ubicación
  */
 export async function rescheduleInspectionViaCIN(params: {
   sessionId: string;
@@ -528,58 +533,167 @@ export async function rescheduleInspectionViaCIN(params: {
   cancelledBy?: string;
   userId?: string;
 }) {
-  const { sessionId, claimId, reasonId, notes, newOptions, userId } = params;
+  const { sessionId, claimId, insActionId, reasonId, notes, newOptions, userId } = params;
+  if (!userId) throw new Error("Debe iniciar sesión para reagendar.");
+  if (!insActionId) throw new Error("Se requiere la gestión INS para reagendar.");
 
-  // 1. Encontrar el template CIN para este claim
+  const scheduledDate = new Date(newOptions.scheduledAt);
+  const now = new Date();
+  now.setSeconds(0, 0);
+  if (scheduledDate.getTime() < now.getTime()) {
+    throw new Error("No se puede agendar en una fecha/hora pasada.");
+  }
+
+  // Obtener el template CIN y su plazo máximo
   const cinTemplate = await findCINTemplateForClaim(claimId);
   if (!cinTemplate) {
     throw new Error("No se encontró el template CIN para este siniestro");
   }
+  const tpl = await fetchById<{ days_to_issue: number | null }>("action_template", cinTemplate.action_template_id, "days_to_issue");
+  const maxDays = tpl?.days_to_issue ?? 2;
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + maxDays);
+  maxDate.setHours(23, 59, 59, 999);
+  if (scheduledDate.getTime() > maxDate.getTime()) {
+    throw new Error(`La fecha de reagendamiento no puede superar los ${maxDays} días desde hoy.`);
+  }
 
-  // 2. Crear gestión CIN con coord_result=fallida + existing_session_id
-  //    La sesión NO se cancela, la INS NO se rechaza.
-  //    existing_session_id indica que la nueva CIN debe vincularse a la sesión existente.
+  // Calendario del inspector: verificar solapamiento real con sesiones existentes.
+  // La sesión actual todavía está activa (status=scheduled) en este punto, así que
+  // cuenta como ocupada — el usuario NO puede elegir el mismo horario con el mismo
+  // inspector. Usamos detección de solapamiento real (no solo comparar hora de inicio).
+  if (newOptions.inspectorId) {
+    const dateStart = scheduledDate.toISOString().slice(0, 10);
+    const nextDay = new Date(scheduledDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const dateEnd = nextDay.toISOString().slice(0, 10);
+    const busy = await getInspectorSchedule(newOptions.inspectorId, dateStart, dateEnd);
+    const newStart = scheduledDate.getTime();
+    const newDuration = newOptions.inspectionType === "onsite" ? 120 : 30;
+    const newEnd = newStart + newDuration * 60 * 1000;
+    const overlap = busy.find((s) => {
+      const sStart = new Date(s.scheduled_at).getTime();
+      const sDuration = s.inspection_type === "onsite" ? 120 : 30;
+      const sEnd = sStart + sDuration * 60 * 1000;
+      return sStart < newEnd && sEnd > newStart;
+    });
+    if (overlap) {
+      throw new Error(
+        `El inspector ya tiene una inspección agendada que se solapa con ese horario ` +
+        `(existente: ${new Date(overlap.scheduled_at).toLocaleString("es-CL")}). ` +
+        `Elija otro horario o cancele primero la inspección en curso.`
+      );
+    }
+  }
+
+  // Datos de la sesión original y de la CIN previa (para no revalidar dirección)
+  const session = await getInspectionSessionById(sessionId);
+  const prevCinData = await getPreviousCINData(claimId);
+  const contactName = String(prevCinData.coord_cont_1 || prevCinData.coord_cont || session?.interviewed_name || "");
+  const location = String(prevCinData.coord_ubic_1 || prevCinData.coord_ubic || session?.claim?.claim_address || "");
+  const latitude = prevCinData.claim_latitude ?? session?.claim?.claim_latitude ?? null;
+  const longitude = prevCinData.claim_longitude ?? session?.claim?.claim_longitude ?? null;
+
+  // 1. Cancelar la sesión de inspección en curso
+  await cancelInspectionSession(sessionId, reasonId, notes, userId);
+
+  // 2. Rechazar la gestión INS-001 original (status=rejected, etapa emisión).
+  //    Esto queda registrado en la historia como "rechazada por reagendamiento".
+  //    El trigger auto_recreate_rejected_workflow_action NO la recrea porque
+  //    las gestiones con característica INS están excluidas (migración 251).
+  //    La INS-001 queda en la historia para auditoría, pero ya no es la activa.
+  if (insActionId) {
+    const { rejectClaimAction } = await import("@/services/claim-actions");
+    await rejectClaimAction(insActionId, "issue", userId, notes || "Reagendamiento desde inspección");
+    console.log("[rescheduleInspectionViaCIN] INS-001 rechazada:", insActionId);
+  }
+
+  // 3. Crear y emitir CIN-002 (Coordinación de Inspección reagendamiento)
+  //    con los nuevos datos. NO se pasa existing_session_id porque queremos
+  //    que el cascade cree una INS-002 NUEVA + sesión nueva (no que actualice
+  //    la existente). Así se conserva la historia:
+  //      CIN-001 (emitida) → INS-001 (rechazada) → sesión cancelada
+  //      CIN-002 (emitida) → INS-002 (todo)      → sesión nueva agendada
   const { createClaimAction, issueClaimAction } = await import("@/services/claim-actions");
   const reasonName = await getLookupName(reasonId);
+  const observationText = [reasonName, notes].filter(Boolean).join(". ");
+
+  // Construir action_data sin valores undefined (JSON los elimina pero
+  // algunos drivers los preservan como null, lo que confunde al trigger)
+  // IMPORTANTE: guardar AMBAS variantes (con y sin sufijo _1) porque:
+  // - La pantalla dinámica lee por ID exacto del snapshot (coord_fecha_1, coord_inspector_1, etc.)
+  // - Los triggers find_coord_field leen por prefijo (coord_fecha, coord_inspector, etc.)
+  const cinActionData: Record<string, unknown> = {
+    ...prevCinData,
+    coord_result: "coordinada",
+    coord_motivo: reasonId,
+    // Sin sufijo (para triggers)
+    coord_fecha: newOptions.scheduledAt,
+    coord_inspection_type: newOptions.inspectionType,
+    coord_type: newOptions.inspectionType,
+    coord_inspector: newOptions.inspectorId ?? null,
+    coord_cont: contactName,
+    coord_ubic: location,
+    coord_comentarios: observationText || null,
+    // Con sufijo _1 (para pantalla dinámica — IDs del snapshot)
+    coord_fecha_1: newOptions.scheduledAt,
+    coord_type_1: newOptions.inspectionType,
+    coord_inspector_1: newOptions.inspectorId ?? null,
+    coord_cont_1: contactName,
+    coord_ubic_1: location,
+    coord_com_1: observationText || null,
+    // Geo
+    claim_latitude: latitude,
+    claim_longitude: longitude,
+  };
+  // Limpiar undefined/null para que el JSON quede limpio
+  for (const k of Object.keys(cinActionData)) {
+    if (cinActionData[k] === undefined) delete cinActionData[k];
+  }
+
+  console.log("[rescheduleInspectionViaCIN] cinActionData:", JSON.stringify(cinActionData));
+
   const newCin = await createClaimAction({
     claim_id: claimId,
     action_template_id: cinTemplate.action_template_id,
     action_features_id: cinTemplate.action_features_id,
     name: "Coordinación de Inspección (reagendamiento)",
     description: `Reagendamiento generado desde inspección. Motivo: ${reasonName}`,
-    action_data: {
-      coord_result: "fallida",
-      coord_motivo: reasonId, // ID del lookup_catalog (cancellation_reason_fallida)
-      coord_fecha_recoord: newOptions.scheduledAt,
-      coord_inspection_type: newOptions.inspectionType,
-      coord_inspector: newOptions.inspectorId || undefined,
-      coord_comentarios: notes || undefined,
-      existing_session_id: sessionId, // ← vincula la sesión existente
-    },
+    action_data: cinActionData,
     issuer_id: userId,
+    created_by: userId,
+    origin: "A",
   });
 
-  // 3. Emitir la CIN → issueClaimAction fallida crea nueva CIN (todo) con existing_session_id
-  await issueClaimAction(newCin.id, userId, {
-    coord_result: "fallida",
-    coord_motivo: reasonId,
-    coord_fecha_recoord: newOptions.scheduledAt,
-    coord_inspection_type: newOptions.inspectionType,
-    coord_inspector: newOptions.inspectorId || undefined,
-    coord_comentarios: notes || undefined,
-    existing_session_id: sessionId,
-  });
+  console.log("[rescheduleInspectionViaCIN] CIN-002 created:", newCin.id, "origin:", newCin.origin);
 
-  return { rescheduledSessionId: sessionId, newCinId: newCin.id };
+  // issueClaimAction sobrescribe action_data con { ...actionData, inf_fecha_entrega }
+  // Por eso pasamos el mismo cinActionData para preservar todos los campos.
+  await issueClaimAction(newCin.id, userId, cinActionData);
+
+  // 4. El trigger cascade_workflow_on_issue del CIN-002 crea automáticamente:
+  //    - INS-002 (nueva, status=todo) con parent_action_data del CIN-002
+  //    - El trigger auto_create_inspection_session crea la sesión nueva
+  //      con los datos del CIN-002 (tipo, fecha, inspector, magic link)
+  //
+  //    La sesión anterior ya está cancelada (paso 1) y la INS-001 ya está
+  //    rechazada (paso 2). La historia se conserva completa:
+  //      CIN-001 (emitida) → INS-001 (rechazada) → sesión cancelada
+  //      CIN-002 (emitida) → INS-002 (todo)      → sesión nueva agendada
+
+  return { cancelledSessionId: sessionId, newCinId: newCin.id };
 }
 
 /**
  * Cancelar una inspección vinculando con la coordinación.
  * Flujo:
  *   1. Cancela la sesión de inspección actual
- *   2. Rechaza la gestión INS (status = rejected)
- *   3. Crea una gestión CIN con coord_result=desistida
- *   4. Emite la CIN → desistida no crea nueva CIN (rompe el flujo)
+ *   2. Emite la gestión INS como "frustrada/cancelada" (el inspector hizo el trabajo)
+ *      - El cancelador queda como emisor (issued_by)
+ *      - Se conservan los datos originales + datos de cancelación en action_data
+ *   3. Crea el reporte de inspección de cancelación
+ *   4. Crea una gestión CIN con coord_result=desistida como registro de auditoría
+ *   5. Emite la CIN → desistida no crea nueva CIN (rompe el flujo)
  */
 export async function cancelInspectionViaCIN(params: {
   sessionId: string;
@@ -595,45 +709,74 @@ export async function cancelInspectionViaCIN(params: {
   // 1. Cancelar la sesión actual
   await cancelInspectionSession(sessionId, reasonId, notes, cancelledBy);
 
-  // 2. Rechazar la gestión INS (si existe)
-  if (insActionId) {
+  // 2. Emitir la gestión INS como frustrada/cancelada (no rechazar)
+  //    El inspector realizó el trabajo, se debe pagar igual.
+  if (insActionId && userId) {
     try {
-      const { rejectClaimAction } = await import("@/services/claim-actions");
-      await rejectClaimAction(insActionId, "issue", userId, notes || "Inspección cancelada (desistida)");
+      const { issueClaimAction } = await import("@/services/claim-actions");
+      const { fetchById } = await import("@/lib/supabase/db");
+      const insAction = await fetchById<{ action_data: Record<string, unknown> | null }>("claim_actions", insActionId, "action_data");
+      const mergedActionData = {
+        ...(insAction?.action_data || {}),
+        cancellation_session_id: sessionId,
+        cancellation_reason_id: reasonId,
+        cancellation_notes: notes || undefined,
+        cancelled_by: cancelledBy || userId,
+        cancellation_status: "cancelled",
+      };
+      await issueClaimAction(insActionId, userId, mergedActionData);
     } catch (err) {
-      console.warn("[cancelInspectionViaCIN] No se pudo rechazar INS:", err);
+      console.warn("[cancelInspectionViaCIN] No se pudo emitir INS como cancelada:", err);
     }
   }
 
-  // 3. Encontrar el template CIN para este claim
+  // 3. Crear reporte de inspección de cancelación
+  try {
+    await createReport({
+      session_id: sessionId,
+      claim_id: claimId,
+      report_url: null,
+      generated_at: new Date().toISOString(),
+      status: "draft",
+      report_type: "cancellation",
+      cancellation_reason_id: reasonId,
+      cancellation_notes: notes || undefined,
+    });
+  } catch (err) {
+    console.warn("[cancelInspectionViaCIN] No se pudo crear reporte de cancelación:", err);
+  }
+
+  // 4. Encontrar el template CIN para este claim
   const cinTemplate = await findCINTemplateForClaim(claimId);
   if (!cinTemplate) {
     throw new Error("No se encontró el template CIN para este siniestro");
   }
 
-  // 4. Crear gestión CIN con coord_result=desistida
+  // 5. Recuperar datos de CIN previa (dirección ya validada) para no revalidar
+  const prevCinData = await getPreviousCINData(claimId);
+
+  // 6. Crear gestión CIN con coord_result=desistida como registro de auditoría
   const { createClaimAction, issueClaimAction } = await import("@/services/claim-actions");
   const reasonName = await getLookupName(reasonId);
+  const desistidaActionData = {
+    ...prevCinData,
+    coord_result: "desistida",
+    coord_motivo: reasonId,
+    coord_comentarios: notes || undefined,
+  };
   const newCin = await createClaimAction({
     claim_id: claimId,
     action_template_id: cinTemplate.action_template_id,
     action_features_id: cinTemplate.action_features_id,
     name: "Coordinación de Inspección (desistida)",
     description: `Inspección desistida. Motivo: ${reasonName}`,
-    action_data: {
-      coord_result: "desistida",
-      coord_motivo: reasonId, // ID del lookup_catalog (consistente con la pantalla CIN)
-      coord_comentarios: notes || undefined,
-    },
+    action_data: desistidaActionData,
     issuer_id: userId,
+    origin: "A",
   });
 
-  // 5. Emitir la CIN → desistida no crea nueva CIN
-  await issueClaimAction(newCin.id, userId, {
-    coord_result: "desistida",
-    coord_motivo: reasonId,
-    coord_comentarios: notes || undefined,
-  });
+  // 7. Emitir la CIN → desistida no crea nueva CIN
+  await issueClaimAction(newCin.id, userId, desistidaActionData);
 
   return { cancelledSessionId: sessionId, newCinId: newCin.id };
 }
@@ -643,27 +786,27 @@ export async function cancelInspectionViaCIN(params: {
  * Busca entre las gestiones CIN existentes del claim (incluyendo rechazadas)
  * para obtener action_template_id y action_features_id.
  */
-async function findCINTemplateForClaim(claimId: string): Promise<{
-  action_template_id: string;
-  action_features_id: string;
-} | null> {
-  // Buscar cualquier gestión CIN existente (incluyendo rechazadas)
+export async function findTemplateForClaim(
+  claimId: string,
+  code: string
+): Promise<{ action_template_id: string; action_features_id: string } | null> {
+  // Buscar cualquier gestión existente con ese código (incluyendo rechazadas)
   const { getClaimActions } = await import("@/services/claim-actions");
   const actions = await getClaimActions(claimId, true); // includeRejected
-  const cinAction = actions.find((a) => a.action_template?.code === "CIN" && a.action_template_id);
-  if (cinAction?.action_template_id && cinAction.action_features_id) {
+  const action = actions.find((a) => a.action_template?.code === code && a.action_template_id);
+  if (action?.action_template_id && action.action_features_id) {
     return {
-      action_template_id: cinAction.action_template_id,
-      action_features_id: cinAction.action_features_id,
+      action_template_id: action.action_template_id,
+      action_features_id: action.action_features_id,
     };
   }
 
-  // Fallback: buscar el template CIN directamente por código
+  // Fallback: buscar el template directamente por código
   const templates = await fetchAll<{ id: string; action_features_id: string }>(
     "action_template",
     {
       select: "id, action_features_id",
-      eq: { code: "CIN", is_active: true },
+      eq: { code, is_active: true },
       limit: 1,
     }
   );
@@ -676,12 +819,45 @@ async function findCINTemplateForClaim(claimId: string): Promise<{
   return null;
 }
 
+async function findCINTemplateForClaim(claimId: string): Promise<{
+  action_template_id: string;
+  action_features_id: string;
+} | null> {
+  return findTemplateForClaim(claimId, "CIN");
+}
+
 /**
  * Obtiene el nombre de un lookup_catalog por ID.
  */
 async function getLookupName(id: string): Promise<string> {
   const row = await fetchById<{ name: string }>("lookup_catalog", id, "name");
   return row?.name || "Motivo no especificado";
+}
+
+/**
+ * Recupera datos de la última CIN del siniestro para precargar
+ * información ya validada (dirección, contacto, etc.).
+ */
+export async function getPreviousCINData(claimId: string): Promise<Record<string, unknown>> {
+  const { getClaimActions } = await import("@/services/claim-actions");
+  const actions = await getClaimActions(claimId, true);
+  const cinActions = actions
+    .filter((a) => a.action_template?.code === "CIN" && a.action_data && Object.keys(a.action_data).length > 0)
+    .sort((a, b) => new Date(b.created_on || 0).getTime() - new Date(a.created_on || 0).getTime());
+  if (!cinActions[0]?.action_data) return {};
+  const data = cinActions[0].action_data as Record<string, unknown>;
+  const preserve: Record<string, unknown> = {};
+  for (const key of Object.keys(data)) {
+    if (
+      key.startsWith("coord_ubic") ||
+      key.startsWith("claim_latitude") ||
+      key.startsWith("claim_longitude") ||
+      key.startsWith("coord_cont")
+    ) {
+      preserve[key] = data[key];
+    }
+  }
+  return preserve;
 }
 
 // ═══════════════════════════════════════════════════════════════

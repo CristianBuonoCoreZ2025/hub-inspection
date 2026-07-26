@@ -593,14 +593,18 @@ export default function PolicyDetailPage() {
  </div>
  <div>
  <Label className="app-field-label">Tipo <span className="text-red-500">*</span></Label>
- <select
- className="app-input w-full"
+ <Select
  value={form.policy_type}
- onChange={(e) => setForm({ ...form, policy_type: e.target.value as "individual" | "collective" })}
+ onValueChange={(v) => setForm({ ...form, policy_type: v as "individual" | "collective" })}
  >
- <option value="individual">Individual</option>
- <option value="collective">Colectiva</option>
- </select>
+ <SelectTrigger className="app-input w-full">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="individual">Individual</SelectItem>
+ <SelectItem value="collective">Colectiva</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
  <div className="lg:col-span-3">
  <Label className="app-field-label">Compañía de Seguros</Label>
@@ -646,16 +650,20 @@ export default function PolicyDetailPage() {
  </div>
  <div>
  <Label className="app-field-label">Moneda <span className="text-red-500">*</span></Label>
- <select
- className="app-input w-full"
- value={form.currency}
- onChange={(e) => setForm({ ...form, currency: e.target.value })}
+ <Select
+ value={form.currency || "__none"}
+ onValueChange={(v) => setForm({ ...form, currency: v === "__none" || !v ? "" : v })}
  >
- <option value="">Seleccionar...</option>
+ <SelectTrigger className="app-input w-full">
+ <SelectValue placeholder="Seleccionar..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Seleccionar...</SelectItem>
  {(countryCurrencies || []).map((c) => (
- <option key={c.code || c.id} value={c.code || c.id}>{c.code || ""} — {c.name}</option>
+ <SelectItem key={c.code || c.id} value={c.code || c.id}>{c.code || ""} — {c.name}</SelectItem>
  ))}
- </select>
+ </SelectContent>
+ </Select>
  </div>
  <div className="lg:col-span-6">
  <Label className="app-field-label">Líneas de Negocio <span className="text-red-500">*</span></Label>
@@ -838,16 +846,20 @@ export default function PolicyDetailPage() {
  </div>
  <div className="lg:col-span-4">
  <Label className="app-field-label">Estado</Label>
- <select
- className="app-input w-full"
+ <Select
  value={form.status}
- onChange={(e) => setForm({ ...form, status: e.target.value as "draft" | "active" | "expired" | "cancelled" })}
+ onValueChange={(v) => setForm({ ...form, status: v as "draft" | "active" | "expired" | "cancelled" })}
  >
- <option value="draft">Borrador</option>
- <option value="active">Activa</option>
- <option value="expired">Vencida</option>
- <option value="cancelled">Cancelada</option>
- </select>
+ <SelectTrigger className="app-input w-full">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="draft">Borrador</SelectItem>
+ <SelectItem value="active">Activa</SelectItem>
+ <SelectItem value="expired">Vencida</SelectItem>
+ <SelectItem value="cancelled">Cancelada</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
  <div className="lg:col-span-6">
  <Label className="app-field-label">Comentarios</Label>

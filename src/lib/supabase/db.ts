@@ -1,5 +1,6 @@
 import { getSupabaseClient } from "./client";
 import { logger } from "@/lib/logger";
+import { startMeasure } from "@/lib/perf-metrics";
 
 /**
  * Capa de datos unificada para reemplazar graphqlRequest.
@@ -17,14 +18,21 @@ export async function fetchById<T = AnyObj>(
   id: string,
   select = "*"
 ): Promise<T | null> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from(table)
-    .select(select)
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return (data as T) ?? null;
+  const end = startMeasure(table, "select_one");
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from(table)
+      .select(select)
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    end({ success: true, rowsAffected: data ? 1 : 0 });
+    return (data as T) ?? null;
+  } catch (err) {
+    end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+    throw err;
+  }
 }
 
 /**
@@ -102,14 +110,28 @@ export async function fetchAll<T = AnyObj>(
     query = query.range(options.range.from, options.range.to);
   }
   if (options?.single) {
-    const { data, error } = await query.maybeSingle();
-    if (error) throw new Error(error.message);
-    return [data as T];
+    const end = startMeasure(table, "select_all");
+    try {
+      const { data, error } = await query.maybeSingle();
+      if (error) throw new Error(error.message);
+      end({ success: true, rowsAffected: data ? 1 : 0 });
+      return [data as T];
+    } catch (err) {
+      end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+      throw err;
+    }
   }
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return (data as T[]) ?? [];
+  const end = startMeasure(table, "select_all");
+  try {
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    end({ success: true, rowsAffected: data?.length ?? 0 });
+    return (data as T[]) ?? [];
+  } catch (err) {
+    end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+    throw err;
+  }
 }
 
 /**
@@ -121,21 +143,28 @@ export async function insertRow<T = AnyObj>(
   row: Record<string, any>,
   select = "*"
 ): Promise<T> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from(table)
-    .insert(row)
-    .select(select)
-    .single();
-  if (error) {
-    logger.error(`Insert error on ${table}`, new Error(error.message), {
-      component: "db.insertRow",
-      action: `insert.${table}`,
-      metadata: { error: error.message, details: error.details },
-    });
-    throw new Error(error.message);
+  const end = startMeasure(table, "insert");
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from(table)
+      .insert(row)
+      .select(select)
+      .single();
+    if (error) {
+      logger.error(`Insert error on ${table}`, new Error(error.message), {
+        component: "db.insertRow",
+        action: `insert.${table}`,
+        metadata: { error: error.message, details: error.details },
+      });
+      throw new Error(error.message);
+    }
+    end({ success: true, rowsAffected: 1 });
+    return data as T;
+  } catch (err) {
+    end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+    throw err;
   }
-  return data as T;
 }
 
 /**
@@ -147,13 +176,20 @@ export async function insertMany<T = AnyObj>(
   rows: Record<string, any>[],
   select = "*"
 ): Promise<T[]> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from(table)
-    .insert(rows)
-    .select(select);
-  if (error) throw new Error(error.message);
-  return (data as T[]) ?? [];
+  const end = startMeasure(table, "insert");
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from(table)
+      .insert(rows)
+      .select(select);
+    if (error) throw new Error(error.message);
+    end({ success: true, rowsAffected: data?.length ?? rows.length });
+    return (data as T[]) ?? [];
+  } catch (err) {
+    end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+    throw err;
+  }
 }
 
 /**
@@ -166,22 +202,29 @@ export async function updateRow<T = AnyObj>(
   set: Record<string, any>,
   select = "*"
 ): Promise<T> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from(table)
-    .update(set)
-    .eq("id", id)
-    .select(select)
-    .single();
-  if (error) {
-    logger.error(`Update error on ${table}`, new Error(error.message), {
-      component: "db.updateRow",
-      action: `update.${table}`,
-      metadata: { error: error.message, id },
-    });
-    throw new Error(error.message);
+  const end = startMeasure(table, "update");
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from(table)
+      .update(set)
+      .eq("id", id)
+      .select(select)
+      .single();
+    if (error) {
+      logger.error(`Update error on ${table}`, new Error(error.message), {
+        component: "db.updateRow",
+        action: `update.${table}`,
+        metadata: { error: error.message, id },
+      });
+      throw new Error(error.message);
+    }
+    end({ success: true, rowsAffected: 1 });
+    return data as T;
+  } catch (err) {
+    end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+    throw err;
   }
-  return data as T;
 }
 
 /**
@@ -195,14 +238,21 @@ export async function updateWhere<T = AnyObj>(
   filters: Record<string, any>,
   select = "*"
 ): Promise<T[]> {
-  const supabase = getSupabaseClient();
-  let query = supabase.from(table).update(set);
-  for (const [k, v] of Object.entries(filters)) {
-    query = query.eq(k, v);
+  const end = startMeasure(table, "update");
+  try {
+    const supabase = getSupabaseClient();
+    let query = supabase.from(table).update(set);
+    for (const [k, v] of Object.entries(filters)) {
+      query = query.eq(k, v);
+    }
+    const { data, error } = await query.select(select);
+    if (error) throw new Error(error.message);
+    end({ success: true, rowsAffected: data?.length ?? 0 });
+    return (data as T[]) ?? [];
+  } catch (err) {
+    end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+    throw err;
   }
-  const { data, error } = await query.select(select);
-  if (error) throw new Error(error.message);
-  return (data as T[]) ?? [];
 }
 
 /**
@@ -213,15 +263,22 @@ export async function deleteRow<T = AnyObj>(
   id: string,
   select = "*"
 ): Promise<T | null> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from(table)
-    .delete()
-    .eq("id", id)
-    .select(select)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return (data as T) ?? null;
+  const end = startMeasure(table, "delete");
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from(table)
+      .delete()
+      .eq("id", id)
+      .select(select)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    end({ success: true, rowsAffected: data ? 1 : 0 });
+    return (data as T) ?? null;
+  } catch (err) {
+    end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+    throw err;
+  }
 }
 
 /**
@@ -232,13 +289,20 @@ export async function deleteWhere(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   filters: Record<string, any>
 ): Promise<void> {
-  const supabase = getSupabaseClient();
-  let query = supabase.from(table).delete();
-  for (const [k, v] of Object.entries(filters)) {
-    query = query.eq(k, v);
+  const end = startMeasure(table, "delete");
+  try {
+    const supabase = getSupabaseClient();
+    let query = supabase.from(table).delete();
+    for (const [k, v] of Object.entries(filters)) {
+      query = query.eq(k, v);
+    }
+    const { error } = await query;
+    if (error) throw new Error(error.message);
+    end({ success: true });
+  } catch (err) {
+    end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+    throw err;
   }
-  const { error } = await query;
-  if (error) throw new Error(error.message);
 }
 
 /**
@@ -268,10 +332,17 @@ export async function countRows(
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function rpc<T = any>(fn: string, args?: Record<string, any>): Promise<T> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase.rpc(fn, args);
-  if (error) throw new Error(error.message);
-  return data as T;
+  const end = startMeasure(fn, "rpc");
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc(fn, args);
+    if (error) throw new Error(error.message);
+    end({ success: true });
+    return data as T;
+  } catch (err) {
+    end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+    throw err;
+  }
 }
 
 /**

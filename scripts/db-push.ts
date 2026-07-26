@@ -3,6 +3,7 @@ import { join } from "path";
 import { Client } from "pg";
 import { config } from "dotenv";
 import { existsSync } from "fs";
+import { createHash } from "crypto";
 
 // Cargar .env.local primero (estándar Next.js), luego .env como fallback
 const envPath = existsSync(".env.local") ? ".env.local" : ".env";
@@ -44,17 +45,23 @@ async function runMigrations() {
     await client.connect();
     console.log("🔗 Conectado a PostgreSQL (Nhost)\n");
 
-    // Crear tabla de tracking si no existe
+    // Crear tabla de tracking si no existe (con checksum para detectar drift)
     await client.query(`
       CREATE TABLE IF NOT EXISTS _migrations (
         filename TEXT PRIMARY KEY,
+        checksum TEXT,
         executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
 
-    // Obtener migraciones ya ejecutadas
-    const executedRes = await client.query('SELECT filename FROM _migrations');
-    const executed = new Set(executedRes.rows.map(r => r.filename));
+    // Asegurar columna checksum en tablas existentes previas
+    await client.query(`
+      ALTER TABLE _migrations ADD COLUMN IF NOT EXISTS checksum TEXT
+    `);
+
+    // Obtener migraciones ya ejecutadas con su checksum
+    const executedRes = await client.query('SELECT filename, checksum FROM _migrations');
+    const executed = new Map<string, string | null>(executedRes.rows.map(r => [r.filename, r.checksum]));
 
     const migrationsDir = join(process.cwd(), "migrations");
     const files = readdirSync(migrationsDir)
@@ -66,7 +73,21 @@ async function runMigrations() {
       return;
     }
 
-    const pending = files.filter(f => !executed.has(f));
+    function fileChecksum(path: string): string {
+      return createHash("sha256").update(readFileSync(path, "utf-8")).digest("hex");
+    }
+
+    const legacy: string[] = []; // ejecutadas sin checksum → solo actualizar
+    const pending = files.filter(f => {
+      const recorded = executed.get(f);
+      if (recorded === undefined) return true; // nunca ejecutada
+      const current = fileChecksum(join(migrationsDir, f));
+      if (recorded === null) {
+        legacy.push(f);
+        return false;
+      }
+      return recorded !== current; // cambió desde la última ejecución
+    });
 
     if (pending.length === 0) {
       console.log(`📂 Migraciones encontradas: ${files.length}`);
@@ -78,17 +99,29 @@ async function runMigrations() {
       return;
     }
 
+    // Actualizar checksums de migraciones legacy (ejecutadas antes de este tracking)
+    for (const file of legacy) {
+      const filePath = join(migrationsDir, file);
+      const checksum = fileChecksum(filePath);
+      await client.query('UPDATE _migrations SET checksum = $2 WHERE filename = $1', [file, checksum]);
+    }
+
     console.log(`📂 Migraciones encontradas: ${files.length}`);
     console.log(`   Ejecutadas: ${executed.size}`);
-    console.log(`   Pendientes: ${pending.length}\n`);
+    console.log(`   Legacy actualizando checksum: ${legacy.length}`);
+    console.log(`   Pendientes o modificadas: ${pending.length}\n`);
 
     for (const file of pending) {
       const filePath = join(migrationsDir, file);
       const sql = readFileSync(filePath, "utf-8");
+      const checksum = fileChecksum(filePath);
 
       console.log(`⏳ Ejecutando: ${file} ...`);
       await client.query(sql);
-      await client.query('INSERT INTO _migrations (filename) VALUES ($1) ON CONFLICT (filename) DO NOTHING', [file]);
+      await client.query(
+        'INSERT INTO _migrations (filename, checksum) VALUES ($1, $2) ON CONFLICT (filename) DO UPDATE SET checksum = EXCLUDED.checksum, executed_at = NOW()',
+        [file, checksum]
+      );
       console.log(`✅ ${file} ejecutado correctamente\n`);
     }
 

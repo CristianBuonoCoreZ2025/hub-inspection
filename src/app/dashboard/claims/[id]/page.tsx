@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { formatUserDateTime as formatDateTime, formatUserDate as formatDate } from "@/lib/timezone";
 import { getClaimById, getClaimParticipants, updateClaimStatus } from "@/services/claims";
 import { getClaimActions, getActionTemplatesByClaimStatus, createClaimAction, getClaimActionById, updateClaimAction, issueClaimAction, reviewClaimAction, approveClaimAction, rejectClaimAction } from "@/services/claim-actions";
 import { getActionHistory } from "@/services/claim-action-history";
@@ -22,6 +23,7 @@ import { toast } from "sonner";
 import {
  ArrowLeft,
  Pencil,
+ Mail as MailIcon,
  MapPin,
  User,
  Shield,
@@ -65,6 +67,10 @@ import ClaimImagesTab from "./claim-images-tab";
 import EditClaimForm from "./edit-claim-form";
 import GestionScreenSwitcher from "./gestion-screens";
 import WorkflowView from "./workflow-view";
+import { EmailComposeModal } from "@/components/claims/email-compose-modal";
+import { EmailPreviewModal } from "@/components/claims/email-preview-modal";
+import { getEmailLogsByClaim, type EmailLog } from "@/services/email-logs";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 // Fix iconos de Leaflet en Next.js (CDN)
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -82,15 +88,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
  reopened: { label: "Reapertura", className: "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300" },
 };
 
-function formatDate(date: string | null) {
- if (!date) return "—";
- return new Date(date).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
 
-function formatDateTime(date: string | null) {
- if (!date) return "—";
- return new Date(date).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
-}
 
 function uniquePhones(...values: (string | null | undefined)[]): string {
  const seen = new Set<string>();
@@ -170,6 +168,15 @@ export default function ClaimDetailPage() {
  const [gestionSubTab, setGestionSubTab] = useState<"lista" | "workflow">("lista");
  const [selectedTemplate, setSelectedTemplate] = useState<ActionTemplate | null>(null);
  const [openEditGestionModal, setOpenEditGestionModal] = useState(false);
+ // Email compose/preview
+ const [emailComposeAction, setEmailComposeAction] = useState<{
+   id: string;
+   company_id: string;
+   claim_id: string;
+   action_template_id: string;
+   action_data?: Record<string, unknown> | null;
+ } | null>(null);
+ const [emailPreviewLog, setEmailPreviewLog] = useState<EmailLog | null>(null);
  const [editingGestion, setEditingGestion] = useState<{
  id: string;
  tipo: string;
@@ -244,6 +251,14 @@ export default function ClaimDetailPage() {
  queryKey: ["claim-actions", id, showRejected],
  queryFn: () => getClaimActions(id, showRejected),
  enabled: !!id,
+ staleTime: 0,
+ });
+
+ // Cargar email logs del siniestro (para badges de contador en la grilla de gestiones)
+ const { data: emailLogsByClaim } = useQuery({
+ queryKey: ["email-logs-by-claim", id],
+ queryFn: () => (id ? getEmailLogsByClaim(id) : Promise.resolve([])),
+ enabled: !!id && activeTab === "gestiones" && gestionSubTab === "lista",
  staleTime: 0,
  });
 
@@ -372,6 +387,7 @@ export default function ClaimDetailPage() {
  const savedActionDataRef = useRef<Record<string, unknown> | null>(null);
 
  const updateGestionDataMutation = useMutation({
+ meta: { autosave: true },
  mutationFn: ({ actionId, data }: { actionId: string; data: Record<string, unknown> }) => {
  // Usar el action_data del cache actual, no del closure stale
  const cached = queryClient.getQueryData<{ action_data?: Record<string, unknown> }>(["claim-action", actionId]);
@@ -973,8 +989,16 @@ export default function ClaimDetailPage() {
  Persona de Contacto
  </h3>
  <div className="app-data-grid-4">
- <DataField label="Nombre" value={contact.first_name || contact.full_name || "—"} />
+ <DataField label="RUT" value={contact.rut || "—"} />
+ <DataField label="Tipo" value={personTypeOf(contact) === "legal" ? "Persona Jurídica" : "Persona Natural"} />
+ {personTypeOf(contact) === "legal" ? (
+ <DataField label="Razón Social" value={displayFirstName(contact)} />
+ ) : (
+ <>
+ <DataField label="Nombre" value={displayFirstName(contact)} />
  <DataField label="Apellido" value={contact.last_name || "—"} />
+ </>
+ )}
  <DataField label="Email" value={contact.email || "—"} />
  <DataField label="Teléfono" value={uniquePhones(contact.phone, contact.cell_phone) || "—"} />
  </div>
@@ -1108,10 +1132,22 @@ export default function ClaimDetailPage() {
  }}
  />
  ) : (() => {
- // Mapa de claim_action_id → inspection_session_id para enlazar gestiones de inspección
+ // Mapa de claim_action_id → inspection_session_id y estado para enlazar gestiones de inspección
  const inspectionByActionId = new Map<string, string>();
+ const inspectionStatusByActionId = new Map<string, string>();
  for (const s of (claim.inspection_sessions || [])) {
- if (s.claim_action_id) inspectionByActionId.set(s.claim_action_id, s.id);
+ if (s.claim_action_id) {
+ inspectionByActionId.set(s.claim_action_id, s.id);
+ inspectionStatusByActionId.set(s.claim_action_id, s.status);
+ }
+ }
+
+ // Mapa de claim_action_id → email logs (para filas hijas en la grilla)
+ const emailsByActionId = new Map<string, EmailLog[]>();
+ for (const log of (emailLogsByClaim || [])) {
+   const arr = emailsByActionId.get(log.claim_action_id) || [];
+   arr.push(log);
+   emailsByActionId.set(log.claim_action_id, arr);
  }
 
  const actions = (claimActions || []).map((a) => ({
@@ -1144,6 +1180,8 @@ export default function ClaimDetailPage() {
  screenType: a.action_feature?.has_specific_screen ? (a.action_feature?.screen?.code || "generica") : null,
  esAutomatica: a.is_automatic,
  origin: a.origin || "M",
+ templateCode: a.action_template?.code || null,
+ coordResult: (a.action_data as { coord_result?: string } | null)?.coord_result || null,
  }));
 
  const gestiones = [...actions].sort((a, b) => {
@@ -1217,6 +1255,7 @@ export default function ClaimDetailPage() {
  {renderSortHeader("dias", "Días Restantes")}
  {renderSortHeader("estado", "Estado", "w-[110px]", true)}
  <th className="w-[80px]"></th>
+ <th className="w-10 text-center" title="Origen: W=Workflow, M=Manual, A=Automática">Or.</th>
  </tr>
  </thead>
  <tbody>
@@ -1352,14 +1391,96 @@ export default function ClaimDetailPage() {
  >
  <td className="font-mono app-body text-primary tabular-nums whitespace-nowrap">
  <span>{shortActionCode(g.codigo)}</span>
- <span className={`ml-1 inline-flex items-center justify-center rounded px-0.5 app-body font-bold ${
- g.origin === "W" ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
- }`}>{g.origin}</span>
  {g.isActive === false && (
  <span className="ml-1 inline-flex items-center justify-center rounded px-0.5 app-body font-bold bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" title="Gestión deshabilitada">OFF</span>
  )}
+ {/* Badge de correos enviados — popover al hacer click */}
+ {(() => {
+   const emails = emailsByActionId.get(g.id) || [];
+   if (emails.length === 0) return null;
+   return (
+     <Popover>
+       <PopoverTrigger
+         render={
+           <button
+             type="button"
+             onClick={(e) => e.stopPropagation()}
+             className="ml-1 inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary hover:bg-primary/20 transition-colors"
+             title={`${emails.length} correo${emails.length > 1 ? "s" : ""} relacionado${emails.length > 1 ? "s" : ""}`}
+           >
+             <MailIcon className="h-2.5 w-2.5" />
+             {emails.length}
+           </button>
+         }
+       />
+       <PopoverContent align="start" sideOffset={4} className="w-80 p-0">
+         <div className="px-3 py-2 border-b border-border">
+           <p className="text-[11px] font-semibold">Seguimiento de Correos</p>
+           <p className="text-[10px] text-muted-foreground">
+             Correos generados desde: <span className="font-mono">{shortActionCode(g.codigo)}</span>
+           </p>
+         </div>
+         <div className="max-h-60 overflow-auto">
+           {emails.map((log) => {
+             const emailCode = `EML-${String(log.correlativo).padStart(3, "0")}`;
+             const statusLabel = log.status === "sent" ? "Enviado" : log.status === "queued" ? "En cola" : "Error";
+             const statusClass = log.status === "sent"
+               ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+               : log.status === "queued"
+               ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+               : "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+             return (
+               <button
+                 key={log.id}
+                 type="button"
+                 onClick={(e) => { e.stopPropagation(); setEmailPreviewLog(log); }}
+                 className="w-full text-left px-3 py-1.5 border-b border-border/50 last:border-0 hover:bg-muted/40 transition-colors"
+               >
+                 <div className="flex items-center justify-between gap-2">
+                   <span className="font-mono text-[10px] text-primary font-medium">{emailCode}</span>
+                   <span className={`px-1.5 rounded text-[9px] font-medium ${statusClass}`}>{statusLabel}</span>
+                 </div>
+                 <p className="text-[10px] text-foreground truncate">{log.subject || "(sin asunto)"}</p>
+                 <div className="flex items-center justify-between gap-2 mt-0.5">
+                   <span className="text-[9px] text-muted-foreground truncate">
+                     {log.to_address.join(", ") || "—"}
+                   </span>
+                   <span className="text-[9px] text-muted-foreground shrink-0">
+                     {new Date(log.sent_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+                   </span>
+                 </div>
+               </button>
+             );
+           })}
+         </div>
+       </PopoverContent>
+     </Popover>
+   );
+ })()}
  </td>
- <td className="font-medium app-body">{g.nombre}</td>
+ <td className="font-medium app-body">
+ <div className="flex items-center gap-2">
+ {g.nombre}
+ {g.href && inspectionStatusByActionId.get(g.id) === "cancelled" && (
+ <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+ Cancelada
+ </span>
+ )}
+ {g.templateCode === "CIN" && g.coordResult && (
+ <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+   g.coordResult === "desistida"
+     ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+     : g.coordResult === "reagendada"
+     ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+     : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+ }`}>
+ {g.coordResult === "coordinada" && "Coordinada"}
+ {g.coordResult === "reagendada" && "Reagendada"}
+ {g.coordResult === "desistida" && "Desistida"}
+ </span>
+ )}
+ </div>
+ </td>
  <td className="app-body text-muted-foreground">{g.fecha ? formatDateTime(g.fecha) : "—"}</td>
  <td className="app-body">
  {daysLeft !== null && daysLeft < 0 ? (
@@ -1412,7 +1533,36 @@ export default function ClaimDetailPage() {
  <Pencil className="h-3 w-3" />
  </Button>
  )}
+ {g.esAccion && (
+ <Button
+ size="sm"
+ className="btn-icon-sm"
+ title="Enviar e-mail"
+ onClick={() => {
+ const action = claimActions?.find((a) => a.id === g.id);
+ setEmailComposeAction({
+ id: g.id,
+ company_id: claim?.company_id || "",
+ claim_id: id || "",
+ action_template_id: action?.action_template_id || "",
+ action_data: action?.action_data as Record<string, unknown> | null,
+ });
+ }}
+ >
+ <MailIcon className="h-3 w-3" />
+ </Button>
+ )}
  </div>
+ </td>
+ <td className="text-center">
+ <span
+ className={`app-origin-badge app-origin-${
+ g.origin === "W" ? "w" : g.origin === "A" ? "a" : g.origin === "M" ? "m" : "default"
+ }`}
+ title={g.origin === "W" ? "Workflow" : g.origin === "A" ? "Automática" : g.origin === "M" ? "Manual" : "—"}
+ >
+ {g.origin}
+ </span>
  </td>
  </tr>
  );
@@ -1611,7 +1761,23 @@ export default function ClaimDetailPage() {
  setEditingActionData(merged);
  if (editingActionId) triggerAutoSave(merged, editingActionId);
  }}
- readOnly={["issued", "reviewed", "approved", "dispatched", "closed", "rejected"].includes(editingAction.action_status?.code || "todo")}
+ readOnly={(() => {
+ const statusCode = editingAction.action_status?.code || "todo";
+ const statusIsClosed = ["issued", "reviewed", "approved", "dispatched", "closed", "rejected"].includes(statusCode);
+ if (statusIsClosed) return true;
+ // Determinar responsable según la etapa actual
+ const currentResponsibleId =
+ statusCode === "todo" ? editingAction.issuer_id :
+ statusCode === "issued" ? editingAction.reviewer_id :
+ statusCode === "reviewed" ? editingAction.approver_id :
+ null;
+ // Si no hay responsable asignado, permitir edición (LevelCard auto-asignará
+ // al usuario si es candidato; si no lo es, no podrá grabar de todas formas
+ // porque los botones de emitir/rechazar validan por responsable).
+ if (!currentResponsibleId) return false;
+ // Si hay responsable y NO es el usuario actual → readOnly
+ return currentResponsibleId !== profile?.id;
+ })()}
  onAdvance={(level) => {
  const mut = level === "issuer" ? issueMut : level === "reviewer" ? reviewMut : approveMut;
  // Flush autoguardado pendiente antes de emitir
@@ -1680,7 +1846,7 @@ export default function ClaimDetailPage() {
  {/* ═══ MODAL: Mapa de ubicación del siniestro ═══ */}
  {claim.claim_latitude && claim.claim_longitude && (
  <Dialog open={mapOpen} onOpenChange={setMapOpen}>
- <DialogContent className="max-w-3xl p-0 overflow-hidden" showCloseButton>
+ <DialogContent className="max-w-328 p-0 overflow-hidden" showCloseButton>
  <DialogHeader className="p-4 pb-0">
  <DialogTitle className="app-section-title">Ubicación del siniestro</DialogTitle>
  <DialogDescription className="modal-subtitle">
@@ -1704,6 +1870,24 @@ export default function ClaimDetailPage() {
  </DialogContent>
  </Dialog>
  )}
+
+ {/* ═══ MODAL: Enviar E-mail desde gestión ═══ */}
+ {emailComposeAction && (
+ <EmailComposeModal
+ open={!!emailComposeAction}
+ onOpenChange={(v) => { if (!v) setEmailComposeAction(null); }}
+ claim={(claim ?? null) as unknown as Record<string, unknown> | null}
+ action={emailComposeAction}
+ businessLineId={claim?.business_line_id}
+ />
+ )}
+
+ {/* ═══ MODAL: Preview de E-mail enviado ═══ */}
+ <EmailPreviewModal
+ open={!!emailPreviewLog}
+ onOpenChange={(v) => { if (!v) setEmailPreviewLog(null); }}
+ log={emailPreviewLog}
+ />
  </div>
  );
 }

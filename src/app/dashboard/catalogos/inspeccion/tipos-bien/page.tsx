@@ -6,10 +6,10 @@ import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
-import { getContentGoodTypes, createContentGoodType, updateContentGoodType, deleteContentGoodType } from "@/services/catalogs";
+import { getContentGoodTypes, createContentGoodType, updateContentGoodType, getContentGoodProducts } from "@/services/catalogs";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Search, Pencil, Trash2, Package } from "lucide-react";
+import { Search, Pencil, Package } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,8 +33,9 @@ const EMPTY_FORM: FormState = { name: "", description: "", requires_detail: fals
 
 export default function TiposBienPage() {
   const queryClient = useQueryClient();
-  const { canCreate, canEdit, canDelete } = usePermissions();
+  const { canCreate, canEdit } = usePermissions();
   const [search, setSearch] = useState("");
+  const [onlyActive, setOnlyActive] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormState>(EMPTY_FORM);
@@ -43,6 +44,20 @@ export default function TiposBienPage() {
     queryKey: ["content-good-types"],
     queryFn: getContentGoodTypes,
   });
+
+  const { data: products } = useQuery({
+    queryKey: ["content-good-products"],
+    queryFn: getContentGoodProducts,
+  });
+
+  // Conteo de productos por tipo
+  const productCountByType = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of products || []) {
+      counts.set(p.content_good_type_id, (counts.get(p.content_good_type_id) || 0) + 1);
+    }
+    return counts;
+  }, [products]);
 
   const createMutation = useMutation({
     mutationFn: createContentGoodType,
@@ -68,10 +83,11 @@ export default function TiposBienPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteContentGoodType,
-    onSuccess: () => {
-      toast.success("Tipo de bien desactivado");
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      updateContentGoodType(id, { is_active: isActive }),
+    onSuccess: (data) => {
+      toast.success(data.is_active ? "Tipo de bien activado" : "Tipo de bien desactivado");
       queryClient.invalidateQueries({ queryKey: ["content-good-types"] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -79,10 +95,12 @@ export default function TiposBienPage() {
 
   const filtered = useMemo(
     () =>
-      (items || []).filter((i) =>
-        `${i.name} ${i.description || ""}`.toLowerCase().includes(search.toLowerCase())
-      ),
-    [items, search]
+      (items || []).filter((i) => {
+        const matchesSearch = `${i.name} ${i.description || ""}`.toLowerCase().includes(search.toLowerCase());
+        const matchesActive = !onlyActive || i.is_active;
+        return matchesSearch && matchesActive;
+      }),
+    [items, search, onlyActive]
   );
 
   const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
@@ -118,12 +136,18 @@ export default function TiposBienPage() {
           Tipos de Bien
         </h1>
         <div className="app-grid-filters">
+          <ToggleChip active={onlyActive} onClick={() => setOnlyActive(!onlyActive)}>
+            {onlyActive ? "Solo activos" : "Ver todos"}
+          </ToggleChip>
+          <span className="text-[11px] text-muted-foreground hidden sm:inline">
+            {filtered.length} de {items?.length || 0} tipos
+          </span>
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <Input
             placeholder="Buscar..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="app-input h-8 w-full sm:max-w-[180px]"
+            className="app-input h-8 w-full sm:max-w-45"
           />
         </div>
         {canCreate(SECTION) && (
@@ -144,21 +168,34 @@ export default function TiposBienPage() {
               <th className="w-10"></th>
               <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
               <SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripción</SortableTh>
+              <th className="text-center">Productos</th>
               <th className="text-center">Detalle</th>
-              <th className="w-[80px]"></th>
+              <th className="w-20"></th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+              <tr><td colSpan={6} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
+              <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
             ) : (
               paginatedData.map((item) => (
-                <tr key={item.id}>
-                  <td><span className={`app-status-dot ${item.is_active ? "app-status-on" : "app-status-off"}`} /></td>
+                <tr key={item.id} className={!item.is_active ? "opacity-50" : ""}>
+                  <td>
+                    {canEdit(SECTION) ? (
+                      <ToggleChip
+                        active={item.is_active}
+                        onClick={() => toggleActiveMutation.mutate({ id: item.id, isActive: !item.is_active })}
+                      >
+                        {item.is_active ? "Activo" : "Inactivo"}
+                      </ToggleChip>
+                    ) : (
+                      <span className={`app-status-dot ${item.is_active ? "app-status-on" : "app-status-off"}`} />
+                    )}
+                  </td>
                   <td className="font-medium">{item.name}</td>
                   <td className="text-muted-foreground">{item.description || "—"}</td>
+                  <td className="text-center text-muted-foreground">{productCountByType.get(item.id) || 0}</td>
                   <td className="text-center text-muted-foreground">{item.requires_detail ? "Sí" : "—"}</td>
                   <td>
                     <div className="app-row-actions">
@@ -173,11 +210,6 @@ export default function TiposBienPage() {
                           setOpen(true);
                         }}>
                           <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {canDelete(SECTION) && (
-                        <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar?")) deleteMutation.mutate(item.id); }}>
-                          <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>

@@ -83,6 +83,7 @@ Sin excepciones. Configuración, catálogos, transacciones, auditoría, todo.
   - Ejemplos que SÍ: `claims`, `companies`, `profiles`, `inspection_sessions`.
   - Ejemplos que NO (catálogos globales): `currencies`, `country_currencies`, `exchange_rates`, `system_settings`, `nav_menu_config`.
   - Las tablas hijas que ya son alcanzables por relación a `claims`, `companies`, `users` u otra tabla tenant NO duplican `company_id`.
+- **Patrón frontend para obtener `company_id`:** Siempre desde `claim.company_id` (el siniestro siempre lo tiene, es relacional). NUNCA hacer casts raros como `(claim as unknown as { company_id?: string }).company_id` ni buscarlo en `claimActions` (que no lo trae en su SELECT). Ejemplo correcto: `claim?.company_id || ""`.
 - Implementar **Row Level Security (RLS)** en todas las tablas con datos sensibles/empresa.
 - Nunca usar bypass de seguridad (`security definer` solo en funciones controladas).
 - Usar `NHOST_ADMIN_SECRET` solo en server actions o Nhost Functions, nunca en cliente.
@@ -229,7 +230,7 @@ workflow_configs (país + línea + evento + estado → config)
         · level: 2+ = dependiente (se crea al cerrar su padre)
         · depends_on_template_id: template del cual depende
         · is_automatic: si el workflow lo crea solo
-        · is_required: si se rechaza, se recrea automáticamente
+        · is_required: si el usuario apreta físicamente el botón de rechazo en la UI, se recrea automáticamente (ver regla abajo)
 ```
 
 ### Triggers SQL (migración 147)
@@ -245,9 +246,18 @@ del workflow que coincida con: país + línea + evento + **nuevo estado**.
 ir al workflow del estado actual del siniestro, buscar qué gestiones dependen
 de la que se acaba de emitir, y crearlas en estado `todo`.
 
-**3. Cuando una gestión se RECHAZA** → ir al workflow del estado actual del
+**3. Cuando una gestión se RECHAZA** (solo desde el botón físico de rechazo
+en la UI de una gestión DINÁMICA) → ir al workflow del estado actual del
 siniestro, buscar si esa gestión es `is_required` en el workflow, y si lo es,
 **recrearla** en estado `todo`.
+
+**NOTA sobre `is_required`:** Esta regla SOLO aplica cuando el usuario apreta
+físicamente el botón de rechazo en la UI de una gestión dinámica (pantalla con
+`review_levels`). NO aplica a:
+- Cancelaciones automáticas del sistema (reagendamiento desde inspecciones)
+- Cancelación desde el módulo de cancelación de acciones (configuración)
+- Rechazos programáticos desde servicios backend
+- Gestiones de pantalla FIJA (como INS) — nunca tienen botón de rechazo
 
 **Lo que NO importa:**
 - ❌ No importa si la gestión es manual o automática
@@ -3536,4 +3546,372 @@ sin perder la distinción entre miles y decimales.
 ### 3. No perder el hilo ante preguntas
 - Si el usuario hace una pregunta mientras hay una tarea activa, responder brevemente y retomar inmediatamente el paso en curso.
 - NO desviarse ni iniciar exploraciones nuevas por una pregunta intermedia.
+
+---
+
+## 25. Zona Horaria y Formato de Fechas/Hora
+
+### Regla general
+Toda fecha/hora que el usuario vea o ingrese debe reflejar su hora local real, independientemente de dónde esté.
+- Por defecto se usa la zona horaria del navegador/dispositivo del usuario (`Intl.DateTimeFormat().resolvedOptions().timeZone`).
+- El usuario puede tener una zona horaria guardada en su perfil (`setUserTimeZone()`), que persiste en `localStorage`.
+- Fallback en servidor: `America/Santiago`.
+- La base de datos siempre almacena UTC (`timestamptz`).
+
+### Almacenamiento
+- `created_on`, `updated_on`, `issued_on`, `scheduled_at`, etc. se guardan como UTC (`timestamptz`).
+- Cuando el usuario elige una fecha/hora local, se envía al servidor como ISO con offset explícito,
+  p. ej. `2026-07-25T10:00:00-04:00` (Chile invierno) o `...-05:00` (Colombia).
+- El offset se calcula por fecha, por lo que funciona correctamente con horario de verano/invierno (DST).
+
+### Conversión
+- Usar `src/lib/timezone.ts` para toda conversión:
+  - `toUserISO(dateStr, timeStr)` — convierte fecha+hora local a ISO con offset del usuario.
+  - `formatUserDateTime(dateStr)` — muestra fecha/hora en la zona del usuario.
+  - `formatUserDate(dateStr)` — muestra fecha; detecta columnas `date` y no las desplaza.
+  - `formatUserTime(dateStr)` — muestra hora en la zona del usuario.
+  - `setUserTimeZone(tz)` / `getUserTimeZone()` — guardar/leer zona horaria del usuario.
+
+### Componentes y servicios actualizados
+- `src/app/dashboard/inspecciones/[id]/page.tsx`
+- `src/app/dashboard/claims/[id]/page.tsx`
+- `src/app/dashboard/inspecciones/page.tsx`
+- `src/app/dashboard/claims/[id]/audit-log-section.tsx`
+- `src/services/claim-actions.ts`
+- `src/services/inspections.ts`
+
+### Prohibido
+- NO usar `new Date("...T10:00:00").toISOString()` directamente porque depende de la zona horaria del navegador/servidor.
+- NO mostrar timestamps sin `timeZone` explícito de `getUserTimeZone()` en `toLocaleString`.
+
+---
+
+## 26. Flujo de Inspección: Cancelación y Reagendamiento
+
+### Cancelación de una inspección
+
+Cuando una inspección se cancela desde el módulo de Inspecciones:
+
+1. Se cancela la `inspection_session` actual (`status='cancelled'`, motivo, notas, fecha).
+2. Se emite la gestión `INS` original con `action_status='issued'` pero marcada como `cancelled`
+   dentro de `action_data` (no se rechaza; el inspector hizo el trabajo).
+3. Se crea y emite una gestión `CIN` con `coord_result='desistida'` y `origin='A'` (automática)
+   como registro de auditoría.
+4. La CIN `desistida` no genera una nueva inspección; rompe el flujo.
+
+### Reagendamiento de una inspección
+
+Cuando una inspección se reagenda desde el módulo de Inspecciones:
+
+1. Se valida que la nueva fecha/hora no sea pasada.
+2. Se valida que no supere el `days_to_issue` del template `CIN`.
+3. Se valida que el inspector no tenga otra sesión en el mismo horario.
+4. Se cancela la `inspection_session` actual (`status='cancelled'`).
+5. Se rechaza la gestión `INS` original (`action_status='rejected'`) para que el workflow
+   pueda crear una nueva.
+6. Se crea una gestión `CIN` con `coord_result='coordinada'`, `origin='A'` (automático
+   desde inspección) y los datos seleccionados:
+   - `coord_fecha`: fecha/hora nueva (con offset de zona horaria del usuario)
+   - `coord_inspector`: inspector seleccionado
+   - `coord_type` / `coord_inspection_type`: tipo de inspección
+   - `coord_comentarios`: motivo del reagendamiento como texto (más notas si las hay)
+   - `coord_cont`: contacto de la última CIN o sesión
+   - `coord_ubic`, `claim_latitude`, `claim_longitude`: dirección de la última CIN o del siniestro
+7. Se emite la CIN (`issueClaimAction`) con `userId` como emisor.
+8. El trigger `cascade_workflow_on_issue` crea la nueva gestión `INS` con `origin='W'`
+   (workflow) y copia el `action_data` del CIN a `parent_action_data` de la INS.
+9. El trigger `auto_create_inspection_session` lee `parent_action_data` de la INS y
+   genera la nueva `inspection_session` con el correlativo `INS-YYYYMMDD-XXXX`,
+   fecha, inspector, contacto, ubicación y magic link.
+
+### Transferencia de datos CIN → INS (trigger cascade)
+
+La función `cascade_workflow_on_issue` (migración 247) copia el `action_data` completo
+del CIN al campo `parent_action_data` dentro del `action_data` de la INS nueva:
+
+```sql
+jsonb_build_object('parent_action_data', COALESCE(NEW.action_data, '{}'::jsonb))
+```
+
+Luego `auto_create_inspection_session` (migración 245) lee los campos de coordinación
+desde `parent_action_data` usando `find_coord_field`:
+
+- `coord_type` / `coord_inspection_type` → tipo de inspección (onsite/remote)
+- `coord_fecha` → fecha/hora agendada
+- `coord_inspector` → inspector asignado
+- `coord_cont` / `coord_contacto` → nombre del contacto
+- `coord_ubic` / `coord_ubicacion` → dirección de la inspección
+
+Si algún campo no se encuentra, usa defaults (onsite, sin fecha, inspector del claim).
+
+### Herencia de datos validados entre CINs
+
+Las nuevas coordinaciones (reagendada, desistida, re-coordinación fallida) deben heredar
+los datos de dirección/contacto ya validados de la CIN anterior. La función
+`getPreviousCINData` extrae de la última CIN los campos:
+
+- `coord_ubic_1` / `coord_ubic` (Aclaración Dirección)
+- `claim_latitude` / `claim_longitude` (geolocalización validada)
+- `coord_cont_1` / `coord_cont` (contacto de coordinación)
+
+El usuario puede cambiarlos si lo desea, pero no es obligación volver a validar la dirección.
+
+### Bloqueo de UI durante acciones async (reagendamiento y cancelación)
+
+Los botones que disparan procesos de larga duración deben mostrar un estado de carga y
+bloquear la interfaz hasta recibir respuesta. Esto evita que el usuario interrumpa la tarea
+o haga doble click.
+
+- Modal de reagendamiento: spinner "Reagendando...", campos deshabilitados, modal no cerrable.
+- Modal de cancelación: spinner "Cancelando...", campos deshabilitados, modal no cerrable.
+- Usar `Loader2` de `lucide-react` con `animate-spin`.
+
+### Archivos
+- `src/services/inspections.ts` — `cancelInspectionViaCIN`, `rescheduleInspectionViaCIN`, `getPreviousCINData`
+- `src/services/claim-actions.ts` — `issueClaimAction` (ramas `fallida`, `reagendada`, `coordinada`)
+- `src/app/dashboard/inspecciones/[id]/page.tsx` — modales de reagendamiento y cancelación
+- `src/app/dashboard/claims/[id]/page.tsx` — badges de CIN en grilla, `readOnly` por responsable
+
+### Validación de responsable activo
+
+Una gestión solo puede ser editada por el responsable de la etapa actual del workflow:
+
+- Estado `todo` → responsable = `issuer_id` (emisor)
+- Estado `issued` → responsable = `reviewer_id` (revisor)
+- Estado `reviewed` → responsable = `approver_id` (aprobador)
+- Estado `approved`/`dispatched`/`closed`/`rejected` → nadie (solo lectura)
+
+Reglas:
+1. Si el usuario NO es el responsable actual → `readOnly = true` (no puede editar campos,
+   no puede emitir, no puede rechazar).
+2. Si el responsable está vacío y el usuario es candidato (está en el combo de roles
+   para esa etapa) → se auto-asigna como responsable (`LevelCard` con `useEffect`).
+3. Si el responsable es otra persona y el usuario es candidato → puede "Tomar la gestión"
+   desde el `LevelCard` (select visible). Al tomarla, se convierte en responsable y
+   puede editar.
+4. Si el usuario NO está en el combo → no puede asignarse, no puede editar, no puede
+   emitir ni rechazar. No puede rechazar a nombre de otra persona.
+
+Implementación:
+- `src/app/dashboard/claims/[id]/page.tsx` — `readOnly` se calcula con IIFE según
+  estado + responsable + `profile.id`.
+- `src/app/dashboard/claims/[id]/gestion-screens/DynamicScreen.tsx` — `LevelCard`
+  tiene `useEffect` que llama a `assignMut.mutate(currentUserId)` cuando la etapa
+  está activa, no hay responsable, y el usuario es candidato.
+
+### Inspector por defecto en coordinación
+
+Cuando se crea una coordinación (CIN) y el campo `coord_inspector` está vacío,
+`InspectorSelectField` auto-selecciona el `inspector_id` del siniestro (`claim.inspector_id`).
+El usuario puede cambiarlo a otro inspector del combo.
+
+Implementación: `useEffect` en `InspectorSelectField` que llama a
+`onChange(field.id, claimInspectorId)` cuando `claimInspectorId` existe, `value`
+está vacío, y no es `readOnly`.
+
+### Mapa de ubicación en coordinación
+
+El modal de `ClaimLocationSelector` debe tener el mismo ancho que el modal de ubicación
+del siniestro: `max-w-328`. El mapa siempre debe ser visible (no condicional a si hay
+candidatos seleccionados), para que el usuario pueda ver los marcadores y hacer clic.
+
+Implementación: `MapContainer` se renderiza siempre (sin condicional `{selected || ...}`).
+Altura del grid: `h-[70vh]` con `min-h-0` en la columna izquierda para que el flex
+no desborde. `min-h-70` en el contenedor del mapa.
+
+### Campo de observaciones en CIN
+
+El campo de observaciones/comentarios de la coordinación es `coord_comentarios`
+(NO `coord_com` — ese era un nombre incorrecto que se usó antes y no existía en
+el screen_schema). El motivo del reagendamiento se guarda ahí como texto:
+
+```
+coord_comentarios = [reasonName, notes].filter(Boolean).join(". ")
+```
+
+### Debug de reagendamiento
+
+`rescheduleInspectionViaCIN` loguea en consola del servidor:
+- `cinActionData` antes de crear la CIN
+- `newCin.id` y `newCin.origin` después de crearla
+
+Esto permite verificar que el `origin='A'` y los datos lleguen bien a la base.
+Si la nueva INS queda sin datos, revisar que el trigger `cascade_workflow_on_issue`
+esté copiando `action_data` al `parent_action_data` (migración 247).
+
+### Validación de calendario en reagendamiento
+
+El reagendamiento debe validar solapamiento REAL con la agenda del inspector,
+no solo comparar la hora de inicio. La sesión actual sigue activa (status=scheduled)
+hasta que se cancele, así que cuenta como ocupada.
+
+- Detección de solapamiento: `sStart < newEnd && sEnd > newStart`
+- Duración: 120 min onsite, 30 min remote (igual que el slot picker)
+- La sesión actual NO se excluye de la agenda — el usuario no puede elegir el
+  mismo horario con el mismo inspector.
+- El slot picker del modal marca la sesión actual con "(sesión actual)" en el
+  tooltip para que el usuario entienda por qué está ocupada.
+
+### Regla de `is_required` (aclaración crítica)
+
+`is_required=true` en `workflow_steps` significa:
+
+> Si el usuario **apreta físicamente el botón de rechazo** en una gestión
+> **DINÁMICA** (pantalla con `review_levels`), el workflow la recrea
+> automáticamente en estado `todo`.
+
+Esta regla **NO aplica** a:
+- Cancelaciones automáticas del sistema (reagendamiento desde inspecciones)
+- Cancelación desde el módulo de cancelación de acciones (configuración)
+- Rechazos programáticos desde servicios backend
+
+La regla SOLO vale cuando el emisor apreta el botón de rechazo en la UI de
+una gestión dinámica. Las gestiones de pantalla FIJA (como INS) nunca tienen
+botón de rechazo, así que nunca se pueden rechazar desde la UI.
+
+### Migración 251: Excluir INS del trigger auto_recreate_rejected_workflow_action
+
+El trigger `auto_recreate_rejected_workflow_action` recrea automáticamente
+cualquier gestión marcada como `is_required=true` cuando se rechaza. Pero la
+regla de `is_required` SOLO aplica a gestiones dinámicas (con botón de
+rechazo en la UI). Las gestiones de pantalla fija como INS nunca tienen botón
+de rechazo, así que nunca deben ser recreadas por este trigger.
+
+La migración 251 excluye las gestiones con `action_features.code = 'INS'`
+del trigger `auto_recreate_rejected_workflow_action`. Esto permite que el
+reagendamiento rechace la INS anterior programáticamente sin que el trigger
+la recrea automáticamente.
+
+### Flujo de reagendamiento (correcto)
+
+El flujo conserva la historia completa para auditoría:
+
+1. **Cancelar la sesión de inspección en curso** (`status='cancelled'`)
+2. **Rechazar la gestión INS-001 original** (status=`rejected`, etapa emisión)
+   - El trigger `auto_recreate_rejected_workflow_action` NO la recrea porque
+     las gestiones con característica INS están excluidas (migración 251)
+   - La INS-001 queda en la historia como "rechazada por reagendamiento"
+3. **Crear + emitir CIN-002** (Coordinación de Inspección reagendamiento)
+   con los nuevos datos. NO se pasa `existing_session_id` porque queremos
+   que el cascade cree una INS-002 NUEVA + sesión nueva
+4. El trigger `cascade_workflow_on_issue` del CIN-002 crea automáticamente:
+   - **INS-002** (nueva, status=todo) con `parent_action_data` del CIN-002
+   - El trigger `auto_create_inspection_session` crea la **sesión nueva**
+     con los datos del CIN-002 (tipo, fecha, inspector, magic link)
+
+Historia resultante:
+```
+CIN-001 (emitida) → INS-001 (rechazada) → sesión cancelada
+CIN-002 (emitida) → INS-002 (todo)      → sesión nueva agendada
+```
+
+### Flujo con coordinación manual nueva (cuando ya hay inspección pendiente)
+
+Si hay una INS pendiente (todo) asociada a una CIN anterior y el usuario
+crea una CIN nueva manualmente y la coordina:
+1. La INS pendiente se **rechaza** automáticamente (por dependencia)
+2. El cascade del CIN nueva crea **INS nueva** + sesión nueva
+3. La INS activa siempre corresponde a la última CIN coordinada
+
+### Regla de duplicados: "no resuelta" en vez de "no rechazada"
+
+**Regla:** Solo puede haber UNA gestión **pendiente (no resuelta)** por
+característica al mismo tiempo. Las gestiones **resueltas** no bloquean
+la creación de nuevas gestiones del mismo tipo.
+
+**"Resuelta"** = completó TODOS sus niveles de revisión requeridos:
+- Solo emisión → `issued_on IS NOT NULL`
+- Emisión + revisión → `issued_on IS NOT NULL AND reviewed_on IS NOT NULL`
+- Emisión + revisión + aprobación → los 3 completos
+- Emisión + revisión + aprobación + despacho → los 4 completos
+
+**Ejemplo:** Puedes tener 10 INS emitidas (resueltas) y crear la INS #11.
+Pero no puedes tener 2 INS en estado `todo` (pendientes) al mismo tiempo.
+
+**Excepción GEN:** La característica genérica (`action_features.code = 'GEN'`)
+puede tener varias gestiones pendientes al mismo tiempo, porque son
+acciones distintas que comparten la misma característica.
+
+**Migración 252:** Cambia la lógica de duplicados en los 3 triggers:
+- `sync_workflow_for_claim` (level 1)
+- `auto_recreate_rejected_workflow_action`
+- `cascade_workflow_on_issue`
+
+Antes: `lc.code != 'rejected'` (todo lo no rechazado bloquea)
+Ahora: `lc.code != 'rejected' AND (no resuelta)` (solo pendientes bloquean)
+
+### Regla de dependencia CIN → INS
+
+- Siempre que se emita una CIN con `coord_result=coordinada` → se crea una
+  INS nueva (si no hay ya una INS pendiente/no resuelta)
+- Si ya existe una INS pendiente (todo) → no se crea otra (duplicado)
+- Si las INS anteriores están resueltas (emitidas/canceladas) → se crea
+  una INS nueva para la CIN activa
+- Es un flujo de dependencia: la INS pendiente siempre corresponde a la
+  última CIN coordinada
+
+### Migración 250: cascade_workflow_on_issue con existing_session_id
+
+La migración 248 sobreescribió `cascade_workflow_on_issue` SIN la lógica de
+`existing_session_id` que había agregado la migración 200. La migración 250
+restaura esa lógica y además agrega la actualización directa de la sesión
+cuando se vincula una INS existente.
+
+Función `cascade_workflow_on_issue` (migración 250):
+- Si `action_data.existing_session_id` existe y el hijo es INS:
+  1. Busca la INS vinculada a esa sesión (`inspection_sessions.claim_action_id`)
+  2. UPDATE de la INS con `parent_action_data`, `parent_action_id`, `parent_code`
+  3. UPDATE de la sesión con `inspection_type`, `scheduled_at`, `inspector_id`,
+     `magic_link_token`, `magic_link_expires_at`, `status='scheduled'`
+  4. CONTINUE (no crea otra INS)
+- Flujo normal: si no hay INS activa, INSERT nueva con `parent_action_data`
+
+---
+
+## 27. Tracking de Migraciones por Checksum
+
+El script `scripts/db-push.ts` ahora guarda un SHA-256 de cada archivo de migración
+aplicado en la tabla `migrations` (columna `checksum`). Antes de ejecutar una migración
+se compara el checksum con el archivo actual:
+
+- Si la migración nunca se aplicó → se ejecuta.
+- Si ya se aplicó y el checksum coincide → se omite.
+- Si ya se aplicó y el checksum difiere → se vuelve a ejecutar (reejecución segura).
+
+Esto evita el "drift" en el que funciones SQL dentro de migraciones quedan desactualizadas
+aunque el archivo migración cambie (problema real con `auto_create_inspection_session` y `company_id`).
+
+### Archivos
+- `scripts/db-push.ts`
+- Tabla `migrations` con columnas `name`, `checksum`, `applied_at`
+
+---
+
+## 28. Modales de Mapa de Ubicación
+
+Los dos modales que muestran el mapa para seleccionar/validar ubicación deben tener
+el mismo ancho y ser suficientemente anchos para visualizar bien el mapa:
+
+- Modal de ubicación del siniestro (`/dashboard/claims/[id]`)
+- Modal de ubicación en coordinación (`ClaimLocationSelector`)
+
+Clase usada: `max-w-328` (82rem ≈ 1312px).
+
+### Archivos
+- `src/app/dashboard/claims/[id]/page.tsx`
+- `src/components/claims/claim-location-selector.tsx`
+
+---
+
+## 29. Sincronización Masiva de Workflows
+
+El script `scripts/sync-all-workflows.cjs` recorre todos los `claims` y ejecuta
+`sync_workflow_for_claim` para crear las gestiones de workflow faltantes.
+
+```
+node scripts/sync-all-workflows.cjs
+```
+
+Útil tras cambiar configuración de workflows o re-sincronizar claims migrados.
+
 

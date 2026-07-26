@@ -60,7 +60,7 @@ export async function getMyGestiones(
     action_status:lookup_catalog!claim_actions_action_status_id_fkey(id, category, code, name),
     claim:claims!claim_actions_claim_id_fkey(
       id, claim_number, liquidation_number, client_reference,
-      insured:claim_participants!claims_insured_participant_id_fkey(full_name)
+      insured:claims_participants!claims_insured_participant_id_fkey(full_name)
     )
   `;
 

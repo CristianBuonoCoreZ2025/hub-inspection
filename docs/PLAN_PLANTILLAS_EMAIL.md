@@ -19,7 +19,7 @@ El plan anterior tenía 3 errores de diseño que se corrigen en esta versión:
 |---|----------------|------------|
 | 1 | `email_templates.action_template_id` era FK **obligatoria 1:1** (una plantilla → una acción) | **Many-to-many** vía tabla junction `email_template_actions`. Una plantilla se crea **sin** acción y se vincula a **N** acciones **después**. |
 | 2 | UI mostraba el formulario arriba y la grilla abajo | **Grilla primero**. El formulario se abre en página editor aparte (`/new` y `/[id]`). |
-| 3 | Botón "Crear" bloqueado por `action_template_id` obligatorio | El botón "Crear" se habilita solo con `name` + `subject` + `body`. La acción se vincula después. |
+| 3 | Botón "Crear" bloqueado por `action_template_id` obligatorio | El botón "Crear" se habilita con `name` + `subject` + `body` + `business_line_id` (obligatoria). La acción se vincula después. |
 | 4 | Placeholders por copiar/pegar | **Insertor interactivo**: panel lateral de campos disponibles, click-to-insert o drag-and-drop. |
 | 5 | Solo texto plano | Soporte **texto plano Y HTML** (toggle `body_format`), con logos, imágenes y estilos. |
 
@@ -81,7 +81,7 @@ Misma sección donde hoy están `Tipos de Gestión`, `Características`, `Pantal
 |---------|------|-------|
 | `id` | uuid PK | |
 | `company_id` | uuid FK → `companies` | Multi-tenant |
-| `business_line_id` | uuid FK → `business_lines` | Línea de negocio a la que aplica (hogar, comercial, etc.). Nullable = aplica a todas |
+| `business_line_id` | uuid FK → `business_lines` NOT NULL | Línea de negocio a la que aplica (hogar, comercial, etc.). **Obligatoria** — una plantilla pertenece a una línea de negocio concreta |
 | ~~`action_template_id`~~ | ~~uuid FK~~ | **Queda como columna nullable obsoleta** después de migrar (ver §9.1). No se usa en código nuevo. Se dropea solo con autorización explícita (REGLA #1). |
 | `name` | text | Nombre interno |
 | `description` | text | Descripción opcional |
@@ -197,7 +197,7 @@ function renderEmailTemplate(
 ### 5.1 Crear plantilla (sin acción)
 1. Usuario entra a la grilla `/dashboard/catalogos/gestiones/email-templates`.
 2. Clic en **Nueva Plantilla** → navega a `/new`.
-3. Completa: nombre, línea de negocio (opcional), formato (`plain`/`html`), asunto, cuerpo.
+3. Completa: nombre, **línea de negocio (obligatoria)**, formato (`plain`/`html`), asunto, cuerpo.
 4. Inserta placeholders desde el panel lateral de campos disponibles (click-to-insert).
 5. Guarda. Vuelve a la grilla. **Aún no tiene acción vinculada.**
 
@@ -228,19 +228,58 @@ function renderEmailTemplate(
 2. Trigger/función llama a `autoIssueAndEmail(action_id)`.
 3. `autoIssueAndEmail`:
    - Emite la acción (`status = issued`, `issued_on`, `issued_by = sistema`).
+   - **Renderiza la pantalla de la gestión** para asegurar que los campos de
+     `action_data` se llenen con la información correcta (la misma data que
+     alimentará los placeholders del e-mail). Sin este render, el e-mail saldría
+     con placeholders vacíos o incorrectos.
    - Si `auto_email = true`: busca la plantilla con `is_default = true` en
      `email_template_actions` para esa acción (valida que exista — si no, loguea error
-     y no envía). Renderiza y envía.
+     y no envía). Renderiza y envía a los destinatarios configurados en
+     `auto_email_recipients` (ver §5.6).
    - Guarda en `email_logs` con `sent_by = sistema`.
 4. Usuario ve la acción ya emitida y con e-mail enviado en el historial.
 
 ### 5.5 Configuración desde `action_template`
 En la ficha de la gestión (mismo lugar que la card de plantillas vinculadas):
 - Switch `Completar automáticamente` (`auto_complete`).
+  - Si `auto_complete = true`, **no se configuran los roles que emiten**
+    (`default_issuer_role`, `default_reviewer_role`, `default_approver_role`):
+    la gestión se emite sola por el sistema al crearse. Esos selectores se
+    ocultan o deshabilitan cuando `auto_complete = true`.
 - Switch `Enviar e-mail automáticamente` (`auto_email`) — visible solo si
   `auto_complete = true`.
-- Si `auto_email = true`: **obliga** a tener una plantilla por defecto vinculada
-  (bloquea guardar si no hay). Selector de plantilla por defecto entre las vinculadas.
+- Si `auto_email = true`:
+  - **Obliga** a tener una plantilla por defecto vinculada (bloquea guardar si no
+    hay). Selector de plantilla por defecto entre las vinculadas.
+  - **Obliga** a seleccionar al menos un destinatario en `auto_email_recipients`
+    (ver §5.6). Bloquea guardar si la lista está vacía.
+
+### 5.6 Destinatarios del auto-envío (`auto_email_recipients`)
+
+Cuando `auto_email = true`, el envío automático se dirige a uno o varios de los
+**participantes del siniestro**. La lista está limitada a estos roles (no se
+permite e-mail libre en auto-envío — para eso está el envío manual):
+
+| Valor en `auto_email_recipients` | Participante | Origen del dato |
+|----------------------------------|--------------|-----------------|
+| `insured` | Asegurado | `claim.insured` / `claim_participants` |
+| `contractor` | Contratante | `claim_participants` (rol contratante) |
+| `beneficiary` | Beneficiario | `claim_participants` (rol beneficiario) |
+| `contact` | Contacto | `claim_participants` (rol contacto) |
+| `adjuster` | Liquidador | `claim.adjuster_id` → `profiles.email` |
+| `inspector` | Inspector | `claim.inspector_id` → `profiles.email` |
+
+Reglas:
+- Se selecciona **uno, varios o todos** los roles vía multi-select en la ficha de
+  la gestión. Se guardan como `TEXT[]` en `action_template.auto_email_recipients`.
+- `auto_email_recipients` **no puede estar vacío** si `auto_email = true`
+  (validación al guardar la gestión).
+- Si al momento del envío algún participante no tiene e-mail cargado, se omite
+  silenciosamente y se registra en `email_logs.provider_response` como
+  `skipped: <rol>` (no falla todo el envío).
+- Lógicas particulares por tipo de gestión/pantalla (ej: "si el inspector no está
+  asignado, no enviar a inspector") se abordarán pantalla por pantalla más
+  adelante — estas son solo las **configuraciones globales**.
 
 ---
 
@@ -261,7 +300,7 @@ Layout de 2 columnas (desktop) / 1 columna (mobile):
 - **Columna principal** (izquierda, ~70%):
   - Campo `Nombre`.
   - Textarea `Descripción` (opcional).
-  - Selector `Línea de negocio` (opcional).
+  - Selector `Línea de negocio` (**obligatorio**).
   - Toggle `Formato`: **Texto plano** / **HTML**.
   - Campo `Asunto` con detección de placeholders en vivo.
   - Editor `Cuerpo`:
@@ -289,8 +328,18 @@ Mismo patrón que `DocumentTemplatesCard`:
 - Acciones por fila: marcar/desmarcar `Por defecto`, desvincular.
 - Botón `Vincular plantilla` → modal con multi-select filtrado por `business_line_id`
   compatible con la gestión.
-- Debajo: switches `auto_complete` / `auto_email` + selector de plantilla por defecto
-  (obligatorio si `auto_email = true`).
+- Debajo, sección **Auto-emisión y auto-envío**:
+  - Switch `Completar automáticamente` (`auto_complete`).
+    - Al activarse, **se ocultan/deshabilitan** los selectores de roles que emiten
+      (`default_issuer_role`, `default_reviewer_role`, `default_approver_role`).
+      La gestión se emite sola por el sistema.
+  - Switch `Enviar e-mail automáticamente` (`auto_email`) — visible solo si
+    `auto_complete = true`.
+  - Si `auto_email = true`:
+    - Selector de plantilla por defecto entre las vinculadas (obligatorio).
+    - **Multi-select de destinatarios** (`auto_email_recipients`) con los 6 roles
+      de participantes: asegurado, contratante, beneficiario, contacto, liquidador,
+      inspector. Obligatorio al menos uno. Bloquea guardar si está vacío.
 
 ### 6.4 Botón E-mail en acción de siniestro
 - En header de la acción, junto a `Emitir`, `Revisar`, etc.
@@ -368,8 +417,11 @@ Para envío desde acción: permiso `edit` sobre la acción o `operaciones`.
 4. **Hacer nullable** `email_templates.action_template_id` (para que las nuevas
    plantillas se puedan crear sin acción). **NO se dropea** — se conserva como
    columna obsoleta (REGLA #1). El código nuevo ignora esta columna y usa la junction.
-5. **Agregar** `email_logs.body_format TEXT NOT NULL DEFAULT 'plain'`.
-6. Índices y RLS sobre la junction.
+5. **Hacer NOT NULL** `email_templates.business_line_id` (era nullable). No hay
+   filas existentes en producción (confirmado), así que `SET NOT NULL` directo sin
+   backfill. Si en el futuro hubiera NULLs, NO se borran — se resuelven a mano.
+6. **Agregar** `email_logs.body_format TEXT NOT NULL DEFAULT 'plain'`.
+7. Índices y RLS sobre la junction.
 
 ### 9.2 Migración 235 — RLS junction
 `migrations/235_email_template_actions_rls.sql`:
@@ -450,11 +502,14 @@ Mismo concepto de placeholders y mapeo que `document_templates`. Diferencias:
 
 ## 13. Checklist de aceptación (definición de "hecho")
 
-- [ ] Puedo crear una plantilla **sin** vincular acción y el botón Crear se habilita.
+- [ ] Puedo crear una plantilla **sin** vincular acción y el botón Crear se habilita con `name` + `subject` + `body` + `business_line_id`.
 - [ ] La grilla se ve primero, sin formulario arriba.
 - [ ] Puedo vincular una misma plantilla a varias gestiones desde la ficha de cada gestión.
 - [ ] Puedo marcar una plantilla como por defecto por acción+línea.
 - [ ] Si `auto_email = true`, no puedo guardar sin plantilla por defecto.
+- [ ] Si `auto_email = true`, no puedo guardar sin al menos un destinatario en `auto_email_recipients` (asegurado, contratante, beneficiario, contacto, liquidador o inspector).
+- [ ] Si `auto_complete = true`, los selectores de roles que emiten se ocultan/deshabilitan.
+- [ ] El auto-envío renderiza la pantalla de la gestión antes de enviar para que los campos se llenen correctamente.
 - [ ] Puedo insertar placeholders con click o drag-and-drop desde el panel lateral.
 - [ ] Puedo elegir formato plain o HTML; HTML soporta logo, imágenes, estilos.
 - [ ] Los vínculos existentes (los que ya tenían `action_template_id`) siguen funcionando.

@@ -21,6 +21,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DiagnosticLogToggle from "./DiagnosticLogToggle";
 
 type ConfigTab = "general" | "notificaciones" | "integraciones" | "perfiles";
@@ -320,28 +321,34 @@ function MapProvidersSection() {
       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <Label className="app-body text-muted-foreground">Proveedor primario</Label>
-          <select
-            className="app-input mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 app-body"
+          <Select
             value={primary}
-            onChange={(e) => setPrimary(e.target.value as MapProvider)}
-            disabled={isLoading}
+            onValueChange={(v) => setPrimary(v as MapProvider)}
           >
-            <option value="osm">OpenStreetMap (gratis)</option>
-            <option value="mapbox">Mapbox (requiere token)</option>
-          </select>
+            <SelectTrigger className="app-input mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 app-body" disabled={isLoading}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="osm">OpenStreetMap (gratis)</SelectItem>
+              <SelectItem value="mapbox">Mapbox (requiere token)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label className="app-body text-muted-foreground">Proveedor secundario (fallback)</Label>
-          <select
-            className="app-input mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 app-body"
+          <Select
             value={secondary}
-            onChange={(e) => setSecondary(e.target.value as MapProvider | "none")}
-            disabled={isLoading}
+            onValueChange={(v) => setSecondary(v as MapProvider | "none")}
           >
-            <option value="none">Ninguno</option>
-            <option value="osm">OpenStreetMap (gratis)</option>
-            <option value="mapbox">Mapbox (requiere token)</option>
-          </select>
+            <SelectTrigger className="app-input mt-1 w-full h-9 rounded-md border border-input bg-transparent px-2 app-body" disabled={isLoading}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Ninguno</SelectItem>
+              <SelectItem value="osm">OpenStreetMap (gratis)</SelectItem>
+              <SelectItem value="mapbox">Mapbox (requiere token)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       {primary === "mapbox" || secondary === "mapbox" ? (

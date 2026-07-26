@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import type { UserRole, UserTypePermission } from "@/types";
+import { setUserTimeZone } from "@/lib/timezone";
 
 interface UserProfile {
   id: string;
   user_id: string;
   email: string;
   full_name: string;
+  timezone?: string | null;
   role: UserRole;
   company_id: string | null;
   company?: { id: string; name: string; logo_url: string | null; phone: string | null; email: string | null; address: string | null } | null;
@@ -72,7 +74,7 @@ export function useAuth() {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, user_id, email, full_name, role, company_id, company:companies!profiles_company_id_fkey(id, name, logo_url, phone, email, address)")
+        .select("id, user_id, email, full_name, timezone, role, company_id, company:companies!profiles_company_id_fkey(id, name, logo_url, phone, email, address)")
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw new Error(error.message);
@@ -80,6 +82,26 @@ export function useAuth() {
     },
     enabled: !!user?.id,
   });
+
+  // Guardar/detectar zona horaria del usuario
+  const timezoneMutation = useMutation({
+    mutationFn: async ({ profileId, timeZone }: { profileId: string; timeZone: string }) => {
+      const { error } = await supabase.from("profiles").update({ timezone: timeZone }).eq("id", profileId);
+      if (error) throw new Error(error.message);
+    },
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!profile) return;
+    if (profile.timezone) {
+      setUserTimeZone(profile.timezone);
+    } else if (!timezoneMutation.isPending && !timezoneMutation.isSuccess) {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setUserTimeZone(detected);
+      timezoneMutation.mutate({ profileId: profile.id, timeZone: detected });
+    }
+  }, [profile, timezoneMutation]);
 
   // Obtener permisos del tipo de usuario
   const { data: permissions } = useQuery<UserTypePermission[]>({

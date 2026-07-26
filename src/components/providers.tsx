@@ -3,6 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
+import { GlobalLoadingOverlay } from "@/components/global-loading-overlay";
+import { PerfPanel } from "@/components/perf-panel";
 import { useState } from "react";
 
 // next-themes renders an inline <script> to prevent theme flicker (FOUC).
@@ -37,7 +39,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         disableTransitionOnChange
       >
         {children}
+        <GlobalLoadingOverlay />
         <Toaster position="top-right" richColors />
+        {process.env.NODE_ENV !== "production" && <PerfPanel />}
       </NextThemesProvider>
     </QueryClientProvider>
   );

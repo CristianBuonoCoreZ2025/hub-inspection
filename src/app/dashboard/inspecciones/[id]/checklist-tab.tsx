@@ -6,6 +6,7 @@ import { getChecklists, createChecklistItem, updateChecklistItem, deleteChecklis
 import { toast } from "sonner";
 import { Trash2, CheckCircle, Circle, MinusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const defaultAreas = [
  "Estructura",
@@ -79,16 +80,20 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
  <div className="flex flex-wrap items-end gap-2">
  <div className="flex-1 min-w-[150px]">
  <label className="app-field-label text-[11px]">Área</label>
- <select
- value={newItem.area}
- onChange={(e) => setNewItem({ ...newItem, area: e.target.value })}
- className="app-input h-7 w-full text-[13px]"
+ <Select
+ value={newItem.area || "__none"}
+ onValueChange={(v) => setNewItem({ ...newItem, area: v === "__none" || !v ? "" : v })}
  >
- <option value="">Seleccionar área...</option>
+ <SelectTrigger className="app-input h-7 w-full text-[13px]">
+ <SelectValue placeholder="Seleccionar área..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Seleccionar área...</SelectItem>
  {defaultAreas.map((a) => (
- <option key={a} value={a}>{a}</option>
+ <SelectItem key={a} value={a}>{a}</SelectItem>
  ))}
- </select>
+ </SelectContent>
+ </Select>
  </div>
  <div className="flex-2 min-w-[200px]">
  <label className="app-field-label text-[11px]">Item a verificar</label>

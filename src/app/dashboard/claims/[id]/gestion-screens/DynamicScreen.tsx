@@ -33,6 +33,7 @@ import { getInspectionSessions, getInspectorSchedule } from "@/services/inspecti
 import { getCoverageCatalog } from "@/services/coverage-catalog";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getDocumentTemplates, type DocumentTemplate } from "@/services/document-templates";
+import { toUserISO, formatUserDateTime, fromDateTimeLocalInput, toDateTimeLocalInput } from "@/lib/timezone";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Plus, Ban, ChevronDown, ChevronRight, Check, CheckCircle, Circle, Clock, X, XCircle, FileText, Download, Loader2, Play, Upload, History, Lock, LockOpen, AlertTriangle, Star, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw, MapPin } from "lucide-react";
@@ -1060,6 +1061,16 @@ function LevelCard({
  const canReject = level.active && !level.done && !!onReject && canAct;
  const canAdvance = level.active && !level.done && !isIssueBlocked && !!onAdvance && canAct;
 
+ // ── Auto-asignación: si la etapa está activa, no hay responsable, y el
+ // usuario actual es candidato → asignarlo automáticamente como responsable.
+ // Así no tiene que buscarse en el combo. ──
+ useEffect(() => {
+   if (level.active && !level.done && !level.currentId && isCandidate && currentUserId && !assignMut.isPending) {
+     assignMut.mutate(currentUserId);
+   }
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [level.active, level.done, level.currentId, isCandidate, currentUserId]);
+
  const advanceLabel = level.key === "issuer" ? "Emitir" : level.key === "reviewer" ? "Revisar" : "Aprobar";
 
  const handleAdvance = () => {
@@ -1439,6 +1450,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  });
 
  const updateCoverageMut = useMutation({
+ meta: { autosave: true },
  mutationFn: ({ id, input }: { id: string; input: Record<string, unknown> }) =>
  updateClaimCoverage(id, input),
  onSuccess: () => {
@@ -2148,6 +2160,8 @@ function OwnField({
  const hasAlert = isPast || isOverMax;
  // min en hora local (datetime-local no usa UTC)
  const minLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+ // Convertir el valor guardado (ISO con offset) al formato que espera el input datetime-local
+ const displayValue = valStr ? toDateTimeLocalInput(valStr) : "";
  return (
  <div className="flex flex-col gap-1">
  <Label className="app-field-label">
@@ -2156,10 +2170,16 @@ function OwnField({
  <Input
  type="datetime-local"
  className={`${inputClass} ${hasAlert ? "border-red-500 focus-visible:ring-red-500" : ""}`}
- value={valStr}
+ value={displayValue}
  min={minLocal}
  max={datetimeMaxDate || undefined}
- onChange={(e) => onChange(field.id, e.target.value)}
+ onChange={(e) => {
+ // El input datetime-local devuelve "yyyy-MM-ddTHH:mm" (hora local, sin offset).
+ // Convertir a ISO con offset de la zona horaria del usuario antes de guardar,
+ // para que Postgres no lo interprete como UTC (causando desfase horario).
+ const iso = fromDateTimeLocalInput(e.target.value);
+ onChange(field.id, iso);
+ }}
  disabled={readOnly}
  />
  {hasAlert && (
@@ -2344,6 +2364,15 @@ function InspectorSelectField({
 
  const claimInspectorId = claim?.inspector_id || null;
  const claimInspectorName = claim?.inspector?.full_name || null;
+
+ // ── Auto-seleccionar el inspector del siniestro cuando el campo está vacío ──
+ // (solo al cargar, si no hay valor previo y el claim tiene inspector asignado)
+ useEffect(() => {
+   if (claimInspectorId && !value && !readOnly) {
+     onChange(field.id, claimInspectorId);
+   }
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [claimInspectorId]);
 
  const selectItems = [
  { value: "__none", label: "Seleccionar inspector..." },
@@ -2887,6 +2916,7 @@ function ReserveEditorForm({
 
  // Mutación para guardar
  const saveMut = useMutation({
+ meta: { autosave: true },
  mutationFn: async () => {
  if (!claimCoverages || claimCoverages.length === 0) {
  throw new Error("No hay coberturas en el siniestro");
@@ -3298,6 +3328,7 @@ function AdjustmentEditorForm({
 
  // Mutación para guardar el ajuste
  const saveMut = useMutation({
+ meta: { autosave: true },
  mutationFn: async () => {
  // Actualizar la reserva con los totales ajustados (sin sobrescribir los originales)
  await updateClaimReserve(reserve.id, {
@@ -3580,6 +3611,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
 
  // ── Mutación: crear solicitud nueva ──
  const saveMut = useMutation({
+ meta: { autosave: true },
  mutationFn: async () => {
  // Guard: si ya existe la solicitud, no crear otra
  if (existingRequest) return;
@@ -3641,6 +3673,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
 
  // ── Mutación: actualizar notas ──
  const updateNotesMut = useMutation({
+ meta: { autosave: true },
  mutationFn: ({ reqId, value }: { reqId: string; value: string }) =>
  updateClaimDocumentRequestNotes(reqId, value),
  onSuccess: () => {
@@ -4521,13 +4554,13 @@ function CoordScheduler({
 
  // Asignar un slot
  const assignSlot = (timeStr: string) => {
- const datetimeStr = `${selectedDate}T${timeStr}`;
+ const datetimeStr = toUserISO(selectedDate, timeStr);
  onChange(field.id, datetimeStr);
  };
 
  // Asignar horario personalizado
  const assignCustom = () => {
- const datetimeStr = `${selectedDate}T${customTime}`;
+ const datetimeStr = toUserISO(selectedDate, customTime);
  onChange(field.id, datetimeStr);
  };
 
@@ -4563,7 +4596,7 @@ function CoordScheduler({
  />
  {currentValue && (
  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0 app-body">
- {valDate ? valDate.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : ""}
+ {currentValue ? formatUserDateTime(currentValue) : ""}
  </Badge>
  )}
  </div>
@@ -4720,7 +4753,7 @@ function CoordScheduler({
  {/* Control doble: fecha centrada a la izquierda, slots a la derecha */}
  <div className="flex flex-col sm:flex-row gap-2">
  {/* Columna izquierda: date picker + fecha centrada verticalmente */}
- <div className="flex flex-col justify-center gap-1 sm:w-27.5 shrink-0">
+ <div className="flex flex-col justify-center gap-1 sm:w-32.5 shrink-0">
  <DatePicker
  value={selectedDate}
  onChange={(v) => setSelectedDate(v)}
@@ -4732,7 +4765,7 @@ function CoordScheduler({
  {currentValue && valDate && (
  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 w-fit app-body px-1 py-0">
  <CheckCircle className="inline h-3 w-3 mr-1" />
- {valDate.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+ {formatUserDateTime(currentValue)}
  </Badge>
  )}
  {selectedDateLabel && (

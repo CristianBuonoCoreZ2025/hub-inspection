@@ -4,6 +4,7 @@ import { useState, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getAuditLogs } from "@/services/audit-logs";
 import { getRegions, getCities, getCommunes } from "@/services/catalogs";
+import { formatUserDateTime as formatDateTime } from "@/lib/timezone";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -26,17 +27,6 @@ const actionColors: Record<string, string> = {
   UPDATE: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
   DELETE: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
 };
-
-function formatDateTime(dateStr: string) {
-  return new Date(dateStr).toLocaleString("es-CL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
 
 // Mapeo completo de campos a etiquetas legibles
 const fieldLabels: Record<string, string> = {

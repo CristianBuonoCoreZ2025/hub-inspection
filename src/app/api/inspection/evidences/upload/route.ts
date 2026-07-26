@@ -144,10 +144,19 @@ export async function POST(request: NextRequest) {
     const documentTypeValue = typeof documentType === "string" && documentType.trim() ? documentType.trim() : null;
     const damageIdValue = typeof damageId === "string" && /^[0-9a-fA-F-]{36}$/.test(damageId) ? damageId : null;
 
+    // Resolver claim_id desde la sesión (para RLS y consistencia)
+    const { data: sessionRow } = await supabase
+      .from("inspection_sessions")
+      .select("claim_id")
+      .eq("id", sessionId)
+      .maybeSingle();
+    const sessionClaimId = sessionRow?.claim_id || null;
+
     const { data: evidence, error } = await supabase
       .from("inspection_evidences")
       .insert({
         session_id: sessionId,
+        claim_id: sessionClaimId,
         type: dbType,
         url,
         description: documentTypeValue || fileCode,
@@ -190,6 +199,7 @@ export async function POST(request: NextRequest) {
     // ── PASO 6-9: Procesamiento en background (optimización + IA) ──
     // after() ejecuta después de que la respuesta se envía al cliente.
     // Si falla, no afecta al usuario — la evidencia ya está subida y registrada.
+    // La IA es un EXTRA: se dispara en segundo plano para no bloquear nuevas subidas.
     after(async () => {
       const evidenceId = evidence.id;
       // Las grabaciones de sesión no se optimizan ni analizan con IA
@@ -253,52 +263,59 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // ── IA: resumen/descripción automático (free → paid) ──
-        let aiStatus: "done" | "error" | "skipped" = "error";
-        try {
-          const ai = await summarizeFile(buffer, mimeType, file.name);
-          if (ai.ok) {
-            aiStatus = "done";
-            await supabase
-              .from("inspection_evidences")
-              .update({
-                ai_summary: ai.summary,
-                ai_model: ai.model,
-                ai_status: aiStatus,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", evidenceId);
+        // ── IA: resumen/descripción automático (EXTRA — no bloquea) ──
+        // Se ejecuta después de la optimización. Si falla, no afecta al usuario:
+        // la evidencia ya está subida y visible. El usuario puede reintentar con
+        // el botón Brain en la tarjeta de la evidencia.
+        // Usar setImmediate para ceder el event loop y permitir que otras
+        // peticiones (nuevas subidas) se procesen primero.
+        setImmediate(async () => {
+          let aiStatus: "done" | "error" | "skipped" = "error";
+          try {
+            const ai = await summarizeFile(buffer, mimeType, file.name);
+            if (ai.ok) {
+              aiStatus = "done";
+              await supabase
+                .from("inspection_evidences")
+                .update({
+                  ai_summary: ai.summary,
+                  ai_model: ai.model,
+                  ai_status: aiStatus,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", evidenceId);
 
-            logger.info("IA: resumen de evidencia generado y guardado", {
-              component: "inspection-evidences-upload",
-              action: "ai.summary.success",
-              metadata: { evidenceId, model: ai.model, type: dbType },
-            });
-          } else {
-            aiStatus = "skipped";
+              logger.info("IA: resumen de evidencia generado y guardado", {
+                component: "inspection-evidences-upload",
+                action: "ai.summary.success",
+                metadata: { evidenceId, model: ai.model, type: dbType },
+              });
+            } else {
+              aiStatus = "skipped";
+              await supabase
+                .from("inspection_evidences")
+                .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
+                .eq("id", evidenceId);
+              logger.warn("IA: no se pudo generar resumen de evidencia", {
+                component: "inspection-evidences-upload",
+                action: "ai.summary.skipped",
+                metadata: { evidenceId, reason: ai.reason, mimeType },
+              });
+            }
+          } catch (aiErr) {
             await supabase
               .from("inspection_evidences")
               .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
               .eq("id", evidenceId);
-            logger.warn("IA: no se pudo generar resumen de evidencia", {
+            logger.warn("IA: error generando resumen de evidencia (no crítico)", {
               component: "inspection-evidences-upload",
-              action: "ai.summary.skipped",
-              metadata: { evidenceId, reason: ai.reason, mimeType },
+              action: "ai.summary.error",
+              metadata: {
+                error: aiErr instanceof Error ? aiErr.message : String(aiErr),
+              },
             });
           }
-        } catch (aiErr) {
-          await supabase
-            .from("inspection_evidences")
-            .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
-            .eq("id", evidenceId);
-          logger.warn("IA: error generando resumen de evidencia (no crítico)", {
-            component: "inspection-evidences-upload",
-            action: "ai.summary.error",
-            metadata: {
-              error: aiErr instanceof Error ? aiErr.message : String(aiErr),
-            },
-          });
-        }
+        });
       } catch (bgErr) {
         logger.error("Background processing de evidencia falló", bgErr as Error, {
           component: "inspection-evidences-upload",

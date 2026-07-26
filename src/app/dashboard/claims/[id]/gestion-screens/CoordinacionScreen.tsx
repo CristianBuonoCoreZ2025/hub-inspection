@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fromDateTimeLocalInput, toDateTimeLocalInput } from "@/lib/timezone";
 import type { GestionScreenProps } from "./types";
 
 export default function CoordinacionScreen({ action, onChange, readOnly }: GestionScreenProps) {
@@ -29,15 +31,18 @@ export default function CoordinacionScreen({ action, onChange, readOnly }: Gesti
  <p className="text-[11px] font-semibold">Datos Coordinación</p>
  <div>
  <Label className="app-field-label text-[11px]">Inspector</Label>
- <select
- className="app-input h-8 w-full"
- value={form.inspector}
- onChange={(e) => setForm({ ...form, inspector: e.target.value })}
- disabled={readOnly}
+ <Select
+ value={form.inspector || "__none"}
+ onValueChange={(v) => setForm({ ...form, inspector: v === "__none" || !v ? "" : v })}
  >
- <option value="">Seleccionar inspector...</option>
- <option value="torres-paula">Torres Pizarro, Paula</option>
- </select>
+ <SelectTrigger className="app-input h-8 w-full" disabled={readOnly}>
+ <SelectValue placeholder="Seleccionar inspector..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Seleccionar inspector...</SelectItem>
+ <SelectItem value="torres-paula">Torres Pizarro, Paula</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <Label className="app-field-label text-[11px]">Ubicación *</Label>
@@ -58,24 +63,32 @@ export default function CoordinacionScreen({ action, onChange, readOnly }: Gesti
  <Input
  type="datetime-local"
  className="app-input h-8 "
- value={form.fecha_hora}
- onChange={(e) => setForm({ ...form, fecha_hora: e.target.value })}
+ value={form.fecha_hora ? toDateTimeLocalInput(form.fecha_hora) : ""}
+ onChange={(e) => {
+ // El input datetime-local devuelve "yyyy-MM-ddTHH:mm" (hora local, sin offset).
+ // Convertir a ISO con offset antes de guardar para evitar desfase horario.
+ const iso = e.target.value ? fromDateTimeLocalInput(e.target.value) : "";
+ setForm({ ...form, fecha_hora: iso });
+ }}
  disabled={readOnly}
  />
  </div>
  <div>
  <Label className="app-field-label text-[11px]">Tipo de Contacto *</Label>
- <select
- className="app-input h-8 w-full"
+ <Select
  value={form.tipo_contacto}
- onChange={(e) => setForm({ ...form, tipo_contacto: e.target.value })}
- disabled={readOnly}
+ onValueChange={(v) => setForm({ ...form, tipo_contacto: v === "__none" || !v ? "" : v })}
  >
- <option value="sms">SMS</option>
- <option value="email">Email</option>
- <option value="whatsapp">WhatsApp</option>
- <option value="llamada">Llamada</option>
- </select>
+ <SelectTrigger className="app-input h-8 w-full" disabled={readOnly}>
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="sms">SMS</SelectItem>
+ <SelectItem value="email">Email</SelectItem>
+ <SelectItem value="whatsapp">WhatsApp</SelectItem>
+ <SelectItem value="llamada">Llamada</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <Label className="app-field-label text-[11px]">Contacto *</Label>
@@ -99,17 +112,20 @@ export default function CoordinacionScreen({ action, onChange, readOnly }: Gesti
  </div>
  <div>
  <Label className="app-field-label text-[11px]">Tipo Coordinación *</Label>
- <select
- className="app-input h-8 w-full"
+ <Select
  value={form.tipo_coordinacion}
- onChange={(e) => setForm({ ...form, tipo_coordinacion: e.target.value })}
- disabled={readOnly}
+ onValueChange={(v) => setForm({ ...form, tipo_coordinacion: v === "__none" || !v ? "" : v })}
  >
- <option value="pendiente">Pendiente</option>
- <option value="completada">Completada</option>
- <option value="reprogramada">Reprogramada</option>
- <option value="cancelada">Cancelada</option>
- </select>
+ <SelectTrigger className="app-input h-8 w-full" disabled={readOnly}>
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="pendiente">Pendiente</SelectItem>
+ <SelectItem value="completada">Completada</SelectItem>
+ <SelectItem value="reprogramada">Reprogramada</SelectItem>
+ <SelectItem value="cancelada">Cancelada</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
  </div>
  </div>

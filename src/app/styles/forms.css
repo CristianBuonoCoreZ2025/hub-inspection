@@ -142,6 +142,27 @@
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15) !important;
   }
 
+  /* Input con icono de búsqueda a la izquierda (ProductSearch).
+     Reserva 28px a la izquierda para que el icono Search no se monte
+     sobre el texto. Pisa el padding global de .app-input. */
+  .app-input.ps-input-with-icon {
+    padding-left: 28px !important;
+    padding-right: 8px !important;
+  }
+
+  /* Textarea con .app-input — permite crecer en altura (la regla
+     global .app-input fuerza height:28px que aplasta el textarea).
+     El padding vertical deja respirar al texto multilinea. */
+  textarea.app-input {
+    height: auto !important;
+    padding: 6px 10px !important;
+    line-height: 1.35 !important;
+    resize: vertical !important;
+  }
+  textarea.app-input.flex-1 {
+    resize: none !important;
+  }
+
   /* Selector de moneda en formularios de daños */
   .app-input.app-currency-select {
     width: 200px !important;

@@ -11,6 +11,7 @@ import {
  updateInspectionSession,
 } from "@/services/inspections";
 import { getUsers } from "@/services/users";
+import { formatUserDateTime as formatDateTime } from "@/lib/timezone";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
@@ -20,6 +21,9 @@ import {
  MapPin,
  User,
  ClipboardCheck,
+ Eye,
+ Play,
+ Ban,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,11 +45,7 @@ const sessionStatusLabels: Record<string, string> = {
  cancelled: "Cancelada",
 };
 
-function formatDateTime(dateStr: string | null) {
- if (!dateStr) return "—";
- const d = new Date(dateStr);
- return `${d.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" })} ${d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}`;
-}
+
 
 export default function InspectionsPage() {
  return (
@@ -76,7 +76,6 @@ function InspectionsPageContent() {
  queryKey: ["users"],
  queryFn: () => getUsers(),
  });
- const inspectors = users?.filter((u) => u.role === "inspector") || [];
 
  const updateMutation = useMutation({
  mutationFn: ({ id, input }: { id: string; input: Partial<InspectionSession> }) =>
@@ -154,9 +153,9 @@ function InspectionsPageContent() {
  <th className="min-w-[90px] sm:w-[110px]">Ref. Cliente</th>
  <th className="min-w-[100px] sm:w-[140px]">Inspector</th>
  <th className="min-w-[100px] sm:w-[160px]">Asegurado</th>
- <th>Direccion</th>
+ <th className="w-60 sm:w-80">Direccion</th>
  <th className="min-w-[80px] sm:w-[90px]">Estado</th>
- <th className="min-w-[90px] sm:w-[130px]">Programada</th>
+ <th className="w-32">Programada</th>
  <th className="min-w-[90px] sm:w-[160px] text-right">Acciones</th>
  </tr>
  </thead>
@@ -186,17 +185,23 @@ function InspectionsPageContent() {
  className="row-clickable"
  onClick={() => router.push(`/dashboard/inspecciones/${session.id}`)}
  >
- <td>
- <div className="flex flex-col gap-0">
- <span className="font-mono text-[11px] font-semibold text-primary">
- {session.inspection_number || session.id.slice(0, 8)}
- </span>
- <span className="text-[10px] text-muted-foreground">
- {session.inspection_type === "remote" ? "Remota" : "Presencial"}
- </span>
+ <td className="whitespace-nowrap">
+ <div className="flex items-center gap-2">
+ <Link
+ href={`/dashboard/inspecciones/${session.id}`}
+ className="font-mono text-[11px] font-semibold text-primary hover:underline"
+ onClick={(e) => e.stopPropagation()}
+ >
+ {session.inspection_number?.split("-").slice(-2).join("-") || session.id.slice(0, 8)}
+ </Link>
+ <StatusBadge
+ tone={session.inspection_type === "remote" ? "sky" : "emerald"}
+ label={session.inspection_type === "remote" ? "Remota" : "Presencial"}
+ size="sm"
+ />
  </div>
  </td>
- <td>
+ <td className="whitespace-nowrap">
  <span className="font-mono text-[11px] font-medium">
  {session.claim?.liquidation_number ? (
  <Link href={`/dashboard/claims/${session.claim_id}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
@@ -207,7 +212,7 @@ function InspectionsPageContent() {
  )}
  </span>
  </td>
- <td>
+ <td className="whitespace-nowrap">
  <span className="text-[11px] text-muted-foreground">
  {session.claim?.client_reference || "—"}
  </span>
@@ -216,7 +221,7 @@ function InspectionsPageContent() {
  <div className="flex items-center gap-1">
  <User className="h-3 w-3 text-muted-foreground shrink-0" />
  <span className="text-[11px]">
- {inspectors.find((i) => i.id === session.claim?.inspector_id)?.full_name || "—"}
+ {users?.find((u) => u.id === (session.inspector_id || session.claim?.inspector_id))?.full_name || "—"}
  </span>
  </div>
  </td>
@@ -225,7 +230,7 @@ function InspectionsPageContent() {
  {session.claim?.claims_participants?.[0]?.full_name || "—"}
  </span>
  </td>
- <td>
+ <td className="max-w-60 sm:max-w-80">
  <div className="flex items-center gap-1">
  <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
  <span className="text-[11px] truncate">
@@ -241,7 +246,7 @@ function InspectionsPageContent() {
  />
  </td>
  <td>
- <div className="flex items-center gap-1 text-[11px]">
+ <div className="flex items-center gap-1 text-[11px] whitespace-nowrap">
  {session.scheduled_at ? (
  <>
  <Calendar className="h-3 w-3 text-muted-foreground" />
@@ -255,16 +260,21 @@ function InspectionsPageContent() {
  <td>
  <div className="app-row-actions" onClick={(e) => e.stopPropagation()}>
  <Button
- className="pg-btn-platinum"
+ variant="ghost"
+ size="icon"
+ className="btn-icon-sm"
+ title="Ver"
  onClick={() => router.push(`/dashboard/inspecciones/${session.id}`)}
  >
- Ver
+ <Eye className="h-4 w-4" />
  </Button>
-
  {canEdit("inspecciones") && session.status === "scheduled" && (
  <>
  <Button
- className="pg-btn-platinum"
+ variant="ghost"
+ size="icon"
+ className="btn-icon-sm"
+ title="Iniciar"
  onClick={() =>
  updateMutation.mutate({
  id: session.id,
@@ -272,10 +282,13 @@ function InspectionsPageContent() {
  })
  }
  >
- Iniciar
+ <Play className="h-4 w-4" />
  </Button>
  <Button
- className="pg-btn-platinum"
+ variant="ghost"
+ size="icon"
+ className="btn-icon-sm"
+ title="Cancelar"
  onClick={() =>
  updateMutation.mutate({
  id: session.id,
@@ -283,7 +296,7 @@ function InspectionsPageContent() {
  })
  }
  >
- Cancelar
+ <Ban className="h-4 w-4" />
  </Button>
  </>
  )}

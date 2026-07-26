@@ -22,6 +22,8 @@ import type {
   DocumentType,
   DamageSpace,
   ContentGoodType,
+  ContentGoodBrand,
+  ContentGoodProduct,
   BuildingDamageCategory,
   Currency,
   CountryCurrency,
@@ -834,6 +836,140 @@ export async function updateContentGoodType(id: string, input: Partial<ContentGo
 
 export async function deleteContentGoodType(id: string) {
   return updateRow("content_good_types", id, { is_active: false }, "id");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTENT GOOD BRANDS (Marcas — catálogo global)
+// ═══════════════════════════════════════════════════════════════
+
+export async function getContentGoodBrands() {
+  return fetchAllSorted<ContentGoodBrand>("content_good_brands", {
+    select: "id, name, country, is_active, created_at, updated_at",
+    eq: { is_active: true },
+  });
+}
+
+export async function createContentGoodBrand(input: { name: string; country?: string | null }) {
+  return insertRow<ContentGoodBrand>("content_good_brands", {
+    ...input,
+    is_active: true,
+  }, "id, name, country, is_active, created_at, updated_at");
+}
+
+export async function updateContentGoodBrand(id: string, input: Partial<ContentGoodBrand>) {
+  const set: Record<string, unknown> = {};
+  if (input.name !== undefined) set.name = input.name;
+  if (input.country !== undefined) set.country = input.country;
+  if (input.is_active !== undefined) set.is_active = input.is_active;
+  return updateRow<ContentGoodBrand>("content_good_brands", id, set, "id, name, country, is_active, created_at, updated_at");
+}
+
+export async function deleteContentGoodBrand(id: string) {
+  return updateRow("content_good_brands", id, { is_active: false }, "id");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTENT GOOD PRODUCTS (Productos — hoja de tipos de bien)
+// ═══════════════════════════════════════════════════════════════
+
+const PRODUCT_SELECT = `
+  id, content_good_type_id, name, description, sort_order, is_active, created_at, updated_at,
+  content_good_type:content_good_types!content_good_products_content_good_type_id_fkey(id, name)
+`;
+
+export async function getContentGoodProducts() {
+  const items = await fetchAll<ContentGoodProduct>("content_good_products", {
+    select: PRODUCT_SELECT,
+    eq: { is_active: true },
+  });
+  // Ordenar por nombre del tipo, luego por sort_order, luego por nombre
+  return items.sort((a, b) => {
+    const ta = a.content_good_type?.name || "";
+    const tb = b.content_good_type?.name || "";
+    const c = naturalCompare(ta, tb);
+    if (c) return c;
+    if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+    return naturalCompare(a.name || "", b.name || "");
+  });
+}
+
+export async function getContentGoodProductsByType(typeId: string) {
+  return fetchAll<ContentGoodProduct>("content_good_products", {
+    select: PRODUCT_SELECT,
+    eq: { is_active: true, content_good_type_id: typeId },
+  }).then((items) => items.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || naturalCompare(a.name || "", b.name || "")));
+}
+
+export async function createContentGoodProduct(input: { content_good_type_id: string; name: string; description?: string | null; sort_order?: number }) {
+  return insertRow<ContentGoodProduct>("content_good_products", {
+    content_good_type_id: input.content_good_type_id,
+    name: input.name,
+    description: input.description ?? null,
+    sort_order: input.sort_order ?? 0,
+    is_active: true,
+  }, PRODUCT_SELECT);
+}
+
+export async function updateContentGoodProduct(id: string, input: Partial<ContentGoodProduct>) {
+  const set: Record<string, unknown> = {};
+  if (input.content_good_type_id !== undefined) set.content_good_type_id = input.content_good_type_id;
+  if (input.name !== undefined) set.name = input.name;
+  if (input.description !== undefined) set.description = input.description;
+  if (input.sort_order !== undefined) set.sort_order = input.sort_order;
+  if (input.is_active !== undefined) set.is_active = input.is_active;
+  return updateRow<ContentGoodProduct>("content_good_products", id, set, PRODUCT_SELECT);
+}
+
+export async function deleteContentGoodProduct(id: string) {
+  return updateRow("content_good_products", id, { is_active: false }, "id");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTENT GOOD PRODUCT BRANDS (Pivote N:M — marcas válidas por producto)
+// ═══════════════════════════════════════════════════════════════
+
+const PRODUCT_BRAND_SELECT = `
+  id, product_id, brand_id, created_at,
+  brand:content_good_brands!content_good_product_brands_brand_id_fkey(id, name, country, is_active)
+`;
+
+export async function getBrandsByProductId(productId: string) {
+  const items = await fetchAll<{ id: string; product_id: string; brand_id: string; brand: ContentGoodBrand | null }>(
+    "content_good_product_brands",
+    {
+      select: PRODUCT_BRAND_SELECT,
+      eq: { product_id: productId },
+    }
+  );
+  // Filtrar marcas activas y mapear a ContentGoodBrand
+  return items
+    .map((r) => r.brand)
+    .filter((b): b is ContentGoodBrand => !!b && b.is_active)
+    .sort((a, b) => naturalCompare(a.name, b.name));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTENT GOOD TYPE BRANDS (Matriz N:M — marcas válidas por tipo de bien)
+// ═══════════════════════════════════════════════════════════════
+
+const TYPE_BRAND_SELECT = `
+  id, content_good_type_id, brand_id, created_at,
+  brand:content_good_brands!content_good_type_brands_brand_id_fkey(id, name, country, is_active)
+`;
+
+export async function getBrandsByTypeId(typeId: string) {
+  const items = await fetchAll<{ id: string; content_good_type_id: string; brand_id: string; brand: ContentGoodBrand | null }>(
+    "content_good_type_brands",
+    {
+      select: TYPE_BRAND_SELECT,
+      eq: { content_good_type_id: typeId },
+    }
+  );
+  // Filtrar marcas activas y mapear a ContentGoodBrand
+  return items
+    .map((r) => r.brand)
+    .filter((b): b is ContentGoodBrand => !!b && b.is_active)
+    .sort((a, b) => naturalCompare(a.name, b.name));
 }
 
 // ═══════════════════════════════════════════════════════════════

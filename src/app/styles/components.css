@@ -434,7 +434,35 @@
 
   /* Título de sección dentro de paneles (con ícono opcional) */
   .app-section-title {
-    @apply text-[11px] font-semibold text-muted-foreground mb-2 flex items-center gap-2;
+    @apply font-semibold text-muted-foreground mb-2 flex items-center gap-2;
+  }
+
+  /* Label de campo a 12px (entre título 13px y valor 11px) */
+  .app-data-label-md {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Label de campo en negrita (prueba) */
+  .app-data-label-bold {
+    @apply font-semibold text-foreground;
+  }
+
+  /* Separador liquid glass entre sub-secciones dentro de un mismo panel.
+     Margen reducido para que la separación total coincida con el mt-2 (8px)
+     que se usa entre filas de datos. */
+  .app-section-divider {
+    height: 1px;
+    margin: 0.25rem 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(var(--border) / 0.5) 20%,
+      rgb(var(--border) / 0.8) 50%,
+      rgb(var(--border) / 0.5) 80%,
+      transparent 100%
+    );
+    border: 0;
   }
 
   /* Grid de datos — 3 columnas responsive, 4 en xl */
@@ -842,6 +870,27 @@
     @apply border-border text-muted-foreground hover:bg-muted/50;
   }
 
+  /* Origin badge — W (Workflow) morado, A (Automática) azul, M (Manual) café */
+  .app-origin-badge {
+    @apply inline-flex items-center justify-center rounded font-bold leading-none;
+    font-size: 9px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 3px;
+  }
+  .app-origin-w {
+    @apply bg-purple-200 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300;
+  }
+  .app-origin-a {
+    @apply bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400;
+  }
+  .app-origin-m {
+    @apply bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300;
+  }
+  .app-origin-default {
+    @apply bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400;
+  }
+
   /* Estado activo/inactivo (bolita de color) */
   .app-status-dot {
     @apply inline-block h-2 w-2 rounded-full;
@@ -1166,4 +1215,185 @@
       display: none !important;
     }
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * REPORTE DE INSPECCIÓN (Acta)
+ * Clases semánticas para el PDF/imprimir del reporte de inspección.
+ * Evita estilos inline en report-tab.tsx.
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Contenedor scroll del preview tipo PDF */
+.report-pdf-viewer {
+  @apply rounded-lg p-4 overflow-y-auto;
+  max-height: calc(100vh - 200px);
+  background-color: #e5e7eb;
+}
+
+/* Página A4-like del reporte */
+.report-pdf-page {
+  @apply shadow-lg mx-auto relative;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  max-width: 800px;
+  padding: 30px 40px;
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+
+/* Marca de agua BORRADOR */
+.report-watermark {
+  @apply absolute inset-0 flex items-center justify-center pointer-events-none z-10;
+}
+.report-watermark-text {
+  @apply font-bold text-gray-300 opacity-30 select-none;
+  transform: rotate(-30deg);
+  letter-spacing: 8px;
+}
+
+/* Header del acta */
+.report-acta-header {
+  @apply flex items-start justify-between border-b-[3px] border-gray-900 pb-3 mb-4;
+}
+.report-header-info {
+  @apply text-right;
+}
+.report-acta-h1 {
+  @apply font-bold text-gray-900;
+}
+.report-logo {
+  @apply h-14 w-auto;
+}
+.report-logo-text {
+  @apply font-bold;
+}
+.report-header-meta {
+  @apply text-gray-500 mt-1;
+}
+
+/* Título de sección del acta */
+.report-acta-title {
+  @apply font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900;
+}
+
+/* Fila de campo label: valor */
+.report-field-row {
+  @apply flex mb-0.5;
+}
+.report-field-label {
+  @apply font-semibold text-muted-foreground min-w-50 uppercase;
+}
+.report-field-value {
+  @apply flex-1;
+}
+
+/* Caja de cancelación */
+.report-cancellation-box {
+  @apply border-2 border-rose-600 bg-rose-50 p-3 rounded mb-3;
+}
+.report-cancellation-title {
+  @apply text-rose-700 font-bold mb-1;
+}
+
+/* Texto de declaración / observaciones */
+.report-statement {
+  @apply text-gray-800 whitespace-pre-wrap leading-relaxed mb-3;
+}
+
+/* Tablas del reporte (terceros, daños, evidencias, videos, etc.) */
+.report-table {
+  @apply w-full border-collapse my-1.5;
+}
+.report-th {
+  @apply text-left p-1.5 bg-gray-100 border border-gray-300 font-bold uppercase;
+}
+.report-th-right {
+  @apply text-right p-1.5 bg-gray-100 border border-gray-300 font-bold uppercase;
+}
+.report-td {
+  @apply p-1.5 border border-gray-300;
+}
+.report-td-right {
+  @apply text-right p-1.5 border border-gray-300;
+}
+
+/* Grilla de fotos */
+.report-photo-grid {
+  @apply grid grid-cols-3 gap-1.5 my-1.5;
+}
+.report-photo-item {
+  @apply border border-gray-300 p-1 bg-gray-50;
+}
+.report-photo-img {
+  @apply w-full h-32 object-contain;
+}
+.report-photo-label {
+  @apply text-gray-600 text-center mt-0.5;
+}
+
+/* Grilla de croquis */
+.report-sketch-grid {
+  @apply grid grid-cols-2 gap-1.5 my-1.5;
+}
+.report-sketch-img {
+  @apply w-full h-36 object-contain border border-gray-300 bg-white;
+}
+
+/* Item de documento adjunto */
+.report-doc-item {
+  @apply border border-gray-300 p-2 mb-2 bg-gray-50;
+}
+.report-doc-title {
+  @apply font-semibold text-gray-700 mb-1;
+}
+.report-doc-desc {
+  @apply text-gray-600 mb-1;
+}
+.report-doc-summary {
+  @apply text-gray-700 italic mb-1 border-l-2 border-gray-300 pl-2;
+}
+.report-doc-img {
+  @apply w-full max-h-48 object-contain border border-gray-200;
+}
+.report-doc-placeholder {
+  @apply text-gray-500 italic;
+}
+
+/* Firmas */
+.report-sig-grid {
+  @apply grid grid-cols-2 gap-5 mt-6;
+}
+.report-sig-box {
+  @apply text-center;
+}
+.report-sig-img {
+  @apply max-h-16 max-w-45 border-b border-gray-700 pb-1 mx-auto;
+}
+.report-sig-name {
+  @apply font-semibold mt-1;
+}
+.report-sig-role {
+  @apply text-gray-500;
+}
+
+/* Footer del reporte */
+.report-footer {
+  @apply mt-8 pt-2.5 border-t border-gray-300 text-center text-gray-400;
+}
+
+/* Acciones del reporte (botones) */
+.report-actions {
+  @apply flex items-center gap-2 flex-wrap;
+}
+
+/* Badge de acta definitiva */
+.report-final-badge {
+  @apply flex items-center gap-2 text-emerald-600 dark:text-emerald-400;
+}
+.report-final-badge-text {
+  @apply font-semibold;
+}
+
+/* Mensaje de carga */
+.report-loading {
+  @apply text-center py-8 text-muted-foreground;
 }

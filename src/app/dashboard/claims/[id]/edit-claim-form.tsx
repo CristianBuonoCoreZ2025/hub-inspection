@@ -32,7 +32,13 @@ import {
 } from "@/components/ui/dialog";
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { FormSelect } from "@/components/ui/form-select";
-import { SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { updateClaimFields, updateClaimStatus, updateClaimParticipant, createClaimParticipant } from "@/services/claims";
 import { findPerson, upsertPerson, addPersonAddress, type PersonWithAddresses } from "@/services/persons";
 import { formatRut, guessPersonType } from "@/lib/validations/rut";
@@ -183,7 +189,7 @@ function EditTextarea({
  return (
  <div className="space-y-1">
  <FieldLabel label={label} required={required} />
- <Textarea className="app-input min-h-[70px]" {...props} />
+ <Textarea className="app-input min-h-17.5" {...props} />
  </div>
  );
 }
@@ -284,6 +290,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  });
  const [contractorLinked, setContractorLinked] = useState(() => getParticipant(participants, "contractor")?.linked_to_insured ?? false);
  const [beneficiaryLinked, setBeneficiaryLinked] = useState(() => getParticipant(participants, "beneficiary")?.linked_to_insured ?? false);
+ const [contactLinked, setContactLinked] = useState(() => getParticipant(participants, "contact")?.linked_to_insured ?? false);
 
  // RUT autocomplete suggestion — busca en master de personas
  const [participantSuggestion, setParticipantSuggestion] = useState<{
@@ -374,8 +381,11 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  beneficiaryCommune: beneficiary?.commune || "",
 
  // Persona de Contacto
+ contactPersonType: (!contact?.last_name && contact?.first_name) ? "legal" : "natural",
  contactFirstName: contact?.first_name || contact?.full_name || "",
  contactLastName: contact?.last_name || "",
+ contactBusinessName: (!contact?.last_name && contact?.first_name) ? (contact?.first_name || contact?.full_name || "") : "",
+ contactRut: contact?.rut || "",
  contactEmail: contact?.email || "",
  contactPhones: uniquePhones(contact?.phone, contact?.cell_phone),
 
@@ -547,19 +557,26 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  }
 
  // 5. Actualizar/crear persona de contacto
+ const contactIsLegal = values.contactPersonType === "legal";
+ const contactName = contactIsLegal ? values.contactBusinessName : values.contactFirstName;
  const contactData = {
- full_name: `${values.contactFirstName} ${values.contactLastName}`.trim(),
- first_name: values.contactFirstName,
- last_name: values.contactLastName || null,
+ full_name: contactIsLegal ? (values.contactBusinessName || "") : `${values.contactFirstName} ${values.contactLastName}`.trim(),
+ first_name: contactName,
+ last_name: contactIsLegal ? null : (values.contactLastName || null),
+ rut: values.contactRut || null,
  email: values.contactEmail || null,
  phone: values.contactPhones || null,
  cell_phone: null,
+ linked_to_insured: contactLinked,
  };
  if (contact) {
- if (values.contactFirstName) {
+ if (contactName) {
  await updateClaimParticipant(contact.id, contactData);
+ } else {
+ // Si no hay nombre, desvincular también
+ await updateClaimParticipant(contact.id, { linked_to_insured: false });
  }
- } else if (values.contactFirstName) {
+ } else if (contactName) {
  await createClaimParticipant({ claim_id: claim.id, type: "contact", ...contactData });
  }
 
@@ -715,6 +732,8 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  const watchedBeneficiaryCity = useWatch({ control, name: "beneficiaryCity" });
  const watchedBeneficiaryRut = useWatch({ control, name: "beneficiaryRut" });
  const watchedBeneficiaryPersonType = useWatch({ control, name: "beneficiaryPersonType" });
+
+ const watchedContactPersonType = useWatch({ control, name: "contactPersonType" });
 
  // Vigencia: fechas de inicio/término como control conjunto
  const watchedPolicyStartDate = useWatch({ control, name: "policyStartDate" });
@@ -1147,6 +1166,21 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  }
  };
 
+ const toggleContactLink = () => {
+ if (!contactLinked) {
+ setValue("contactPersonType", form.getValues("insuredPersonType") || "natural");
+ setValue("contactFirstName", form.getValues("insuredFirstName") || "");
+ setValue("contactLastName", form.getValues("insuredLastName") || "");
+ setValue("contactBusinessName", form.getValues("insuredBusinessName") || "");
+ setValue("contactRut", form.getValues("insuredRut") || "");
+ setValue("contactEmail", form.getValues("insuredEmail") || "");
+ setValue("contactPhones", form.getValues("insuredPhones") || "");
+ setContactLinked(true);
+ } else {
+ setContactLinked(false);
+ }
+ };
+
  const toggleClaimAddressLink = () => {
  if (!claimAddressLinked) {
  // Copiar dirección
@@ -1338,7 +1372,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
 
  <form onSubmit={handleSubmit((v) => saveMutation.mutate(v))} className="flex flex-col gap-2">
  {/* Tab content */}
- <div className="min-h-[300px]">
+ <div className="min-h-75">
  {/* ═══ TAB: SINIESTRO ═══ */}
  {activeTab === "siniestro" && (
  <div className="space-y-2">
@@ -1355,15 +1389,15 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  <EditInput label="N° Siniestro (Cía)" required {...register("claimNumber")} />
  <div className="space-y-1">
  <FieldLabel label="Fecha Siniestro" required />
- <FormDatePicker control={control} name="claimDate" className="w-[130px]" />
+ <FormDatePicker control={control} name="claimDate" className="w-32.5" />
  </div>
  <div className="space-y-1">
  <FieldLabel label="Fecha Denuncio" />
- <FormDatePicker control={control} name="reportDate" className="w-[130px]" />
+ <FormDatePicker control={control} name="reportDate" className="w-32.5" />
  </div>
  <div className="space-y-1">
  <FieldLabel label="Fecha Asignación" />
- <FormDatePicker control={control} name="assignmentDate" className="w-[130px]" />
+ <FormDatePicker control={control} name="assignmentDate" className="w-32.5" />
  </div>
  </div>
  </div>
@@ -1489,7 +1523,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  <FormDatePicker
  control={control}
  name="policyStartDate"
- className="w-[130px]"
+ className="w-32.5"
  maxDate={watchedPolicyEndDate || undefined}
  onDateChange={(value) => {
  if (value && watchedPolicyEndDate && value > watchedPolicyEndDate) {
@@ -1503,7 +1537,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  <FormDatePicker
  control={control}
  name="policyEndDate"
- className="w-[130px]"
+ className="w-32.5"
  minDate={watchedPolicyStartDate || undefined}
  onDateChange={(value) => {
  if (value && watchedPolicyStartDate && value < watchedPolicyStartDate) {
@@ -1671,7 +1705,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 app-body w-[150px] justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-37.5 justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={toggleContractorLink}
  >
  {contractorLinked ? "Desligar" : "Copiar"}
@@ -1802,7 +1836,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 app-body w-[150px] justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-37.5 justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={toggleBeneficiaryLink}
  >
  {beneficiaryLinked ? "Desligar" : "Copiar"}
@@ -1950,7 +1984,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 app-body w-[150px] justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-37.5 justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={toggleClaimAddressLink}
  >
  {claimAddressLinked ? "Desligar" : "Copiar"}
@@ -2057,15 +2091,46 @@ setValue("claimAddress", candidate.displayName || candidate.label);
 
  {/* Persona de Contacto */}
  <div className="app-panel">
- <h3 className="app-section-title">
+ <div className="w-full flex items-center justify-between pb-2">
+ <span className="app-section-title app-body font-semibold text-muted-foreground flex items-center gap-2">
  <User className="h-4 w-4" />
  Persona de Contacto
- </h3>
- <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-1">
- <EditInput label="Nombre" {...register("contactFirstName")} />
- <EditInput label="Apellido" {...register("contactLastName")} />
- <EditInput label="Email" type="email" {...register("contactEmail")} />
- <EditInput label="Teléfono" {...register("contactPhones")} placeholder="+56 9 1234 5678" />
+ </span>
+ <Button
+ type="button"
+ variant="outline"
+ size="sm"
+ className={`h-6 app-body w-37.5 justify-center ${contactLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ onClick={toggleContactLink}
+ >
+ {contactLinked ? "Desligar" : "Copiar"}
+ </Button>
+ </div>
+ <div className="space-y-3 pt-2">
+ <div className="app-data-grid-4">
+ <EditRutInput label="RUT" {...register("contactRut")} disabled={contactLinked} />
+ <EditSelect
+ label="Tipo"
+ control={control}
+ name="contactPersonType"
+ placeholder="Seleccionar..."
+ disabled={contactLinked}
+ items={[
+ { value: "natural", label: "Persona Natural" },
+ { value: "legal", label: "Persona Jurídica" },
+ ]}
+ />
+ {watchedContactPersonType === "legal" ? (
+ <EditInput label="Razón Social" {...register("contactBusinessName")} disabled={contactLinked} />
+ ) : (
+ <>
+ <EditInput label="Nombre" {...register("contactFirstName")} disabled={contactLinked} />
+ <EditInput label="Apellido" {...register("contactLastName")} disabled={contactLinked} />
+ </>
+ )}
+ <EditInput label="Email" type="email" {...register("contactEmail")} disabled={contactLinked} />
+ <EditInput label="Teléfono" {...register("contactPhones")} placeholder="+56 9 1234 5678, +56 2 2345 6789" disabled={contactLinked} />
+ </div>
  </div>
  </div>
 
@@ -2208,45 +2273,57 @@ setValue("claimAddress", candidate.displayName || candidate.label);
  )}
  <div>
  <FieldLabel label="Compañía" />
- <select
- className="app-input h-7 w-full"
- value={newPolicy.insurance_company_id}
- onChange={(e) => setNewPolicy({ ...newPolicy, insurance_company_id: e.target.value })}
+ <Select
+ value={newPolicy.insurance_company_id || "__none"}
+ onValueChange={(v) => setNewPolicy({ ...newPolicy, insurance_company_id: v === "__none" || !v ? "" : v })}
  >
- <option value="">Seleccionar...</option>
+ <SelectTrigger className="app-input h-7 w-full">
+ <SelectValue placeholder="Seleccionar..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Seleccionar...</SelectItem>
  {catalogs.insuranceCompanies?.map((c) => (
- <option key={c.id} value={c.id}>{c.name}</option>
+ <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
  ))}
- </select>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <FieldLabel label="Línea de Negocio" />
- <select
- className="app-input h-7 w-full"
- value={newPolicy.business_line_id}
- onChange={(e) => setNewPolicy({ ...newPolicy, business_line_id: e.target.value })}
+ <Select
+ value={newPolicy.business_line_id || "__none"}
+ onValueChange={(v) => setNewPolicy({ ...newPolicy, business_line_id: v === "__none" || !v ? "" : v })}
  >
- <option value="">Seleccionar...</option>
+ <SelectTrigger className="app-input h-7 w-full">
+ <SelectValue placeholder="Seleccionar..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Seleccionar...</SelectItem>
  {catalogs.businessLines?.map((b) => (
- <option key={b.id} value={b.id}>{b.name}</option>
+ <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
  ))}
- </select>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <FieldLabel label="Moneda" />
- <select
- className="app-input h-7 w-full"
- value={newPolicy.currency}
- onChange={(e) => setNewPolicy({ ...newPolicy, currency: e.target.value })}
+ <Select
+ value={newPolicy.currency || "__none"}
+ onValueChange={(v) => setNewPolicy({ ...newPolicy, currency: v === "__none" || !v ? "" : v })}
  >
- <option value="">Seleccionar...</option>
+ <SelectTrigger className="app-input h-7 w-full">
+ <SelectValue placeholder="Seleccionar..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Seleccionar...</SelectItem>
  {(countryCurrencies && countryCurrencies.length > 0
  ? countryCurrencies
  : catalogs.currencies
  ).map((c) => (
- <option key={c.code || c.id} value={c.code || c.id}>{c.code || ""} — {c.name}</option>
+ <SelectItem key={c.code || c.id} value={c.code || c.id}>{c.code || ""} — {c.name}</SelectItem>
  ))}
- </select>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <FieldLabel label="Inicio Vigencia" />
@@ -2256,7 +2333,7 @@ setValue("claimAddress", candidate.displayName || candidate.label);
  const newEnd = value && newPolicy.end_date && value > newPolicy.end_date ? value : newPolicy.end_date;
  setNewPolicy({ ...newPolicy, start_date: value, end_date: newEnd });
  }}
- className="w-[130px]"
+ className="w-32.5"
  maxDate={newPolicy.end_date || undefined}
  />
  </div>
@@ -2268,7 +2345,7 @@ setValue("claimAddress", candidate.displayName || candidate.label);
  const newStart = value && newPolicy.start_date && value < newPolicy.start_date ? value : newPolicy.start_date;
  setNewPolicy({ ...newPolicy, end_date: value, start_date: newStart });
  }}
- className="w-[130px]"
+ className="w-32.5"
  minDate={newPolicy.start_date || undefined}
  />
  </div>

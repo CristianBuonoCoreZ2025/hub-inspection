@@ -410,14 +410,18 @@ onBlur={(e) => onUpdate(index, { label: toLabelCase(e.target.value) })}
  <>
  <div>
  <Label className="app-field-label app-body">Tipo de contenido</Label>
- <select
- className="app-input h-8 app-body w-full"
+ <Select
  value={field.inputType || "alphanumeric"}
- onChange={(e) => onUpdate(index, { inputType: e.target.value as "alphanumeric" | "numeric" })}
+ onValueChange={(v) => onUpdate(index, { inputType: v as "alphanumeric" | "numeric" })}
  >
- <option value="alphanumeric">Alfanumérico</option>
- <option value="numeric">Numérico</option>
- </select>
+ <SelectTrigger className="app-input h-8 app-body w-full">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="alphanumeric">Alfanumérico</SelectItem>
+ <SelectItem value="numeric">Numérico</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <Label className="app-field-label app-body">Largo máximo</Label>
@@ -462,14 +466,18 @@ onBlur={(e) => onUpdate(index, { label: toLabelCase(e.target.value) })}
  <>
  <div>
  <Label className="app-field-label app-body">Tipo de fecha</Label>
- <select
- className="app-input h-8 app-body w-full"
+ <Select
  value={field.dateType || "date"}
- onChange={(e) => onUpdate(index, { dateType: e.target.value as "date" | "datetime" })}
+ onValueChange={(v) => onUpdate(index, { dateType: v as "date" | "datetime" })}
  >
- <option value="date">Solo fecha</option>
- <option value="datetime">Fecha y hora</option>
- </select>
+ <SelectTrigger className="app-input h-8 app-body w-full">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="date">Solo fecha</SelectItem>
+ <SelectItem value="datetime">Fecha y hora</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
 
  <div>

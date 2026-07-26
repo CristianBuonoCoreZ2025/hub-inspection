@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { renderEmailTemplate } from "@/services/email-render";
 import { sendEmail } from "@/services/email-sender";
+import { buildDocumentDataForClaim } from "@/services/document-data";
+import { buildTemplateData } from "@/lib/document-fields";
 
 // ──────────────────────────────────────────────────────────────
 // POST /api/email/send
@@ -16,116 +18,278 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
+    // Buscar el profile del usuario logueado (email_logs.sent_by FK → profiles.id)
+    const { data: profileRow } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+    const profileId = profileRow?.id ?? null;
+
     const payload = await request.json();
-    const { claimActionId, emailTemplateId, to, cc = [], bcc = [] } = payload as {
+    const {
+      claimActionId,
+      emailTemplateId,
+      to,
+      cc = [],
+      bcc = [],
+      // Modo "escrito a mano": el usuario escribe subject y body sin plantilla
+      manualSubject,
+      manualBody,
+      manualBodyFormat = "plain",
+    } = payload as {
       claimActionId: string;
-      emailTemplateId: string;
+      emailTemplateId?: string | null;
       to: string[];
       cc?: string[];
       bcc?: string[];
+      manualSubject?: string;
+      manualBody?: string;
+      manualBodyFormat?: "plain" | "html";
     };
 
-    if (!claimActionId || !emailTemplateId || !to?.length) {
+    if (!claimActionId || !to?.length) {
       return NextResponse.json({ error: "Faltan datos obligatorios" }, { status: 400 });
     }
 
-    // Cargar acción + claim + perfiles asociados
+    // Modo: plantilla (con emailTemplateId) o escrito a mano (con manualSubject + manualBody)
+    const isManual = !emailTemplateId;
+    if (isManual && (!manualSubject || !manualBody)) {
+      return NextResponse.json(
+        { error: "En modo manual se requiere subject y body" },
+        { status: 400 }
+      );
+    }
+
+    // Cargar acción (claim_actions NO tiene company_id — se obtiene del claim)
     const { data: action, error: actionError } = await supabase
       .from("claim_actions")
-      .select(
-        "id, action_data, company_id, claim_id, action_template_id, claim:claims!inner(id, claim_number, liquidation_number, claim_date, claim_address, business_line_id, event_id, adjuster_id, assigned_adjuster_id, inspector_id, dispatcher_id, assistant_id, insurance_company_id, policy_id, owner_same_as_insured, owner_name, owner_email, owner_phone, country_id, region_id, city_id, commune_id, created_at)"
-      )
+      .select("id, code, action_data, claim_id, action_template_id")
       .eq("id", claimActionId)
       .single();
 
     if (actionError || !action) {
+      console.error("[email/send] Acción no encontrada:", { claimActionId, error: actionError?.message });
       return NextResponse.json({ error: "Acción no encontrada" }, { status: 404 });
     }
 
-    const claim = (action as unknown as { claim: Record<string, unknown> }).claim;
-    const companyId = action.company_id as string;
-
-    // Validar plantilla
-    const { data: template, error: templateError } = await supabase
-      .from("email_templates")
-      .select("id, company_id, action_template_id, subject, body, placeholder_mapping")
-      .eq("id", emailTemplateId)
-      .eq("is_active", true)
-      .single();
-
-    if (templateError || !template || template.company_id !== companyId || template.action_template_id !== action.action_template_id) {
-      return NextResponse.json({ error: "Plantilla no válida" }, { status: 400 });
-    }
-
-    // Perfiles asociados al siniestro
-    const profileIds = [
-      claim.adjuster_id,
-      claim.assigned_adjuster_id,
-      claim.inspector_id,
-      claim.dispatcher_id,
-      claim.assistant_id,
-    ].filter(Boolean) as string[];
-
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, full_name, email, role")
-      .in("id", profileIds);
-
-    const profilesMap = new Map((profiles || []).map((p) => [p.id, p]));
-
-    // Datos para renderizar placeholders
-    const data: Record<string, unknown> = {
-      ...claim,
-      claim_id: claim.id,
-      action_id: action.id,
-      action_data: action.action_data,
-      adjuster_full_name: profilesMap.get(claim.adjuster_id as string)?.full_name || "",
-      adjuster_email: profilesMap.get(claim.adjuster_id as string)?.email || "",
-      assigned_adjuster_full_name: profilesMap.get(claim.assigned_adjuster_id as string)?.full_name || "",
-      inspector_full_name: profilesMap.get(claim.inspector_id as string)?.full_name || "",
-      inspector_email: profilesMap.get(claim.inspector_id as string)?.email || "",
-      dispatcher_full_name: profilesMap.get(claim.dispatcher_id as string)?.full_name || "",
-      assistant_full_name: profilesMap.get(claim.assistant_id as string)?.full_name || "",
-      owner_name: claim.owner_name || "",
-      owner_email: claim.owner_email || "",
-      owner_phone: claim.owner_phone || "",
-      claim_address: claim.claim_address || "",
-      claim_number: claim.claim_number || "",
-      liquidation_number: claim.liquidation_number || "",
+    const actionRow = action as unknown as {
+      id: string;
+      code: string | null;
+      action_data: Record<string, unknown> | null;
+      claim_id: string;
+      action_template_id: string;
     };
 
-    // Aplanar action_data como top-level keys
-    const actionData = (action.action_data || {}) as Record<string, unknown>;
+    // Cargar el claim por separado (evita problemas de RLS con !inner join)
+    const { data: claimRow, error: claimError } = await supabase
+      .from("claims")
+      .select("id, company_id, claim_number, liquidation_number, claim_date, claim_address, business_line_id, event_id, adjuster_id, assigned_adjuster_id, inspector_id, dispatcher_id, assistant_id, insurance_company_id, policy_id, owner_same_as_insured, country_id, region_id, city_id, commune_id, created_at")
+      .eq("id", actionRow.claim_id)
+      .single();
+
+    if (claimError || !claimRow) {
+      console.error("[email/send] Claim no encontrado:", { claimId: actionRow.claim_id, error: claimError?.message });
+      return NextResponse.json({ error: "Siniestro no encontrado" }, { status: 404 });
+    }
+
+    const claim = claimRow as Record<string, unknown> & { company_id: string; id: string };
+    const actionCode = actionRow.code || null;
+    const companyId = claim.company_id;
+
+    // Validar plantilla (solo si se usa plantilla — no en modo manual)
+    let template: {
+      id: string;
+      company_id: string;
+      business_line_id: string | null;
+      action_template_id: string | null;
+      name: string;
+      description: string | null;
+      body_format: "plain" | "html";
+      subject: string;
+      body: string;
+      logo_url: string | null;
+      header_color: string | null;
+      placeholder_mapping: Record<string, string> | null;
+      is_active: boolean;
+      actions?: { action_template_id: string; is_default: boolean }[];
+    } | null = null;
+
+    if (!isManual && emailTemplateId) {
+      const { data: tpl, error: templateError } = await supabase
+        .from("email_templates")
+        .select(
+          "id, company_id, business_line_id, action_template_id, name, description, body_format, subject, body, logo_url, header_color, placeholder_mapping, is_active, actions:email_template_actions(action_template_id, is_default)"
+        )
+        .eq("id", emailTemplateId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (templateError || !tpl) {
+        return NextResponse.json({ error: "Plantilla no encontrada o inactiva" }, { status: 404 });
+      }
+      if (tpl.company_id !== companyId) {
+        return NextResponse.json({ error: "Plantilla no pertenece al tenant" }, { status: 403 });
+      }
+      const linkedActions = (tpl as unknown as {
+        actions?: { action_template_id: string; is_default: boolean }[];
+      }).actions || [];
+      const isLinked = linkedActions.some((a) => a.action_template_id === actionRow.action_template_id);
+      if (!isLinked) {
+        return NextResponse.json(
+          { error: "La plantilla no está vinculada a esta gestión" },
+          { status: 400 }
+        );
+      }
+      template = tpl as (typeof template & object);
+    }
+
+    // ── Construir datos completos del siniestro usando el mismo sistema que
+    //    document-data.ts (resuelve TODOS los joins: participantes, perfiles,
+    //    catálogos, gestiones, sesión de inspección, etc.) ──
+    //    Esto garantiza que TODOS los placeholders del catálogo DOCUMENT_FIELDS
+    //    se resuelvan correctamente, sin que falte ninguno.
+    const docData = await buildDocumentDataForClaim(actionRow.claim_id, supabase);
+
+    // Cargar la última sesión de inspección (para magic link y validez)
+    const { data: sessions } = await supabase
+      .from("inspection_sessions")
+      .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
+      .eq("claim_id", claim.id as string)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const lastSession = sessions?.[0] ?? null;
+
+    // Construir URL pública del magic link.
+    // NEXT_PUBLIC_APP_URL puede no estar seteada en dev/local, así que usamos
+    // el origin del request (headers host + x-forwarded-proto) como fallback.
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      `${request.nextUrl.protocol}//${request.headers.get("x-forwarded-host") || request.headers.get("host") || ""}`;
+    const magicLinkUrl = lastSession?.magic_link_token
+      ? `${appUrl}/inspection/${lastSession.magic_link_token}`
+      : "";
+
+    // Helper para calcular el inicio de la ventana de validez del magic link.
+    // La ventana es: [scheduled_at - 1h, magic_link_expires_at].
+    // (coincide con la lógica del componente MagicLinkSender).
+    const fmtDateTime = (v: string | null | undefined): string => {
+      if (!v) return "";
+      const d = new Date(v);
+      if (isNaN(d.getTime())) return String(v);
+      return d.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+    };
+    const windowStart = lastSession?.scheduled_at
+      ? new Date(new Date(lastSession.scheduled_at).getTime() - 60 * 60 * 1000).toISOString()
+      : lastSession?.created_at ?? null;
+
+    // Resolver TODOS los campos canónicos del catálogo (claim_number, insured_name,
+    // inspector_name, claim_cause, insurance_company, policy_*, etc.) + mapeo manual
+    const placeholderMapping = (template as { placeholder_mapping?: Record<string, string> } | null)?.placeholder_mapping || {};
+    const templateData = buildTemplateData(docData, placeholderMapping);
+
+    // Datos finales para renderizar:
+    // IMPORTANTE: NO hacer spread de `claim` crudo aquí, porque sus campos son
+    // objetos (joins como {id, name}) y pisarían los strings resueltos por
+    // buildTemplateData (ej: insurance_company pasaría de "Mapfre" a {id,name}).
+    // templateData ya contiene todos los campos canónicos resueltos a strings.
+    const data: Record<string, unknown> = {
+      ...templateData,
+      claim_id: claim.id,
+      action_id: actionRow.id,
+      action_data: actionRow.action_data,
+      // Magic link de la última inspección
+      magic_link: magicLinkUrl,
+      magic_link_valid_from: fmtDateTime(windowStart),
+      magic_link_valid_until: fmtDateTime(lastSession?.magic_link_expires_at),
+      last_inspection_scheduled_at: fmtDateTime(lastSession?.scheduled_at),
+      // <coord_inspection_date> = fecha de la última inspección agendada (formateada)
+      coord_inspection_date: fmtDateTime(lastSession?.scheduled_at),
+      coord_inspection_datetime: fmtDateTime(lastSession?.scheduled_at),
+      // Header color de la empresa para el wrapper HTML
+      company_header_color: docData.company?.logo_url ? "#0095DA" : "#0095DA",
+    };
+
+    // Aplanar action_data como top-level keys (por si la plantilla usa campos
+    // específicos de la gestión, ej: <email_fecha>, <contact_date>)
+    const actionData = (actionRow.action_data || {}) as Record<string, unknown>;
     for (const [k, v] of Object.entries(actionData)) {
       if (typeof v !== "object" || v === null) {
         data[k] = v;
       }
     }
 
-    const { subject, body } = renderEmailTemplate(template, data);
+    // Renderizar: si hay plantilla, renderiza placeholders; si es manual, usa lo que el usuario escribió
+    let subject: string;
+    let body: string;
+    let body_format: "plain" | "html";
+
+    if (template) {
+      const rendered = renderEmailTemplate(template, data);
+      subject = rendered.subject;
+      body = rendered.body;
+      body_format = rendered.body_format;
+      // DEBUG TEMPORAL: ver qué se renderiza
+      console.log("[email-debug] template body_format:", body_format);
+      console.log("[email-debug] rendered subject:", subject);
+      console.log("[email-debug] rendered body (first 300):", body.substring(0, 300));
+      console.log("[email-debug] data.insured_name:", data.insured_name);
+      console.log("[email-debug] data.inspector_name:", data.inspector_name);
+      console.log("[email-debug] data.claim_cause:", data.claim_cause);
+      console.log("[email-debug] data.insurance_company:", data.insurance_company);
+    } else {
+      // Modo manual: el usuario escribió subject y body.
+      // Aún así, reemplazamos placeholders simples en el body manual por si el usuario
+      // los usó (ej: <magic_link>, <liquidation_number>).
+      const manualTemplate = {
+        subject: manualSubject || "",
+        body: manualBody || "",
+        body_format: manualBodyFormat,
+        placeholder_mapping: undefined as Record<string, string> | undefined,
+      };
+      const rendered = renderEmailTemplate(manualTemplate, data);
+      subject = rendered.subject;
+      body = rendered.body;
+      body_format = rendered.body_format;
+    }
+
+    // Si la plantilla es HTML, envolver en estructura de email completa
+    const { wrapHtmlEmail } = await import("@/services/email-render");
+    const finalBody =
+      body_format === "html"
+        ? wrapHtmlEmail({
+            body,
+            logoUrl: data.company_logo as string,
+            headerColor: data.company_header_color as string,
+            companyName: data.company_name as string,
+          })
+        : body;
 
     const result = await sendEmail({
       to,
       cc,
       bcc,
       subject,
-      body,
+      body: finalBody,
+      html: body_format === "html",
     });
 
     const { data: log, error: logError } = await supabase.from("email_logs").insert({
       company_id: companyId,
       claim_id: claim.id as string,
       claim_action_id: claimActionId,
-      email_template_id: emailTemplateId,
+      email_template_id: emailTemplateId ?? null,
       to_address: to,
       cc_address: cc,
       bcc_address: bcc,
       subject,
-      body,
+      body: finalBody,
+      body_format,
       status: result.status,
       provider_response: result.provider_response,
-      sent_by: user.id,
-    }).select("id").single();
+      sent_by: profileId,
+      parent_action_code: actionCode,
+    }).select("id, correlativo").single();
 
     if (logError) {
       console.error("Error guardando email_logs:", logError.message);

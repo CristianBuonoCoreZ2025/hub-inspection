@@ -1,0 +1,22 @@
+[
+  { "id": "T01", "code": "ELECTRODOMESTICOS", "name": "Electrodomésticos", "description": "Línea blanca y pequeños electrodomésticos: refrigeración, lavado, cocción, climatización, pequeños aparatos.", "sort_order": 1 },
+  { "id": "T02", "code": "ELECTRONICA", "name": "Electrónica", "description": "Entretenimiento y audio/video: TV, consolas, equipos de sonido, parlantes, soundbars, proyectores, cámaras, drones. NO incluye computación ni móviles (ver Computación y Móviles).", "sort_order": 2 },
+  { "id": "T03", "code": "COMPUTACION_MOVILES", "name": "Computación y Móviles", "description": "Informática y móviles: notebooks, PC desktop, all-in-one, tablets, smartphones, smartwatches, monitores, routers, discos externos, auriculares, power banks, accesorios móvil.", "sort_order": 3 },
+  { "id": "T04", "code": "MUEBLES", "name": "Muebles", "description": "Muebles de living, dormitorio, oficina, cocina y baño.", "sort_order": 4 },
+  { "id": "T05", "code": "ROPA_VESTUARIO", "name": "Ropa / Vestuario", "description": "Ropa, calzado, accesorios de vestir, carteras, mochilas.", "sort_order": 5 },
+  { "id": "T06", "code": "JOYAS_BISUTERIA", "name": "Joyas / Bisutería", "description": "Joyas, relojes tradicionales y bisutería de valor. NO incluye smartwatches (ver Computación y Móviles).", "sort_order": 6 },
+  { "id": "T07", "code": "MAQUINARIA", "name": "Maquinaria y Herramientas", "description": "Maquinaria industrial, herramientas eléctricas y manuales, equipos de trabajo.", "sort_order": 7 },
+  { "id": "T08", "code": "VEHICULOS", "name": "Vehículos", "description": "Autos, motos, bicicletas, vehículos menores, scooters eléctricos.", "sort_order": 8 },
+  { "id": "T09", "code": "EQUIPAMIENTO_OFICINA", "name": "Equipamiento Oficina", "description": "Impresoras, escáneres, multifuncionales, shredders, calculadoras, mobiliario de oficina.", "sort_order": 9 },
+  { "id": "T10", "code": "EQUIPAMIENTO_DEPORTIVO", "name": "Equipamiento Deportivo", "description": "Bicicletas, gimnasio, pesas, raquetas, pelotas, tablas, esquí, cascos.", "sort_order": 10 },
+  { "id": "T11", "code": "INSTRUMENTOS_MUSICALES", "name": "Instrumentos Musicales", "description": "Guitarras, pianos, baterías, vientos, micrófonos, amplificadores.", "sort_order": 11 },
+  { "id": "T12", "code": "ARTE_COLECCIONES", "name": "Arte / Colecciones", "description": "Cuadros, esculturas, monedas, filatelia, vinos de colección, libros antiguos.", "sort_order": 12 },
+  { "id": "T13", "code": "LIBROS_DOCUMENTOS", "name": "Libros / Documentos", "description": "Libros, documentos importantes, enciclopedias, cómics, archivos.", "sort_order": 13 },
+  { "id": "T14", "code": "EQUIPAMIENTO_MEDICO", "name": "Equipamiento Médico", "description": "Equipos médicos, sillas de ruedas, andadores, camas clínicas, oxígeno, monitores.", "sort_order": 14 },
+  { "id": "T15", "code": "ENSERES_COCINA", "name": "Enseres de Cocina", "description": "Vajilla, cubiertos, ollas, sartenes, vasos, copas, termos, coolers. Bienes de uso durable de cocina (no consumibles).", "sort_order": 15 },
+  { "id": "T16", "code": "OTROS", "name": "Otros", "description": "Bienes no clasificados en las categorías anteriores.", "sort_order": 16 },
+  { "id": "T17", "code": "ALIMENTOS_VIVERES", "name": "Alimentos / Víveres", "description": "Consumibles: vinos y licores de consumo, alimentos congelados, refrigerados, despensa no perecible. Caso típico: corte de luz que arruina freezers. Vino de guarda/inversión va a Arte/Colecciones.", "sort_order": 17 },
+  { "id": "T18", "code": "JARDINERIA_EXTERIOR", "name": "Jardinería / Exterior", "description": "Podadoras, motosierras, cortasetos, máquinas de césped, aspersores, muebles de jardín.", "sort_order": 18 },
+  { "id": "T19", "code": "SEGURIDAD_SMART_HOME", "name": "Seguridad / Smart Home", "description": "Cámaras de seguridad, DVR/NVR, alarmas, cerraduras smart, timbres smart, sensores.", "sort_order": 19 },
+  { "id": "T20", "code": "OPTICA_ASTRONOMIA", "name": "Óptica / Astronomía", "description": "Telescopios, microscopios, binoculares, lupas, gafas/lentes recetados y de sol.", "sort_order": 20 }
+]

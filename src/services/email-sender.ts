@@ -12,6 +12,8 @@ export interface SendEmailInput {
   bcc?: string[];
   subject: string;
   body: string;
+  /** Si true, `body` se envía como HTML. Si false, como texto plano. */
+  html?: boolean;
   from?: string;
   replyTo?: string;
 }
@@ -24,8 +26,22 @@ export interface SendEmailResult {
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
-  const provider = process.env.EMAIL_PROVIDER?.toLowerCase() || "console";
-  const from = input.from || process.env.EMAIL_FROM || "sistema@hub-inspection.cl";
+  // Auto-detección de proveedor: si EMAIL_PROVIDER está seteado, se respeta.
+  // Si no, se detecta por presencia de las API keys (Resend > SendGrid > console).
+  const explicitProvider = process.env.EMAIL_PROVIDER?.toLowerCase();
+  const provider =
+    explicitProvider ||
+    (process.env.RESEND_API_KEY ? "resend" : process.env.SENDGRID_API_KEY ? "sendgrid" : "console");
+
+  // From: prioriza input > EMAIL_FROM > RESEND_FROM_EMAIL > SENDGRID_FROM_EMAIL > default
+  const from =
+    input.from ||
+    process.env.EMAIL_FROM ||
+    process.env.RESEND_FROM_EMAIL ||
+    process.env.SENDGRID_FROM_EMAIL ||
+    "sistema@hub-inspection.cl";
+
+  const isHtml = input.html === true;
 
   const payload = {
     from,
@@ -33,17 +49,18 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     cc: input.cc,
     bcc: input.bcc,
     subject: input.subject,
-    text: input.body,
+    text: isHtml ? undefined : input.body,
+    html: isHtml ? input.body : undefined,
     reply_to: input.replyTo,
   };
 
   if (provider === "console") {
     console.log("--- E-mail (modo console) ---");
-    console.log(JSON.stringify(payload, null, 2));
+    console.log(JSON.stringify({ ...payload, html: isHtml ? "[HTML body]" : undefined }, null, 2));
     return {
       status: "sent",
       provider,
-      provider_response: { mode: "console", note: "No se envió realmente" },
+      provider_response: { mode: "console", note: "No se envió realmente", html: isHtml },
       messageId: `console-${Date.now()}`,
     };
   }
@@ -74,6 +91,10 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     const apiKey = process.env.SENDGRID_API_KEY;
     if (!apiKey) throw new Error("SENDGRID_API_KEY no configurada");
 
+    const content = isHtml
+      ? [{ type: "text/html", value: input.body }]
+      : [{ type: "text/plain", value: input.body }];
+
     const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -81,7 +102,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         personalizations: [{ to: input.to.map((email) => ({ email })) }],
         from: { email: from },
         subject: input.subject,
-        content: [{ type: "text/plain", value: input.body }],
+        content,
       }),
     });
 

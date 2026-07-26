@@ -155,7 +155,7 @@ export function StatusBadge({
 
   const sizes = {
     sm: {
-      container: "h-5 px-2 text-[10px] gap-1.5",
+      container: "h-5 px-1.5 text-[9px] gap-1",
       dot: "h-1.5 w-1.5",
     },
     md: {

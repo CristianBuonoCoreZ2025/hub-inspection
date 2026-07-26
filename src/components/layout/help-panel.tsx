@@ -19,6 +19,7 @@ import {
   ChevronRight,
   BookOpen,
   Lightbulb,
+  Sparkles,
 } from "lucide-react";
 import { HelpIcon } from "@/components/icons/topbar-icons";
 
@@ -418,6 +419,84 @@ const HELP_SECTIONS: HelpSection[] = [
     ],
   },
   {
+    id: "novedades",
+    title: "Novedades y Mejoras",
+    icon: Sparkles,
+    category: "General",
+    content: [
+      {
+        question: "¿Qué hay de nuevo en el sistema?",
+        answer:
+          "Se han incorporado varias mejoras de rendimiento, usabilidad y confiabilidad: panel de métricas de consultas, bloqueo de UI durante grabaciones, optimización de gestiones, y corrección de zona horaria. Esta sección documenta cada una.",
+      },
+      {
+        question: "Panel de Métricas de Rendimiento",
+        answer:
+          "Se agregó un panel flotante (botón abajo a la derecha o Ctrl+Shift+P) que muestra en tiempo real todas las consultas a la base de datos: cuántas se ejecutan, cuánto demoran, cuáles son las más lentas (avg, p95, max) y cuáles fallan. Sirve para identificar cuellos de botella y optimizar el sistema.",
+        steps: [
+          "Abre el panel con Ctrl+Shift+P o click en el botón flotante",
+          "Tab 'Más lentas' — top 10 consultas por promedio de duración",
+          "Tab 'Todas' — lista completa con count, avg, p95, max, total",
+          "Tab 'Recientes' — últimas 200 consultas individuales con ruta",
+          "Colores: rojo >1000ms, ámbar >500ms, primario >200ms",
+          "Botón Reset para limpiar las métricas",
+        ],
+        tips: [
+          "Solo visible en desarrollo (no aparece en producción).",
+          "Las métricas también se guardan en la tabla query_audit_log para análisis histórico.",
+          "Las consultas lentas (>500ms) tienen índice dedicado en BD para análisis rápido.",
+        ],
+      },
+      {
+        question: "Bloqueo de UI al grabar",
+        answer:
+          "Cuando presionas un botón físico (Guardar, Emitir, Eliminar, Aprobar, Rechazar), aparece un overlay translúcido con spinner 'Procesando…' que bloquea toda la pantalla. Esto evita que el usuario haga click repetido o navegue antes de que termine la operación, previniendo duplicados y errores.",
+        tips: [
+          "NO aparece al cambiar de página ni al cargar datos (solo en grabaciones).",
+          "NO aparece en autoguardados automáticos (cuando escribes en campos).",
+          "Solo se muestra si la operación tarda más de 150ms (no parpadea en operaciones rápidas).",
+          "Se oculta automáticamente cuando todas las mutations del usuario terminan.",
+        ],
+      },
+      {
+        question: "Gestiones más rápidas",
+        answer:
+          "Se optimizó la emisión, revisión, aprobación y rechazo de gestiones. Antes cada emisión hacía 6-8 viajes secuenciales a la base de datos (~600ms a 2.4s). Ahora hace 2 viajes en paralelo + 1 update, y el historial se registra en background sin bloquear la respuesta (~200-400ms).",
+        steps: [
+          "Caché de IDs de estado: lookup_catalog se carga una sola vez",
+          "Paralelización: la gestión y el estado se leen al mismo tiempo",
+          "Validación de perfil eliminada: la FK de Postgres la hace",
+          "Historial fire-and-forget: no bloquea la respuesta al usuario",
+        ],
+        tips: [
+          "Si presionas 'Emitir' y la gestión se demora, revisa el panel de métricas para ver qué consulta es lenta.",
+          "El historial de gestiones se sigue registrando, solo que en background.",
+        ],
+      },
+      {
+        question: "Corrección de zona horaria en horas",
+        answer:
+          "Se corrigió un bug donde seleccionar las 10:00 AM se guardaba como 06:00 AM (desfase de 4 horas). El problema era que el input datetime-local devuelve la hora local sin offset, y Postgres la interpretaba como UTC. Ahora se agrega el offset de la zona horaria del usuario antes de guardar.",
+        tips: [
+          "La zona horaria se detecta automáticamente del navegador del usuario.",
+          "Se puede sobrescribir con setUserTimeZone() y se persiste en localStorage.",
+          "Fallback en servidor: America/Santiago.",
+          "La BD siempre almacena UTC (timestamptz); la conversión es solo al mostrar/guardar.",
+        ],
+      },
+      {
+        question: "Log de auditoría de consultas",
+        answer:
+          "Cada consulta a la base de datos se registra en la tabla query_audit_log con: tabla, operación, duración, éxito/error, usuario, ruta de la página, y timestamp. Esto permite análisis histórico de rendimiento y detección de consultas problemáticas.",
+        tips: [
+          "Los registros se auto-purgan después de 30 días.",
+          "Solo el service role (server actions) puede leer los logs; el cliente solo escribe.",
+          "Para análisis: SELECT table_name, operation, count(*), avg(duration_ms) FROM query_audit_log GROUP BY 1,2 ORDER BY avg DESC;",
+        ],
+      },
+    ],
+  },
+  {
     id: "atajos",
     title: "Atajos y Tips",
     icon: Lightbulb,
@@ -454,6 +533,16 @@ const HELP_SECTIONS: HelpSection[] = [
         question: "Real-time",
         answer:
           "El sistema actualiza automáticamente los datos cuando hay cambios en la base de datos. Si otro usuario crea un siniestro o emite una gestión, lo verás reflejado en tu pantalla sin necesidad de recargar.",
+      },
+      {
+        question: "Panel de métricas (Ctrl+Shift+P)",
+        answer:
+          "En desarrollo, presiona Ctrl+Shift+P para abrir el panel flotante de métricas de rendimiento. Muestra qué consultas son lentas, cuántas se ejecutan y dónde están los cuellos de botella. Útil para reportar problemas de velocidad al equipo técnico.",
+        tips: [
+          "Ctrl+Shift+P abre/cierra el panel.",
+          "El botón flotante abajo a la derecha también lo abre.",
+          "Solo disponible en entorno de desarrollo.",
+        ],
       },
     ],
   },

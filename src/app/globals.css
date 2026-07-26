@@ -58,6 +58,18 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
+  /* Spacing adicional para valores frecuentes que no están en el scale por defecto */
+  --spacing-0\.75: 0.1875rem;
+  --spacing-5\.5: 1.375rem;
+  --spacing-17: 4.25rem;
+  --spacing-17\.5: 4.375rem;
+  --spacing-32\.5: 8.125rem;
+  --spacing-37\.5: 9.375rem;
+  --spacing-45: 11.25rem;
+  --spacing-65: 16.25rem;
+  --spacing-70: 17.5rem;
+  --spacing-75: 18.75rem;
+  --spacing-130: 32.5rem;
 }
 
 /*
@@ -167,3 +179,101 @@
     @apply font-sans;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────
+   HtmlEditor (TipTap) — estilos del contenido + tablas
+   ────────────────────────────────────────────────────────────── */
+.html-editor-wrap {
+  position: relative;
+}
+.html-editor-content {
+  line-height: 1.5;
+}
+.html-editor-content:empty::before,
+.html-editor-content p.is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.html-editor-content h1 { font-size: 1.75rem; font-weight: 700; margin: 0.6em 0 0.3em; }
+.html-editor-content h2 { font-size: 1.4rem; font-weight: 700; margin: 0.6em 0 0.3em; }
+.html-editor-content h3 { font-size: 1.15rem; font-weight: 600; margin: 0.6em 0 0.3em; }
+.html-editor-content p { margin: 0.3em 0; }
+.html-editor-content ul,
+.html-editor-content ol { margin: 0.3em 0; padding-left: 1.5em; }
+.html-editor-content ul { list-style: disc; }
+.html-editor-content ol { list-style: decimal; }
+.html-editor-content blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 0.75em;
+  color: var(--muted-foreground);
+  font-style: italic;
+  margin: 0.4em 0;
+}
+.html-editor-content pre {
+  background: var(--muted);
+  padding: 0.6em 0.8em;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.85em;
+  overflow-x: auto;
+}
+.html-editor-content a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+.html-editor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+.html-editor-content table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.5em 0;
+  overflow: hidden;
+}
+.html-editor-content th,
+.html-editor-content td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  vertical-align: top;
+  position: relative;
+  min-width: 60px;
+}
+.html-editor-content th {
+  background: var(--muted);
+  font-weight: 600;
+  text-align: left;
+}
+.html-editor-content .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--primary);
+  opacity: 0.15;
+  pointer-events: none;
+}
+.html-editor-content .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background: var(--primary);
+  pointer-events: none;
+}
+.html-editor-content.resize-cursor {
+  cursor: col-resize;
+}
+.html-editor-content [data-indent="1"] { padding-left: 40px; }
+.html-editor-content [data-indent="2"] { padding-left: 80px; }
+.html-editor-content [data-indent="3"] { padding-left: 120px; }
+.html-editor-content [data-indent="4"] { padding-left: 160px; }
+.html-editor-content [data-indent="5"] { padding-left: 200px; }
+.html-editor-content [data-indent="6"] { padding-left: 240px; }
+.html-editor-content [data-indent="7"] { padding-left: 280px; }
+.html-editor-content [data-indent="8"] { padding-left: 320px; }

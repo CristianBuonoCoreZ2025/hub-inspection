@@ -2,7 +2,8 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, MessageCircle, Mail, Send, Phone, RefreshCw, Clock, CheckCircle2, AlertTriangle, Loader2, MapPin } from "lucide-react";
+import { Copy, Mail, Send, RefreshCw, Clock, CheckCircle2, AlertTriangle, Loader2, UserRound } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { refreshMagicLink } from "@/services/inspections";
@@ -38,6 +39,7 @@ export function MagicLinkSender({
 }: MagicLinkSenderProps) {
   const queryClient = useQueryClient();
   const [sending, setSending] = React.useState<"whatsapp" | "email" | null>(null);
+  const [whatsappCloudEnabled, setWhatsappCloudEnabled] = React.useState<boolean | null>(null);
   const link = typeof window !== "undefined" ? `${window.location.origin}/inspection/${token}` : "";
 
   // Hora local para el cálculo de estados — se actualiza cada minuto
@@ -45,6 +47,17 @@ export function MagicLinkSender({
   React.useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 60_000);
     return () => clearInterval(id);
+  }, []);
+
+  // Consulta una sola vez si WhatsApp Cloud API está configurada
+  React.useEffect(() => {
+    fetch("/api/integrations/status")
+      .then((r) => r.json())
+      .then((data) => {
+        const wa = Array.isArray(data?.integrations) ? data.integrations.find((i: { key: string }) => i.key === "whatsapp") : null;
+        setWhatsappCloudEnabled(!!wa?.connected);
+      })
+      .catch(() => setWhatsappCloudEnabled(false));
   }, []);
 
   const scheduled = scheduledAt ? new Date(scheduledAt).getTime() : null;
@@ -72,6 +85,12 @@ export function MagicLinkSender({
     }
     return { status: "unknown" as const, label: "Sin fecha de expiración" };
   }, [scheduled, windowStart, windowEnd, nowMs, magicLinkExtended]);
+
+  // ¿El link está dentro de su ventana de validez (normal o extendida)?
+  const isWithinValidity = expiryInfo.status === "valid" || expiryInfo.status === "extended";
+
+  // ¿Se puede renovar? Solo antes de expirar (cualquier estado excepto expired)
+  const canRenew = expiryInfo.status !== "expired";
 
   const refreshMutation = useMutation({
     mutationFn: () => refreshMagicLink(sessionId),
@@ -190,33 +209,89 @@ export function MagicLinkSender({
 
   return (
     <div className="space-y-2">
-      {/* Link + copiar + refrescar */}
+      {/* Link + copiar + refrescar + recaptura + WSP + email — todo en una línea */}
       <div className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 p-2 text-[11px]">
         <span className="text-violet-700 dark:text-violet-300 shrink-0">Link:</span>
         <code className="flex-1 truncate text-muted-foreground">{link}</code>
-        <Button size="sm" variant="outline" className="btn-icon-sm shrink-0" onClick={copyLink}>
+        {/* Copiar — siempre visible */}
+        <Button size="sm" variant="outline" className="h-7 w-7 p-0 shrink-0" onClick={copyLink} title="Copiar link">
           <Copy className="h-3.5 w-3.5" />
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="btn-icon-sm shrink-0"
-          onClick={() => refreshMutation.mutate()}
-          disabled={refreshMutation.isPending}
-          title="Renovar magic link"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="btn-icon-sm shrink-0"
-          onClick={() => enableRecaptureMutation.mutate()}
-          disabled={enableRecaptureMutation.isPending}
-          title="Habilitar recaptura de ubicación"
-        >
-          {enableRecaptureMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
-        </Button>
+        {/* Renovar — solo antes de expirar */}
+        {canRenew && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 w-7 p-0 shrink-0"
+            onClick={() => refreshMutation.mutate()}
+            disabled={refreshMutation.isPending}
+            title="Renovar magic link"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
+          </Button>
+        )}
+        {/* Rehabilitar captura — solo durante validez, icono user+pin (UserRound) */}
+        {isWithinValidity && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 w-7 p-0 shrink-0"
+            onClick={() => enableRecaptureMutation.mutate()}
+            disabled={enableRecaptureMutation.isPending}
+            title="Habilitar recaptura de ubicación"
+          >
+            {enableRecaptureMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <UserRound className="h-3.5 w-3.5 text-primary" />
+            )}
+          </Button>
+        )}
+        {/* Botones de envío — en la misma línea del link.
+            Siempre visibles mientras el link no esté expirado. */}
+        {expiryInfo.status !== "expired" && (
+          <>
+            <div className="w-px h-5 bg-border mx-0.5 shrink-0" />
+            {/* WhatsApp abrir app (wa.me) — icono WhatsApp real */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 p-0 shrink-0"
+              onClick={sendWhatsAppMe}
+              disabled={!contactPhone}
+              title={!contactPhone ? "No hay teléfono" : "Abrir WhatsApp con mensaje pre-llenado"}
+            >
+              <WhatsAppIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            </Button>
+            {/* WhatsApp Cloud API — solo si está configurado */}
+            {whatsappCloudEnabled && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 w-7 p-0 shrink-0"
+                onClick={sendWhatsAppCloud}
+                disabled={!contactPhone || sending === "whatsapp"}
+                title={!contactPhone ? "No hay teléfono" : "Enviar por WhatsApp Cloud API"}
+              >
+                {sending === "whatsapp" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+            {/* Email — icono Mail */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 p-0 shrink-0"
+              onClick={sendEmail}
+              disabled={!contactEmail || sending === "email"}
+              title={!contactEmail ? "No hay email" : "Enviar por email"}
+            >
+              {sending === "email" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Indicador de estado */}
@@ -225,44 +300,16 @@ export function MagicLinkSender({
         {expiryInfo.label}
       </div>
 
-      {/* Ventana del link */}
+      {/* Programado + Ventana en una sola línea */}
       {scheduledAt && (
-        <div className="text-[11px] text-muted-foreground space-y-0.5">
-          <p><span className="font-medium text-foreground">Programado:</span> {fmt(scheduledAt)}</p>
-          <p>
-            <span className="font-medium text-foreground">Ventana:</span>{" "}
-            {fmt(windowStart ? new Date(windowStart).toISOString() : null)} - {fmt(expiresAt)}
-          </p>
-          {magicLinkExtended && <p className="text-sky-600 dark:text-sky-400">Extensión usada</p>}
+        <div className="text-[11px] text-muted-foreground">
+          <span className="font-medium text-foreground">Programado:</span> {fmt(scheduledAt)}
+          <span className="mx-2">-</span>
+          <span className="font-medium text-foreground">Ventana:</span>{" "}
+          {fmt(windowStart ? new Date(windowStart).toISOString() : null)} - {fmt(expiresAt)}
+          {magicLinkExtended && <span className="ml-2 text-sky-600 dark:text-sky-400">· Extensión usada</span>}
         </div>
       )}
-
-      {/* Botones de envío */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={sendWhatsAppMe} disabled={!contactPhone} title={!contactPhone ? "No hay teléfono" : "Abrir WhatsApp con mensaje pre-llenado"}>
-          <MessageCircle className="h-3.5 w-3.5" />
-        </Button>
-        <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={sendWhatsAppCloud} disabled={!contactPhone || sending === "whatsapp"} title={!contactPhone ? "No hay teléfono" : "Enviar por WhatsApp Cloud API"}>
-          {sending === "whatsapp" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-        </Button>
-        <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={sendEmail} disabled={!contactEmail || sending === "email"} title={!contactEmail ? "No hay email" : "Enviar por email"}>
-          {sending === "email" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-        </Button>
-      </div>
-
-      {/* Info de contacto disponible */}
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-        {contactPhone ? (
-          <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {contactPhone}</span>
-        ) : (
-          <span className="text-amber-500">Sin teléfono</span>
-        )}
-        {contactEmail ? (
-          <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {contactEmail}</span>
-        ) : (
-          <span className="text-amber-500">Sin email</span>
-        )}
-      </div>
     </div>
   );
 }

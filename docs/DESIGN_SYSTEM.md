@@ -20,23 +20,32 @@
 
 | Elemento | Tamaño | Peso | Capitalización | Clase helper |
 |---|---:|---|---|---|
-| Títulos (página, modal, panel, dinámica) | `13px` | `600` semibold | Propercase | `.app-title`, `.app-page-title`, `.app-dynamic-title` |
+| Títulos (página, modal, panel, card, dinámica) | `13px` | `600` semibold | Propercase | `.app-title`, `.app-page-title`, `.app-section-title`, `.app-dynamic-title` |
+| Títulos de campo (labels) | `12px` | `400` regular | Propercase | `.app-data-label`, `.app-field-label` |
 | Badges / píldoras | `12px` | `500` medium | Propercase | `.app-badge-text`, `.app-dynamic-badge` |
 | Tabs / sub-tabs | `12px` | `500` medium | Propercase | `.app-tab-text`, `.app-dynamic-tab` |
 | Texto de grillas | `11px` | `400` regular | Propercase | `.app-grid-text` |
 | Títulos de grillas | `11px` | `600` semibold | Propercase | `.app-grid-title` |
-| Texto general en pantalla | `11px` | — | — | `.app-text`, `.app-body` |
+| Valores de campo | `11px` | `400`/`500` | — | `.app-text`, `.app-body` |
 | Botones (Liquid Glass / app) | `11px` | `600` semibold | Propercase | `.app-button-text` |
 | Pantallas dinámicas — título | `13px` | `600` semibold | Propercase | `.app-dynamic-title` |
 | Pantallas dinámicas — badges | `12px` | `500` medium | Propercase | `.app-dynamic-badge` |
 | Pantallas dinámicas — tabs | `12px` | `500` medium | Propercase | `.app-dynamic-tab` |
 | Pantallas dinámicas — items/valores | `11px` | `400` regular | — | `.app-dynamic-info`, `.app-dynamic-value` |
 
+### Jerarquía visual de un card de datos
+1. **Título del card** → `13px` semibold (`app-section-title`)
+2. **Título de campo** (label) → `12px` regular (`app-data-label`)
+3. **Valor del campo** → `11px` (`app-body`)
+
+Esta jerarquía de 3 niveles (13/12/11) se aplica en TODAS las pantallas. No se sobreescribe inline.
+
 ### Implementación
 - Los ajustes se hacen en `src/app/styles/typography.css` mediante variables CSS:
   ```css
   :root {
     --app-title-size: 13px;
+    --app-label-size: 12px;
     --app-badge-size: 12px;
     --app-tab-size: 12px;
     --app-grid-size: 11px;

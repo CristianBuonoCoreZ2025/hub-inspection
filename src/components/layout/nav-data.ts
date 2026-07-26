@@ -115,6 +115,7 @@ export const catalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/monedas", label: "Monedas", icon: Coins },
   { href: "/dashboard/catalogos/tipos-cambio", label: "Tipos de Cambio", icon: ArrowRightLeft },
   { href: "/dashboard/catalogos/tempario", label: "Tempario", icon: HardHat },
+  { href: "/dashboard/catalogos/marcas", label: "Marcas", icon: Tag },
 ];
 
 // ── Catálogos de Inspección ──
@@ -133,6 +134,7 @@ export const inspectionCatalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/inspeccion/cierre-perimetral", label: "Cierre Perimetral", icon: Fence },
   { href: "/dashboard/catalogos/inspeccion/espacios-dano", label: "Espacios de Daño", icon: Grid3x3 },
   { href: "/dashboard/catalogos/inspeccion/tipos-bien", label: "Tipos de Bien", icon: Package },
+  { href: "/dashboard/catalogos/inspeccion/productos", label: "Productos de Bien", icon: Boxes },
   { href: "/dashboard/catalogos/inspeccion/categorias-evidencia", label: "Categorías Evidencia", icon: Camera },
   { href: "/dashboard/catalogos/inspeccion/motivos-fallida", label: "Motivos Reagendamiento", icon: RotateCcw },
   { href: "/dashboard/catalogos/inspeccion/motivos-desistida", label: "Motivos Cancelación", icon: Ban },

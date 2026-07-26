@@ -46,6 +46,23 @@ function Recenter({ center }: { center: { lat: number; lng: number } }) {
   return null;
 }
 
+// Leaflet no detecta cambios de tamaño del contenedor automáticamente.
+// Cuando la lista de candidatos cambia (al buscar), el layout se reajusta
+// y el mapa queda "chico" o distorsionado. Este componente llama a
+// invalidateSize() periódicamente y cuando cambia el número de candidatos
+// para forzar al mapa a recalcular su tamaño real.
+function MapResizer({ trigger }: { trigger: unknown }) {
+  const map = useMap();
+  React.useEffect(() => {
+    // Pequeño delay para que el DOM se reajuste antes de invalidar
+    const id = setTimeout(() => {
+      map.invalidateSize();
+    }, 50);
+    return () => clearTimeout(id);
+  }, [map, trigger]);
+  return null;
+}
+
 function MapClickHandler({ onClick }: { onClick: (latlng: { lat: number; lng: number }) => void }) {
   useMapEvents({
     click(e) {
@@ -186,7 +203,7 @@ export function ClaimLocationSelector({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-hidden">
+      <DialogContent className="max-w-328 max-h-[90vh] p-0 overflow-hidden">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle className="app-section-title">Seleccionar ubicación exacta</DialogTitle>
           <DialogDescription className="modal-subtitle">
@@ -210,9 +227,9 @@ export function ClaimLocationSelector({
           </div>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 h-[75vh]">
+        <div className="grid grid-cols-1 md:grid-cols-2 h-[70vh]">
           {/* Lista de candidatos */}
-          <div className="flex flex-col border-r border-border">
+          <div className="flex flex-col border-r border-border min-h-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {isLoading && (
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground py-8">
@@ -300,47 +317,43 @@ export function ClaimLocationSelector({
             </div>
           </div>
 
-          {/* Mapa */}
-          <div className="relative h-full min-h-75 md:min-h-0">
-            {(selected || !hasCandidates || manualPin) ? (
-              <MapContainer
-                center={[mapCenter.lat, mapCenter.lng]}
-                zoom={16}
-                style={{ height: "100%", width: "100%" }}
-                scrollWheelZoom={false}
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          {/* Mapa — siempre visible, mismo tamaño que el modal de siniestro */}
+          <div className="relative h-full min-h-70 md:min-h-0">
+            <MapContainer
+              center={[mapCenter.lat, mapCenter.lng]}
+              zoom={16}
+              style={{ height: "100%", width: "100%" }}
+              scrollWheelZoom={false}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              />
+              {allCandidates.map((c, i) => (
+                <Marker
+                  key={i}
+                  position={[c.lat, c.lng]}
+                  icon={i === selectedIndex && !manualPin ? blueIcon : grayIcon}
+                  eventHandlers={{
+                    click: () => {
+                      setSelectedIndex(i);
+                      setManualPin(null);
+                      setManualPinAddress(null);
+                    },
+                  }}
                 />
-                {allCandidates.map((c, i) => (
-                  <Marker
-                    key={i}
-                    position={[c.lat, c.lng]}
-                    icon={i === selectedIndex && !manualPin ? blueIcon : grayIcon}
-                    eventHandlers={{
-                      click: () => {
-                        setSelectedIndex(i);
-                        setManualPin(null);
-                        setManualPinAddress(null);
-                      },
-                    }}
-                  />
-                ))}
-                {manualPin && (
-                  <Marker
-                    position={[manualPin.lat, manualPin.lng]}
-                    icon={blueIcon}
-                  />
-                )}
-                <MapClickHandler onClick={handleMapClick} />
-                <Recenter center={mapCenter} />
-              </MapContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
-                {isLoading ? "Cargando mapa..." : "Selecciona una ubicación"}
-              </div>
-            )}
+              ))}
+              {manualPin && (
+                <Marker
+                  position={[manualPin.lat, manualPin.lng]}
+                  icon={blueIcon}
+                />
+              )}
+              <MapClickHandler onClick={handleMapClick} />
+              <Recenter center={mapCenter} />
+              <MapResizer trigger={allCandidates.length} />
+              <MapResizer trigger={isLoading} />
+            </MapContainer>
           </div>
         </div>
       </DialogContent>

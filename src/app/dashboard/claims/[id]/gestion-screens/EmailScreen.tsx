@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDocumentTemplates } from "@/services/document-templates";
+import { fromDateTimeLocalInput, toDateTimeLocalInput } from "@/lib/timezone";
 import type { GestionScreenProps } from "./types";
 
 export default function EmailScreen({ action, onChange, readOnly }: GestionScreenProps) {
@@ -32,6 +33,10 @@ export default function EmailScreen({ action, onChange, readOnly }: GestionScree
  plantilla_nombre: data.plantilla_nombre || "",
  preview: data.preview || "",
  });
+
+ // El campo aviso usa datetime-local que devuelve hora local sin offset.
+ // Para mostrarlo correctamente, convertir el valor guardado (ISO) al formato del input.
+ const avisoDisplay = form.aviso ? toDateTimeLocalInput(form.aviso) : form.aviso;
 
  useEffect(() => {
  onChange?.(form);
@@ -82,8 +87,12 @@ export default function EmailScreen({ action, onChange, readOnly }: GestionScree
  <Input
  type="datetime-local"
  className="app-input"
- value={form.aviso}
- onChange={(e) => setForm({ ...form, aviso: e.target.value })}
+ value={avisoDisplay}
+ onChange={(e) => {
+ // Convertir hora local (sin offset) a ISO con offset antes de guardar
+ const iso = e.target.value ? fromDateTimeLocalInput(e.target.value) : "";
+ setForm({ ...form, aviso: iso });
+ }}
  disabled={readOnly}
  />
  </div>

@@ -278,14 +278,18 @@ onBlur={(e) => onUpdate({ label: toLabelCase(e.target.value) })}
  <SectionHeader>Contenido</SectionHeader>
  <div>
  <Label className="app-field-label app-body">Tipo de contenido</Label>
- <select
- className="app-input h-7 app-body w-full"
+ <Select
  value={field.inputType || "alphanumeric"}
- onChange={(e) => onUpdate({ inputType: e.target.value as "alphanumeric" | "numeric" })}
+ onValueChange={(v) => onUpdate({ inputType: v as "alphanumeric" | "numeric" })}
  >
- <option value="alphanumeric">Alfanumérico</option>
- <option value="numeric">Numérico</option>
- </select>
+ <SelectTrigger className="app-input h-7 app-body w-full">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="alphanumeric">Alfanumérico</SelectItem>
+ <SelectItem value="numeric">Numérico</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <Label className="app-field-label app-body">Largo máximo</Label>
@@ -324,14 +328,18 @@ onBlur={(e) => onUpdate({ label: toLabelCase(e.target.value) })}
  <SectionHeader>Validación de fecha</SectionHeader>
  <div>
  <Label className="app-field-label app-body">Tipo de fecha</Label>
- <select
- className="app-input h-7 app-body w-full"
+ <Select
  value={field.dateType || "date"}
- onChange={(e) => onUpdate({ dateType: e.target.value as "date" | "datetime" })}
+ onValueChange={(v) => onUpdate({ dateType: v as "date" | "datetime" })}
  >
- <option value="date">Solo fecha</option>
- <option value="datetime">Fecha y hora</option>
- </select>
+ <SelectTrigger className="app-input h-7 app-body w-full">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="date">Solo fecha</SelectItem>
+ <SelectItem value="datetime">Fecha y hora</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <Label className="app-field-label app-body">Validación</Label>
@@ -538,38 +546,44 @@ function ConditionalRulesSection({
  </ToggleChip>
  <div>
  <Label className="app-field-label app-body">Campo controlador</Label>
- <select
- className="app-input h-7 app-body w-full"
- value={currentRule.field}
- onChange={(e) => onChange({ ...currentRule, field: e.target.value })}
+ <Select
+ value={currentRule.field || "__none"}
+ onValueChange={(v) => onChange({ ...currentRule, field: v === "__none" || !v ? "" : v })}
  >
- <option value="">Seleccionar campo...</option>
+ <SelectTrigger className="app-input h-7 app-body w-full">
+ <SelectValue placeholder="Seleccionar campo..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Seleccionar campo...</SelectItem>
  {controllerFields.map((f) => (
- <option key={f.id} value={f.id}>
- {f.label || f.id} ({f.id})
- </option>
+ <SelectItem key={f.id} value={f.id}>{f.label || f.id} ({f.id})</SelectItem>
  ))}
- </select>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <Label className="app-field-label app-body">Operador</Label>
- <select
- className="app-input h-7 app-body w-full"
+ <Select
  value={currentRule.operator}
- onChange={(e) =>
+ onValueChange={(v) =>
  onChange({
  ...currentRule,
- operator: e.target.value as VisibilityRule["operator"],
- value: (e.target.value === "in" || e.target.value === "not_in") && !Array.isArray(currentRule.value)
+ operator: v as VisibilityRule["operator"],
+ value: (v === "in" || v === "not_in") && !Array.isArray(currentRule.value)
  ? [String(currentRule.value || "")]
  : currentRule.value,
  })
  }
  >
+ <SelectTrigger className="app-input h-7 app-body w-full">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
  {RULE_OPERATORS.map((o) => (
- <option key={o.value} value={o.value}>{o.label}</option>
+ <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
  ))}
- </select>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <Label className="app-field-label app-body">
@@ -611,16 +625,20 @@ function ConditionalRulesSection({
  }
  // Single select
  return (
- <select
- className="app-input h-7 app-body w-full"
- value={String(currentRule.value || "")}
- onChange={(e) => onChange({ ...currentRule, value: e.target.value })}
+ <Select
+ value={String(currentRule.value || "") || "__none"}
+ onValueChange={(v) => onChange({ ...currentRule, value: v === "__none" || !v ? "" : v })}
  >
- <option value="">Seleccionar valor...</option>
+ <SelectTrigger className="app-input h-7 app-body w-full">
+ <SelectValue placeholder="Seleccionar valor..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Seleccionar valor...</SelectItem>
  {availableOptions.map((opt) => (
- <option key={opt.value} value={opt.value}>{opt.label}</option>
+ <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
  ))}
- </select>
+ </SelectContent>
+ </Select>
  );
  }
  // Input de texto libre (para campos text/date/etc sin options)

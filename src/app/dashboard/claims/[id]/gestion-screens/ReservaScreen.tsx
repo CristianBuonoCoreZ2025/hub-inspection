@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { GestionScreenProps } from "./types";
 
 export default function ReservaScreen({ action, onChange, readOnly }: GestionScreenProps) {
@@ -36,17 +37,20 @@ export default function ReservaScreen({ action, onChange, readOnly }: GestionScr
  </div>
  <div>
  <Label className="app-field-label text-[11px]">Moneda</Label>
- <select
- className="app-input h-8 w-full"
+ <Select
  value={form.moneda}
- onChange={(e) => setForm({ ...form, moneda: e.target.value })}
- disabled={readOnly}
+ onValueChange={(v) => setForm({ ...form, moneda: v === "__none" || !v ? "" : v })}
  >
- <option value="CLP">CLP</option>
- <option value="USD">USD</option>
- <option value="EUR">EUR</option>
- <option value="UF">UF</option>
- </select>
+ <SelectTrigger className="app-input h-8 w-full" disabled={readOnly}>
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="CLP">CLP</SelectItem>
+ <SelectItem value="USD">USD</SelectItem>
+ <SelectItem value="EUR">EUR</SelectItem>
+ <SelectItem value="UF">UF</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
  <div className="col-span-2">
  <Label className="app-field-label text-[11px]">Cuenta Bancaria</Label>
@@ -63,13 +67,13 @@ export default function ReservaScreen({ action, onChange, readOnly }: GestionScr
  value={form.fechaPago}
  onChange={(value) => setForm({ ...form, fechaPago: value })}
  disabled={readOnly}
- className="w-[130px]"
+ className="w-32.5"
  />
  </div>
  <div className="col-span-2">
  <Label className="app-field-label text-[11px]">Instrucción de Pago</Label>
  <Textarea
- className="app-input min-h-[80px]"
+ className="app-input min-h-20"
  value={form.instruccionPago}
  onChange={(e) => setForm({ ...form, instruccionPago: e.target.value })}
  disabled={readOnly}

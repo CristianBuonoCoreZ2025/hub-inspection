@@ -43,11 +43,21 @@ export interface CatalogRef {
   code?: string;
 }
 
+export interface CompanyData {
+  id?: string;
+  name?: string;
+  rut?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  logo_url?: string | null;
+}
+
 export interface DocumentData {
   // Claim plano (todos los campos crudos)
   claim?: Record<string, unknown>;
   // Joins ya resueltos a strings
-  company?: CatalogRef | null;
+  company?: CompanyData | null;
   insurance_company?: CatalogRef | null;
   broker?: CatalogRef | null;
   advisor?: CatalogRef | null;
@@ -84,6 +94,8 @@ export interface DocumentData {
   assistant?: UserData | null;
   // Gestiones del siniestro (mapa code → datos de la última gestión emitida)
   actions?: Record<string, ActionSummary>;
+  // Última sesión de inspección del siniestro (para magic link y validez)
+  last_inspection_session?: InspectionSessionSummary | null;
   // Fechas formateadas
   today?: string;
 }
@@ -93,6 +105,17 @@ export interface ActionSummary {
   code: string;          // código del template (COB, RES, PCA, NSA, RTA, COI, INS, AAS, etc.)
   issued_on: string | null;
   action_data: Record<string, unknown> | null;
+}
+
+/** Datos de la última sesión de inspección del siniestro (para magic link, validez, etc.) */
+export interface InspectionSessionSummary {
+  id: string;
+  magic_link_token: string | null;
+  magic_link_expires_at: string | null;
+  scheduled_at: string | null;
+  created_at: string;
+  inspection_type: "onsite" | "remote" | null;
+  status: string;
 }
 
 export interface DocumentField {
@@ -193,6 +216,12 @@ export const DOCUMENT_FIELDS: DocumentField[] = [
 
   // ─── Empresas ───
   { key: "company", label: "Empresa (Cliente)", group: "Empresas", resolve: (d) => d.company?.name ?? "" },
+  { key: "company_name", label: "Nombre Empresa", group: "Empresas", resolve: (d) => d.company?.name ?? "" },
+  { key: "company_rut", label: "RUT Empresa", group: "Empresas", resolve: (d) => d.company?.rut ?? "" },
+  { key: "company_address", label: "Dirección Empresa", group: "Empresas", resolve: (d) => d.company?.address ?? "" },
+  { key: "company_phone", label: "Teléfono Empresa", group: "Empresas", resolve: (d) => d.company?.phone ?? "" },
+  { key: "company_email", label: "Email Empresa", group: "Empresas", resolve: (d) => d.company?.email ?? "" },
+  { key: "company_logo", label: "Logo Empresa", group: "Empresas", resolve: (d) => d.company?.logo_url ?? "" },
   { key: "insurance_company", label: "Compañía de Seguros", group: "Empresas", resolve: (d) => d.insurance_company?.name ?? "" },
   { key: "broker", label: "Corredor", group: "Empresas", resolve: (d) => d.broker?.name ?? "" },
   { key: "advisor", label: "Asesor", group: "Empresas", resolve: (d) => d.advisor?.name ?? "" },
@@ -409,6 +438,42 @@ export const DOCUMENT_FIELDS: DocumentField[] = [
     if (!coi?.action_data) return "";
     const t = String(coi.action_data.coord_inspection_type ?? "");
     return t === "remote" ? "Remota" : t === "in_person" ? "Presencial" : t;
+  }},
+  // Fecha Y hora de la última coordinación (formato completo dd-mm-aaaa HH:mm)
+  { key: "coord_inspection_datetime", label: "Fecha y Hora Coordinada", group: "Gestiones: Coordinación", resolve: (d) => {
+    const coi = d.actions?.COI;
+    if (!coi?.action_data) return "";
+    const fecha = coi.action_data.coord_fecha as unknown;
+    if (!fecha) return "";
+    return fmtDateTime(fecha);
+  }},
+
+  // ─── Inspección: Magic Link y Validez ───
+  { key: "magic_link", label: "Magic Link Inspección", group: "Inspección: Magic Link", resolve: (d) => {
+    const s = d.last_inspection_session;
+    if (!s?.magic_link_token) return "";
+    const origin = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "");
+    return `${origin}/inspection/${s.magic_link_token}`;
+  }},
+  { key: "magic_link_valid_from", label: "Magic Link Válido Desde", group: "Inspección: Magic Link", resolve: (d) => {
+    const s = d.last_inspection_session;
+    if (!s) return "";
+    // Ventana de validez: [scheduled_at - 1h, magic_link_expires_at]
+    const start = s.scheduled_at
+      ? new Date(new Date(s.scheduled_at).getTime() - 60 * 60 * 1000).toISOString()
+      : s.created_at;
+    if (!start) return "";
+    return fmtDateTime(start);
+  }},
+  { key: "magic_link_valid_until", label: "Magic Link Válido Hasta", group: "Inspección: Magic Link", resolve: (d) => {
+    const s = d.last_inspection_session;
+    if (!s?.magic_link_expires_at) return "";
+    return fmtDateTime(s.magic_link_expires_at);
+  }},
+  { key: "last_inspection_scheduled_at", label: "Fecha Programada Inspección", group: "Inspección: Magic Link", resolve: (d) => {
+    const s = d.last_inspection_session;
+    if (!s?.scheduled_at) return "";
+    return fmtDateTime(s.scheduled_at);
   }},
 
   // ─── Gestiones: Aviso de Asignación (AAS) ───

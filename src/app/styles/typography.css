@@ -13,6 +13,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 :root {
   --app-title-size: 13px;
+  --app-label-size: 12px;
   --app-badge-size: 12px;
   --app-tab-size: 12px;
   --app-grid-size: 11px;
@@ -193,8 +194,6 @@
 .app-text,
 .app-body,
 .app-page-lead,
-.app-data-label,
-.app-field-label,
 .app-empty-state,
 .app-inline-code,
 .app-grid-breadcrumbs,
@@ -204,6 +203,13 @@
 .app-dynamic-value,
 .app-dynamic-label {
   font-size: var(--app-body-size) !important;
+  line-height: 1.4 !important;
+}
+
+/* Títulos de campo (labels): 12px — un nivel sobre los valores (11px) */
+.app-data-label,
+.app-field-label {
+  font-size: var(--app-label-size) !important;
   line-height: 1.4 !important;
 }
 

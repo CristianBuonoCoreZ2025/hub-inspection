@@ -1,7 +1,29 @@
 import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
+import { formatUserDateTime } from "@/lib/timezone";
 import type { ClaimAction, ActionTemplate, ActionFeature } from "@/types";
 import { logActionHistory } from "@/services/claim-action-history";
 import { getClaimCoveragesByAction } from "@/services/claim-coverages";
+
+// ═══════════════════════════════════════════════════════════════════
+// Caché de IDs de estados de action_status (lookup_catalog)
+// Estos IDs son estables: se cargan una vez y se reutilizan en todas
+// las llamadas, evitando un roundtrip a Supabase en cada emisión/revisión.
+// ═══════════════════════════════════════════════════════════════════
+const actionStatusCache = new Map<string, string>();
+
+async function getCachedActionStatusId(code: string): Promise<string> {
+  const cached = actionStatusCache.get(code);
+  if (cached) return cached;
+  const rows = await fetchAll<{ id: string }>("lookup_catalog", {
+    select: "id",
+    eq: { category: "action_status", code },
+    limit: 1,
+  });
+  const id = rows[0]?.id;
+  if (!id) throw new Error(`No se encontró el estado de acción '${code}'`);
+  actionStatusCache.set(code, id);
+  return id;
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // Servicios para el Sistema de Acciones (Claim Actions)
@@ -313,15 +335,10 @@ export async function createClaimAction(input: {
   approver_id?: string;
   expected_date?: string;
   is_automatic?: boolean;
+  origin?: "M" | "W" | "A";
 }): Promise<ClaimAction> {
-  // Obtener el status_id de "todo" (pendiente)
-  const statusRows = await fetchAll<{ id: string }>("lookup_catalog", {
-    select: "id",
-    eq: { category: "action_status", code: "todo" },
-    limit: 1,
-  });
-  const todoStatusId = statusRows[0]?.id;
-  if (!todoStatusId) throw new Error("No se encontró el estado de acción 'todo'");
+  // Obtener el status_id de "todo" (pendiente) — desde caché
+  const todoStatusId = await getCachedActionStatusId("todo");
 
   // Si se pasó template, copiar datos de la plantilla
   let templateData: Record<string, unknown> = {};
@@ -440,6 +457,7 @@ export async function createClaimAction(input: {
     approver_id: autoApproverId,
     expected_date: input.expected_date || null,
     is_automatic: input.is_automatic ?? false,
+    origin: input.origin ?? "M",
     screen_snapshot: screenSnapshot,
     screen_snapshot_at: screenSnapshot ? new Date().toISOString() : null,
   };
@@ -564,8 +582,13 @@ export async function issueClaimAction(actionId: string, userId?: string, action
     throw new Error("Debe iniciar sesión para completar esta acción.");
   }
 
+  // ── Paralelizar: leer la gestión + ID del estado "issued" al mismo tiempo ──
+  const [action, issuedStatusId] = await Promise.all([
+    fetchById<ClaimAction>("claim_actions", actionId, "id, action_template_id, claim_id, action_data, screen_snapshot, action_template:action_template!claim_actions_action_template_id_fkey(code)"),
+    getCachedActionStatusId("issued"),
+  ]);
+
   // ── Validar que el COB tenga al menos 1 cobertura ──
-  const action = await fetchById<ClaimAction>("claim_actions", actionId, "id, action_template_id, claim_id, action_data, screen_snapshot, action_template:action_template!claim_actions_action_template_id_fkey(code)");
   if (action?.action_template?.code === "COB") {
     const coverages = await getClaimCoveragesByAction(action.claim_id!, actionId);
     if (!coverages || coverages.length === 0) {
@@ -622,24 +645,9 @@ export async function issueClaimAction(actionId: string, userId?: string, action
     }
   }
 
-  const statusRows = await fetchAll<{ id: string }>("lookup_catalog", {
-    select: "id",
-    eq: { category: "action_status", code: "issued" },
-    limit: 1,
-  });
-  const issuedStatusId = statusRows[0]?.id;
-  if (!issuedStatusId) throw new Error("No se encontró el estado de acción 'issued'");
-
-  // El usuario que emite pasa a ser el issuer_id (siempre, para todas las gestiones)
-  // Validar que el userId exista en profiles (FK constraint)
-  let validUserId: string | null = userId || null;
-  if (userId) {
-    const profile = await fetchById<{ id: string }>("profiles", userId, "id");
-    if (!profile) {
-      // El usuario de auth no tiene profile — usar issued_by sin issuer_id
-      validUserId = null;
-    }
-  }
+  // Nota: se eliminó el fetch de validación de perfil. La FK issuer_id → profiles.id
+  // de Postgres valida la existencia. Si el usuario no tiene profile, el UPDATE
+  // falla con error de FK y se muestra al usuario. Esto ahorra 1 roundtrip por emisión.
 
   const now = new Date();
   const issuedOnIso = now.toISOString();
@@ -649,13 +657,10 @@ export async function issueClaimAction(actionId: string, userId?: string, action
     action_status_id: issuedStatusId,
     issued_on: issuedOnIso,
     issued_by: userId,
+    issuer_id: userId, // Si falla la FK, el error de Postgres se propaga
     updated_on: issuedOnIso,
     updated_by: userId,
   };
-  // Solo asignar issuer_id si el usuario existe en profiles
-  if (validUserId) {
-    setFields.issuer_id = validUserId;
-  }
   if (actionData) {
     // Auto-completar inf_fecha_entrega con la fecha de emisión real
     setFields.action_data = { ...actionData, inf_fecha_entrega: issuedOnDate };
@@ -663,8 +668,9 @@ export async function issueClaimAction(actionId: string, userId?: string, action
 
   const result = await updateRow<ClaimAction>("claim_actions", actionId, setFields, CLAIM_ACTION_SELECT);
 
-  // ── Registrar en historial ──
-  await logActionHistory({
+  // ── Registrar en historial (fire-and-forget: no bloquea la respuesta al usuario) ──
+  // El historial es best-effort: si falla, no debe impedir la emisión.
+  void logActionHistory({
     claim_action_id: actionId,
     event_type: "issued",
     from_status_code: "todo",
@@ -672,7 +678,7 @@ export async function issueClaimAction(actionId: string, userId?: string, action
     performed_by: userId || null,
     performed_by_name: userId ? await getProfileName(userId) : null,
     level: "issue",
-  });
+  }).catch((e) => console.warn("[issueClaimAction] logActionHistory falló:", e));
 
   // ── Si es CIN (Coordinación de Inspección), ramificar según coord_result ──
   // coordinada → el trigger cascade crea la acción INS, y el trigger
@@ -689,6 +695,8 @@ export async function issueClaimAction(actionId: string, userId?: string, action
     if (coordResult === "fallida") {
       // Crear una nueva gestión CIN para re-coordinar
       try {
+        const { getPreviousCINData } = await import("@/services/inspections");
+        const prevCinData = await getPreviousCINData(action.claim_id!);
         const fechaRecoord = String(data.coord_fecha_recoord || "");
         const expectedDate = fechaRecoord ? new Date(fechaRecoord).toISOString() : undefined;
         // Obtener action_features_id del template original
@@ -708,11 +716,54 @@ export async function issueClaimAction(actionId: string, userId?: string, action
             name: "Coordinación de Inspección (re-coordinación)",
             description: `Re-coordinación generada por intento fallido. Motivo: ${await resolveMotivoName(String(data.coord_motivo || ""))}`,
             expected_date: expectedDate,
-            action_data: existingSessionId ? { existing_session_id: existingSessionId } : undefined,
+            action_data: {
+              ...prevCinData,
+              coord_result: "coordinada",
+              coord_fecha_recoord: data.coord_fecha_recoord,
+              coord_motivo: data.coord_motivo,
+              existing_session_id: existingSessionId,
+            },
           });
         }
       } catch (err) {
         console.warn("[issueClaimAction] No se pudo crear re-coordinación CIN:", err);
+      }
+    } else if (coordResult === "reagendada") {
+      // Crear una nueva gestión INS automática (origen A) con los datos del reagendamiento
+      try {
+        const { findTemplateForClaim } = await import("@/services/inspections");
+        const insTemplate = await findTemplateForClaim(action.claim_id!, "INS");
+        if (insTemplate?.action_features_id) {
+          const scheduledAt = String(data.coord_fecha_recoord || data.coord_fecha || "");
+          const inspectionType = String(data.coord_inspection_type || data.coord_type || "onsite");
+          const inspectorId = String(data.coord_inspector || "");
+          const contactName = String(data.coord_cont || "");
+          const location = String(data.coord_ubic || "");
+          const notes = String(data.coord_comentarios || "");
+
+          await createClaimAction({
+            claim_id: action.claim_id!,
+            action_template_id: insTemplate.action_template_id,
+            action_features_id: insTemplate.action_features_id,
+            name: inspectionType === "remote" ? "Inspección Remota" : "Inspección Presencial",
+            description: `Inspección ${inspectionType === "remote" ? "remota" : "presencial"} programada para ${scheduledAt ? formatUserDateTime(scheduledAt) : "sin fecha"}`,
+            expected_date: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+            issuer_id: inspectorId || undefined,
+            origin: "A",
+            action_data: {
+              parent_action_data: {
+                coord_type: inspectionType,
+                coord_fecha: scheduledAt,
+                coord_inspector: inspectorId || undefined,
+                coord_cont: contactName || undefined,
+                coord_ubic: location || undefined,
+                coord_com: notes || undefined,
+              },
+            },
+          });
+        }
+      } catch (err) {
+        console.warn("[issueClaimAction] No se pudo crear INS automática por reagendamiento:", err);
       }
     }
     // desistida: no hace nada
@@ -806,12 +857,11 @@ export async function updateClaimAction(actionId: string, updates: Record<string
 // ═══ Hook helper: resolver código de estado de acción desde ID ═══
 
 export async function getActionStatusByCode(code: string): Promise<string | null> {
-  const rows = await fetchAll<{ id: string }>("lookup_catalog", {
-    select: "id",
-    eq: { category: "action_status", code },
-    limit: 1,
-  });
-  return rows[0]?.id ?? null;
+  try {
+    return await getCachedActionStatusId(code);
+  } catch {
+    return null;
+  }
 }
 
 // ═══ Obtener una acción por ID (con relaciones completas) ═══
@@ -826,8 +876,7 @@ export async function reviewClaimAction(actionId: string, userId?: string, comme
   // ── Validar que el usuario sea el responsable de revisión ──
   await validateResponsible(actionId, "reviewer", userId);
 
-  const statusId = await getActionStatusByCode("reviewed");
-  if (!statusId) throw new Error("No se encontró el estado de acción 'reviewed'");
+  const statusId = await getCachedActionStatusId("reviewed");
 
   const setFields: Record<string, unknown> = {
     action_status_id: statusId,
@@ -840,8 +889,8 @@ export async function reviewClaimAction(actionId: string, userId?: string, comme
 
   const result = await updateRow<ClaimAction>("claim_actions", actionId, setFields, CLAIM_ACTION_SELECT);
 
-  // ── Registrar en historial ──
-  await logActionHistory({
+  // ── Registrar en historial (fire-and-forget) ──
+  void logActionHistory({
     claim_action_id: actionId,
     event_type: "reviewed",
     from_status_code: "issued",
@@ -849,7 +898,7 @@ export async function reviewClaimAction(actionId: string, userId?: string, comme
     performed_by: userId || null,
     performed_by_name: userId ? await getProfileName(userId) : null,
     level: "review",
-  });
+  }).catch((e) => console.warn("[reviewClaimAction] logActionHistory falló:", e));
 
   return result;
 }
@@ -860,8 +909,7 @@ export async function approveClaimAction(actionId: string, userId?: string): Pro
   // ── Validar que el usuario sea el responsable de aprobación ──
   await validateResponsible(actionId, "approver", userId);
 
-  const statusId = await getActionStatusByCode("approved");
-  if (!statusId) throw new Error("No se encontró el estado de acción 'approved'");
+  const statusId = await getCachedActionStatusId("approved");
 
   const setFields: Record<string, unknown> = {
     action_status_id: statusId,
@@ -873,8 +921,8 @@ export async function approveClaimAction(actionId: string, userId?: string): Pro
 
   const result = await updateRow<ClaimAction>("claim_actions", actionId, setFields, CLAIM_ACTION_SELECT);
 
-  // ── Registrar en historial ──
-  await logActionHistory({
+  // ── Registrar en historial (fire-and-forget) ──
+  void logActionHistory({
     claim_action_id: actionId,
     event_type: "approved",
     from_status_code: "reviewed",
@@ -882,7 +930,7 @@ export async function approveClaimAction(actionId: string, userId?: string): Pro
     performed_by: userId || null,
     performed_by_name: userId ? await getProfileName(userId) : null,
     level: "approve",
-  });
+  }).catch((e) => console.warn("[approveClaimAction] logActionHistory falló:", e));
 
   return result;
 }
@@ -890,8 +938,7 @@ export async function approveClaimAction(actionId: string, userId?: string): Pro
 // ═══ Despachar una acción (cambiar estado a "dispatched") ═══
 
 export async function dispatchClaimAction(actionId: string, userId?: string): Promise<ClaimAction> {
-  const statusId = await getActionStatusByCode("dispatched");
-  if (!statusId) throw new Error("No se encontró el estado de acción 'dispatched'");
+  const statusId = await getCachedActionStatusId("dispatched");
 
   const setFields: Record<string, unknown> = {
     action_status_id: statusId,
@@ -923,49 +970,43 @@ export async function rejectClaimAction(
     updated_by: userId || null,
   };
 
+  // Mapear stage → código de estado destino, y cargar el ID desde caché
+  const targetStatusCode =
+    stage === "issue" ? "rejected" :
+    stage === "review" ? "todo" :
+    stage === "approve" ? "issued" :
+    "approved"; // dispatch
+
+  const statusId = await getCachedActionStatusId(targetStatusCode);
+
   if (stage === "issue") {
-    // Rechazar emisión → acción queda rechazada
-    const statusId = await getActionStatusByCode("rejected");
-    if (!statusId) throw new Error("No se encontró el estado de acción 'rejected'");
-    setFields.action_status_id = statusId;
     setFields.issued_on = null;
     setFields.issued_by = null;
     if (comment) setFields.issuer_rejection_comment = comment;
   } else if (stage === "review") {
-    // Rechazar revisión → vuelve a emisión (todo)
-    const statusId = await getActionStatusByCode("todo");
-    if (!statusId) throw new Error("No se encontró el estado de acción 'todo'");
-    setFields.action_status_id = statusId;
     setFields.reviewed_on = null;
     setFields.reviewed_by = null;
     setFields.review_rejected_on = now;
     setFields.review_rejected_by = userId || null;
     if (comment) setFields.reviewer_rejection_comment = comment;
   } else if (stage === "approve") {
-    // Rechazar aprobación → vuelve a revisión (issued)
-    const statusId = await getActionStatusByCode("issued");
-    if (!statusId) throw new Error("No se encontró el estado de acción 'issued'");
-    setFields.action_status_id = statusId;
     setFields.approved_on = null;
     setFields.approved_by = null;
     setFields.approve_rejected_on = now;
     setFields.approve_rejected_by = userId || null;
     if (comment) setFields.approver_rejection_comment = comment;
   } else if (stage === "dispatch") {
-    // Rechazar despacho → vuelve a aprobación (approved)
-    const statusId = await getActionStatusByCode("approved");
-    if (!statusId) throw new Error("No se encontró el estado de acción 'approved'");
-    setFields.action_status_id = statusId;
     setFields.dispatched_on = null;
     setFields.dispatched_by = null;
     setFields.dispatch_rejected_on = now;
     setFields.dispatch_rejected_by = userId || null;
     if (comment) setFields.dispatcher_rejection_comment = comment;
   }
+  setFields.action_status_id = statusId;
 
   const result = await updateRow<ClaimAction>("claim_actions", actionId, setFields, CLAIM_ACTION_SELECT);
 
-  // ── Registrar en historial ──
+  // ── Registrar en historial (fire-and-forget) ──
   const eventTypeMap: Record<string, string> = {
     issue: "rejected_issue",
     review: "rejected_review",
@@ -979,7 +1020,7 @@ export async function rejectClaimAction(
     dispatch: { from: "approved", to: "approved" },
   };
   const ft = fromToMap[stage];
-  await logActionHistory({
+  void logActionHistory({
     claim_action_id: actionId,
     event_type: eventTypeMap[stage] || "rejected_review",
     from_status_code: ft.from,
@@ -988,7 +1029,7 @@ export async function rejectClaimAction(
     performed_by_name: userId ? await getProfileName(userId) : null,
     level: stage,
     comment: comment || null,
-  });
+  }).catch((e) => console.warn("[rejectClaimAction] logActionHistory falló:", e));
 
   return result;
 }

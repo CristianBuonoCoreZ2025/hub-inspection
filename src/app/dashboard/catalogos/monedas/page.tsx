@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ToggleChip } from "@/components/ui/toggle-chip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function MonedasPage() {
  return (
@@ -393,14 +394,18 @@ function PaisesModal({
  </td>
  <td>
  {isAssociated && (
- <select
- className="h-6 rounded border-border bg-transparent text-[11px] px-1"
+ <Select
  value={refDateType}
- onChange={(e) => refDateMut.mutate({ countryId: country.id, type: e.target.value as "claim_date" | "execution_date" })}
+ onValueChange={(v) => refDateMut.mutate({ countryId: country.id, type: v as "claim_date" | "execution_date" })}
  >
- <option value="claim_date">Siniestro</option>
- <option value="execution_date">Ejecución</option>
- </select>
+ <SelectTrigger className="h-6 rounded border-border bg-transparent text-[11px] px-1">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="claim_date">Siniestro</SelectItem>
+ <SelectItem value="execution_date">Ejecución</SelectItem>
+ </SelectContent>
+ </Select>
  )}
  </td>
  </tr>

@@ -97,6 +97,7 @@ export interface Profile {
   rut: string | null;
   country_id: string | null;
   avatar_url: string | null;
+  timezone: string | null;
   role: UserRole;
   is_active: boolean;
   created_at: string;
@@ -568,7 +569,7 @@ export interface InspectionEvidence {
   category: string | null;
   damage_id: string | null;
   source: EvidenceSource | null;
-  metadata: { originalName?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number; source?: string; lat?: number; lng?: number; capturedBy?: string } | null;
+  metadata: { originalName?: string; fileCode?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number; source?: string; lat?: number; lng?: number; capturedBy?: string } | null;
   created_at: string;
 }
 
@@ -716,6 +717,8 @@ export interface InspectionDamage {
   space_id: string | null;
   content_good_type_id: string | null;
   building_damage_category_id: string | null;
+  product_id: string | null;
+  brand_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -738,6 +741,28 @@ export interface ContentGoodType {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ContentGoodBrand {
+  id: string;
+  name: string;
+  country: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContentGoodProduct {
+  id: string;
+  content_good_type_id: string;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  // Relación expandible (para listados con JOIN)
+  content_good_type?: ContentGoodType | null;
 }
 
 export interface BuildingDamageCategory {

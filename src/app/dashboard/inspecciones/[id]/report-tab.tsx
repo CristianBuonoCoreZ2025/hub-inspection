@@ -1,24 +1,41 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getReport, createReport, updateReport } from "@/services/inspections";
 import { updateInspectionSession } from "@/services/inspections";
 import { issueClaimAction } from "@/services/claim-actions";
-import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download } from "lucide-react";
+import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SessionDetail } from "@/services/inspections";
 
-const DAMAGE_TYPE_LABELS: Record<string, string> = {
-  building: "Daño Constructivo",
-  content: "Daño de Contenido",
+const SEVERITY_LABELS: Record<string, string> = {
+  low: "Baja",
+  medium: "Media",
+  high: "Alta",
+  total: "Total",
 };
 
 function fmtDateTime(s?: string | null): string {
   if (!s) return "—";
   return new Date(s).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+function fmtDate(s?: string | null): string {
+  if (!s) return "—";
+  return new Date(s).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function fmtQuantity(d: { quantity: number | null; unit: string | null; length: number | null; width: number | null; height: number | null }): string {
+  if (d.quantity == null || d.quantity === 0) return "—";
+  const dimension =
+    d.unit === "M2" && (d.length || d.width)
+      ? ` (${d.length || 0}x${d.width || 0})`
+      : d.unit === "M3" && (d.length || d.width || d.height)
+        ? ` (${d.length || 0}x${d.width || 0}x${d.height || 0})`
+        : "";
+  return `${d.quantity.toLocaleString("es-CL")} ${d.unit || ""}${dimension}`.trim();
 }
 
 function fmtMoney(amount?: number | null, currency?: string | null): string {
@@ -38,6 +55,7 @@ function fmtMoney(amount?: number | null, currency?: string | null): string {
 
 export default function ReportTab({
   session,
+  profile,
   claimNumber,
   claimLiquidationNumber,
   claimAddress,
@@ -53,6 +71,7 @@ export default function ReportTab({
   cancelledAt,
 }: {
   session: SessionDetail;
+  profile?: { id?: string; company?: { name?: string | null; logo_url?: string | null; phone?: string | null; email?: string | null; address?: string | null } | null } | null;
   claimNumber?: string;
   claimLiquidationNumber?: string;
   claimAddress?: string;
@@ -68,7 +87,6 @@ export default function ReportTab({
   cancelledAt?: string | null;
 }) {
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
   const printRef = useRef<HTMLDivElement>(null);
   const sessionId = session.id;
   const sessionStatus = session.status;
@@ -255,34 +273,41 @@ export default function ReportTab({
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px 40px; max-width: 800px; margin: 0 auto; color: #222; font-size: 11px; line-height: 1.6; }
-            .acta-header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 3px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 16px; }
-            .acta-header .logo { max-height: 50px; max-width: 180px; }
-            .acta-header .logo-text { font-size: 14px; font-weight: 700; color: #1a1a1a; }
-            .acta-header .header-info { text-align: right; font-size: 10px; color: #555; }
-            .acta-header .header-info h1 { font-size: 16px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
-            .acta-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; background: #f0f0f0; padding: 6px 10px; margin: 18px 0 8px; border-left: 4px solid #1a1a1a; }
-            .field-row { display: flex; margin-bottom: 2px; }
-            .field-label { font-weight: 600; color: #444; min-width: 200px; font-size: 10px; text-transform: uppercase; }
-            .field-value { flex: 1; font-size: 10px; color: #222; }
-            .field-block { margin-bottom: 3px; }
-            .field-block .label { font-weight: 600; color: #444; font-size: 10px; text-transform: uppercase; }
-            .field-block .value { font-size: 10px; color: #222; margin-top: 1px; }
-            table { width: 100%; border-collapse: collapse; margin: 6px 0; }
-            th { text-align: left; padding: 5px 6px; background: #f0f0f0; border: 1px solid #ccc; font-size: 9px; font-weight: 700; text-transform: uppercase; }
-            td { padding: 5px 6px; border: 1px solid #ccc; font-size: 9px; }
-            .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0; }
-            .photo-grid img { width: 100%; height: 130px; object-fit: contain; }
-            .photo-label { font-size: 8px; color: #666; text-align: center; margin-top: 2px; }
-            .sketch-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 6px 0; }
-            .sketch-grid img { width: 100%; height: 140px; object-fit: contain; border: 1px solid #ccc; background: #fff; }
-            .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
-            .sig-box { text-align: center; }
-            .sig-box img { max-height: 60px; max-width: 180px; border-bottom: 1px solid #333; padding-bottom: 3px; margin: 0 auto; }
-            .sig-box .name { font-size: 10px; font-weight: 600; margin-top: 3px; }
-            .sig-box .role { font-size: 9px; color: #666; }
-            .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #ccc; text-align: center; font-size: 8px; color: #999; }
-            .cancellation-box { border: 2px solid #c0392b; background: #fdf2f2; padding: 10px; margin: 10px 0; border-radius: 4px; }
-            .cancellation-box h3 { color: #c0392b; font-size: 12px; margin-bottom: 4px; }
+            .report-acta-header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 3px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 16px; }
+            .report-acta-header .report-logo { max-height: 50px; max-width: 180px; }
+            .report-acta-header .report-logo-text { font-size: 14px; font-weight: 700; color: #1a1a1a; }
+            .report-acta-header .report-header-info { text-align: right; font-size: 10px; color: #555; }
+            .report-acta-header .report-header-info .report-acta-h1 { font-size: 16px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+            .report-acta-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; background: #f0f0f0; padding: 6px 10px; margin: 18px 0 8px; border-left: 4px solid #1a1a1a; }
+            .report-field-row { display: flex; margin-bottom: 2px; }
+            .report-field-label { font-weight: 600; color: #444; min-width: 200px; font-size: 10px; text-transform: uppercase; }
+            .report-field-value { flex: 1; font-size: 10px; color: #222; }
+            .report-statement { color: #222; white-space: pre-wrap; line-height: 1.6; margin-bottom: 12px; }
+            table.report-table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+            .report-table th.report-th, .report-table th.report-th-right { text-align: left; padding: 5px 6px; background: #f0f0f0; border: 1px solid #ccc; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+            .report-table th.report-th-right { text-align: right; }
+            .report-table td.report-td, .report-table td.report-td-right { padding: 5px 6px; border: 1px solid #ccc; font-size: 9px; }
+            .report-table td.report-td-right { text-align: right; }
+            .report-photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0; }
+            .report-photo-grid .report-photo-img { width: 100%; height: 130px; object-fit: contain; }
+            .report-photo-label { font-size: 8px; color: #666; text-align: center; margin-top: 2px; }
+            .report-sketch-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 6px 0; }
+            .report-sketch-grid .report-sketch-img { width: 100%; height: 140px; object-fit: contain; border: 1px solid #ccc; background: #fff; }
+            .report-sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
+            .report-sig-box { text-align: center; }
+            .report-sig-box .report-sig-img { max-height: 60px; max-width: 180px; border-bottom: 1px solid #333; padding-bottom: 3px; margin: 0 auto; }
+            .report-sig-box .report-sig-name { font-size: 10px; font-weight: 600; margin-top: 3px; }
+            .report-sig-box .report-sig-role { font-size: 9px; color: #666; }
+            .report-footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #ccc; text-align: center; font-size: 8px; color: #999; }
+            .report-cancellation-box { border: 2px solid #c0392b; background: #fdf2f2; padding: 10px; margin: 10px 0; border-radius: 4px; }
+            .report-cancellation-box .report-cancellation-title { color: #c0392b; font-size: 12px; margin-bottom: 4px; }
+            .report-doc-item { border: 1px solid #ccc; padding: 8px; margin-bottom: 8px; background: #fafafa; }
+            .report-doc-item .report-doc-title { font-weight: 600; color: #444; font-size: 10px; margin-bottom: 4px; }
+            .report-doc-item .report-doc-desc { color: #666; font-size: 9px; margin-bottom: 4px; }
+            .report-doc-item .report-doc-summary { color: #444; font-style: italic; font-size: 9px; margin-bottom: 4px; border-left: 2px solid #ccc; padding-left: 8px; }
+            .report-doc-item .report-doc-img { width: 100%; max-height: 190px; object-fit: contain; border: 1px solid #e0e0e0; }
+            .report-doc-item .report-doc-placeholder { color: #888; font-style: italic; font-size: 9px; }
+            .report-watermark { display: none; }
             @media print { body { padding: 15px 20px; } }
           </style>
         </head>
@@ -293,20 +318,107 @@ export default function ReportTab({
     printWindow.print();
   };
 
-  const evidences = session.inspection_evidences || [];
-  const damages = session.inspection_damages || [];
-  const signatures = session.inspection_signatures || [];
-  const sketches = session.damage_sketches || [];
+  const evidences = useMemo(() => session.inspection_evidences || [], [session.inspection_evidences]);
+  const damages = useMemo(() => session.inspection_damages || [], [session.inspection_damages]);
+  const buildingDamages = useMemo(() => damages.filter((d) => d.damage_type !== "content"), [damages]);
+  const contentDamages = useMemo(() => damages.filter((d) => d.damage_type === "content"), [damages]);
+  const signatures = useMemo(() => session.inspection_signatures || [], [session.inspection_signatures]);
+  const sketches = useMemo(() => session.damage_sketches || [], [session.damage_sketches]);
   // Filtro flexible: el type puede venir como "photo", "image", "video", "document", "pdf", etc.
   const isPhoto = (t: string) => ["photo", "image", "jpg", "jpeg", "png"].includes(t.toLowerCase());
   const isVideo = (t: string) => ["video", "mp4", "mov"].includes(t.toLowerCase());
   const isDoc = (t: string) => ["document", "pdf", "doc", "docx", "file"].includes(t.toLowerCase());
-  const photos = evidences.filter(e => isPhoto(e.type));
-  const videos = evidences.filter(e => isVideo(e.type));
-  const docs = evidences.filter(e => isDoc(e.type));
-  const otherEvidences = evidences.filter(e => !isPhoto(e.type) && !isVideo(e.type) && !isDoc(e.type));
+  const photos = useMemo(() => evidences.filter(e => isPhoto(e.type)), [evidences]);
+  const videos = useMemo(() => evidences.filter(e => isVideo(e.type)), [evidences]);
+  const docs = useMemo(() => evidences.filter(e => isDoc(e.type)), [evidences]);
+  const otherEvidences = useMemo(() => evidences.filter(e => !isPhoto(e.type) && !isVideo(e.type) && !isDoc(e.type)), [evidences]);
   // Solo una firma por rol (insured + adjuster = máximo 2)
-  const uniqueSignatures = signatures.filter((s, i, arr) => arr.findIndex(x => x.role === s.role) === i);
+  const uniqueSignatures = useMemo(() => signatures.filter((s, i, arr) => arr.findIndex(x => x.role === s.role) === i), [signatures]);
+
+  // Descargar ZIP: reporte PDF + todas las evidencias + croquis (sin firmas)
+  const [zipPending, setZipPending] = useState(false);
+  const handleDownloadZip = useCallback(async () => {
+    setZipPending(true);
+    try {
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+      const baseName = claimLiquidationNumber || claimNumber || sessionId;
+      const safeBase = baseName.replace(/[^a-zA-Z0-9-_]/g, "_");
+
+      // Helper: descargar archivo desde R2 vía proxy (evita CORS del browser)
+      const fetchViaProxy = async (url: string): Promise<Blob | null> => {
+        try {
+          const proxyUrl = `/api/storage/proxy?url=${encodeURIComponent(url)}`;
+          const res = await fetch(proxyUrl);
+          if (!res.ok) return null;
+          return await res.blob();
+        } catch { return null; }
+      };
+
+      // 1. PDF del acta
+      let pdfBlob: Blob | null = null;
+      if (report?.report_url) {
+        pdfBlob = await fetchViaProxy(report.report_url);
+      }
+      if (!pdfBlob) pdfBlob = await generatePdf();
+      if (pdfBlob) zip.file(`acta-${safeBase}.pdf`, pdfBlob);
+
+      // 2. Evidencias (fotos, videos, documentos, otras) — sin firmas
+      const evidenceItems = [
+        ...photos.map((e, i) => ({ ev: e, folder: "fotos", index: i + 1 })),
+        ...videos.map((e, i) => ({ ev: e, folder: "videos", index: i + 1 })),
+        ...docs.map((e, i) => ({ ev: e, folder: "documentos", index: i + 1 })),
+        ...otherEvidences.map((e, i) => ({ ev: e, folder: "otras-evidencias", index: i + 1 })),
+      ];
+
+      let fetched = 0;
+      await Promise.all(evidenceItems.map(async ({ ev, folder, index }) => {
+        const blob = await fetchViaProxy(ev.url);
+        if (!blob) return;
+        // Usar el fileCode del sistema (muestra que pasó por el sistema)
+        // ej: L-000000141-HINS-003-EVI-0001.png
+        const fileCode = ev.metadata?.fileCode;
+        const ext = (ev.metadata?.mimeType || ev.type || "bin").split("/").pop()?.split(";")[0] || "bin";
+        const fileName = fileCode
+          ? `${fileCode}.${ext}`
+          : `${String(index).padStart(2, "0")}.${ext}`;
+        zip.file(`evidencias/${folder}/${fileName}`, blob);
+        fetched++;
+      }));
+
+      // 3. Croquis
+      let sketchesFetched = 0;
+      await Promise.all(sketches.map(async (sk, i) => {
+        const blob = await fetchViaProxy(sk.sketch_url);
+        if (!blob) return;
+        const ext = sk.sketch_url.split(".").pop()?.split("?")[0] || "png";
+        const label = sk.label ? `-${sk.label.replace(/[^a-zA-Z0-9-_]/g, "_")}` : "";
+        const fileName = `croquis-${String(i + 1).padStart(2, "0")}${label}.${ext}`;
+        zip.file(`croquis/${fileName}`, blob);
+        sketchesFetched++;
+      }));
+
+      // 4. Generar y descargar el ZIP
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safeBase}-inspeccion.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      const total = fetched + sketchesFetched + (pdfBlob ? 1 : 0);
+      if (total <= 1) {
+        toast.warning(`ZIP con solo ${total} archivo. Verifique permisos de R2.`);
+      } else {
+        toast.success(`ZIP descargado: ${total} archivo(s)`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al generar ZIP");
+    } finally {
+      setZipPending(false);
+    }
+  }, [report, generatePdf, photos, videos, docs, otherEvidences, sketches, claimLiquidationNumber, claimNumber, sessionId]);
   const companyName = profile?.company?.name || "—";
   const companyLogo = profile?.company?.logo_url || null;
   const companyPhone = profile?.company?.phone || null;
@@ -315,16 +427,16 @@ export default function ReportTab({
 
   // Estilos compartidos para campos
   const fieldRow = (label: string, value: string | undefined | null, key?: string) => (
-    <div key={key} className="field-row flex mb-0.5">
-      <span className="field-label font-semibold text-muted-foreground min-w-[200px] app-body uppercase">{label}:</span>
-      <span className="field-value flex-1 app-body">{value || "—"}</span>
+    <div key={key} className="report-field-row">
+      <span className="report-field-label app-body">{label}:</span>
+      <span className="report-field-value app-body">{value || "—"}</span>
     </div>
   );
 
   return (
     <div className="app-stack">
       {/* Acciones — botones de una sola palabra */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="report-actions">
         {!isFinal && (
           <Button
             onClick={() => generateMutation.mutate()}
@@ -369,9 +481,12 @@ export default function ReportTab({
             <Button variant="outline" onClick={handleDownload} className="pg-btn-platinum-icon">
               <Download className="mr-2 h-4 w-4" /> Descargar
             </Button>
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+            <Button variant="outline" onClick={handleDownloadZip} disabled={zipPending} className="pg-btn-platinum-icon">
+              <Archive className="mr-2 h-4 w-4" /> {zipPending ? "Comprimiendo..." : "ZIP"}
+            </Button>
+            <div className="report-final-badge">
               <CheckCircle2 className="h-5 w-5" />
-              <span className="app-body font-semibold">Acta Definitiva</span>
+              <span className="report-final-badge-text app-body">Acta Definitiva</span>
             </div>
           </>
         )}
@@ -379,35 +494,35 @@ export default function ReportTab({
 
       {/* Preview del acta — vista tipo PDF con scroll */}
       {isLoading ? (
-        <div className="app-panel text-center py-8 text-muted-foreground app-body">Cargando...</div>
+        <div className="report-loading app-panel app-body">Cargando...</div>
       ) : (
-        <div className="pdf-viewer rounded-lg p-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)", backgroundColor: "#e5e7eb" }}>
-          <div className="pdf-page shadow-lg mx-auto relative" ref={printRef} style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: "800px", padding: "30px 40px", backgroundColor: "#ffffff", color: "#1a1a1a" }}>
+        <div className="report-pdf-viewer">
+          <div className="report-pdf-page" ref={printRef}>
 
           {/* Marca de agua BORRADOR */}
           {!isFinal && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-              <span className="app-page-title font-bold text-gray-300 opacity-30 select-none" style={{ transform: "rotate(-30deg)", letterSpacing: "8px" }}>
+            <div className="report-watermark">
+              <span className="report-watermark-text app-page-title">
                 BORRADOR
               </span>
             </div>
           )}
 
           {/* ═══ HEADER ═══ */}
-          <div className="acta-header flex items-start justify-between border-b-[3px] border-gray-900 pb-3 mb-4">
+          <div className="report-acta-header">
             <div>
               {companyLogo ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={companyLogo} alt={companyName} className="logo h-14 w-auto" />
+                <img src={companyLogo} alt={companyName} className="report-logo" />
               ) : (
-                <div className="logo-text app-body font-bold">{companyName}</div>
+                <div className="report-logo-text app-body">{companyName}</div>
               )}
-              {companyPhone && <p className="app-body text-gray-500 mt-1">Tel: {companyPhone}</p>}
-              {companyAddress && <p className="app-body text-gray-500">{companyAddress}</p>}
-              {companyEmail && <p className="app-body text-gray-500">{companyEmail}</p>}
+              {companyPhone && <p className="report-header-meta app-body">Tel: {companyPhone}</p>}
+              {companyAddress && <p className="report-header-meta app-body">{companyAddress}</p>}
+              {companyEmail && <p className="report-header-meta app-body">{companyEmail}</p>}
             </div>
-            <div className="header-info text-right">
-              <h1 className="app-body font-bold text-gray-900">ACTA DE INSPECCIÓN</h1>
+            <div className="report-header-info">
+              <h1 className="report-acta-h1 app-body">ACTA DE INSPECCIÓN</h1>
               <p>Correlativo: {claimLiquidationNumber || "—"}</p>
               <p>Siniestro: {claimNumber || "—"}</p>
               <p>Inspección: {session.inspection_number || "—"}</p>
@@ -416,8 +531,8 @@ export default function ReportTab({
 
           {/* ═══ CANCELACIÓN ═══ */}
           {isCancellation && (
-            <div className="cancellation-box border-2 border-rose-600 bg-rose-50 p-3 rounded mb-3">
-              <h3 className="text-rose-700 font-bold app-body mb-1">Inspección Cancelada</h3>
+            <div className="report-cancellation-box">
+              <h3 className="report-cancellation-title app-body">Inspección Cancelada</h3>
               {fieldRow("Motivo", cancellationReason)}
               {fieldRow("Notas", cancellationNotes)}
               {fieldRow("Fecha", fmtDateTime(cancelledAt))}
@@ -425,7 +540,7 @@ export default function ReportTab({
           )}
 
           {/* ═══ ANTECEDENTES GENERALES ═══ */}
-          <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+          <div className="report-acta-title app-body">
             Antecedentes Generales
           </div>
           {fieldRow("Aseguradora", session.claim?.insurance_company?.name)}
@@ -434,7 +549,7 @@ export default function ReportTab({
           {fieldRow("Fecha de Inspección", fmtDateTime(session.inspection_date ? `${session.inspection_date}T${session.inspection_time || "00:00"}` : session.scheduled_at))}
 
           {/* ═══ ANTECEDENTES DEL ASEGURADO ═══ */}
-          <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+          <div className="report-acta-title app-body">
             Antecedentes del Asegurado
           </div>
           {fieldRow("Razón Social", insuredName)}
@@ -451,10 +566,10 @@ export default function ReportTab({
           {/* ═══ DETALLE DE LOS HECHOS ═══ */}
           {session.insured_statement?.statement && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Detalle de los Hechos
               </div>
-              <p className="app-body text-gray-800 whitespace-pre-wrap leading-relaxed mb-3">
+              <p className="report-statement app-body">
                 {session.insured_statement.statement}
               </p>
             </>
@@ -463,7 +578,7 @@ export default function ReportTab({
           {/* ═══ ANTECEDENTES DEL RIESGO ═══ */}
           {session.property_risk && Object.keys(session.property_risk).length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Antecedentes del Riesgo
               </div>
               {fieldRow("Materia Afectada", session.property_risk.property_type)}
@@ -480,7 +595,7 @@ export default function ReportTab({
           {/* ═══ CARACTERÍSTICAS DE LA CONSTRUCCIÓN ═══ */}
           {session.property_materiality && Object.keys(session.property_materiality).length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Características de la Construcción
               </div>
               {fieldRow("Sistema Estructural", null)}
@@ -498,7 +613,7 @@ export default function ReportTab({
           {/* ═══ MEDIDAS DE SEGURIDAD ═══ */}
           {session.security_measures && Object.keys(session.security_measures).length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Medidas de Seguridad
               </div>
               {Object.entries(session.security_measures).map(([key, val]) => {
@@ -516,7 +631,7 @@ export default function ReportTab({
           {/* ═══ ANTECEDENTES POLICIALES ═══ */}
           {(session.police_report_number || session.firefighters_company) && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Antecedentes Policiales / Bomberos
               </div>
               {fieldRow("Parte Carabineros", session.police_report_number)}
@@ -529,27 +644,27 @@ export default function ReportTab({
           {/* ═══ TERCEROS ═══ */}
           {session.third_parties && session.third_parties.length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Terceros Afectados
               </div>
-              <table className="w-full border-collapse my-1.5">
+              <table className="report-table">
                 <thead>
                   <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Tipo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Nombre</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">RUT</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Teléfono</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Seguro</th>
+                    <th className="report-th app-body">Tipo</th>
+                    <th className="report-th app-body">Nombre</th>
+                    <th className="report-th app-body">RUT</th>
+                    <th className="report-th app-body">Teléfono</th>
+                    <th className="report-th app-body">Seguro</th>
                   </tr>
                 </thead>
                 <tbody>
                   {session.third_parties.map((tp, i) => (
                     <tr key={i}>
-                      <td className="p-1.5 border border-gray-300 app-body">{tp.party_type}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{tp.full_name || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{tp.rut || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{tp.phone || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{tp.has_insurance ? tp.insurance_company || "Sí" : "No"}</td>
+                      <td className="report-td app-body">{tp.party_type}</td>
+                      <td className="report-td app-body">{tp.full_name || "—"}</td>
+                      <td className="report-td app-body">{tp.rut || "—"}</td>
+                      <td className="report-td app-body">{tp.phone || "—"}</td>
+                      <td className="report-td app-body">{tp.has_insurance ? tp.insurance_company || "Sí" : "No"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -557,38 +672,78 @@ export default function ReportTab({
             </>
           )}
 
-          {/* ═══ REGISTRO DE DAÑOS ═══ */}
-          {damages.length > 0 && (
+          {/* ═══ REGISTRO DE DAÑOS CONSTRUCTIVOS ═══ */}
+          {buildingDamages.length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
-                Registro de Daños ({damages.length})
+              <div className="report-acta-title app-body">
+                Daños Constructivos ({buildingDamages.length})
               </div>
-              <table className="w-full border-collapse my-1.5">
+              <table className="report-table">
                 <thead>
                   <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Tipo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Espacio</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Categoría</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Materialidad / Aclaración</th>
-                    <th className="text-right p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Cant.</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Unidad</th>
-                    <th className="text-right p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Monto Est.</th>
+                    <th className="report-th app-body">Espacio</th>
+                    <th className="report-th app-body">Categoría</th>
+                    <th className="report-th app-body">Materialidad / Aclaración</th>
+                    <th className="report-th app-body">Cantidad</th>
+                    <th className="report-th-right app-body">Monto</th>
+                    <th className="report-th app-body">Clasificación</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {damages.map((d) => [
+                  {buildingDamages.map((d) => [
                     <tr key={d.id} className={d.observations ? "report-with-observation" : ""}>
-                      <td className="p-1.5 border border-gray-300 app-body">{DAMAGE_TYPE_LABELS[d.damage_type] || d.damage_type}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{d.dependency || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{d.subcategory || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{d.description || d.materiality_type || "—"}</td>
-                      <td className="text-right p-1.5 border border-gray-300 app-body">{d.quantity ?? "—"}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{d.unit || "—"}</td>
-                      <td className="text-right p-1.5 border border-gray-300 app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
+                      <td className="report-td app-body">{d.dependency || "—"}</td>
+                      <td className="report-td app-body">{d.subcategory || "—"}</td>
+                      <td className="report-td app-body">{d.description || d.materiality_type || "—"}</td>
+                      <td className="report-td app-body">{fmtQuantity(d)}</td>
+                      <td className="report-td-right app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
+                      <td className="report-td app-body">{SEVERITY_LABELS[d.severity] || d.severity}</td>
                     </tr>,
                     d.observations ? (
                       <tr key={`${d.id}-obs`} className="report-observation-row">
-                        <td colSpan={7} className="p-1.5 border border-gray-300 report-observation">
+                        <td colSpan={6} className="report-td report-observation">
+                          {d.observations}
+                        </td>
+                      </tr>
+                    ) : null,
+                  ])}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {/* ═══ REGISTRO DE DAÑOS DE CONTENIDO ═══ */}
+          {contentDamages.length > 0 && (
+            <>
+              <div className="report-acta-title app-body">
+                Daños de Contenido ({contentDamages.length})
+              </div>
+              <table className="report-table">
+                <thead>
+                  <tr>
+                    <th className="report-th app-body">Tipo de Bien</th>
+                    <th className="report-th app-body">Producto</th>
+                    <th className="report-th app-body">Marca/Modelo</th>
+                    <th className="report-th app-body">Clasificación del Daño</th>
+                    <th className="report-th-right app-body">Cantidad</th>
+                    <th className="report-th-right app-body">Monto</th>
+                    <th className="report-th app-body">Fecha Compra</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contentDamages.map((d) => [
+                    <tr key={d.id} className={d.observations ? "report-with-observation" : ""}>
+                      <td className="report-td app-body">{d.category || "—"}</td>
+                      <td className="report-td app-body">{d.product || d.description || "—"}</td>
+                      <td className="report-td app-body">{d.brand_model || "—"}</td>
+                      <td className="report-td app-body">{SEVERITY_LABELS[d.severity] || d.severity}</td>
+                      <td className="report-td-right app-body">{fmtQuantity(d)}</td>
+                      <td className="report-td-right app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
+                      <td className="report-td app-body">{fmtDate(d.purchase_date)}</td>
+                    </tr>,
+                    d.observations ? (
+                      <tr key={`${d.id}-obs`} className="report-observation-row">
+                        <td colSpan={7} className="report-td report-observation">
                           {d.observations}
                         </td>
                       </tr>
@@ -602,10 +757,10 @@ export default function ReportTab({
           {/* ═══ OBSERVACIONES DEL INSPECTOR ═══ */}
           {session.inspector_observations && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Observaciones del Inspector
               </div>
-              <p className="app-body text-gray-800 whitespace-pre-wrap leading-relaxed mb-3">
+              <p className="report-statement app-body">
                 {session.inspector_observations}
               </p>
             </>
@@ -614,25 +769,25 @@ export default function ReportTab({
           {/* ═══ RESUMEN DE EVIDENCIAS ═══ */}
           {evidences.length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Resumen de Evidencias ({evidences.length})
               </div>
-              <table className="w-full border-collapse my-1.5">
+              <table className="report-table">
                 <thead>
                   <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">N°</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Tipo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Archivo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Descripción</th>
+                    <th className="report-th app-body">N°</th>
+                    <th className="report-th app-body">Tipo</th>
+                    <th className="report-th app-body">Archivo</th>
+                    <th className="report-th app-body">Descripción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {evidences.map((ev, idx) => (
                     <tr key={ev.id}>
-                      <td className="p-1.5 border border-gray-300 app-body">{idx + 1}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{ev.type}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{ev.metadata?.originalName || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{ev.description || "—"}</td>
+                      <td className="report-td app-body">{idx + 1}</td>
+                      <td className="report-td app-body">{ev.type}</td>
+                      <td className="report-td app-body">{ev.metadata?.originalName || "—"}</td>
+                      <td className="report-td app-body">{ev.description || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -643,15 +798,15 @@ export default function ReportTab({
           {/* ═══ EVIDENCIAS FOTOGRÁFICAS ═══ */}
           {photos.length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Evidencias Fotográficas ({photos.length})
               </div>
-              <div className="photo-grid grid grid-cols-3 gap-1.5 my-1.5">
+              <div className="report-photo-grid">
                 {photos.map((ev, idx) => (
-                  <div key={ev.id} className="border border-gray-300 p-1 bg-gray-50">
+                  <div key={ev.id} className="report-photo-item">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ev.url} alt={`Foto ${idx + 1}`} className="w-full h-32 object-contain" />
-                    <p className="photo-label app-body text-gray-600 text-center mt-0.5">
+                    <img src={ev.url} alt={`Foto ${idx + 1}`} className="report-photo-img" />
+                    <p className="report-photo-label app-body">
                       Foto {idx + 1}{ev.description ? ` — ${ev.description}` : ""}
                     </p>
                   </div>
@@ -663,23 +818,23 @@ export default function ReportTab({
           {/* ═══ VIDEOS ═══ */}
           {videos.length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Videos ({videos.length})
               </div>
-              <table className="w-full border-collapse my-1.5">
+              <table className="report-table">
                 <thead>
                   <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">N°</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Archivo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Descripción</th>
+                    <th className="report-th app-body">N°</th>
+                    <th className="report-th app-body">Archivo</th>
+                    <th className="report-th app-body">Descripción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {videos.map((v, idx) => (
                     <tr key={v.id}>
-                      <td className="p-1.5 border border-gray-300 app-body">{idx + 1}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{v.metadata?.originalName || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{v.description || "—"}</td>
+                      <td className="report-td app-body">{idx + 1}</td>
+                      <td className="report-td app-body">{v.metadata?.originalName || "—"}</td>
+                      <td className="report-td app-body">{v.description || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -690,7 +845,7 @@ export default function ReportTab({
           {/* ═══ DOCUMENTOS ADJUNTOS ═══ */}
           {docs.length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Documentos Adjuntos ({docs.length})
               </div>
               {docs.map((d, idx) => {
@@ -700,24 +855,24 @@ export default function ReportTab({
                 const pageCount = d.metadata?.pdfPageCount as number | undefined;
                 const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName);
                 return (
-                  <div key={d.id} className="border border-gray-300 p-2 mb-2 bg-gray-50">
-                    <p className="app-body font-semibold text-gray-700 mb-1">
+                  <div key={d.id} className="report-doc-item">
+                    <p className="report-doc-title app-body">
                       Documento {idx + 1}: {fileName}
                       {pageCount ? ` (${pageCount} ${pageCount === 1 ? "página" : "páginas"})` : ""}
                     </p>
                     {d.description && (
-                      <p className="app-body text-gray-600 mb-1">{d.description}</p>
+                      <p className="report-doc-desc app-body">{d.description}</p>
                     )}
                     {pdfSummary && (
-                      <p className="app-body text-gray-700 italic mb-1 border-l-2 border-gray-300 pl-2">
+                      <p className="report-doc-summary app-body">
                         {pdfSummary}
                       </p>
                     )}
                     {isImage ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={d.url} alt={fileName} className="w-full max-h-48 object-contain border border-gray-200" />
+                      <img src={d.url} alt={fileName} className="report-doc-img" />
                     ) : !pdfSummary && (
-                      <p className="app-body text-gray-500 italic">
+                      <p className="report-doc-placeholder app-body">
                         Documento {mimeType || "adjunto"} — {d.metadata?.fileSize ? `${(d.metadata.fileSize as number / 1024).toFixed(0)} KB` : ""}
                       </p>
                     )}
@@ -730,25 +885,25 @@ export default function ReportTab({
           {/* ═══ OTRAS EVIDENCIAS ═══ */}
           {otherEvidences.length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Otras Evidencias ({otherEvidences.length})
               </div>
-              <table className="w-full border-collapse my-1.5">
+              <table className="report-table">
                 <thead>
                   <tr>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">N°</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Tipo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Archivo</th>
-                    <th className="text-left p-1.5 bg-gray-100 border border-gray-300 app-body font-bold uppercase">Descripción</th>
+                    <th className="report-th app-body">N°</th>
+                    <th className="report-th app-body">Tipo</th>
+                    <th className="report-th app-body">Archivo</th>
+                    <th className="report-th app-body">Descripción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {otherEvidences.map((d, idx) => (
                     <tr key={d.id}>
-                      <td className="p-1.5 border border-gray-300 app-body">{idx + 1}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{d.type}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{d.metadata?.originalName || "—"}</td>
-                      <td className="p-1.5 border border-gray-300 app-body">{d.description || "—"}</td>
+                      <td className="report-td app-body">{idx + 1}</td>
+                      <td className="report-td app-body">{d.type}</td>
+                      <td className="report-td app-body">{d.metadata?.originalName || "—"}</td>
+                      <td className="report-td app-body">{d.description || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -759,15 +914,15 @@ export default function ReportTab({
           {/* ═══ CROQUIS ═══ */}
           {sketches.length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Croquis ({sketches.length})
               </div>
-              <div className="sketch-grid grid grid-cols-2 gap-1.5 my-1.5">
+              <div className="report-sketch-grid">
                 {sketches.map((sk, idx) => (
                   <div key={sk.id}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sk.sketch_url} alt={`Croquis ${idx + 1}`} className="w-full h-36 object-contain border border-gray-300 bg-white" />
-                    <p className="photo-label app-body text-gray-600 text-center mt-0.5">
+                    <img src={sk.sketch_url} alt={`Croquis ${idx + 1}`} className="report-sketch-img" />
+                    <p className="report-photo-label app-body">
                       Croquis {idx + 1}{sk.label ? ` — ${sk.label}` : ""}
                     </p>
                   </div>
@@ -779,18 +934,18 @@ export default function ReportTab({
           {/* ═══ FIRMAS ═══ */}
           {uniqueSignatures.length > 0 && (
             <>
-              <div className="acta-title app-body font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l-4 border-gray-900">
+              <div className="report-acta-title app-body">
                 Firmas
               </div>
-              <div className="sig-grid grid grid-cols-2 gap-5 mt-6">
+              <div className="report-sig-grid">
                 {uniqueSignatures.map((sig) => (
-                  <div key={sig.id} className="sig-box text-center">
+                  <div key={sig.id} className="report-sig-box">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sig.signature_url} alt={`Firma ${sig.role}`} className="max-h-16 max-w-[180px] border-b border-gray-700 pb-1 mx-auto" />
-                    <p className="name app-body font-semibold mt-1">
+                    <img src={sig.signature_url} alt={`Firma ${sig.role}`} className="report-sig-img" />
+                    <p className="report-sig-name app-body">
                       {sig.role === "insured" ? "Asegurado" : "Inspector"}
                     </p>
-                    <p className="role app-body text-gray-500">{fmtDateTime(sig.signed_at)}</p>
+                    <p className="report-sig-role app-body">{fmtDateTime(sig.signed_at)}</p>
                   </div>
                 ))}
               </div>
@@ -798,7 +953,7 @@ export default function ReportTab({
           )}
 
           {/* ═══ FOOTER ═══ */}
-          <div className="footer mt-8 pt-2.5 border-t border-gray-300 text-center app-body text-gray-400">
+          <div className="report-footer app-body">
             Documento {isFinal ? "definitivo" : "en borrador"} emitido por {companyName} · {new Date().toLocaleDateString("es-CL")}
             {isFinal && report?.generated_at && ` · Finalizado el ${fmtDateTime(report.generated_at)}`}
           </div>

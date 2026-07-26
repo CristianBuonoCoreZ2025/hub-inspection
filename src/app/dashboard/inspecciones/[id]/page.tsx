@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -10,12 +10,12 @@ import {
  updateInspectionSession,
  rescheduleInspectionViaCIN,
  cancelInspectionViaCIN,
- getInspectorSchedule,
 } from "@/services/inspections";
 import { updateClaimStatus } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
-import { getUsers } from "@/services/users";
+import { getUsers, getUsersByRoleForCompany } from "@/services/users";
 import { usePermissions } from "@/hooks/use-permissions";
+import { formatUserDateTime as formatDateTime } from "@/lib/timezone";
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
 import { useAuth } from "@/hooks/use-auth";
@@ -27,6 +27,8 @@ import {
  FileText,
  MapPin,
  User,
+ Mail,
+ Phone,
  Clock,
  ShieldCheck,
  MessageSquare,
@@ -35,11 +37,15 @@ import {
  CalendarClock,
  Play,
  AlertTriangle,
+ CheckCircle2,
+ Loader2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MagicLinkSender } from "@/components/ui/magic-link-sender";
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import L from "leaflet";
 // Tabs components no longer used — replaced with flat tab style matching claims page
 import {
  Dialog,
@@ -54,7 +60,7 @@ import {
  SelectTrigger,
  SelectValue,
 } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
+import { CoordScheduler } from "@/components/inspections/coord-scheduler";
 import { Label } from "@/components/ui/label";
 import type { InspectionSession } from "@/types";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
@@ -66,6 +72,14 @@ import ReportTab from "./report-tab";
 import SketchesTab from "./sketches-tab";
 import ChatTab from "./chat-tab";
 import { LiveVideoCall } from "@/components/inspection/live-video-call";
+
+// Fix iconos de Leaflet en Next.js (CDN)
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 // Mapea estado de inspección → código de estado de claim
 const sessionToClaimStatusCode: Record<string, string> = {
@@ -94,22 +108,12 @@ const sessionStatusColors: Record<string, string> = {
 
 function formatDate(dateStr: string | null) {
  if (!dateStr) return "—";
- return new Date(dateStr).toLocaleDateString("es-CL", {
+ // Las columnas `date` no tienen zona horaria: formatear en UTC para no cambiar el día
+ return new Date(`${dateStr}T00:00:00Z`).toLocaleDateString("es-CL", {
+ timeZone: "UTC",
  day: "2-digit",
  month: "2-digit",
  year: "numeric",
- });
-}
-
-function formatDateTime(dateStr: string | null) {
- if (!dateStr) return "—";
- return new Date(dateStr).toLocaleString("es-CL", {
- day: "2-digit",
- month: "2-digit",
- year: "numeric",
- hour: "2-digit",
- minute: "2-digit",
- hour12: false,
  });
 }
 
@@ -138,13 +142,21 @@ export default function InspectionDetailPage() {
  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
  const [cancelReasonId, setCancelReasonId] = useState<string>("");
  const [cancelNotes, setCancelNotes] = useState<string>("");
- const [rescheduleDate, setRescheduleDate] = useState<string>("");
- const [rescheduleTime, setRescheduleTime] = useState<string>("");
+ const [rescheduleSelectedDatetime, setRescheduleSelectedDatetime] = useState<string>("");
  const [rescheduleType, setRescheduleType] = useState<"onsite" | "remote">("onsite");
  const [rescheduleInspectorId, setRescheduleInspectorId] = useState<string>("");
  const [chatPanelOpen, setChatPanelOpen] = useState(false);
  const [videoCallOpen, setVideoCallOpen] = useState(false);
+ const [mapViewOpen, setMapViewOpen] = useState(false);
  const autoVideoOpenedRef = useRef(false);
+
+ // Límites de fecha para reagendamiento: máximo days_to_issue del CIN (2 días)
+ const { maxDate: rescheduleMaxDate } = useMemo(() => {
+   const max = new Date();
+   max.setDate(max.getDate() + 2); // days_to_issue de template CIN
+   max.setHours(23, 59, 59, 999);
+   return { maxDate: max.toISOString().split("T")[0] };
+ }, []);
  const { codeToId } = useClaimStatuses();
 
  const { data: session, isLoading, isError, error } = useQuery({
@@ -169,8 +181,18 @@ export default function InspectionDetailPage() {
  queryKey: ["users"],
  queryFn: () => getUsers(),
  });
- // Inspectores: rol principal o rol secundario inspector
- const inspectors = users?.filter((u) => u.role === "inspector" || u.secondary_roles?.some((r) => r.role === "inspector")) || [];
+ // company_id del claim para filtrar inspectores por empresa (igual que el form CIN)
+ const claimCompanyId = (session?.claim as Record<string, unknown> | undefined)?.company_id as string | undefined;
+ // Inspectores via RPC (bypassa RLS, igual que el formulario de coordinación CIN)
+ const { data: inspectorList } = useQuery({
+ queryKey: ["users-by-role", "inspector", claimCompanyId],
+ queryFn: () => getUsersByRoleForCompany("inspector", claimCompanyId),
+ enabled: !!session?.claim_id,
+ });
+ const inspectors = inspectorList || [];
+ // Fallback: si la RPC no retorna datos, usar getUsers() filtrado client-side
+ const inspectorsFallback = users?.filter((u) => u.role === "inspector" || u.secondary_roles?.some((r) => r.role === "inspector")) || [];
+ const allInspectors = inspectors.length > 0 ? inspectors : inspectorsFallback;
 
  // Helper para buscar nombre de usuario sin depender del filtro de inspectores
  const userName = (id?: string | null) => {
@@ -179,60 +201,8 @@ export default function InspectionDetailPage() {
    return u?.full_name || u?.email || null;
  };
 
- // Query: agenda del inspector para la fecha seleccionada (reagendamiento)
- const rescheduleDateForQuery = rescheduleDate ? new Date(`${rescheduleDate}T00:00:00`) : null;
- const { data: rescheduleSchedule, isLoading: rescheduleScheduleLoading } = useQuery({
- queryKey: ["inspector-schedule", rescheduleInspectorId, rescheduleDate],
- queryFn: () => {
- if (!rescheduleDateForQuery) return [];
- const start = new Date(rescheduleDateForQuery);
- const end = new Date(rescheduleDateForQuery);
- end.setDate(end.getDate() + 1);
- return getInspectorSchedule(rescheduleInspectorId, start.toISOString(), end.toISOString());
- },
- enabled: !!rescheduleInspectorId && !!rescheduleDate && rescheduleModalOpen,
- });
-
- // Generar slots para reagendamiento
- const RESCHEDULE_SLOT_MIN = rescheduleType === "onsite" ? 120 : 30;
- const generateRescheduleSlots = () => {
- const slots: { time: string; label: string; available: boolean; extra: boolean; bookedInfo?: string }[] = [];
- const DAY_START = 6, DAY_END = 22, NORMAL_START = 9, NORMAL_END = 18;
- const totalMin = (DAY_END - DAY_START) * 60;
- const now = new Date();
- const isToday = rescheduleDate === now.toISOString().split("T")[0];
- for (let offset = 0; offset + RESCHEDULE_SLOT_MIN <= totalMin; offset += RESCHEDULE_SLOT_MIN) {
- const startHour = DAY_START + Math.floor(offset / 60);
- const startMin = offset % 60;
- const endHour = DAY_START + Math.floor((offset + RESCHEDULE_SLOT_MIN) / 60);
- const endMin = (offset + RESCHEDULE_SLOT_MIN) % 60;
- const timeStr = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
- const endStr = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
- // Si es hoy, saltar slots que ya pasaron
- if (isToday) {
- const slotStartCheck = new Date(`${rescheduleDate}T${timeStr}:00`);
- if (slotStartCheck <= now) continue;
- }
- const isExtra = startHour < NORMAL_START || startHour >= NORMAL_END;
- const slotStart = new Date(`${rescheduleDate}T${timeStr}:00`);
- const slotEnd = new Date(`${rescheduleDate}T${endStr}:00`);
- const booked = rescheduleSchedule?.find((s) => {
- const sStart = new Date(s.scheduled_at);
- const sDuration = s.inspection_type === "onsite" ? 120 : 30;
- const sEnd = new Date(sStart.getTime() + sDuration * 60000);
- return sStart < slotEnd && sEnd > slotStart;
- });
- slots.push({
- time: timeStr,
- label: `${timeStr} - ${endStr}`,
- available: !booked,
- extra: isExtra,
- bookedInfo: booked ? `${booked.claim.claim_number}` : undefined,
- });
- }
- return slots;
- };
- const rescheduleSlots = rescheduleDate && rescheduleInspectorId ? generateRescheduleSlots() : [];
+ // La agenda del inspector y los slots ahora los maneja CoordScheduler.
+ // (mismo componente que la coordinación en DynamicScreen)
 
  // Cargar motivos: fallida para reagendar, desistida para cancelar
  // Se cargan siempre para poder mostrar el motivo de sesiones canceladas
@@ -307,6 +277,8 @@ export default function InspectionDetailPage() {
  queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
  queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
  queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
+ // Invalidar la agenda del inspector (la sesión cancelada libera el horario)
+ queryClient.invalidateQueries({ queryKey: ["inspector-schedule"] });
  setCancelModalOpen(false);
  setCancelReasonId("");
  setCancelNotes("");
@@ -346,11 +318,13 @@ export default function InspectionDetailPage() {
  toast.success("Inspección reagendada. Se generó gestión CIN para re-coordinar.");
  queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
  queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
+ // Invalidar la agenda del inspector para que la próxima vez muestre
+ // las horas ocupadas actualizadas (sesión nueva agendada, vieja cancelada)
+ queryClient.invalidateQueries({ queryKey: ["inspector-schedule"] });
  setRescheduleModalOpen(false);
  setCancelReasonId("");
  setCancelNotes("");
- setRescheduleDate("");
- setRescheduleTime("");
+ setRescheduleSelectedDatetime("");
  setRescheduleInspectorId("");
  // Volver al siniestro — el usuario debe completar la nueva CIN
  if (session?.claim_id) router.push(`/dashboard/claims/${session.claim_id}`);
@@ -392,6 +366,8 @@ export default function InspectionDetailPage() {
  claim_longitude?: number | null;
  policy_number?: string | null;
  claim_date?: string | null;
+ report_date?: string | null;
+ assignment_date?: string | null;
  liquidation_number?: string | null;
  broker_executive?: string | null;
  inspector_id?: string | null;
@@ -428,8 +404,6 @@ export default function InspectionDetailPage() {
    return undefined;
  };
  const coordAclaracionDireccion = findCoord(["coord_ubic", "coord_ubicacion"]);
- const coordOtrosContactos = findCoord(["coord_cont", "coord_contacto"]);
- const coordComentarios = findCoord(["coord_com"]);
 
  const allTabs = [
  { id: "resumen", label: "Resumen", icon: FileText, section: "inspecciones_detalle" },
@@ -503,16 +477,17 @@ export default function InspectionDetailPage() {
 
  {/* ── TAB: RESUMEN ── */}
  {activeTab === "resumen" && (
- <div className="mt-4 app-stack">
- {/* Información General */}
- <div className="app-panel">
- <h3 className="app-section-title">
+ <div className="mt-4 space-y-2">
+ {/* Información General + Asegurado (fusionados) */}
+ <div className="app-panel py-3 px-4">
+ <h3 className="app-section-title mb-2">
  Información General
  </h3>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 app-body">
- <div>
+ {/* Línea 1: datos del siniestro */}
+ <div className="grid grid-cols-5 gap-x-4 gap-y-1 app-body">
+ <div className="min-w-0">
  <span className="app-data-label">N° Interno</span>
- <p className="font-mono font-semibold text-primary">
+ <p className="font-mono font-semibold text-primary truncate">
  {claim?.liquidation_number ? (
  <Link href={`/dashboard/claims/${session.claim_id}`} className="hover:underline">
  {claim.liquidation_number as string}
@@ -522,182 +497,179 @@ export default function InspectionDetailPage() {
  )}
  </p>
  </div>
- <div>
+ <div className="min-w-0">
  <span className="app-data-label">Ref. Cliente</span>
- <p className="font-medium">{(claim?.client_reference as string) || "—"}</p>
+ <p className="font-medium truncate">{(claim?.client_reference as string) || "—"}</p>
  </div>
- <div>
- <span className="app-data-label">N° Siniestro Cía</span>
- <p className="font-medium">{claim?.claim_number as string}</p>
- </div>
- <div>
- <span className="app-data-label">N° Poliza</span>
- <p className="font-medium">{claim?.policy_number as string}</p>
- </div>
- <div>
+ <div className="min-w-0">
  <span className="app-data-label">Compañia</span>
- <p className="font-medium">{claim?.insurance_company?.name || "—"}</p>
+ <p className="font-medium truncate">{claim?.insurance_company?.name || "—"}</p>
  </div>
- <div>
- <span className="app-data-label">Inspector</span>
- <p className="font-medium">{userName(session.inspector_id || claim?.inspector_id) || "—"}</p>
- </div>
- <div>
- <span className="app-data-label">Gestión</span>
- <p className="font-medium">{session?.action_template?.name || "—"}</p>
- </div>
- <div>
+ <div className="min-w-0">
  <span className="app-data-label">Fecha Siniestro</span>
- <p className="font-medium">{formatDate(claim?.claim_date as string | null)}</p>
+ <p className="font-medium whitespace-nowrap">{formatDate(claim?.claim_date as string | null)}</p>
  </div>
+ <div className="min-w-0">
+ <span className="app-data-label">Fecha Denuncia</span>
+ <p className="font-medium whitespace-nowrap">{formatDate(claim?.report_date as string | null)}</p>
  </div>
  </div>
 
- {/* Asegurado */}
- <div className="app-panel">
- <h3 className="app-section-title">
- Asegurado
- </h3>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 app-body">
+ {/* Línea 2+: datos del asegurado */}
+ <div className="grid grid-cols-2 md:grid-cols-5 gap-x-4 gap-y-1 app-body mt-2">
  <div>
- <span className="app-data-label">RUT</span>
+ <span className="app-data-label">RUT Asegurado</span>
  <p className="font-medium">{insuredParticipant?.rut || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Tipo</span>
- <p className="font-medium">
- {insuredParticipant?.person_type === "legal" ? "Persona Jurídica" : insuredParticipant?.person_type === "natural" ? "Persona Natural" : "—"}
- </p>
- </div>
- <div>
- <span className="app-data-label">Nombre</span>
+ <span className="app-data-label">Nombre Asegurado</span>
  <p className="font-medium">{insuredParticipant?.first_name || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Apellido</span>
+ <span className="app-data-label">Apellido Asegurado</span>
  <p className="font-medium">{insuredParticipant?.last_name || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Email</span>
- <p className="font-medium">{insuredParticipant?.email || "—"}</p>
+ <span className="app-data-label">Email Asegurado</span>
+ <p className="font-medium flex items-center gap-1"><Mail className="h-3 w-3 text-muted-foreground shrink-0" />{insuredParticipant?.email || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Teléfono</span>
- <p className="font-medium">{insuredParticipant?.cell_phone || insuredParticipant?.phone || "—"}</p>
- </div>
- <div className="col-span-2">
- <span className="app-data-label">Dirección</span>
- <p className="font-medium">{insuredParticipant?.address || "—"}</p>
- </div>
- <div>
- <span className="app-data-label">País</span>
- <p className="font-medium">{insuredParticipant?.country || "—"}</p>
- </div>
- <div>
- <span className="app-data-label">Región</span>
- <p className="font-medium">{insuredParticipant?.region || "—"}</p>
- </div>
- <div>
- <span className="app-data-label">Ciudad</span>
- <p className="font-medium">{insuredParticipant?.city || "—"}</p>
- </div>
- <div>
- <span className="app-data-label">Comuna</span>
- <p className="font-medium">{insuredParticipant?.commune || "—"}</p>
- </div>
+ <span className="app-data-label">Teléfono Asegurado</span>
+ <p className="font-medium flex items-center gap-1"><Phone className="h-3 w-3 text-muted-foreground shrink-0" />{insuredParticipant?.cell_phone || insuredParticipant?.phone || "—"}</p>
  </div>
  </div>
 
- {/* Datos del Siniestro — contacto y dirección del claim (NO se tocan) */}
- <div className="app-panel">
- <h3 className="app-section-title">
- Datos del Siniestro
- </h3>
- <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-2 app-body">
+ {/* Línea 3: dirección del asegurado */}
+ <div className="grid grid-cols-2 md:grid-cols-5 gap-x-4 gap-y-1 app-body mt-2">
  <div>
- <span className="app-data-label">Nombre contacto</span>
- <p className="font-medium">{contactParticipant?.full_name || insuredParticipant?.full_name || "—"}</p>
+ <span className="app-data-label">Dirección Asegurado</span>
+ <p className="font-medium">{insuredParticipant?.address || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Email</span>
- <p className="font-medium">{contactParticipant?.email || insuredParticipant?.email || "—"}</p>
+ <span className="app-data-label">País Asegurado</span>
+ <p className="font-medium">{insuredParticipant?.country || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Teléfono</span>
- <p className="font-medium">{contactParticipant?.cell_phone || contactParticipant?.phone || insuredParticipant?.cell_phone || insuredParticipant?.phone || "—"}</p>
+ <span className="app-data-label">Región Asegurado</span>
+ <p className="font-medium">{insuredParticipant?.region || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Dirección del Siniestro</span>
+ <span className="app-data-label">Ciudad Asegurado</span>
+ <p className="font-medium">{insuredParticipant?.city || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Comuna Asegurado</span>
+ <p className="font-medium">{insuredParticipant?.commune || "—"}</p>
+ </div>
+ </div>
+
+ {/* Separador liquid glass */}
+ <hr className="app-section-divider" />
+
+ {/* Sub-sección: Datos del Siniestro */}
+ <div className="grid grid-cols-2 md:grid-cols-5 gap-x-4 gap-y-1 app-body">
+ <div>
+ <span className="app-data-label">RUT Contacto</span>
+ <p className="font-medium">{contactParticipant?.rut || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Nombre Contacto</span>
+ <p className="font-medium">{contactParticipant?.first_name || insuredParticipant?.first_name || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Apellido Contacto</span>
+ <p className="font-medium">{contactParticipant?.last_name || insuredParticipant?.last_name || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Email Contacto</span>
+ <p className="font-medium flex items-center gap-1"><Mail className="h-3 w-3 text-muted-foreground shrink-0" />{contactParticipant?.email || insuredParticipant?.email || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Teléfono Contacto</span>
+ <p className="font-medium flex items-center gap-1"><Phone className="h-3 w-3 text-muted-foreground shrink-0" />{contactParticipant?.cell_phone || contactParticipant?.phone || insuredParticipant?.cell_phone || insuredParticipant?.phone || "—"}</p>
+ </div>
+ <div>
+ <span className="app-data-label">Dirección Siniestro</span>
  <p className="font-medium">{claim?.claim_address || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">País</span>
+ <span className="app-data-label">País Siniestro</span>
  <p className="font-medium">{claim?.country?.name || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Región</span>
+ <span className="app-data-label">Región Siniestro</span>
  <p className="font-medium">{claim?.region?.name || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Ciudad</span>
+ <span className="app-data-label">Ciudad Siniestro</span>
  <p className="font-medium">{claim?.city?.name || "—"}</p>
  </div>
  <div>
- <span className="app-data-label">Comuna</span>
+ <span className="app-data-label">Comuna Siniestro</span>
  <p className="font-medium">{claim?.commune?.name || "—"}</p>
  </div>
  </div>
  </div>
 
  {/* Datos de la Coordinación — anexos capturados al agendar (CIN) */}
- <div className="app-panel">
- <h3 className="app-section-title">
+ <div className="app-panel py-3 px-4">
+ <h3 className="app-section-title mb-2">
  Datos de la Coordinación
  </h3>
- <div className="grid grid-cols-3 gap-x-4 gap-y-2 app-body">
+ <div className="grid grid-cols-2 gap-x-4 gap-y-1 app-body">
+ <div className="grid grid-cols-2 gap-x-4 gap-y-1">
  <div>
- <span className="app-data-label">Tipo de Inspección</span>
- <p className="font-medium">{session.inspection_type === "remote" ? "Remota" : session.inspection_type === "onsite" ? "Presencial" : "—"}</p>
- </div>
- <div>
- <span className="app-data-label">Fecha Agendada</span>
+ <span className="app-data-label">Fecha Coordinación</span>
  <p className="font-medium">{session.scheduled_at ? formatDateTime(session.scheduled_at) : "—"}</p>
  </div>
  <div>
  <span className="app-data-label">Inspector</span>
- <p className="font-medium">{userName(session.inspector_id) || "—"}</p>
+ <p className="font-medium flex items-center gap-1"><User className="h-3 w-3 text-muted-foreground shrink-0" />{userName(session.inspector_id) || "—"}</p>
  </div>
- {coordAclaracionDireccion && (
+ </div>
  <div>
  <span className="app-data-label">Aclaración Dirección</span>
- <p className="font-medium whitespace-pre-wrap">{coordAclaracionDireccion}</p>
- </div>
- )}
- {coordOtrosContactos && (
- <div>
- <span className="app-data-label">Otros Contactos</span>
- <p className="font-medium whitespace-pre-wrap">{coordOtrosContactos}</p>
- </div>
- )}
- {coordComentarios && (
- <div>
- <span className="app-data-label">Comentarios</span>
- <p className="font-medium whitespace-pre-wrap">{coordComentarios}</p>
- </div>
- )}
- {session.inspector_observations && (
- <div className="col-span-3">
- <span className="app-data-label">Observaciones del Inspector</span>
- <p className="font-medium whitespace-pre-wrap mt-0.5">{session.inspector_observations}</p>
- </div>
+ <div className="flex items-start justify-between gap-2">
+ <p className="font-medium whitespace-pre-wrap flex-1">{coordAclaracionDireccion || "—"}</p>
+ {claim?.claim_latitude != null && claim?.claim_longitude != null && (
+ <Button
+ size="sm"
+ variant="outline"
+ className="h-7 w-7 p-0 shrink-0"
+ title="Ver ubicación en el mapa"
+ onClick={() => setMapViewOpen(true)}
+ >
+ <MapPin className="h-3.5 w-3.5 text-primary" />
+ </Button>
  )}
  </div>
  </div>
+ </div>
+ </div>
+
+ {/* Magic link */}
+ {session.inspection_type === "remote" && session.magic_link_token && (
+ <div className="app-panel">
+ <h3 className="app-section-title">
+ Magic Link
+ </h3>
+ <MagicLinkSender
+ token={session.magic_link_token}
+ sessionId={session.id}
+ scheduledAt={session.scheduled_at}
+ expiresAt={session.magic_link_expires_at}
+ magicLinkExtended={session.magic_link_extended}
+ contactName={session.interviewed_name || contactParticipant?.full_name}
+ contactEmail={session.interviewed_email || contactParticipant?.email}
+ contactPhone={contactParticipant?.cell_phone || contactParticipant?.phone || insuredParticipant?.cell_phone || insuredParticipant?.phone}
+ />
+ </div>
+ )}
 
  {/* Aviso: capturar geo antes de iniciar (presencial) */}
  {session.inspection_type === "onsite" && session.status === "scheduled" &&
  (!session.geo_status || session.geo_status === "pending" || session.geo_status === "failed") && (
- <div className="app-panel border-amber-500/30 bg-amber-500/5">
+ <div className="app-panel xl:col-span-2 border-amber-500/30 bg-amber-500/5">
  <div className="flex items-center gap-2">
  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
  <p className="app-body text-amber-700 dark:text-amber-400">
@@ -707,13 +679,15 @@ export default function InspectionDetailPage() {
  </div>
  )}
 
- {/* Estado de la Sesion + Acciones */}
- <div className="app-panel">
- <h3 className="app-section-title">
+ {/* Estado de la Sesion + Resultado */}
+ <div className="app-panel py-3 px-4">
+ <h3 className="app-section-title mb-2">
  Estado de la Sesion
  </h3>
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+ {/* 1/2: estado + fechas + acciones */}
  <div className="flex items-start gap-4">
- <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-2 app-body flex-1 min-w-0">
+ <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-1 app-body flex-1 min-w-0">
  <div>
  <span className="app-data-label">Estado</span>
  <p>
@@ -736,12 +710,14 @@ export default function InspectionDetailPage() {
  </div>
  </div>
 
- {/* Botones de acción horizontales (solo si está scheduled) */}
- {session.status === "scheduled" && (
+ {/* Botones de acción horizontales (scheduled o active) */}
+ {(session.status === "scheduled" || session.status === "active") && (
  <div className="flex flex-row items-start gap-1.5 shrink-0">
+ {session.status === "scheduled" && (
  <Button
  size="sm"
- className="pg-btn-platinum h-7 w-7 p-0"
+ variant="outline"
+ className="h-7 w-7 p-0"
  title={
  session.inspection_type === "onsite" && (!session.geo_status || session.geo_status === "pending" || session.geo_status === "failed")
  ? "Primero debes capturar tu geolocalización en el lugar"
@@ -768,16 +744,21 @@ export default function InspectionDetailPage() {
  >
  <Play className="h-3.5 w-3.5" />
  </Button>
+ )}
  <Button
  size="sm"
  variant="outline"
- className="pg-btn-platinum h-7 w-7 p-0"
+ className="h-7 w-7 p-0"
  title="Reagendar (genera CIN de re-coordinación)"
  onClick={() => {
+ // Priorizar el inspector de la sesión, luego el del siniestro
+ const sessionInspectorId = session?.inspector_id as string | undefined;
  const claimData = session?.claim as Record<string, unknown> | undefined;
- if (claimData?.inspector_id) {
- setRescheduleInspectorId(claimData.inspector_id as string);
- }
+ const claimInspectorId = claimData?.inspector_id as string | undefined;
+ const initialInspector = sessionInspectorId || claimInspectorId || "";
+ setRescheduleInspectorId(initialInspector);
+ // Cargar tipo de inspección de la sesión actual
+ setRescheduleType((session?.inspection_type as "onsite" | "remote") || "onsite");
  setRescheduleModalOpen(true);
  }}
  >
@@ -786,12 +767,50 @@ export default function InspectionDetailPage() {
  <Button
  size="sm"
  variant="outline"
- className="pg-btn-platinum h-7 w-7 p-0"
+ className="h-7 w-7 p-0"
  title="Cancelar (genera CIN desistida, INS rechazada)"
  onClick={() => setCancelModalOpen(true)}
  >
  <XCircle className="h-3.5 w-3.5" />
  </Button>
+ </div>
+ )}
+ </div>
+
+ {/* 1/2: resultado de la inspección (solo si hay un resultado) */}
+ {(session.status === "cancelled" || session.status === "completed") && (
+ <div className={`rounded-lg p-3 border ${session.status === "cancelled" ? "border-rose-500/20 bg-rose-500/5" : "border-violet-500/20 bg-violet-500/5"}`}>
+ <div className="flex items-start gap-2">
+ {session.status === "cancelled" ? (
+ <XCircle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+ ) : (
+ <CheckCircle2 className="h-4 w-4 text-violet-500 shrink-0 mt-0.5" />
+ )}
+ <div className="flex-1 min-w-0">
+ <p className={`app-body font-semibold ${session.status === "cancelled" ? "text-rose-700 dark:text-rose-300" : "text-violet-700 dark:text-violet-300"}`}>
+ {session.status === "cancelled" ? "Inspección Cancelada" : "Inspección Completada"}
+ </p>
+ {session.status === "cancelled" ? (
+ <div className="mt-1">
+ <p className="app-body text-muted-foreground">
+ {allCancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || "Motivo no registrado"}
+ {session.cancellation_notes && (
+ <>. &ldquo;{session.cancellation_notes}&rdquo;</>
+ )}
+ {session.cancelled_at && (
+ <> - Cancelada el {new Date(session.cancelled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</>
+ )}
+ </p>
+ </div>
+ ) : (
+ session.ended_at && (
+ <p className="app-body text-muted-foreground mt-1">
+ Finalizada el {new Date(session.ended_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+ </p>
+ )
+ )}
+ </div>
+ </div>
  </div>
  )}
  </div>
@@ -825,25 +844,6 @@ export default function InspectionDetailPage() {
  });
  }}
  />
- )}
-
- {/* Magic link */}
- {session.inspection_type === "remote" && session.magic_link_token && (
- <div className="app-panel">
- <h3 className="app-section-title">
- Magic Link
- </h3>
- <MagicLinkSender
- token={session.magic_link_token}
- sessionId={session.id}
- scheduledAt={session.scheduled_at}
- expiresAt={session.magic_link_expires_at}
- magicLinkExtended={session.magic_link_extended}
- contactName={session.interviewed_name || contactParticipant?.full_name}
- contactEmail={session.interviewed_email || contactParticipant?.email}
- contactPhone={contactParticipant?.cell_phone || contactParticipant?.phone || insuredParticipant?.cell_phone || insuredParticipant?.phone}
- />
- </div>
  )}
  </div>
  )}
@@ -907,7 +907,7 @@ export default function InspectionDetailPage() {
  {session.status === "scheduled" ? (
  <NotStartedNotice />
  ) : (
- <SignaturesTab sessionId={session.id} sessionStatus={session.status} magicLinkToken={session.magic_link_token || undefined} />
+ <SignaturesTab sessionId={session.id} sessionStatus={session.status} magicLinkToken={session.magic_link_token || undefined} inspectionType={session.inspection_type} />
  )}
  </div>
  )}
@@ -917,6 +917,7 @@ export default function InspectionDetailPage() {
  <div className="mt-4">
  <ReportTab
  session={session}
+ profile={profile}
  claimNumber={claim?.claim_number ?? undefined}
  claimLiquidationNumber={claim?.liquidation_number ?? undefined}
  claimAddress={claim?.claim_address ?? undefined}
@@ -1011,9 +1012,48 @@ export default function InspectionDetailPage() {
  )}
  </div>
 
+ {/* Modal: mapa del siniestro (solo lectura) — liquid glass */}
+ {mapViewOpen && claim?.claim_latitude != null && claim?.claim_longitude != null && (
+ <Dialog open={mapViewOpen} onOpenChange={setMapViewOpen}>
+ <DialogContent className="max-w-5xl p-0 overflow-hidden ring-1 ring-violet-500/20 shadow-2xl shadow-violet-500/10" showCloseButton>
+ <div className="modal-header px-5 pt-4 pb-3 border-b border-border/40">
+ <div className="flex items-center gap-2">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 ring-1 ring-violet-500/20">
+ <MapPin className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+ </div>
+ <div className="flex-1 min-w-0">
+ <DialogTitle className="app-section-title mb-0">Ubicación del Siniestro</DialogTitle>
+ <DialogDescription className="modal-subtitle truncate">
+ {claim?.claim_address || "Ubicación confirmada"}
+ </DialogDescription>
+ </div>
+ <div className="flex flex-col items-end gap-0.5 shrink-0">
+ <span className="text-[10px] font-mono text-muted-foreground">Lat {Number(claim.claim_latitude).toFixed(6)}</span>
+ <span className="text-[10px] font-mono text-muted-foreground">Lng {Number(claim.claim_longitude).toFixed(6)}</span>
+ </div>
+ </div>
+ </div>
+ <div className="h-125 relative">
+ <MapContainer
+ center={[claim.claim_latitude, claim.claim_longitude]}
+ zoom={16}
+ style={{ height: "100%", width: "100%" }}
+ scrollWheelZoom={false}
+ >
+ <TileLayer
+ url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+ attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+ />
+ <Marker position={[claim.claim_latitude, claim.claim_longitude]} />
+ </MapContainer>
+ </div>
+ </DialogContent>
+ </Dialog>
+ )}
+
  {/* Modal de Cancelación */}
- <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
- <DialogContent className="modal-content max-w-[480px]">
+ <Dialog open={cancelModalOpen} onOpenChange={(open) => { if (!open && cancelMutation.isPending) return; setCancelModalOpen(open); }}>
+ <DialogContent className="modal-content max-w-[480px]" showCloseButton={!cancelMutation.isPending}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2">
  <XCircle className="h-4 w-4 text-rose-500" />
@@ -1026,7 +1066,7 @@ export default function InspectionDetailPage() {
  <div className="modal-body space-y-2">
  <div className="modal-field">
  <Label className="app-field-label">Motivo de cancelación *</Label>
- <Select value={cancelReasonId || null} onValueChange={(v) => setCancelReasonId(v ?? "")}>
+ <Select disabled={cancelMutation.isPending} value={cancelReasonId || null} onValueChange={(v) => setCancelReasonId(v ?? "")}>
  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar motivo..." /></SelectTrigger>
  <SelectContent>
  {desistidaReasons?.map((r) => (
@@ -1038,6 +1078,7 @@ export default function InspectionDetailPage() {
  <div className="modal-field">
  <Label className="app-field-label">Notas adicionales</Label>
  <textarea
+ disabled={cancelMutation.isPending}
  value={cancelNotes}
  onChange={(e) => setCancelNotes(e.target.value)}
  rows={3}
@@ -1047,7 +1088,7 @@ export default function InspectionDetailPage() {
  </div>
  </div>
  <div className="modal-footer">
- <Button variant="outline" size="sm" onClick={() => setCancelModalOpen(false)} className="pg-btn-platinum">
+ <Button variant="outline" size="sm" disabled={cancelMutation.isPending} onClick={() => setCancelModalOpen(false)} className="pg-btn-platinum">
  Cerrar
  </Button>
  <Button
@@ -1062,14 +1103,14 @@ export default function InspectionDetailPage() {
  })}
  className="pg-btn-platinum"
  >
- Cancelar
+ {cancelMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Cancelando...</> : "Cancelar"}
  </Button>
  </div>
  </DialogContent>
  </Dialog>
 
  {/* Modal de Reagendamiento */}
- <Dialog open={rescheduleModalOpen} onOpenChange={setRescheduleModalOpen}>
+ <Dialog open={rescheduleModalOpen} onOpenChange={(open) => { if (!open && rescheduleMutation.isPending) return; setRescheduleModalOpen(open); }}>
  <DialogContent className="modal-lg" showCloseButton={false}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2">
@@ -1081,17 +1122,17 @@ export default function InspectionDetailPage() {
  </DialogDescription>
  </div>
  <div className="modal-body space-y-2">
- <div className="modal-grid-3">
+ <div className="modal-grid-2">
  <div className="modal-field">
  <Label className="app-field-label">Inspector *</Label>
- <Select value={rescheduleInspectorId || null} onValueChange={(v) => setRescheduleInspectorId(v ?? "")}>
+ <Select disabled={rescheduleMutation.isPending} value={rescheduleInspectorId || null} onValueChange={(v) => setRescheduleInspectorId(v ?? "")}>
  <SelectTrigger className="app-input">
  <SelectValue placeholder="Seleccionar...">
- {inspectors.find((i) => i.id === rescheduleInspectorId)?.full_name || inspectors.find((i) => i.id === rescheduleInspectorId)?.email || "Seleccionar..."}
+ {allInspectors.find((i) => i.id === rescheduleInspectorId)?.full_name || allInspectors.find((i) => i.id === rescheduleInspectorId)?.email || "Seleccionar..."}
  </SelectValue>
  </SelectTrigger>
  <SelectContent>
- {inspectors.map((i) => (
+ {allInspectors.map((i) => (
  <SelectItem key={i.id} value={i.id}>{i.full_name || i.email}</SelectItem>
  ))}
  </SelectContent>
@@ -1099,82 +1140,37 @@ export default function InspectionDetailPage() {
  </div>
  <div className="modal-field">
  <Label className="app-field-label">Tipo *</Label>
- <Select value={rescheduleType} onValueChange={(v) => setRescheduleType(v as "onsite" | "remote")}>
+ <Select disabled={rescheduleMutation.isPending} value={rescheduleType} onValueChange={(v) => setRescheduleType(v as "onsite" | "remote")}>
  <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
  <SelectContent>
- <SelectItem value="onsite">Presencial (2h)</SelectItem>
+ <SelectItem value="onsite">Presencial (3h)</SelectItem>
  <SelectItem value="remote">Remota (30min)</SelectItem>
  </SelectContent>
  </Select>
  </div>
- <div className="modal-field">
- <Label className="app-field-label">Fecha *</Label>
- <DatePicker
- value={rescheduleDate}
- onChange={(value) => { setRescheduleDate(value); setRescheduleTime(""); }}
- className="w-[130px]"
- />
- </div>
  </div>
 
- {/* Disponibilidad del inspector */}
- {rescheduleInspectorId && rescheduleDate ? (
- <div>
- <div className="flex items-center justify-between mb-2">
+ {/* Disponibilidad del inspector — mismo formato que coordinación */}
+ <div className="modal-field">
  <Label className="app-field-label flex items-center gap-1.5">
  <CalendarClock className="h-3.5 w-3.5" />
- Disponibilidad
+ Fecha y hora *
  </Label>
- <span className="app-body text-muted-foreground">
- {rescheduleType === "onsite" ? "Bloques de 2h" : "Bloques de 30min"} · Normal 9-18 · Extra 6-9 / 18-22
- </span>
+ <CoordScheduler
+ inspectorId={rescheduleInspectorId}
+ inspectionType={rescheduleType}
+ value={rescheduleSelectedDatetime || undefined}
+ onChange={(iso) => setRescheduleSelectedDatetime(iso)}
+ readOnly={rescheduleMutation.isPending}
+ daysToIssue={2}
+ maxDate={rescheduleMaxDate}
+ excludeSessionId={session?.id}
+ />
  </div>
- {rescheduleScheduleLoading ? (
- <div className="flex items-center justify-center py-4">
- <Clock className="h-4 w-4 animate-spin text-muted-foreground" />
- <span className="ml-2 app-body text-muted-foreground">Cargando...</span>
- </div>
- ) : rescheduleSlots.length === 0 ? (
- <p className="app-body text-muted-foreground text-center py-4">Sin horarios disponibles.</p>
- ) : (
- <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[160px] overflow-y-auto p-1">
- {rescheduleSlots.map((slot) => (
- <button
- key={slot.time}
- type="button"
- disabled={!slot.available}
- title={slot.bookedInfo ? `Ocupado: ${slot.bookedInfo}` : slot.extra ? "Extra horario" : "Disponible"}
- onClick={() => setRescheduleTime(slot.time)}
- className={`rounded-lg border px-3 py-2 app-body font-medium transition-all text-center ${
- !slot.available
- ? "border-rose-500/20 bg-rose-500/5 text-rose-400 cursor-not-allowed line-through"
- : rescheduleTime === slot.time
- ? slot.extra
- ? "border-amber-500 bg-amber-500 text-white shadow-sm"
- : "border-primary bg-primary text-primary-foreground shadow-sm"
- : slot.extra
- ? "border-amber-500/30 bg-amber-500/5 text-amber-600 dark:text-amber-400 hover:border-amber-500/60 hover:bg-amber-500/10 cursor-pointer"
- : "border-border bg-card hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
- }`}
- >
- {slot.label}
- {slot.extra && slot.available && (
- <span className="block app-body font-normal text-amber-500/70 truncate mt-0.5">extra</span>
- )}
- </button>
- ))}
- </div>
- )}
- </div>
- ) : (
- <div className="rounded-lg border border-dashed border-border p-4 text-center app-body text-muted-foreground">
- Selecciona inspector y fecha para ver la disponibilidad.
- </div>
- )}
 
  <div className="modal-field">
  <Label className="app-field-label">Motivo de reagendamiento *</Label>
- <Select value={cancelReasonId || null} onValueChange={(v) => setCancelReasonId(v ?? "")}>
+ <Select disabled={rescheduleMutation.isPending} value={cancelReasonId || null} onValueChange={(v) => setCancelReasonId(v ?? "")}>
  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar motivo..." /></SelectTrigger>
  <SelectContent>
  {fallidaReasons?.map((r) => (
@@ -1186,6 +1182,7 @@ export default function InspectionDetailPage() {
  <div className="modal-field">
  <Label className="app-field-label">Notas</Label>
  <textarea
+ disabled={rescheduleMutation.isPending}
  value={cancelNotes}
  onChange={(e) => setCancelNotes(e.target.value)}
  rows={2}
@@ -1195,55 +1192,29 @@ export default function InspectionDetailPage() {
  </div>
  </div>
  <div className="modal-footer">
- <Button variant="outline" size="sm" onClick={() => setRescheduleModalOpen(false)} className="pg-btn-platinum">
+ <Button variant="outline" size="sm" disabled={rescheduleMutation.isPending} onClick={() => setRescheduleModalOpen(false)} className="pg-btn-platinum">
  Cerrar
  </Button>
  <Button
  size="sm"
- disabled={!cancelReasonId || !rescheduleDate || !rescheduleTime || !rescheduleInspectorId || rescheduleMutation.isPending}
+ disabled={!cancelReasonId || !rescheduleSelectedDatetime || !rescheduleInspectorId || rescheduleMutation.isPending}
  onClick={() => {
- const scheduledAt = new Date(`${rescheduleDate}T${rescheduleTime}:00`).toISOString();
  rescheduleMutation.mutate({
  currentId: session.id,
  claimId: session.claim_id,
  insActionId: session.claim_action_id,
  reasonId: cancelReasonId,
  notes: cancelNotes || undefined,
- newOptions: { inspectionType: rescheduleType, scheduledAt, inspectorId: rescheduleInspectorId || undefined },
+ newOptions: { inspectionType: rescheduleType, scheduledAt: rescheduleSelectedDatetime, inspectorId: rescheduleInspectorId || undefined },
  });
  }}
  className="pg-btn-platinum"
  >
- Reagendar
+ {rescheduleMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Reagendando...</> : "Reagendar"}
  </Button>
  </div>
  </DialogContent>
  </Dialog>
-
- {/* Info de cancelación si aplica */}
- {session.status === "cancelled" && session.cancelled_at && (
- <div className="app-panel border-rose-500/20 bg-rose-500/5">
- <div className="flex items-start gap-3">
- <XCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" />
- <div className="flex-1">
- <h3 className="app-title text-rose-700 dark:text-rose-300">
- Inspección Cancelada
- </h3>
- <p className="app-body text-muted-foreground mt-1">
- {allCancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || "Motivo no registrado"}
- </p>
- {session.cancellation_notes && (
- <p className="app-body text-muted-foreground mt-1 italic">
- &ldquo;{session.cancellation_notes}&rdquo;
- </p>
- )}
- <p className="app-body text-muted-foreground mt-2">
- Cancelada el {new Date(session.cancelled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
- </p>
- </div>
- </div>
- </div>
- )}
  </div>
  );
 }

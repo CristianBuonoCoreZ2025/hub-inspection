@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDamages, createDamage, updateDamage, deleteDamage, getThirdParties, getEvidences } from "@/services/inspections";
-import { getDamageSpaces, getContentGoodTypes, getCountryCurrencies, getDamageClassifications } from "@/services/catalogs";
+import { getDamageSpaces, getContentGoodTypes, getContentGoodProducts, getBrandsByTypeId, getCountryCurrencies, getDamageClassifications } from "@/services/catalogs";
+import { ProductSearch, type ProductSearchItem } from "@/components/ui/product-search";
 import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
 import { toast } from "sonner";
-import { Trash2, Pencil, Building2, Package, Lock } from "lucide-react";
+import { Trash2, Pencil, Building2, Package, Lock, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
  Select,
@@ -16,6 +17,7 @@ import {
  SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { amountInWords } from "@/lib/amount-words";
 import type { InspectionDamage } from "@/types";
 
@@ -70,6 +72,8 @@ interface DamageForm {
  damage_type: DamageType;
  product: string;
  brand_model: string;
+ product_id: string;
+ brand_id: string;
  purchase_date: string;
  estimated_amount: number;
  currency: string;
@@ -98,6 +102,8 @@ function emptyForm(sessionId: string, type: DamageType): DamageForm {
  damage_type: type,
  product: "",
  brand_model: "",
+ product_id: "",
+ brand_id: "",
  purchase_date: "",
  estimated_amount: 0,
  currency: "CLP",
@@ -136,6 +142,8 @@ function damageToForm(d: InspectionDamage): DamageForm {
  damage_type: d.damage_type === "content" ? "content" : "building",
  product: d.product ?? "",
  brand_model: d.brand_model ?? "",
+ product_id: d.product_id ?? "",
+ brand_id: d.brand_id ?? "",
  purchase_date: d.purchase_date ?? "",
  estimated_amount: d.estimated_amount ?? 0,
  currency: d.currency ?? "CLP",
@@ -269,6 +277,21 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  const { data: goodTypes = [] } = useQuery({
  queryKey: ["content-good-types"],
  queryFn: getContentGoodTypes,
+ staleTime: 1000 * 60 * 30,
+ });
+
+ // Todos los productos (con su tipo) para el buscador inteligente
+ const { data: allProducts = [] } = useQuery({
+ queryKey: ["content-good-products"],
+ queryFn: getContentGoodProducts,
+ staleTime: 1000 * 60 * 30,
+ });
+
+ // Marcas válidas para el tipo de bien seleccionado (vía matriz N:M)
+ const { data: brandsByType = [] } = useQuery({
+ queryKey: ["brands-by-type", form.content_good_type_id],
+ queryFn: () => getBrandsByTypeId(form.content_good_type_id),
+ enabled: !!form.content_good_type_id,
  staleTime: 1000 * 60 * 30,
  });
 
@@ -446,6 +469,8 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  quantity: form.quantity || null,
  product: form.product || null,
  brand_model: form.brand_model || null,
+ product_id: form.product_id || null,
+ brand_id: form.brand_id || null,
  purchase_date: form.purchase_date || null,
  estimated_amount: form.estimated_amount || null,
  currency: form.currency || "CLP",
@@ -784,136 +809,162 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  ) : (
  /* ── FORMULARIO CONTENIDO ── */
- <div className="modal-grid-3" key="content-form">
+ <div className='modal-grid-4' key='content-form'>
  <div className="modal-field">
- <label className="app-field-label">Tipo de Bien</label>
- <Select
- value={form.content_good_type_id || ""}
- items={goodTypes.map((g) => ({ value: g.id, label: g.name }))}
- onValueChange={(v) => {
- const gt = goodTypes.find((g) => g.id === v);
+ <div className='flex items-center gap-1'>
+ <label className='app-field-label'>Buscar producto</label>
+ <Popover>
+ <PopoverTrigger
+ render={
+ <button type='button' className='p-0 h-auto bg-transparent border-0 cursor-pointer'>
+ <Info className='h-3.5 w-3.5 text-muted-foreground' />
+ </button>
+ }
+ />
+ <PopoverContent className='p-2 w-64'>
+ <div className='space-y-1 text-[11px]'>
+ <p><span className='font-semibold'>Tipo de Bien:</span> {selectedGoodType?.name || 'No seleccionado'}</p>
+ <p><span className='font-semibold'>Producto:</span> {form.product || 'No se ha seleccionado producto'}</p>
+ </div>
+ </PopoverContent>
+ </Popover>
+ </div>
+ <ProductSearch
+ products={allProducts as ProductSearchItem[]}
+ selectedProductId={form.product_id || undefined}
+ selectedLabel={form.product || undefined}
+ onSelect={(p) => {
+ const gt = goodTypes.find((g) => g.id === p.content_good_type_id);
  setForm({
  ...form,
- content_good_type_id: v || "",
+ content_good_type_id: p.content_good_type_id,
+ product_id: p.id,
+ product: p.name,
  category: gt?.name || form.category,
  description: gt?.requires_detail ? form.description : "",
+ // Reset marca al cambiar producto
+ brand_id: "",
+ brand_model: "",
+ });
+ }}
+ onClear={() => {
+ setForm({
+ ...form,
+ content_good_type_id: "",
+ product_id: "",
+ product: "",
+ brand_id: "",
+ brand_model: "",
+ });
+ }}
+ autoFocus
+ />
+ </div>
+ <div className='modal-field row-span-2 flex flex-col'>
+ <label className='app-field-label'>Aclaratoria</label>
+ <textarea
+ value={form.description || ''}
+ onChange={(e) => setForm({ ...form, description: e.target.value })}
+ placeholder={requiresDetail || form.product === 'Otros' ? 'Especificar producto / detalle...' : 'No requiere aclaratoria'}
+ disabled={!requiresDetail && form.product !== 'Otros'}
+ className={'app-input w-full flex-1 min-h-28 resize-none ' + (requiresDetail && !form.description?.trim() ? 'app-input-required' : '')}
+ />
+ </div>
+ <div className='modal-field'>
+ <label className='app-field-label'>Marca</label>
+ <Select
+ value={form.brand_id || "__none"}
+ onValueChange={(v) => {
+ const brand = brandsByType.find((b) => b.id === v);
+ setForm({
+ ...form,
+ brand_id: v === "__none" ? "" : (v ?? ""),
+ brand_model: brand?.name || "",
  });
  }}
  >
  <SelectTrigger className="app-input w-full">
- <SelectValue>{form.content_good_type_id ? goodTypeName(form.content_good_type_id) : "Seleccionar..."}</SelectValue>
+ <SelectValue>{form.brand_id ? (brandsByType.find((b) => b.id === form.brand_id)?.name || "Seleccionar...") : (form.content_good_type_id ? "Seleccionar..." : "Seleccione tipo de bien...")}</SelectValue>
  </SelectTrigger>
  <SelectContent>
- {goodTypes.map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+ <SelectItem value="__none">Sin selección</SelectItem>
+ {brandsByType.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
  </SelectContent>
  </Select>
  </div>
- <div className="modal-field">
- <label className="app-field-label">Producto</label>
- <input
- value={form.product}
- onChange={(e) => setForm({ ...form, product: e.target.value })}
- placeholder="Ej. Televisor Samsung 55"
- className="app-input w-full"
- />
- </div>
- <div className="modal-field">
- <label className="app-field-label">Marca / Modelo</label>
- <input
- value={form.brand_model}
- onChange={(e) => setForm({ ...form, brand_model: e.target.value })}
- placeholder="Ej. UN55AU8000"
- className="app-input w-full"
- />
- </div>
- <div className="modal-field">
- <label className="app-field-label">Clasificación del Daño</label>
+ <div className='modal-field'>
+ <label className='app-field-label'>Espacio (opcional)</label>
  <Select
- value={form.severity || "low"}
- items={severityOptions}
- onValueChange={(v) => setForm({ ...form, severity: (v || "low") as InspectionDamage["severity"] })}
- >
- <SelectTrigger className="app-input w-full">
- <SelectValue>{severityLabelMap[form.severity] || "Seleccionar..."}</SelectValue>
- </SelectTrigger>
- <SelectContent>
- {severityOptions.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
- </SelectContent>
- </Select>
- </div>
- <div className="modal-field">
- <label className="app-field-label">Cantidad</label>
- <input
- type="number"
- value={form.quantity}
- onChange={(e) => setForm({ ...form, quantity: parseQuantity(e.target.value) })}
- placeholder="1"
- className="app-input w-full"
- />
- </div>
- <div className="modal-field">
- <label className="app-field-label">Fecha Compra</label>
- <DatePicker
- value={form.purchase_date}
- onChange={(value) => setForm({ ...form, purchase_date: value || "" })}
- className="w-[130px]"
- />
- </div>
- <div className="modal-field modal-field-full">
- <label className="app-field-label">Descripción / Detalle del daño</label>
- <input
- value={form.description}
- onChange={(e) => setForm({ ...form, description: e.target.value })}
- placeholder={requiresDetail ? "Especificar (requerido por el Tipo de Bien)..." : "Ej. Pantalla rota por impacto, quemado total..."}
- className={`app-input w-full ${requiresDetail && !form.description?.trim() ? "app-input-required" : ""}`}
- />
- </div>
- <div className="modal-field modal-field-full">
- <label className="app-field-label">Observaciones</label>
- <input
- value={form.observations}
- onChange={(e) => setForm({ ...form, observations: e.target.value })}
- placeholder="Observaciones adicionales..."
- className="app-input w-full"
- />
- </div>
- <div className="modal-field">
- <label className="app-field-label">Espacio (opcional)</label>
- <Select
- value={form.space_id || ""}
+ value={form.space_id || ''}
  items={filteredSpaces.map((s) => ({ value: s.id, label: s.name }))}
- onValueChange={(v) => setForm({ ...form, space_id: v || "" })}
+ onValueChange={(v) => setForm({ ...form, space_id: v || '' })}
  >
- <SelectTrigger className="app-input w-full" disabled={!propertyClassification}>
- <SelectValue>{propertyClassification ? (form.space_id ? spaceName(form.space_id) : "Si se puede ubicar...") : "Selecciona clasificación del inmueble..."}</SelectValue>
+ <SelectTrigger className='app-input w-full' disabled={!propertyClassification}>
+ <SelectValue>{propertyClassification ? (form.space_id ? spaceName(form.space_id) : 'Si se puede ubicar...') : 'Selecciona clasificación del inmueble...'}</SelectValue>
  </SelectTrigger>
  <SelectContent>
  {filteredSpaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
  </SelectContent>
  </Select>
  </div>
- <div className="modal-field modal-field-full">
- <label className="app-field-label">Monto Estimado</label>
- <div className="flex items-center gap-1.5">
+ <div className='modal-field'>
+ <label className='app-field-label'>Clasificación del Daño</label>
+ <Select
+ value={form.severity || 'low'}
+ items={severityOptions}
+ onValueChange={(v) => setForm({ ...form, severity: (v || 'low') as InspectionDamage['severity'] })}
+ >
+ <SelectTrigger className='app-input w-full'>
+ <SelectValue>{severityLabelMap[form.severity] || 'Seleccionar...'}</SelectValue>
+ </SelectTrigger>
+ <SelectContent>
+ {severityOptions.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+ </SelectContent>
+ </Select>
+ </div>
+ <div className='modal-field'>
+ <label className='app-field-label'>Cantidad</label>
+ <input
+ type='number'
+ value={form.quantity}
+ onChange={(e) => setForm({ ...form, quantity: parseQuantity(e.target.value) })}
+ placeholder='1'
+ className='app-input w-full'
+ />
+ </div>
+ <div className='modal-field'>
+ <label className='app-field-label'>Fecha de compra</label>
+ <DatePicker
+ value={form.purchase_date}
+ onChange={(value) => setForm({ ...form, purchase_date: value || '' })}
+ className='w-[130px]'
+ />
+ </div>
+ <div className='modal-field'>
+ <label className='app-field-label'>Moneda</label>
  <Select
  value={form.currency}
  items={currencyOptions}
- onValueChange={(v) => setForm({ ...form, currency: v || "CLP" })}
+ onValueChange={(v) => setForm({ ...form, currency: v || 'CLP' })}
  >
- <SelectTrigger className="app-input app-currency-select">
+ <SelectTrigger className='app-input app-currency-select'>
  <SelectValue />
  </SelectTrigger>
  <SelectContent>
  {currencyOptions.map((c) => <SelectItem key={c.value} value={c.value}>{c.value}</SelectItem>)}
  </SelectContent>
  </Select>
+ </div>
+ <div className='modal-field col-span-3'>
+ <label className='app-field-label'>Monto estimado</label>
+ <div className='flex items-center gap-1.5'>
  <input
- type="text"
- inputMode="decimal"
+ type='text'
+ inputMode='decimal'
  value={amountFocused ? amountRaw : formatAmount(form.estimated_amount)}
  onFocus={() => {
  setAmountFocused(true);
- setAmountRaw(String(form.estimated_amount || ""));
+ setAmountRaw(String(form.estimated_amount || ''));
  }}
  onBlur={() => setAmountFocused(false)}
  onChange={(e) => {
@@ -922,11 +973,20 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  setAmountRaw(parsed >= MAX_ESTIMATED_AMOUNT ? String(MAX_ESTIMATED_AMOUNT) : raw);
  setForm({ ...form, estimated_amount: parsed });
  }}
- placeholder="0"
- className="app-input app-amount-input font-mono"
+ placeholder='0'
+ className='app-input app-amount-input font-mono'
  />
- <p className="app-amount-words flex-1 min-w-0 self-center">{amountInWords(form.estimated_amount, form.currency)}</p>
+ <p className='app-amount-words flex-1 min-w-0 self-center'>{amountInWords(form.estimated_amount, form.currency)}</p>
  </div>
+ </div>
+ <div className='modal-field modal-field-full col-span-4'>
+ <label className='app-field-label'>Observaciones</label>
+ <input
+ value={form.observations}
+ onChange={(e) => setForm({ ...form, observations: e.target.value })}
+ placeholder='Observaciones adicionales...'
+ className='app-input w-full'
+ />
  </div>
  {affectedThirdParties.length > 0 && (
  <div className="modal-field">

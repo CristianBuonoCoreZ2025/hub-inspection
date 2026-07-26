@@ -29,7 +29,7 @@ import {
  Search, Pencil, Ban, FileSpreadsheet, Check,
  Clock, ArrowLeft, X,
  ChevronRight, FileText, Send, CheckCircle2, Settings2,
- AlertTriangle, Shield,
+ AlertTriangle, Shield, Mail,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { userTypeLabels } from "@/services/permissions";
@@ -49,6 +49,7 @@ import {
  SelectValue,
 } from "@/components/ui/select";
 import { DocumentTemplatesCard } from "./document-templates-card";
+import { EmailTemplatesCard } from "./email-templates-card";
 import { CamposPlantillaModal } from "./campos-plantilla-modal";
 
 interface FormState {
@@ -156,9 +157,16 @@ export default function GestionesPage() {
  const { data: events } = useQuery({ queryKey: ["events-list"], queryFn: getEvents });
  const { data: emailTemplates } = useQuery({
  queryKey: ["email-templates", profile?.company_id],
- queryFn: () => getEmailTemplates({ companyId: profile?.company_id || undefined, includeInactive: true }),
+ queryFn: () => getEmailTemplates({ companyId: profile?.company_id || undefined, includeInactive: true, withActions: true }),
  enabled: !!profile?.company_id,
  });
+ // Plantillas vinculadas a la gestión que se está editando (para el selector de auto-email)
+ const linkedEmailTemplates = useMemo(
+ () => (emailTemplates || []).filter((t) =>
+ (t.actions || []).some((a) => a.action_template_id === editingId)
+ ),
+ [emailTemplates, editingId]
+ );
 
  const selectedFeature = useMemo(() => features?.find(f => f.id === form.action_features_id), [features, form.action_features_id]);
  const screenFields = useMemo(() => {
@@ -748,11 +756,11 @@ export default function GestionesPage() {
  <Select
  value={form.auto_email_template_id || "__none"}
  onValueChange={(v) => setForm({ ...form, auto_email_template_id: v === "__none" || v === null ? "" : v })}
- items={(emailTemplates || []).map((t) => ({ value: t.id, label: t.name }))}
+ items={(linkedEmailTemplates || []).map((t) => ({ value: t.id, label: t.name }))}
  disabled={isFieldDisabled("auto_email_template_id")}
  >
  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar plantilla..." /></SelectTrigger>
- <SelectContent><SelectItem value="__none">Sin selección</SelectItem>{emailTemplates?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+ <SelectContent><SelectItem value="__none">Sin selección</SelectItem>{linkedEmailTemplates?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
  </Select>
  </div>
  )}
@@ -786,14 +794,18 @@ export default function GestionesPage() {
  {screenFields.map((f) => (
  <div key={f.id} className="flex items-center gap-2">
  <span className="app-body shrink-0 w-1/2 truncate" title={f.label}>{f.label || f.id}</span>
- <select
- className="app-input h-7 w-1/2 text-[12px]"
- value={form.auto_field_mapping[f.id] || ""}
- onChange={(e) => setForm({ ...form, auto_field_mapping: { ...form.auto_field_mapping, [f.id]: e.target.value } })}
- disabled={isFieldDisabled("auto_field_mapping")}
+ <Select
+ value={form.auto_field_mapping[f.id] || "__none"}
+ onValueChange={(v) => setForm({ ...form, auto_field_mapping: { ...form.auto_field_mapping, [f.id]: v === "__none" || !v ? "" : v } })}
  >
- {fieldSources.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
- </select>
+ <SelectTrigger className="app-input h-7 w-1/2 text-[12px]" disabled={isFieldDisabled("auto_field_mapping")}>
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__none">Sin asignar</SelectItem>
+ {fieldSources.filter((s) => s.value !== "").map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+ </SelectContent>
+ </Select>
  </div>
  ))}
  </div>
@@ -1009,6 +1021,24 @@ export default function GestionesPage() {
  />
  );
  })()}
+
+ {/* ═══ Card: Plantillas de E-mail ═══ */}
+ {editingId ? (
+ <EmailTemplatesCard
+ actionTemplateId={editingId}
+ businessLineId={form.line_business_id || null}
+ />
+ ) : (
+ <section className="app-panel">
+ <h3 className="app-section-title">
+ <Mail className="h-3.5 w-3.5" />
+ Plantillas De E-mail
+ </h3>
+ <div className="app-empty-state">
+ Guarda la gestión primero para vincular plantillas de e-mail.
+ </div>
+ </section>
+ )}
  </div>{/* /columna derecha */}
  </div>{/* /grid 2 columnas */}
 

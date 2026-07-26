@@ -6,7 +6,63 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+interface SelectItemData {
+  value: string
+  label: React.ReactNode
+}
+
+function isItemWithValueLabel(item: unknown): item is { value: unknown; label: React.ReactNode } {
+  return typeof item === "object" && item !== null && "value" in item && "label" in item
+}
+
+function extractSelectItems(nodes: React.ReactNode): SelectItemData[] {
+  const result: SelectItemData[] = []
+  React.Children.forEach(nodes, (child) => {
+    if (!React.isValidElement<{ value?: unknown; children?: React.ReactNode }>(child)) return
+    if (child.type === SelectItem) {
+      result.push({ value: String(child.props.value ?? ""), label: child.props.children })
+    } else if (child.props && child.props.children) {
+      result.push(...extractSelectItems(child.props.children))
+    }
+  })
+  return result
+}
+
+function Select<Value, Multiple extends boolean | undefined = false>({
+  children,
+  items: itemsProp,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const derivedItems = React.useMemo(() => extractSelectItems(children), [children])
+
+  const allItems = React.useMemo<SelectItemData[]>(() => {
+    const map = new Map<string, React.ReactNode>()
+    const add = (value: string, label: React.ReactNode) => {
+      if (!map.has(value)) map.set(value, label)
+    }
+    if (itemsProp) {
+      if (Array.isArray(itemsProp)) {
+        itemsProp.forEach((item) => {
+          if (isItemWithValueLabel(item)) {
+            add(String(item.value), item.label)
+          }
+        })
+      } else {
+        Object.entries(itemsProp as Record<string, React.ReactNode>).forEach(([value, label]) => {
+          add(value, label)
+        })
+      }
+    }
+    derivedItems.forEach((item) => add(item.value, item.label))
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }))
+  }, [itemsProp, derivedItems])
+
+  return (
+    <SelectPrimitive.Root {...props} items={allItems as SelectPrimitive.Root.Props<Value, Multiple>["items"]}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
