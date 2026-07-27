@@ -73,11 +73,6 @@ export function EmailComposeModal({
   const [activeField, setActiveField] = useState<"to" | "cc" | "bcc" | null>(null);
   const [autocompleteQuery, setAutocompleteQuery] = useState("");
 
-  const changeMode = (newMode: "template" | "manual") => {
-    setMode(newMode);
-    setSubjectOverride(null);
-    setBodyOverride(null);
-  };
   const changeTemplate = (newId: string) => {
     setSelectedTemplateId(newId);
     setSubjectOverride(null);
@@ -293,15 +288,13 @@ export function EmailComposeModal({
   };
 
   const templateItems = useMemo(
-    () => [
-      { value: "__none", label: "Seleccionar..." },
-      ...activeTemplates.map((t) => {
+    () =>
+      activeTemplates.map((t) => {
         const isDefault = (t.actions || []).some(
           (a) => a.action_template_id === action.action_template_id && a.is_default
         );
         return { value: t.id, label: `${t.name}${isDefault ? " · default" : ""}` };
       }),
-    ],
     [activeTemplates, action.action_template_id]
   );
 
@@ -382,37 +375,63 @@ export function EmailComposeModal({
           {hasTemplates && (
             <>
               <div className="w-px h-5 bg-border mx-1" />
-              <Select
-                value={effectiveTemplateId || "__none"}
-                onValueChange={(v) => {
-                  if (v === "__none" || !v) {
-                    changeMode("manual");
+              {/* Toggle Plantilla: activar/desactivar el uso de plantillas */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (effectiveMode === "template") {
+                    // Desactivar → modo manual
+                    setMode("manual");
                     setSelectedTemplateId("");
+                    setSubjectOverride(null);
+                    setBodyOverride(null);
                   } else {
+                    // Activar → modo plantilla con la default
                     setMode("template");
-                    changeTemplate(v);
+                    setSelectedTemplateId("");
+                    setSubjectOverride(null);
+                    setBodyOverride(null);
                   }
                 }}
-                items={templateItems}
+                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                  effectiveMode === "template"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={effectiveMode === "template" ? "Desactivar plantilla" : "Usar plantilla"}
               >
-                <SelectTrigger className="app-input h-7 w-50">
-                  <SelectValue placeholder="Plantilla..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">A mano</SelectItem>
-                  {activeTemplates.map((t) => {
-                    const isDefault = (t.actions || []).some(
-                      (a) => a.action_template_id === action.action_template_id && a.is_default
-                    );
-                    return (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name}
-                        {isDefault ? " · default" : ""}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+                <FileText className="h-3 w-3" />
+                Plantilla
+              </button>
+              {/* Dropdown de plantillas — solo visible cuando Plantilla está activa */}
+              {effectiveMode === "template" && (
+                <Select
+                  value={effectiveTemplateId || "__none"}
+                  onValueChange={(v) => {
+                    if (v === "__none" || !v) return;
+                    setMode("template");
+                    changeTemplate(v);
+                  }}
+                  items={templateItems}
+                >
+                  <SelectTrigger className="app-input h-7 w-50">
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeTemplates.map((t) => {
+                      const isDefault = (t.actions || []).some(
+                        (a) => a.action_template_id === action.action_template_id && a.is_default
+                      );
+                      return (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                          {isDefault ? " · default" : ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
             </>
           )}
 
