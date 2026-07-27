@@ -208,10 +208,13 @@ src/
 
 ### EmailComposeModal (compositor de correos)
 - **Archivo:** `src/components/claims/email-compose-modal.tsx`
-- **Modelo:** Outlook 365 — toolbar arriba, Para/CC/CCO/Asunto, body abajo
+- **Modelo:** Outlook 365 — Enviar en fila Para, Para/CC/CCO/Asunto, body abajo
 - **Características:**
-  - Plantillas (solo si la gestión tiene vinculadas)
-  - Autocomplete de destinatarios desde libreta de contactos del siniestro
+  - Botón Enviar al inicio de la fila Para (15% ancho)
+  - Header con info de gestión que origina el correo (código + siniestro)
+  - Plantillas via modal (link pequeño como CC/CCO, abre modal al pinchar)
+  - Botón [👥] libreta de contactos en Para/CC/BCC (popover agrupado)
+  - Autocomplete al escribir en Para/CC/BCC (filtrado por nombre/email/rol)
   - HtmlEditor WYSIWYG (bold, tablas, colores — mismo que configurador de plantillas)
   - Auditoría de plantilla (versión original vs final, migración 263)
   - Sin vista código HTML — pensado para usuario final, no informático
