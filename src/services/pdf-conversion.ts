@@ -23,7 +23,7 @@ export async function convertToPdf(buffer: Uint8Array, fileName: string): Promis
 
   if (!gotenbergUrl) {
     throw new Error(
-      "GOTENBERG_URL no está configurada. Para convertir a PDF, desplegá Gotenberg (Docker) y configurá la variable de entorno."
+      "GOTENBERG_URL no está configurada. Para convertir a PDF, despliega Gotenberg (Docker) y configura la variable de entorno."
     );
   }
 

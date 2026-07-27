@@ -78,6 +78,14 @@ Sin excepciones. Configuración, catálogos, transacciones, auditoría, todo.
 - Mantener separación clara entre Server Actions y Client Components.
 - Usar `@supabase/ssr` para autenticación en Next.js (cookies via middleware).
 
+## Convenciones de Lenguaje (OBLIGATORIO)
+- **Idioma: español neutro / internacional.** NO usar argentismos ni modismos regionales.
+- Prohibido: "che", "vos", "re", "laburo", "pibe", "bondi", "fiaca", "posta", "dale", "bárbaro", "lindo", etc.
+- Usar "tú" o tratar de usted, nunca "vos". Ej: "puedes" (no "podés"), "tienes" (no "tenés"), "haz" (no "hacé").
+- En la UI, código, comentarios, commits y comunicación con el usuario: español neutro.
+- Ejemplos correctos: "puedes", "tienes", "haz clic", "selecciona", "muestra", "configura".
+- Ejemplos incorrectos: "podés", "tenés", "hacé clic", "mostrá", "configurá", "escribí", "arrastrá", "pegá".
+
 ## Multi Tenant & Seguridad
 - Las tablas de **datos de negocio particionables por empresa** deben tener `company_id` o `tenant_id`.
   - Ejemplos que SÍ: `claims`, `companies`, `profiles`, `inspection_sessions`.
@@ -147,6 +155,27 @@ Reglas:
 - Excepción única: warnings de librerías externas incompatibles (ej: React Compiler +
   react-hook-form `watch()`) se silencian con `// eslint-disable-next-line` con comentario
   explicando por qué.
+
+## Regla de Cero Redundancia (OBLIGATORIO)
+- **NUNCA** crear tablas que dupliquen datos de otra tabla existente.
+  Si dos tablas tienen relación 1:1, los campos deben vivir en una sola tabla.
+  Caso real: `characteristic` duplicaba `action_features` 1:1 y causó confusión,
+  errores de TypeScript y código muerto. Se eliminó en migración 262.
+- **NUNCA** crear columnas que no se usen en ningún lugar del código.
+  Antes de agregar una columna, verificar que hay código que la lee/escribe.
+- **NUNCA** dejar funciones exportadas que no se importen en ningún archivo.
+  Si una función no se usa, borrarla. No acumular código muerto.
+- **NUNCA** dejar tipos/interfaces que no se usen en ningún import.
+  Si un tipo no se referencia, borrarlo.
+- **Antes de crear una tabla nueva**, preguntarse:
+  ¿Ya existe una tabla que pueda contener estos datos?
+  ¿La relación es 1:1 con otra tabla? Si es así, usar columnas en la tabla existente.
+  ¿La relación es N:M? Entonces sí crear junction table.
+- **Antes de crear una columna nueva**, preguntarse:
+  ¿Hay código que la lea? ¿Hay código que la escriba?
+  Si no hay ambos, no crearla.
+- **Scripts temporales** (investigación, debugging, verificación) deben borrarse
+  al terminar la tarea. No se commitean scripts `.cjs`/`.mts` de un solo uso.
 
 ## Notas Importantes
 - No comenzar con videollamadas, IA o PDF hasta que la base SaaS esté 100% funcional.

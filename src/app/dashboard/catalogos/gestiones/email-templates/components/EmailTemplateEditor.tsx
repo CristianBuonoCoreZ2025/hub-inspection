@@ -490,7 +490,7 @@ export function EmailTemplateEditor({ templateId }: Props) {
                 onChange={(html) => setForm({ ...form, body: html })}
                 disabled={readOnly}
                 editorRef={htmlEditorRef}
-                placeholder="Escribí el cuerpo del e-mail..."
+                placeholder="Escribe el cuerpo del e-mail..."
                 className="min-h-40"
               />
             ) : (
@@ -508,7 +508,7 @@ export function EmailTemplateEditor({ templateId }: Props) {
               />
             )}
             <p className="text-[10px] text-muted-foreground">
-              Arrastrá campos desde el panel derecho o hacé clic en ellos para insertar.
+              Arrastra campos desde el panel derecho o haz clic en ellos para insertar.
             </p>
           </div>
 

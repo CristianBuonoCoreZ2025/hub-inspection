@@ -175,7 +175,7 @@ export default function GestionesPage() {
               <div>
                 <p className="text-[13px] font-medium">Gestiones abiertas de {selectedClaim.claim_number}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Acá podés rechazar o eliminar acciones que estén en curso. Rechazar las deja registradas como rechazadas; eliminar las borra físicamente.
+                  Aquí puedes rechazar o eliminar acciones que estén en curso. Rechazar las deja registradas como rechazadas; eliminar las borra físicamente.
                 </p>
               </div>
             </div>

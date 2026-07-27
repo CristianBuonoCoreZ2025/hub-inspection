@@ -75,7 +75,7 @@ function MiComponente() {
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │  CAMPOS DE DESTINATARIO                                   │   │
-│  │  [✈ Enviar 15%] Para: [escribí nombre...] [👥] CC/CCO   │   │
+│  │  [✈ Enviar 15%] Para: [escribe nombre...] [👥] CC/CCO   │   │
 │  │                  CC:  [...]                  [👥]         │   │
 │  │                  CCO: [...]                  [👥]         │   │
 │  └──────────────────────────────────────────────────────────┘   │
@@ -102,7 +102,7 @@ function MiComponente() {
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │  MODAL DE PLANTILLAS (overlay, se abre al pinchar link)   │   │
+│  │  MODAL DE PLANTILLAS (overlay, se abre al hacer clic en el link)   │   │
 │  │  ┌────────────────────────────────────────────────────┐   │   │
 │  │  │ [📄] Seleccionar Plantilla                     [X] │   │   │
 │  │  ├────────────────────────────────────────────────────┤   │   │
@@ -145,7 +145,7 @@ Al activar el toggle Historial, se muestra un panel con los envíos anteriores:
 ## Campos de Destinatario
 
 ```
-[Enviar 15%] Para: [escribí nombre...] [�]   CC/CCO  Plantilla
+[Enviar 15%] Para: [escribe nombre...] [�]   CC/CCO  Plantilla
               CC:  [...]                      [👥]
               CCO: [...]                      [👥]
 ```
@@ -244,7 +244,7 @@ Además del botón [👥], al escribir en Para/CC/CCO aparece un dropdown con su
 
 ## Modal de Plantillas
 
-Al pinchar el link "Plantilla" se abre un modal (`modal-md`) con la lista de plantillas vinculadas a la gestión:
+Al hacer clic en el link "Plantilla" se abre un modal (`modal-md`) con la lista de plantillas vinculadas a la gestión:
 
 ```
 ┌────────────────────────────────────────────────────┐
@@ -329,17 +329,17 @@ Cuando se carga una plantilla HTML, el editor preserva todos los estilos:
 ## Modos de Composición
 
 ### Con Plantilla
-1. Usuario pincha link "Plantilla"
+1. Usuario hace clic en el link "Plantilla"
 2. Se abre el modal de plantillas
 3. Selecciona una plantilla
 4. Backend renderiza subject + body con datos del siniestro (`/api/email/preview`)
 5. Subject y body son **completamente editables**
 6. El formato (html/plain) lo define la plantilla — no cambiable
 7. Al enviar, se guarda la versión original Y la final (auditoría)
-8. Link cambia a "Quitar plantilla" — al pincharlo, desactiva la plantilla
+8. Link cambia a "Quitar plantilla" — al hacer clic, desactiva la plantilla
 
 ### Sin Plantilla (escritura libre)
-1. Link "Plantilla" no aparece (no hay plantillas) o no se pincha
+1. Link "Plantilla" no aparece (no hay plantillas) o no se usa
 2. El editor arranca en modo HTML (rich text) automáticamente
 3. El usuario escribe subject y body desde cero
 4. No hay concepto de "modo manual" — simplemente escribe
@@ -456,7 +456,7 @@ Este componente está diseñado para un **experto en liquidación de siniestros*
 - **Sin conceptos técnicos**: no hay "HTML", "texto plano", "modo manual", "vista código"
 - **Sin decisiones de formato**: el formato lo define la plantilla, o por defecto es rich text
 - **Dos formas de elegir contactos**: escribir (autocomplete) o botón [👥] (libreta completa)
-- **Plantillas como modal**: link pequeño como CC/CCO, abre modal al pinchar
+- **Plantillas como modal**: link pequeño como CC/CCO, abre modal al hacer clic
 - **Body ocupa todo**: el editor llena el espacio disponible, como Outlook/Mail
 - **Asunto integrado**: parte del correo, no un campo más — pero jerarquizado visualmente
 - **Enviar en la fila Para**: como Outlook 365, al inicio de la fila de destinatarios

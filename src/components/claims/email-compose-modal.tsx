@@ -659,7 +659,7 @@ export function EmailComposeModal({
                   value={effectiveBody || ""}
                   onChange={(html) => setBodyOverride(html)}
                   editorRef={htmlEditorRef}
-                  placeholder="Escribí el cuerpo del correo…"
+                  placeholder="Escribe el cuerpo del correo…"
                   className="flex-1 min-h-0"
                   showCodeView={false}
                 />
@@ -667,7 +667,7 @@ export function EmailComposeModal({
                 <textarea
                   value={effectiveBody}
                   onChange={(e) => setBodyOverride(e.target.value)}
-                  placeholder="Escribí el cuerpo del correo…"
+                  placeholder="Escribe el cuerpo del correo…"
                   className="flex-1 min-h-40 w-full resize-none bg-background p-4 text-sm leading-relaxed text-foreground outline-none border border-border rounded-lg overflow-y-auto"
                 />
               )}
