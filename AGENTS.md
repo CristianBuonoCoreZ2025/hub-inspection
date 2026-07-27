@@ -261,6 +261,14 @@ mismo contexto (misma pantalla, misma sección, mismo bloque):
 - **Si la liquidación NO se muestra** en el mismo contexto → mostrar código
   LARGO (completo): `L-000000141-HINS-003`
 
+**Orden de metadata (OBLIGATORIO):** Cuando se muestra metadata de un correo
+o gestión, el orden SIEMPRE es:
+1. **Liquidación** (`L-000000141`)
+2. **Gestión** (`HINS-003` o código largo según regla anterior)
+3. **email** (`EML-001` — correlativo del correo)
+
+Aplica a: headers de modales, HTML de impresión, headers de .eml.
+
 Funciones helper (en `src/app/dashboard/claims/[id]/page.tsx` y
 `src/components/claims/email-preview-modal.tsx`):
 - `shortActionCode(code)` → extrae `HINS-003` de `L-000000141-HINS-003`

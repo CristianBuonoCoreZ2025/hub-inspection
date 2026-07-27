@@ -75,8 +75,8 @@ export function EmailPreviewModal({ open, onOpenChange, log }: EmailPreviewModal
       <div style="border-bottom:1px solid #e5e7eb;padding-bottom:12px;margin-bottom:16px;">
         <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:8px;">${log.subject || "(sin asunto)"}</div>
         <table style="border-collapse:collapse;width:100%;">
-          ${log.parent_action_code ? metaRow("Gestión", shortActionCode(log.parent_action_code)) : ""}
           ${log.parent_action_code ? metaRow("Liquidación", liquidationFromCode(log.parent_action_code)) : ""}
+          ${log.parent_action_code ? metaRow("Gestión", shortActionCode(log.parent_action_code)) : ""}
           ${metaRow("email", fullCode)}
           ${metaRow("Para", log.to_address.join(", "))}
           ${metaRow("CC", log.cc_address.join(", "))}
@@ -146,8 +146,8 @@ ${bodyHtml}
       `Subject: ${log.subject}`,
       `Date: ${date.toUTCString()}`,
       `X-Correlativo: ${fullCode}`,
-      log.parent_action_code ? `X-Gestion: ${shortActionCode(log.parent_action_code)}` : "",
       log.parent_action_code ? `X-Liquidacion: ${liquidationFromCode(log.parent_action_code)}` : "",
+      log.parent_action_code ? `X-Gestion: ${shortActionCode(log.parent_action_code)}` : "",
       "MIME-Version: 1.0",
       log.body_format === "html"
         ? 'Content-Type: text/html; charset=UTF-8'
@@ -189,8 +189,13 @@ ${bodyHtml}
             </div>
             <div className="flex flex-col">
               <span className="email-header-title">{log.subject || "(sin asunto)"}</span>
+              {log.parent_action_code && (
+                <span className="email-header-meta">
+                  Liquidación {liquidationFromCode(log.parent_action_code)}
+                </span>
+              )}
               <span className="email-header-subtitle">
-                {log.parent_action_code ? `Gestión: ${log.parent_action_code}` : ""}
+                {log.parent_action_code ? `Gestión: ${shortActionCode(log.parent_action_code)}` : ""}
               </span>
               <span className="email-header-meta">email: {fullCode}</span>
             </div>
