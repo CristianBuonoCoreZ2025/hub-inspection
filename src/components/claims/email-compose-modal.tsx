@@ -609,21 +609,21 @@ export function EmailComposeModal({
                 />
               </div>
 
-              {/* Editor — ocupa todo el espacio restante */}
+              {/* Editor — mismo formato que el configurador de plantillas */}
               {effectiveFormat === "html" ? (
                 <HtmlEditor
                   value={effectiveBody || ""}
                   onChange={(html) => setBodyOverride(html)}
                   editorRef={htmlEditorRef}
                   placeholder="Escribí el cuerpo del correo…"
-                  className="flex-1 flex flex-col min-h-0 rounded-none border-0 shadow-none"
+                  className="flex-1 flex flex-col min-h-0"
                 />
               ) : (
                 <textarea
                   value={effectiveBody}
                   onChange={(e) => setBodyOverride(e.target.value)}
                   placeholder="Escribí el cuerpo del correo…"
-                  className="flex-1 w-full bg-background border-0 outline-none p-4 text-sm leading-relaxed text-foreground resize-none overflow-y-auto min-h-0"
+                  className="flex-1 min-h-40 w-full resize-none bg-background p-3 font-mono text-[11px] text-foreground outline-none border border-border rounded-lg overflow-y-auto"
                 />
               )}
             </>
