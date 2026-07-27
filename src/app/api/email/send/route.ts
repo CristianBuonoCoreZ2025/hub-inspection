@@ -223,24 +223,40 @@ export async function POST(request: NextRequest) {
     let subject: string;
     let body: string;
     let body_format: "plain" | "html";
+    // Versión original de la plantilla (para auditoría)
+    let orig_template_subject: string | null = null;
+    let orig_template_body: string | null = null;
+    let orig_template_body_format: "plain" | "html" | null = null;
+    let was_modified = false;
 
     if (template) {
       const rendered = renderEmailTemplate(template, data);
-      subject = rendered.subject;
-      body = rendered.body;
-      body_format = rendered.body_format;
-      // DEBUG TEMPORAL: ver qué se renderiza
-      console.log("[email-debug] template body_format:", body_format);
-      console.log("[email-debug] rendered subject:", subject);
-      console.log("[email-debug] rendered body (first 300):", body.substring(0, 300));
-      console.log("[email-debug] data.insured_name:", data.insured_name);
-      console.log("[email-debug] data.inspector_name:", data.inspector_name);
-      console.log("[email-debug] data.claim_cause:", data.claim_cause);
-      console.log("[email-debug] data.insurance_company:", data.insurance_company);
+      orig_template_subject = rendered.subject;
+      orig_template_body = rendered.body;
+      orig_template_body_format = rendered.body_format;
+
+      // Si el usuario envió manualSubject/manualBody, significa que editó la plantilla
+      if (manualSubject !== undefined || manualBody !== undefined) {
+        const manualTemplate = {
+          subject: manualSubject || rendered.subject,
+          body: manualBody || rendered.body,
+          body_format: manualBodyFormat || rendered.body_format,
+          placeholder_mapping: undefined as Record<string, string> | undefined,
+        };
+        const renderedManual = renderEmailTemplate(manualTemplate, data);
+        subject = renderedManual.subject;
+        body = renderedManual.body;
+        body_format = renderedManual.body_format;
+        was_modified =
+          subject !== orig_template_subject ||
+          body !== orig_template_body;
+      } else {
+        subject = rendered.subject;
+        body = rendered.body;
+        body_format = rendered.body_format;
+      }
     } else {
-      // Modo manual: el usuario escribió subject y body.
-      // Aún así, reemplazamos placeholders simples en el body manual por si el usuario
-      // los usó (ej: <magic_link>, <liquidation_number>).
+      // Modo manual puro (sin plantilla)
       const manualTemplate = {
         subject: manualSubject || "",
         body: manualBody || "",
@@ -289,6 +305,11 @@ export async function POST(request: NextRequest) {
       provider_response: result.provider_response,
       sent_by: profileId,
       parent_action_code: actionCode,
+      // Auditoría de plantilla: versión original vs final
+      template_subject: orig_template_subject,
+      template_body: orig_template_body,
+      template_body_format: orig_template_body_format,
+      was_modified: was_modified,
     }).select("id, correlativo").single();
 
     if (logError) {

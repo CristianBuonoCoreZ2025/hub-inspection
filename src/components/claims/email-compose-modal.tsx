@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useRef } from "react";
+import type { Editor } from "@tiptap/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Mail, Send, Loader2, X, History, FileText, Code2, Sparkles, ChevronDown, ChevronUp, Contact } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { HtmlEditor } from "@/components/ui/html-editor";
 import { getEmailTemplatesForAction } from "@/services/email-template-actions";
-import { wrapHtmlEmail } from "@/services/email-render";
 import { EmailContactBook } from "@/components/claims/email-contact-book";
 import { getSupabaseClient } from "@/lib/supabase/db";
 import { toast } from "sonner";
@@ -41,10 +42,23 @@ interface EmailComposeModalProps {
  *
  * El correo ES la vista previa (WYSIWYG):
  *  - Header con gestión + código
- *  - Toolbar con plantilla + modo + sugeridos
+ *  - Toolbar con plantilla + modo + contactos + historial
  *  - Metadata bar (Para / CC / CCO / Asunto) estilo Outlook
- *  - Canvas del correo (iframe contentEditable para HTML, textarea para texto plano)
+ *  - Canvas del correo:
+ *    - HTML → HtmlEditor (TipTap) con toolbar completa (bold, tablas, colores, etc.)
+ *    - Texto plano → textarea full-width
  *  - Footer con Cancelar + Enviar
+ *
+ * Modo Plantilla:
+ *  - El subject y body vienen renderizados con datos del siniestro
+ *  - Ambos son editables (el usuario puede modificar lo que quiera)
+ *  - El formato (html/plain) lo define la plantilla (no cambiable)
+ *  - Al enviar, se guarda la versión original Y la final para auditoría
+ *
+ * Modo Manual:
+ *  - El usuario escribe subject y body desde cero
+ *  - Toggle de formato: Texto plano / HTML
+ *  - En HTML tiene la misma toolbar que el editor de plantillas
  *
  * Lo que se ve es lo que se envía.
  */
@@ -65,8 +79,7 @@ export function EmailComposeModal({
   const [showHistory, setShowHistory] = useState(false);
   const [showCcBcc, setShowCcBcc] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
-  const [iframeLoaded, setIframeLoaded] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const htmlEditorRef = useRef<Editor | null>(null);
   const queryClient = useQueryClient();
 
   const changeMode = (newMode: "template" | "manual") => {
@@ -172,46 +185,10 @@ export function EmailComposeModal({
   const effectiveBody = bodyOverride ?? rendered.body;
   const effectiveFormat = mode === "manual" ? manualBodyFormat : rendered.body_format;
 
-  // HTML envuelto para el iframe (solo lectura visual, edición via contentEditable)
-  const previewHtml = useMemo(() => {
-    if (effectiveFormat !== "html") return "";
-    return wrapHtmlEmail({ body: effectiveBody || "<p><em>(cuerpo vacío)</em></p>" });
-  }, [effectiveBody, effectiveFormat]);
-
-  // ─── WYSIWYG: sincronizar edición del iframe → bodyOverride ───
-  const handleIframeEdit = useCallback(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    const doc = iframe.contentDocument;
-    if (!doc) return;
-    // Extraer solo el body del iframe (sin el wrapper de wrapHtmlEmail)
-    const bodyEl = doc.querySelector("table[role='presentation'] td[style*='padding:32px']") || doc.body;
-    const html = bodyEl.innerHTML;
-    if (html && html !== bodyOverride) {
-      setBodyOverride(html);
-    }
-  }, [bodyOverride]);
-
-  // Hacer contentEditable el body del iframe cuando carga
-  useEffect(() => {
-    if (!iframeLoaded || effectiveFormat !== "html") return;
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    const doc = iframe.contentDocument;
-    if (!doc) return;
-    // Hacer editable el td del body (no el banner ni el footer)
-    const bodyTd = doc.querySelector("table[role='presentation'] td[style*='padding:32px']") as HTMLElement | null;
-    if (bodyTd) {
-      bodyTd.contentEditable = "true";
-      bodyTd.style.outline = "none";
-      bodyTd.addEventListener("input", handleIframeEdit);
-    }
-    return () => {
-      if (bodyTd) {
-        bodyTd.removeEventListener("input", handleIframeEdit);
-      }
-    };
-  }, [iframeLoaded, effectiveFormat, handleIframeEdit]);
+  // Versión original de la plantilla (para auditoría — se envía al backend)
+  const templateOriginalSubject = mode === "template" ? rendered.subject : null;
+  const templateOriginalBody = mode === "template" ? rendered.body : null;
+  const templateOriginalFormat = mode === "template" ? rendered.body_format : null;
 
   const sendMutation = useMutation({
     mutationFn: async () => {
@@ -227,14 +204,20 @@ export function EmailComposeModal({
       };
 
       if (mode === "template" && effectiveTemplateId) {
+        // Modo plantilla: SIEMPRE pasamos emailTemplateId (incluso si editó)
+        // + la versión original renderizada para auditoría
         payload.emailTemplateId = effectiveTemplateId;
+        payload.templateSubject = templateOriginalSubject;
+        payload.templateBody = templateOriginalBody;
+        payload.templateBodyFormat = templateOriginalFormat;
+        // Si el usuario editó, pasamos también la versión final
         if (subjectOverride !== null || bodyOverride !== null) {
           payload.manualSubject = effectiveSubject;
           payload.manualBody = effectiveBody;
           payload.manualBodyFormat = effectiveFormat;
-          payload.emailTemplateId = null;
         }
       } else {
+        // Modo manual puro
         payload.manualSubject = effectiveSubject;
         payload.manualBody = effectiveBody;
         payload.manualBodyFormat = effectiveFormat;
@@ -528,19 +511,20 @@ export function EmailComposeModal({
               <Loader2 className="h-5 w-5 animate-spin" />
               <p className="text-[11px]">Generando correo…</p>
             </div>
-          ) : effectiveFormat === "html" && previewHtml ? (
+          ) : effectiveFormat === "html" ? (
+            /* HtmlEditor — misma toolbar que el editor de plantillas
+               (bold, tablas, colores, listas, alineación, fuentes, etc.) */
             <div className="app-compose-canvas">
-              <iframe
-                ref={iframeRef}
-                title="email-compose"
-                srcDoc={previewHtml}
-                className="w-full bg-white block"
-                style={{ minHeight: "50vh" }}
-                sandbox="allow-same-origin"
-                onLoad={() => setIframeLoaded(true)}
+              <HtmlEditor
+                value={effectiveBody || ""}
+                onChange={(html) => setBodyOverride(html)}
+                editorRef={htmlEditorRef}
+                placeholder="Escribí el cuerpo del correo…"
+                className="app-compose-htmleditor"
               />
             </div>
           ) : (
+            /* Texto plano — textarea full-width estilo Mac Mail */
             <div className="app-compose-canvas">
               <textarea
                 value={effectiveBody}

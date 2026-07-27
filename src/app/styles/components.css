@@ -1211,6 +1211,22 @@
     flex-shrink: 0;
   }
 
+  /* ─── HtmlEditor dentro del canvas del compose ─── */
+  .app-compose-htmleditor {
+    @apply w-full bg-white;
+    min-height: 400px;
+  }
+  .dark .app-compose-htmleditor {
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+  }
+  /* El área de contenido del editor ocupa todo el alto disponible */
+  .app-compose-htmleditor .ProseMirror {
+    @apply outline-none p-8;
+    min-height: 400px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
   /* Footer del compose */
   .app-compose-footer {
     @apply flex items-center justify-end gap-2 px-4 py-3 border-t border-border;
