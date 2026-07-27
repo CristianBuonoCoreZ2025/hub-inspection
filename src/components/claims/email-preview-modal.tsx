@@ -152,7 +152,7 @@ ${bodyHtml}
       <DialogContent className="modal-email p-0! flex flex-col" showCloseButton={false}>
 
         {/* 1. HEADER DEL MODAL (Fijo arriba) */}
-        <div className="p-4 border-b border-border bg-background flex items-start justify-between gap-3">
+        <div className="p-4 border-b border-border bg-background flex items-start justify-between gap-3 shrink-0">
           <DialogTitle className="flex items-start gap-3 m-0">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
               <Mail className="h-4 w-4" />
@@ -179,7 +179,7 @@ ${bodyHtml}
         </div>
 
         {/* Metadatos: Para, CC, CCO, Fecha */}
-        <div className="px-4 py-3 border-b border-border bg-muted/20 grid grid-cols-2 gap-x-6 gap-y-1.5 text-[11px]">
+        <div className="px-4 py-3 border-b border-border bg-muted/20 grid grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] shrink-0">
           <div className="flex items-baseline gap-2">
             <span className="text-muted-foreground font-medium min-w-10">Para</span>
             <span className="text-foreground break-all">{log.to_address.join(", ") || "—"}</span>
@@ -199,7 +199,7 @@ ${bodyHtml}
         </div>
 
         {/* 2. ÁREA DE SCROLL (Único scroll de la ventana) */}
-        <div className="flex-1 overflow-y-auto w-full">
+        <div className="flex-1 overflow-y-auto w-full min-h-0">
 
           {/* 3. EL CORREO EN SÍ (Sin cajas extra alrededor) */}
           <div className="w-full min-h-full">

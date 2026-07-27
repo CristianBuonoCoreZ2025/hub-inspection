@@ -99,7 +99,8 @@
    *  el viewport, incluso si el breakpoint le asigna más alto.
    * ════════════════════════════════════════════════════════════════ */
   .modal-email {
-    @apply flex flex-col gap-0 overflow-hidden border-0 p-0;
+    @apply flex flex-col gap-0 border-0 p-0;
+    overflow: hidden !important;
     border-radius: 18px !important;
     background: color-mix(in srgb, var(--card) 85%, transparent) !important;
     backdrop-filter: blur(20px) saturate(140%);
