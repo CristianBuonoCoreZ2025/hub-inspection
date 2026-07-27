@@ -149,7 +149,7 @@ ${bodyHtml}
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} dismissible={false}>
-      <DialogContent className="modal-xl p-0! flex flex-col" showCloseButton={false}>
+      <DialogContent className="modal-email p-0! flex flex-col" showCloseButton={false}>
 
         {/* 1. HEADER DEL MODAL (Fijo arriba) */}
         <div className="p-4 border-b border-border bg-background flex items-start justify-between gap-3">
@@ -207,8 +207,7 @@ ${bodyHtml}
               <iframe
                 title="email-body-preview"
                 srcDoc={htmlPreview}
-                className="w-full bg-white block"
-                style={{ minHeight: "60vh" }}
+                className="w-full bg-white block flex-1"
                 sandbox="allow-same-origin"
               />
             ) : (

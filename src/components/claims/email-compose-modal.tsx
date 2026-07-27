@@ -403,7 +403,7 @@ export function EmailComposeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} dismissible={false}>
-      <DialogContent className="modal-xl p-0! flex flex-col h-[92vh]" showCloseButton={false}>
+      <DialogContent className="modal-email p-0! flex flex-col" showCloseButton={false}>
 
         {/* ═══ 1. HEADER — idéntico al preview (mismo alto y dimensiones) ═══ */}
         <div className="p-4 border-b border-border bg-background flex items-start justify-between gap-3 shrink-0">
@@ -660,7 +660,7 @@ export function EmailComposeModal({
                   onChange={(html) => setBodyOverride(html)}
                   editorRef={htmlEditorRef}
                   placeholder="Escribí el cuerpo del correo…"
-                  className="flex-1 min-h-0 min-h-[50vh]"
+                  className="flex-1 min-h-0"
                   showCodeView={false}
                 />
               ) : (

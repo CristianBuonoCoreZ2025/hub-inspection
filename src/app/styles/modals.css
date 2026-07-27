@@ -84,6 +84,63 @@
     min-height: 0 !important;
   }
 
+  /* ════════════════════════════════════════════════════════════════
+   *  modal-email → dimensiones FIJAS por breakpoint
+   *  Aplica a EmailPreviewModal y EmailComposeModal
+   *
+   *  4 escenarios:
+   *    Mobile  (<640px):   100vw × 100vh  (full screen)
+   *    Tablet  (640-1023): 95vw  × 80vh
+   *    Desktop 1080p (1024-1919): 1100px × 880px
+   *    Desktop 1440p (≥1920):     1200px × 1100px
+   *
+   *  El alto y ancho NO se adaptan al contenido — siempre fijos.
+   * ════════════════════════════════════════════════════════════════ */
+  .modal-email {
+    @apply flex flex-col gap-0 overflow-hidden border-0 p-0;
+    border-radius: 18px !important;
+    background: color-mix(in srgb, var(--card) 85%, transparent) !important;
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    box-shadow: 0 26px 55px rgba(2, 12, 27, 0.25) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+
+    /* Mobile (<640px) — full screen */
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+
+    /* Tablet (640-1023px) */
+    @media (min-width: 640px) {
+      width: 95vw !important;
+      height: 80vh !important;
+      max-width: 95vw !important;
+      max-height: 80vh !important;
+      border-radius: 18px !important;
+    }
+
+    /* Desktop 1080p (1024-1919px) */
+    @media (min-width: 1024px) {
+      width: 1100px !important;
+      height: 880px !important;
+      max-width: 1100px !important;
+      max-height: 880px !important;
+    }
+
+    /* Desktop 1440p (≥1920px) */
+    @media (min-width: 1920px) {
+      width: 1200px !important;
+      height: 1100px !important;
+      max-width: 1200px !important;
+      max-height: 1100px !important;
+    }
+  }
+
   /* ═══════════════ ESTRUCTURA INTERNA (inmune) ═══════════════ */
   .modal-header {
     flex-shrink: 0 !important;
