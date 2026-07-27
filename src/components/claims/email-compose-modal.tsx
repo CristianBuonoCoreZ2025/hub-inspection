@@ -3,13 +3,14 @@
 import { useState, useMemo, useRef } from "react";
 import type { Editor } from "@tiptap/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Mail, Send, Loader2, X, History, FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { Mail, Send, Loader2, X, History, FileText, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { HtmlEditor } from "@/components/ui/html-editor";
 import { getEmailTemplatesForAction } from "@/services/email-template-actions";
 import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
@@ -40,9 +41,119 @@ interface EmailComposeModalProps {
  *  4. Toolbar de formato (Bold, tablas, colores…) — solo en HTML
  *  5. Body del correo (HtmlEditor o textarea)
  *
- * La libreta de contactos se invoca escribiendo en Para/CC/BCC:
- * al teclear un nombre, aparece un dropdown con sugerencias.
+ * La libreta de contactos se invoca de 2 formas:
+ *  - Escribiendo en Para/CC/BCC: autocomplete con sugerencias filtradas
+ *  - Botón [Users] al lado de cada campo: abre popover con la libreta completa
  */
+
+/**
+ * Botón de libreta de contactos para un campo de destinatario.
+ * Abre un popover con todos los contactos del siniestro, agrupados.
+ * Click en un contacto → lo agrega al campo correspondiente.
+ */
+function ContactBookButton({
+  contacts,
+  onPick,
+}: {
+  contacts: EmailContact[];
+  onPick: (email: string) => void;
+}) {
+  if (contacts.length === 0) return null;
+
+  // Agrupar contactos por grupo
+  const groups: Record<string, EmailContact[]> = {};
+  for (const c of contacts) {
+    const g = c.group;
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(c);
+  }
+  const groupLabels: Record<string, string> = {
+    participants: "Participantes",
+    team: "Equipo",
+    advisor: "Asesor",
+    global: "Directorio",
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            title="Abrir libreta de contactos"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+          >
+            <Users className="h-3.5 w-3.5" />
+          </button>
+        }
+      />
+      <PopoverContent align="end" sideOffset={4} className="w-80 max-h-80 overflow-auto p-0">
+        <div className="px-3 py-2 border-b border-border bg-muted/30 sticky top-0 z-10">
+          <span className="text-[11px] font-semibold text-foreground">Libreta de contactos</span>
+        </div>
+        <div className="py-1">
+          {Object.entries(groups).map(([groupKey, groupContacts]) => (
+            <div key={groupKey}>
+              <div className="px-3 py-1 bg-muted/20 sticky top-7 z-[5]">
+                <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {groupLabels[groupKey] || groupKey}
+                </span>
+              </div>
+              {groupContacts.map((contact) => {
+                const initials = (contact.fullName || contact.email)
+                  .split(" ")
+                  .map((w) => w[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase();
+                return (
+                  <button
+                    key={contact.email + (contact.fullName || "")}
+                    type="button"
+                    onClick={() => onPick(contact.email)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent transition-colors"
+                  >
+                    <div
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0"
+                      style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}
+                    >
+                      {initials}
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[11px] font-medium text-foreground truncate">
+                        {contact.fullName || contact.email}
+                      </span>
+                      {contact.fullName && (
+                        <span className="text-[10px] text-muted-foreground truncate font-mono">
+                          {contact.email}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-0.5 shrink-0">
+                      {contact.roles.slice(0, 2).map((role) => (
+                        <span
+                          key={role}
+                          className={`text-[8px] px-1 py-0.5 rounded font-medium ${
+                            contact.isInternal
+                              ? "bg-primary/12 text-primary"
+                              : "bg-muted/40 text-muted-foreground"
+                          }`}
+                        >
+                          {role}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function EmailComposeModal({
   open,
   onOpenChange,
@@ -385,6 +496,11 @@ export function EmailComposeModal({
               placeholder="nombre o email…"
               className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
             />
+            {/* Botón libreta de contactos */}
+            <ContactBookButton
+              contacts={contacts || []}
+              onPick={(email) => addRecipientToField(email, "to")}
+            />
             {/* Toggles pequeños: CC/CCO y Plantilla */}
             <div className="flex items-center gap-2 shrink-0">
               {!showCcBcc && (
@@ -435,6 +551,10 @@ export function EmailComposeModal({
                 placeholder="con copia…"
                 className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
               />
+              <ContactBookButton
+                contacts={contacts || []}
+                onPick={(email) => addRecipientToField(email, "cc")}
+              />
             </div>
           )}
 
@@ -450,6 +570,10 @@ export function EmailComposeModal({
                 onBlur={handleRecipientBlur}
                 placeholder="con copia oculta…"
                 className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
+              />
+              <ContactBookButton
+                contacts={contacts || []}
+                onPick={(email) => addRecipientToField(email, "bcc")}
               />
             </div>
           )}
