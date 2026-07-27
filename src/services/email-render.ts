@@ -10,6 +10,33 @@
 
 const PLACEHOLDER_REGEX = /(?:<([a-zA-Z0-9_.]+)>|\[([A-Z][A-Z0-9_.]*)\]|\{\{([a-zA-Z0-9_.]+)\}\}|&lt;([a-zA-Z0-9_.]+)&gt;)/g;
 
+/**
+ * Conjunto de nombres de tags HTML que NO deben tratarse como placeholders.
+ * El regex de placeholders usa el formato `<name>` que colisiona con tags HTML
+ * sin atributos (ej: `<p>`, `<strong>`, `<br>`). Sin este filtro, el render
+ * borraría todos los tags HTML sin atributos del cuerpo del correo.
+ */
+const HTML_TAGS = new Set([
+  // Block
+  "p", "div", "section", "article", "header", "footer", "main", "aside", "nav",
+  "h1", "h2", "h3", "h4", "h5", "h6",
+  "blockquote", "pre", "hr", "address", "figure", "figcaption",
+  // List
+  "ul", "ol", "li", "dl", "dt", "dd",
+  // Table
+  "table", "thead", "tbody", "tfoot", "tr", "td", "th", "caption", "colgroup", "col",
+  // Inline
+  "span", "a", "strong", "b", "em", "i", "u", "s", "strike", "del", "ins",
+  "sub", "sup", "small", "big", "mark", "code", "kbd", "samp", "var",
+  "q", "cite", "abbr", "time", "data", "wbr", "br",
+  // Media
+  "img", "picture", "source", "video", "audio", "iframe", "embed", "object",
+  // Form (raro en emails pero por seguridad)
+  "form", "input", "button", "label", "select", "option", "textarea",
+  // Otros
+  "details", "summary", "dialog", "template", "slot",
+]);
+
 export type EmailBodyFormat = "plain" | "html";
 
 export interface EmailTemplateData {
@@ -31,7 +58,8 @@ export function extractPlaceholders(text: string): string[] {
   PLACEHOLDER_REGEX.lastIndex = 0;
   while ((match = PLACEHOLDER_REGEX.exec(text)) !== null) {
     const key = match[1] || match[2] || match[3] || match[4];
-    if (key) found.add(key);
+    // Saltar tags HTML (ej: <p>, <strong>, <br>) — no son placeholders
+    if (key && !HTML_TAGS.has(key.toLowerCase())) found.add(key);
   }
   return [...found];
 }
@@ -108,8 +136,10 @@ export function renderEmailTemplate(
   };
 
   const replaceIn = (text: string, escape: boolean): string => {
-    return text.replace(PLACEHOLDER_REGEX, (_full, angle: string, square: string, curly: string, escaped: string) => {
+    return text.replace(PLACEHOLDER_REGEX, (full: string, angle: string, square: string, curly: string, escaped: string) => {
       const key = angle || square || curly || escaped;
+      // Saltar tags HTML (ej: <p>, <strong>, <br>) — devolverlos sin modificar
+      if (key && HTML_TAGS.has(key.toLowerCase())) return full;
       const raw = resolveValue(key);
       if (raw === "") return "";
       // Caso especial: <company_logo> en HTML → renderizar como <img>
