@@ -871,24 +871,199 @@
   }
 
   /* Origin badge — W (Workflow) morado, A (Automática) azul, M (Manual) café */
+  /* Sin fondo — solo la letra con definición HD */
   .app-origin-badge {
     @apply inline-flex items-center justify-center rounded font-bold leading-none;
     font-size: 9px;
     min-width: 16px;
     height: 16px;
     padding: 0 3px;
+    background-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+    font-feature-settings: "kern" 1;
+    paint-order: stroke fill;
+    -webkit-text-stroke: 0.3px currentColor;
   }
   .app-origin-w {
-    @apply bg-purple-200 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300;
+    @apply text-purple-700 dark:text-purple-300;
+    border: 1px solid rgb(168 85 247 / 0.15);
   }
   .app-origin-a {
-    @apply bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400;
+    @apply text-blue-600 dark:text-blue-400;
+    border: 1px solid rgb(59 130 246 / 0.15);
   }
   .app-origin-m {
-    @apply bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300;
+    @apply text-amber-700 dark:text-amber-300;
+    border: 1px solid rgb(245 158 11 / 0.15);
   }
   .app-origin-default {
-    @apply bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400;
+    @apply text-slate-500 dark:text-slate-400;
+    border: 1px solid rgb(115 115 115 / 0.15);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * Badge de código de gestión — estilo workflow config
+   * Fondo tenue + borde sutil + glow decorativo + letra que destaca
+   * El color se setea via --gestion-color (hex) en style inline
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-gestion-code {
+    @apply relative inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 backdrop-blur-sm border transition-all font-mono font-bold leading-none;
+    font-size: 10px;
+    /* Fondo y borde usan la variable --gestion-color con opacidad baja */
+    background-color: color-mix(in srgb, var(--gestion-color, transparent) 6%, transparent);
+    border-color: color-mix(in srgb, var(--gestion-color, transparent) 18%, transparent);
+    color: var(--gestion-color, inherit);
+  }
+  /* Glow decorativo detrás del badge */
+  .app-gestion-code-glow {
+    @apply pointer-events-none absolute -inset-0.5 rounded-md blur-sm opacity-20 -z-10;
+    background-color: color-mix(in srgb, var(--gestion-color, transparent) 8%, transparent);
+  }
+
+  /* Variante mini — icono cuadrado del código (workflow nodes/palette) */
+  .app-gestion-code-icon {
+    @apply flex items-center justify-center rounded-md border transition-transform;
+    background-color: color-mix(in srgb, var(--gestion-color, transparent) 6%, transparent);
+    border-color: color-mix(in srgb, var(--gestion-color, transparent) 18%, transparent);
+    color: var(--gestion-color, inherit);
+  }
+  .app-gestion-code-icon-text {
+    @apply font-mono font-bold leading-none;
+    font-size: 8px;
+  }
+
+  /* Variante nodo de workflow — card más grande con padding */
+  .app-gestion-node {
+    @apply relative flex items-center gap-1.5 rounded-lg px-2 py-1 backdrop-blur-sm border transition-all duration-150;
+    background-color: color-mix(in srgb, var(--gestion-color, transparent) 6%, transparent);
+    border-color: color-mix(in srgb, var(--gestion-color, transparent) 18%, transparent);
+  }
+  .app-gestion-node-glow {
+    @apply pointer-events-none absolute -inset-0.5 rounded-lg blur-sm opacity-20 -z-10;
+    background-color: color-mix(in srgb, var(--gestion-color, transparent) 8%, transparent);
+  }
+  .app-gestion-node-code {
+    @apply font-mono text-[10px] font-semibold leading-tight;
+    color: var(--gestion-color, inherit);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * Email Preview Modal — Liquid Glass Card
+   * Contenedor exterior lila/azul suave + inner card blanco
+   * El body del correo (plantilla) NO se toca — solo el shell
+   * ═══════════════════════════════════════════════════════════════ */
+  .app-email-glass {
+    @apply relative rounded-2xl border backdrop-blur-md p-5 sm:p-6;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--primary) 6%, transparent) 0%,
+      color-mix(in srgb, rgb(99 102 241) 4%, transparent) 50%,
+      color-mix(in srgb, rgb(168 85 247) 4%, transparent) 100%);
+    border-color: color-mix(in srgb, var(--primary) 12%, transparent);
+    box-shadow:
+      0 4px 24px -8px rgb(99 102 241 / 0.15),
+      0 1px 3px rgb(0 0 0 / 0.04),
+      inset 0 1px 0 rgb(255 255 255 / 0.4);
+  }
+  .dark .app-email-glass {
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--primary) 10%, transparent) 0%,
+      color-mix(in srgb, rgb(99 102 241) 6%, transparent) 50%,
+      color-mix(in srgb, rgb(168 85 247) 6%, transparent) 100%);
+    border-color: color-mix(in srgb, var(--primary) 18%, transparent);
+    box-shadow:
+      0 4px 24px -8px rgb(0 0 0 / 0.4),
+      inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+
+  /* Píldora de empresa centrada arriba del inner card */
+  .app-email-company-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 mx-auto;
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Inner card — fondo blanco, esquinas redondeadas, separada del exterior */
+  .app-email-inner-card {
+    @apply rounded-xl bg-white shadow-sm overflow-hidden;
+    box-shadow:
+      0 1px 3px rgb(0 0 0 / 0.06),
+      0 4px 12px -4px rgb(0 0 0 / 0.08);
+  }
+
+  /* ═══ Email Preview — layout de 1 solo nivel ═══ */
+  /* modal-body — único contenedor con scroll + p-6 uniforme (incluye abajo) */
+  .app-email-modal-body {
+    @apply flex-1 overflow-auto p-6;
+  }
+  /* email-card — tarjeta blanca con border-radius 12px + overflow hidden */
+  .app-email-card {
+    @apply w-full rounded-xl overflow-hidden;
+    background: #ffffff;
+    box-shadow: 0 4px 20px rgb(0 0 0 / 0.06);
+  }
+  .dark .app-email-card {
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+  }
+
+  /* Metadata limpia — label | valor alineados */
+  .app-email-meta {
+    @apply grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[11px] leading-tight;
+  }
+  .app-email-meta-label {
+    @apply text-muted-foreground font-medium tabular-nums;
+    min-width: 56px;
+  }
+  .app-email-meta-value {
+    @apply text-foreground break-all;
+  }
+  /* Barra de metadata — fondo sutil + borde liquid glass coherente */
+  .app-email-meta-bar {
+    background: color-mix(in srgb, var(--muted) 20%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+    box-shadow: 0 4px 8px -4px rgb(0 0 0 / 0.08);
+  }
+
+  /* Header del modal — banner con ícono (liquid glass coherente con sistema) */
+  .app-email-header {
+    @apply flex items-center gap-3 px-4 py-3;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--primary) 8%, transparent),
+      transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  }
+  .app-email-header-icon {
+    @apply flex h-9 w-9 items-center justify-center rounded-xl text-white shrink-0;
+    background: linear-gradient(135deg, rgb(99 102 241), rgb(168 85 247));
+    box-shadow: 0 2px 8px -2px rgb(99 102 241 / 0.5);
+  }
+
+  /* Botones de acción rápida del header (liquid glass) */
+  .app-email-action-btn {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-all hover:text-foreground;
+    background: color-mix(in srgb, var(--card) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .app-email-action-btn:hover {
+    background: color-mix(in srgb, var(--muted) 60%, transparent);
+    border-color: color-mix(in srgb, var(--border) 60%, transparent);
+  }
+
+  /* Badge de estado del correo */
+  .app-email-status {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold;
+  }
+  .app-email-status-sent {
+    @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300;
+  }
+  .app-email-status-queued {
+    @apply bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300;
+  }
+  .app-email-status-error {
+    @apply bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300;
   }
 
   /* Estado activo/inactivo (bolita de color) */

@@ -23,13 +23,16 @@ function DropdownMenuContent({
   alignOffset = 0,
   side = "bottom",
   sideOffset = 0,
+  arrow = false,
   className,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
     MenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  > & {
+    arrow?: boolean
+  }) {
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
@@ -41,6 +44,22 @@ function DropdownMenuContent({
         positionMethod="fixed"
         collisionAvoidance={{ side: "flip", align: "shift", fallbackAxisSide: "none" }}
       >
+        {arrow && (
+          <svg
+            data-slot="dropdown-menu-arrow"
+            className="pointer-events-none absolute -top-2 z-50 fill-popover/85"
+            style={{
+              right: align === "end" ? "12px" : align === "start" ? "12px" : "50%",
+              left: align === "start" ? "12px" : undefined,
+              transform: align === "center" ? "translateX(-50%)" : undefined,
+            }}
+            width="14"
+            height="8"
+            viewBox="0 0 14 8"
+          >
+            <path d="M0 8 L7 0 L14 8 Z" />
+          </svg>
+        )}
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn("z-50 max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover/85 backdrop-blur-xl p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95", className )}

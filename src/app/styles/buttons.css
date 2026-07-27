@@ -450,6 +450,66 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
   }
 
+  /* A1 — Botón activo mientras su dropdown está abierto */
+  .btn-icon-sm[data-popup-open] {
+    color: var(--primary) !important;
+    border-color: color-mix(in srgb, var(--primary) 35%, transparent) !important;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--primary) 18%, transparent) 0%,
+      color-mix(in srgb, var(--primary) 8%, transparent) 100%
+    ) !important;
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent),
+      0 4px 12px color-mix(in srgb, var(--primary) 15%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+    transform: none !important;
+  }
+
+  /* A1 — Animación de origen: el menú emerge del botón */
+  .dropdown-emerge {
+    transform-origin: top right !important;
+  }
+  /* Anular animaciones nativas de Tailwind cuando usamos dropdown-emerge */
+  .dropdown-emerge[data-open]:not([data-side]) {
+    animation: dropdown-emerge-open 220ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+    animation-fill-mode: both !important;
+  }
+  .dropdown-emerge[data-open] {
+    animation: dropdown-emerge-open 220ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+    animation-fill-mode: both !important;
+    --tw-enter-opacity: initial !important;
+    --tw-enter-scale: initial !important;
+    --tw-enter-translate-y: initial !important;
+  }
+  .dropdown-emerge[data-closed] {
+    animation: dropdown-emerge-close 140ms ease-in !important;
+    animation-fill-mode: both !important;
+    --tw-exit-opacity: initial !important;
+    --tw-exit-scale: initial !important;
+    --tw-exit-translate-y: initial !important;
+  }
+  @keyframes dropdown-emerge-open {
+    0% {
+      opacity: 0;
+      transform: scale(0.6) translateY(-12px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  @keyframes dropdown-emerge-close {
+    0% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.7) translateY(-8px);
+    }
+  }
+
   .dark .btn-icon-sm {
     background: linear-gradient(
       180deg,

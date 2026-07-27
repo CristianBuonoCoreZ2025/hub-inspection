@@ -11,6 +11,7 @@ import { getActionHistory } from "@/services/claim-action-history";
 import { getGestionScreensForClaimAction } from "@/services/gestion-screens";
 import { getUsers } from "@/services/users";
 import { getCompanies } from "@/services/companies";
+import { CorreoIcon } from "@/components/icons/topbar-icons";
 import { getCountries } from "@/services/countries";
 import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getCurrencies, getEvents, getCountryById, getRegionById, getCityById, getCommuneById } from "@/services/catalogs";
 import type { ClaimsParticipant, ActionTemplate } from "@/types";
@@ -23,7 +24,6 @@ import { toast } from "sonner";
 import {
  ArrowLeft,
  Pencil,
- Mail as MailIcon,
  MapPin,
  User,
  Shield,
@@ -45,6 +45,8 @@ import {
  ArrowUpDown,
  ArrowUp,
  ArrowDown,
+ Inbox,
+ MailCheck,
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import L from "leaflet";
@@ -70,7 +72,8 @@ import WorkflowView from "./workflow-view";
 import { EmailComposeModal } from "@/components/claims/email-compose-modal";
 import { EmailPreviewModal } from "@/components/claims/email-preview-modal";
 import { getEmailLogsByClaim, type EmailLog } from "@/services/email-logs";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 // Fix iconos de Leaflet en Next.js (CDN)
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -1182,6 +1185,8 @@ export default function ClaimDetailPage() {
  origin: a.origin || "M",
  templateCode: a.action_template?.code || null,
  coordResult: (a.action_data as { coord_result?: string } | null)?.coord_result || null,
+ // Color directo desde action_feature (migración 261 — consolidado desde characteristic)
+ color: a.action_feature?.color || null,
  }));
 
  const gestiones = [...actions].sort((a, b) => {
@@ -1249,13 +1254,13 @@ export default function ClaimDetailPage() {
  <table className="app-data-table">
  <thead>
  <tr>
+ <th className="w-6 pl-2" title="Origen: W=Workflow, M=Manual, A=Automática"></th>
  {renderSortHeader("codigo", "Código", "w-[90px]")}
  {renderSortHeader("nombre", "Nombre Gestión")}
  {renderSortHeader("fecha", "Fecha Ejecución")}
  {renderSortHeader("dias", "Días Restantes")}
  {renderSortHeader("estado", "Estado", "w-[110px]", true)}
  <th className="w-[80px]"></th>
- <th className="w-10 text-center" title="Origen: W=Workflow, M=Manual, A=Automática">Or.</th>
  </tr>
  </thead>
  <tbody>
@@ -1389,74 +1394,40 @@ export default function ClaimDetailPage() {
  }
  }}
  >
- <td className="font-mono app-body text-primary tabular-nums whitespace-nowrap">
- <span>{shortActionCode(g.codigo)}</span>
- {g.isActive === false && (
- <span className="ml-1 inline-flex items-center justify-center rounded px-0.5 app-body font-bold bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" title="Gestión deshabilitada">OFF</span>
- )}
- {/* Badge de correos enviados — popover al hacer click */}
+ <td className="pl-2 pr-1">
+ <span
+ className={`app-origin-badge app-origin-${
+ g.origin === "W" ? "w" : g.origin === "A" ? "a" : g.origin === "M" ? "m" : "default"
+ }`}
+ title={g.origin === "W" ? "Workflow" : g.origin === "A" ? "Automática" : g.origin === "M" ? "Manual" : "—"}
+ >
+ {g.origin}
+ </span>
+ </td>
+ <td className="whitespace-nowrap">
+ <div className="flex items-center gap-1.5">
  {(() => {
-   const emails = emailsByActionId.get(g.id) || [];
-   if (emails.length === 0) return null;
-   return (
-     <Popover>
-       <PopoverTrigger
-         render={
-           <button
-             type="button"
-             onClick={(e) => e.stopPropagation()}
-             className="ml-1 inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary hover:bg-primary/20 transition-colors"
-             title={`${emails.length} correo${emails.length > 1 ? "s" : ""} relacionado${emails.length > 1 ? "s" : ""}`}
-           >
-             <MailIcon className="h-2.5 w-2.5" />
-             {emails.length}
-           </button>
-         }
-       />
-       <PopoverContent align="start" sideOffset={4} className="w-80 p-0">
-         <div className="px-3 py-2 border-b border-border">
-           <p className="text-[11px] font-semibold">Seguimiento de Correos</p>
-           <p className="text-[10px] text-muted-foreground">
-             Correos generados desde: <span className="font-mono">{shortActionCode(g.codigo)}</span>
-           </p>
-         </div>
-         <div className="max-h-60 overflow-auto">
-           {emails.map((log) => {
-             const emailCode = `EML-${String(log.correlativo).padStart(3, "0")}`;
-             const statusLabel = log.status === "sent" ? "Enviado" : log.status === "queued" ? "En cola" : "Error";
-             const statusClass = log.status === "sent"
-               ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-               : log.status === "queued"
-               ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-               : "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-             return (
-               <button
-                 key={log.id}
-                 type="button"
-                 onClick={(e) => { e.stopPropagation(); setEmailPreviewLog(log); }}
-                 className="w-full text-left px-3 py-1.5 border-b border-border/50 last:border-0 hover:bg-muted/40 transition-colors"
-               >
-                 <div className="flex items-center justify-between gap-2">
-                   <span className="font-mono text-[10px] text-primary font-medium">{emailCode}</span>
-                   <span className={`px-1.5 rounded text-[9px] font-medium ${statusClass}`}>{statusLabel}</span>
-                 </div>
-                 <p className="text-[10px] text-foreground truncate">{log.subject || "(sin asunto)"}</p>
-                 <div className="flex items-center justify-between gap-2 mt-0.5">
-                   <span className="text-[9px] text-muted-foreground truncate">
-                     {log.to_address.join(", ") || "—"}
-                   </span>
-                   <span className="text-[9px] text-muted-foreground shrink-0">
-                     {new Date(log.sent_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
-                   </span>
-                 </div>
-               </button>
-             );
-           })}
-         </div>
-       </PopoverContent>
-     </Popover>
-   );
+   const code = shortActionCode(g.codigo);
+   const hexColor = g.color;
+   if (hexColor) {
+     // Estilo via CSS class — color se setea con variable --gestion-color
+     return (
+       <div
+         className="app-gestion-code"
+         style={{ "--gestion-color": hexColor } as React.CSSProperties}
+       >
+         <div className="app-gestion-code-glow" />
+         <span>{code}</span>
+       </div>
+     );
+   }
+   // Sin color configurado → estilo original
+   return <span className="font-mono app-body text-primary tabular-nums">{code}</span>;
  })()}
+ {g.isActive === false && (
+ <span className="inline-flex items-center justify-center rounded px-0.5 app-body font-bold bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" title="Gestión deshabilitada">OFF</span>
+ )}
+ </div>
  </td>
  <td className="font-medium app-body">
  <div className="flex items-center gap-2">
@@ -1533,36 +1504,138 @@ export default function ClaimDetailPage() {
  <Pencil className="h-3 w-3" />
  </Button>
  )}
- {g.esAccion && (
- <Button
- size="sm"
- className="btn-icon-sm"
- title="Enviar e-mail"
- onClick={() => {
- const action = claimActions?.find((a) => a.id === g.id);
- setEmailComposeAction({
- id: g.id,
- company_id: claim?.company_id || "",
- claim_id: id || "",
- action_template_id: action?.action_template_id || "",
- action_data: action?.action_data as Record<string, unknown> | null,
- });
- }}
- >
- <MailIcon className="h-3 w-3" />
- </Button>
- )}
+ {/* Botón de correo con menú funcional estilo Mantine — reemplaza el botón MailIcon original */}
+ {(() => {
+   const emails = emailsByActionId.get(g.id) || [];
+   const openCompose = (e: { stopPropagation: () => void }) => {
+     e.stopPropagation();
+     const action = claimActions?.find((a) => a.id === g.id);
+     setEmailComposeAction({
+       id: g.id,
+       company_id: claim?.company_id || "",
+       claim_id: id || "",
+       action_template_id: action?.action_template_id || "",
+       action_data: action?.action_data as Record<string, unknown> | null,
+     });
+   };
+
+   // Sin correos: botón directo que abre redactar (sin dropdown)
+   if (emails.length === 0) {
+     return (
+       <button
+         type="button"
+         onClick={openCompose}
+         className="btn-icon-sm relative"
+         title="Redactar correo"
+       >
+         <CorreoIcon size={20} />
+       </button>
+     );
+   }
+
+   // Con correos: dropdown con redactar + lista
+   return (
+     <DropdownMenu>
+       <DropdownMenuTrigger
+         render={
+           <button
+             type="button"
+             onClick={(e) => e.stopPropagation()}
+             className="btn-icon-sm relative"
+             title={`${emails.length} correo${emails.length > 1 ? "s" : ""}`}
+           >
+             <CorreoIcon size={20} />
+             <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-0.5 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[8px] font-bold leading-none">
+               {emails.length}
+             </span>
+           </button>
+         }
+       />
+       <DropdownMenuContent align="end" arrow className="w-64 p-1.5 dropdown-emerge" sideOffset={4}>
+         {/* Item 1: Redactar Correo */}
+         <DropdownMenuItem
+           onClick={openCompose}
+           className="cursor-pointer"
+         >
+           <div className="flex items-center justify-center h-6 w-6 rounded bg-linear-to-br from-sky-500 to-indigo-600 text-white shrink-0">
+             <Plus className="h-3.5 w-3.5" />
+           </div>
+           <div className="flex flex-col min-w-0">
+             <span className="app-body font-medium">Redactar Correo</span>
+             <span className="text-[10px] text-muted-foreground">Crear un nuevo correo desde esta gestión</span>
+           </div>
+         </DropdownMenuItem>
+
+         <DropdownMenuSeparator />
+
+         {/* Item 2: Correos enviados (n) — submenu con la lista */}
+         <DropdownMenuSub>
+           <DropdownMenuSubTrigger className="cursor-pointer">
+             <div className="flex items-center justify-center h-6 w-6 rounded bg-linear-to-br from-amber-400 to-orange-600 text-white shrink-0">
+               <Inbox className="h-3.5 w-3.5" />
+             </div>
+             <div className="flex flex-col min-w-0 flex-1">
+               <span className="app-body font-medium">Correos enviados</span>
+               <span className="text-[10px] text-muted-foreground">
+                 {emails.length} correo{emails.length > 1 ? "s" : ""}
+               </span>
+             </div>
+             <span className="min-w-4 h-4 px-1 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold leading-none">
+               {emails.length}
+             </span>
+           </DropdownMenuSubTrigger>
+           <DropdownMenuSubContent className="w-72 p-0 overflow-hidden" sideOffset={4}>
+             {/* Header del submenu */}
+             <div className="px-3 py-2 border-b border-border bg-linear-to-br from-primary/10 via-primary/5 to-transparent">
+               <div className="flex items-center justify-between gap-2">
+                 <span className="app-section-title">Correos enviados</span>
+                 <span className="text-[10px] text-muted-foreground font-mono">{g.codigo}</span>
+               </div>
+               <p className="text-[10px] text-muted-foreground">
+                 {emails.length} enviado{emails.length !== 1 ? "s" : ""}
+               </p>
+             </div>
+             {/* Lista de correos */}
+             <div className="max-h-64 overflow-auto">
+               {emails.map((log) => {
+                 const emailCode = `EML-${String(log.correlativo).padStart(3, "0")}`;
+                 const statusTone = log.status === "sent" ? "emerald" : log.status === "queued" ? "amber" : "rose";
+                 const statusLabel = log.status === "sent" ? "Enviado" : log.status === "queued" ? "En cola" : "Error";
+                 const Icon = log.status === "sent" ? MailCheck : log.status === "queued" ? History : AlertTriangle;
+                 const iconTone = log.status === "sent" ? "from-emerald-400 to-emerald-600" : log.status === "queued" ? "from-amber-400 to-amber-600" : "from-rose-400 to-rose-600";
+                 return (
+                   <DropdownMenuItem
+                     key={log.id}
+                     onClick={(e: { stopPropagation: () => void }) => { e.stopPropagation(); setEmailPreviewLog(log); }}
+                     className="cursor-pointer py-2 border-b border-border/30 last:border-0"
+                   >
+                     <div className={cn("flex items-center justify-center h-6 w-6 rounded bg-linear-to-br text-white shrink-0", iconTone)}>
+                       <Icon className="h-3 w-3" />
+                     </div>
+                     <div className="flex flex-col min-w-0 flex-1 gap-0.5">
+                       <div className="flex items-center justify-between gap-2">
+                         <span className="font-mono app-body text-primary font-medium">{emailCode}</span>
+                         <span className="text-[10px] text-muted-foreground tabular-nums">
+                           {new Date(log.sent_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+                         </span>
+                       </div>
+                       <p className="app-body truncate">{log.subject || "(sin asunto)"}</p>
+                       <div className="flex items-center justify-between gap-2">
+                         <span className="text-[10px] text-muted-foreground truncate">{log.to_address.join(", ") || "—"}</span>
+                         <StatusBadge tone={statusTone} label={statusLabel} size="sm" dot />
+                       </div>
+                     </div>
+                   </DropdownMenuItem>
+                 );
+               })}
+             </div>
+           </DropdownMenuSubContent>
+         </DropdownMenuSub>
+       </DropdownMenuContent>
+     </DropdownMenu>
+   );
+ })()}
  </div>
- </td>
- <td className="text-center">
- <span
- className={`app-origin-badge app-origin-${
- g.origin === "W" ? "w" : g.origin === "A" ? "a" : g.origin === "M" ? "m" : "default"
- }`}
- title={g.origin === "W" ? "Workflow" : g.origin === "A" ? "Automática" : g.origin === "M" ? "Manual" : "—"}
- >
- {g.origin}
- </span>
  </td>
  </tr>
  );
