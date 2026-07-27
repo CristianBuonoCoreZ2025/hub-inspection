@@ -337,7 +337,7 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
                       title={`Agregar ${r.email} a Para`}
                     >
                       <Plus className="h-2.5 w-2.5" />
-                      {r.label}: <span className="font-mono truncate max-w-[120px]">{r.email}</span>
+                      {r.label}: <span className="font-mono truncate max-w-30">{r.email}</span>
                     </button>
                   ))}
                 </div>
@@ -378,13 +378,13 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
                     <iframe
                       title="email-preview"
                       srcDoc={previewHtml}
-                      className="w-full h-[240px] rounded border border-border bg-white"
+                      className="w-full h-60 rounded border border-border bg-white"
                     />
                   ) : (
                     <Textarea
                       value={preview.body}
                       readOnly
-                      className="app-input min-h-[140px] bg-muted/30"
+                      className="app-input min-h-35 bg-muted/30"
                     />
                   )}
                 </div>
@@ -400,7 +400,7 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
                     {showHistory ? "Ocultar historial" : "Ver historial de envíos"}
                   </button>
                   {showHistory && logs && logs.length > 0 && (
-                    <div className="rounded-lg border border-border p-2 space-y-1 max-h-[160px] overflow-auto">
+                    <div className="rounded-lg border border-border p-2 space-y-1 max-h-40 overflow-auto">
                       {logs.map((log) => (
                         <div
                           key={log.id}
