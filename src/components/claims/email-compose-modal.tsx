@@ -10,13 +10,6 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { HtmlEditor } from "@/components/ui/html-editor";
 import { getEmailTemplatesForAction } from "@/services/email-template-actions";
 import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
@@ -66,6 +59,7 @@ export function EmailComposeModal({
   const [manualBodyFormat] = useState<"plain" | "html">("html");
   const [showHistory, setShowHistory] = useState(false);
   const [showCcBcc, setShowCcBcc] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const htmlEditorRef = useRef<Editor | null>(null);
   const queryClient = useQueryClient();
 
@@ -287,17 +281,6 @@ export function EmailComposeModal({
     }, 200);
   };
 
-  const templateItems = useMemo(
-    () =>
-      activeTemplates.map((t) => {
-        const isDefault = (t.actions || []).some(
-          (a) => a.action_template_id === action.action_template_id && a.is_default
-        );
-        return { value: t.id, label: `${t.name}${isDefault ? " · default" : ""}` };
-      }),
-    [activeTemplates, action.action_template_id]
-  );
-
   const canSend =
     to.trim().length > 0 &&
     effectiveSubject.trim().length > 0 &&
@@ -311,117 +294,36 @@ export function EmailComposeModal({
     <Dialog open={open} onOpenChange={onOpenChange} dismissible={false}>
       <DialogContent className="modal-xl p-0! flex flex-col" showCloseButton={false}>
 
-        {/* ═══ 1. HEADER compacto ═══ */}
-        <div className="px-4 py-2.5 border-b border-border bg-background flex items-center justify-between gap-3 shrink-0">
-          <DialogTitle className="flex items-center gap-2.5 m-0">
+        {/* ═══ 1. HEADER — info de gestión que originó el correo ═══ */}
+        <div className="px-4 py-2.5 border-b border-border bg-muted/15 flex items-center justify-between gap-3 shrink-0">
+          <DialogTitle className="flex items-center gap-2.5 m-0 min-w-0">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
               <Mail className="h-3.5 w-3.5" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-[13px] font-semibold text-foreground leading-tight">Correo</span>
-              {gestionCode && (
-                <span className="text-[10px] text-muted-foreground">Gestión: {gestionCode}</span>
-              )}
+            <div className="flex flex-col min-w-0">
+              <span className="text-[13px] font-semibold text-foreground leading-tight truncate">
+                {gestionCode || "Correo"}
+              </span>
+              <span className="text-[10px] text-muted-foreground truncate">
+                Siniestro L-{String(action.claim_id).slice(-6).toUpperCase()} · Gestión que origina este correo
+              </span>
             </div>
           </DialogTitle>
-          <button type="button" onClick={() => onOpenChange(false)} title="Cerrar" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
-        {/* ═══ 2. ACTION BAR — [Enviar] [Plantilla ▼]    [Historial] ═══ */}
-        <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-muted/15 shrink-0">
-          {/* Enviar — izquierda, destacado */}
-          <Button
-            className="pg-btn-platinum"
-            disabled={!canSend}
-            onClick={() => sendMutation.mutate()}
-          >
-            {sendMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Send className="h-3.5 w-3.5" />
-            )}
-            Enviar
-          </Button>
-
-          {/* Selector de plantilla — solo si hay plantillas vinculadas */}
-          {hasTemplates && (
-            <>
-              <div className="w-px h-5 bg-border mx-1" />
-              {/* Toggle Plantilla: activar/desactivar el uso de plantillas */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (effectiveMode === "template") {
-                    // Desactivar → modo libre
-                    setMode("manual");
-                    setSelectedTemplateId("");
-                    setSubjectOverride(null);
-                    setBodyOverride(null);
-                  } else {
-                    // Activar → modo plantilla con la default
-                    setMode("template");
-                    setSelectedTemplateId("");
-                    setSubjectOverride(null);
-                    setBodyOverride(null);
-                  }
-                }}
-                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
-                  effectiveMode === "template"
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title={effectiveMode === "template" ? "Desactivar plantilla" : "Usar plantilla"}
-              >
-                <FileText className="h-3 w-3" />
-                Plantilla
-              </button>
-              {/* Dropdown de plantillas — solo visible cuando Plantilla está activa */}
-              {effectiveMode === "template" && (
-                <Select
-                  value={effectiveTemplateId || "__none"}
-                  onValueChange={(v) => {
-                    if (v === "__none" || !v) return;
-                    setMode("template");
-                    changeTemplate(v);
-                  }}
-                  items={templateItems}
-                >
-                  <SelectTrigger className="app-input h-7 w-50">
-                    <SelectValue placeholder="Seleccionar..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activeTemplates.map((t) => {
-                      const isDefault = (t.actions || []).some(
-                        (a) => a.action_template_id === action.action_template_id && a.is_default
-                      );
-                      return (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                          {isDefault ? " · default" : ""}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              )}
-            </>
-          )}
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Historial — derecha */}
-          <button
-            type="button"
-            onClick={() => setShowHistory((v) => !v)}
-            className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
-            title="Historial de envíos"
-          >
-            <History className="h-3 w-3" />
-            {showHistory ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Historial — derecha */}
+            <button
+              type="button"
+              onClick={() => setShowHistory((v) => !v)}
+              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+              title="Historial de envíos"
+            >
+              <History className="h-3 w-3" />
+              {showHistory ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+            <button type="button" onClick={() => onOpenChange(false)} title="Cerrar" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* Historial (colapsable) */}
@@ -456,10 +358,24 @@ export function EmailComposeModal({
           </div>
         )}
 
-        {/* ═══ 3. CAMPOS — Para → CC → BCC → Asunto (con autocomplete) ═══ */}
+        {/* ═══ 2. CAMPOS — [Enviar 15%] Para → CC → BCC (con autocomplete) ═══ */}
         <div className="px-4 py-2 border-b border-border bg-background text-[11px] shrink-0 relative">
-          {/* Para */}
+          {/* Fila Para — con Enviar al inicio (15%) */}
           <div className="flex items-center gap-2 py-0.5 relative">
+            {/* Enviar — 15% de la sección, al inicio */}
+            <Button
+              className="pg-btn-platinum shrink-0"
+              style={{ width: "15%" }}
+              disabled={!canSend}
+              onClick={() => sendMutation.mutate()}
+            >
+              {sendMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+              Enviar
+            </Button>
             <span className="text-muted-foreground font-medium shrink-0 w-10">Para</span>
             <input
               value={to}
@@ -467,22 +383,49 @@ export function EmailComposeModal({
               onFocus={() => setActiveField("to")}
               onBlur={handleRecipientBlur}
               placeholder="nombre o email…"
-              className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
+              className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
             />
-            {!showCcBcc && (
-              <button
-                type="button"
-                onClick={() => setShowCcBcc(true)}
-                className="text-[10px] text-primary hover:underline shrink-0"
-              >
-                CC / CCO
-              </button>
-            )}
+            {/* Toggles pequeños: CC/CCO y Plantilla */}
+            <div className="flex items-center gap-2 shrink-0">
+              {!showCcBcc && (
+                <button
+                  type="button"
+                  onClick={() => setShowCcBcc(true)}
+                  className="text-[10px] text-primary hover:underline"
+                >
+                  CC / CCO
+                </button>
+              )}
+              {hasTemplates && !showTemplateModal && effectiveMode !== "template" && (
+                <button
+                  type="button"
+                  onClick={() => setShowTemplateModal(true)}
+                  className="text-[10px] text-primary hover:underline"
+                >
+                  Plantilla
+                </button>
+              )}
+              {effectiveMode === "template" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("manual");
+                    setSelectedTemplateId("");
+                    setSubjectOverride(null);
+                    setBodyOverride(null);
+                  }}
+                  className="text-[10px] text-primary hover:underline"
+                >
+                  Quitar plantilla
+                </button>
+              )}
+            </div>
           </div>
 
           {/* CC */}
           {showCcBcc && (
             <div className="flex items-center gap-2 py-0.5 relative">
+              <span className="text-muted-foreground font-medium shrink-0" style={{ width: "calc(15% + 40px)" }} />
               <span className="text-muted-foreground font-medium shrink-0 w-10">CC</span>
               <input
                 value={cc}
@@ -490,7 +433,7 @@ export function EmailComposeModal({
                 onFocus={() => setActiveField("cc")}
                 onBlur={handleRecipientBlur}
                 placeholder="con copia…"
-                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
+                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
               />
             </div>
           )}
@@ -498,6 +441,7 @@ export function EmailComposeModal({
           {/* BCC */}
           {showCcBcc && (
             <div className="flex items-center gap-2 py-0.5 relative">
+              <span className="text-muted-foreground font-medium shrink-0" style={{ width: "calc(15% + 40px)" }} />
               <span className="text-muted-foreground font-medium shrink-0 w-10">CCO</span>
               <input
                 value={bcc}
@@ -505,7 +449,7 @@ export function EmailComposeModal({
                 onFocus={() => setActiveField("bcc")}
                 onBlur={handleRecipientBlur}
                 placeholder="con copia oculta…"
-                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
+                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
               />
             </div>
           )}
@@ -604,6 +548,77 @@ export function EmailComposeModal({
             </>
           )}
         </div>
+
+        {/* ═══ MODAL DE PLANTILLAS — se abre al pinchar "Plantilla" ═══ */}
+        {showTemplateModal && (
+          <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal} dismissible={false}>
+            <DialogContent className="modal-md p-0!" showCloseButton={false}>
+              <div className="modal-header">
+                <DialogTitle className="modal-title flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  Seleccionar Plantilla
+                </DialogTitle>
+                <button
+                  type="button"
+                  onClick={() => setShowTemplateModal(false)}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="modal-body p-3 space-y-1 max-h-80 overflow-y-auto">
+                {activeTemplates.map((t) => {
+                  const isDefault = (t.actions || []).some(
+                    (a) => a.action_template_id === action.action_template_id && a.is_default
+                  );
+                  const isSelected = effectiveTemplateId === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setMode("template");
+                        changeTemplate(t.id);
+                        setShowTemplateModal(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors border ${
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:bg-muted/50 text-foreground"
+                      }`}
+                    >
+                      <FileText className="h-4 w-4 shrink-0" />
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-[12px] font-medium truncate">{t.name}</span>
+                        {t.description && (
+                          <span className="text-[10px] text-muted-foreground truncate">{t.description}</span>
+                        )}
+                      </div>
+                      {isDefault && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium shrink-0">
+                          default
+                        </span>
+                      )}
+                      {isSelected && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium shrink-0">
+                          seleccionada
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="modal-footer">
+                <Button
+                  className="pg-btn-platinum"
+                  onClick={() => setShowTemplateModal(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </DialogContent>
     </Dialog>
   );
