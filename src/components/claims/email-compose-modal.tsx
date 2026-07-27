@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef } from "react";
 import type { Editor } from "@tiptap/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Mail, Send, Loader2, X, History, FileText, ChevronDown, ChevronUp, Users } from "lucide-react";
+import { Mail, Send, Loader2, X, History, FileText, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -405,18 +405,21 @@ export function EmailComposeModal({
     <Dialog open={open} onOpenChange={onOpenChange} dismissible={false}>
       <DialogContent className="modal-xl p-0! flex flex-col" showCloseButton={false}>
 
-        {/* ═══ 1. HEADER — info de gestión que originó el correo ═══ */}
-        <div className="px-4 py-2.5 border-b border-border bg-muted/15 flex items-center justify-between gap-3 shrink-0">
-          <DialogTitle className="flex items-center gap-2.5 m-0 min-w-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
-              <Mail className="h-3.5 w-3.5" />
+        {/* ═══ 1. HEADER — idéntico al preview (mismo alto y dimensiones) ═══ */}
+        <div className="p-4 border-b border-border bg-background flex items-start justify-between gap-3 shrink-0">
+          <DialogTitle className="flex items-start gap-3 m-0 min-w-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
+              <Mail className="h-4 w-4" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[13px] font-semibold text-foreground leading-tight truncate">
+              <span className="text-sm font-semibold text-foreground leading-tight truncate">
                 {gestionCode || "Correo"}
               </span>
               <span className="text-[10px] text-muted-foreground truncate">
-                Siniestro L-{String(action.claim_id).slice(-6).toUpperCase()} · Gestión que origina este correo
+                Siniestro L-{String(action.claim_id).slice(-6).toUpperCase()}
+              </span>
+              <span className="text-[10px] text-muted-foreground truncate">
+                Gestión que origina este correo
               </span>
             </div>
           </DialogTitle>
@@ -425,13 +428,12 @@ export function EmailComposeModal({
             <button
               type="button"
               onClick={() => setShowHistory((v) => !v)}
-              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               title="Historial de envíos"
             >
-              <History className="h-3 w-3" />
-              {showHistory ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              <History className="h-3.5 w-3.5" />
             </button>
-            <button type="button" onClick={() => onOpenChange(false)} title="Cerrar" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            <button type="button" onClick={() => onOpenChange(false)} title="Cerrar" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
