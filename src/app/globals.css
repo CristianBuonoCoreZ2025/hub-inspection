@@ -191,6 +191,9 @@
 }
 .html-editor-content {
   line-height: 1.5;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.875rem;
 }
 .html-editor-content:empty::before,
 .html-editor-content p.is-empty::before {

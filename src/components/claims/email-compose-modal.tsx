@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { HtmlEditor } from "@/components/ui/html-editor";
 import { getEmailTemplatesForAction } from "@/services/email-template-actions";
 import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
@@ -473,86 +475,90 @@ export function EmailComposeModal({
           </div>
         )}
 
-        {/* ═══ 2. CAMPOS — [Enviar 15%] Para → CC (con autocomplete) ═══ */}
-        <div className="px-4 py-2 border-b border-border bg-background text-[11px] shrink-0 relative">
-          {/* Fila Para — con Enviar al inicio (15%) */}
-          <div className="flex items-center gap-2 py-0.5 relative">
-            {/* Enviar — 15% de la sección, al inicio */}
-            <Button
-              className="pg-btn-platinum shrink-0 email-send-col"
-              disabled={!canSend}
-              onClick={() => sendMutation.mutate()}
-            >
-              {sendMutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-              Enviar
-            </Button>
-            <span className="text-muted-foreground font-medium shrink-0 w-10 text-[11px]">Para</span>
-            <input
-              value={to}
-              onChange={(e) => handleRecipientInput(e.target.value, "to")}
-              onFocus={() => setActiveField("to")}
-              onBlur={handleRecipientBlur}
-              placeholder="nombre o email…"
-              className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
-            />
-            {/* Botón libreta de contactos */}
-            <ContactBookButton
-              contacts={contacts || []}
-              onPick={(email) => addRecipientToField(email, "to")}
-            />
-            {/* Toggle Plantilla */}
-            <div className="flex items-center gap-2 shrink-0">
-              {hasTemplates && !showTemplateModal && effectiveMode !== "template" && (
-                <button
-                  type="button"
-                  onClick={() => setShowTemplateModal(true)}
-                  className="text-[10px] text-primary hover:underline"
-                >
-                  Plantilla
-                </button>
-              )}
-              {effectiveMode === "template" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode("manual");
-                    setSelectedTemplateId("");
-                    setSubjectOverride(null);
-                    setBodyOverride(null);
-                  }}
-                  className="text-[10px] text-primary hover:underline"
-                >
-                  Quitar plantilla
-                </button>
-              )}
-            </div>
-          </div>
+        {/* ═══ 2. CAMPOS — [Enviar] Para → CC (con autocomplete) ═══ */}
+        <div className="px-4 py-2 border-b border-border bg-background text-[11px] shrink-0 relative flex gap-2">
+          {/* Enviar — columna izquierda, cuadrado, spanea Para + CC (estilo Outlook 365) */}
+          <button
+            type="button"
+            className="email-send-btn shrink-0"
+            disabled={!canSend}
+            onClick={() => sendMutation.mutate()}
+          >
+            {sendMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+            Enviar
+          </button>
 
-          {/* CC — siempre visible */}
-          <div className="flex items-center gap-2 py-0.5 relative">
-            <span className="text-muted-foreground font-medium shrink-0 email-cc-label" />
-            <span className="text-muted-foreground font-medium shrink-0 w-10 text-[11px]">CC</span>
-            <input
-              value={cc}
-              onChange={(e) => handleRecipientInput(e.target.value, "cc")}
-              onFocus={() => setActiveField("cc")}
-              onBlur={handleRecipientBlur}
-              placeholder="con copia…"
-              className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
-            />
-            <ContactBookButton
-              contacts={contacts || []}
-              onPick={(email) => addRecipientToField(email, "cc")}
-            />
+          {/* Columna derecha — Para + CC apilados */}
+          <div className="flex-1 flex flex-col gap-0.5 min-w-0 relative">
+            {/* Fila Para */}
+            <div className="flex items-center gap-2 py-0.5 relative">
+              <span className="text-muted-foreground font-medium shrink-0 w-10 text-[11px]">Para</span>
+              <input
+                value={to}
+                onChange={(e) => handleRecipientInput(e.target.value, "to")}
+                onFocus={() => setActiveField("to")}
+                onBlur={handleRecipientBlur}
+                placeholder="nombre o email…"
+                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
+              />
+              {/* Botón libreta de contactos */}
+              <ContactBookButton
+                contacts={contacts || []}
+                onPick={(email) => addRecipientToField(email, "to")}
+              />
+              {/* Toggle Plantilla */}
+              <div className="flex items-center gap-2 shrink-0">
+                {hasTemplates && !showTemplateModal && effectiveMode !== "template" && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplateModal(true)}
+                    className="text-[10px] text-primary hover:underline"
+                  >
+                    Plantilla
+                  </button>
+                )}
+                {effectiveMode === "template" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("manual");
+                      setSelectedTemplateId("");
+                      setSubjectOverride(null);
+                      setBodyOverride(null);
+                    }}
+                    className="text-[10px] text-primary hover:underline"
+                  >
+                    Quitar plantilla
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* CC — siempre visible */}
+            <div className="flex items-center gap-2 py-0.5 relative">
+              <span className="text-muted-foreground font-medium shrink-0 w-10 text-[11px]">CC</span>
+              <input
+                value={cc}
+                onChange={(e) => handleRecipientInput(e.target.value, "cc")}
+                onFocus={() => setActiveField("cc")}
+                onBlur={handleRecipientBlur}
+                placeholder="con copia…"
+                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
+              />
+              <ContactBookButton
+                contacts={contacts || []}
+                onPick={(email) => addRecipientToField(email, "cc")}
+              />
+            </div>
           </div>
 
           {/* ─── Autocomplete dropdown ─── */}
           {activeField && autocompleteSuggestions.length > 0 && (
-            <div className="absolute z-50 left-14 right-4 mt-1 rounded-lg border border-border bg-popover shadow-lg max-h-60 overflow-auto">
+            <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-lg border border-border bg-popover shadow-lg max-h-60 overflow-auto">
               {autocompleteSuggestions.map((contact) => {
                 const initials = (contact.fullName || contact.email)
                   .split(" ")
@@ -613,13 +619,14 @@ export function EmailComposeModal({
             </div>
           ) : (
             <>
-              {/* Asunto — integrado al body, jerarquía visual mayor */}
-              <div className="px-4 py-2.5 border-b border-border/40 bg-background shrink-0">
-                <input
+              {/* Asunto — mismo control que el configurador de plantillas */}
+              <div className="px-4 py-2.5 bg-background shrink-0 flex flex-col gap-1">
+                <Label className="app-field-label">Asunto</Label>
+                <Input
                   value={effectiveSubject}
                   onChange={(e) => setSubjectOverride(e.target.value)}
-                  placeholder="Asunto"
-                  className="w-full bg-transparent border-0 outline-none text-foreground text-[15px] font-semibold"
+                  placeholder="Asunto del correo"
+                  className="h-9"
                 />
               </div>
 

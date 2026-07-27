@@ -102,15 +102,23 @@
     @apply flex flex-col gap-0 border-0 p-0;
     overflow: hidden !important;
     border-radius: 18px !important;
-    background: color-mix(in srgb, var(--card) 85%, transparent) !important;
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    box-shadow: 0 26px 55px rgba(2, 12, 27, 0.25) !important;
-    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 55%, transparent) 0%,
+      color-mix(in srgb, var(--card) 35%, transparent) 100%
+    ) !important;
+    backdrop-filter: blur(26px) saturate(170%);
+    -webkit-backdrop-filter: blur(26px) saturate(170%);
+    box-shadow:
+      0 26px 55px rgba(2, 12, 27, 0.25),
+      0 1px 0 rgba(255, 255, 255, 0.12) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
     display: flex !important;
     flex-direction: column !important;
     min-height: 0 !important;
     max-height: 100vh !important;
+    position: relative !important;
 
     /* Mobile (<640px) — compacto con aire */
     width: 90vw !important;
@@ -138,6 +146,49 @@
       height: 1100px !important;
       max-width: 1200px !important;
     }
+  }
+
+  /* Liquid glass — glow radial en la esquina superior izquierda
+   * Coherente con .app-panel. El tono se adapta al tema de color activo. */
+  .modal-email::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(
+      120% 100% at 0% 0%,
+      color-mix(in srgb, var(--primary) 18%, transparent) 0%,
+      transparent 55%
+    );
+  }
+
+  /* Liquid glass — modo oscuro */
+  .dark .modal-email {
+    border-color: oklch(0.30 0.02 250 / 40%) !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 60%, transparent) 0%,
+      color-mix(in srgb, var(--card) 35%, transparent) 100%
+    ) !important;
+    box-shadow:
+      0 26px 55px rgba(0, 0, 0, 0.5),
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+  }
+
+  .dark .modal-email::before {
+    background: radial-gradient(
+      120% 100% at 0% 0%,
+      color-mix(in srgb, var(--primary) 12%, transparent) 0%,
+      transparent 55%
+    );
+  }
+
+  /* Asegurar que el contenido del modal quede por encima del ::before */
+  .modal-email > * {
+    position: relative;
+    z-index: 1;
   }
 
   /* ═══════════════ ESTRUCTURA INTERNA (inmune) ═══════════════ */
@@ -318,16 +369,29 @@
   flex-shrink: 0 !important;
 }
 
-/* Ancho del botón Enviar en el compose (15% de la fila Para) */
-.email-send-col {
-  width: 15% !important;
+/* Botón Enviar del compose — estilo Outlook Web 365
+ * Cuadrado, sólido, fuera del esquema de botones redondeados estándar.
+ * Spanea verticalmente las filas Para + CC. */
+.email-send-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  width: 80px !important;
+  align-self: stretch !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border: 1px solid var(--primary) !important;
+  transition: opacity 0.15s ease !important;
+  cursor: pointer !important;
 }
-
-/* Ancho del label vacío en filas CC/CCO
- * Alinea el label CC/CCO con el label Para de la primera fila.
- * Primera fila: [Enviar 15%] [gap 8px] [Para w-10 40px] [input...]
- * Filas CC/CCO: [spacer] [gap 8px] [CC/CCO w-10 40px] [input...]
- * El spacer debe ser 15% + 8px (gap) = 15% + 8px para alinear los labels */
-.email-cc-label {
-  width: calc(15% + 8px) !important;
+.email-send-btn:hover:not(:disabled) {
+  opacity: 0.88 !important;
+}
+.email-send-btn:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
 }

@@ -471,7 +471,7 @@ export function HtmlEditor({
     editable: !disabled,
     editorProps: {
       attributes: {
-        class: "html-editor-content prose max-w-none min-h-40 px-3 pt-2 pb-5 text-sm focus:outline-none",
+        class: "html-editor-content max-w-none min-h-40 px-3 pt-2 pb-5 text-sm focus:outline-none",
       },
     },
     onUpdate: ({ editor }) => {
