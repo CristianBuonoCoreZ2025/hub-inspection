@@ -39,12 +39,12 @@ interface EmailComposeModalProps {
  * Layout (de arriba a abajo):
  *  1. Header compacto (icono + título + gestión + cerrar)
  *  2. Action bar: [Enviar] [Plantilla ▼ si hay]     [Historial]
- *  3. Campos: Para → CC → BCC → Asunto (con autocomplete de libreta)
+ *  3. Campos: Para → CC → Asunto (con autocomplete de libreta)
  *  4. Toolbar de formato (Bold, tablas, colores…) — solo en HTML
  *  5. Body del correo (HtmlEditor o textarea)
  *
  * La libreta de contactos se invoca de 2 formas:
- *  - Escribiendo en Para/CC/BCC: autocomplete con sugerencias filtradas
+ *  - Escribiendo en Para/CC: autocomplete con sugerencias filtradas
  *  - Botón [Users] al lado de cada campo: abre popover con la libreta completa
  */
 
@@ -166,18 +166,16 @@ export function EmailComposeModal({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [to, setTo] = useState<string>("");
   const [cc, setCc] = useState<string>("");
-  const [bcc, setBcc] = useState<string>("");
   const [subjectOverride, setSubjectOverride] = useState<string | null>(null);
   const [bodyOverride, setBodyOverride] = useState<string | null>(null);
   const [manualBodyFormat] = useState<"plain" | "html">("html");
   const [showHistory, setShowHistory] = useState(false);
-  const [showCcBcc, setShowCcBcc] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const htmlEditorRef = useRef<Editor | null>(null);
   const queryClient = useQueryClient();
 
   // ─── Autocomplete state ───
-  const [activeField, setActiveField] = useState<"to" | "cc" | "bcc" | null>(null);
+  const [activeField, setActiveField] = useState<"to" | "cc" | null>(null);
   const [autocompleteQuery, setAutocompleteQuery] = useState("");
 
   const changeTemplate = (newId: string) => {
@@ -299,13 +297,11 @@ export function EmailComposeModal({
     mutationFn: async () => {
       const toArr = to.split(",").map((s) => s.trim()).filter(Boolean);
       const ccArr = cc.split(",").map((s) => s.trim()).filter(Boolean);
-      const bccArr = bcc.split(",").map((s) => s.trim()).filter(Boolean);
 
       const payload: Record<string, unknown> = {
         claimActionId: action.id,
         to: toArr,
         cc: ccArr,
-        bcc: bccArr,
       };
 
       if (effectiveMode === "template" && effectiveTemplateId) {
@@ -339,7 +335,6 @@ export function EmailComposeModal({
       queryClient.invalidateQueries({ queryKey: ["email-logs", action.id] });
       setTo("");
       setCc("");
-      setBcc("");
       setSubjectOverride(null);
       setBodyOverride(null);
       onOpenChange(false);
@@ -347,13 +342,12 @@ export function EmailComposeModal({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const addRecipientToField = (email: string, field: "to" | "cc" | "bcc") => {
-    const setter = field === "to" ? setTo : field === "cc" ? setCc : setBcc;
-    const current = field === "to" ? to : field === "cc" ? cc : bcc;
+  const addRecipientToField = (email: string, field: "to" | "cc") => {
+    const setter = field === "to" ? setTo : setCc;
+    const current = field === "to" ? to : cc;
     const existing = current.split(",").map((s) => s.trim()).filter(Boolean);
     if (existing.includes(email)) return;
     setter([...existing, email].join(", "));
-    if (field !== "to") setShowCcBcc(true);
     setAutocompleteQuery("");
     setActiveField(null);
   };
@@ -379,8 +373,8 @@ export function EmailComposeModal({
       .slice(0, 8);
   }, [activeField, contacts, autocompleteQuery]);
 
-  const handleRecipientInput = (value: string, field: "to" | "cc" | "bcc") => {
-    const setter = field === "to" ? setTo : field === "cc" ? setCc : setBcc;
+  const handleRecipientInput = (value: string, field: "to" | "cc") => {
+    const setter = field === "to" ? setTo : setCc;
     setter(value);
     setActiveField(field);
     setAutocompleteQuery(getLastFragment(value));
@@ -479,7 +473,7 @@ export function EmailComposeModal({
           </div>
         )}
 
-        {/* ═══ 2. CAMPOS — [Enviar 15%] Para → CC → BCC (con autocomplete) ═══ */}
+        {/* ═══ 2. CAMPOS — [Enviar 15%] Para → CC (con autocomplete) ═══ */}
         <div className="px-4 py-2 border-b border-border bg-background text-[11px] shrink-0 relative">
           {/* Fila Para — con Enviar al inicio (15%) */}
           <div className="flex items-center gap-2 py-0.5 relative">
@@ -496,7 +490,7 @@ export function EmailComposeModal({
               )}
               Enviar
             </Button>
-            <span className="text-muted-foreground font-medium shrink-0 w-10">Para</span>
+            <span className="text-muted-foreground font-medium shrink-0 w-10 text-[11px]">Para</span>
             <input
               value={to}
               onChange={(e) => handleRecipientInput(e.target.value, "to")}
@@ -510,17 +504,8 @@ export function EmailComposeModal({
               contacts={contacts || []}
               onPick={(email) => addRecipientToField(email, "to")}
             />
-            {/* Toggles pequeños: CC/CCO y Plantilla */}
+            {/* Toggle Plantilla */}
             <div className="flex items-center gap-2 shrink-0">
-              {!showCcBcc && (
-                <button
-                  type="button"
-                  onClick={() => setShowCcBcc(true)}
-                  className="text-[10px] text-primary hover:underline"
-                >
-                  CC / CCO
-                </button>
-              )}
               {hasTemplates && !showTemplateModal && effectiveMode !== "template" && (
                 <button
                   type="button"
@@ -547,45 +532,23 @@ export function EmailComposeModal({
             </div>
           </div>
 
-          {/* CC */}
-          {showCcBcc && (
-            <div className="flex items-center gap-2 py-0.5 relative">
-              <span className="text-muted-foreground font-medium shrink-0 email-cc-label" />
-              <span className="text-muted-foreground font-medium shrink-0 w-10">CC</span>
-              <input
-                value={cc}
-                onChange={(e) => handleRecipientInput(e.target.value, "cc")}
-                onFocus={() => setActiveField("cc")}
-                onBlur={handleRecipientBlur}
-                placeholder="con copia…"
-                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
-              />
-              <ContactBookButton
-                contacts={contacts || []}
-                onPick={(email) => addRecipientToField(email, "cc")}
-              />
-            </div>
-          )}
-
-          {/* BCC */}
-          {showCcBcc && (
-            <div className="flex items-center gap-2 py-0.5 relative">
-              <span className="text-muted-foreground font-medium shrink-0 email-cc-label" />
-              <span className="text-muted-foreground font-medium shrink-0 w-10">CCO</span>
-              <input
-                value={bcc}
-                onChange={(e) => handleRecipientInput(e.target.value, "bcc")}
-                onFocus={() => setActiveField("bcc")}
-                onBlur={handleRecipientBlur}
-                placeholder="con copia oculta…"
-                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
-              />
-              <ContactBookButton
-                contacts={contacts || []}
-                onPick={(email) => addRecipientToField(email, "bcc")}
-              />
-            </div>
-          )}
+          {/* CC — siempre visible */}
+          <div className="flex items-center gap-2 py-0.5 relative">
+            <span className="text-muted-foreground font-medium shrink-0 email-cc-label" />
+            <span className="text-muted-foreground font-medium shrink-0 w-10 text-[11px]">CC</span>
+            <input
+              value={cc}
+              onChange={(e) => handleRecipientInput(e.target.value, "cc")}
+              onFocus={() => setActiveField("cc")}
+              onBlur={handleRecipientBlur}
+              placeholder="con copia…"
+              className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
+            />
+            <ContactBookButton
+              contacts={contacts || []}
+              onPick={(email) => addRecipientToField(email, "cc")}
+            />
+          </div>
 
           {/* ─── Autocomplete dropdown ─── */}
           {activeField && autocompleteSuggestions.length > 0 && (

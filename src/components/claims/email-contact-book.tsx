@@ -9,7 +9,7 @@ interface EmailContactBookProps {
   claimId: string;
   open: boolean;
   onClose: () => void;
-  onAddRecipient: (email: string, field: "to" | "cc" | "bcc") => void;
+  onAddRecipient: (email: string, field: "to" | "cc") => void;
 }
 
 const GROUP_LABELS: Record<EmailContact["group"], { label: string; icon: typeof Users }> = {
@@ -188,14 +188,6 @@ export function EmailContactBook({
                           title="CC"
                         >
                           CC
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onAddRecipient(contact.email, "bcc")}
-                          className="text-[8px] px-1 py-0.5 rounded font-medium bg-muted/30 text-muted-foreground hover:bg-primary/15 hover:text-primary transition-colors"
-                          title="CCO"
-                        >
-                          CCO
                         </button>
                       </div>
                     </div>

@@ -61,7 +61,6 @@ export function EmailPreviewModal({ open, onOpenChange, log }: EmailPreviewModal
           ${metaRow("email", fullCode)}
           ${metaRow("Para", log.to_address.join(", "))}
           ${metaRow("CC", log.cc_address.join(", "))}
-          ${metaRow("CCO", log.bcc_address.join(", "))}
           ${metaRow("Fecha", dateStrPrint)}
         </table>
       </div>
@@ -125,7 +124,6 @@ ${bodyHtml}
       `From: ${log.sent_by_user?.email || "noreply@hub-inspection.cl"}`,
       `To: ${log.to_address.join(", ")}`,
       log.cc_address.length > 0 ? `Cc: ${log.cc_address.join(", ")}` : "",
-      log.bcc_address.length > 0 ? `Bcc: ${log.bcc_address.join(", ")}` : "",
       `Subject: ${log.subject}`,
       `Date: ${date.toUTCString()}`,
       `X-Correlativo: ${fullCode}`,
@@ -190,7 +188,7 @@ ${bodyHtml}
           </div>
         </div>
 
-        {/* Metadatos: Para, CC, CCO, Fecha */}
+        {/* Metadatos: Para, CC, Fecha */}
         <div className="px-4 py-3 border-b border-border bg-muted/20 grid grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] shrink-0">
           <div className="flex items-baseline gap-2">
             <span className="text-muted-foreground font-medium min-w-10">Para</span>
@@ -199,10 +197,6 @@ ${bodyHtml}
           <div className="flex items-baseline gap-2">
             <span className="text-muted-foreground font-medium min-w-10">CC</span>
             <span className="text-foreground break-all">{log.cc_address.length > 0 ? log.cc_address.join(", ") : ""}</span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-muted-foreground font-medium min-w-10">CCO</span>
-            <span className="text-foreground break-all">{log.bcc_address.length > 0 ? log.bcc_address.join(", ") : ""}</span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-muted-foreground font-medium min-w-10">Fecha</span>

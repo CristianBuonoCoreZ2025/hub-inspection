@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
       emailTemplateId,
       to,
       cc = [],
-      bcc = [],
       // Modo "escrito a mano": el usuario escribe subject y body sin plantilla
       manualSubject,
       manualBody,
@@ -42,7 +41,6 @@ export async function POST(request: NextRequest) {
       emailTemplateId?: string | null;
       to: string[];
       cc?: string[];
-      bcc?: string[];
       manualSubject?: string;
       manualBody?: string;
       manualBodyFormat?: "plain" | "html";
@@ -284,7 +282,6 @@ export async function POST(request: NextRequest) {
     const result = await sendEmail({
       to,
       cc,
-      bcc,
       subject,
       body: finalBody,
       html: body_format === "html",
@@ -297,7 +294,6 @@ export async function POST(request: NextRequest) {
       email_template_id: emailTemplateId ?? null,
       to_address: to,
       cc_address: cc,
-      bcc_address: bcc,
       subject,
       body: finalBody,
       body_format,

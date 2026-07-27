@@ -323,7 +323,11 @@
   width: 15% !important;
 }
 
-/* Ancho del label vacío en filas CC/CCO (15% + 40px para alinear con Para) */
+/* Ancho del label vacío en filas CC/CCO
+ * Alinea el label CC/CCO con el label Para de la primera fila.
+ * Primera fila: [Enviar 15%] [gap 8px] [Para w-10 40px] [input...]
+ * Filas CC/CCO: [spacer] [gap 8px] [CC/CCO w-10 40px] [input...]
+ * El spacer debe ser 15% + 8px (gap) = 15% + 8px para alinear los labels */
 .email-cc-label {
-  width: calc(15% + 40px) !important;
+  width: calc(15% + 8px) !important;
 }

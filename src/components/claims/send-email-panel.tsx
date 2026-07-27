@@ -58,7 +58,6 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [to, setTo] = useState<string>("");
   const [cc, setCc] = useState<string>("");
-  const [bcc, setBcc] = useState<string>("");
   const [showHistory, setShowHistory] = useState(false);
   const queryClient = useQueryClient();
 
@@ -218,7 +217,6 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
     mutationFn: async () => {
       const toArr = to.split(",").map((s) => s.trim()).filter(Boolean);
       const ccArr = cc.split(",").map((s) => s.trim()).filter(Boolean);
-      const bccArr = bcc.split(",").map((s) => s.trim()).filter(Boolean);
 
       const res = await fetch("/api/email/send", {
         method: "POST",
@@ -228,7 +226,6 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
           emailTemplateId: selectedTemplateId,
           to: toArr,
           cc: ccArr,
-          bcc: bccArr,
         }),
       });
       const json = await res.json();
@@ -240,15 +237,14 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
       queryClient.invalidateQueries({ queryKey: ["email-logs", action.id] });
       setTo("");
       setCc("");
-      setBcc("");
       setOpen(false);
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const addRecipientToField = (email: string, field: "to" | "cc" | "bcc") => {
-    const setter = field === "to" ? setTo : field === "cc" ? setCc : setBcc;
-    const current = field === "to" ? to : field === "cc" ? cc : bcc;
+  const addRecipientToField = (email: string, field: "to" | "cc") => {
+    const setter = field === "to" ? setTo : setCc;
+    const current = field === "to" ? to : cc;
     const existing = current.split(",").map((s) => s.trim()).filter(Boolean);
     if (existing.includes(email)) return;
     setter([...existing, email].join(", "));
@@ -365,15 +361,6 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
                     <Input
                       value={cc}
                       onChange={(e) => setCc(e.target.value)}
-                      placeholder="Separados por coma"
-                      className="app-input"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="app-field-label">CCO</Label>
-                    <Input
-                      value={bcc}
-                      onChange={(e) => setBcc(e.target.value)}
                       placeholder="Separados por coma"
                       className="app-input"
                     />
