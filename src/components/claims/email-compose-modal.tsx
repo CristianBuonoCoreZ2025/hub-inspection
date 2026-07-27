@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Mail, Send, Loader2, X, Plus, History, FileText, Code2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Mail, Send, Loader2, X, History, FileText, Code2, Sparkles, ChevronDown, ChevronUp, Contact } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { getEmailTemplatesForAction } from "@/services/email-template-actions";
 import { wrapHtmlEmail } from "@/services/email-render";
+import { EmailContactBook } from "@/components/claims/email-contact-book";
 import { getSupabaseClient } from "@/lib/supabase/db";
 import { toast } from "sonner";
 
@@ -35,12 +36,6 @@ interface EmailComposeModalProps {
   businessLineId?: string | null;
 }
 
-interface RecipientSuggestion {
-  label: string;
-  email: string | null;
-  role: string;
-}
-
 /**
  * Modal de composición de email — modelo Outlook/Apple Mail.
  *
@@ -56,7 +51,6 @@ interface RecipientSuggestion {
 export function EmailComposeModal({
   open,
   onOpenChange,
-  claim,
   action,
   businessLineId,
 }: EmailComposeModalProps) {
@@ -70,6 +64,7 @@ export function EmailComposeModal({
   const [manualBodyFormat, setManualBodyFormat] = useState<"plain" | "html">("plain");
   const [showHistory, setShowHistory] = useState(false);
   const [showCcBcc, setShowCcBcc] = useState(false);
+  const [showContacts, setShowContacts] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const queryClient = useQueryClient();
@@ -118,97 +113,6 @@ export function EmailComposeModal({
       return (data || []) as EmailLogLite[];
     },
     enabled: open && showHistory,
-  });
-
-  const { data: recipientSuggestions } = useQuery({
-    queryKey: ["email-recipients", action.claim_id, claim],
-    queryFn: async (): Promise<RecipientSuggestion[]> => {
-      const suggestions: RecipientSuggestion[] = [];
-      const claimData = claim || {};
-      const ownerEmail = claimData.owner_email as string | undefined;
-      if (ownerEmail) {
-        suggestions.push({ label: "Propietario", email: ownerEmail, role: "owner" });
-      }
-      const profileIds = [
-        claimData.adjuster_id as string | undefined,
-        claimData.assigned_adjuster_id as string | undefined,
-        claimData.inspector_id as string | undefined,
-        claimData.assistant_id as string | undefined,
-        claimData.dispatcher_id as string | undefined,
-      ].filter(Boolean) as string[];
-      if (profileIds.length > 0) {
-        const supabase = getSupabaseClient();
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .in("id", profileIds);
-        const profMap = new Map<string, { id: string; full_name: string; email: string }>(
-          (profiles || []).map((p: { id: string; full_name: string; email: string }) => [p.id, p])
-        );
-        if (claimData.adjuster_id) {
-          const p = profMap.get(claimData.adjuster_id as string);
-          if (p?.email) suggestions.push({ label: "Liquidador", email: p.email, role: "adjuster" });
-        }
-        if (claimData.assigned_adjuster_id) {
-          const p = profMap.get(claimData.assigned_adjuster_id as string);
-          if (p?.email) suggestions.push({ label: "Liq. Asignado", email: p.email, role: "assigned_adjuster" });
-        }
-        if (claimData.inspector_id) {
-          const p = profMap.get(claimData.inspector_id as string);
-          if (p?.email) suggestions.push({ label: "Inspector", email: p.email, role: "inspector" });
-        }
-        if (claimData.assistant_id) {
-          const p = profMap.get(claimData.assistant_id as string);
-          if (p?.email) suggestions.push({ label: "Asistente", email: p.email, role: "assistant" });
-        }
-        if (claimData.dispatcher_id) {
-          const p = profMap.get(claimData.dispatcher_id as string);
-          if (p?.email) suggestions.push({ label: "Despachador", email: p.email, role: "dispatcher" });
-        }
-      }
-      const supabase = getSupabaseClient();
-      const { data: participants } = await supabase
-        .from("claims_participants")
-        .select("id, type, full_name, email")
-        .eq("claim_id", action.claim_id);
-      for (const p of participants || []) {
-        if (!p.email) continue;
-        const typeLabel: Record<string, string> = {
-          insured: "Asegurado",
-          contractor: "Contratista",
-          beneficiary: "Beneficiario",
-          executive: "Ejecutivo",
-          contact: "Contacto",
-        };
-        suggestions.push({
-          label: typeLabel[p.type] || p.type,
-          email: p.email,
-          role: p.type,
-        });
-      }
-      // ─── Deduplicar por email: combinar roles con el mismo correo ───
-      // Si Asegurado, Beneficiario y Contratista comparten email, mostrar
-      // un solo chip: "Asegurado, Beneficiario, Contratista: cristian@..."
-      const byEmail = new Map<string, { labels: string[]; email: string }>();
-      for (const s of suggestions) {
-        if (!s.email) continue;
-        const key = s.email.toLowerCase().trim();
-        const existing = byEmail.get(key);
-        if (existing) {
-          if (!existing.labels.includes(s.label)) {
-            existing.labels.push(s.label);
-          }
-        } else {
-          byEmail.set(key, { labels: [s.label], email: s.email });
-        }
-      }
-      return Array.from(byEmail.values()).map((v) => ({
-        label: v.labels.join(", "),
-        email: v.email,
-        role: "merged",
-      }));
-    },
-    enabled: open,
   });
 
   const activeTemplates = useMemo(() => templates?.filter((t) => t.is_active) || [], [templates]);
@@ -511,25 +415,25 @@ export function EmailComposeModal({
             <History className="h-3 w-3" />
             {showHistory ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </button>
+
+          {/* Toggle Contact Book */}
+          <button
+            type="button"
+            onClick={() => setShowContacts((v) => !v)}
+            data-active={showContacts}
+            className="app-contact-toggle"
+            title="Libreta de contactos"
+          >
+            <Contact className="h-3 w-3" />
+            Contactos
+          </button>
         </div>
 
-        {/* Sugeridos + Historial (colapsable) */}
-        {(recipientSuggestions?.length || showHistory) && (
-          <div className="px-4 py-2 border-b border-border bg-muted/10 flex flex-wrap items-center gap-1.5">
-            {recipientSuggestions?.map((r) => (
-              <button
-                key={`${r.role}-${r.email}`}
-                type="button"
-                onClick={() => r.email && addRecipientToField(r.email, "to")}
-                className="app-compose-chip"
-                title={`Agregar ${r.email} a Para`}
-              >
-                <Plus className="h-2.5 w-2.5" />
-                {r.label}: <span className="font-mono truncate max-w-30">{r.email}</span>
-              </button>
-            ))}
-            {showHistory && logs && logs.length > 0 && (
-              <div className="w-full app-compose-history">
+        {/* Historial (colapsable) */}
+        {showHistory && (
+          <div className="px-4 py-2 border-b border-border bg-muted/10">
+            {logs && logs.length > 0 && (
+              <div className="app-compose-history">
                 {logs.map((log) => (
                   <div key={log.id} className="app-compose-history-item">
                     <div className="flex flex-col min-w-0">
@@ -547,8 +451,8 @@ export function EmailComposeModal({
                 ))}
               </div>
             )}
-            {showHistory && logs && logs.length === 0 && (
-              <p className="text-[11px] text-muted-foreground italic w-full">
+            {logs && logs.length === 0 && (
+              <p className="text-[11px] text-muted-foreground italic">
                 No hay envíos registrados.
               </p>
             )}
@@ -615,8 +519,10 @@ export function EmailComposeModal({
           </div>
         </div>
 
-        {/* ═══ 4. CANVAS DEL CORREO — WYSIWYG (lo que ves es lo que envías) ═══ */}
-        <div className="app-compose-scroll">
+        {/* ═══ 4. CANVAS DEL CORREO + CONTACT BOOK (flex row) ═══ */}
+        <div className="flex-1 flex overflow-hidden">
+        {/* Canvas WYSIWYG (lo que ves es lo que envías) */}
+        <div className="app-compose-scroll flex-1">
           {previewLoading && mode === "template" ? (
             <div className="app-compose-loading">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -645,6 +551,15 @@ export function EmailComposeModal({
             </div>
           )}
           <div className="app-compose-spacer" />
+        </div>
+
+        {/* Contact Book — panel lateral deslizable */}
+        <EmailContactBook
+          claimId={action.claim_id}
+          open={showContacts}
+          onClose={() => setShowContacts(false)}
+          onAddRecipient={addRecipientToField}
+        />
         </div>
 
         {/* ═══ 5. FOOTER — Cancelar + Enviar ═══ */}

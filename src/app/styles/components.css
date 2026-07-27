@@ -1059,10 +1059,11 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════ */
-  /*  EMAIL COMPOSE MODAL — Clases reutilizables                      */
+  /*  EMAIL COMPOSE MODAL — Modelo Outlook/Apple Mail (WYSIWYG)       */
+  /*  El correo ES la vista previa. Edición inline.                   */
   /* ═══════════════════════════════════════════════════════════════ */
 
-  /* Header del compose — banner con ícono + gestión + código */
+  /* Header del compose — 3 filas como el preview */
   .app-compose-header {
     @apply flex items-start justify-between gap-3 p-4 border-b border-border;
     background: var(--background);
@@ -1082,7 +1083,7 @@
     @apply text-[10px] text-muted-foreground font-mono;
   }
 
-  /* Botones del header — liquid glass coherente con preview */
+  /* Botones del header — liquid glass */
   .app-compose-btn {
     @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground;
     background: color-mix(in srgb, var(--card) 60%, transparent);
@@ -1108,14 +1109,21 @@
     box-shadow: none;
   }
 
+  /* Barra de herramientas — plantilla + modo + sugeridos */
+  .app-compose-toolbar {
+    @apply flex items-center gap-2 px-4 py-2 border-b border-border flex-wrap;
+    background: color-mix(in srgb, var(--background) 60%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
   /* Tabs de modo (Plantilla / A mano) — liquid glass */
   .app-compose-tabs {
-    @apply flex items-center gap-1 p-1 rounded-lg;
+    @apply flex items-center gap-1 p-0.5 rounded-lg;
     background: color-mix(in srgb, var(--muted) 30%, transparent);
     border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
   }
   .app-compose-tab {
-    @apply flex-1 flex items-center justify-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-md transition-all cursor-pointer;
+    @apply flex items-center justify-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md transition-all cursor-pointer;
     color: var(--muted-foreground);
   }
   .app-compose-tab:hover {
@@ -1141,47 +1149,66 @@
     color: var(--primary);
   }
 
-  /* Labels de campos — coherente con sistema */
+  /* Labels de campos */
   .app-compose-label {
     @apply text-[11px] font-medium text-muted-foreground;
   }
 
-  /* Panel izquierdo — composición */
-  .app-compose-panel-left {
-    @apply space-y-3 overflow-y-auto border-r border-border;
-    background: color-mix(in srgb, var(--muted) 8%, transparent);
+  /* ─── Metadata bar — Para/CC/CCO/Asunto (estilo Outlook) ─── */
+  .app-compose-meta {
+    @apply px-4 py-3 border-b border-border;
+    background: color-mix(in srgb, var(--muted) 15%, transparent);
+  }
+  .app-compose-meta-row {
+    @apply flex items-baseline gap-2 py-0.5;
+  }
+  .app-compose-meta-label {
+    @apply text-[11px] font-medium text-muted-foreground shrink-0;
+    min-width: 56px;
+  }
+  .app-compose-meta-input {
+    @apply flex-1 bg-transparent border-0 outline-none text-[12px] text-foreground;
+  }
+  .app-compose-meta-input::placeholder {
+    color: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
+  }
+  .app-compose-meta-divider {
+    @apply border-t border-border my-0;
+    border-color: color-mix(in srgb, var(--border) 30%, transparent);
   }
 
-  /* Panel derecho — preview en vivo */
-  .app-compose-panel-right {
-    @apply flex flex-col overflow-hidden;
+  /* ─── Área del correo — scroll + canvas WYSIWYG ─── */
+  .app-compose-scroll {
+    @apply flex-1 overflow-y-auto w-full;
     background: color-mix(in srgb, var(--muted) 12%, transparent);
   }
-  .app-compose-preview-bar {
-    @apply flex items-center justify-between px-4 py-2 border-b border-border;
-    background: color-mix(in srgb, var(--background) 60%, transparent);
-    backdrop-filter: blur(8px);
-  }
-  .app-compose-preview-title {
-    @apply flex items-center gap-1.5 text-[11px] font-medium text-foreground;
-  }
-  .app-compose-preview-badge {
-    @apply text-[10px] text-muted-foreground px-1.5 py-0.5 rounded;
-    background: color-mix(in srgb, var(--muted) 40%, transparent);
-  }
-  .app-compose-preview-body {
-    @apply flex-1 overflow-auto p-4;
-  }
-  .app-compose-preview-card {
-    @apply rounded-xl overflow-hidden mx-auto bg-white;
-    max-width: 600px;
+  .app-compose-canvas {
+    @apply w-full bg-white mx-auto;
+    max-width: 680px;
+    min-height: 400px;
     box-shadow: 0 4px 20px rgb(0 0 0 / 0.06);
   }
-  .dark .app-compose-preview-card {
+  .dark .app-compose-canvas {
     background: color-mix(in srgb, var(--card) 92%, transparent);
   }
-  .app-compose-preview-text {
-    @apply rounded-xl border border-border bg-background p-6 min-h-75 max-w-2xl mx-auto shadow-sm;
+  /* El iframe hereda el ancho del canvas */
+  .app-compose-canvas iframe {
+    @apply w-full bg-white block;
+  }
+
+  /* ─── Texto plano — textarea full-width estilo Mac Mail ─── */
+  .app-compose-plaintext {
+    @apply w-full bg-white border-0 outline-none p-8 text-sm leading-relaxed text-foreground resize-none;
+    min-height: 400px;
+  }
+  .dark .app-compose-plaintext {
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+  }
+
+  /* ─── Espaciador inferior ─── */
+  .app-compose-spacer {
+    height: 24px;
+    flex-shrink: 0;
   }
 
   /* Footer del compose */
@@ -1191,9 +1218,9 @@
     backdrop-filter: blur(8px);
   }
 
-  /* Historial — lista compacta */
+  /* Historial — lista compacta (colapsable en toolbar) */
   .app-compose-history {
-    @apply rounded-lg border border-border p-2 space-y-1 overflow-auto;
+    @apply rounded-lg border border-border p-2 space-y-1 overflow-auto mt-1;
     background: color-mix(in srgb, var(--background) 60%, transparent);
     max-height: 160px;
   }
@@ -1233,9 +1260,138 @@
     color: var(--primary);
   }
 
-  /* Loading state del preview */
+  /* Loading state */
   .app-compose-loading {
-    @apply h-full flex flex-col items-center justify-center gap-2 text-muted-foreground;
+    @apply flex flex-col items-center justify-center gap-2 text-muted-foreground;
+    min-height: 200px;
+  }
+
+  /* Select de plantilla en toolbar */
+  .app-compose-template-select {
+    @apply h-8 text-[11px];
+    min-width: 200px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════ */
+  /*  EMAIL CONTACT BOOK — Libreta de direcciones reutilizable        */
+  /*  Mini Outlook: panel deslizable con contactos agrupados          */
+  /* ═══════════════════════════════════════════════════════════════ */
+
+  /* Overlay del contact book — panel lateral deslizable */
+  .app-contact-book {
+    @apply flex flex-col overflow-hidden;
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter: blur(20px) saturate(140%);
+    border-left: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  }
+
+  /* Header del contact book */
+  .app-contact-book-header {
+    @apply flex items-center justify-between px-3 py-2 border-b border-border shrink-0;
+    background: color-mix(in srgb, var(--background) 60%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .app-contact-book-title {
+    @apply flex items-center gap-1.5 text-[11px] font-medium text-foreground;
+  }
+  .app-contact-book-count {
+    @apply text-[10px] text-muted-foreground px-1.5 py-0.5 rounded;
+    background: color-mix(in srgb, var(--muted) 40%, transparent);
+  }
+
+  /* Search bar */
+  .app-contact-book-search {
+    @apply flex items-center gap-1.5 px-3 py-2 border-b border-border shrink-0;
+    background: color-mix(in srgb, var(--muted) 10%, transparent);
+  }
+  .app-contact-book-search-input {
+    @apply flex-1 bg-transparent border-0 outline-none text-[11px] text-foreground;
+  }
+  .app-contact-book-search-input::placeholder {
+    color: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
+  }
+
+  /* Lista de contactos — scroll */
+  .app-contact-book-list {
+    @apply flex-1 overflow-y-auto;
+  }
+
+  /* Grupo de contactos (sección) */
+  .app-contact-group-header {
+    @apply sticky top-0 z-10 px-3 py-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground;
+    background: color-mix(in srgb, var(--background) 80%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 20%, transparent);
+  }
+
+  /* Item de contacto */
+  .app-contact-item {
+    @apply flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors border-b;
+    border-color: color-mix(in srgb, var(--border) 15%, transparent);
+  }
+  .app-contact-item:hover {
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+  .app-contact-item-avatar {
+    @apply flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-medium text-white shrink-0;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+  }
+  .app-contact-item-info {
+    @apply flex flex-col min-w-0 flex-1;
+  }
+  .app-contact-item-name {
+    @apply text-[11px] font-medium text-foreground truncate;
+  }
+  .app-contact-item-email {
+    @apply text-[10px] text-muted-foreground truncate font-mono;
+  }
+  .app-contact-item-roles {
+    @apply flex flex-wrap gap-0.5 shrink-0;
+  }
+  .app-contact-item-role {
+    @apply text-[8px] px-1 py-0.5 rounded font-medium;
+    background: color-mix(in srgb, var(--muted) 40%, transparent);
+    color: var(--muted-foreground);
+  }
+  .app-contact-item-role-internal {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+  }
+
+  /* Botones de acción del contact book (Para / CC / CCO) */
+  .app-contact-actions {
+    @apply flex items-center gap-0.5 shrink-0;
+  }
+  .app-contact-action-btn {
+    @apply text-[8px] px-1 py-0.5 rounded font-medium transition-colors;
+    background: color-mix(in srgb, var(--muted) 30%, transparent);
+    color: var(--muted-foreground);
+  }
+  .app-contact-action-btn:hover {
+    background: color-mix(in srgb, var(--primary) 15%, transparent);
+    color: var(--primary);
+  }
+
+  /* Estado vacío */
+  .app-contact-empty {
+    @apply flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground;
+  }
+
+  /* Toggle button para abrir/cerrar el contact book */
+  .app-contact-toggle {
+    @apply inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-colors cursor-pointer;
+    background: color-mix(in srgb, var(--muted) 30%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+    color: var(--muted-foreground);
+  }
+  .app-contact-toggle:hover {
+    color: var(--foreground);
+    border-color: color-mix(in srgb, var(--border) 50%, transparent);
+  }
+  .app-contact-toggle[data-active="true"] {
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+    color: var(--primary);
   }
 
   /* Header del modal — banner con ícono (liquid glass coherente con sistema) */
