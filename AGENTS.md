@@ -74,6 +74,52 @@ Sin excepciones. Configuración, catálogos, transacciones, auditoría, todo.
 - Usar `async/await` para operaciones asíncronas.
 - Preferir **Server Components** por defecto; usar `"use client"` solo cuando sea necesario (hooks del browser, eventos, etc.).
 - Validar todos los inputs de usuario con **Zod**.
+
+### REGLA #2 — CERO inline styles en componentes (OBLIGATORIO)
+**Esta regla tiene prioridad máxima sobre la conveniencia.** No hay excepciones para
+estilos visuales, tamaños, colores, gradientes, espaciados o layout.
+
+#### Prohibido
+- **NUNCA** usar `style={{ ... }}` en JSX para definir estilos visuales.
+  - Prohibido: `style={{ background: "linear-gradient(...)" }}`
+  - Prohibido: `style={{ width: "15%" }}`
+  - Prohibido: `style={{ height: "20px", minHeight: "20px", flexShrink: 0 }}`
+- **NUNCA** hardcodear colores, gradientes, tamaños o espaciados en el JSX.
+- **NUNCA** usar Tailwind utilities arbitrarias con valores mágicos (`w-[15%]`, `h-[20px]`)
+  cuando el valor se repite en múltiples lugares.
+
+#### Obligatorio
+- **TODOS** los estilos visuales deben ser **clases CSS** definidas en archivos `.css`
+  (principalmente `src/app/styles/modals.css` para modales y componentes compartidos).
+- Las clases CSS deben ser **reutilizables** y **semánticas** — el nombre describe
+  qué SON, no cómo se ven:
+  - ✅ `email-icon-gradient` (describe qué es: icono con gradiente brand)
+  - ✅ `email-bottom-spacer` (describe qué es: espaciador inferior)
+  - ✅ `email-send-col` (describe qué es: columna del botón enviar)
+  - ❌ `bg-indigo-purple` (describe cómo se ve, no qué es)
+  - ❌ `h-20-w-20` (describe dimensiones, no propósito)
+- Las clases CSS deben usar `!important` cuando sea necesario para que no sean
+  sobrescritas por utilities de Tailwind (ver bug de `@layer components`).
+- Si un estilo se repite en 2+ componentes, DEBE ser una clase CSS compartida.
+- Si un estilo es único de un componente, puede ser una clase CSS local, pero
+  NUNCA un inline style.
+
+#### Excepciones (ÚNICAS excepciones permitidas)
+- `style` para **valores dinámicos** que dependen de datos en runtime:
+  - ✅ `style={{ height: \`${dynamicHeight}px\` }}` (altura calculada en runtime)
+  - ✅ `style={{ transform: \`translateX(${position}px)\` }}` (posición animada)
+  - ✅ `style={{ gridTemplateColumns: \`repeat(${count}, 1fr)\` }}` (columnas dinámicas)
+- `style` para **refs medidas** (scroll position, offsetHeight, etc.)
+- En estos casos, el `style` es el ÚNICO modo de aplicar el valor porque no existe
+  en tiempo de compilación. Pero el resto de estilos del mismo elemento deben ser clases.
+
+#### Motivo
+- **Mantenibilidad**: cambiar un gradiente o tamaño en 1 lugar, no en 10.
+- **Consistencia**: todos los modales usan las mismas dimensiones y estilos.
+- **Auditabilidad**: los estilos están centralizados en CSS, no dispersos en JSX.
+- **Reutilización**: una clase como `email-icon-gradient` sirve para preview,
+  compose, contact book y cualquier futuro componente de email.
+
 - Usar **React Hook Form** para todos los formularios.
 - Mantener separación clara entre Server Actions y Client Components.
 - Usar `@supabase/ssr` para autenticación en Next.js (cookies via middleware).

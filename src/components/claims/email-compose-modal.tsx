@@ -114,8 +114,7 @@ function ContactBookButton({
                     className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent transition-colors"
                   >
                     <div
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0"
-                      style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0 email-icon-gradient"
                     >
                       {initials}
                     </div>
@@ -408,7 +407,7 @@ export function EmailComposeModal({
         {/* ═══ 1. HEADER — idéntico al preview (mismo alto y dimensiones) ═══ */}
         <div className="p-4 border-b border-border bg-background flex items-start justify-between gap-3 shrink-0">
           <DialogTitle className="flex items-start gap-3 m-0 min-w-0">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shrink-0 email-icon-gradient">
               <Mail className="h-4 w-4" />
             </div>
             <div className="flex flex-col min-w-0">
@@ -477,8 +476,7 @@ export function EmailComposeModal({
           <div className="flex items-center gap-2 py-0.5 relative">
             {/* Enviar — 15% de la sección, al inicio */}
             <Button
-              className="pg-btn-platinum shrink-0"
-              style={{ width: "15%" }}
+              className="pg-btn-platinum shrink-0 email-send-col"
               disabled={!canSend}
               onClick={() => sendMutation.mutate()}
             >
@@ -543,7 +541,7 @@ export function EmailComposeModal({
           {/* CC */}
           {showCcBcc && (
             <div className="flex items-center gap-2 py-0.5 relative">
-              <span className="text-muted-foreground font-medium shrink-0" style={{ width: "calc(15% + 40px)" }} />
+              <span className="text-muted-foreground font-medium shrink-0 email-cc-label" />
               <span className="text-muted-foreground font-medium shrink-0 w-10">CC</span>
               <input
                 value={cc}
@@ -563,7 +561,7 @@ export function EmailComposeModal({
           {/* BCC */}
           {showCcBcc && (
             <div className="flex items-center gap-2 py-0.5 relative">
-              <span className="text-muted-foreground font-medium shrink-0" style={{ width: "calc(15% + 40px)" }} />
+              <span className="text-muted-foreground font-medium shrink-0 email-cc-label" />
               <span className="text-muted-foreground font-medium shrink-0 w-10">CCO</span>
               <input
                 value={bcc}
@@ -600,7 +598,7 @@ export function EmailComposeModal({
                     }}
                     className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-accent transition-colors border-b last:border-0 border-border/20"
                   >
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0 email-icon-gradient">
                       {initials}
                     </div>
                     <div className="flex flex-col min-w-0 flex-1">

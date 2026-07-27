@@ -145,7 +145,7 @@ export function EmailContactBook({
                       onClick={() => onAddRecipient(contact.email, "to")}
                       title={`Agregar ${contact.email} a Para`}
                     >
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-medium text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-medium text-white shrink-0 email-icon-gradient">
                         {initials}
                       </div>
                       <div className="flex flex-col min-w-0 flex-1">

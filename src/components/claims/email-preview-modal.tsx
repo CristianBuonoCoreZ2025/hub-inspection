@@ -154,7 +154,7 @@ ${bodyHtml}
         {/* 1. HEADER DEL MODAL (Fijo arriba) */}
         <div className="p-4 border-b border-border bg-background flex items-start justify-between gap-3 shrink-0">
           <DialogTitle className="flex items-start gap-3 m-0">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shrink-0 email-icon-gradient">
               <Mail className="h-4 w-4" />
             </div>
             <div className="flex flex-col">
@@ -212,7 +212,7 @@ ${bodyHtml}
           ) : (
             <div className="flex-1 overflow-y-auto p-4">
               <pre className="whitespace-pre-wrap font-sans">{log.body}</pre>
-              <div style={{ height: "20px", minHeight: "20px", flexShrink: 0 }} />
+              <div className="email-bottom-spacer" />
             </div>
           )}
         </div>

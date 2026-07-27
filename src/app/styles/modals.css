@@ -299,3 +299,31 @@
   color: #003591 !important;
   font-size: 13px !important;
 }
+
+/* ════════════════════════════════════════════════════════════════
+ *  CLASES REUTILIZABLES PARA MODALES DE EMAIL
+ *  (preview y compose comparten estas clases)
+ * ════════════════════════════════════════════════════════════════ */
+
+/* Icono con gradiente brand — usado en headers de modal y avatares */
+.email-icon-gradient {
+  background: linear-gradient(135deg, #6366f1, #a855f7) !important;
+}
+
+/* Espaciador inferior — 20px de aire antes del borde del modal
+ * Evita el bug de Chrome donde padding-bottom colapsa en overflow-y: auto */
+.email-bottom-spacer {
+  height: 20px !important;
+  min-height: 20px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Ancho del botón Enviar en el compose (15% de la fila Para) */
+.email-send-col {
+  width: 15% !important;
+}
+
+/* Ancho del label vacío en filas CC/CCO (15% + 40px para alinear con Para) */
+.email-cc-label {
+  width: calc(15% + 40px) !important;
+}
