@@ -195,6 +195,17 @@ src/
 - **Archivo:** `src/components/ui/dialog.tsx`
 - **Características:** z-50, sin isolate en overlay
 
+### DropdownMenu (menú contextual)
+- **Archivo:** `src/components/ui/dropdown-menu.tsx`
+- **Características:** Prop `arrow` para flecha, clase `dropdown-emerge` para animación
+- **Docs:** [dropdown-emerge.md](./dropdown-emerge.md)
+
+### EmailPreviewModal (visor de correos)
+- **Archivo:** `src/components/claims/email-preview-modal.tsx`
+- **Características:** Vista previa HTML/texto, metadatos, impresión, descarga .eml
+- **Reutilizable:** Solo necesita un objeto `EmailLogLite`
+- **Docs:** [email-preview-modal.md](./email-preview-modal.md)
+
 ### FieldConfigEditor (matriz de campos)
 - **Archivo:** `src/components/ui/field-config-editor.tsx`
 - **Características:** Iconos Eye/EyeOff (sin checkboxes), labels personalizables
