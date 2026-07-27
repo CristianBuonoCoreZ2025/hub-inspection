@@ -455,6 +455,397 @@
     white-space: nowrap !important;
   }
 
+  /* ──────────────────────────────────────────────────────────────
+   * Panel de mapeo de columnas (match de importación)
+   * ────────────────────────────────────────────────────────────── */
+  .bulk-mapper-panel {
+    border-radius: 16px !important;
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent) !important;
+    background: color-mix(in srgb, var(--card) 60%, transparent) !important;
+    padding: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .bulk-mapper-header {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .bulk-mapper-header-left {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .bulk-mapper-title {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+    margin: 0 0 4px 0 !important;
+  }
+
+  .bulk-mapper-subtitle {
+    font-size: 12px !important;
+    color: var(--muted-foreground) !important;
+    margin: 0 !important;
+    max-width: 540px !important;
+    line-height: 1.5 !important;
+  }
+
+  .bulk-mapper-status {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .bulk-mapper-status-warn,
+  .bulk-mapper-status-ok {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 6px 12px !important;
+    border-radius: 9999px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+  }
+
+  .bulk-mapper-status-warn {
+    color: #b45309 !important;
+    background: color-mix(in srgb, #f59e0b 14%, transparent) !important;
+    border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent) !important;
+  }
+
+  .bulk-mapper-status-ok {
+    color: #047857 !important;
+    background: color-mix(in srgb, #10b981 14%, transparent) !important;
+    border: 1px solid color-mix(in srgb, #10b981 30%, transparent) !important;
+  }
+
+  .dark .bulk-mapper-status-warn {
+    color: #fcd34d !important;
+    background: color-mix(in srgb, #f59e0b 20%, transparent) !important;
+  }
+
+  .dark .bulk-mapper-status-ok {
+    color: #6ee7b7 !important;
+    background: color-mix(in srgb, #10b981 20%, transparent) !important;
+  }
+
+  /* Columnas detectadas — chips */
+  .bulk-mapper-detected {
+    padding: 12px 14px !important;
+    border-radius: 10px !important;
+    background: color-mix(in srgb, var(--muted) 30%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 50%, transparent) !important;
+  }
+
+  .bulk-mapper-detected-label {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: var(--muted-foreground) !important;
+    margin: 0 0 8px 0 !important;
+  }
+
+  .bulk-mapper-detected-chips {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .bulk-detected-chip {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 4px 10px !important;
+    border-radius: 9999px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: var(--foreground) !important;
+    background: color-mix(in srgb, var(--background) 70%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent) !important;
+  }
+
+  .bulk-detected-chip em {
+    font-style: normal !important;
+    color: var(--primary) !important;
+    font-weight: 600 !important;
+  }
+
+  .bulk-detected-chip-used {
+    border-color: color-mix(in srgb, var(--primary) 40%, transparent) !important;
+    background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+  }
+
+  /* Tabla de mapeo */
+  .bulk-mapper-table-wrap {
+    overflow-x: auto !important;
+    border-radius: 12px !important;
+    border: 1px solid color-mix(in srgb, var(--border) 50%, transparent) !important;
+  }
+
+  .bulk-mapper-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 12px !important;
+  }
+
+  .bulk-mapper-table thead tr {
+    background: color-mix(in srgb, var(--muted) 40%, transparent) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent) !important;
+  }
+
+  .bulk-mapper-table th {
+    padding: 10px 12px !important;
+    text-align: left !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--muted-foreground) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  .bulk-mapper-table td {
+    padding: 10px 12px !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 30%, transparent) !important;
+    vertical-align: middle !important;
+  }
+
+  .bulk-mapper-table tbody tr:last-child td {
+    border-bottom: none !important;
+  }
+
+  .bulk-mapper-row-required {
+    background: color-mix(in srgb, var(--primary) 4%, transparent) !important;
+  }
+
+  .bulk-mapper-th-arrow {
+    width: 32px !important;
+  }
+
+  .bulk-mapper-th-status {
+    width: 160px !important;
+  }
+
+  .bulk-mapper-td-arrow {
+    text-align: center !important;
+    color: var(--muted-foreground) !important;
+  }
+
+  .bulk-mapper-field-info {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .bulk-mapper-field-label {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+  }
+
+  .bulk-mapper-required-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    align-self: flex-start !important;
+    padding: 1px 7px !important;
+    border-radius: 9999px !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: #b91c1c !important;
+    background: color-mix(in srgb, #ef4444 12%, transparent) !important;
+    border: 1px solid color-mix(in srgb, #ef4444 25%, transparent) !important;
+  }
+
+  .dark .bulk-mapper-required-badge {
+    color: #fca5a5 !important;
+    background: color-mix(in srgb, #ef4444 18%, transparent) !important;
+  }
+
+  .bulk-mapper-field-desc {
+    font-size: 10px !important;
+    color: var(--muted-foreground) !important;
+    line-height: 1.4 !important;
+  }
+
+  .bulk-mapper-select {
+    width: 100% !important;
+    min-width: 180px !important;
+  }
+
+  .bulk-mapper-option-used {
+    opacity: 0.5 !important;
+  }
+
+  /* Pills de estado del mapeo */
+  .bulk-mapper-status-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 3px 9px !important;
+    border-radius: 9999px !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+  }
+
+  .bulk-mapper-status-pill-error {
+    color: #b91c1c !important;
+    background: color-mix(in srgb, #ef4444 12%, transparent) !important;
+    border: 1px solid color-mix(in srgb, #ef4444 25%, transparent) !important;
+  }
+
+  .bulk-mapper-status-pill-warn {
+    color: #b45309 !important;
+    background: color-mix(in srgb, #f59e0b 14%, transparent) !important;
+    border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent) !important;
+  }
+
+  .bulk-mapper-status-pill-ok {
+    color: #047857 !important;
+    background: color-mix(in srgb, #10b981 14%, transparent) !important;
+    border: 1px solid color-mix(in srgb, #10b981 30%, transparent) !important;
+  }
+
+  .bulk-mapper-status-pill-neutral {
+    color: var(--muted-foreground) !important;
+    background: color-mix(in srgb, var(--muted) 40%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 50%, transparent) !important;
+  }
+
+  .dark .bulk-mapper-status-pill-error {
+    color: #fca5a5 !important;
+    background: color-mix(in srgb, #ef4444 18%, transparent) !important;
+  }
+
+  .dark .bulk-mapper-status-pill-warn {
+    color: #fcd34d !important;
+    background: color-mix(in srgb, #f59e0b 20%, transparent) !important;
+  }
+
+  .dark .bulk-mapper-status-pill-ok {
+    color: #6ee7b7 !important;
+    background: color-mix(in srgb, #10b981 20%, transparent) !important;
+  }
+
+  /* Acciones del mapper */
+  .bulk-mapper-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .bulk-mapper-actions-hint {
+    font-size: 12px !important;
+    color: var(--muted-foreground) !important;
+    margin: 0 !important;
+  }
+
+  /* ──────────────────────────────────────────────────────────────
+   * Badges de error por tipo (en preview)
+   * ────────────────────────────────────────────────────────────── */
+  .bulk-error-badge-missing_column {
+    color: #b45309 !important;
+    background: color-mix(in srgb, #f59e0b 12%, transparent) !important;
+    border-color: color-mix(in srgb, #f59e0b 25%, transparent) !important;
+  }
+
+  .bulk-error-badge-empty_value {
+    color: #b91c1c !important;
+    background: color-mix(in srgb, #ef4444 12%, transparent) !important;
+    border-color: color-mix(in srgb, #ef4444 25%, transparent) !important;
+  }
+
+  .bulk-error-badge-invalid_value {
+    color: #6d28d9 !important;
+    background: color-mix(in srgb, #8b5cf6 12%, transparent) !important;
+    border-color: color-mix(in srgb, #8b5cf6 25%, transparent) !important;
+  }
+
+  .dark .bulk-error-badge-missing_column {
+    color: #fcd34d !important;
+    background: color-mix(in srgb, #f59e0b 18%, transparent) !important;
+  }
+
+  .dark .bulk-error-badge-empty_value {
+    color: #fca5a5 !important;
+    background: color-mix(in srgb, #ef4444 18%, transparent) !important;
+  }
+
+  .dark .bulk-error-badge-invalid_value {
+    color: #c4b5fd !important;
+    background: color-mix(in srgb, #8b5cf6 18%, transparent) !important;
+  }
+
+  /* Resumen de errores */
+  .bulk-error-summary {
+    padding: 12px 14px !important;
+    border-radius: 10px !important;
+    background: color-mix(in srgb, #ef4444 6%, transparent) !important;
+    border: 1px solid color-mix(in srgb, #ef4444 20%, transparent) !important;
+  }
+
+  .bulk-error-summary-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #b91c1c !important;
+    margin: 0 0 8px 0 !important;
+  }
+
+  .dark .bulk-error-summary-title {
+    color: #fca5a5 !important;
+  }
+
+  .bulk-error-summary-chips {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .bulk-error-summary-chip {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 4px 10px !important;
+    border-radius: 9999px !important;
+    font-size: 11px !important;
+    color: var(--foreground) !important;
+    background: color-mix(in srgb, var(--background) 70%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent) !important;
+  }
+
+  .bulk-error-summary-chip strong {
+    font-weight: 600 !important;
+  }
+
+  .bulk-error-summary-chip em {
+    font-style: normal !important;
+    color: var(--muted-foreground) !important;
+    font-size: 10px !important;
+  }
+
+  .bulk-error-summary-chip-missing_column {
+    border-color: color-mix(in srgb, #f59e0b 30%, transparent) !important;
+  }
+
+  .bulk-error-summary-chip-empty_value {
+    border-color: color-mix(in srgb, #ef4444 30%, transparent) !important;
+  }
+
+  .bulk-error-summary-chip-invalid_value {
+    border-color: color-mix(in srgb, #8b5cf6 30%, transparent) !important;
+  }
+
   /* Observaciones dentro del informe/PDF */
   .report-observation {
     font-size: 9px !important;
