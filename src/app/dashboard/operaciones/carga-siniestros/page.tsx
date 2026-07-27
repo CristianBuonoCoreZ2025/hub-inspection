@@ -496,7 +496,7 @@ export default function CargaSiniestrosPage() {
           )}
 
           {/* Table preview */}
-          <div className="app-data-table-wrap max-h-[500px] overflow-auto">
+          <div className="app-data-table-wrap max-h-125 overflow-auto">
             <table className="app-data-table">
               <thead>
                 <tr>
