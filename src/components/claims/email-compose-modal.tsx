@@ -668,7 +668,7 @@ export function EmailComposeModal({
                   value={effectiveBody}
                   onChange={(e) => setBodyOverride(e.target.value)}
                   placeholder="Escribe el cuerpo del correo…"
-                  className="flex-1 min-h-40 w-full resize-none bg-background p-4 text-sm leading-relaxed text-foreground outline-none border border-border rounded-lg overflow-y-auto"
+                  className="flex-1 min-h-40 w-full resize-none bg-background px-4 pt-4 pb-5 text-sm leading-relaxed text-foreground outline-none border border-border rounded-lg overflow-y-auto"
                 />
               )}
             </>

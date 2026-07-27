@@ -198,29 +198,23 @@ ${bodyHtml}
           </div>
         </div>
 
-        {/* 2. ÁREA DE SCROLL (Único scroll de la ventana) */}
-        <div className="flex-1 overflow-y-auto w-full min-h-0">
-
-          {/* 3. EL CORREO EN SÍ (Sin cajas extra alrededor) */}
-          <div className="w-full min-h-full">
-            {log.body_format === "html" && htmlPreview ? (
+        {/* 2. ÁREA DEL CORREO — scroll interno, sin scroll externo del modal */}
+        <div className="flex-1 overflow-hidden flex flex-col bg-background">
+          {log.body_format === "html" && htmlPreview ? (
+            <div className="flex-1 p-4 pb-5 overflow-hidden">
               <iframe
                 title="email-body-preview"
                 srcDoc={htmlPreview}
-                className="w-full bg-white block flex-1"
+                className="w-full h-full bg-white block"
                 sandbox="allow-same-origin"
               />
-            ) : (
-              <div className="p-8 pb-16 text-foreground text-sm leading-relaxed">
-                <pre className="whitespace-pre-wrap font-sans">{log.body}</pre>
-                <div style={{ height: "20px", minHeight: "20px", flexShrink: 0 }} />
-              </div>
-            )}
-          </div>
-
-          {/* Espaciador final — aire inferior para que el scroll no choque abajo */}
-          <div style={{ height: "20px", minHeight: "20px", flexShrink: 0 }} />
-
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto p-4">
+              <pre className="whitespace-pre-wrap font-sans">{log.body}</pre>
+              <div style={{ height: "20px", minHeight: "20px", flexShrink: 0 }} />
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
