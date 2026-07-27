@@ -6,13 +6,9 @@ import { Search, X, Users, Building2, UserCircle2, Globe } from "lucide-react";
 import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
 
 interface EmailContactBookProps {
-  /** ID del siniestro para cargar los contactos */
   claimId: string;
-  /** Si el panel está abierto */
   open: boolean;
-  /** Callback para cerrar el panel */
   onClose: () => void;
-  /** Agregar email a un campo (Para/CC/CCO) */
   onAddRecipient: (email: string, field: "to" | "cc" | "bcc") => void;
 }
 
@@ -26,15 +22,10 @@ const GROUP_LABELS: Record<EmailContact["group"], { label: string; icon: typeof 
 /**
  * Libreta de direcciones reutilizable — mini Outlook contact book.
  *
- * Panel lateral con contactos agrupados:
- *  - Participantes del siniestro (asegurado, beneficiario, contratista, contacto)
- *  - Equipo del siniestro (liquidador, inspector, asistente, auditor, despachador)
- *  - Asesor
- *  - Directorio global (todos los usuarios del sistema)
- *
- * Deduplicado por email con roles combinados.
- * Search en tiempo real por nombre o email.
- * Click en Para/CC/CCO para agregar al campo correspondiente.
+ * Panel lateral con contactos agrupados, deduplicados por email.
+ * Usa los mismos patrones visuales que el resto del sistema:
+ *  - bg-background, border-border, text-muted-foreground
+ *  - Sin clases custom paralelas, inline Tailwind como el preview
  */
 export function EmailContactBook({
   claimId,
@@ -48,10 +39,9 @@ export function EmailContactBook({
     queryKey: ["email-contacts", claimId],
     queryFn: () => fetchClaimContacts(claimId),
     enabled: open,
-    staleTime: 30_000, // 30s — los contactos no cambian cada segundo
+    staleTime: 30_000,
   });
 
-  // Filtrar por search
   const filtered = useMemo(() => {
     if (!contacts) return [];
     const q = search.toLowerCase().trim();
@@ -64,7 +54,6 @@ export function EmailContactBook({
     );
   }, [contacts, search]);
 
-  // Agrupar por group
   const grouped = useMemo(() => {
     const map = new Map<EmailContact["group"], EmailContact[]>();
     for (const c of filtered) {
@@ -78,34 +67,36 @@ export function EmailContactBook({
   if (!open) return null;
 
   return (
-    <div className="app-contact-book w-72">
+    <div className="flex flex-col overflow-hidden w-72 border-l border-border bg-background">
       {/* Header */}
-      <div className="app-contact-book-header">
-        <div className="app-contact-book-title">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background shrink-0">
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-foreground">
           <Users className="h-3.5 w-3.5 text-muted-foreground" />
           Contactos
           {contacts && (
-            <span className="app-contact-book-count">{contacts.length}</span>
+            <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/40">
+              {contacts.length}
+            </span>
           )}
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="app-compose-btn h-6 w-6"
-          title="Cerrar libreta"
+          title="Cerrar"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <X className="h-3 w-3" />
         </button>
       </div>
 
       {/* Search */}
-      <div className="app-contact-book-search">
+      <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border bg-muted/10 shrink-0">
         <Search className="h-3 w-3 text-muted-foreground shrink-0" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre, email o rol…"
-          className="app-contact-book-search-input"
+          placeholder="Buscar…"
+          className="flex-1 bg-transparent border-0 outline-none text-[11px] text-foreground"
           autoFocus
         />
         {search && (
@@ -120,17 +111,15 @@ export function EmailContactBook({
       </div>
 
       {/* Lista */}
-      <div className="app-contact-book-list">
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="app-contact-empty">
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
             <p className="text-[11px]">Cargando contactos…</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="app-contact-empty">
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
             <Users className="h-6 w-6 opacity-40" />
-            <p className="text-[11px]">
-              {search ? "Sin resultados" : "No hay contactos"}
-            </p>
+            <p className="text-[11px]">{search ? "Sin resultados" : "No hay contactos"}</p>
           </div>
         ) : (
           Array.from(grouped.entries()).map(([group, items]) => {
@@ -138,7 +127,7 @@ export function EmailContactBook({
             const Icon = meta.icon;
             return (
               <div key={group}>
-                <div className="app-contact-group-header">
+                <div className="sticky top-0 z-10 px-3 py-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground bg-background/80 backdrop-blur-sm border-b border-border/20">
                   <Icon className="h-2.5 w-2.5 inline mr-1" />
                   {meta.label} ({items.length})
                 </div>
@@ -152,36 +141,42 @@ export function EmailContactBook({
                   return (
                     <div
                       key={contact.email}
-                      className="app-contact-item"
+                      className="flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors border-b border-border/15 hover:bg-primary/8"
                       onClick={() => onAddRecipient(contact.email, "to")}
                       title={`Agregar ${contact.email} a Para`}
                     >
-                      <div className="app-contact-item-avatar">{initials}</div>
-                      <div className="app-contact-item-info">
-                        <span className="app-contact-item-name">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-medium text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
+                        {initials}
+                      </div>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-[11px] font-medium text-foreground truncate">
                           {contact.fullName || contact.email}
                         </span>
                         {contact.fullName && (
-                          <span className="app-contact-item-email">{contact.email}</span>
+                          <span className="text-[10px] text-muted-foreground truncate font-mono">
+                            {contact.email}
+                          </span>
                         )}
                       </div>
-                      <div className="app-contact-item-roles">
+                      <div className="flex flex-wrap gap-0.5 shrink-0">
                         {contact.roles.slice(0, 2).map((role) => (
                           <span
                             key={role}
-                            className={`app-contact-item-role ${
-                              contact.isInternal ? "app-contact-item-role-internal" : ""
+                            className={`text-[8px] px-1 py-0.5 rounded font-medium ${
+                              contact.isInternal
+                                ? "bg-primary/12 text-primary"
+                                : "bg-muted/40 text-muted-foreground"
                             }`}
                           >
                             {role}
                           </span>
                         ))}
                       </div>
-                      <div className="app-contact-actions" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           onClick={() => onAddRecipient(contact.email, "to")}
-                          className="app-contact-action-btn"
+                          className="text-[8px] px-1 py-0.5 rounded font-medium bg-muted/30 text-muted-foreground hover:bg-primary/15 hover:text-primary transition-colors"
                           title="Para"
                         >
                           Para
@@ -189,7 +184,7 @@ export function EmailContactBook({
                         <button
                           type="button"
                           onClick={() => onAddRecipient(contact.email, "cc")}
-                          className="app-contact-action-btn"
+                          className="text-[8px] px-1 py-0.5 rounded font-medium bg-muted/30 text-muted-foreground hover:bg-primary/15 hover:text-primary transition-colors"
                           title="CC"
                         >
                           CC
@@ -197,7 +192,7 @@ export function EmailContactBook({
                         <button
                           type="button"
                           onClick={() => onAddRecipient(contact.email, "bcc")}
-                          className="app-contact-action-btn"
+                          className="text-[8px] px-1 py-0.5 rounded font-medium bg-muted/30 text-muted-foreground hover:bg-primary/15 hover:text-primary transition-colors"
                           title="CCO"
                         >
                           CCO

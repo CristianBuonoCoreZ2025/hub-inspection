@@ -280,41 +280,38 @@ export function EmailComposeModal({
     <Dialog open={open} onOpenChange={onOpenChange} dismissible={false}>
       <DialogContent className="modal-xl p-0! flex flex-col" showCloseButton={false}>
 
-        {/* ═══ 1. HEADER — 3 filas como el preview ═══ */}
-        <div className="app-compose-header">
+        {/* ═══ 1. HEADER — idéntico al preview ═══ */}
+        <div className="p-4 border-b border-border bg-background flex items-start justify-between gap-3">
           <DialogTitle className="flex items-start gap-3 m-0">
-            <div className="app-compose-header-icon">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
               <Mail className="h-4 w-4" />
             </div>
             <div className="flex flex-col">
-              <span className="app-compose-title">Enviar Correo</span>
+              <span className="text-sm font-semibold text-foreground leading-tight">Enviar Correo</span>
               {gestionCode && (
-                <span className="app-compose-subtitle">Gestión: {gestionCode}</span>
+                <span className="text-[10px] text-muted-foreground">Gestión: {gestionCode}</span>
               )}
-              <span className="app-compose-subtitle-mono">Componer y enviar email</span>
+              <span className="text-[10px] text-muted-foreground font-mono">componer y enviar</span>
             </div>
           </DialogTitle>
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              title="Cerrar"
-              className="app-compose-btn"
-            >
+            <button type="button" onClick={() => onOpenChange(false)} title="Cerrar" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
 
-        {/* ═══ 2. TOOLBAR — plantilla + modo + sugeridos + historial ═══ */}
-        <div className="app-compose-toolbar">
+        {/* ═══ 2. TOOLBAR — plantilla + modo + contactos + historial ═══ */}
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/20 flex-wrap">
           {/* Tabs: Plantilla / A mano */}
-          <div className="app-compose-tabs">
+          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted/50 border border-border">
             <button
               type="button"
               onClick={() => changeMode("template")}
               data-active={mode === "template"}
-              className="app-compose-tab"
+              className={`flex items-center justify-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md transition-all ${
+                mode === "template" ? "bg-background text-foreground shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               <FileText className="h-3 w-3" />
               Plantilla
@@ -327,7 +324,9 @@ export function EmailComposeModal({
                 setManualBodyFormat("plain");
               }}
               data-active={mode === "manual"}
-              className="app-compose-tab"
+              className={`flex items-center justify-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md transition-all ${
+                mode === "manual" ? "bg-background text-foreground shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               <Sparkles className="h-3 w-3" />
               A mano
@@ -341,7 +340,7 @@ export function EmailComposeModal({
               onValueChange={(v) => changeTemplate(v === "__none" || !v ? "" : v)}
               items={templateItems}
             >
-              <SelectTrigger className="app-compose-template-select">
+              <SelectTrigger className="app-input h-7 w-[200px]">
                 <SelectValue placeholder="Seleccionar..." />
               </SelectTrigger>
               <SelectContent>
@@ -363,12 +362,13 @@ export function EmailComposeModal({
 
           {/* Toggle Texto/HTML (solo modo manual) */}
           {mode === "manual" && (
-            <div className="app-compose-format-toggle">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setManualBodyFormat("plain")}
-                data-active={manualBodyFormat === "plain"}
-                className="app-compose-format-btn"
+                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                  manualBodyFormat === "plain" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
               >
                 <FileText className="h-2.5 w-2.5" />
                 Texto
@@ -376,8 +376,9 @@ export function EmailComposeModal({
               <button
                 type="button"
                 onClick={() => setManualBodyFormat("html")}
-                data-active={manualBodyFormat === "html"}
-                className="app-compose-format-btn"
+                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                  manualBodyFormat === "html" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
               >
                 <Code2 className="h-2.5 w-2.5" />
                 HTML
@@ -392,7 +393,7 @@ export function EmailComposeModal({
           <button
             type="button"
             onClick={() => setShowHistory((v) => !v)}
-            className="app-compose-format-btn"
+            className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
             title="Historial de envíos"
           >
             <History className="h-3 w-3" />
@@ -403,8 +404,9 @@ export function EmailComposeModal({
           <button
             type="button"
             onClick={() => setShowContacts((v) => !v)}
-            data-active={showContacts}
-            className="app-contact-toggle"
+            className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+              showContacts ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
             title="Libreta de contactos"
           >
             <Contact className="h-3 w-3" />
@@ -416,9 +418,9 @@ export function EmailComposeModal({
         {showHistory && (
           <div className="px-4 py-2 border-b border-border bg-muted/10">
             {logs && logs.length > 0 && (
-              <div className="app-compose-history">
+              <div className="rounded-lg border border-border p-2 space-y-1 max-h-40 overflow-auto bg-background/60">
                 {logs.map((log) => (
-                  <div key={log.id} className="app-compose-history-item">
+                  <div key={log.id} className="text-[11px] flex items-center justify-between gap-2 border-b last:border-0 pb-1 border-border/30">
                     <div className="flex flex-col min-w-0">
                       <span className="truncate">
                         EML-{String(log.correlativo).padStart(3, "0")}: {log.subject}
@@ -427,7 +429,11 @@ export function EmailComposeModal({
                         {log.to_address.join(", ")} · {new Date(log.sent_at).toLocaleString("es-CL")}
                       </span>
                     </div>
-                    <span className={`app-compose-history-status app-compose-history-status-${log.status}`}>
+                    <span className={`shrink-0 px-1.5 rounded text-[10px] font-medium ${
+                      log.status === "sent" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                      : log.status === "queued" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                      : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                    }`}>
                       {log.status}
                     </span>
                   </div>
@@ -435,23 +441,21 @@ export function EmailComposeModal({
               </div>
             )}
             {logs && logs.length === 0 && (
-              <p className="text-[11px] text-muted-foreground italic">
-                No hay envíos registrados.
-              </p>
+              <p className="text-[11px] text-muted-foreground italic">No hay envíos registrados.</p>
             )}
           </div>
         )}
 
-        {/* ═══ 3. METADATA BAR — Para/CC/CCO/Asunto (estilo Outlook) ═══ */}
-        <div className="app-compose-meta">
+        {/* ═══ 3. METADATA BAR — Para/CC/CCO/Asunto (estilo Outlook, mismo patrón que preview) ═══ */}
+        <div className="px-4 py-3 border-b border-border bg-muted/20 text-[11px]">
           {/* Para */}
-          <div className="app-compose-meta-row">
-            <span className="app-compose-meta-label">Para</span>
+          <div className="flex items-baseline gap-2 py-0.5">
+            <span className="text-muted-foreground font-medium shrink-0 min-w-[56px]">Para</span>
             <input
               value={to}
               onChange={(e) => setTo(e.target.value)}
               placeholder="destinatario@ejemplo.com"
-              className="app-compose-meta-input"
+              className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
             />
             {!showCcBcc && (
               <button
@@ -467,99 +471,92 @@ export function EmailComposeModal({
           {/* CC / CCO (colapsable) */}
           {showCcBcc && (
             <>
-              <div className="app-compose-meta-row">
-                <span className="app-compose-meta-label">CC</span>
+              <div className="flex items-baseline gap-2 py-0.5">
+                <span className="text-muted-foreground font-medium shrink-0 min-w-[56px]">CC</span>
                 <input
                   value={cc}
                   onChange={(e) => setCc(e.target.value)}
                   placeholder="con copia"
-                  className="app-compose-meta-input"
+                  className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
                 />
               </div>
-              <div className="app-compose-meta-row">
-                <span className="app-compose-meta-label">CCO</span>
+              <div className="flex items-baseline gap-2 py-0.5">
+                <span className="text-muted-foreground font-medium shrink-0 min-w-[56px]">CCO</span>
                 <input
                   value={bcc}
                   onChange={(e) => setBcc(e.target.value)}
                   placeholder="con copia oculta"
-                  className="app-compose-meta-input"
+                  className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
                 />
               </div>
             </>
           )}
 
-          <div className="app-compose-meta-divider" />
+          <div className="border-t border-border/30 my-0.5" />
 
           {/* Asunto */}
-          <div className="app-compose-meta-row">
-            <span className="app-compose-meta-label">Asunto</span>
+          <div className="flex items-baseline gap-2 py-0.5">
+            <span className="text-muted-foreground font-medium shrink-0 min-w-[56px]">Asunto</span>
             <input
               value={effectiveSubject}
               onChange={(e) => setSubjectOverride(e.target.value)}
               placeholder="Asunto del correo"
-              className="app-compose-meta-input font-medium"
+              className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] font-medium"
             />
           </div>
         </div>
 
         {/* ═══ 4. CANVAS DEL CORREO + CONTACT BOOK (flex row) ═══ */}
         <div className="flex-1 flex overflow-hidden">
-        {/* Canvas WYSIWYG (lo que ves es lo que envías) */}
-        <div className="app-compose-scroll flex-1">
-          {previewLoading && mode === "template" ? (
-            <div className="app-compose-loading">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <p className="text-[11px]">Generando correo…</p>
-            </div>
-          ) : effectiveFormat === "html" ? (
-            /* HtmlEditor — misma toolbar que el editor de plantillas
-               (bold, tablas, colores, listas, alineación, fuentes, etc.) */
-            <div className="app-compose-canvas">
-              <HtmlEditor
-                value={effectiveBody || ""}
-                onChange={(html) => setBodyOverride(html)}
-                editorRef={htmlEditorRef}
-                placeholder="Escribí el cuerpo del correo…"
-                className="app-compose-htmleditor"
-              />
-            </div>
-          ) : (
-            /* Texto plano — textarea full-width estilo Mac Mail */
-            <div className="app-compose-canvas">
-              <textarea
-                value={effectiveBody}
-                onChange={(e) => setBodyOverride(e.target.value)}
-                placeholder="Escribí el cuerpo del correo…"
-                className="app-compose-plaintext"
-              />
-            </div>
-          )}
-          <div className="app-compose-spacer" />
+          {/* Canvas WYSIWYG (lo que ves es lo que envías) */}
+          <div className="flex-1 overflow-y-auto w-full bg-muted/12">
+            {previewLoading && mode === "template" ? (
+              <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <p className="text-[11px]">Generando correo…</p>
+              </div>
+            ) : effectiveFormat === "html" ? (
+              <div className="w-full bg-white mx-auto" style={{ maxWidth: 680, minHeight: 400, boxShadow: "0 4px 20px rgb(0 0 0 / 0.06)" }}>
+                <HtmlEditor
+                  value={effectiveBody || ""}
+                  onChange={(html) => setBodyOverride(html)}
+                  editorRef={htmlEditorRef}
+                  placeholder="Escribí el cuerpo del correo…"
+                />
+              </div>
+            ) : (
+              <div className="w-full bg-white mx-auto" style={{ maxWidth: 680, minHeight: 400, boxShadow: "0 4px 20px rgb(0 0 0 / 0.06)" }}>
+                <textarea
+                  value={effectiveBody}
+                  onChange={(e) => setBodyOverride(e.target.value)}
+                  placeholder="Escribí el cuerpo del correo…"
+                  className="w-full bg-white border-0 outline-none p-8 text-sm leading-relaxed text-foreground resize-none"
+                  style={{ minHeight: 400 }}
+                />
+              </div>
+            )}
+            <div style={{ height: 24, flexShrink: 0 }} />
+          </div>
+
+          {/* Contact Book — panel lateral deslizable */}
+          <EmailContactBook
+            claimId={action.claim_id}
+            open={showContacts}
+            onClose={() => setShowContacts(false)}
+            onAddRecipient={addRecipientToField}
+          />
         </div>
 
-        {/* Contact Book — panel lateral deslizable */}
-        <EmailContactBook
-          claimId={action.claim_id}
-          open={showContacts}
-          onClose={() => setShowContacts(false)}
-          onAddRecipient={addRecipientToField}
-        />
-        </div>
-
-        {/* ═══ 5. FOOTER — Cancelar + Enviar ═══ */}
-        <div className="app-compose-footer">
-          <Button
-            className="pg-btn-platinum"
-            onClick={() => onOpenChange(false)}
-          >
+        {/* ═══ 5. FOOTER — Cancelar + Enviar (pg-btn-platinum) ═══ */}
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border bg-background">
+          <Button className="pg-btn-platinum" onClick={() => onOpenChange(false)}>
             <X className="h-3.5 w-3.5" />
             Cancelar
           </Button>
-          <button
-            type="button"
+          <Button
+            className="pg-btn-platinum"
             disabled={!canSend}
             onClick={() => sendMutation.mutate()}
-            className="app-compose-btn-primary"
           >
             {sendMutation.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -567,7 +564,7 @@ export function EmailComposeModal({
               <Send className="h-3.5 w-3.5" />
             )}
             Enviar
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
