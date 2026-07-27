@@ -340,7 +340,7 @@ export function EmailComposeModal({
               onValueChange={(v) => changeTemplate(v === "__none" || !v ? "" : v)}
               items={templateItems}
             >
-              <SelectTrigger className="app-input h-7 w-[200px]">
+              <SelectTrigger className="app-input h-7 w-50">
                 <SelectValue placeholder="Seleccionar..." />
               </SelectTrigger>
               <SelectContent>
@@ -450,7 +450,7 @@ export function EmailComposeModal({
         <div className="px-4 py-3 border-b border-border bg-muted/20 text-[11px]">
           {/* Para */}
           <div className="flex items-baseline gap-2 py-0.5">
-            <span className="text-muted-foreground font-medium shrink-0 min-w-[56px]">Para</span>
+            <span className="text-muted-foreground font-medium shrink-0 min-w-14">Para</span>
             <input
               value={to}
               onChange={(e) => setTo(e.target.value)}
@@ -472,7 +472,7 @@ export function EmailComposeModal({
           {showCcBcc && (
             <>
               <div className="flex items-baseline gap-2 py-0.5">
-                <span className="text-muted-foreground font-medium shrink-0 min-w-[56px]">CC</span>
+                <span className="text-muted-foreground font-medium shrink-0 min-w-14">CC</span>
                 <input
                   value={cc}
                   onChange={(e) => setCc(e.target.value)}
@@ -481,7 +481,7 @@ export function EmailComposeModal({
                 />
               </div>
               <div className="flex items-baseline gap-2 py-0.5">
-                <span className="text-muted-foreground font-medium shrink-0 min-w-[56px]">CCO</span>
+                <span className="text-muted-foreground font-medium shrink-0 min-w-14">CCO</span>
                 <input
                   value={bcc}
                   onChange={(e) => setBcc(e.target.value)}
@@ -496,7 +496,7 @@ export function EmailComposeModal({
 
           {/* Asunto */}
           <div className="flex items-baseline gap-2 py-0.5">
-            <span className="text-muted-foreground font-medium shrink-0 min-w-[56px]">Asunto</span>
+            <span className="text-muted-foreground font-medium shrink-0 min-w-14">Asunto</span>
             <input
               value={effectiveSubject}
               onChange={(e) => setSubjectOverride(e.target.value)}
