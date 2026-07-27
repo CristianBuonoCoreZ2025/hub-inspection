@@ -160,7 +160,7 @@ ${bodyHtml}
     const a = document.createElement("a");
     a.href = url;
     a.download = log.parent_action_code
-      ? `${shortActionCode(log.parent_action_code)}_${fullCode}.eml`
+      ? `${log.parent_action_code}_${fullCode}.eml`
       : `${fullCode}.eml`;
     a.click();
     URL.revokeObjectURL(url);
@@ -190,7 +190,7 @@ ${bodyHtml}
             <div className="flex flex-col">
               <span className="email-header-title">{log.subject || "(sin asunto)"}</span>
               <span className="email-header-subtitle">
-                {log.parent_action_code ? `Gestión: ${shortActionCode(log.parent_action_code)}` : ""}
+                {log.parent_action_code ? `Gestión: ${log.parent_action_code}` : ""}
               </span>
               <span className="email-header-meta">email: {fullCode}</span>
             </div>

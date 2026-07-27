@@ -248,6 +248,27 @@ Para buscar un siniestro por su número de liquidación en Supabase:
   claims?liquidation_number=eq.L-000000141
 ```
 
+### Regla de códigos de gestión (mostrado en UI)
+
+El `parent_action_code` de las gestiones tiene formato compuesto:
+`{liquidation_number}-{gestion_code}` (ej: `L-000000141-HINS-003`).
+
+**Regla:** El código a mostrar depende de si la liquidación es visible en el
+mismo contexto (misma pantalla, misma sección, mismo bloque):
+
+- **Si la liquidación SÍ se muestra** en el mismo contexto → mostrar código
+  CORTO (solo gestión): `HINS-003`
+- **Si la liquidación NO se muestra** en el mismo contexto → mostrar código
+  LARGO (completo): `L-000000141-HINS-003`
+
+Funciones helper (en `src/app/dashboard/claims/[id]/page.tsx` y
+`src/components/claims/email-preview-modal.tsx`):
+- `shortActionCode(code)` → extrae `HINS-003` de `L-000000141-HINS-003`
+- `liquidationFromCode(code)` → extrae `L-000000141` de `L-000000141-HINS-003`
+
+**Nota:** `parent_action_code` se guarda COMPLETO en la base de datos
+(para auditoría). La transformación es solo de presentación en UI.
+
 ### Cadena de Gestiones (orden obligatorio)
 
 Las gestiones siguen una cadena de dependencias: cada gestión requiere que la gestión
