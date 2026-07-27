@@ -1,12 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Mail, Send, Loader2, X, Plus, History, FileText, Code2, Eye, Sparkles } from "lucide-react";
+import { Mail, Send, Loader2, X, Plus, History, FileText, Code2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -45,18 +42,16 @@ interface RecipientSuggestion {
 }
 
 /**
- * Modal de envío de e-mail desde una gestión del siniestro.
+ * Modal de composición de email — modelo Outlook/Apple Mail.
  *
- * Dos modos:
- *  1. Plantilla: el usuario selecciona una plantilla vinculada → se renderiza con
- *     los datos del siniestro. El subject y body son editables después de renderizar.
- *  2. Manual: el usuario escribe subject y body desde cero (sin plantilla).
+ * El correo ES la vista previa (WYSIWYG):
+ *  - Header con gestión + código
+ *  - Toolbar con plantilla + modo + sugeridos
+ *  - Metadata bar (Para / CC / CCO / Asunto) estilo Outlook
+ *  - Canvas del correo (iframe contentEditable para HTML, textarea para texto plano)
+ *  - Footer con Cancelar + Enviar
  *
- * En ambos casos:
- *  - Sugiere destinatarios automáticamente (asegurado, liquidador, inspector, etc.)
- *  - Preview en vivo (texto plano o HTML con iframe)
- *  - El usuario completa Para / CC / CCO
- *  - Al enviar, se guarda en email_logs con correlativo automático
+ * Lo que se ve es lo que se envía.
  */
 export function EmailComposeModal({
   open,
@@ -74,6 +69,9 @@ export function EmailComposeModal({
   const [bodyOverride, setBodyOverride] = useState<string | null>(null);
   const [manualBodyFormat, setManualBodyFormat] = useState<"plain" | "html">("plain");
   const [showHistory, setShowHistory] = useState(false);
+  const [showCcBcc, setShowCcBcc] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const queryClient = useQueryClient();
 
   const changeMode = (newMode: "template" | "manual") => {
@@ -188,7 +186,27 @@ export function EmailComposeModal({
           role: p.type,
         });
       }
-      return suggestions;
+      // ─── Deduplicar por email: combinar roles con el mismo correo ───
+      // Si Asegurado, Beneficiario y Contratista comparten email, mostrar
+      // un solo chip: "Asegurado, Beneficiario, Contratista: cristian@..."
+      const byEmail = new Map<string, { labels: string[]; email: string }>();
+      for (const s of suggestions) {
+        if (!s.email) continue;
+        const key = s.email.toLowerCase().trim();
+        const existing = byEmail.get(key);
+        if (existing) {
+          if (!existing.labels.includes(s.label)) {
+            existing.labels.push(s.label);
+          }
+        } else {
+          byEmail.set(key, { labels: [s.label], email: s.email });
+        }
+      }
+      return Array.from(byEmail.values()).map((v) => ({
+        label: v.labels.join(", "),
+        email: v.email,
+        role: "merged",
+      }));
     },
     enabled: open,
   });
@@ -207,28 +225,16 @@ export function EmailComposeModal({
 
   const effectiveTemplateId = selectedTemplateId || defaultTemplateId;
 
-  const selectedTemplate = useMemo(
-    () => templates?.find((t) => t.id === effectiveTemplateId) || null,
-    [templates, effectiveTemplateId]
-  );
-
-  const { data: previewData, isLoading: previewLoading, error: previewError } = useQuery({
-    queryKey: ["email-preview", action.id, mode, effectiveTemplateId, subjectOverride, bodyOverride, manualBodyFormat],
+  const { data: previewData, isLoading: previewLoading } = useQuery({
+    queryKey: ["email-preview", action.id, mode, effectiveTemplateId, manualBodyFormat],
     queryFn: async () => {
       try {
         if (mode === "manual") {
-          const res = await fetch("/api/email/preview", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              claimActionId: action.id,
-              manualSubject: subjectOverride ?? "",
-              manualBody: bodyOverride ?? "",
-              manualBodyFormat,
-            }),
-          });
-          if (!res.ok) return { subject: subjectOverride ?? "", body: bodyOverride ?? "", body_format: manualBodyFormat };
-          return await res.json();
+          return {
+            subject: subjectOverride ?? "",
+            body: bodyOverride ?? "",
+            body_format: manualBodyFormat,
+          };
         }
         if (!effectiveTemplateId) {
           return { subject: "", body: "", body_format: "plain" as const };
@@ -241,14 +247,9 @@ export function EmailComposeModal({
             emailTemplateId: effectiveTemplateId,
           }),
         });
-        if (!res.ok) {
-          const errText = await res.text().catch(() => "");
-          console.error("[email-preview] HTTP", res.status, errText, "claimActionId:", action.id);
-          return { subject: "", body: "", body_format: "plain" as const };
-        }
+        if (!res.ok) return { subject: "", body: "", body_format: "plain" as const };
         return await res.json();
-      } catch (err) {
-        console.error("[email-preview] error:", err);
+      } catch {
         return { subject: "", body: "", body_format: "plain" as const };
       }
     },
@@ -267,10 +268,46 @@ export function EmailComposeModal({
   const effectiveBody = bodyOverride ?? rendered.body;
   const effectiveFormat = mode === "manual" ? manualBodyFormat : rendered.body_format;
 
+  // HTML envuelto para el iframe (solo lectura visual, edición via contentEditable)
   const previewHtml = useMemo(() => {
     if (effectiveFormat !== "html") return "";
     return wrapHtmlEmail({ body: effectiveBody || "<p><em>(cuerpo vacío)</em></p>" });
   }, [effectiveBody, effectiveFormat]);
+
+  // ─── WYSIWYG: sincronizar edición del iframe → bodyOverride ───
+  const handleIframeEdit = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+    // Extraer solo el body del iframe (sin el wrapper de wrapHtmlEmail)
+    const bodyEl = doc.querySelector("table[role='presentation'] td[style*='padding:32px']") || doc.body;
+    const html = bodyEl.innerHTML;
+    if (html && html !== bodyOverride) {
+      setBodyOverride(html);
+    }
+  }, [bodyOverride]);
+
+  // Hacer contentEditable el body del iframe cuando carga
+  useEffect(() => {
+    if (!iframeLoaded || effectiveFormat !== "html") return;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+    // Hacer editable el td del body (no el banner ni el footer)
+    const bodyTd = doc.querySelector("table[role='presentation'] td[style*='padding:32px']") as HTMLElement | null;
+    if (bodyTd) {
+      bodyTd.contentEditable = "true";
+      bodyTd.style.outline = "none";
+      bodyTd.addEventListener("input", handleIframeEdit);
+    }
+    return () => {
+      if (bodyTd) {
+        bodyTd.removeEventListener("input", handleIframeEdit);
+      }
+    };
+  }, [iframeLoaded, effectiveFormat, handleIframeEdit]);
 
   const sendMutation = useMutation({
     mutationFn: async () => {
@@ -328,6 +365,7 @@ export function EmailComposeModal({
     const existing = current.split(",").map((s) => s.trim()).filter(Boolean);
     if (existing.includes(email)) return;
     setter([...existing, email].join(", "));
+    if (field !== "to") setShowCcBcc(true);
   };
 
   const templateItems = useMemo(
@@ -349,7 +387,6 @@ export function EmailComposeModal({
     effectiveBody.trim().length > 0 &&
     !sendMutation.isPending;
 
-  // Código de gestión para el header
   const gestionCode = (action.action_data as Record<string, unknown> | null)?.codigo as string | undefined;
 
   return (
@@ -382,282 +419,235 @@ export function EmailComposeModal({
           </div>
         </div>
 
-        {/* ═══ 2. BODY — 2 columnas: composición + preview ═══ */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(0,420px)_1fr] overflow-hidden">
-
-          {/* ─── Columna izquierda: composición ─── */}
-          <div className="app-compose-panel-left p-4">
-
-            {/* Tabs: Plantilla / A mano */}
-            <div className="app-compose-tabs">
-              <button
-                type="button"
-                onClick={() => changeMode("template")}
-                data-active={mode === "template"}
-                className="app-compose-tab"
-              >
-                <FileText className="h-3 w-3" />
-                Plantilla
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  changeMode("manual");
-                  setSelectedTemplateId("");
-                  setManualBodyFormat("plain");
-                }}
-                data-active={mode === "manual"}
-                className="app-compose-tab"
-              >
-                <Sparkles className="h-3 w-3" />
-                A mano
-              </button>
-            </div>
-
-            {/* Selector de plantilla */}
-            {mode === "template" && (
-              <div className="space-y-1.5">
-                <Label className="app-compose-label">Plantilla</Label>
-                <Select
-                  value={effectiveTemplateId || "__none"}
-                  onValueChange={(v) => changeTemplate(v === "__none" || !v ? "" : v)}
-                  items={templateItems}
-                >
-                  <SelectTrigger className="app-input h-9 w-full">
-                    <SelectValue placeholder="Seleccionar..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">Seleccionar...</SelectItem>
-                    {activeTemplates.map((t) => {
-                      const isDefault = (t.actions || []).some(
-                        (a) => a.action_template_id === action.action_template_id && a.is_default
-                      );
-                      return (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                          {isDefault ? " · default" : ""}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-                {activeTemplates.length === 0 && (
-                  <p className="text-[11px] text-amber-600">
-                    No hay plantillas activas vinculadas a esta gestión. Usa modo &ldquo;A mano&rdquo;.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Destinatarios sugeridos */}
-            {recipientSuggestions && recipientSuggestions.length > 0 && (
-              <div className="space-y-1.5">
-                <Label className="app-compose-label">Sugeridos</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {recipientSuggestions.map((r) => (
-                    <button
-                      key={`${r.role}-${r.email}`}
-                      type="button"
-                      onClick={() => r.email && addRecipientToField(r.email, "to")}
-                      className="app-compose-chip"
-                      title={`Agregar ${r.email} a Para`}
-                    >
-                      <Plus className="h-2.5 w-2.5" />
-                      {r.label}: <span className="font-mono truncate max-w-30">{r.email}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Para */}
-            <div className="space-y-1.5">
-              <Label className="app-compose-label">Para</Label>
-              <Input
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                placeholder="destinatario@ejemplo.com, otro@ejemplo.com"
-                className="app-input"
-              />
-            </div>
-
-            {/* CC / CCO */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="app-compose-label">CC</Label>
-                <Input
-                  value={cc}
-                  onChange={(e) => setCc(e.target.value)}
-                  placeholder="Separados por coma"
-                  className="app-input"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="app-compose-label">CCO</Label>
-                <Input
-                  value={bcc}
-                  onChange={(e) => setBcc(e.target.value)}
-                  placeholder="Separados por coma"
-                  className="app-input"
-                />
-              </div>
-            </div>
-
-            {/* Asunto */}
-            <div className="space-y-1.5">
-              <Label className="app-compose-label">
-                Asunto {mode === "template" && selectedTemplate && "(editable)"}
-              </Label>
-              <Input
-                value={effectiveSubject}
-                onChange={(e) => setSubjectOverride(e.target.value)}
-                placeholder="Asunto del correo"
-                className="app-input"
-              />
-            </div>
-
-            {/* Cuerpo */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label className="app-compose-label">
-                  Cuerpo {mode === "template" && selectedTemplate && "(editable)"}
-                </Label>
-                {mode === "manual" && (
-                  <div className="app-compose-format-toggle">
-                    <button
-                      type="button"
-                      onClick={() => setManualBodyFormat("plain")}
-                      data-active={manualBodyFormat === "plain"}
-                      className="app-compose-format-btn"
-                    >
-                      <FileText className="h-2.5 w-2.5" />
-                      Texto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setManualBodyFormat("html")}
-                      data-active={manualBodyFormat === "html"}
-                      className="app-compose-format-btn"
-                    >
-                      <Code2 className="h-2.5 w-2.5" />
-                      HTML
-                    </button>
-                  </div>
-                )}
-              </div>
-              {previewLoading && mode === "template" ? (
-                <div className="app-compose-loading h-40 rounded-lg border border-border">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <p className="text-[11px]">Cargando vista previa...</p>
-                </div>
-              ) : previewError && mode === "template" ? (
-                <div className="w-full h-20 rounded-lg border border-destructive/30 bg-destructive/5 flex items-center justify-center text-[11px] text-destructive">
-                  Error al cargar vista previa
-                </div>
-              ) : effectiveFormat === "html" && previewHtml ? (
-                <details className="text-[10px] group">
-                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground list-none flex items-center gap-1 mb-1">
-                    <Code2 className="h-3 w-3" />
-                    Editar HTML fuente
-                  </summary>
-                  <Textarea
-                    value={effectiveBody}
-                    onChange={(e) => setBodyOverride(e.target.value)}
-                    className="app-input min-h-30 font-mono text-[10px]"
-                  />
-                </details>
-              ) : (
-                <Textarea
-                  value={effectiveBody}
-                  onChange={(e) => setBodyOverride(e.target.value)}
-                  placeholder="Cuerpo del correo..."
-                  className="app-input min-h-40"
-                />
-              )}
-            </div>
-
-            {/* Historial */}
-            <div className="space-y-1.5">
-              <button
-                type="button"
-                onClick={() => setShowHistory((v) => !v)}
-                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <History className="h-3 w-3" />
-                {showHistory ? "Ocultar historial" : "Ver historial de envíos"}
-              </button>
-              {showHistory && logs && logs.length > 0 && (
-                <div className="app-compose-history">
-                  {logs.map((log) => (
-                    <div key={log.id} className="app-compose-history-item">
-                      <div className="flex flex-col min-w-0">
-                        <span className="truncate">
-                          EML-{String(log.correlativo).padStart(3, "0")}: {log.subject}
-                        </span>
-                        <span className="text-[9px] text-muted-foreground">
-                          {log.to_address.join(", ")} · {new Date(log.sent_at).toLocaleString("es-CL")}
-                        </span>
-                      </div>
-                      <span
-                        className={`app-compose-history-status app-compose-history-status-${log.status}`}
-                      >
-                        {log.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {showHistory && logs && logs.length === 0 && (
-                <p className="text-[11px] text-muted-foreground italic">
-                  No hay envíos registrados.
-                </p>
-              )}
-            </div>
+        {/* ═══ 2. TOOLBAR — plantilla + modo + sugeridos + historial ═══ */}
+        <div className="app-compose-toolbar">
+          {/* Tabs: Plantilla / A mano */}
+          <div className="app-compose-tabs">
+            <button
+              type="button"
+              onClick={() => changeMode("template")}
+              data-active={mode === "template"}
+              className="app-compose-tab"
+            >
+              <FileText className="h-3 w-3" />
+              Plantilla
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                changeMode("manual");
+                setSelectedTemplateId("");
+                setManualBodyFormat("plain");
+              }}
+              data-active={mode === "manual"}
+              className="app-compose-tab"
+            >
+              <Sparkles className="h-3 w-3" />
+              A mano
+            </button>
           </div>
 
-          {/* ─── Columna derecha: preview en vivo ─── */}
-          <div className="app-compose-panel-right">
-            <div className="app-compose-preview-bar">
-              <div className="app-compose-preview-title">
-                <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                Vista Previa
-              </div>
-              <span className="app-compose-preview-badge">
-                {effectiveFormat === "html" ? "HTML" : "Texto plano"}
-              </span>
+          {/* Select de plantilla (solo modo template) */}
+          {mode === "template" && (
+            <Select
+              value={effectiveTemplateId || "__none"}
+              onValueChange={(v) => changeTemplate(v === "__none" || !v ? "" : v)}
+              items={templateItems}
+            >
+              <SelectTrigger className="app-compose-template-select">
+                <SelectValue placeholder="Seleccionar..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Seleccionar...</SelectItem>
+                {activeTemplates.map((t) => {
+                  const isDefault = (t.actions || []).some(
+                    (a) => a.action_template_id === action.action_template_id && a.is_default
+                  );
+                  return (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                      {isDefault ? " · default" : ""}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Toggle Texto/HTML (solo modo manual) */}
+          {mode === "manual" && (
+            <div className="app-compose-format-toggle">
+              <button
+                type="button"
+                onClick={() => setManualBodyFormat("plain")}
+                data-active={manualBodyFormat === "plain"}
+                className="app-compose-format-btn"
+              >
+                <FileText className="h-2.5 w-2.5" />
+                Texto
+              </button>
+              <button
+                type="button"
+                onClick={() => setManualBodyFormat("html")}
+                data-active={manualBodyFormat === "html"}
+                className="app-compose-format-btn"
+              >
+                <Code2 className="h-2.5 w-2.5" />
+                HTML
+              </button>
             </div>
-            <div className="app-compose-preview-body">
-              {previewLoading && mode === "template" ? (
-                <div className="app-compose-loading">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <p className="text-[11px]">Generando vista previa…</p>
-                </div>
-              ) : effectiveFormat === "html" && previewHtml ? (
-                <div className="app-compose-preview-card">
-                  <iframe
-                    title="email-preview"
-                    srcDoc={previewHtml}
-                    className="w-full bg-white"
-                    style={{ minHeight: "70vh" }}
-                    sandbox="allow-same-origin"
-                  />
-                </div>
-              ) : (
-                <div className="app-compose-preview-text">
-                  <div className="whitespace-pre-wrap text-sm text-foreground leading-relaxed">
-                    {effectiveBody || (
-                      <span className="text-muted-foreground italic">
-                        (cuerpo vacío — escribí algo o elegí una plantilla)
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Historial */}
+          <button
+            type="button"
+            onClick={() => setShowHistory((v) => !v)}
+            className="app-compose-format-btn"
+            title="Historial de envíos"
+          >
+            <History className="h-3 w-3" />
+            {showHistory ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </button>
+        </div>
+
+        {/* Sugeridos + Historial (colapsable) */}
+        {(recipientSuggestions?.length || showHistory) && (
+          <div className="px-4 py-2 border-b border-border bg-muted/10 flex flex-wrap items-center gap-1.5">
+            {recipientSuggestions?.map((r) => (
+              <button
+                key={`${r.role}-${r.email}`}
+                type="button"
+                onClick={() => r.email && addRecipientToField(r.email, "to")}
+                className="app-compose-chip"
+                title={`Agregar ${r.email} a Para`}
+              >
+                <Plus className="h-2.5 w-2.5" />
+                {r.label}: <span className="font-mono truncate max-w-30">{r.email}</span>
+              </button>
+            ))}
+            {showHistory && logs && logs.length > 0 && (
+              <div className="w-full app-compose-history">
+                {logs.map((log) => (
+                  <div key={log.id} className="app-compose-history-item">
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate">
+                        EML-{String(log.correlativo).padStart(3, "0")}: {log.subject}
                       </span>
-                    )}
+                      <span className="text-[9px] text-muted-foreground">
+                        {log.to_address.join(", ")} · {new Date(log.sent_at).toLocaleString("es-CL")}
+                      </span>
+                    </div>
+                    <span className={`app-compose-history-status app-compose-history-status-${log.status}`}>
+                      {log.status}
+                    </span>
                   </div>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
+            {showHistory && logs && logs.length === 0 && (
+              <p className="text-[11px] text-muted-foreground italic w-full">
+                No hay envíos registrados.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ═══ 3. METADATA BAR — Para/CC/CCO/Asunto (estilo Outlook) ═══ */}
+        <div className="app-compose-meta">
+          {/* Para */}
+          <div className="app-compose-meta-row">
+            <span className="app-compose-meta-label">Para</span>
+            <input
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              placeholder="destinatario@ejemplo.com"
+              className="app-compose-meta-input"
+            />
+            {!showCcBcc && (
+              <button
+                type="button"
+                onClick={() => setShowCcBcc(true)}
+                className="text-[10px] text-primary hover:underline shrink-0"
+              >
+                CC / CCO
+              </button>
+            )}
+          </div>
+
+          {/* CC / CCO (colapsable) */}
+          {showCcBcc && (
+            <>
+              <div className="app-compose-meta-row">
+                <span className="app-compose-meta-label">CC</span>
+                <input
+                  value={cc}
+                  onChange={(e) => setCc(e.target.value)}
+                  placeholder="con copia"
+                  className="app-compose-meta-input"
+                />
+              </div>
+              <div className="app-compose-meta-row">
+                <span className="app-compose-meta-label">CCO</span>
+                <input
+                  value={bcc}
+                  onChange={(e) => setBcc(e.target.value)}
+                  placeholder="con copia oculta"
+                  className="app-compose-meta-input"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="app-compose-meta-divider" />
+
+          {/* Asunto */}
+          <div className="app-compose-meta-row">
+            <span className="app-compose-meta-label">Asunto</span>
+            <input
+              value={effectiveSubject}
+              onChange={(e) => setSubjectOverride(e.target.value)}
+              placeholder="Asunto del correo"
+              className="app-compose-meta-input font-medium"
+            />
           </div>
         </div>
 
-        {/* ═══ 3. FOOTER — Cancelar + Enviar ═══ */}
+        {/* ═══ 4. CANVAS DEL CORREO — WYSIWYG (lo que ves es lo que envías) ═══ */}
+        <div className="app-compose-scroll">
+          {previewLoading && mode === "template" ? (
+            <div className="app-compose-loading">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <p className="text-[11px]">Generando correo…</p>
+            </div>
+          ) : effectiveFormat === "html" && previewHtml ? (
+            <div className="app-compose-canvas">
+              <iframe
+                ref={iframeRef}
+                title="email-compose"
+                srcDoc={previewHtml}
+                className="w-full bg-white block"
+                style={{ minHeight: "50vh" }}
+                sandbox="allow-same-origin"
+                onLoad={() => setIframeLoaded(true)}
+              />
+            </div>
+          ) : (
+            <div className="app-compose-canvas">
+              <textarea
+                value={effectiveBody}
+                onChange={(e) => setBodyOverride(e.target.value)}
+                placeholder="Escribí el cuerpo del correo…"
+                className="app-compose-plaintext"
+              />
+            </div>
+          )}
+          <div className="app-compose-spacer" />
+        </div>
+
+        {/* ═══ 5. FOOTER — Cancelar + Enviar ═══ */}
         <div className="app-compose-footer">
           <Button
             className="pg-btn-platinum"
