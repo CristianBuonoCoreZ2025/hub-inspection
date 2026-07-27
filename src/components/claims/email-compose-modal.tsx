@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef } from "react";
 import type { Editor } from "@tiptap/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Mail, Send, Loader2, X, History, FileText, Code2, ChevronDown, ChevronUp } from "lucide-react";
+import { Mail, Send, Loader2, X, History, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -63,7 +63,7 @@ export function EmailComposeModal({
   const [bcc, setBcc] = useState<string>("");
   const [subjectOverride, setSubjectOverride] = useState<string | null>(null);
   const [bodyOverride, setBodyOverride] = useState<string | null>(null);
-  const [manualBodyFormat, setManualBodyFormat] = useState<"plain" | "html">("plain");
+  const [manualBodyFormat] = useState<"plain" | "html">("html");
   const [showHistory, setShowHistory] = useState(false);
   const [showCcBcc, setShowCcBcc] = useState(false);
   const htmlEditorRef = useRef<Editor | null>(null);
@@ -345,32 +345,6 @@ export function EmailComposeModal({
             Enviar
           </Button>
 
-          {/* Toggle Texto/HTML (solo modo manual) */}
-          {effectiveMode === "manual" && (
-            <div className="flex items-center gap-0.5 ml-1 p-0.5 rounded-md bg-muted/40 border border-border">
-              <button
-                type="button"
-                onClick={() => setManualBodyFormat("plain")}
-                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
-                  manualBodyFormat === "plain" ? "bg-background text-foreground shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <FileText className="h-2.5 w-2.5" />
-                Texto
-              </button>
-              <button
-                type="button"
-                onClick={() => setManualBodyFormat("html")}
-                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
-                  manualBodyFormat === "html" ? "bg-background text-foreground shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Code2 className="h-2.5 w-2.5" />
-                HTML
-              </button>
-            </div>
-          )}
-
           {/* Selector de plantilla — solo si hay plantillas vinculadas */}
           {hasTemplates && (
             <>
@@ -380,7 +354,7 @@ export function EmailComposeModal({
                 type="button"
                 onClick={() => {
                   if (effectiveMode === "template") {
-                    // Desactivar → modo manual
+                    // Desactivar → modo libre
                     setMode("manual");
                     setSelectedTemplateId("");
                     setSubjectOverride(null);
@@ -617,13 +591,14 @@ export function EmailComposeModal({
                   editorRef={htmlEditorRef}
                   placeholder="Escribí el cuerpo del correo…"
                   className="flex-1 flex flex-col min-h-0"
+                  showCodeView={false}
                 />
               ) : (
                 <textarea
                   value={effectiveBody}
                   onChange={(e) => setBodyOverride(e.target.value)}
                   placeholder="Escribí el cuerpo del correo…"
-                  className="flex-1 min-h-40 w-full resize-none bg-background p-3 font-mono text-[11px] text-foreground outline-none border border-border rounded-lg overflow-y-auto"
+                  className="flex-1 min-h-40 w-full resize-none bg-background p-4 text-sm leading-relaxed text-foreground outline-none border border-border rounded-lg overflow-y-auto"
                 />
               )}
             </>

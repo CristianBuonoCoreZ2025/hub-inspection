@@ -186,6 +186,9 @@ export interface HtmlEditorProps {
   className?: string;
   /** Ref al elemento editable para insertar placeholders desde afuera. */
   editorRef?: React.MutableRefObject<Editor | null>;
+  /** Mostrar toggle de vista código HTML (default: true).
+   *  En el compose de email se oculta — el usuario final no debe ver HTML crudo. */
+  showCodeView?: boolean;
 }
 
 const FONT_FAMILIES = [
@@ -434,6 +437,7 @@ export function HtmlEditor({
   placeholder,
   className,
   editorRef,
+  showCodeView = true,
 }: HtmlEditorProps) {
   const [mode, setMode] = React.useState<"visual" | "code">("visual");
   const [codeValue, setCodeValue] = React.useState(value);
@@ -703,34 +707,36 @@ export function HtmlEditor({
           </>
         )}
 
-        {/* Toggle visual / código */}
-        <div className="ml-auto flex items-center gap-0.5 self-center">
-          <ToolbarButton
-            title="Editor visual"
-            active={mode === "visual"}
-            onClick={() => {
-              if (mode === "code") {
-                editor?.commands.setContent(codeValue || "", { emitUpdate: false });
-                onChange(codeValue || "");
-              }
-              setMode("visual");
-            }}
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </ToolbarButton>
-          <ToolbarButton
-            title="Editar HTML"
-            active={mode === "code"}
-            onClick={() => {
-              if (mode === "visual" && editor) {
-                setCodeValue(editor.getHTML());
-              }
-              setMode("code");
-            }}
-          >
-            <Code2 className="h-3.5 w-3.5" />
-          </ToolbarButton>
-        </div>
+        {/* Toggle visual / código — oculto en el compose (showCodeView=false) */}
+        {showCodeView && (
+          <div className="ml-auto flex items-center gap-0.5 self-center">
+            <ToolbarButton
+              title="Editor visual"
+              active={mode === "visual"}
+              onClick={() => {
+                if (mode === "code") {
+                  editor?.commands.setContent(codeValue || "", { emitUpdate: false });
+                  onChange(codeValue || "");
+                }
+                setMode("visual");
+              }}
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </ToolbarButton>
+            <ToolbarButton
+              title="Editar HTML"
+              active={mode === "code"}
+              onClick={() => {
+                if (mode === "visual" && editor) {
+                  setCodeValue(editor.getHTML());
+                }
+                setMode("code");
+              }}
+            >
+              <Code2 className="h-3.5 w-3.5" />
+            </ToolbarButton>
+          </div>
+        )}
       </div>
 
       {/* Contenido */}
