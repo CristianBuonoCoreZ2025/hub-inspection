@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateResetCode, getUserIdByEmail } from "@/services/password-reset";
-import { createAdminClient } from "@/lib/supabase/server";
+import { sendEmail } from "@/services/email-sender";
 import { logger } from "@/lib/logger";
 
 /**
  * POST /api/auth/send-reset-code
  * Body: { email: string }
  *
- * Genera un código de 6 dígitos y lo envía por email al usuario.
+ * Genera un código OTP de 6 dígitos, lo guarda en la BD
+ * (tabla password_reset_codes) y lo envía por email al usuario
+ * usando el proveedor configurado (Resend/SendGrid).
  *
- * Estrategia:
- * 1. Genera un código OTP en nuestra BD (tabla password_reset_codes)
- * 2. Usa Supabase auth.admin.generateLink con type='recovery' para
- *    que Supabase envíe un email de recuperación al usuario.
- * 3. El usuario ve el código OTP en la UI de /forgot-password y lo ingresa.
+ * El usuario ingresa el código en la UI de /forgot-password para
+ * validar su identidad y setear una nueva contraseña.
  *
- * En desarrollo, retorna el código para testing.
+ * En desarrollo (NODE_ENV=development), retorna el código para
+ * testing — no requiere proveedor de email configurado.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -38,34 +38,63 @@ export async function POST(request: NextRequest) {
     // Generar código OTP en nuestra BD
     const code = await generateResetCode(email);
 
-    // Usar Supabase para enviar el email de recuperación
-    // Esto envía un email con un link que contiene un token.
-    // El usuario puede usar el código OTP que generamos en nuestra BD
-    // para resetear la contraseña desde nuestra UI.
-    const supabase = createAdminClient();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-
-    const { error: emailError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${siteUrl}/forgot-password`,
-    });
-
-    if (emailError) {
-      logger.warn("Supabase reset email error", {
-        component: "auth-send-reset-code",
-        action: "resetPasswordForEmail",
-        metadata: { error: emailError.message, email },
-      });
-      // No fallar si el email falla — el código ya está en BD
-      // En desarrollo, el usuario puede ver el código en la UI
-    }
-
+    // En desarrollo, retornar el código para testing sin enviar email
     if (process.env.NODE_ENV === "development") {
-      // En desarrollo, retornar el código para testing
       return NextResponse.json({
         ok: true,
         code,
         message: "Código generado (modo desarrollo)",
       });
+    }
+
+    // En producción, enviar el código por email via el proveedor configurado
+    const siteName = process.env.NEXT_PUBLIC_APP_NAME || "Claims Hub";
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="color: #0f172a; margin: 0 0 8px 0;">${siteName}</h2>
+        <p style="color: #475569; margin: 0 0 24px 0;">Recuperación de contraseña</p>
+        <p style="color: #1e293b; margin: 0 0 16px 0;">
+          Hemos recibido una solicitud para restablecer la contraseña de tu cuenta.
+        </p>
+        <p style="color: #1e293b; margin: 0 0 24px 0;">
+          Usa el siguiente código de verificación para continuar:
+        </p>
+        <div style="text-align: center; margin: 24px 0;">
+          <span style="display: inline-block; font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #7c3aed; background: #f5f3ff; padding: 16px 24px; border-radius: 12px; border: 1px solid #ddd6fe;">
+            ${code}
+          </span>
+        </div>
+        <p style="color: #64748b; font-size: 13px; margin: 0 0 8px 0;">
+          Este código expira en 10 minutos.
+        </p>
+        <p style="color: #64748b; font-size: 13px; margin: 0 0 24px 0;">
+          Si no solicitaste este cambio, puedes ignorar este correo.
+        </p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+        <p style="color: #94a3b8; font-size: 11px; margin: 0;">
+          Este es un mensaje automático, no respondas a este correo.
+        </p>
+      </div>
+    `;
+
+    const result = await sendEmail({
+      to: [email],
+      subject: `Código de verificación — ${siteName}`,
+      body: html,
+      html: true,
+    });
+
+    if (result.status === "failed") {
+      logger.error("send-reset-code: email send failed", new Error(JSON.stringify(result.provider_response)), {
+        component: "auth-send-reset-code",
+        action: "sendEmail",
+        metadata: { email, provider: result.provider },
+      });
+      return NextResponse.json(
+        { ok: false, error: "No se pudo enviar el correo. Intenta nuevamente." },
+        { status: 502 }
+      );
     }
 
     return NextResponse.json({
