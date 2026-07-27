@@ -185,6 +185,9 @@
    ────────────────────────────────────────────────────────────── */
 .html-editor-wrap {
   position: relative;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 .html-editor-content {
   line-height: 1.5;

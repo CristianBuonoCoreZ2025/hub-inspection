@@ -536,17 +536,6 @@ export function EmailComposeModal({
             </div>
           )}
 
-          {/* Asunto */}
-          <div className="flex items-center gap-2 py-0.5 border-t border-border/30 mt-0.5 pt-1">
-            <span className="text-muted-foreground font-medium shrink-0 w-10">Asunto</span>
-            <input
-              value={effectiveSubject}
-              onChange={(e) => setSubjectOverride(e.target.value)}
-              placeholder="asunto del correo"
-              className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] font-medium"
-            />
-          </div>
-
           {/* ─── Autocomplete dropdown ─── */}
           {activeField && autocompleteSuggestions.length > 0 && (
             <div className="absolute z-50 left-14 right-4 mt-1 rounded-lg border border-border bg-popover shadow-lg max-h-60 overflow-auto">
@@ -601,28 +590,43 @@ export function EmailComposeModal({
           )}
         </div>
 
-        {/* ═══ 4 + 5. BODY — HtmlEditor (toolbar + content) o textarea ═══ */}
-        <div className="flex-1 overflow-hidden flex flex-col">
+        {/* ═══ 4 + 5. BODY — Asunto integrado + editor que ocupa todo ═══ */}
+        <div className="flex-1 overflow-hidden flex flex-col bg-background">
           {previewLoading && effectiveMode === "template" ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-2 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
               <p className="text-[11px]">Generando correo…</p>
             </div>
-          ) : effectiveFormat === "html" ? (
-            <HtmlEditor
-              value={effectiveBody || ""}
-              onChange={(html) => setBodyOverride(html)}
-              editorRef={htmlEditorRef}
-              placeholder="Escribí el cuerpo del correo…"
-              className="flex-1 flex flex-col"
-            />
           ) : (
-            <textarea
-              value={effectiveBody}
-              onChange={(e) => setBodyOverride(e.target.value)}
-              placeholder="Escribí el cuerpo del correo…"
-              className="flex-1 w-full bg-white border-0 outline-none p-4 text-sm leading-relaxed text-foreground resize-none overflow-y-auto"
-            />
+            <>
+              {/* Asunto — integrado al body, jerarquía visual mayor */}
+              <div className="px-4 py-2.5 border-b border-border/40 bg-background shrink-0">
+                <input
+                  value={effectiveSubject}
+                  onChange={(e) => setSubjectOverride(e.target.value)}
+                  placeholder="Asunto"
+                  className="w-full bg-transparent border-0 outline-none text-foreground text-[15px] font-semibold"
+                />
+              </div>
+
+              {/* Editor — ocupa todo el espacio restante */}
+              {effectiveFormat === "html" ? (
+                <HtmlEditor
+                  value={effectiveBody || ""}
+                  onChange={(html) => setBodyOverride(html)}
+                  editorRef={htmlEditorRef}
+                  placeholder="Escribí el cuerpo del correo…"
+                  className="flex-1 flex flex-col min-h-0 rounded-none border-0 shadow-none"
+                />
+              ) : (
+                <textarea
+                  value={effectiveBody}
+                  onChange={(e) => setBodyOverride(e.target.value)}
+                  placeholder="Escribí el cuerpo del correo…"
+                  className="flex-1 w-full bg-background border-0 outline-none p-4 text-sm leading-relaxed text-foreground resize-none overflow-y-auto min-h-0"
+                />
+              )}
+            </>
           )}
         </div>
       </DialogContent>
