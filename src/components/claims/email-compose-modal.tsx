@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef } from "react";
 import type { Editor } from "@tiptap/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Mail, Send, Loader2, X, History, FileText, Code2, Sparkles, ChevronDown, ChevronUp, Contact } from "lucide-react";
+import { Mail, Send, Loader2, X, History, FileText, Code2, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { HtmlEditor } from "@/components/ui/html-editor";
 import { getEmailTemplatesForAction } from "@/services/email-template-actions";
-import { EmailContactBook } from "@/components/claims/email-contact-book";
+import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
 import { getSupabaseClient } from "@/lib/supabase/db";
 import { toast } from "sonner";
 
@@ -38,29 +38,17 @@ interface EmailComposeModalProps {
 }
 
 /**
- * Modal de composición de email — modelo Outlook/Apple Mail.
+ * Modal de composición de email — modelo Outlook 365.
  *
- * El correo ES la vista previa (WYSIWYG):
- *  - Header con gestión + código
- *  - Toolbar con plantilla + modo + contactos + historial
- *  - Metadata bar (Para / CC / CCO / Asunto) estilo Outlook
- *  - Canvas del correo:
- *    - HTML → HtmlEditor (TipTap) con toolbar completa (bold, tablas, colores, etc.)
- *    - Texto plano → textarea full-width
- *  - Footer con Cancelar + Enviar
+ * Layout (de arriba a abajo):
+ *  1. Header compacto (icono + título + gestión + cerrar)
+ *  2. Action bar: [Enviar] [Plantilla ▼ si hay]     [Historial]
+ *  3. Campos: Para → CC → BCC → Asunto (con autocomplete de libreta)
+ *  4. Toolbar de formato (Bold, tablas, colores…) — solo en HTML
+ *  5. Body del correo (HtmlEditor o textarea)
  *
- * Modo Plantilla:
- *  - El subject y body vienen renderizados con datos del siniestro
- *  - Ambos son editables (el usuario puede modificar lo que quiera)
- *  - El formato (html/plain) lo define la plantilla (no cambiable)
- *  - Al enviar, se guarda la versión original Y la final para auditoría
- *
- * Modo Manual:
- *  - El usuario escribe subject y body desde cero
- *  - Toggle de formato: Texto plano / HTML
- *  - En HTML tiene la misma toolbar que el editor de plantillas
- *
- * Lo que se ve es lo que se envía.
+ * La libreta de contactos se invoca escribiendo en Para/CC/BCC:
+ * al teclear un nombre, aparece un dropdown con sugerencias.
  */
 export function EmailComposeModal({
   open,
@@ -78,9 +66,12 @@ export function EmailComposeModal({
   const [manualBodyFormat, setManualBodyFormat] = useState<"plain" | "html">("plain");
   const [showHistory, setShowHistory] = useState(false);
   const [showCcBcc, setShowCcBcc] = useState(false);
-  const [showContacts, setShowContacts] = useState(false);
   const htmlEditorRef = useRef<Editor | null>(null);
   const queryClient = useQueryClient();
+
+  // ─── Autocomplete state ───
+  const [activeField, setActiveField] = useState<"to" | "cc" | "bcc" | null>(null);
+  const [autocompleteQuery, setAutocompleteQuery] = useState("");
 
   const changeMode = (newMode: "template" | "manual") => {
     setMode(newMode);
@@ -102,6 +93,14 @@ export function EmailComposeModal({
         includeInactive: false,
       }),
     enabled: open,
+  });
+
+  // ─── Libreta de contactos para autocomplete ───
+  const { data: contacts } = useQuery<EmailContact[]>({
+    queryKey: ["email-contacts", action.claim_id],
+    queryFn: () => fetchClaimContacts(action.claim_id),
+    enabled: open,
+    staleTime: 60_000,
   });
 
   interface EmailLogLite {
@@ -130,6 +129,10 @@ export function EmailComposeModal({
 
   const activeTemplates = useMemo(() => templates?.filter((t) => t.is_active) || [], [templates]);
 
+  // ─── Si no hay plantillas vinculadas, forzar modo manual ───
+  // (derivado, sin useEffect — si no hay plantillas, siempre es manual)
+  const effectiveMode = activeTemplates.length === 0 ? "manual" : mode;
+
   const defaultTemplateId = useMemo(() => {
     if (activeTemplates.length === 0) return "";
     const def = activeTemplates.find((t) =>
@@ -143,10 +146,10 @@ export function EmailComposeModal({
   const effectiveTemplateId = selectedTemplateId || defaultTemplateId;
 
   const { data: previewData, isLoading: previewLoading } = useQuery({
-    queryKey: ["email-preview", action.id, mode, effectiveTemplateId, manualBodyFormat],
+    queryKey: ["email-preview", action.id, effectiveMode, effectiveTemplateId, manualBodyFormat],
     queryFn: async () => {
       try {
-        if (mode === "manual") {
+        if (effectiveMode === "manual") {
           return {
             subject: subjectOverride ?? "",
             body: bodyOverride ?? "",
@@ -183,12 +186,12 @@ export function EmailComposeModal({
 
   const effectiveSubject = subjectOverride ?? rendered.subject;
   const effectiveBody = bodyOverride ?? rendered.body;
-  const effectiveFormat = mode === "manual" ? manualBodyFormat : rendered.body_format;
+  const effectiveFormat = effectiveMode === "manual" ? manualBodyFormat : rendered.body_format;
 
   // Versión original de la plantilla (para auditoría — se envía al backend)
-  const templateOriginalSubject = mode === "template" ? rendered.subject : null;
-  const templateOriginalBody = mode === "template" ? rendered.body : null;
-  const templateOriginalFormat = mode === "template" ? rendered.body_format : null;
+  const templateOriginalSubject = effectiveMode === "template" ? rendered.subject : null;
+  const templateOriginalBody = effectiveMode === "template" ? rendered.body : null;
+  const templateOriginalFormat = effectiveMode === "template" ? rendered.body_format : null;
 
   const sendMutation = useMutation({
     mutationFn: async () => {
@@ -203,21 +206,17 @@ export function EmailComposeModal({
         bcc: bccArr,
       };
 
-      if (mode === "template" && effectiveTemplateId) {
-        // Modo plantilla: SIEMPRE pasamos emailTemplateId (incluso si editó)
-        // + la versión original renderizada para auditoría
+      if (effectiveMode === "template" && effectiveTemplateId) {
         payload.emailTemplateId = effectiveTemplateId;
         payload.templateSubject = templateOriginalSubject;
         payload.templateBody = templateOriginalBody;
         payload.templateBodyFormat = templateOriginalFormat;
-        // Si el usuario editó, pasamos también la versión final
         if (subjectOverride !== null || bodyOverride !== null) {
           payload.manualSubject = effectiveSubject;
           payload.manualBody = effectiveBody;
           payload.manualBodyFormat = effectiveFormat;
         }
       } else {
-        // Modo manual puro
         payload.manualSubject = effectiveSubject;
         payload.manualBody = effectiveBody;
         payload.manualBodyFormat = effectiveFormat;
@@ -253,6 +252,44 @@ export function EmailComposeModal({
     if (existing.includes(email)) return;
     setter([...existing, email].join(", "));
     if (field !== "to") setShowCcBcc(true);
+    setAutocompleteQuery("");
+    setActiveField(null);
+  };
+
+  // ─── Autocomplete: filtrar contactos por lo que se está escribiendo ───
+  // Extrae el último fragmento después de la última coma
+  const getLastFragment = (text: string) => {
+    const parts = text.split(",");
+    return parts[parts.length - 1].trim();
+  };
+
+  const autocompleteSuggestions = useMemo(() => {
+    if (!activeField || !contacts) return [];
+    const query = autocompleteQuery.toLowerCase().trim();
+    if (query.length < 1) return [];
+    return contacts
+      .filter(
+        (c) =>
+          c.email.toLowerCase().includes(query) ||
+          (c.fullName?.toLowerCase().includes(query) ?? false) ||
+          c.roles.some((r) => r.toLowerCase().includes(query))
+      )
+      .slice(0, 8);
+  }, [activeField, contacts, autocompleteQuery]);
+
+  const handleRecipientInput = (value: string, field: "to" | "cc" | "bcc") => {
+    const setter = field === "to" ? setTo : field === "cc" ? setCc : setBcc;
+    setter(value);
+    setActiveField(field);
+    setAutocompleteQuery(getLastFragment(value));
+  };
+
+  const handleRecipientBlur = () => {
+    // Delay para permitir click en sugerencia
+    setTimeout(() => {
+      setActiveField(null);
+      setAutocompleteQuery("");
+    }, 200);
   };
 
   const templateItems = useMemo(
@@ -275,99 +312,54 @@ export function EmailComposeModal({
     !sendMutation.isPending;
 
   const gestionCode = (action.action_data as Record<string, unknown> | null)?.codigo as string | undefined;
+  const hasTemplates = activeTemplates.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} dismissible={false}>
       <DialogContent className="modal-xl p-0! flex flex-col" showCloseButton={false}>
 
-        {/* ═══ 1. HEADER — idéntico al preview ═══ */}
-        <div className="p-4 border-b border-border bg-background flex items-start justify-between gap-3">
-          <DialogTitle className="flex items-start gap-3 m-0">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
-              <Mail className="h-4 w-4" />
+        {/* ═══ 1. HEADER compacto ═══ */}
+        <div className="px-4 py-2.5 border-b border-border bg-background flex items-center justify-between gap-3 shrink-0">
+          <DialogTitle className="flex items-center gap-2.5 m-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
+              <Mail className="h-3.5 w-3.5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-foreground leading-tight">Enviar Correo</span>
+              <span className="text-[13px] font-semibold text-foreground leading-tight">Correo</span>
               {gestionCode && (
                 <span className="text-[10px] text-muted-foreground">Gestión: {gestionCode}</span>
               )}
-              <span className="text-[10px] text-muted-foreground font-mono">componer y enviar</span>
             </div>
           </DialogTitle>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button type="button" onClick={() => onOpenChange(false)} title="Cerrar" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <button type="button" onClick={() => onOpenChange(false)} title="Cerrar" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
 
-        {/* ═══ 2. TOOLBAR — plantilla + modo + contactos + historial ═══ */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/20 flex-wrap">
-          {/* Tabs: Plantilla / A mano */}
-          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted/50 border border-border">
-            <button
-              type="button"
-              onClick={() => changeMode("template")}
-              data-active={mode === "template"}
-              className={`flex items-center justify-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md transition-all ${
-                mode === "template" ? "bg-background text-foreground shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <FileText className="h-3 w-3" />
-              Plantilla
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                changeMode("manual");
-                setSelectedTemplateId("");
-                setManualBodyFormat("plain");
-              }}
-              data-active={mode === "manual"}
-              className={`flex items-center justify-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md transition-all ${
-                mode === "manual" ? "bg-background text-foreground shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Sparkles className="h-3 w-3" />
-              A mano
-            </button>
-          </div>
-
-          {/* Select de plantilla (solo modo template) */}
-          {mode === "template" && (
-            <Select
-              value={effectiveTemplateId || "__none"}
-              onValueChange={(v) => changeTemplate(v === "__none" || !v ? "" : v)}
-              items={templateItems}
-            >
-              <SelectTrigger className="app-input h-7 w-50">
-                <SelectValue placeholder="Seleccionar..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none">Seleccionar...</SelectItem>
-                {activeTemplates.map((t) => {
-                  const isDefault = (t.actions || []).some(
-                    (a) => a.action_template_id === action.action_template_id && a.is_default
-                  );
-                  return (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                      {isDefault ? " · default" : ""}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          )}
+        {/* ═══ 2. ACTION BAR — [Enviar] [Plantilla ▼]    [Historial] ═══ */}
+        <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-muted/15 shrink-0">
+          {/* Enviar — izquierda, destacado */}
+          <Button
+            className="pg-btn-platinum"
+            disabled={!canSend}
+            onClick={() => sendMutation.mutate()}
+          >
+            {sendMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+            Enviar
+          </Button>
 
           {/* Toggle Texto/HTML (solo modo manual) */}
-          {mode === "manual" && (
-            <div className="flex items-center gap-1">
+          {effectiveMode === "manual" && (
+            <div className="flex items-center gap-0.5 ml-1 p-0.5 rounded-md bg-muted/40 border border-border">
               <button
                 type="button"
                 onClick={() => setManualBodyFormat("plain")}
                 className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
-                  manualBodyFormat === "plain" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                  manualBodyFormat === "plain" ? "bg-background text-foreground shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <FileText className="h-2.5 w-2.5" />
@@ -377,7 +369,7 @@ export function EmailComposeModal({
                 type="button"
                 onClick={() => setManualBodyFormat("html")}
                 className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
-                  manualBodyFormat === "html" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                  manualBodyFormat === "html" ? "bg-background text-foreground shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Code2 className="h-2.5 w-2.5" />
@@ -386,10 +378,48 @@ export function EmailComposeModal({
             </div>
           )}
 
+          {/* Selector de plantilla — solo si hay plantillas vinculadas */}
+          {hasTemplates && (
+            <>
+              <div className="w-px h-5 bg-border mx-1" />
+              <Select
+                value={effectiveTemplateId || "__none"}
+                onValueChange={(v) => {
+                  if (v === "__none" || !v) {
+                    changeMode("manual");
+                    setSelectedTemplateId("");
+                  } else {
+                    setMode("template");
+                    changeTemplate(v);
+                  }
+                }}
+                items={templateItems}
+              >
+                <SelectTrigger className="app-input h-7 w-50">
+                  <SelectValue placeholder="Plantilla..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">A mano</SelectItem>
+                  {activeTemplates.map((t) => {
+                    const isDefault = (t.actions || []).some(
+                      (a) => a.action_template_id === action.action_template_id && a.is_default
+                    );
+                    return (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                        {isDefault ? " · default" : ""}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </>
+          )}
+
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Historial */}
+          {/* Historial — derecha */}
           <button
             type="button"
             onClick={() => setShowHistory((v) => !v)}
@@ -399,24 +429,11 @@ export function EmailComposeModal({
             <History className="h-3 w-3" />
             {showHistory ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </button>
-
-          {/* Toggle Contact Book */}
-          <button
-            type="button"
-            onClick={() => setShowContacts((v) => !v)}
-            className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
-              showContacts ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
-            }`}
-            title="Libreta de contactos"
-          >
-            <Contact className="h-3 w-3" />
-            Contactos
-          </button>
         </div>
 
         {/* Historial (colapsable) */}
         {showHistory && (
-          <div className="px-4 py-2 border-b border-border bg-muted/10">
+          <div className="px-4 py-2 border-b border-border bg-muted/10 shrink-0">
             {logs && logs.length > 0 && (
               <div className="rounded-lg border border-border p-2 space-y-1 max-h-40 overflow-auto bg-background/60">
                 {logs.map((log) => (
@@ -446,15 +463,17 @@ export function EmailComposeModal({
           </div>
         )}
 
-        {/* ═══ 3. METADATA BAR — Para/CC/CCO/Asunto (estilo Outlook, mismo patrón que preview) ═══ */}
-        <div className="px-4 py-3 border-b border-border bg-muted/20 text-[11px]">
+        {/* ═══ 3. CAMPOS — Para → CC → BCC → Asunto (con autocomplete) ═══ */}
+        <div className="px-4 py-2 border-b border-border bg-background text-[11px] shrink-0 relative">
           {/* Para */}
-          <div className="flex items-baseline gap-2 py-0.5">
-            <span className="text-muted-foreground font-medium shrink-0 min-w-14">Para</span>
+          <div className="flex items-center gap-2 py-0.5 relative">
+            <span className="text-muted-foreground font-medium shrink-0 w-10">Para</span>
             <input
               value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="destinatario@ejemplo.com"
+              onChange={(e) => handleRecipientInput(e.target.value, "to")}
+              onFocus={() => setActiveField("to")}
+              onBlur={handleRecipientBlur}
+              placeholder="nombre o email…"
               className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
             />
             {!showCcBcc && (
@@ -468,103 +487,124 @@ export function EmailComposeModal({
             )}
           </div>
 
-          {/* CC / CCO (colapsable) */}
+          {/* CC */}
           {showCcBcc && (
-            <>
-              <div className="flex items-baseline gap-2 py-0.5">
-                <span className="text-muted-foreground font-medium shrink-0 min-w-14">CC</span>
-                <input
-                  value={cc}
-                  onChange={(e) => setCc(e.target.value)}
-                  placeholder="con copia"
-                  className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
-                />
-              </div>
-              <div className="flex items-baseline gap-2 py-0.5">
-                <span className="text-muted-foreground font-medium shrink-0 min-w-14">CCO</span>
-                <input
-                  value={bcc}
-                  onChange={(e) => setBcc(e.target.value)}
-                  placeholder="con copia oculta"
-                  className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
-                />
-              </div>
-            </>
+            <div className="flex items-center gap-2 py-0.5 relative">
+              <span className="text-muted-foreground font-medium shrink-0 w-10">CC</span>
+              <input
+                value={cc}
+                onChange={(e) => handleRecipientInput(e.target.value, "cc")}
+                onFocus={() => setActiveField("cc")}
+                onBlur={handleRecipientBlur}
+                placeholder="con copia…"
+                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
+              />
+            </div>
           )}
 
-          <div className="border-t border-border/30 my-0.5" />
+          {/* BCC */}
+          {showCcBcc && (
+            <div className="flex items-center gap-2 py-0.5 relative">
+              <span className="text-muted-foreground font-medium shrink-0 w-10">CCO</span>
+              <input
+                value={bcc}
+                onChange={(e) => handleRecipientInput(e.target.value, "bcc")}
+                onFocus={() => setActiveField("bcc")}
+                onBlur={handleRecipientBlur}
+                placeholder="con copia oculta…"
+                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px]"
+              />
+            </div>
+          )}
 
           {/* Asunto */}
-          <div className="flex items-baseline gap-2 py-0.5">
-            <span className="text-muted-foreground font-medium shrink-0 min-w-14">Asunto</span>
+          <div className="flex items-center gap-2 py-0.5 border-t border-border/30 mt-0.5 pt-1">
+            <span className="text-muted-foreground font-medium shrink-0 w-10">Asunto</span>
             <input
               value={effectiveSubject}
               onChange={(e) => setSubjectOverride(e.target.value)}
-              placeholder="Asunto del correo"
+              placeholder="asunto del correo"
               className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] font-medium"
             />
           </div>
+
+          {/* ─── Autocomplete dropdown ─── */}
+          {activeField && autocompleteSuggestions.length > 0 && (
+            <div className="absolute z-50 left-14 right-4 mt-1 rounded-lg border border-border bg-popover shadow-lg max-h-60 overflow-auto">
+              {autocompleteSuggestions.map((contact) => {
+                const initials = (contact.fullName || contact.email)
+                  .split(" ")
+                  .map((w) => w[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase();
+                return (
+                  <button
+                    key={contact.email}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      addRecipientToField(contact.email, activeField);
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-accent transition-colors border-b last:border-0 border-border/20"
+                  >
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }}>
+                      {initials}
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[11px] font-medium text-foreground truncate">
+                        {contact.fullName || contact.email}
+                      </span>
+                      {contact.fullName && (
+                        <span className="text-[10px] text-muted-foreground truncate font-mono">
+                          {contact.email}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-0.5 shrink-0">
+                      {contact.roles.slice(0, 2).map((role) => (
+                        <span
+                          key={role}
+                          className={`text-[8px] px-1 py-0.5 rounded font-medium ${
+                            contact.isInternal
+                              ? "bg-primary/12 text-primary"
+                              : "bg-muted/40 text-muted-foreground"
+                          }`}
+                        >
+                          {role}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* ═══ 4. CANVAS DEL CORREO + CONTACT BOOK (flex row) ═══ */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Canvas WYSIWYG (lo que ves es lo que envías) */}
-          <div className="flex-1 overflow-y-auto w-full bg-muted/12">
-            {previewLoading && mode === "template" ? (
-              <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <p className="text-[11px]">Generando correo…</p>
-              </div>
-            ) : effectiveFormat === "html" ? (
-              <div className="w-full bg-white mx-auto" style={{ maxWidth: 680, minHeight: 400, boxShadow: "0 4px 20px rgb(0 0 0 / 0.06)" }}>
-                <HtmlEditor
-                  value={effectiveBody || ""}
-                  onChange={(html) => setBodyOverride(html)}
-                  editorRef={htmlEditorRef}
-                  placeholder="Escribí el cuerpo del correo…"
-                />
-              </div>
-            ) : (
-              <div className="w-full bg-white mx-auto" style={{ maxWidth: 680, minHeight: 400, boxShadow: "0 4px 20px rgb(0 0 0 / 0.06)" }}>
-                <textarea
-                  value={effectiveBody}
-                  onChange={(e) => setBodyOverride(e.target.value)}
-                  placeholder="Escribí el cuerpo del correo…"
-                  className="w-full bg-white border-0 outline-none p-8 text-sm leading-relaxed text-foreground resize-none"
-                  style={{ minHeight: 400 }}
-                />
-              </div>
-            )}
-            <div style={{ height: 24, flexShrink: 0 }} />
-          </div>
-
-          {/* Contact Book — panel lateral deslizable */}
-          <EmailContactBook
-            claimId={action.claim_id}
-            open={showContacts}
-            onClose={() => setShowContacts(false)}
-            onAddRecipient={addRecipientToField}
-          />
-        </div>
-
-        {/* ═══ 5. FOOTER — Cancelar + Enviar (pg-btn-platinum) ═══ */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border bg-background">
-          <Button className="pg-btn-platinum" onClick={() => onOpenChange(false)}>
-            <X className="h-3.5 w-3.5" />
-            Cancelar
-          </Button>
-          <Button
-            className="pg-btn-platinum"
-            disabled={!canSend}
-            onClick={() => sendMutation.mutate()}
-          >
-            {sendMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Send className="h-3.5 w-3.5" />
-            )}
-            Enviar
-          </Button>
+        {/* ═══ 4 + 5. BODY — HtmlEditor (toolbar + content) o textarea ═══ */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {previewLoading && effectiveMode === "template" ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <p className="text-[11px]">Generando correo…</p>
+            </div>
+          ) : effectiveFormat === "html" ? (
+            <HtmlEditor
+              value={effectiveBody || ""}
+              onChange={(html) => setBodyOverride(html)}
+              editorRef={htmlEditorRef}
+              placeholder="Escribí el cuerpo del correo…"
+              className="flex-1 flex flex-col"
+            />
+          ) : (
+            <textarea
+              value={effectiveBody}
+              onChange={(e) => setBodyOverride(e.target.value)}
+              placeholder="Escribí el cuerpo del correo…"
+              className="flex-1 w-full bg-white border-0 outline-none p-4 text-sm leading-relaxed text-foreground resize-none overflow-y-auto"
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>
