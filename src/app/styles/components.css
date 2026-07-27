@@ -476,6 +476,36 @@
     flex-wrap: wrap !important;
   }
 
+  /* Botón toggle para colapsar/expandir el mapper */
+  .bulk-mapper-toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    width: 100% !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+    text-align: left !important;
+  }
+
+  .bulk-mapper-toggle:hover {
+    opacity: 0.85 !important;
+  }
+
+  .bulk-mapper-toggle-left {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .bulk-mapper-toggle-right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
   .bulk-mapper-header-left {
     display: flex !important;
     align-items: flex-start !important;

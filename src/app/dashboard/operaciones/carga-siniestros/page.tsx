@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { createClaim } from "@/services/claims";
 import { toast } from "sonner";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2, ArrowRight, SlidersHorizontal } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2, ArrowRight, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -24,7 +24,7 @@ interface ExcelRow {
   [key: string]: string | number | null;
 }
 
-type Step = "upload" | "mapping" | "preview";
+type Step = "upload" | "review";
 
 export default function CargaSiniestrosPage() {
   const { canCreate } = usePermissions();
@@ -38,20 +38,18 @@ export default function CargaSiniestrosPage() {
   const [excelHeaders, setExcelHeaders] = useState<string[]>([]);
   const [rawRows, setRawRows] = useState<ExcelRow[]>([]);
   const [mapping, setMapping] = useState<Record<string, ColumnMapping>>({});
-  const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+  const [mapperOpen, setMapperOpen] = useState(true);
 
-  // ── Aplicar mapeo + validar ──
-  const applyMappingAndValidate = (
-    activeMapping: Record<string, ColumnMapping>,
-    rows: ExcelRow[]
-  ) => {
-    const parsed: ParsedRow[] = rows.map((raw, idx) => {
-      const data = applyMappingToRow(raw, activeMapping);
-      const { valid, errors } = validateRowWithMapping(data, activeMapping);
+  // ── Parsed rows: estado derivado de mapping + rawRows ──
+  // Se recalcula en vivo cuando el usuario cambia el mapeo, sin useEffect.
+  const parsedRows = useMemo<ParsedRow[]>(() => {
+    if (rawRows.length === 0) return [];
+    return rawRows.map((raw, idx) => {
+      const data = applyMappingToRow(raw, mapping);
+      const { valid, errors } = validateRowWithMapping(data, mapping);
       return { rowNum: idx + 2, data, valid, errors };
     });
-    setParsedRows(parsed);
-  };
+  }, [rawRows, mapping]);
 
   // ── Cargar y parsear el Excel ──
   const parseFile = useCallback((f: File) => {
@@ -74,22 +72,22 @@ export default function CargaSiniestrosPage() {
         setExcelHeaders(headers);
         setRawRows(jsonData);
         setMapping(autoMapping);
-        setParsedRows([]);
 
         // Verificar si hay campos requeridos sin mapear
         const missingRequired = REQUIRED_FIELDS.filter(
           (field) => !autoMapping[field.key]?.fieldKey
         );
 
+        // Siempre ir a review — mapeo + preview juntos
+        setStep("review");
+        // Abrir el mapper si faltan requeridos, colapsarlo si todo está OK
+        setMapperOpen(missingRequired.length > 0);
+
         if (missingRequired.length > 0) {
-          setStep("mapping");
           toast.info(
-            `Detectamos ${missingRequired.length} campo(s) requerido(s) sin mapear. Revisa el mapeo de columnas.`
+            `Detectamos ${missingRequired.length} campo(s) requerido(s) sin mapear. Ajusta el mapeo de columnas arriba.`
           );
         } else {
-          // Todo mapeado, ir directo a preview
-          applyMappingAndValidate(autoMapping, jsonData);
-          setStep("preview");
           toast.success(`${jsonData.length} filas parseadas`);
         }
       } catch (err) {
@@ -100,35 +98,11 @@ export default function CargaSiniestrosPage() {
     reader.readAsArrayBuffer(f);
   }, []);
 
-  // ── Confirmar mapeo manual ──
-  const handleConfirmMapping = () => {
-    const missingRequired = REQUIRED_FIELDS.filter(
-      (field) => !mapping[field.key]?.fieldKey || !mapping[field.key]?.excelHeader
-    );
-    if (missingRequired.length > 0) {
-      toast.error(
-        `Faltan mapear ${missingRequired.length} campo(s) requerido(s): ${missingRequired
-          .map((f) => f.label)
-          .join(", ")}`
-      );
-      return;
-    }
-    applyMappingAndValidate(mapping, rawRows);
-    setStep("preview");
-    toast.success("Mapeo confirmado. Revisa el preview antes de cargar.");
-  };
-
   // ── Cambiar el mapeo de un campo ──
   const handleFieldMappingChange = (fieldKey: string, excelHeader: string | null) => {
     const header = excelHeader || "__none__";
     setMapping((prev) => {
       const next = { ...prev };
-
-      // Liberar el header que tenía este campo antes
-      const prevMapping = next[fieldKey];
-      if (prevMapping?.excelHeader) {
-        // Si el header que se libera era usado por este campo, ya no lo usa
-      }
 
       // Si el header nuevo ya estaba asignado a otro campo, quitarlo de ahí
       if (header !== "__none__") {
@@ -202,11 +176,11 @@ export default function CargaSiniestrosPage() {
 
   const handleReset = () => {
     setFile(null);
-    setParsedRows([]);
     setRawRows([]);
     setExcelHeaders([]);
     setMapping({});
     setStep("upload");
+    setMapperOpen(true);
   };
 
   const validCount = parsedRows.filter((r) => r.valid).length;
@@ -277,171 +251,10 @@ export default function CargaSiniestrosPage() {
         </div>
       )}
 
-      {/* ── Step: Mapeo de columnas ── */}
-      {step === "mapping" && (
-        <div className="bulk-mapper-panel">
-          <div className="bulk-mapper-header">
-            <div className="bulk-mapper-header-left">
-              <SlidersHorizontal className="h-5 w-5 text-primary" />
-              <div>
-                <h2 className="bulk-mapper-title">Mapeo de columnas</h2>
-                <p className="bulk-mapper-subtitle">
-                  Asigna cada columna de tu Excel al campo correspondiente del sistema.
-                  Las columnas se autodetectaron por nombre; ajusta las que no coinciden.
-                </p>
-              </div>
-            </div>
-            <div className="bulk-mapper-status">
-              {missingRequiredCount > 0 ? (
-                <span className="bulk-mapper-status-warn">
-                  <AlertCircle className="h-4 w-4" />
-                  {missingRequiredCount} requerido(s) sin mapear
-                </span>
-              ) : (
-                <span className="bulk-mapper-status-ok">
-                  <CheckCircle className="h-4 w-4" />
-                  Todos los requeridos mapeados
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Columnas detectadas en el Excel */}
-          <div className="bulk-mapper-detected">
-            <p className="bulk-mapper-detected-label">
-              Columnas detectadas en tu Excel ({excelHeaders.length}):
-            </p>
-            <div className="bulk-mapper-detected-chips">
-              {excelHeaders.map((h) => {
-                const usedBy = usedHeaders.get(h);
-                const field = usedBy ? CLAIM_FIELDS.find((f) => f.key === usedBy) : null;
-                return (
-                  <span
-                    key={h}
-                    className={`bulk-detected-chip ${field ? "bulk-detected-chip-used" : ""}`}
-                    title={field ? `Asignada a: ${field.label}` : "Sin asignar"}
-                  >
-                    {h}
-                    {field && <em>→ {field.label}</em>}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Tabla de mapeo campo → columna */}
-          <div className="bulk-mapper-table-wrap">
-            <table className="bulk-mapper-table">
-              <thead>
-                <tr>
-                  <th className="bulk-mapper-th-field">Campo del sistema</th>
-                  <th className="bulk-mapper-th-arrow"></th>
-                  <th className="bulk-mapper-th-column">Columna del Excel</th>
-                  <th className="bulk-mapper-th-status">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {CLAIM_FIELDS.map((field) => {
-                  const m = mapping[field.key];
-                  const isMapped = m?.fieldKey && m?.excelHeader;
-                  const confidence = m?.confidence ?? 0;
-                  const isLowConfidence = isMapped && confidence < 1 && m?.autoDetected;
-
-                  return (
-                    <tr key={field.key} className={field.required ? "bulk-mapper-row-required" : ""}>
-                      <td className="bulk-mapper-td-field">
-                        <div className="bulk-mapper-field-info">
-                          <span className="bulk-mapper-field-label">{field.label}</span>
-                          {field.required && <span className="bulk-mapper-required-badge">Requerido</span>}
-                          {field.description && (
-                            <span className="bulk-mapper-field-desc">{field.description}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="bulk-mapper-td-arrow">
-                        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                      </td>
-                      <td className="bulk-mapper-td-column">
-                        <Select
-                          value={m?.excelHeader || "__none__"}
-                          onValueChange={(val) => handleFieldMappingChange(field.key, val)}
-                        >
-                          <SelectTrigger className="bulk-mapper-select">
-                            <SelectValue placeholder="— Sin mapear —" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">— Sin mapear —</SelectItem>
-                            {excelHeaders.map((h) => {
-                              const usedByField = usedHeaders.get(h);
-                              const usedByOther = usedByField && usedByField !== field.key;
-                              const usedLabel = usedByOther
-                                ? CLAIM_FIELDS.find((f) => f.key === usedByField)?.label
-                                : null;
-                              return (
-                                <SelectItem
-                                  key={h}
-                                  value={h}
-                                  disabled={!!usedByOther}
-                                  className={usedByOther ? "bulk-mapper-option-used" : ""}
-                                >
-                                  {h}
-                                  {usedLabel && ` (asignada a: ${usedLabel})`}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="bulk-mapper-td-status">
-                        {!isMapped && field.required && (
-                          <span className="bulk-mapper-status-pill bulk-mapper-status-pill-error">
-                            Falta mapear
-                          </span>
-                        )}
-                        {!isMapped && !field.required && (
-                          <span className="bulk-mapper-status-pill bulk-mapper-status-pill-neutral">
-                            Opcional
-                          </span>
-                        )}
-                        {isMapped && isLowConfidence && (
-                          <span className="bulk-mapper-status-pill bulk-mapper-status-pill-warn">
-                            Sugerencia ({Math.round(confidence * 100)}%)
-                          </span>
-                        )}
-                        {isMapped && !isLowConfidence && (
-                          <span className="bulk-mapper-status-pill bulk-mapper-status-pill-ok">
-                            <CheckCircle className="h-3 w-3" /> Mapeado
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="bulk-mapper-actions">
-            <Button
-              onClick={handleConfirmMapping}
-              disabled={missingRequiredCount > 0}
-              className="pg-btn-platinum"
-            >
-              <CheckCircle className="mr-2 h-3.5 w-3.5" />
-              Confirmar mapeo y ver preview
-            </Button>
-            {missingRequiredCount > 0 && (
-              <p className="bulk-mapper-actions-hint">
-                Mapea los {missingRequiredCount} campo(s) requerido(s) faltante(s) para continuar.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Step: Preview con errores claros ── */}
-      {step === "preview" && (
-        <div className="space-y-2">
+      {/* ── Step Review: mapeo + preview juntos en la misma pantalla ── */}
+      {step === "review" && (
+        <div className="space-y-3">
+          {/* Barra de estado + acciones principales */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm">
               <span className="flex items-center gap-1.5">
@@ -452,25 +265,26 @@ export default function CargaSiniestrosPage() {
                 <AlertCircle className="h-4 w-4 text-red-500" />
                 {invalidCount} con errores
               </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setStep("mapping")}>
-                <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" /> Editar mapeo
-              </Button>
-              {canCreate("operaciones") && (
-                <Button
-                  onClick={() => loadMutation.mutate(parsedRows)}
-                  disabled={isUploading || validCount === 0}
-                  className="pg-btn-platinum-icon"
-                >
-                  {isUploading ? (
-                    <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando...</>
-                  ) : (
-                    <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar {validCount} siniestros</>
-                  )}
-                </Button>
+              {missingRequiredCount > 0 && (
+                <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  {missingRequiredCount} requerido(s) sin mapear
+                </span>
               )}
             </div>
+            {canCreate("operaciones") && (
+              <Button
+                onClick={() => loadMutation.mutate(parsedRows)}
+                disabled={isUploading || validCount === 0 || missingRequiredCount > 0}
+                className="pg-btn-platinum-icon"
+              >
+                {isUploading ? (
+                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando...</>
+                ) : (
+                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar {validCount} siniestros</>
+                )}
+              </Button>
+            )}
           </div>
 
           {/* Progress bar */}
@@ -490,12 +304,168 @@ export default function CargaSiniestrosPage() {
             </div>
           )}
 
+          {/* ── Panel de mapeo (colapsable) ── */}
+          <div className="bulk-mapper-panel">
+            <button
+              type="button"
+              onClick={() => setMapperOpen((v) => !v)}
+              className="bulk-mapper-toggle"
+            >
+              <div className="bulk-mapper-toggle-left">
+                <SlidersHorizontal className="h-5 w-5 text-primary" />
+                <div>
+                  <h2 className="bulk-mapper-title">Mapeo de columnas</h2>
+                  <p className="bulk-mapper-subtitle">
+                    {missingRequiredCount > 0
+                      ? `${missingRequiredCount} campo(s) requerido(s) sin mapear — ajusta abajo.`
+                      : "Todos los campos requeridos están mapeados. Puedes ajustar opcionalmente."}
+                  </p>
+                </div>
+              </div>
+              <div className="bulk-mapper-toggle-right">
+                {missingRequiredCount > 0 ? (
+                  <span className="bulk-mapper-status-warn">
+                    <AlertCircle className="h-4 w-4" />
+                    {missingRequiredCount} sin mapear
+                  </span>
+                ) : (
+                  <span className="bulk-mapper-status-ok">
+                    <CheckCircle className="h-4 w-4" />
+                    Mapeo OK
+                  </span>
+                )}
+                {mapperOpen
+                  ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              </div>
+            </button>
+
+            {mapperOpen && (
+              <>
+                {/* Columnas detectadas en el Excel */}
+                <div className="bulk-mapper-detected">
+                  <p className="bulk-mapper-detected-label">
+                    Columnas detectadas en tu Excel ({excelHeaders.length}):
+                  </p>
+                  <div className="bulk-mapper-detected-chips">
+                    {excelHeaders.map((h) => {
+                      const usedBy = usedHeaders.get(h);
+                      const field = usedBy ? CLAIM_FIELDS.find((f) => f.key === usedBy) : null;
+                      return (
+                        <span
+                          key={h}
+                          className={`bulk-detected-chip ${field ? "bulk-detected-chip-used" : ""}`}
+                          title={field ? `Asignada a: ${field.label}` : "Sin asignar"}
+                        >
+                          {h}
+                          {field && <em>→ {field.label}</em>}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Tabla de mapeo campo → columna */}
+                <div className="bulk-mapper-table-wrap">
+                  <table className="bulk-mapper-table">
+                    <thead>
+                      <tr>
+                        <th className="bulk-mapper-th-field">Campo del sistema</th>
+                        <th className="bulk-mapper-th-arrow"></th>
+                        <th className="bulk-mapper-th-column">Columna del Excel</th>
+                        <th className="bulk-mapper-th-status">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {CLAIM_FIELDS.map((field) => {
+                        const m = mapping[field.key];
+                        const isMapped = m?.fieldKey && m?.excelHeader;
+                        const confidence = m?.confidence ?? 0;
+                        const isLowConfidence = isMapped && confidence < 1 && m?.autoDetected;
+
+                        return (
+                          <tr key={field.key} className={field.required ? "bulk-mapper-row-required" : ""}>
+                            <td className="bulk-mapper-td-field">
+                              <div className="bulk-mapper-field-info">
+                                <span className="bulk-mapper-field-label">{field.label}</span>
+                                {field.required && <span className="bulk-mapper-required-badge">Requerido</span>}
+                                {field.description && (
+                                  <span className="bulk-mapper-field-desc">{field.description}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="bulk-mapper-td-arrow">
+                              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                            </td>
+                            <td className="bulk-mapper-td-column">
+                              <Select
+                                value={m?.excelHeader || "__none__"}
+                                onValueChange={(val) => handleFieldMappingChange(field.key, val)}
+                              >
+                                <SelectTrigger className="bulk-mapper-select">
+                                  <SelectValue placeholder="— Sin mapear —" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">— Sin mapear —</SelectItem>
+                                  {excelHeaders.map((h) => {
+                                    const usedByField = usedHeaders.get(h);
+                                    const usedByOther = usedByField && usedByField !== field.key;
+                                    const usedLabel = usedByOther
+                                      ? CLAIM_FIELDS.find((f) => f.key === usedByField)?.label
+                                      : null;
+                                    return (
+                                      <SelectItem
+                                        key={h}
+                                        value={h}
+                                        disabled={!!usedByOther}
+                                        className={usedByOther ? "bulk-mapper-option-used" : ""}
+                                      >
+                                        {h}
+                                        {usedLabel && ` (asignada a: ${usedLabel})`}
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="bulk-mapper-td-status">
+                              {!isMapped && field.required && (
+                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-error">
+                                  Falta mapear
+                                </span>
+                              )}
+                              {!isMapped && !field.required && (
+                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-neutral">
+                                  Opcional
+                                </span>
+                              )}
+                              {isMapped && isLowConfidence && (
+                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-warn">
+                                  Sugerencia ({Math.round(confidence * 100)}%)
+                                </span>
+                              )}
+                              {isMapped && !isLowConfidence && (
+                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-ok">
+                                  <CheckCircle className="h-3 w-3" /> Mapeado
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+
           {/* Resumen de errores por tipo (si hay inválidas) */}
           {invalidCount > 0 && (
             <ErrorSummary parsedRows={parsedRows} />
           )}
 
-          {/* Table preview */}
+          {/* Table preview — se revalida en vivo al cambiar el mapeo */}
           <div className="app-data-table-wrap max-h-125 overflow-auto">
             <table className="app-data-table">
               <thead>
