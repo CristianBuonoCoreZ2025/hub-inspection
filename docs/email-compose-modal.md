@@ -1,12 +1,15 @@
-# EmailComposeModal — Compositor de Correos Reutilizable
+# EmailComposeModal — Compositor de Correos
 
-> Componente modal para redactar y enviar correos desde cualquier gestión del sistema.
-> Incluye plantillas, sugerencia de destinatarios, preview en vivo, y envío con correlativo automático.
+> Modal para redactar y enviar correos desde cualquier gestión del sistema.
+> Modelo Outlook 365: toolbar arriba, campos Para/CC/CCO/Asunto, body abajo.
+> Pensado para un usuario experto en liquidación, no informático.
 
 ## Ubicación
 
 ```
 src/components/claims/email-compose-modal.tsx
+API:     src/app/api/email/send/route.ts
+Preview: src/app/api/email/preview/route.ts
 ```
 
 ## API
@@ -57,278 +60,301 @@ function MiComponente() {
 }
 ```
 
-## Estructura visual
+## Layout — Modelo Outlook 365
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│  DIALOGCONTENT (modal-xl)                                             │
-│  ├─ Ancho: min(98vw, 1100px)                                          │
-│  ├─ Alto máximo: 92vh                                                 │
-│  ├─ border-radius: 18px                                               │
-│  ├─ border: 1px solid color-mix(var(--border) 40%, transparent)       │
-│  ├─ background: color-mix(var(--card) 85%, transparent)               │
-│  ├─ backdrop-filter: blur(20px) saturate(140%)                        │
-│  └─ box-shadow: 0 26px 55px rgba(2,12,27,0.25)                        │
-│                                                                       │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │  HEADER (p-4)                                                   │  │
-│  │  ├─ border-bottom: 1px solid var(--border)                      │  │
-│  │  ├─ background: var(--background)                               │  │
-│  │  │                                                              │  │
-│  │  │  [✉️]  Enviar Correo (14px semibold)                         │  │
-│  │  │  40px  Gestión: L-000000141-HCIN-004 (10px)                 │  │
-│  │  │  grad   Componer y enviar email (10px mono)                 │  │
-│  │  │                                                              │  │
-│  │  │                                              [X] (32x32)     │  │
-│  │  └──────────────────────────────────────────────────────────────┘  │
-│  │                                                                      │
-│  ┌──────────────────────┬───────────────────────────────────────────┐  │
-│  │  COMPOSICIÓN (420px) │  PREVIEW EN VIVO (resto)                   │  │
-│  │  ├─ border-r          │  ├─ background: muted 12%                  │  │
-│  │  ├─ background: muted │  │                                          │  │
-│  │  │   8%               │  ├─ Preview bar                             │  │
-│  │  │                    │  │  ├─ [Eye] Vista Previa                   │  │
-│  │  ├─ [Plantilla|A mano]│  │  └─ [HTML/Texto] badge                  │  │
-│  │  ├─ Plantilla select  │  │                                          │  │
-│  │  ├─ Sugeridos (chips) │  ├─ Preview body (scroll)                  │  │
-│  │  ├─ Para              │  │  ┌──────────────────────────────┐       │  │
-│  │  ├─ CC / CCO          │  │  │  Tarjeta blanca (600px max)  │       │  │
-│  │  ├─ Asunto            │  │  │  ├─ iframe HTML o            │       │  │
-│  │  ├─ Cuerpo            │  │  │  │  texto plano               │       │  │
-│  │  │  ├─ Texto/HTML     │  │  │  └─ min-height: 70vh         │       │  │
-│  │  │  └─ Textarea       │  │  └──────────────────────────────┘       │  │
-│  │  ├─ Historial         │  │                                          │  │
-│  │  │  ├─ EML-001: ...   │  │                                          │  │
-│  │  │  └─ EML-002: ...   │  │                                          │  │
-│  │  └─ (scroll)          │  └─ (scroll)                                │  │
-│  └──────────────────────┴───────────────────────────────────────────┘  │
-│  │                                                                      │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │  FOOTER                                                         │  │
-│  │  ├─ border-top: 1px solid var(--border)                         │  │
-│  │  ├─ background: var(--background) 60% + blur(8px)               │  │
-│  │  │                                                              │  │
-│  │  │              [Cancelar]  [✈ Enviar]                          │  │
-│  │  │               platinum    gradient primary                   │  │
-│  │  └──────────────────────────────────────────────────────────────┘  │
-│  └──────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  DIALOGCONTENT (modal-xl)                                        │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  HEADER compacto                                          │   │
+│  │  [✉️] Correo                        Gestión: COB-001  [X] │   │
+│  │  32px  13px semibold                10px muted        28px│   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  ACTION BAR                                               │   │
+│  │  [✈ Enviar]  |  [📄 Plantilla] [Plantilla ▼]   [Historial]│   │
+│  │   platinum      toggle      dropdown          toggle      │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  CAMPOS DE DESTINATARIO                                   │   │
+│  │  Para:    [escribí un nombre → autocomplete ↓]   CC/CCO  │   │
+│  │  CC:      [...]                                           │   │
+│  │  CCO:     [...]                                           │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  ASUNTO (integrado al body, jerarquía mayor)              │   │
+│  │  Asunto del correo aquí                                    │   │
+│  │  15px font-semibold                                        │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  TOOLBAR del HtmlEditor (Bold, tablas, colores, etc.)     │   │
+│  │  [B][I][U][S] [Fuente▼] [Size▼] | [Color][Highlight] |   │   │
+│  │  [Align] [List] [Link] [Image] [Table] [Indent]           │   │
+│  ├──────────────────────────────────────────────────────────┤   │
+│  │                                                            │   │
+│  │  BODY DEL CORREO (ocupa todo el espacio restante)         │   │
+│  │                                                            │   │
+│  │  Estimado Franco Buono,                                    │   │
+│  │                                                            │   │
+│  │  Le informamos que su siniestro L-000000141...            │   │
+│  │                                                            │   │
+│  │  (scroll si el contenido es largo)                         │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Header — 3 filas (igual que preview)
+### Reglas de diseño
 
-| Fila | Contenido | Clase | Estilo |
-|------|-----------|-------|--------|
-| 1 | "Enviar Correo" | `.app-compose-title` | 14px semibold |
-| 2 | `Gestión: {codigo}` | `.app-compose-subtitle` | 10px muted (solo si existe) |
-| 3 | "Componer y enviar email" | `.app-compose-subtitle-mono` | 10px mono muted |
+- **Sin clases CSS custom paralelas** — todo inline Tailwind, mismo patrón que el `EmailPreviewModal`
+- **Botones**: `pg-btn-platinum` (regla del design system)
+- **Inputs**: `app-input h-7` para selects
+- **Modal**: `modal-xl`, `dismissible={false}`, `showCloseButton={false}`
+- **Tipografía**: 13/12/11/10px según jerarquía (regla global)
+- **Sin vista código HTML** — el usuario final nunca ve HTML crudo
 
-### Ícono del header
-- Clase: `.app-compose-header-icon`
-- Tamaño: 40×40px
-- Border-radius: 12px
-- Background: `linear-gradient(135deg, #6366f1, #a855f7)`
-- Box-shadow: `0 2px 8px -2px rgb(99 102 241 / 0.5)`
+## Header compacto
 
-## Dos modos de composición
+| Elemento | Estilo |
+|----------|--------|
+| Icono | `h-8 w-8 rounded-lg`, gradient `linear-gradient(135deg, #6366f1, #a855f7)` |
+| Título | "Correo" — `text-[13px] font-semibold` |
+| Subtítulo | `Gestión: {codigo}` — `text-[10px] text-muted-foreground` (solo si existe) |
+| Botón cerrar | `h-7 w-7 rounded-lg border-border` |
 
-### Modo Plantilla
-- Selecciona una plantilla vinculada a la gestión
-- El backend renderiza subject + body con datos reales del siniestro
-- El resultado es editable (subject y body)
-- Si el usuario edita, se envía como manual (sin re-renderizar la plantilla)
+## Action Bar
 
-### Modo Manual
-- El usuario escribe subject y body desde cero
-- Toggle de formato: Texto plano / HTML
-- En modo HTML, se puede editar el código fuente directamente
-
-## Destinatarios sugeridos
-
-Chips liquid glass con un click para agregar al campo "Para":
-
-| Origen | Label |
-|--------|-------|
-| `claim.owner_email` | Propietario |
-| `claim.adjuster_id` | Liquidador |
-| `claim.assigned_adjuster_id` | Liq. Asignado |
-| `claim.inspector_id` | Inspector |
-| `claim.assistant_id` | Asistente |
-| `claim.dispatcher_id` | Despachador |
-| `claims_participants` | Asegurado, Contratista, Beneficiario, Ejecutivo, Contacto |
-
-### Estilo de chips
-- Clase: `.app-compose-chip`
-- Liquid glass: `color-mix(var(--card) 60%, transparent)` + `blur(8px)`
-- Border: `color-mix(var(--border) 40%, transparent)`
-- Hover: border primary, fondo primary 10%, color primary
-
-## Preview en vivo
-
-### Barra superior
-- Clase: `.app-compose-preview-bar`
-- Ícono `Eye` + "Vista Previa" (11px medium)
-- Badge de formato: "HTML" o "Texto plano" (10px)
-
-### Body del preview
-- Clase: `.app-compose-preview-body`
-- Scroll independiente
-- HTML: tarjeta blanca (`max-width: 600px`) con iframe
-- Texto: tarjeta con borde, `whitespace-pre-wrap`
-
-### Tarjeta del preview
-- Clase: `.app-compose-preview-card`
-- `border-radius: 12px` + `overflow: hidden`
-- `box-shadow: 0 4px 20px rgb(0 0 0 / 0.06)`
-- `max-width: 600px` + `margin: 0 auto`
-- Dark mode: `color-mix(var(--card) 92%, transparent)`
-
-## Footer
-
-| Botón | Clase | Estilo |
-|-------|-------|--------|
-| Cancelar | `pg-btn-platinum` | Platinum estándar |
-| Enviar | `.app-compose-btn-primary` | Gradiente primary, glow, hover lift |
+```
+[Enviar]  |  [📄 Plantilla] [Plantilla ▼]    [Historial]
+```
 
 ### Botón Enviar
-- Gradiente: `linear-gradient(135deg, #6366f1, #a855f7)`
-- Box-shadow: `0 2px 8px -2px rgb(99 102 241 / 0.4)`
-- Hover: shadow más fuerte + `translateY(-1px)`
-- Disabled: `opacity-50`, sin shadow, sin lift
-- Loading: spinner `Loader2` animado
+- **Posición**: izquierda (como Outlook 365)
+- **Clase**: `pg-btn-platinum`
+- **Disabled** cuando: no hay destinatarios, no hay asunto, no hay body, o está enviando
+- **Icono**: `Send` (o `Loader2` spin mientras envía)
 
-## Historial de envíos
+### Toggle Plantilla
+- **Solo aparece** si la gestión tiene plantillas vinculadas
+- **Activado** (azul/primary): muestra el dropdown de plantillas al lado
+- **Desactivado** (gris/muted): oculta el dropdown, el usuario escribe libre
+- Si no hay plantillas vinculadas, el toggle no aparece — todo es escritura libre
 
-Lista compacta de correos ya enviados desde esta gestión:
+### Dropdown de Plantillas
+- **Solo visible** cuando Plantilla está activado
+- **Clase**: `app-input h-7 w-50`
+- Lista las plantillas activas vinculadas a la gestión
+- Marca la default con "· default"
+- Al seleccionar, el backend renderiza subject + body con datos del siniestro
 
-| Elemento | Clase | Estilo |
-|----------|-------|--------|
-| Contenedor | `.app-compose-history` | max-h 160px, scroll, border |
-| Item | `.app-compose-history-item` | 11px, border-b |
-| Status sent | `.app-compose-history-status-sent` | emerald |
-| Status queued | `.app-compose-history-status-queued` | amber |
-| Status error | `.app-compose-history-status-error` | rose |
+### Botón Historial
+- **Posición**: derecha
+- Toggle colapsable que muestra los envíos anteriores de esta gestión
+- Cada item: `EML-001: {subject}` + destinatarios + fecha + status badge
 
-## Clases CSS
+## Campos de Destinatario
 
-### components.css — clases del compose
+```
+Para:    [escribí un nombre → autocomplete ↓]   CC/CCO
+CC:      [...]
+CCO:     [...]
+```
 
-| Clase | Función |
-|-------|---------|
-| `.app-compose-header` | Header del modal (3 filas) |
-| `.app-compose-header-icon` | Ícono gradiente (40×40) |
-| `.app-compose-title` | Título "Enviar Correo" (14px) |
-| `.app-compose-subtitle` | Gestión (10px) |
-| `.app-compose-subtitle-mono` | Subtítulo mono (10px) |
-| `.app-compose-btn` | Botones del header (liquid glass) |
-| `.app-compose-btn-primary` | Botón Enviar (gradiente primary) |
-| `.app-compose-tabs` | Contenedor de tabs |
-| `.app-compose-tab` | Tab individual (Plantilla/A mano) |
-| `.app-compose-chip` | Chip de destinatario sugerido |
-| `.app-compose-label` | Label de campo (11px) |
-| `.app-compose-panel-left` | Panel izquierdo (composición) |
-| `.app-compose-panel-right` | Panel derecho (preview) |
-| `.app-compose-preview-bar` | Barra del preview |
-| `.app-compose-preview-title` | Título del preview |
-| `.app-compose-preview-badge` | Badge de formato |
-| `.app-compose-preview-body` | Body del preview (scroll) |
-| `.app-compose-preview-card` | Tarjeta blanca del preview |
-| `.app-compose-preview-text` | Tarjeta de texto plano |
-| `.app-compose-footer` | Footer del modal |
-| `.app-compose-history` | Lista de historial |
-| `.app-compose-history-item` | Item del historial |
-| `.app-compose-history-status-*` | Badges de estado (sent/queued/error) |
-| `.app-compose-format-toggle` | Toggle Texto/HTML |
-| `.app-compose-format-btn` | Botón del toggle |
-| `.app-compose-loading` | Estado de carga |
+### Estructura
+- **Label**: `w-10 text-muted-foreground font-medium`
+- **Input**: `bg-transparent border-0 outline-none text-[12px]`
+- **CC/CCO**: colapsables — botón "CC / CCO" los muestra/oculta
+
+### Autocomplete de Libreta de Contactos
+
+Al escribir en Para/CC/CCO, aparece un dropdown con contactos que coinciden:
+
+```
+┌──────────────────────────────────────────┐
+│  [CB] Cristian Buono                     │
+│       cristian@...                       │
+│       [Asegurado] [Beneficiario]         │
+├──────────────────────────────────────────┤
+│  [FB] Franco Buono                       │
+│       franco@...                         │
+│       [Liquidador]                       │
+└──────────────────────────────────────────┘
+```
+
+**Fuentes de contactos** (servicio `email-contacts.ts`):
+- Participantes del siniestro (claims_participants + owner_email)
+- Equipo del siniestro (claims.*_id → profiles)
+- Asesor (claims.advisor_id → advisors)
+- Directorio global (profiles)
+
+**Deduplicación**: si Asegurado y Beneficiario comparten email, se muestra un solo contacto con ambos roles.
+
+**Filtrado**: por nombre, email o rol (case-insensitive, mínimo 1 carácter)
+
+**Selección**: click en una sugerencia → agrega el email al campo actual (separado por coma)
+
+## Asunto — Integrado al Body
+
+El Asunto NO está en la sección de destinatarios — está **integrado al body** como parte del correo, con jerarquía visual mayor:
+
+| Propiedad | Valor |
+|-----------|-------|
+| Font-size | `15px` |
+| Font-weight | `semibold` |
+| Padding | `px-4 py-2.5` |
+| Separator | `border-b border-border/40` |
+| Placeholder | "Asunto" |
+
+Esto crea la sensación de que el Asunto es parte del correo (no un campo más) pero visualmente se distingue del body.
+
+## Body — Editor
+
+### HTML (rich text)
+Usa el componente `HtmlEditor` (TipTap) — **el mismo** que el configurador de plantillas:
+
+| Capacidad | Disponible |
+|-----------|-----------|
+| Bold, Italic, Underline, Strikethrough | ✓ |
+| Tablas (insertar, filas, columnas) | ✓ |
+| Listas ordenadas/no ordenadas | ✓ |
+| Font family, font size | ✓ |
+| Text colors, highlight | ✓ |
+| Alineación (izq, centro, der, justificado) | ✓ |
+| Indent/Outdent (Tab/Shift+Tab) | ✓ |
+| Links, imágenes | ✓ |
+| Subscript, Superscript | ✓ |
+| Undo/Redo | ✓ |
+
+**Prop `showCodeView={false}`**: oculta los botones Eye/Code2 (vista HTML crudo). El usuario final nunca ve código.
+
+### Texto plano
+Si la plantilla es texto plano, se muestra un textarea simple (`text-sm leading-relaxed`, sin `font-mono`).
+
+### Preservación de formato de plantilla
+Cuando se carga una plantilla HTML, el editor preserva todos los estilos:
+- Las extensiones `FontFamily`, `FontSize`, `Color`, `TextStyle`, `Highlight`, `TextAlign` de TipTap parsean y mantienen los estilos inline del HTML
+- El `renderEmailTemplate()` solo reemplaza placeholders — no toca el HTML
+- TipTap `setContent()` preserva los estilos que sus extensiones soportan
+
+### Ocupación de espacio
+- El editor tiene `flex-1 flex flex-col min-h-0`
+- `.html-editor-wrap` en `globals.css` tiene `flex:1 + overflow-y:auto + min-height:0`
+- La toolbar queda fija arriba, el content area crece y hace scroll
+
+## Modos de Composición
+
+### Con Plantilla
+1. Usuario activa toggle "Plantilla"
+2. Selecciona una plantilla del dropdown
+3. Backend renderiza subject + body con datos del siniestro (`/api/email/preview`)
+4. Subject y body son **completamente editables**
+5. El formato (html/plain) lo define la plantilla — no cambiable
+6. Al enviar, se guarda la versión original Y la final (auditoría)
+
+### Sin Plantilla (escritura libre)
+1. Toggle "Plantilla" desactivado (o no existe)
+2. El editor arranca en modo HTML (rich text) automáticamente
+3. El usuario escribe subject y body desde cero
+4. No hay concepto de "modo manual" — simplemente escribe
+5. **Sin toggle Texto/HTML** — el usuario no elige formato
+
+## Auditoría de Plantilla (Migración 263)
+
+Cuando se envía un correo con plantilla, `email_logs` guarda ambas versiones:
+
+| Columna | Descripción |
+|---------|-------------|
+| `template_subject` | Asunto original renderizado (NULL si sin plantilla) |
+| `template_body` | Body original renderizado (NULL si sin plantilla) |
+| `template_body_format` | Formato original: plain o html (NULL si sin plantilla) |
+| `was_modified` | TRUE si el usuario editó subject o body |
+
+### Lógica del send API
+```
+Modo Plantilla (sin editar):
+  → emailTemplateId = "xxx"
+  → backend renderiza → guarda template_* = render, final = render, was_modified = false
+
+Modo Plantilla (editado):
+  → emailTemplateId = "xxx" + manualSubject + manualBody
+  → backend renderiza plantilla (template_*) + usa manual como final
+  → guarda template_* = original, final = editado, was_modified = true
+
+Sin Plantilla:
+  → sin emailTemplateId + manualSubject + manualBody
+  → guarda template_* = NULL, final = manual, was_modified = false
+```
+
+Esto permite responder: "la plantilla dijo *Estimado Franco*, pero tú lo cambiaste a *Estimado Sr. Buono*".
+
+## Envío
+
+### API
+```
+POST /api/email/send
+{
+  claimActionId: string,
+  emailTemplateId?: string,      // solo si hay plantilla
+  to: string[],
+  cc?: string[],
+  bcc?: string[],
+  manualSubject?: string,        // versión final (si editó plantilla o sin plantilla)
+  manualBody?: string,
+  manualBodyFormat?: "plain" | "html",
+  templateSubject?: string,      // versión original (auditoría)
+  templateBody?: string,
+  templateBodyFormat?: "plain" | "html"
+}
+```
+
+### Respuesta
+```json
+{
+  "success": true,
+  "log": { "id": "...", "correlativo": 42 },
+  "result": { "status": "sent", "provider_response": "..." }
+}
+```
+
+### Validaciones
+- `to` no puede estar vacío
+- `subject` no puede estar vacío
+- `body` no puede estar vacío
+- En modo plantilla: la plantilla debe estar activa y vinculada a la gestión
+- En modo plantilla: debe pertenecer al mismo tenant (company_id)
+
+### Post-envío
+- Invalida queries `email-logs-by-claim` y `email-logs`
+- Limpia campos (to, cc, bcc, subject, body)
+- Cierra el modal
+- Toast de éxito
 
 ## Dependencias
 
-### Componentes
-- `Dialog`, `DialogContent`, `DialogTitle` — `@/components/ui/dialog`
-- `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue` — `@/components/ui/select`
-- `Input`, `Textarea`, `Label`, `Button` — shadcn/ui
-- `wrapHtmlEmail` — `@/services/email-render`
-- `getEmailTemplatesForAction` — `@/services/email-template-actions`
-- `getSupabaseClient` — `@/lib/supabase/db`
+| Componente | Ubicación |
+|-----------|-----------|
+| `HtmlEditor` | `@/components/ui/html-editor` (TipTap) |
+| `EmailContactBook` | `@/components/claims/email-contact-book` (reusable, no renderizado aquí) |
+| `getEmailTemplatesForAction` | `@/services/email-template-actions` |
+| `fetchClaimContacts` | `@/services/email-contacts` |
+| `renderEmailTemplate` | `@/services/email-render` |
+| `wrapHtmlEmail` | `@/services/email-render` |
+| `sendEmail` | `@/services/email-sender` |
+| `buildDocumentDataForClaim` | `@/services/document-data` |
+| `buildTemplateData` | `@/lib/document-fields` |
 
-### Íconos (lucide-react)
-- `Mail` — ícono del header
-- `Send` — botón enviar
-- `X` — cerrar / cancelar
-- `Plus` — agregar destinatario
-- `History` — ver historial
-- `FileText` — modo plantilla / texto plano
-- `Code2` — modo HTML
-- `Eye` — vista previa
-- `Sparkles` — modo manual
-- `Loader2` — loading state
+## Filosofía de UX
 
-### Servicios backend
-- `POST /api/email/preview` — renderiza plantilla con datos del siniestro
-- `POST /api/email/send` — envía el correo y guarda en `email_logs`
+Este componente está diseñado para un **experto en liquidación de siniestros**, no un informático:
 
-## Flujo de envío
-
-```
-1. Usuario abre modal
-   ↓
-2. Selecciona modo (Plantilla o Manual)
-   ↓
-3. [Plantilla] Backend renderiza subject + body con datos reales
-   [Manual] Usuario escribe subject + body
-   ↓
-4. Usuario completa Para / CC / CCO
-   (puede click en chips de sugeridos)
-   ↓
-5. Preview en vivo se actualiza automáticamente
-   ↓
-6. Usuario click "Enviar"
-   ↓
-7. POST /api/email/send
-   ├─ to, cc, bcc arrays
-   ├─ emailTemplateId (si plantilla sin edits)
-   └─ manualSubject, manualBody, manualBodyFormat (si edits o manual)
-   ↓
-8. Backend guarda en email_logs con correlativo automático
-   ↓
-9. Toast "E-mail enviado" + cierra modal + invalida queries
-```
-
-## Puntos de extensión
-
-### Agregar nuevo modo
-Agregar tab en `.app-compose-tabs`:
-```tsx
-<button
-  type="button"
-  onClick={() => changeMode("nuevo-modo")}
-  data-active={mode === "nuevo-modo"}
-  className="app-compose-tab"
->
-  <NuevoIcon className="h-3 w-3" />
-  Nuevo Modo
-</button>
-```
-
-### Cambiar tamaño del modal
-Reemplazar `modal-xl` por `modal-lg` (910px) si se quiere más chico.
-
-### Reutilizar en otros módulos
-El componente necesita `claim` + `action` + `businessLineId`. Se puede usar desde:
-- Gestiones del siniestro (actual)
-- Módulo de notificaciones
-- Bandeja de salida
-- Cualquier lugar con una gestión y un siniestro
-
-## Archivos relacionados
-
-| Archivo | Función |
-|---------|---------|
-| `src/components/claims/email-compose-modal.tsx` | Componente principal |
-| `src/app/api/email/preview/route.ts` | API de renderizado de plantillas |
-| `src/app/api/email/send/route.ts` | API de envío |
-| `src/services/email-render.ts` | `wrapHtmlEmail()` — envuelve HTML |
-| `src/services/email-template-actions.ts` | Carga de plantillas vinculadas |
-| `src/app/styles/components.css` | Clases `.app-compose-*` |
-| `src/app/styles/modals.css` | Clase `modal-xl` |
-| `src/app/dashboard/claims/[id]/page.tsx` | Integración con gestiones |
+- **Sin conceptos técnicos**: no hay "HTML", "texto plano", "modo manual", "vista código"
+- **Sin decisiones de formato**: el formato lo define la plantilla, o por defecto es rich text
+- **Autocomplete natural**: escribir un nombre en "Para" sugiere contactos — como Outlook
+- **Plantillas solo si existen**: si la gestión no tiene plantillas, el toggle no aparece
+- **Body ocupa todo**: el editor llena el espacio disponible, como Outlook/Mail
+- **Asunto integrado**: parte del correo, no un campo más — pero jerarquizado visualmente
+- **Enviar arriba**: como Outlook 365, no abajo a la derecha

@@ -208,9 +208,22 @@ src/
 
 ### EmailComposeModal (compositor de correos)
 - **Archivo:** `src/components/claims/email-compose-modal.tsx`
-- **Características:** Plantillas, sugerencia de destinatarios, preview en vivo, envío con correlativo
+- **Modelo:** Outlook 365 — toolbar arriba, Para/CC/CCO/Asunto, body abajo
+- **Características:**
+  - Plantillas (solo si la gestión tiene vinculadas)
+  - Autocomplete de destinatarios desde libreta de contactos del siniestro
+  - HtmlEditor WYSIWYG (bold, tablas, colores — mismo que configurador de plantillas)
+  - Auditoría de plantilla (versión original vs final, migración 263)
+  - Sin vista código HTML — pensado para usuario final, no informático
 - **Reutilizable:** Necesita `claim` + `action` + `businessLineId`
 - **Docs:** [email-compose-modal.md](./email-compose-modal.md)
+
+### EmailContactBook (libreta de contactos — reusable)
+- **Archivo:** `src/components/claims/email-contact-book.tsx`
+- **Servicio:** `src/services/email-contacts.ts`
+- **API:** `src/app/api/email/contacts/route.ts`
+- **Características:** Contactos del siniestro agrupados, deduplicados por email
+- **Nota:** No se renderiza en el compose — el autocomplete lo reemplaza. Componente reusable para futuros usos.
 
 ### FieldConfigEditor (matriz de campos)
 - **Archivo:** `src/components/ui/field-config-editor.tsx`
