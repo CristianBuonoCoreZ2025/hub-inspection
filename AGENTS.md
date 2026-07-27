@@ -269,6 +269,11 @@ o gestión, el orden SIEMPRE es:
 
 Aplica a: headers de modales, HTML de impresión, headers de .eml.
 
+**Excepción — descarga de archivos .eml:** El nombre del archivo descargable
+SIEMPRE usa el código LARGO completo (`L-000000141-HINS-003_EML-001.eml`)
+para que el archivo sea identificable fuera del sistema (en el sistema de
+archivos del usuario no hay contexto de liquidación visible).
+
 Funciones helper (en `src/app/dashboard/claims/[id]/page.tsx` y
 `src/components/claims/email-preview-modal.tsx`):
 - `shortActionCode(code)` → extrae `HINS-003` de `L-000000141-HINS-003`
