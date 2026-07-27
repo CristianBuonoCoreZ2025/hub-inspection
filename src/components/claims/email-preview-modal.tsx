@@ -9,6 +9,15 @@ import {
 import { wrapHtmlEmail } from "@/services/email-render";
 import { useMemo } from "react";
 
+/** Extrae solo el código de gestión del formato compuesto {liquidation}-{code}.
+ *  Ej: "L-000000141-HINS-003" → "HINS-003" */
+function shortActionCode(code: string | null | undefined): string {
+  if (!code) return "";
+  const parts = code.split("-");
+  if (parts.length >= 3) return parts.slice(2).join("-");
+  return code;
+}
+
 interface EmailLogLite {
   id: string;
   to_address: string[];
@@ -57,7 +66,7 @@ export function EmailPreviewModal({ open, onOpenChange, log }: EmailPreviewModal
       <div style="border-bottom:1px solid #e5e7eb;padding-bottom:12px;margin-bottom:16px;">
         <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:8px;">${log.subject || "(sin asunto)"}</div>
         <table style="border-collapse:collapse;width:100%;">
-          ${log.parent_action_code ? metaRow("Gestión", log.parent_action_code) : ""}
+          ${log.parent_action_code ? metaRow("Gestión", shortActionCode(log.parent_action_code)) : ""}
           ${metaRow("email", fullCode)}
           ${metaRow("Para", log.to_address.join(", "))}
           ${metaRow("CC", log.cc_address.join(", "))}
@@ -127,7 +136,7 @@ ${bodyHtml}
       `Subject: ${log.subject}`,
       `Date: ${date.toUTCString()}`,
       `X-Correlativo: ${fullCode}`,
-      log.parent_action_code ? `X-Gestion: ${log.parent_action_code}` : "",
+      log.parent_action_code ? `X-Gestion: ${shortActionCode(log.parent_action_code)}` : "",
       "MIME-Version: 1.0",
       log.body_format === "html"
         ? 'Content-Type: text/html; charset=UTF-8'
@@ -140,7 +149,7 @@ ${bodyHtml}
     const a = document.createElement("a");
     a.href = url;
     a.download = log.parent_action_code
-      ? `${log.parent_action_code}_${fullCode}.eml`
+      ? `${shortActionCode(log.parent_action_code)}_${fullCode}.eml`
       : `${fullCode}.eml`;
     a.click();
     URL.revokeObjectURL(url);
@@ -170,7 +179,7 @@ ${bodyHtml}
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-foreground leading-tight">{log.subject || "(sin asunto)"}</span>
               <span className="text-[10px] text-muted-foreground">
-                {log.parent_action_code ? `Gestión: ${log.parent_action_code}` : ""}
+                {log.parent_action_code ? `Gestión: ${shortActionCode(log.parent_action_code)}` : ""}
               </span>
               <span className="text-[10px] text-muted-foreground font-mono">email: {fullCode}</span>
             </div>

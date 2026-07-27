@@ -422,7 +422,7 @@ export function EmailComposeModal({
               )}
               {liquidationNumber && (
                 <span className="text-[10px] text-muted-foreground truncate font-mono">
-                  Siniestro {liquidationNumber}
+                  Liquidación {liquidationNumber}
                 </span>
               )}
             </div>

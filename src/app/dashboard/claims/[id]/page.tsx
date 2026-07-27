@@ -1518,7 +1518,7 @@ export default function ClaimDetailPage() {
        claim_id: id || "",
        action_template_id: action?.action_template_id || "",
        action_data: action?.action_data as Record<string, unknown> | null,
-       gestion_codigo: g.codigo,
+       gestion_codigo: shortActionCode(g.codigo),
        gestion_nombre: g.nombre,
      });
    };
