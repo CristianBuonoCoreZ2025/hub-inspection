@@ -412,16 +412,16 @@ export function EmailComposeModal({
               <Mail className="h-4 w-4" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-semibold text-foreground leading-tight truncate">
+              <span className="email-header-title">
                 {gestionCode ? `Gestión ${gestionCode}` : "Correo"}
               </span>
               {gestionNombre && (
-                <span className="text-[10px] text-muted-foreground truncate">
+                <span className="email-header-subtitle">
                   {gestionNombre}
                 </span>
               )}
               {liquidationNumber && (
-                <span className="text-[10px] text-muted-foreground truncate font-mono">
+                <span className="email-header-meta">
                   Liquidación {liquidationNumber}
                 </span>
               )}

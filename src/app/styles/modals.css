@@ -360,6 +360,39 @@
   background: linear-gradient(135deg, #6366f1, #a855f7) !important;
 }
 
+/* ═══════════════ HEADER DE MODAL DE EMAIL ═══════════════
+ *  Clases semánticas para los 3 niveles del header:
+ *    .email-header-title    → título principal (gestión o asunto)
+ *    .email-header-subtitle → subtítulo (nombre de gestión)
+ *    .email-header-meta     → metadata monoespaciada (liquidación, código email)
+ *  Compartido entre compose y preview. */
+.email-header-title {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--foreground) !important;
+  line-height: 1.25 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.email-header-subtitle {
+  font-size: 10px !important;
+  color: var(--muted-foreground) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.email-header-meta {
+  font-size: 10px !important;
+  color: var(--muted-foreground) !important;
+  font-family: var(--font-mono, monospace) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
 /* Espaciador inferior — 20px de aire antes del borde del modal
  * Evita el bug de Chrome donde padding-bottom colapsa en overflow-y: auto */
 .email-bottom-spacer {

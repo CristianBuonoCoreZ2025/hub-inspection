@@ -18,6 +18,15 @@ function shortActionCode(code: string | null | undefined): string {
   return code;
 }
 
+/** Extrae el número de liquidación del formato compuesto {liquidation}-{code}.
+ *  Ej: "L-000000141-HINS-003" → "L-000000141" */
+function liquidationFromCode(code: string | null | undefined): string {
+  if (!code) return "";
+  const parts = code.split("-");
+  if (parts.length >= 3) return `${parts[0]}-${parts[1]}`;
+  return "";
+}
+
 interface EmailLogLite {
   id: string;
   to_address: string[];
@@ -67,6 +76,7 @@ export function EmailPreviewModal({ open, onOpenChange, log }: EmailPreviewModal
         <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:8px;">${log.subject || "(sin asunto)"}</div>
         <table style="border-collapse:collapse;width:100%;">
           ${log.parent_action_code ? metaRow("Gestión", shortActionCode(log.parent_action_code)) : ""}
+          ${log.parent_action_code ? metaRow("Liquidación", liquidationFromCode(log.parent_action_code)) : ""}
           ${metaRow("email", fullCode)}
           ${metaRow("Para", log.to_address.join(", "))}
           ${metaRow("CC", log.cc_address.join(", "))}
@@ -137,6 +147,7 @@ ${bodyHtml}
       `Date: ${date.toUTCString()}`,
       `X-Correlativo: ${fullCode}`,
       log.parent_action_code ? `X-Gestion: ${shortActionCode(log.parent_action_code)}` : "",
+      log.parent_action_code ? `X-Liquidacion: ${liquidationFromCode(log.parent_action_code)}` : "",
       "MIME-Version: 1.0",
       log.body_format === "html"
         ? 'Content-Type: text/html; charset=UTF-8'
@@ -177,11 +188,11 @@ ${bodyHtml}
               <Mail className="h-4 w-4" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-foreground leading-tight">{log.subject || "(sin asunto)"}</span>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="email-header-title">{log.subject || "(sin asunto)"}</span>
+              <span className="email-header-subtitle">
                 {log.parent_action_code ? `Gestión: ${shortActionCode(log.parent_action_code)}` : ""}
               </span>
-              <span className="text-[10px] text-muted-foreground font-mono">email: {fullCode}</span>
+              <span className="email-header-meta">email: {fullCode}</span>
             </div>
           </DialogTitle>
           <div className="flex items-center gap-1.5 shrink-0">
