@@ -651,14 +651,14 @@ export function EmailComposeModal({
                 />
               </div>
 
-              {/* Editor — mismo formato que el configurador de plantillas */}
+              {/* Editor — mismo componente y className que el configurador de plantillas */}
               {effectiveFormat === "html" ? (
                 <HtmlEditor
                   value={effectiveBody || ""}
                   onChange={(html) => setBodyOverride(html)}
                   editorRef={htmlEditorRef}
                   placeholder="Escribí el cuerpo del correo…"
-                  className="flex-1 flex flex-col min-h-0"
+                  className="flex-1 min-h-0"
                   showCodeView={false}
                 />
               ) : (

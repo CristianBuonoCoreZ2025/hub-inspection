@@ -529,9 +529,9 @@ export function HtmlEditor({
   const currentHighlight = (editor?.getAttributes("highlight").color as string) || undefined;
 
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-border bg-background shadow-sm", className)}>
+    <div className={cn("overflow-hidden rounded-lg border border-border bg-background shadow-sm flex flex-col", className)}>
       {/* Toolbar — estilo Outlook */}
-      <div className="flex flex-wrap items-stretch gap-0.5 border-b border-border bg-linear-to-b from-muted/40 to-muted/10 px-1 py-0.5">
+      <div className="flex flex-wrap items-stretch gap-0.5 border-b border-border bg-linear-to-b from-muted/40 to-muted/10 px-1 py-0.5 shrink-0">
         {/* Grupo: Deshacer/Rehacer */}
         <ToolbarButton title="Deshacer (Ctrl+Z)" onClick={() => editor?.chain().focus().undo().run()} disabled={disabled || !editor?.can().undo()}>
           <Undo2 className="h-3.5 w-3.5" />
@@ -758,7 +758,7 @@ export function HtmlEditor({
           }}
           disabled={disabled}
           spellCheck={false}
-          className="min-h-40 w-full resize-y bg-background p-3 font-mono text-[11px] text-foreground outline-none disabled:opacity-50"
+          className="flex-1 min-h-0 w-full resize-y bg-background p-3 font-mono text-[11px] text-foreground outline-none disabled:opacity-50"
           placeholder="<p>...</p>"
         />
       )}
