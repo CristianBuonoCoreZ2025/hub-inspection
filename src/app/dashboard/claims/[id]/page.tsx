@@ -1585,18 +1585,16 @@ export default function ClaimDetailPage() {
              </span>
            </DropdownMenuSubTrigger>
            <DropdownMenuSubContent className="w-72 p-0 overflow-hidden" sideOffset={4}>
-             {/* Header del submenu */}
-             <div className="px-3 py-2 border-b border-border bg-linear-to-br from-primary/10 via-primary/5 to-transparent">
-               <div className="flex items-center justify-between gap-2">
-                 <span className="app-section-title">Correos enviados</span>
-                 <span className="text-[10px] text-muted-foreground font-mono">{g.codigo}</span>
+             {/* Header del submenu — 2 líneas compactas */}
+             <div className="app-email-submenu-header">
+               <div className="app-email-submenu-title">Correos Enviados</div>
+               <div className="app-email-submenu-meta">
+                 <span className="app-email-submenu-meta-code">{g.codigo}</span>
+                 <span className="app-email-submenu-meta-count">{emails.length} enviado{emails.length !== 1 ? "s" : ""}</span>
                </div>
-               <p className="text-[10px] text-muted-foreground">
-                 {emails.length} enviado{emails.length !== 1 ? "s" : ""}
-               </p>
              </div>
              {/* Lista de correos */}
-             <div className="max-h-64 overflow-auto">
+             <div className="app-email-submenu-list">
                {emails.map((log) => {
                  const emailCode = `EML-${String(log.correlativo).padStart(3, "0")}`;
                  const statusTone = log.status === "sent" ? "emerald" : log.status === "queued" ? "amber" : "rose";

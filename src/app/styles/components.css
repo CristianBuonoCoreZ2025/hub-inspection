@@ -1026,6 +1026,38 @@
     box-shadow: 0 4px 8px -4px rgb(0 0 0 / 0.08);
   }
 
+  /* ═══ Header del submenu de correos enviados — 2 líneas compactas ═══ */
+  .app-email-submenu-header {
+    @apply px-3 pt-1.5 pb-0.5 border-b border-border flex flex-col;
+    background: linear-gradient(to bottom right,
+      color-mix(in srgb, var(--primary) 10%, transparent),
+      color-mix(in srgb, var(--primary) 5%, transparent),
+      transparent);
+  }
+  .app-email-submenu-title {
+    @apply font-semibold tracking-tight text-foreground;
+    font-size: 11px;
+    line-height: 14px;
+  }
+  .app-email-submenu-meta {
+    @apply flex items-center justify-between gap-2;
+    margin-top: 1px;
+  }
+  .app-email-submenu-meta-code {
+    @apply font-mono text-muted-foreground;
+    font-size: 9px;
+    line-height: 13px;
+  }
+  .app-email-submenu-meta-count {
+    @apply text-muted-foreground;
+    font-size: 9px;
+    line-height: 13px;
+  }
+  .app-email-submenu-list {
+    @apply overflow-auto;
+    max-height: 288px;
+  }
+
   /* Header del modal — banner con ícono (liquid glass coherente con sistema) */
   .app-email-header {
     @apply flex items-center gap-3 px-4 py-3;
