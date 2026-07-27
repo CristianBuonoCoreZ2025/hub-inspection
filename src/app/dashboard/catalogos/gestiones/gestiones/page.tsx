@@ -1145,11 +1145,24 @@ export default function GestionesPage() {
  : paginatedData.map((t) => (
  <tr key={t.id}>
  <td><span className={`inline-block h-2 w-2 rounded-full ${t.is_active ? "bg-emerald-500" : "bg-zinc-400"}`} /></td>
- <td className="text-muted-foreground font-mono">
+ <td className="whitespace-nowrap">
  {(() => {
- const prefix = t.line_business?.code_prefix || "";
- const featCode = t.action_feature?.code || "";
- return (prefix + featCode) || "—";
+   const prefix = t.line_business?.code_prefix || "";
+   const featCode = t.action_feature?.code || "";
+   const code = (prefix + featCode) || "—";
+   const hexColor = t.action_feature?.color;
+   if (hexColor && code !== "—") {
+     return (
+       <div
+         className="app-gestion-code"
+         style={{ "--gestion-color": hexColor } as React.CSSProperties}
+       >
+         <div className="app-gestion-code-glow" />
+         <span>{code}</span>
+       </div>
+     );
+   }
+   return <span className="font-mono text-muted-foreground">{code}</span>;
  })()}
  </td>
  <td className="font-medium">{t.name}</td>

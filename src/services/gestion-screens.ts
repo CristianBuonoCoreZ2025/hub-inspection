@@ -1,12 +1,12 @@
 import { fetchAll, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
-import type { GestionScreen, CharacteristicScreen, ClaimAction } from "@/types";
+import type { GestionScreen, ActionFeatureScreen, ClaimAction } from "@/types";
 
 const SCREEN_FIELDS =
   "id, code, name, description, icon, form_schema, is_active, is_dynamic, sort_order";
 
 // ═══════════════════════════════════════════════════════════════════
 // Servicio para el catálogo de pantallas de gestión y su relación
-// con las características (many-to-many).
+// con las action_features (many-to-many).
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getGestionScreens(options?: { includeInactive?: boolean }): Promise<GestionScreen[]> {
@@ -43,10 +43,10 @@ export async function getGestionScreenByCode(code: string): Promise<GestionScree
   return rows[0] ?? null;
 }
 
-export async function getCharacteristicScreens(characteristicId: string): Promise<CharacteristicScreen[]> {
-  return fetchAll<CharacteristicScreen>("characteristic_screens", {
-    select: "id, characteristic_id, screen_id, is_default, screen:gestion_screens!characteristic_screens_screen_id_fkey(id, code, name, description, icon, form_schema)",
-    eq: { characteristic_id: characteristicId },
+export async function getActionFeatureScreens(actionFeatureId: string): Promise<ActionFeatureScreen[]> {
+  return fetchAll<ActionFeatureScreen>("action_feature_screen", {
+    select: "id, action_feature_id, screen_id, is_default, screen:gestion_screens!action_feature_screen_screen_id_fkey(id, code, name, description, icon, form_schema)",
+    eq: { action_feature_id: actionFeatureId },
     order: { column: "is_default", ascending: false },
   });
 }
@@ -67,18 +67,18 @@ export async function getGestionScreensForClaimAction(action: ClaimAction): Prom
 }
 
 /**
- * Asociar una pantalla a una característica.
+ * Asociar una pantalla a una action_feature.
  */
-export async function associateScreenToCharacteristic(
-  characteristicId: string,
+export async function associateScreenToActionFeature(
+  actionFeatureId: string,
   screenId: string,
   isDefault = false
-): Promise<CharacteristicScreen> {
-  return insertRow<CharacteristicScreen>("characteristic_screens", {
-    characteristic_id: characteristicId,
+): Promise<ActionFeatureScreen> {
+  return insertRow<ActionFeatureScreen>("action_feature_screen", {
+    action_feature_id: actionFeatureId,
     screen_id: screenId,
     is_default: isDefault,
-  }, "id, characteristic_id, screen_id, is_default, screen:gestion_screens!characteristic_screens_screen_id_fkey(id, code, name)");
+  }, "id, action_feature_id, screen_id, is_default, screen:gestion_screens!action_feature_screen_screen_id_fkey(id, code, name)");
 }
 
 /**
@@ -179,20 +179,20 @@ export async function reactivateGestionScreen(id: string): Promise<GestionScreen
 
 /**
  * Eliminar permanentemente una pantalla.
- * Solo debe usarse cuando la pantalla no está asociada a ninguna característica.
+ * Solo debe usarse cuando la pantalla no está asociada a ninguna action_feature.
  */
 export async function deleteGestionScreen(id: string): Promise<void> {
   await deleteRow("gestion_screens", id, "id");
 }
 
 /**
- * Remover una asociación característica-pantalla (soft-delete).
+ * Remover una asociación action_feature-pantalla (soft-delete).
  */
-export async function removeCharacteristicScreen(id: string): Promise<void> {
+export async function removeActionFeatureScreen(id: string): Promise<void> {
   // Soft-delete: desactivar en lugar de eliminar
   const supabase = getSupabaseClient();
   const { error } = await supabase
-    .from("characteristic_screens")
+    .from("action_feature_screen")
     .update({ is_active: false })
     .eq("id", id);
   if (error) throw new Error(error.message);

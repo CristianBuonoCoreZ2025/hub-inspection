@@ -41,6 +41,7 @@ export default function CaracteristicasPage() {
  has_template: false,
  max_review_levels: 1,
  screen_id: "",
+ color: "",
  });
 
  const { data: features, isLoading, error } = useQuery({
@@ -90,7 +91,7 @@ export default function CaracteristicasPage() {
  onError: (e: Error) => toast.error(e.message),
  });
 
- const resetForm = () => setFormData({ name: "", code: "", has_specific_screen: false, has_template: false, max_review_levels: 1, screen_id: "" });
+ const resetForm = () => setFormData({ name: "", code: "", has_specific_screen: false, has_template: false, max_review_levels: 1, screen_id: "", color: "" });
 
  const handleSubmit = (e: React.FormEvent) => {
  e.preventDefault();
@@ -105,7 +106,13 @@ export default function CaracteristicasPage() {
  // soporta templates. No se pregunta manualmente.
  const selectedScreen = screens?.find(s => s.id === effectiveScreenId);
  const derivedHasTemplate = screenHasDocumentTemplates(selectedScreen);
- const payload = { ...formData, screen_id: effectiveScreenId, has_template: derivedHasTemplate };
+ // color va directo a action_features (migración 261 — consolidado desde characteristic)
+ const payload = {
+   ...formData,
+   screen_id: effectiveScreenId,
+   has_template: derivedHasTemplate,
+   color: formData.color || undefined,
+ };
  if (editingId) { updateMut.mutate({ id: editingId, input: payload }); }
  else { createMut.mutate(payload); }
  };
@@ -168,7 +175,24 @@ export default function CaracteristicasPage() {
  const screen = screens?.find(s => s.id === (f.screen_id || genericScreenId));
  return (
  <tr key={f.id}>
- <td className="font-mono font-semibold text-primary">{f.code || "—"}</td>
+ <td className="whitespace-nowrap">
+ {(() => {
+   const code = f.code || "—";
+   const hexColor = f.color;
+   if (hexColor) {
+     return (
+       <div
+         className="app-gestion-code"
+         style={{ "--gestion-color": hexColor } as React.CSSProperties}
+       >
+         <div className="app-gestion-code-glow" />
+         <span>{code}</span>
+       </div>
+     );
+   }
+   return <span className="font-mono font-semibold text-primary">{code}</span>;
+ })()}
+ </td>
  <td className="font-medium">{f.name}</td>
  <td className="text-muted-foreground">
  {screen?.name || f.screen?.name || "Genérica"}
@@ -191,6 +215,7 @@ export default function CaracteristicasPage() {
  has_template: f.has_template,
  max_review_levels: f.max_review_levels,
  screen_id: f.screen_id || "",
+ color: f.color || "",
  });
  setOpen(true);
  }}>
@@ -321,6 +346,51 @@ export default function CaracteristicasPage() {
  </div>
  <p className="text-[10px] text-muted-foreground">
  Las gestiones pueden reducir niveles pero nunca exceder este máximo.
+ </p>
+ </div>
+
+ {/* Color de la característica — se muestra en la grilla del siniestro y el workflow */}
+ <div className="flex flex-col gap-1.5">
+ <Label className="app-field-label">Color identificatorio</Label>
+ <div className="flex items-center gap-2">
+ <input
+ type="color"
+ value={formData.color || "#0095DA"}
+ onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+ className="h-7 w-10 cursor-pointer rounded border border-border bg-background p-0.5"
+ title="Color de la característica"
+ />
+ <Input
+ value={formData.color}
+ onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+ className="app-input h-7 text-[11px] font-mono w-32"
+ placeholder="Ej: #0095DA"
+ />
+ {formData.color && (
+ <button
+ type="button"
+ onClick={() => setFormData({ ...formData, color: "" })}
+ className="text-[11px] text-muted-foreground hover:text-foreground"
+ title="Quitar color"
+ >
+ ×
+ </button>
+ )}
+ {/* Vista previa del código con el color */}
+ {formData.color && (
+ <span
+ className="ml-auto font-mono text-[11px] font-bold rounded px-1.5 py-0.5"
+ style={{
+ color: formData.color,
+ backgroundColor: `${formData.color}14`,
+ }}
+ >
+ {formData.code || "EJ"}
+ </span>
+ )}
+ </div>
+ <p className="text-[10px] text-muted-foreground">
+ Color con el que se identifica esta gestión en la grilla del siniestro y el workflow.
  </p>
  </div>
  </div>

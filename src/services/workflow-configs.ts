@@ -9,7 +9,7 @@ const WORKFLOW_CONFIG_SELECT =
   "id, country_id, business_line_id, event_id, claim_status_id, is_active, status, created_at, updated_at, country:countries!workflow_configs_country_id_fkey(id, name), business_line:business_lines!workflow_configs_business_line_id_fkey(id, name, code_letter), event:events!workflow_configs_event_id_fkey(id, name), claim_status:lookup_catalog!workflow_configs_claim_status_id_fkey(id, code, name)";
 
 const WORKFLOW_STEP_SELECT =
-  "id, workflow_config_id, action_template_id, depends_on_template_id, level, sort_order, is_automatic, is_required, created_at, updated_at, action_template:action_template!workflow_steps_action_template_id_fkey(id, name, code, action_features_id, line_business_id, action_feature:action_features!action_template_action_features_id_fkey(id, name, code)), depends_on_template:action_template!workflow_steps_depends_on_template_id_fkey(id, name, code)";
+  "id, workflow_config_id, action_template_id, depends_on_template_id, level, sort_order, is_automatic, is_required, created_at, updated_at, action_template:action_template!workflow_steps_action_template_id_fkey(id, name, code, action_features_id, line_business_id, action_feature:action_features!action_template_action_features_id_fkey(id, name, code, color)), depends_on_template:action_template!workflow_steps_depends_on_template_id_fkey(id, name, code)";
 
 export type WorkflowStatus = "draft" | "online" | "suspended";
 
@@ -46,7 +46,12 @@ export interface WorkflowStep {
     code: string;
     action_features_id: string;
     line_business_id: string | null;
-    action_feature?: { id: string; name: string; code: string };
+    action_feature?: {
+      id: string;
+      name: string;
+      code: string;
+      color: string | null;
+    };
   };
   depends_on_template?: { id: string; name: string; code: string } | null;
 }

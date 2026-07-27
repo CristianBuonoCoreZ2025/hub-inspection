@@ -27,25 +27,13 @@ export interface ActionFeature {
   is_active: boolean;
   sort_order: number;
   screen_id: string | null;
-  screen?: { id: string; code: string; name: string; is_dynamic?: boolean; form_schema?: Record<string, unknown> | null } | null;
-  characteristics: Characteristic[];
-}
-
-export interface Characteristic {
-  id: string;
-  action_feature_id: string;
-  name: string;
+  // Campos consolidados desde characteristic (migración 261)
+  color: string | null;
   local_name: string | null;
-  screen: boolean;
-  control: boolean;
-  issue: boolean;
-  review: boolean;
-  approve: boolean;
   document_template: boolean;
   email_template: boolean;
   document_type: boolean;
-  is_active: boolean;
-  sort_order: number;
+  screen?: { id: string; code: string; name: string; is_dynamic?: boolean; form_schema?: Record<string, unknown> | null } | null;
 }
 
 export interface ActionTemplate {
@@ -86,7 +74,7 @@ export interface ActionTemplate {
   sort_order: number;
   // Joins
   action_type?: ActionType;
-  action_feature?: { id: string; name: string; code: string | null };
+  action_feature?: { id: string; name: string; code: string | null; color?: string | null };
   line_business?: { id: string; name: string; code_prefix: string | null };
   company?: { id: string; name: string };
   insurance_company?: { id: string; name: string };
@@ -139,21 +127,15 @@ export async function deleteActionType(id: string) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Action Features + Characteristics
+// Action Features
 // ──────────────────────────────────────────────────────────────
 
 export async function getActionFeatures(): Promise<ActionFeature[]> {
   return fetchAll<ActionFeature>("action_features", {
-    select: "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, screen:gestion_screens!action_features_screen_id_fkey(id, code, name, is_dynamic, form_schema), characteristics:characteristic!characteristic_action_feature_id_fkey(id, action_feature_id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order)",
+    select: "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, color, local_name, document_template, email_template, document_type, screen:gestion_screens!action_features_screen_id_fkey(id, code, name, is_dynamic, form_schema)",
     eq: { is_active: true },
     order: { column: "name", ascending: true },
   }).then((rows) => {
-    // Sort characteristics by sort_order within each feature
-    for (const f of rows) {
-      if (f.characteristics) {
-        f.characteristics.sort((a, b) => a.sort_order - b.sort_order);
-      }
-    }
     console.log("[getActionFeatures] rows:", rows.length, "ILI:", rows.find(r => r.code === "ILI")?.has_template, "withTemplate:", rows.filter(r => r.has_template).map(r => r.code));
     return rows;
   });
@@ -170,6 +152,7 @@ export async function createActionFeature(input: {
   has_review?: boolean;
   has_approve?: boolean;
   screen_id?: string;
+  color?: string;
 }) {
   return insertRow<ActionFeature>("action_features", {
     name: input.name,
@@ -182,7 +165,8 @@ export async function createActionFeature(input: {
     has_review: input.has_review ?? false,
     has_approve: input.has_approve ?? false,
     screen_id: input.screen_id || null,
-  }, "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order");
+    color: input.color || null,
+  }, "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, color, local_name, document_template, email_template, document_type");
 }
 
 export async function updateActionFeature(id: string, input: Partial<{
@@ -196,11 +180,12 @@ export async function updateActionFeature(id: string, input: Partial<{
   has_approve: boolean;
   is_active: boolean;
   screen_id: string;
+  color: string;
 }>) {
   const set: Record<string, unknown> = {};
   Object.entries(input).forEach(([k, v]) => { if (v !== undefined) set[k] = v; });
 
-  return updateRow<ActionFeature>("action_features", id, set, "id, name, has_specific_screen, has_control, has_issue, has_review, has_approve, is_active, sort_order");
+  return updateRow<ActionFeature>("action_features", id, set, "id, name, has_specific_screen, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, color, local_name, document_template, email_template, document_type");
 }
 
 export async function deleteActionFeature(id: string) {
@@ -208,67 +193,11 @@ export async function deleteActionFeature(id: string) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Characteristics
-// ──────────────────────────────────────────────────────────────
-
-export async function createCharacteristic(input: {
-  action_feature_id: string;
-  name: string;
-  local_name?: string;
-  screen?: boolean;
-  control?: boolean;
-  issue?: boolean;
-  review?: boolean;
-  approve?: boolean;
-  document_template?: boolean;
-  email_template?: boolean;
-  document_type?: boolean;
-}) {
-  return insertRow<Characteristic>("characteristic", {
-    action_feature_id: input.action_feature_id,
-    name: input.name,
-    local_name: input.local_name || null,
-    screen: input.screen ?? false,
-    control: input.control ?? false,
-    issue: input.issue ?? false,
-    review: input.review ?? false,
-    approve: input.approve ?? false,
-    document_template: input.document_template ?? false,
-    email_template: input.email_template ?? false,
-    document_type: input.document_type ?? false,
-  }, "id, action_feature_id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order");
-}
-
-export async function updateCharacteristic(id: string, input: Partial<{
-  name: string;
-  local_name: string;
-  screen: boolean;
-  control: boolean;
-  issue: boolean;
-  review: boolean;
-  approve: boolean;
-  document_template: boolean;
-  email_template: boolean;
-  document_type: boolean;
-  is_active: boolean;
-}>) {
-  const set: Record<string, unknown> = {};
-  Object.entries(input).forEach(([k, v]) => { if (v !== undefined) set[k] = v; });
-
-  return updateRow<Characteristic>("characteristic", id, set, "id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order");
-}
-
-export async function deleteCharacteristic(id: string) {
-  // Soft-delete: desactivar en lugar de eliminar
-  await updateRow<Characteristic>("characteristic", id, { is_active: false }, "id, name, local_name, screen, control, issue, review, approve, document_template, email_template, document_type, is_active, sort_order");
-}
-
-// ──────────────────────────────────────────────────────────────
 // Action Templates
 // ──────────────────────────────────────────────────────────────
 
 const ACTION_TEMPLATE_FIELDS =
-  "id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, review_levels, issuer_roles, reviewer_roles, approver_roles, default_issuer_role, default_reviewer_role, default_approver_role, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, code, is_dispatch_applicable, auto_complete, auto_email, auto_email_template_id, auto_email_recipients, auto_field_mapping, company_id, insurance_company_id, event_id, country_id, sort_order, action_feature:action_features!action_template_action_features_id_fkey(id, name, code), line_business:business_lines!action_template_line_business_id_fkey(id, name, code_prefix), company:companies!action_template_company_id_fkey(id, name), event:events!action_template_event_id_fkey(id, name), claim_statuses:action_template_claim_status!action_template_claim_status_action_template_id_fkey(claim_status_id, is_active)";
+  "id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, review_levels, issuer_roles, reviewer_roles, approver_roles, default_issuer_role, default_reviewer_role, default_approver_role, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, code, is_dispatch_applicable, auto_complete, auto_email, auto_email_template_id, auto_email_recipients, auto_field_mapping, company_id, insurance_company_id, event_id, country_id, sort_order, action_feature:action_features!action_template_action_features_id_fkey(id, name, code, color), line_business:business_lines!action_template_line_business_id_fkey(id, name, code_prefix), company:companies!action_template_company_id_fkey(id, name), event:events!action_template_event_id_fkey(id, name), claim_statuses:action_template_claim_status!action_template_claim_status_action_template_id_fkey(claim_status_id, is_active)";
 
 export async function getActionTemplates(includeInactive = true): Promise<ActionTemplate[]> {
   const options: Parameters<typeof fetchAll>[1] = {

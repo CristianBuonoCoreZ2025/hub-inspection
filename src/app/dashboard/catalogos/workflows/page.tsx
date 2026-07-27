@@ -588,14 +588,18 @@ export default function WorkflowsPage() {
  </p>
  ) : (
  <div className="flex flex-wrap gap-1.5">
- {availableToAdd.map(t => (
+ {availableToAdd.map(t => {
+   const hexColor = t.action_feature?.color || null;
+   return (
  <DraggablePaletteItem
  key={t.id}
  templateId={t.id}
  code={t.code || "?"}
  name={t.name}
+ color={hexColor}
  />
- ))}
+   );
+ })}
  </div>
  )}
  {addDependentParent && (
@@ -1192,7 +1196,7 @@ function EmptyState({ onCreate, canCreate }: { onCreate: () => void; canCreate: 
 // Componente: DraggablePaletteItem — item arrastrable de la paleta
 // ═══════════════════════════════════════════════════════════════════
 
-function DraggablePaletteItem({ templateId, code, name }: { templateId: string; code: string; name: string }) {
+function DraggablePaletteItem({ templateId, code, name, color }: { templateId: string; code: string; name: string; color: string | null }) {
  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
  id: `palette_${templateId}`,
  data: { source: "palette", templateId, code, label: code },
@@ -1206,22 +1210,37 @@ function DraggablePaletteItem({ templateId, code, name }: { templateId: string; 
  return (
  <button
  ref={setNodeRef}
- style={style}
+ style={{
+   ...style,
+   ...(color ? { "--gestion-color": color } : {}),
+ } as React.CSSProperties}
  {...listeners}
  {...attributes}
- className="flex items-center gap-1.5 rounded-lg px-2 py-1
- bg-white/5 hover:bg-violet-500/15
- border border-white/10 hover:border-violet-500/30
+ className={`flex items-center gap-1.5 rounded-lg px-2 py-1
+ ${color ? "app-gestion-node" : "bg-white/5 hover:bg-violet-500/15"}
+ border ${color ? "" : "border-white/10 hover:border-violet-500/30"}
  transition-all duration-200 active:scale-95 group
- cursor-grab active:cursor-grabbing"
+ cursor-grab active:cursor-grabbing`}
  >
+ {color && <div className="app-gestion-node-glow" />}
  <GripVertical className="h-2.5 w-2.5 text-muted-foreground/40 group-hover:text-violet-400 transition-colors" />
- <div className="flex h-5 w-5 items-center justify-center rounded-md bg-violet-500/10 border border-violet-500/20
- group-hover:scale-110 transition-transform">
- <span className="font-mono text-[8px] font-bold text-violet-400">{code.slice(0, 2)}</span>
+ <div
+   className={`flex h-5 w-5 items-center justify-center rounded-md border group-hover:scale-110 transition-transform ${color ? "app-gestion-code-icon" : ""}`}
+   style={color ? undefined : { backgroundColor: "rgba(139,92,246,0.1)", borderColor: "rgba(139,92,246,0.2)" }}
+ >
+ <span
+   className={`font-mono text-[8px] font-bold ${color ? "app-gestion-code-icon-text" : ""}`}
+   style={color ? undefined : { color: "#a78bfa" }}
+ >
+ {code.slice(0, 2)}
+ </span>
  </div>
  <div className="flex flex-col">
- <span className="font-mono text-[10px] font-semibold leading-tight">{code}</span>
+ <span
+   className={`font-mono text-[10px] font-semibold leading-tight ${color ? "app-gestion-node-code" : ""}`}
+ >
+ {code}
+ </span>
  <span className="text-[8px] text-muted-foreground leading-tight max-w-[100px] truncate">{name}</span>
  </div>
  </button>
@@ -1263,16 +1282,21 @@ function SortableNode({
  // Detectar si hay un item arrastrandose sobre este (para feedback de drop de paleta)
  const isDropTarget = isOver && active?.data.current?.source === "palette";
 
+ // Color directo desde action_feature (migración 261 — consolidado desde characteristic)
+ const hexColor = step.action_template?.action_feature?.color || null;
+
  return (
  <div className="flex items-center gap-1.5 mb-0.5">
  <div
  ref={setNodeRef}
- style={style}
+ style={{
+   ...style,
+   ...(hexColor ? { "--gestion-color": hexColor } : {}),
+ } as React.CSSProperties}
  {...listeners}
  {...attributes}
- className={`relative flex items-center gap-1.5 rounded-lg px-2 py-1
- bg-linear-to-br ${lc.bg} backdrop-blur-sm
- border ${lc.border}
+ className={`${hexColor ? "app-gestion-node" : `relative flex items-center gap-1.5 rounded-lg px-2 py-1 bg-linear-to-br ${lc.bg}`}
+ backdrop-blur-sm border ${hexColor ? "" : lc.border}
  ${canEdit ? "cursor-grab active:cursor-grabbing active:scale-95" : "cursor-default"}
  transition-all duration-150
  ${isSelected ? "ring-1 ring-offset-0 ring-violet-500/40 " : canEdit ? "hover:scale-[1.02]" : ""}
@@ -1280,21 +1304,34 @@ function SortableNode({
  onClick={onSelect}
  >
  {/* Glow decorativo */}
- <div className={`pointer-events-none absolute -inset-0.5 rounded-lg ${lc.glow} blur-sm opacity-30 -z-10`} />
+ {hexColor ? (
+   <div className="app-gestion-node-glow" />
+ ) : (
+   <div className={`pointer-events-none absolute -inset-0.5 rounded-lg ${lc.glow} blur-sm opacity-30 -z-10`} />
+ )}
 
  {/* Grip handle */}
  <GripVertical className="h-2.5 w-2.5 text-muted-foreground/30 hover:text-violet-400 transition-colors shrink-0" />
 
  {/* Icono del codigo */}
- <div className={`flex h-5 w-5 items-center justify-center rounded-md ${lc.glow} border ${lc.border}`}>
- <span className={`font-mono text-[8px] font-bold ${lc.text}`}>
+ <div
+   className={`flex h-5 w-5 items-center justify-center rounded-md border ${hexColor ? "app-gestion-code-icon" : `${lc.glow} ${lc.border}`}`}
+   style={hexColor ? { "--gestion-color": hexColor } as React.CSSProperties : undefined}
+ >
+ <span
+   className={`font-mono text-[8px] font-bold ${hexColor ? "app-gestion-code-icon-text" : lc.text}`}
+ >
  {(step.action_template?.code || "?").slice(0, 2)}
  </span>
  </div>
 
  {/* Info */}
  <div className="flex flex-col">
- <span className="text-[10px] font-semibold leading-tight">{step.action_template?.code}</span>
+ <span
+   className={`text-[10px] font-semibold leading-tight ${hexColor ? "app-gestion-node-code" : ""}`}
+ >
+ {step.action_template?.code}
+ </span>
  <span className="text-[8px] text-muted-foreground leading-tight max-w-[120px] truncate">
  {step.action_template?.name}
  </span>

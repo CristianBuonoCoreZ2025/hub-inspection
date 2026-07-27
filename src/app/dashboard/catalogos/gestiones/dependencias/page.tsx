@@ -59,11 +59,11 @@ export default function DependenciasGestionPage() {
  onError: (err: Error) => toast.error(err.message),
  });
 
- // Templates activos: extraer codigos unicos con su nombre
+ // Templates activos: extraer codigos unicos con su nombre y color
  const codeMap = useMemo(() => {
- const m = new Map<string, { code: string; name: string }>();
+ const m = new Map<string, { code: string; name: string; color?: string }>();
  for (const t of (templates || []).filter(t => t.is_active && t.code)) {
- if (!m.has(t.code!)) m.set(t.code!, { code: t.code!, name: t.name });
+   if (!m.has(t.code!)) m.set(t.code!, { code: t.code!, name: t.name, color: t.action_feature?.color || undefined });
  }
  return Array.from(m.values()).sort((a, b) => a.code.localeCompare(b.code));
  }, [templates]);
@@ -149,6 +149,7 @@ export default function DependenciasGestionPage() {
  };
 
  const nameFor = (code: string) => codeMap.find(c => c.code === code)?.name || code;
+const colorFor = (code: string) => codeMap.find(c => c.code === code)?.color;
  const depIdFor = (parent: string, child: string) =>
  (dependencies || []).find(d => d.parent_code === parent && d.child_code === child)?.id;
  const depConditionFor = (parent: string, child: string) =>
@@ -227,16 +228,25 @@ export default function DependenciasGestionPage() {
  { bg: "bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/15", icon: "bg-amber-500/20 text-amber-400 border-amber-500/30", badge: "bg-amber-500/15 text-amber-400", label: `NIVEL ${item.level + 1}` },
  ];
  const style = levelStyles[Math.min(item.level, 3)];
+ const hexColor = colorFor(item.code);
  return (
  <div key={`${item.code}-${idx}`} className="flex items-center gap-2">
  {/* Nodo */}
  <div className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2
  border transition-all duration-200 ${style.bg}`}>
- <div className={`flex h-7 w-7 items-center justify-center rounded-lg font-mono text-[10px] font-bold ${style.icon}`}>
+ <div
+   className={`flex h-7 w-7 items-center justify-center rounded-lg font-mono text-[10px] font-bold ${hexColor ? "app-gestion-code-icon" : style.icon}`}
+   style={hexColor ? { "--gestion-color": hexColor } as React.CSSProperties : undefined}
+ >
  {item.code.slice(0, 2)}
  </div>
  <div className="flex flex-col">
- <span className="text-[11px] font-semibold leading-tight">{item.code}</span>
+ <span
+   className={`text-[11px] font-semibold leading-tight ${hexColor ? "app-gestion-node-code" : ""}`}
+   style={hexColor ? { "--gestion-color": hexColor } as React.CSSProperties : undefined}
+ >
+ {item.code}
+ </span>
  <span className="text-[10px] text-muted-foreground leading-tight">{nameFor(item.code)}</span>
  </div>
  <span className={`ml-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${style.badge}`}>

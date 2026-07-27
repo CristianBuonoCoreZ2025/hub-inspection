@@ -33,9 +33,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Falta claimActionId" }, { status: 400 });
     }
 
-    // DEBUG TEMPORAL
-    console.log("[email-preview] claimActionId:", claimActionId);
-
     // 1. Obtener la claim_action (query simple sin joins, igual que el send route)
     const { data: actionRow, error: actionError } = await supabase
       .from("claim_actions")
@@ -44,7 +41,6 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (actionError || !actionRow) {
-      console.log("[email-preview] actionError:", actionError?.message, "actionRow:", actionRow);
       return NextResponse.json({ error: "Gestión no encontrada" }, { status: 404 });
     }
 

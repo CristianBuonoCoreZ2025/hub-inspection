@@ -390,3 +390,51 @@ export function ThemeMoonIcon({ size = 18, ...props }: IconProps) {
     </svg>
   );
 }
+
+/* ─────────────────────────────────────────────────────────
+ * Correo — sobre amarillo/naranja con carta blanca
+ * Sobre color naranja ámbar, carta blanca con borde sutil,
+ * líneas de correo visibles y pequeño punto de estado verde.
+ * ───────────────────────────────────────────────────────── */
+export function CorreoIcon({ size = 18, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <defs>
+        <linearGradient id="correo-body" x1="2" y1="8" x2="22" y2="18" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#fbbf24" />
+          <stop offset="0.6" stopColor="#f59e0b" />
+          <stop offset="1" stopColor="#d97706" />
+        </linearGradient>
+        <linearGradient id="correo-flap" x1="12" y1="8" x2="12" y2="14" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#f59e0b" />
+          <stop offset="1" stopColor="#d97706" />
+        </linearGradient>
+        <linearGradient id="correo-letter" x1="7" y1="4" x2="17" y2="14" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffffff" />
+          <stop offset="1" stopColor="#f8fafc" />
+        </linearGradient>
+        <linearGradient id="correo-lines" x1="9" y1="8" x2="15" y2="12" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#60a5fa" />
+          <stop offset="1" stopColor="#3b82f6" />
+        </linearGradient>
+        <filter id="correo-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="0.8" stdDeviation="0.7" floodColor="#92400e" floodOpacity="0.4" />
+        </filter>
+      </defs>
+      {/* Sombra del sobre */}
+      <rect x="2" y="8" width="20" height="14" rx="2.5" fill="#92400e" opacity="0.25" transform="translate(0.5 0.8)" />
+      {/* Cuerpo del sobre */}
+      <rect x="2" y="8" width="20" height="14" rx="2.5" fill="url(#correo-body)" filter="url(#correo-shadow)" />
+      {/* Carta blanca saliendo */}
+      <rect x="6" y="3" width="12" height="10" rx="1.5" fill="url(#correo-letter)" stroke="#94a3b8" strokeWidth="0.5" opacity="0.9" />
+      {/* Líneas azules de la carta (representan texto) */}
+      <path d="M8 6h8M8 8.5h6" stroke="url(#correo-lines)" strokeWidth="1.2" strokeLinecap="round" opacity="0.85" />
+      {/* Solapa del sobre */}
+      <path d="M2 9.5l10 6.5 10-6.5" stroke="#b45309" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.6" />
+      {/* Borde superior del sobre */}
+      <path d="M2 9.5l10 6.5 10-6.5" stroke="#fff7ed" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.4" />
+      {/* Punto verde de notificación */}
+      <circle cx="18.5" cy="10" r="2" fill="#22c55e" stroke="#ffffff" strokeWidth="0.6" />
+    </svg>
+  );
+}

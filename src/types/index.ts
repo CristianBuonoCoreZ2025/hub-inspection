@@ -896,27 +896,12 @@ export interface ActionFeature {
   screen_id: string | null;
   created_at: string;
   updated_at: string;
-  characteristics?: Characteristic[];
-  screen?: GestionScreen | null;
-}
-
-export interface Characteristic {
-  id: string;
-  action_feature_id: string;
-  name: string;
+  // Campos consolidados desde characteristic (migración 261)
+  color: string | null;
   local_name: string | null;
-  screen: boolean;
-  control: boolean;
-  issue: boolean;
-  review: boolean;
-  approve: boolean;
   document_template: boolean;
-  email_template: boolean;
   document_type: boolean;
-  is_active: boolean;
-  sort_order: number;
-  screen_id: string | null;
-  action_feature?: ActionFeature;
+  screen?: GestionScreen | null;
 }
 
 export interface ActionTemplate {
@@ -974,9 +959,9 @@ export interface GestionScreen {
   updated_at: string;
 }
 
-export interface CharacteristicScreen {
+export interface ActionFeatureScreen {
   id: string;
-  characteristic_id: string;
+  action_feature_id: string;
   screen_id: string;
   is_default: boolean;
   created_at: string;
