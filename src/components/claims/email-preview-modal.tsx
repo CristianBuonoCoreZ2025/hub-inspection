@@ -103,7 +103,19 @@ ${bodyHtml}
 </html>`);
     printWin.document.close();
     printWin.focus();
-    setTimeout(() => printWin.print(), 300);
+    setTimeout(() => {
+      printWin.print();
+      // Cerrar la ventana después de imprimir (o cancelar) —
+      // onafterprint se dispara tanto si se imprime como si se cancela
+      printWin.onafterprint = () => {
+        printWin.close();
+      };
+      // Fallback: si onafterprint no se dispara (algunos navegadores),
+      // cerrar tras un tiempo prudencial
+      setTimeout(() => {
+        if (!printWin.closed) printWin.close();
+      }, 1000);
+    }, 300);
   };
 
   const handleDownload = () => {
