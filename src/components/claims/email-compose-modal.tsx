@@ -156,6 +156,7 @@ function ContactBookButton({
 export function EmailComposeModal({
   open,
   onOpenChange,
+  claim,
   action,
   businessLineId,
 }: EmailComposeModalProps) {
@@ -398,6 +399,7 @@ export function EmailComposeModal({
     !sendMutation.isPending;
 
   const gestionCode = (action.action_data as Record<string, unknown> | null)?.codigo as string | undefined;
+  const liquidationNumber = (claim as Record<string, unknown> | null)?.liquidation_number as string | undefined;
   const hasTemplates = activeTemplates.length > 0;
 
   return (
@@ -412,14 +414,13 @@ export function EmailComposeModal({
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold text-foreground leading-tight truncate">
-                {gestionCode || "Correo"}
+                {gestionCode ? `Gestión ${gestionCode}` : "Nuevo correo"}
               </span>
-              <span className="text-[10px] text-muted-foreground truncate">
-                Siniestro L-{String(action.claim_id).slice(-6).toUpperCase()}
-              </span>
-              <span className="text-[10px] text-muted-foreground truncate">
-                Gestión que origina este correo
-              </span>
+              {liquidationNumber && (
+                <span className="text-[10px] text-muted-foreground truncate font-mono">
+                  Siniestro {liquidationNumber}
+                </span>
+              )}
             </div>
           </DialogTitle>
           <div className="flex items-center gap-1.5 shrink-0">
