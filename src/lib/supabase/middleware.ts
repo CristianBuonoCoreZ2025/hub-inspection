@@ -43,13 +43,16 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname === "/" ||
     request.nextUrl.pathname.startsWith("/inspection/");
 
-  if (!user && !isAuthRoute && !isPublicRoute) {
+  // Las API routes gestionan su propia autenticación — no redirigir
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
+
+  if (!user && !isAuthRoute && !isPublicRoute && !isApiRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthRoute) {
+  if (user && isAuthRoute && !isApiRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
