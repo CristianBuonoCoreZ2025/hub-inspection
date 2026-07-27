@@ -274,7 +274,7 @@ export default function CargaSiniestrosPage() {
                   <th>Fecha</th>
                   <th>Tipo</th>
                   <th>Empresa</th>
-                  <th className="w-40">Errores</th>
+                  <th className="bulk-error-col">Errores</th>
                 </tr>
               </thead>
               <tbody>
@@ -291,12 +291,20 @@ export default function CargaSiniestrosPage() {
                     <td className="font-medium">{String(row.data.claimNumber || "—")}</td>
                     <td>{String(row.data.policyNumber || "—")}</td>
                     <td>{String(row.data.insuredName || "—")}</td>
-                    <td className="max-w-[150px] truncate">{String(row.data.address || "—")}</td>
+                    <td className="bulk-cell-narrow">{String(row.data.address || "—")}</td>
                     <td>{String(row.data.claimDate || "—")}</td>
                     <td>{String(row.data.claimType || "—")}</td>
-                    <td className="max-w-[120px] truncate">{String(row.data.companyId || "—")}</td>
-                    <td className="text-xs text-red-600 max-w-[160px] truncate">
-                      {row.errors.join(", ")}
+                    <td className="bulk-cell-medium">{String(row.data.companyId || "—")}</td>
+                    <td>
+                      {row.errors.length > 0 ? (
+                        <div className="bulk-error-list">
+                          {row.errors.map((err, i) => (
+                            <span key={i} className="bulk-error-badge">{err}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-emerald-600 text-xs">OK</span>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -394,6 +394,67 @@
     line-height: 1.3 !important;
   }
 
+  /* ──────────────────────────────────────────────────────────────
+   * Badges de error para carga masiva / validación de filas
+   * Muestra cada error como un pill rojo en su propia línea,
+   * sin truncar el texto.
+   * ────────────────────────────────────────────────────────────── */
+  .bulk-error-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    padding: 2px 0 !important;
+    max-width: 280px !important;
+  }
+
+  .bulk-error-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 2px 7px !important;
+    border-radius: 9999px !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    line-height: 1.3 !important;
+    white-space: nowrap !important;
+    color: #b91c1c !important;
+    background: color-mix(in srgb, #ef4444 12%, transparent) !important;
+    border: 1px solid color-mix(in srgb, #ef4444 25%, transparent) !important;
+  }
+
+  .dark .bulk-error-badge {
+    color: #fca5a5 !important;
+    background: color-mix(in srgb, #ef4444 18%, transparent) !important;
+    border-color: color-mix(in srgb, #ef4444 30%, transparent) !important;
+  }
+
+  .bulk-error-badge::before {
+    content: "•";
+    font-weight: 700 !important;
+    margin-right: 1px !important;
+  }
+
+  /* Columna de errores en tabla de carga masiva — ancho fijo, sin truncate */
+  .bulk-error-col {
+    width: 280px !important;
+    min-width: 200px !important;
+  }
+
+  /* Celdas de tabla con truncate controlado para carga masiva */
+  .bulk-cell-narrow {
+    max-width: 150px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .bulk-cell-medium {
+    max-width: 120px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
   /* Observaciones dentro del informe/PDF */
   .report-observation {
     font-size: 9px !important;
