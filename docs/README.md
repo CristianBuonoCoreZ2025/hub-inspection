@@ -206,6 +206,12 @@ src/
 - **Reutilizable:** Solo necesita un objeto `EmailLogLite`
 - **Docs:** [email-preview-modal.md](./email-preview-modal.md)
 
+### EmailComposeModal (compositor de correos)
+- **Archivo:** `src/components/claims/email-compose-modal.tsx`
+- **Características:** Plantillas, sugerencia de destinatarios, preview en vivo, envío con correlativo
+- **Reutilizable:** Necesita `claim` + `action` + `businessLineId`
+- **Docs:** [email-compose-modal.md](./email-compose-modal.md)
+
 ### FieldConfigEditor (matriz de campos)
 - **Archivo:** `src/components/ui/field-config-editor.tsx`
 - **Características:** Iconos Eye/EyeOff (sin checkboxes), labels personalizables

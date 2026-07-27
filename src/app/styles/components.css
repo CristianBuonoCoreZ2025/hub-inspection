@@ -1058,6 +1058,186 @@
     max-height: 288px;
   }
 
+  /* ═══════════════════════════════════════════════════════════════ */
+  /*  EMAIL COMPOSE MODAL — Clases reutilizables                      */
+  /* ═══════════════════════════════════════════════════════════════ */
+
+  /* Header del compose — banner con ícono + gestión + código */
+  .app-compose-header {
+    @apply flex items-start justify-between gap-3 p-4 border-b border-border;
+    background: var(--background);
+  }
+  .app-compose-header-icon {
+    @apply flex h-10 w-10 items-center justify-center rounded-xl text-white shrink-0;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    box-shadow: 0 2px 8px -2px rgb(99 102 241 / 0.5);
+  }
+  .app-compose-title {
+    @apply text-sm font-semibold text-foreground leading-tight;
+  }
+  .app-compose-subtitle {
+    @apply text-[10px] text-muted-foreground;
+  }
+  .app-compose-subtitle-mono {
+    @apply text-[10px] text-muted-foreground font-mono;
+  }
+
+  /* Botones del header — liquid glass coherente con preview */
+  .app-compose-btn {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground;
+    background: color-mix(in srgb, var(--card) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .app-compose-btn:hover {
+    background: color-mix(in srgb, var(--muted) 60%, transparent);
+    border-color: color-mix(in srgb, var(--border) 60%, transparent);
+  }
+  .app-compose-btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 h-8 text-[11px] font-medium text-white transition-all;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    box-shadow: 0 2px 8px -2px rgb(99 102 241 / 0.4);
+  }
+  .app-compose-btn-primary:hover {
+    box-shadow: 0 4px 12px -2px rgb(99 102 241 / 0.5);
+    transform: translateY(-1px);
+  }
+  .app-compose-btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Tabs de modo (Plantilla / A mano) — liquid glass */
+  .app-compose-tabs {
+    @apply flex items-center gap-1 p-1 rounded-lg;
+    background: color-mix(in srgb, var(--muted) 30%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+  }
+  .app-compose-tab {
+    @apply flex-1 flex items-center justify-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-md transition-all cursor-pointer;
+    color: var(--muted-foreground);
+  }
+  .app-compose-tab:hover {
+    color: var(--foreground);
+  }
+  .app-compose-tab[data-active="true"] {
+    @apply font-medium shadow-sm;
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  /* Chips de destinatarios sugeridos — liquid glass */
+  .app-compose-chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] transition-colors cursor-pointer;
+    background: color-mix(in srgb, var(--card) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+    backdrop-filter: blur(8px);
+    color: var(--muted-foreground);
+  }
+  .app-compose-chip:hover {
+    border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    color: var(--primary);
+  }
+
+  /* Labels de campos — coherente con sistema */
+  .app-compose-label {
+    @apply text-[11px] font-medium text-muted-foreground;
+  }
+
+  /* Panel izquierdo — composición */
+  .app-compose-panel-left {
+    @apply space-y-3 overflow-y-auto border-r border-border;
+    background: color-mix(in srgb, var(--muted) 8%, transparent);
+  }
+
+  /* Panel derecho — preview en vivo */
+  .app-compose-panel-right {
+    @apply flex flex-col overflow-hidden;
+    background: color-mix(in srgb, var(--muted) 12%, transparent);
+  }
+  .app-compose-preview-bar {
+    @apply flex items-center justify-between px-4 py-2 border-b border-border;
+    background: color-mix(in srgb, var(--background) 60%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .app-compose-preview-title {
+    @apply flex items-center gap-1.5 text-[11px] font-medium text-foreground;
+  }
+  .app-compose-preview-badge {
+    @apply text-[10px] text-muted-foreground px-1.5 py-0.5 rounded;
+    background: color-mix(in srgb, var(--muted) 40%, transparent);
+  }
+  .app-compose-preview-body {
+    @apply flex-1 overflow-auto p-4;
+  }
+  .app-compose-preview-card {
+    @apply rounded-xl overflow-hidden mx-auto bg-white;
+    max-width: 600px;
+    box-shadow: 0 4px 20px rgb(0 0 0 / 0.06);
+  }
+  .dark .app-compose-preview-card {
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+  }
+  .app-compose-preview-text {
+    @apply rounded-xl border border-border bg-background p-6 min-h-75 max-w-2xl mx-auto shadow-sm;
+  }
+
+  /* Footer del compose */
+  .app-compose-footer {
+    @apply flex items-center justify-end gap-2 px-4 py-3 border-t border-border;
+    background: color-mix(in srgb, var(--background) 60%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Historial — lista compacta */
+  .app-compose-history {
+    @apply rounded-lg border border-border p-2 space-y-1 overflow-auto;
+    background: color-mix(in srgb, var(--background) 60%, transparent);
+    max-height: 160px;
+  }
+  .app-compose-history-item {
+    @apply text-[11px] flex items-center justify-between gap-2 border-b last:border-0 pb-1;
+    border-color: color-mix(in srgb, var(--border) 30%, transparent);
+  }
+  .app-compose-history-status {
+    @apply shrink-0 px-1.5 rounded text-[10px] font-medium;
+  }
+  .app-compose-history-status-sent {
+    background: color-mix(in srgb, rgb(16 185 129) 15%, transparent);
+    color: rgb(16 185 129);
+  }
+  .app-compose-history-status-queued {
+    background: color-mix(in srgb, rgb(245 158 11) 15%, transparent);
+    color: rgb(245 158 11);
+  }
+  .app-compose-history-status-error {
+    background: color-mix(in srgb, rgb(244 63 94) 15%, transparent);
+    color: rgb(244 63 94);
+  }
+
+  /* Toggle de formato (Texto / HTML) — mini tabs */
+  .app-compose-format-toggle {
+    @apply flex items-center gap-1;
+  }
+  .app-compose-format-btn {
+    @apply flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors cursor-pointer;
+    color: var(--muted-foreground);
+  }
+  .app-compose-format-btn:hover {
+    color: var(--foreground);
+  }
+  .app-compose-format-btn[data-active="true"] {
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    color: var(--primary);
+  }
+
+  /* Loading state del preview */
+  .app-compose-loading {
+    @apply h-full flex flex-col items-center justify-center gap-2 text-muted-foreground;
+  }
+
   /* Header del modal — banner con ícono (liquid glass coherente con sistema) */
   .app-email-header {
     @apply flex items-center gap-3 px-4 py-3;
