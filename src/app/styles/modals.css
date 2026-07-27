@@ -118,7 +118,6 @@
     flex-direction: column !important;
     min-height: 0 !important;
     max-height: 100vh !important;
-    position: relative !important;
 
     /* Mobile (<640px) — compacto con aire */
     width: 90vw !important;
