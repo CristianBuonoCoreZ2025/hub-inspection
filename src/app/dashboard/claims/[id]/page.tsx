@@ -178,6 +178,8 @@ export default function ClaimDetailPage() {
    claim_id: string;
    action_template_id: string;
    action_data?: Record<string, unknown> | null;
+   gestion_codigo?: string;
+   gestion_nombre?: string;
  } | null>(null);
  const [emailPreviewLog, setEmailPreviewLog] = useState<EmailLog | null>(null);
  const [editingGestion, setEditingGestion] = useState<{
@@ -1516,6 +1518,8 @@ export default function ClaimDetailPage() {
        claim_id: id || "",
        action_template_id: action?.action_template_id || "",
        action_data: action?.action_data as Record<string, unknown> | null,
+       gestion_codigo: g.codigo,
+       gestion_nombre: g.nombre,
      });
    };
 

@@ -27,6 +27,8 @@ interface EmailComposeModalProps {
     claim_id: string;
     action_template_id: string;
     action_data?: Record<string, unknown> | null;
+    gestion_codigo?: string;
+    gestion_nombre?: string;
   };
   businessLineId?: string | null;
 }
@@ -398,7 +400,8 @@ export function EmailComposeModal({
     effectiveBody.trim().length > 0 &&
     !sendMutation.isPending;
 
-  const gestionCode = (action.action_data as Record<string, unknown> | null)?.codigo as string | undefined;
+  const gestionCode = action.gestion_codigo || (action.action_data as Record<string, unknown> | null)?.codigo as string | undefined;
+  const gestionNombre = action.gestion_nombre;
   const liquidationNumber = (claim as Record<string, unknown> | null)?.liquidation_number as string | undefined;
   const hasTemplates = activeTemplates.length > 0;
 
@@ -414,8 +417,13 @@ export function EmailComposeModal({
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold text-foreground leading-tight truncate">
-                {gestionCode ? `Gestión ${gestionCode}` : "Nuevo correo"}
+                {gestionCode ? `Gestión ${gestionCode}` : "Correo"}
               </span>
+              {gestionNombre && (
+                <span className="text-[10px] text-muted-foreground truncate">
+                  {gestionNombre}
+                </span>
+              )}
               {liquidationNumber && (
                 <span className="text-[10px] text-muted-foreground truncate font-mono">
                   Siniestro {liquidationNumber}
