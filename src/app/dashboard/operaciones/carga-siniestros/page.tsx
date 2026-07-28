@@ -26,8 +26,11 @@ import * as XLSX from "xlsx";
 import {
   getImportFieldMappings,
   getImportValueMappings,
+  getImportFixedValues,
   saveImportFieldMappingsBatch,
   saveImportValueMappingsBatch,
+  saveImportFixedValuesBatch,
+  deleteImportFixedValue,
 } from "@/services/import-mappings";
 import {
   CLAIM_FIELDS,
@@ -65,8 +68,11 @@ export default function CargaSiniestrosPage() {
   const [mapperOpen, setMapperOpen] = useState(true);
   // Mapeo manual de valores: "fieldKey::excelValue" → UUID del catálogo
   const [valueMappings, setValueMappings] = useState<Record<string, string>>({});
-  // Valores fijos: fieldKey → valor en duro (no viene del Excel)
-  const [fixedValues, setFixedValues] = useState<Record<string, string>>({});
+  // Valores fijos: fieldKey → { value, catalogUuid }
+  // value = texto libre (para campos de texto)
+  // catalogUuid = UUID del catálogo (para campos de referencia)
+  const [fixedValues, setFixedValues] = useState<Record<string, { value: string; catalogUuid: string | null }>>({});
+  const [pendingFixedField, setPendingFixedField] = useState<string | null>(null);
 
   // Staging (carga temporal)
   const [stagingRows, setStagingRows] = useState<ClaimStagingRow[]>([]);
@@ -185,6 +191,30 @@ export default function CargaSiniestrosPage() {
     enabled: !!tenantCompanyId,
     staleTime: 60 * 1000,
   });
+  const { data: savedFixedValues } = useQuery({
+    queryKey: ["import-fixed-values", tenantCompanyId],
+    queryFn: () => getImportFixedValues(tenantCompanyId!),
+    enabled: !!tenantCompanyId,
+    staleTime: 60 * 1000,
+  });
+
+  // Fixed values efectivos = DB (defaults) + overrides del usuario
+  // Los del usuario (setFixedValues) toman prioridad sobre los de la DB
+  const effectiveFixedValues = useMemo(() => {
+    const result: Record<string, { value: string; catalogUuid: string | null }> = {};
+    // 1. Cargar desde la DB (defaults)
+    for (const fv of savedFixedValues ?? []) {
+      result[fv.field_key] = {
+        value: fv.fixed_value || "",
+        catalogUuid: fv.catalog_uuid || null,
+      };
+    }
+    // 2. Override con los del usuario (setFixedValues)
+    for (const [k, v] of Object.entries(fixedValues)) {
+      result[k] = v;
+    }
+    return result;
+  }, [savedFixedValues, fixedValues]);
 
   // Normalización simple: lowercase + sin acentos + sin espacios extra
   const normalizeName = useCallback((s: string): string => {
@@ -434,11 +464,16 @@ export default function CargaSiniestrosPage() {
       const data = applyMappingToRow(raw, mapping);
       // Inyectar valores fijos SOLO si el campo no viene del Excel (no tiene valor)
       // Si el Excel ya trae un valor para ese campo, el valor fijo NO se aplica
-      for (const [fieldKey, value] of Object.entries(fixedValues)) {
-        if (!value) continue;
+      for (const [fieldKey, fv] of Object.entries(effectiveFixedValues)) {
+        if (!fv.value && !fv.catalogUuid) continue;
         const currentValue = data[fieldKey];
         if (currentValue === undefined || currentValue === null || currentValue === "") {
-          data[fieldKey] = value;
+          // Si es un campo de referencia y tiene catalogUuid, usar el UUID
+          if (fv.catalogUuid) {
+            data[fieldKey] = fv.catalogUuid;
+          } else {
+            data[fieldKey] = fv.value;
+          }
         }
       }
       const { valid, errors } = validateRowWithMapping(data, mapping);
@@ -461,7 +496,7 @@ export default function CargaSiniestrosPage() {
 
       return { rowNum: idx + 2, data, valid: valid && errors.length === 0, errors };
     });
-  }, [rawRows, mapping, refFields, fixedValues]);
+  }, [rawRows, mapping, refFields, effectiveFixedValues]);
 
   // ── Cargar y parsear el Excel ──
   const parseFile = useCallback((f: File) => {
@@ -959,9 +994,25 @@ export default function CargaSiniestrosPage() {
           await saveImportValueMappingsBatch(tenantCompanyId, valueMappingsToSave);
         }
 
+        // 3. Guardar valores fijos (field_key → fixed_value + catalog_uuid)
+        const fixedValuesToSave: Array<{ fieldKey: string; fixedValue: string | null; catalogUuid: string | null }> = [];
+        for (const [fieldKey, fv] of Object.entries(effectiveFixedValues)) {
+          if (fv.value || fv.catalogUuid) {
+            fixedValuesToSave.push({
+              fieldKey,
+              fixedValue: fv.value || null,
+              catalogUuid: fv.catalogUuid || null,
+            });
+          }
+        }
+        if (fixedValuesToSave.length > 0) {
+          await saveImportFixedValuesBatch(tenantCompanyId, fixedValuesToSave);
+        }
+
         // Invalidar queries para recargar en próxima importación
         queryClient.invalidateQueries({ queryKey: ["import-field-mappings", tenantCompanyId] });
         queryClient.invalidateQueries({ queryKey: ["import-value-mappings", tenantCompanyId] });
+        queryClient.invalidateQueries({ queryKey: ["import-fixed-values", tenantCompanyId] });
       } catch (learnErr) {
         console.error("Error guardando mappings aprendidos:", learnErr);
         // No fallar la importación por esto
@@ -1039,6 +1090,21 @@ export default function CargaSiniestrosPage() {
     }
     return used;
   }, [mapping]);
+
+  // Primer valor no vacío de cada columna del Excel (para tooltip de ayuda)
+  const headerSamples = useMemo(() => {
+    const samples = new Map<string, string>();
+    for (const h of excelHeaders) {
+      for (const row of rawRows) {
+        const val = row[h];
+        if (val !== null && val !== undefined && String(val).trim() !== "") {
+          samples.set(h, String(val).trim().substring(0, 80));
+          break;
+        }
+      }
+    }
+    return samples;
+  }, [excelHeaders, rawRows]);
 
   const missingRequiredCount = REQUIRED_FIELDS.filter(
     (field) => !mapping[field.key]?.fieldKey || !mapping[field.key]?.excelHeader
@@ -1233,7 +1299,15 @@ export default function CargaSiniestrosPage() {
                         return (
                           <tr key={header} className={field?.required ? "bulk-mapper-row-required" : ""}>
                             <td className="bulk-mapper-td-column">
-                              <span className="bulk-mapper-field-label">{header}</span>
+                              <span
+                                className="bulk-mapper-field-label"
+                                title={headerSamples.get(header) ? `Ej: "${headerSamples.get(header)}"` : "(columna vacía)"}
+                              >
+                                {header}
+                              </span>
+                              {headerSamples.get(header) && (
+                                <em className="bulk-mapper-field-sample">{headerSamples.get(header)}</em>
+                              )}
                             </td>
                             <td className="bulk-mapper-td-arrow">
                               <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1305,26 +1379,39 @@ export default function CargaSiniestrosPage() {
                     <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
                     <span className="bulk-fixed-values-title">Valores fijos</span>
                     <span className="bulk-fixed-values-desc">
-                      Asigna un valor en duro a campos del sistema que no tienen columna en el Excel
+                      Asigna un valor en duro a campos que no tienen columna en el Excel. Se guardan para futuras importaciones.
                     </span>
                   </div>
                   <div className="bulk-fixed-values-list">
-                    {Object.entries(fixedValues).length > 0 && (
+                    {Object.entries(effectiveFixedValues).length > 0 && (
                       <div className="bulk-fixed-values-existing">
-                        {Object.entries(fixedValues).map(([fk, val]) => {
+                        {Object.entries(effectiveFixedValues).map(([fk, fv]) => {
                           const f = CLAIM_FIELDS.find((cf) => cf.key === fk);
+                          const refField = refFields.find((rf) => rf.fieldKey === fk);
+                          // Para campos de referencia, mostrar el nombre del catálogo
+                          const displayValue = refField && fv.catalogUuid
+                            ? (refField.options.find((o) => o.id === fv.catalogUuid)?.name || fv.value)
+                            : fv.value;
                           return (
                             <div key={fk} className="bulk-fixed-value-item">
                               <span className="bulk-fixed-value-field">{f?.label || fk}</span>
                               <span className="bulk-fixed-value-arrow">=</span>
-                              <span className="bulk-fixed-value-val">{val}</span>
+                              <span className="bulk-fixed-value-val">{displayValue}</span>
                               <button
                                 className="bulk-fixed-value-remove"
-                                onClick={() => setFixedValues((prev) => {
-                                  const next = { ...prev };
-                                  delete next[fk];
-                                  return next;
-                                })}
+                                title="Eliminar valor fijo"
+                                onClick={() => {
+                                  setFixedValues((prev) => {
+                                    const next = { ...prev };
+                                    delete next[fk];
+                                    return next;
+                                  });
+                                  // También eliminar de la DB
+                                  if (tenantCompanyId) {
+                                    deleteImportFixedValue(tenantCompanyId, fk).catch(console.error);
+                                    queryClient.invalidateQueries({ queryKey: ["import-fixed-values", tenantCompanyId] });
+                                  }
+                                }}
                               >
                                 <X className="h-3 w-3" />
                               </button>
@@ -1333,39 +1420,81 @@ export default function CargaSiniestrosPage() {
                         })}
                       </div>
                     )}
-                    <div className="bulk-fixed-values-add">
-                      <Select
-                        value=""
-                        onValueChange={(fk) => {
-                          if (!fk || fk === "__none__") return;
-                          // Abrir input para escribir el valor
-                          const val = window.prompt(`Valor fijo para: ${CLAIM_FIELDS.find(f => f.key === fk)?.label || fk}`);
-                          if (val !== null && val.trim()) {
-                            setFixedValues((prev) => ({ ...prev, [fk]: val.trim() }));
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="bulk-fixed-values-select">
-                          <SelectValue placeholder="+ Agregar valor fijo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">— Seleccionar campo —</SelectItem>
-                          {CLAIM_FIELDS
-                            .filter((f) => {
-                              // No mostrar si ya está mapeado desde el Excel O ya tiene valor fijo
-                              const isMappedFromExcel = !!(mapping[f.key]?.fieldKey && mapping[f.key]?.excelHeader);
-                              const hasFixedValue = f.key in fixedValues;
-                              return !isMappedFromExcel && !hasFixedValue;
-                            })
-                            .map((f) => (
-                              <SelectItem key={f.key} value={f.key}>
-                                {f.label}
-                                {f.required && " *"}
-                              </SelectItem>
+                    {/* Selector de campo para agregar valor fijo */}
+                    {!pendingFixedField && (
+                      <div className="bulk-fixed-values-add">
+                        <Select
+                          value=""
+                          onValueChange={(fk) => {
+                            if (!fk || fk === "__none__") return;
+                            const refField = refFields.find((rf) => rf.fieldKey === fk);
+                            if (refField) {
+                              // Campo de referencia: mostrar combo del catálogo
+                              setPendingFixedField(fk);
+                            } else {
+                              // Campo de texto: prompt
+                              const val = window.prompt(`Valor fijo para: ${CLAIM_FIELDS.find(f => f.key === fk)?.label || fk}`);
+                              if (val !== null && val.trim()) {
+                                setFixedValues((prev) => ({ ...prev, [fk]: { value: val.trim(), catalogUuid: null } }));
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="bulk-fixed-values-select">
+                            <SelectValue placeholder="+ Agregar valor fijo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Seleccionar campo —</SelectItem>
+                            {CLAIM_FIELDS
+                              .filter((f) => {
+                                const isMappedFromExcel = !!(mapping[f.key]?.fieldKey && mapping[f.key]?.excelHeader);
+                                const hasFixedValue = f.key in effectiveFixedValues;
+                                return !isMappedFromExcel && !hasFixedValue;
+                              })
+                              .map((f) => (
+                                <SelectItem key={f.key} value={f.key}>
+                                  {f.label}
+                                  {f.required && " *"}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {/* Combo del catálogo para campos de referencia */}
+                    {pendingFixedField && (
+                      <div className="bulk-fixed-values-add">
+                        <span className="bulk-fixed-values-pending-label">
+                          {CLAIM_FIELDS.find(f => f.key === pendingFixedField)?.label}:
+                        </span>
+                        <Select
+                          value=""
+                          onValueChange={(uuid) => {
+                            if (!uuid || uuid === "__none__") {
+                              setPendingFixedField(null);
+                              return;
+                            }
+                            const refField = refFields.find((rf) => rf.fieldKey === pendingFixedField);
+                            const opt = refField?.options.find((o) => o.id === uuid);
+                            setFixedValues((prev) => ({
+                              ...prev,
+                              [pendingFixedField]: { value: opt?.name || "", catalogUuid: uuid },
+                            }));
+                            setPendingFixedField(null);
+                          }}
+                        >
+                          <SelectTrigger className="bulk-fixed-values-select">
+                            <SelectValue placeholder="Seleccionar valor del catálogo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Cancelar —</SelectItem>
+                            {refFields.find((rf) => rf.fieldKey === pendingFixedField)?.options.map((o) => (
+                              <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
                             ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 </div>
               </>

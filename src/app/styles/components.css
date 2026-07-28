@@ -678,6 +678,18 @@
     color: var(--foreground) !important;
   }
 
+  .bulk-mapper-field-sample {
+    display: block !important;
+    font-size: 10px !important;
+    font-style: italic !important;
+    color: var(--muted-foreground) !important;
+    margin-top: 2px !important;
+    max-width: 220px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
   .bulk-mapper-required-badge {
     display: inline-flex !important;
     align-items: center !important;
@@ -847,10 +859,19 @@
 
   .bulk-fixed-values-add {
     display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
   }
 
   .bulk-fixed-values-select {
     width: 100% !important;
+  }
+
+  .bulk-fixed-values-pending-label {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+    white-space: nowrap !important;
   }
 
   .dark .bulk-mapper-status-pill-error {

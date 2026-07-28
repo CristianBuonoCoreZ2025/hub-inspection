@@ -179,3 +179,95 @@ export async function saveImportValueMappingsBatch(
     }
   }
 }
+
+// ── Fixed Values (campo → valor fijo, no viene del Excel) ──
+
+export interface ImportFixedValue {
+  id: string;
+  company_id: string;
+  field_key: string;
+  fixed_value: string | null;
+  catalog_uuid: string | null;
+  times_used: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getImportFixedValues(companyId: string): Promise<ImportFixedValue[]> {
+  return fetchAll<ImportFixedValue>("import_fixed_values", {
+    eq: { company_id: companyId },
+  });
+}
+
+/**
+ * Guarda o actualiza un valor fijo.
+ * - fixed_value: texto libre (para campos de texto)
+ * - catalog_uuid: UUID del catálogo (para campos de referencia como auditor, liquidador)
+ */
+export async function saveImportFixedValue(
+  companyId: string,
+  fieldKey: string,
+  fixedValue: string | null,
+  catalogUuid: string | null
+): Promise<void> {
+  const existing = await fetchAll<ImportFixedValue>("import_fixed_values", {
+    eq: { company_id: companyId, field_key: fieldKey },
+    limit: 1,
+  });
+
+  if (existing.length > 0) {
+    await updateRow<ImportFixedValue>("import_fixed_values", existing[0].id, {
+      fixed_value: fixedValue,
+      catalog_uuid: catalogUuid,
+      times_used: existing[0].times_used + 1,
+    });
+  } else {
+    await insertRow<ImportFixedValue>("import_fixed_values", {
+      company_id: companyId,
+      field_key: fieldKey,
+      fixed_value: fixedValue,
+      catalog_uuid: catalogUuid,
+      times_used: 1,
+    });
+  }
+}
+
+export async function deleteImportFixedValue(companyId: string, fieldKey: string): Promise<void> {
+  const existing = await fetchAll<ImportFixedValue>("import_fixed_values", {
+    eq: { company_id: companyId, field_key: fieldKey },
+    limit: 1,
+  });
+  if (existing.length > 0) {
+    const { deleteRow } = await import("@/lib/supabase/db");
+    await deleteRow("import_fixed_values", existing[0].id);
+  }
+}
+
+export async function saveImportFixedValuesBatch(
+  companyId: string,
+  fixedValues: Array<{ fieldKey: string; fixedValue: string | null; catalogUuid: string | null }>
+): Promise<void> {
+  const existing = await fetchAll<ImportFixedValue>("import_fixed_values", {
+    eq: { company_id: companyId },
+  });
+  const existingMap = new Map(existing.map((m) => [m.field_key, m]));
+
+  for (const { fieldKey, fixedValue, catalogUuid } of fixedValues) {
+    const ex = existingMap.get(fieldKey);
+    if (ex) {
+      await updateRow<ImportFixedValue>("import_fixed_values", ex.id, {
+        fixed_value: fixedValue,
+        catalog_uuid: catalogUuid,
+        times_used: ex.times_used + 1,
+      });
+    } else {
+      await insertRow<ImportFixedValue>("import_fixed_values", {
+        company_id: companyId,
+        field_key: fieldKey,
+        fixed_value: fixedValue,
+        catalog_uuid: catalogUuid,
+        times_used: 1,
+      });
+    }
+  }
+}
