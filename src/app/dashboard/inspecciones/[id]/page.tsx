@@ -1015,7 +1015,7 @@ export default function InspectionDetailPage() {
  {/* Modal: mapa del siniestro (solo lectura) — liquid glass */}
  {mapViewOpen && claim?.claim_latitude != null && claim?.claim_longitude != null && (
  <Dialog open={mapViewOpen} onOpenChange={setMapViewOpen}>
- <DialogContent className="max-w-5xl p-0 overflow-hidden ring-1 ring-violet-500/20 shadow-2xl shadow-violet-500/10" showCloseButton>
+ <DialogContent className="modal-xl ring-1 ring-violet-500/20 shadow-2xl shadow-violet-500/10" showCloseButton>
  <div className="modal-header px-5 pt-4 pb-3 border-b border-border/40">
  <div className="flex items-center gap-2">
  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 ring-1 ring-violet-500/20">
@@ -1053,7 +1053,7 @@ export default function InspectionDetailPage() {
 
  {/* Modal de Cancelación */}
  <Dialog open={cancelModalOpen} onOpenChange={(open) => { if (!open && cancelMutation.isPending) return; setCancelModalOpen(open); }}>
- <DialogContent className="modal-content max-w-[480px]" showCloseButton={!cancelMutation.isPending}>
+ <DialogContent className="modal-sm" showCloseButton={!cancelMutation.isPending}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2">
  <XCircle className="h-4 w-4 text-rose-500" />

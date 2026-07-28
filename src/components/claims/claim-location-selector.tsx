@@ -203,7 +203,7 @@ export function ClaimLocationSelector({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-328 max-h-[90vh] p-0 overflow-hidden">
+      <DialogContent className="modal-lg">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle className="app-section-title">Seleccionar ubicación exacta</DialogTitle>
           <DialogDescription className="modal-subtitle">

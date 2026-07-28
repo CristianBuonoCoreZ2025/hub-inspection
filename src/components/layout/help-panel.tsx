@@ -593,7 +593,7 @@ export function HelpPanel({ open, onOpenChange }: HelpPanelProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] h-[85vh] p-0 flex flex-col" showCloseButton={false}>
+      <DialogContent className="modal-lg" showCloseButton={false}>
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3 shrink-0">
           <div className="flex items-center gap-2.5">

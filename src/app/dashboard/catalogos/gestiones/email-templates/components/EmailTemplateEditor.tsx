@@ -635,7 +635,7 @@ export function EmailTemplateEditor({ templateId }: Props) {
 
           {/* Preview modal */}
           <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-            <DialogContent className="w-[calc(100%-2rem)] max-w-6xl h-[90vh] p-0 flex flex-col" showCloseButton={false}>
+            <DialogContent className="modal-xl" showCloseButton={false}>
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30 shrink-0">
                 <DialogTitle className="text-sm font-medium flex items-center gap-2">

@@ -1921,7 +1921,7 @@ export default function ClaimDetailPage() {
  {/* ═══ MODAL: Mapa de ubicación del siniestro ═══ */}
  {claim.claim_latitude && claim.claim_longitude && (
  <Dialog open={mapOpen} onOpenChange={setMapOpen}>
- <DialogContent className="max-w-328 p-0 overflow-hidden" showCloseButton>
+ <DialogContent className="modal-lg" showCloseButton>
  <DialogHeader className="p-4 pb-0">
  <DialogTitle className="app-section-title">Ubicación del siniestro</DialogTitle>
  <DialogDescription className="modal-subtitle">
