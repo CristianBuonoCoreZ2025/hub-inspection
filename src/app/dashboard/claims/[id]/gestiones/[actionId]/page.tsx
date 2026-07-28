@@ -252,7 +252,7 @@ export default function GestionDetailPage() {
  </div>
  </div>
 
- <div className="grid gap-4 lg:grid-cols-3">
+ <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
  {/* Columna principal */}
  <div className="lg:col-span-2 app-stack">
  {/* Descripción */}
@@ -425,7 +425,7 @@ export default function GestionDetailPage() {
  <Clock className="h-4 w-4" />
  Plazos
  </h3>
- <div className="grid grid-cols-2 gap-2 text-[11px]">
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
  <div>
  <span className="app-data-label">Emitir</span>
  <p className="font-medium">{template?.days_to_issue ?? "—"} días</p>

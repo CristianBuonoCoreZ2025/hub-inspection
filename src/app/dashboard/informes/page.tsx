@@ -315,7 +315,7 @@ export default function InformesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-1 border-b border-border overflow-x-auto flex-nowrap">
         {tabs.map((t) => {
           const Icon = t.icon;
           return (

@@ -103,7 +103,7 @@ export default function SettingsPage() {
       </header>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-border mb-4">
+      <div className="flex gap-1 border-b border-border mb-4 overflow-x-auto flex-nowrap">
         {visibleTabs.map((t) => {
           const Icon = t.icon;
           return (

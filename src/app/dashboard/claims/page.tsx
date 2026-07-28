@@ -973,7 +973,7 @@ function ClaimsPageContent() {
  {/* Datos del Siniestro */}
  <div className="rounded-lg border border-border/50 p-3 space-y-2">
  <h3 className="app-section-title">Datos del Siniestro</h3>
- <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
+ <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">
  País del Siniestro <span className="text-red-500">*</span>
@@ -1089,7 +1089,7 @@ function ClaimsPageContent() {
  {/* Clasificación */}
  <div className="rounded-lg border border-border/50 p-3 space-y-2">
  <h3 className="app-section-title">Clasificación</h3>
- <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
+ <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">
  Tipo de Siniestro <span className="text-red-500">*</span>
@@ -1278,7 +1278,7 @@ function ClaimsPageContent() {
  </button>
  </div>
  )}
- <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
+ <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">RUT</Label>
  <input {...form.register("rut")} placeholder="14185994k" className="app-input" />
@@ -1315,7 +1315,7 @@ function ClaimsPageContent() {
  <input {...form.register("insuredAddress")} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
  </div>
  </div>
- <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
+ <div className="grid grid-cols-1 sm:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">País</Label>
  <FormSelect
@@ -1441,7 +1441,7 @@ function ClaimsPageContent() {
  </button>
  </div>
  )}
- <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
+ <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">RUT</Label>
  <input {...form.register("contractorRut")} readOnly={contractorLinked} placeholder="14185994k" className="app-input" />
@@ -1472,7 +1472,7 @@ function ClaimsPageContent() {
  <input {...form.register("contractorAddress")} readOnly={contractorLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
  </div>
  </div>
- <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
+ <div className="grid grid-cols-1 sm:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">País</Label>
  <FormSelect
@@ -1601,7 +1601,7 @@ function ClaimsPageContent() {
  </button>
  </div>
  )}
- <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
+ <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">RUT</Label>
  <input {...form.register("beneficiaryRut")} readOnly={beneficiaryLinked} placeholder="14185994k" className="app-input" />
@@ -1632,7 +1632,7 @@ function ClaimsPageContent() {
  <input {...form.register("beneficiaryAddress")} readOnly={beneficiaryLinked} placeholder="Av. Ricardo Lyon 1351" className="app-input" />
  </div>
  </div>
- <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
+ <div className="grid grid-cols-1 sm:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">País</Label>
  <FormSelect
@@ -1726,7 +1726,7 @@ function ClaimsPageContent() {
  {/* Incidente */}
  <div className="rounded-lg border border-border/50 p-3 space-y-2">
  <h3 className="app-section-title">Incidente</h3>
- <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
+ <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">Causal del Siniestro</Label>
  <FormSelect
@@ -1836,7 +1836,7 @@ function ClaimsPageContent() {
  {claimAddressLinked ? "Desligar" : "Copiar"}
  </Button>
  </div>
- <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
+ <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
  <div className="flex flex-col gap-1 col-span-full">
  <Label className="app-body text-muted-foreground">
  Dirección <span className="text-red-500">*</span>

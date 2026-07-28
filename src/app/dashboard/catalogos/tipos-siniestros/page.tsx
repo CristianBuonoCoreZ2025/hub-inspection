@@ -203,7 +203,7 @@ export default function ClaimTypePage() {
  </div>
  <div className="modal-field">
  <Label className="app-field-label">Ícono</Label>
- <div className="grid grid-cols-8 gap-2">
+ <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
  {ICON_OPTIONS.map((iconName) => {
  const IconComponent = ICON_MAP[iconName];
  return (

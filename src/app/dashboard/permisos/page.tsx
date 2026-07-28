@@ -226,7 +226,7 @@ export default function PermisosPage() {
                     {userType}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
                     onClick={() => {
@@ -267,7 +267,7 @@ export default function PermisosPage() {
               </div>
 
               {/* Tabla de permisos */}
-              <div className="overflow-x-auto">
+              <div className="app-data-table-wrap">
                 <table className="app-data-table">
                   <thead>
                     <tr className="border-b border-border">
