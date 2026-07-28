@@ -642,17 +642,26 @@ export default function CargaSiniestrosPage() {
       }
 
       // Recargar staging para mostrar estado final
-      const finalRows = await getStagingRows(tenantCompanyId);
-      setStagingRows(finalRows);
+      // (los importados se borran, los con error quedan para revisión)
+      if (error === 0) {
+        // Todo OK → borrar todo el staging
+        await cleanStaging(tenantCompanyId);
+        setStagingRows([]);
+      } else {
+        // Hay errores → borrar solo los importados, dejar los con error
+        const finalRows = await getStagingRows(tenantCompanyId);
+        const remaining = finalRows.filter((r) => r.status !== "imported");
+        setStagingRows(remaining);
+      }
 
       setIsConfirming(false);
       return { success, error, total: validStaging.length };
     },
     onSuccess: (result) => {
       if (result.error === 0) {
-        toast.success(`Carga confirmada: ${result.success} siniestros importados`);
+        toast.success(`${result.success} registros importados`);
       } else {
-        toast.warning(`Carga parcial: ${result.success} importados, ${result.error} errores`);
+        toast.warning(`${result.success} importados, ${result.error} errores`);
       }
       setStep("done");
     },
@@ -739,7 +748,7 @@ export default function CargaSiniestrosPage() {
         </div>
         {step !== "upload" && (
           <Button variant="ghost" size="sm" onClick={handleReset}>
-            <X className="mr-1.5 h-3.5 w-3.5" /> Empezar de nuevo
+            <X className="mr-1.5 h-3.5 w-3.5" /> Reiniciar
           </Button>
         )}
       </div>
@@ -801,9 +810,9 @@ export default function CargaSiniestrosPage() {
                 className="pg-btn-platinum-icon"
               >
                 {isUploading ? (
-                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando a staging...</>
+                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando</>
                 ) : (
-                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar {validCount} filas a staging</>
+                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar</>
                 )}
               </Button>
             )}
@@ -1128,15 +1137,15 @@ export default function CargaSiniestrosPage() {
             <div className="flex items-center gap-4 text-sm">
               <span className="flex items-center gap-1.5">
                 <CheckCircle className="h-4 w-4 text-emerald-500" />
-                {stagingRows.filter((r) => r.status === "valid").length} válidos
+                <span className="app-data-label">{stagingRows.filter((r) => r.status === "valid").length} registros</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <AlertCircle className="h-4 w-4 text-red-500" />
-                {stagingRows.filter((r) => r.status === "error").length} con errores
+                <span className="app-data-label">{stagingRows.filter((r) => r.status === "error").length} errores</span>
               </span>
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5" />
-                {stagingRows.filter((r) => r.status === "imported").length} importados
+                <span className="app-data-label">{stagingRows.filter((r) => r.status === "imported").length} importados</span>
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -1155,9 +1164,9 @@ export default function CargaSiniestrosPage() {
                   className="pg-btn-platinum-icon"
                 >
                   {isConfirming ? (
-                    <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Confirmando...</>
+                    <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Confirmando</>
                   ) : (
-                    <><CheckCircle className="mr-2 h-3.5 w-3.5" /> Confirmar carga ({stagingRows.filter((r) => r.status === "valid").length})</>
+                    <><CheckCircle className="mr-2 h-3.5 w-3.5" /> Confirmar</>
                   )}
                 </Button>
               )}
@@ -1266,8 +1275,10 @@ export default function CargaSiniestrosPage() {
             <div>
               <h2 className="app-section-title">Carga completada</h2>
               <p className="text-sm text-muted-foreground">
-                {confirmProgress.success} siniestro(s) importado(s) correctamente
-                {confirmProgress.error > 0 && `, ${confirmProgress.error} con errores`}
+                <span className="app-data-label">{confirmProgress.success} registros importados</span>
+                {confirmProgress.error > 0 && (
+                  <span className="app-data-label text-red-500"> · {confirmProgress.error} errores</span>
+                )}
               </p>
             </div>
           </div>
@@ -1324,7 +1335,7 @@ export default function CargaSiniestrosPage() {
 
           <div className="flex justify-end">
             <Button onClick={handleReset} className="pg-btn-platinum-icon">
-              <Upload className="mr-2 h-3.5 w-3.5" /> Nueva carga
+              <Upload className="mr-2 h-3.5 w-3.5" /> Cargar
             </Button>
           </div>
         </div>

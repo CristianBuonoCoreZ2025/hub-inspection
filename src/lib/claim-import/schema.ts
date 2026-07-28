@@ -81,12 +81,7 @@ export const CLAIM_FIELDS: ClaimField[] = [
     synonyms: ["empresa", "compañía de seguros", "compania seguros", "compañia seguros", "cia seguros", "compañía", "compañia", "insurance company", "insurance_company", "cia", "aseguradora", "company", "compania de seguros", "cia de seguros"],
   },
   // ── Opcionales ──
-  {
-    key: "liquidationNumber",
-    label: "N° Liquidación",
-    required: false,
-    synonyms: ["n liquidacion", "n° liquidacion", "numero liquidacion", "nro liquidacion", "liquidacion", "liquidación", "n° liquidación", "liquidation number", "liquidation_number", "liquidationnumber"],
-  },
+  // Nota: liquidation_number NO se pide — es correlativo automático de claims
   {
     key: "claimCause",
     label: "Causal Siniestro",
