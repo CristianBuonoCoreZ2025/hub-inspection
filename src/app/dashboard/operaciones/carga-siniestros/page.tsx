@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createClaimMinimal } from "@/services/claims";
-import { getInsuranceCompanies } from "@/services/catalogs";
+import { getInsuranceCompanies, getClaimTypes } from "@/services/catalogs";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2, ArrowRight, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
@@ -42,13 +42,18 @@ export default function CargaSiniestrosPage() {
   const [rawRows, setRawRows] = useState<ExcelRow[]>([]);
   const [mapping, setMapping] = useState<Record<string, ColumnMapping>>({});
   const [mapperOpen, setMapperOpen] = useState(true);
-  // Mapeo manual de valores: valorExactoDelExcel → UUID de aseguradora
+  // Mapeo manual de valores: "fieldKey::excelValue" → UUID del catálogo
   const [valueMappings, setValueMappings] = useState<Record<string, string>>({});
 
-  // ── Cargar aseguradoras para resolver nombre → UUID ──
+  // ── Cargar catálogos de referencia para resolver texto → UUID ──
   const { data: insuranceCompanies } = useQuery({
     queryKey: ["insurance-companies"],
     queryFn: getInsuranceCompanies,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: claimTypes } = useQuery({
+    queryKey: ["claim-types"],
+    queryFn: getClaimTypes,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -63,50 +68,94 @@ export default function CargaSiniestrosPage() {
       .trim();
   };
 
-  // Mapa nombre aseguradora (normalizado) → UUID
+  // Mapas nombre (normalizado) → UUID
   const insuranceCompanyMap = useMemo(() => {
     const map = new Map<string, string>();
-    for (const c of insuranceCompanies ?? []) {
-      map.set(normalizeName(c.name), c.id);
-    }
+    for (const c of insuranceCompanies ?? []) map.set(normalizeName(c.name), c.id);
     return map;
   }, [insuranceCompanies]);
+
+  const claimTypeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of claimTypes ?? []) map.set(normalizeName(c.name), c.id);
+    return map;
+  }, [claimTypes]);
 
   // Tenant (company_id) del usuario logueado — NO se pide en el Excel
   const tenantCompanyId = profile?.company_id || null;
 
-  // ── Resolver nombre de aseguradora → UUID ──
-  // 1) Si es UUID, directo
-  // 2) Si está en valueMappings (mapeo manual del usuario), usarlo
-  // 3) Match exacto normalizado contra insurance_companies
-  // 4) Si no se encuentra → null (el usuario verá el panel de mapeo de valores)
-  const resolveInsuranceCompanyId = useCallback((value: string): string | null => {
-    if (!value) return null;
-    const trimmed = value.trim();
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
-      return trimmed;
-    }
-    // Mapeo manual del usuario (clave = valor exacto del Excel)
-    if (valueMappings[trimmed]) return valueMappings[trimmed];
-    // Match exacto normalizado
-    return insuranceCompanyMap.get(normalizeName(trimmed)) || null;
-  }, [valueMappings, insuranceCompanyMap]);
+  // ── Resolver texto → UUID para campos de referencia ──
+  // Orden: 1) UUID directo, 2) mapeo manual del usuario, 3) match exacto normalizado
+  const resolveRefId = useCallback(
+    (fieldKey: string, value: string, catalogMap: Map<string, string>): string | null => {
+      if (!value) return null;
+      const trimmed = value.trim();
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+        return trimmed;
+      }
+      const manualKey = `${fieldKey}::${trimmed}`;
+      if (valueMappings[manualKey]) return valueMappings[manualKey];
+      return catalogMap.get(normalizeName(trimmed)) || null;
+    },
+    [valueMappings]
+  );
 
-  // ── Valores distinct del Excel para la columna aseguradora ──
-  const distinctInsuranceValues = useMemo(() => {
-    const values = new Set<string>();
-    for (const row of rawRows) {
-      const data = applyMappingToRow(row, mapping);
-      const v = String(data.insuranceCompany || "").trim();
-      if (v) values.add(v);
-    }
-    return [...values].sort();
-  }, [rawRows, mapping]);
+  const resolveInsuranceCompanyId = useCallback(
+    (value: string) => resolveRefId("insuranceCompany", value, insuranceCompanyMap),
+    [resolveRefId, insuranceCompanyMap]
+  );
+  const resolveClaimTypeId = useCallback(
+    (value: string) => resolveRefId("claimType", value, claimTypeMap),
+    [resolveRefId, claimTypeMap]
+  );
 
-  // ── Valores sin resolver (que necesitan mapeo manual) ──
-  const unmappedInsuranceValues = useMemo(() => {
-    return distinctInsuranceValues.filter((v) => !resolveInsuranceCompanyId(v));
-  }, [distinctInsuranceValues, resolveInsuranceCompanyId]);
+  // ── Configuración de campos de referencia (para UI y validación) ──
+  const refFields = useMemo(() => [
+    {
+      fieldKey: "insuranceCompany",
+      label: "Aseguradora",
+      dataKey: "insuranceCompany" as const,
+      resolver: resolveInsuranceCompanyId,
+      options: insuranceCompanies ?? [],
+    },
+    {
+      fieldKey: "claimType",
+      label: "Tipo de Siniestro",
+      dataKey: "claimType" as const,
+      resolver: resolveClaimTypeId,
+      options: claimTypes ?? [],
+    },
+  ], [resolveInsuranceCompanyId, resolveClaimTypeId, insuranceCompanies, claimTypes]);
+
+  // ── Valores distinct del Excel por campo de referencia ──
+  const distinctRefValues = useMemo(() => {
+    const result: Record<string, string[]> = {};
+    for (const ref of refFields) {
+      const values = new Set<string>();
+      for (const row of rawRows) {
+        const data = applyMappingToRow(row, mapping);
+        const v = String(data[ref.dataKey] || "").trim();
+        if (v) values.add(v);
+      }
+      result[ref.fieldKey] = [...values].sort();
+    }
+    return result;
+  }, [rawRows, mapping, refFields]);
+
+  // ── Valores sin resolver por campo (que necesitan mapeo manual) ──
+  const unmappedRefValues = useMemo(() => {
+    const result: Record<string, string[]> = {};
+    for (const ref of refFields) {
+      result[ref.fieldKey] = (distinctRefValues[ref.fieldKey] || []).filter(
+        (v) => !ref.resolver(v)
+      );
+    }
+    return result;
+  }, [distinctRefValues, refFields]);
+
+  const totalUnmappedCount = useMemo(() => {
+    return Object.values(unmappedRefValues).reduce((sum, arr) => sum + arr.length, 0);
+  }, [unmappedRefValues]);
 
   // ── Parsed rows: estado derivado de mapping + rawRows + valueMappings ──
   const parsedRows = useMemo<ParsedRow[]>(() => {
@@ -115,23 +164,25 @@ export default function CargaSiniestrosPage() {
       const data = applyMappingToRow(raw, mapping);
       const { valid, errors } = validateRowWithMapping(data, mapping);
 
-      // Validación: resolver nombre de aseguradora → UUID
-      const insuranceValue = String(data.insuranceCompany || "").trim();
-      if (insuranceValue && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(insuranceValue)) {
-        const resolved = resolveInsuranceCompanyId(insuranceValue);
-        if (!resolved) {
-          errors.push({
-            fieldKey: "insuranceCompany",
-            fieldLabel: "Empresa / Compañía de Seguros",
-            kind: "invalid_value",
-            message: `Aseguradora "${insuranceValue}" no reconocida. Mapea este valor en el panel de mapeo de valores.`,
-          });
+      // Validación: resolver cada campo de referencia → UUID
+      for (const ref of refFields) {
+        const value = String(data[ref.dataKey] || "").trim();
+        if (value && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+          const resolved = ref.resolver(value);
+          if (!resolved) {
+            errors.push({
+              fieldKey: ref.fieldKey,
+              fieldLabel: ref.label,
+              kind: "invalid_value",
+              message: `${ref.label} "${value}" no reconocida. Mapea este valor en el panel de mapeo de valores.`,
+            });
+          }
         }
       }
 
       return { rowNum: idx + 2, data, valid: valid && errors.length === 0, errors };
     });
-  }, [rawRows, mapping, resolveInsuranceCompanyId]);
+  }, [rawRows, mapping, refFields]);
 
   // ── Cargar y parsear el Excel ──
   const parseFile = useCallback((f: File) => {
@@ -226,6 +277,10 @@ export default function CargaSiniestrosPage() {
           if (!insuranceCompanyId) {
             throw new Error(`Aseguradora "${d.insuranceCompany}" no encontrada en el catálogo de insurance_companies.`);
           }
+          const claimTypeId = d.claimType ? resolveClaimTypeId(String(d.claimType)) : null;
+          if (d.claimType && !claimTypeId) {
+            throw new Error(`Tipo de siniestro "${d.claimType}" no encontrado en el catálogo de claim_types.`);
+          }
 
           await createClaimMinimal(
             {
@@ -237,7 +292,7 @@ export default function CargaSiniestrosPage() {
               assignmentDate: d.assignmentDate ? String(d.assignmentDate) : null,
               company_id: tenantCompanyId,
               insuranceCompanyId,
-              claimTypeId: d.claimType ? String(d.claimType) : null,
+              claimTypeId,
             },
             {
               insuredName: String(d.insuredName || ""),
@@ -297,13 +352,19 @@ export default function CargaSiniestrosPage() {
     }
   };
 
-  // ── Mapear un valor del Excel a una aseguradora del sistema ──
-  const handleValueMappingChange = (excelValue: string, insuranceCompanyId: string | null) => {
-    const id = insuranceCompanyId || "__none__";
-    setValueMappings((prev) => ({
-      ...prev,
-      [excelValue]: id === "__none__" ? "" : id,
-    }));
+  // ── Mapear un valor del Excel a un UUID del catálogo ──
+  const handleValueMappingChange = (fieldKey: string, excelValue: string, uuid: string | null) => {
+    const id = uuid || "__none__";
+    const key = `${fieldKey}::${excelValue}`;
+    setValueMappings((prev) => {
+      const next = { ...prev };
+      if (id === "__none__") {
+        delete next[key];
+      } else {
+        next[key] = id;
+      }
+      return next;
+    });
   };
 
   const handleReset = () => {
@@ -408,7 +469,7 @@ export default function CargaSiniestrosPage() {
             {canCreate("operaciones") && (
               <Button
                 onClick={() => loadMutation.mutate(parsedRows)}
-                disabled={isUploading || validCount === 0 || missingRequiredCount > 0}
+                disabled={isUploading || validCount === 0 || missingRequiredCount > 0 || totalUnmappedCount > 0}
                 className="pg-btn-platinum-icon"
               >
                 {isUploading ? (
@@ -593,66 +654,77 @@ export default function CargaSiniestrosPage() {
             )}
           </div>
 
-          {/* ── Panel de mapeo de valores: aseguradoras no reconocidas ── */}
-          {step === "review" && unmappedInsuranceValues.length > 0 && (
+          {/* ── Panel de mapeo de valores: catálogos no reconocidos ── */}
+          {step === "review" && totalUnmappedCount > 0 && (
             <div className="bulk-value-mapper-panel">
               <div className="bulk-value-mapper-header">
                 <SlidersHorizontal className="h-5 w-5 text-amber-500" />
                 <div>
-                  <h2 className="bulk-mapper-title">Mapeo de aseguradoras</h2>
+                  <h2 className="bulk-mapper-title">Mapeo de valores</h2>
                   <p className="bulk-mapper-subtitle">
-                    Estos valores de la columna &ldquo;Empresa&rdquo; del Excel no coinciden exactamente
-                    con ninguna aseguradora del sistema. Mapea cada valor a la aseguradora
-                    correcta para que las filas se validen.
+                    Estos valores del Excel no coinciden exactamente con los catálogos del sistema.
+                    Mapea cada valor al registro correcto para que las filas se validen.
                   </p>
                 </div>
                 <span className="bulk-mapper-status-warn">
                   <AlertCircle className="h-4 w-4" />
-                  {unmappedInsuranceValues.length} sin mapear
+                  {totalUnmappedCount} sin mapear
                 </span>
               </div>
 
-              <div className="bulk-value-mapper-table-wrap">
-                <table className="bulk-mapper-table">
-                  <thead>
-                    <tr>
-                      <th className="bulk-mapper-th-field">Valor en tu Excel</th>
-                      <th className="bulk-mapper-th-arrow"></th>
-                      <th className="bulk-mapper-th-column">Aseguradora del sistema</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {unmappedInsuranceValues.map((excelValue) => (
-                      <tr key={excelValue}>
-                        <td className="bulk-mapper-td-field">
-                          <span className="bulk-mapper-field-label">{excelValue}</span>
-                        </td>
-                        <td className="bulk-mapper-td-arrow">
-                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                        </td>
-                        <td className="bulk-mapper-td-column">
-                          <Select
-                            value={valueMappings[excelValue] || "__none__"}
-                            onValueChange={(val) => handleValueMappingChange(excelValue, val)}
-                          >
-                            <SelectTrigger className="bulk-mapper-select">
-                              <SelectValue placeholder="— Selecciona una aseguradora —" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">— Sin mapear —</SelectItem>
-                              {insuranceCompanies?.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {refFields.map((ref) => {
+                const unmapped = unmappedRefValues[ref.fieldKey] || [];
+                if (unmapped.length === 0) return null;
+                return (
+                  <div key={ref.fieldKey} className="bulk-value-mapper-section">
+                    <p className="bulk-value-mapper-section-title">{ref.label} ({unmapped.length})</p>
+                    <div className="bulk-value-mapper-table-wrap">
+                      <table className="bulk-mapper-table">
+                        <thead>
+                          <tr>
+                            <th className="bulk-mapper-th-field">Valor en tu Excel</th>
+                            <th className="bulk-mapper-th-arrow"></th>
+                            <th className="bulk-mapper-th-column">{ref.label} del sistema</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {unmapped.map((excelValue) => {
+                            const mapKey = `${ref.fieldKey}::${excelValue}`;
+                            return (
+                              <tr key={excelValue}>
+                                <td className="bulk-mapper-td-field">
+                                  <span className="bulk-mapper-field-label">{excelValue}</span>
+                                </td>
+                                <td className="bulk-mapper-td-arrow">
+                                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                                </td>
+                                <td className="bulk-mapper-td-column">
+                                  <Select
+                                    value={valueMappings[mapKey] || "__none__"}
+                                    onValueChange={(val) => handleValueMappingChange(ref.fieldKey, excelValue, val)}
+                                  >
+                                    <SelectTrigger className="bulk-mapper-select">
+                                      <SelectValue placeholder={`— Selecciona ${ref.label.toLowerCase()} —`} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__none__">— Sin mapear —</SelectItem>
+                                      {ref.options.map((c) => (
+                                        <SelectItem key={c.id} value={c.id}>
+                                          {c.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 

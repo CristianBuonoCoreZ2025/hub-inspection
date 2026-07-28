@@ -841,6 +841,20 @@
     border: 1px solid color-mix(in srgb, var(--border) 50%, transparent) !important;
   }
 
+  .bulk-value-mapper-section {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .bulk-value-mapper-section-title {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+    margin: 0 !important;
+    padding-left: 2px !important;
+  }
+
   /* Resumen de errores */
   .bulk-error-summary {
     padding: 12px 14px !important;
