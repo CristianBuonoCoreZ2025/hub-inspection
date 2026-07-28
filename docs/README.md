@@ -14,6 +14,7 @@
 | **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Arquitectura del proyecto, estructura de carpetas, módulos | Al entender el proyecto |
 | **[MIGRATIONS.md](./MIGRATIONS.md)** | Historial de migraciones de base de datos (000-158) | Al tocar la BD |
 | **[CHANGELOG.md](./CHANGELOG.md)** | Historial de cambios y features implementadas | Al revisar qué se ha hecho |
+| **[CARGA_SINIESTROS.md](./CARGA_SINIESTROS.md)** | Flujo de carga masiva de siniestros desde Excel (staging → claims) | Al tocar carga-siniestros |
 
 ---
 
