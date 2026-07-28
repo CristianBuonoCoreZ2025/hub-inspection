@@ -348,6 +348,7 @@ export async function createClaimMinimal(
     internalNumber?: string | null;
     isSpecialClaim?: boolean | null;
     brokerExecutive?: string | null;
+    companyReportNumber?: string | null;
   },
   insured: {
     insuredName: string;
@@ -446,6 +447,7 @@ export async function createClaimMinimal(
     internal_number: input.internalNumber || null,
     is_special_claim: input.isSpecialClaim ?? null,
     broker_executive: input.brokerExecutive || null,
+    company_report_number: input.companyReportNumber || null,
   }, CLAIM_SELECT);
 
   // No se geocodifica automáticamente — las coordenadas deben venir del

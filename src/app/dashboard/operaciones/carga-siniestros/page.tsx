@@ -6,6 +6,7 @@ import { createClaimMinimal } from "@/services/claims";
 import {
   getInsuranceCompanies, getClaimTypes, getClaimCauses, getBusinessLines,
   getCurrencies, getHousingDestinations, getDamageClassifications, getLookupCatalog,
+  getInsuranceProducts, getEvents,
 } from "@/services/catalogs";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -90,6 +91,16 @@ export default function CargaSiniestrosPage() {
     queryFn: () => getLookupCatalog("claim_status"),
     staleTime: 5 * 60 * 1000,
   });
+  const { data: insuranceProducts } = useQuery({
+    queryKey: ["insurance-products"],
+    queryFn: getInsuranceProducts,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: events } = useQuery({
+    queryKey: ["events"],
+    queryFn: getEvents,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Normalización simple: lowercase + sin acentos + sin espacios extra
   const normalizeName = (s: string): string => {
@@ -117,6 +128,8 @@ export default function CargaSiniestrosPage() {
   const housingDestinationMap = useMemo(() => buildMap(housingDestinations), [buildMap, housingDestinations]);
   const damageClassificationMap = useMemo(() => buildMap(damageClassifications), [buildMap, damageClassifications]);
   const claimStatusMap = useMemo(() => buildMap(claimStatuses), [buildMap, claimStatuses]);
+  const insuranceProductMap = useMemo(() => buildMap(insuranceProducts), [buildMap, insuranceProducts]);
+  const eventMap = useMemo(() => buildMap(events), [buildMap, events]);
 
   // Tenant (company_id) del usuario logueado — NO se pide en el Excel
   const tenantCompanyId = profile?.company_id || null;
@@ -169,6 +182,14 @@ export default function CargaSiniestrosPage() {
     (value: string) => resolveRefId("status", value, claimStatusMap),
     [resolveRefId, claimStatusMap]
   );
+  const resolveInsuranceProductId = useCallback(
+    (value: string) => resolveRefId("insuranceProduct", value, insuranceProductMap),
+    [resolveRefId, insuranceProductMap]
+  );
+  const resolveEventId = useCallback(
+    (value: string) => resolveRefId("event", value, eventMap),
+    [resolveRefId, eventMap]
+  );
 
   // ── Configuración de campos de referencia (para UI y validación) ──
   const refFields = useMemo(() => [
@@ -180,11 +201,14 @@ export default function CargaSiniestrosPage() {
     { fieldKey: "currency", label: "Moneda Póliza", dataKey: "currency" as const, resolver: resolveCurrencyId, options: currencies ?? [] },
     { fieldKey: "destination", label: "Destino", dataKey: "destination" as const, resolver: resolveDestinationHousingId, options: housingDestinations ?? [] },
     { fieldKey: "damageClassification", label: "Clasif. Daño", dataKey: "damageClassification" as const, resolver: resolveDamageClassificationId, options: damageClassifications ?? [] },
+    { fieldKey: "insuranceProduct", label: "Ramo/Producto", dataKey: "insuranceProduct" as const, resolver: resolveInsuranceProductId, options: insuranceProducts ?? [] },
+    { fieldKey: "event", label: "Evento", dataKey: "event" as const, resolver: resolveEventId, options: events ?? [] },
   ], [
     resolveInsuranceCompanyId, resolveClaimTypeId, resolveClaimCauseId, resolveStatusId,
     resolveBusinessLineId, resolveCurrencyId, resolveDestinationHousingId, resolveDamageClassificationId,
+    resolveInsuranceProductId, resolveEventId,
     insuranceCompanies, claimTypes, claimCauses, claimStatuses, businessLines, currencies,
-    housingDestinations, damageClassifications,
+    housingDestinations, damageClassifications, insuranceProducts, events,
   ]);
 
   // ── Valores distinct del Excel por campo de referencia ──
@@ -371,6 +395,8 @@ export default function CargaSiniestrosPage() {
           const currencyId = str(d.currency) ? resolveCurrencyId(str(d.currency)) : null;
           const destinationHousingId = str(d.destination) ? resolveDestinationHousingId(str(d.destination)) : null;
           const damageClassificationId = str(d.damageClassification) ? resolveDamageClassificationId(str(d.damageClassification)) : null;
+          const insuranceProductId = str(d.insuranceProduct) ? resolveInsuranceProductId(str(d.insuranceProduct)) : null;
+          const eventId = str(d.event) ? resolveEventId(str(d.event)) : null;
 
           await createClaimMinimal(
             {
@@ -389,16 +415,18 @@ export default function CargaSiniestrosPage() {
               currencyId,
               destinationHousingId,
               damageClassificationId,
+              insuranceProductId,
+              eventId,
               ownerSameAsInsured: bool(d.ownerSameAsInsured),
-              // Campos nuevos de póliza
+              // Campos de póliza
               policyItem: str(d.policyItem) || null,
               policyStartDate: date(d.policyStartDate),
               policyEndDate: date(d.policyEndDate),
               policyAmount: num(d.policyAmount),
               policyPremium: num(d.policyPremium),
-              internalNumber: str(d.internalNumber) || null,
               isSpecialClaim: bool(d.isSpecialClaim),
               brokerExecutive: str(d.brokerExecutive) || null,
+              companyReportNumber: str(d.companyReportNumber) || null,
             },
             {
               insuredName: str(d.insuredName),
@@ -414,11 +442,13 @@ export default function CargaSiniestrosPage() {
               insuredCommune: str(d.commune) || null,
             },
             {
-              claimAddress: str(d.address),
-              claimCountry: str(d.country) || null,
-              claimRegion: str(d.region) || null,
-              claimCity: str(d.city),
-              claimCommune: str(d.commune) || null,
+              // Dirección del Siniestro (separada de la del contratante)
+              // Si no viene claimAddress, usar address del contratante como fallback
+              claimAddress: str(d.claimAddress) || str(d.address),
+              claimCountry: str(d.claimCountry) || str(d.country) || null,
+              claimRegion: str(d.claimRegion) || str(d.region) || null,
+              claimCity: str(d.claimCity) || str(d.city),
+              claimCommune: str(d.claimCommune) || str(d.commune) || null,
             },
             null, // contractor
             str(d.beneficiaryName) ? {
