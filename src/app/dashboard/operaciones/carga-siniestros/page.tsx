@@ -49,7 +49,7 @@ interface ExcelRow {
   [key: string]: string | number | null;
 }
 
-type Step = "upload" | "review" | "staging" | "done";
+type Step = "upload" | "preview" | "fixed" | "mapping" | "homologation" | "staging" | "done";
 
 export default function CargaSiniestrosPage() {
   const { canCreate } = usePermissions();
@@ -515,44 +515,23 @@ export default function CargaSiniestrosPage() {
         }
 
         const headers = Object.keys(jsonData[0]);
-        // Autodetectar mapeo usando primero los mapeos aprendidos de la empresa
-        const autoMapping = autoDetectMapping(
-          headers,
-          (learnedFieldMappings ?? []).map((m) => ({
-            excel_header: m.excel_header,
-            field_key: m.field_key,
-            times_used: m.times_used,
-          }))
-        );
 
         setExcelHeaders(headers);
         setRawRows(jsonData);
-        setMapping(autoMapping);
+        // NO autodetectar todavía — el usuario primero ve el preview,
+        // luego agrega fixed values, y recién en el paso "mapping" se autodetecta
+        setMapping({});
 
-        // Verificar si hay campos requeridos sin mapear
-        const missingRequired = REQUIRED_FIELDS.filter(
-          (field) => !autoMapping[field.key]?.fieldKey
-        );
-
-        // Siempre ir a review — mapeo + preview juntos
-        setStep("review");
-        // Abrir el mapper si faltan requeridos, colapsarlo si todo está OK
-        setMapperOpen(missingRequired.length > 0);
-
-        if (missingRequired.length > 0) {
-          toast.info(
-            `Detectamos ${missingRequired.length} campo(s) requerido(s) sin mapear. Ajusta el mapeo de columnas arriba.`
-          );
-        } else {
-          toast.success(`${jsonData.length} filas parseadas`);
-        }
+        // Paso 2: Preview de cabeceras
+        setStep("preview");
+        toast.success(`Excel leído: ${headers.length} columnas, ${jsonData.length} filas`);
       } catch (err) {
         toast.error("Error al leer el archivo Excel");
         console.error(err);
       }
     };
     reader.readAsArrayBuffer(f);
-  }, [learnedFieldMappings]);
+  }, []);
 
   // ── Cambiar el mapeo: desde una columna del Excel a un campo del sistema ──
   // excelHeader = columna del Excel que se está mapeando
@@ -1105,6 +1084,21 @@ export default function CargaSiniestrosPage() {
     setMapperOpen(true);
   };
 
+  // Paso 3 → 4: al entrar a "mapping", autodetectar con aprendizaje
+  const goToMapping = () => {
+    const autoMapping = autoDetectMapping(
+      excelHeaders,
+      (learnedFieldMappings ?? []).map((m) => ({
+        excel_header: m.excel_header,
+        field_key: m.field_key,
+        times_used: m.times_used,
+      }))
+    );
+    setMapping(autoMapping);
+    setStep("mapping");
+    setMapperOpen(true);
+  };
+
   const validCount = parsedRows.filter((r) => r.valid).length;
   const invalidCount = parsedRows.filter((r) => !r.valid).length;
 
@@ -1188,60 +1182,178 @@ export default function CargaSiniestrosPage() {
         </div>
       )}
 
-      {/* ── Step Review: mapeo + preview juntos en la misma pantalla ── */}
-      {step === "review" && (
+      {/* ══════════ PASO 2: PREVIEW de cabeceras ══════════ */}
+      {step === "preview" && (
         <div className="space-y-3">
-          {/* Barra de estado + acciones principales */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 text-sm">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                {validCount} válidos
-              </span>
-              <span className="flex items-center gap-1.5">
-                <AlertCircle className="h-4 w-4 text-red-500" />
-                {invalidCount} con errores
-              </span>
-              {missingRequiredCount > 0 && (
-                <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  {missingRequiredCount} requerido(s) sin mapear
-                </span>
+          <div className="rounded-lg border bg-card p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              <h2 className="text-base font-semibold">Excel leído</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              {file?.name} · {excelHeaders.length} columnas · {rawRows.length} filas
+            </p>
+            <p className="bulk-mapper-detected-label mb-2">Cabeceras detectadas (con primer valor):</p>
+            <div className="bulk-mapper-detected-chips">
+              {excelHeaders.map((h) => {
+                const sample = headerSamples.get(h);
+                return (
+                  <span
+                    key={h}
+                    className="bulk-detected-chip"
+                    title={sample ? `Ej: "${sample}"` : "(columna vacía)"}
+                  >
+                    {h}
+                    {sample && <em className="bulk-detected-chip-sample">· {sample}</em>}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setStep("fixed")} className="pg-btn-platinum-icon">
+              Continuar <ArrowRight className="ml-2 h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ PASO 3: VALORES FIJOS ══════════ */}
+      {step === "fixed" && (
+        <div className="space-y-3">
+          <div className="rounded-lg border bg-card p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <SlidersHorizontal className="h-5 w-5 text-primary" />
+              <h2 className="text-base font-semibold">Valores fijos</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Setea defaults para campos que NO vienen en el Excel (ej: auditor, despachador, cia).
+              Se guardan para futuras importaciones.
+            </p>
+
+            <div className="bulk-fixed-values-list">
+              {Object.entries(effectiveFixedValues).length > 0 && (
+                <div className="bulk-fixed-values-existing">
+                  {Object.entries(effectiveFixedValues).map(([fk, fv]) => {
+                    const f = CLAIM_FIELDS.find((cf) => cf.key === fk);
+                    const refField = refFields.find((rf) => rf.fieldKey === fk);
+                    const displayValue = refField && fv.catalogUuid
+                      ? (refField.options.find((o) => o.id === fv.catalogUuid)?.name || fv.value)
+                      : fv.value;
+                    return (
+                      <div key={fk} className="bulk-fixed-value-item">
+                        <span className="bulk-fixed-value-field">{f?.label || fk}</span>
+                        <span className="bulk-fixed-value-arrow">=</span>
+                        <span className="bulk-fixed-value-val">{displayValue}</span>
+                        <button
+                          className="bulk-fixed-value-remove"
+                          title="Eliminar valor fijo"
+                          onClick={() => {
+                            setFixedValues((prev) => {
+                              const next = { ...prev };
+                              delete next[fk];
+                              return next;
+                            });
+                            if (tenantCompanyId) {
+                              deleteImportFixedValue(tenantCompanyId, fk).catch(console.error);
+                              queryClient.invalidateQueries({ queryKey: ["import-fixed-values", tenantCompanyId] });
+                            }
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {!pendingFixedField && (
+                <div className="bulk-fixed-values-add">
+                  <Select
+                    value=""
+                    onValueChange={(fk) => {
+                      if (!fk || fk === "__none__") return;
+                      const refField = refFields.find((rf) => rf.fieldKey === fk);
+                      if (refField) {
+                        setPendingFixedField(fk);
+                      } else {
+                        const val = window.prompt(`Valor fijo para: ${CLAIM_FIELDS.find(f => f.key === fk)?.label || fk}`);
+                        if (val !== null && val.trim()) {
+                          setFixedValues((prev) => ({ ...prev, [fk]: { value: val.trim(), catalogUuid: null } }));
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bulk-fixed-values-select">
+                      <SelectValue placeholder="+ Agregar valor fijo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— Seleccionar campo —</SelectItem>
+                      {CLAIM_FIELDS
+                        .filter((f) => {
+                          const hasFixedValue = f.key in effectiveFixedValues;
+                          return !hasFixedValue;
+                        })
+                        .map((f) => (
+                          <SelectItem key={f.key} value={f.key}>
+                            {f.label}
+                            {f.required && " *"}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {pendingFixedField && (
+                <div className="bulk-fixed-values-add">
+                  <span className="bulk-fixed-values-pending-label">
+                    {CLAIM_FIELDS.find(f => f.key === pendingFixedField)?.label}:
+                  </span>
+                  <Select
+                    value=""
+                    onValueChange={(uuid) => {
+                      if (!uuid || uuid === "__none__") {
+                        setPendingFixedField(null);
+                        return;
+                      }
+                      const refField = refFields.find((rf) => rf.fieldKey === pendingFixedField);
+                      const opt = refField?.options.find((o) => o.id === uuid);
+                      setFixedValues((prev) => ({
+                        ...prev,
+                        [pendingFixedField]: { value: opt?.name || "", catalogUuid: uuid },
+                      }));
+                      setPendingFixedField(null);
+                    }}
+                  >
+                    <SelectTrigger className="bulk-fixed-values-select">
+                      <SelectValue placeholder="Seleccionar valor del catálogo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— Cancelar —</SelectItem>
+                      {refFields.find((rf) => rf.fieldKey === pendingFixedField)?.options.map((o) => (
+                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
             </div>
-            {canCreate("operaciones") && (
-              <Button
-                onClick={() => loadMutation.mutate(parsedRows)}
-                disabled={isUploading || validCount === 0 || missingRequiredCount > 0 || totalUnmappedCount > 0}
-                className="pg-btn-platinum-icon"
-              >
-                {isUploading ? (
-                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando</>
-                ) : (
-                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar</>
-                )}
-              </Button>
-            )}
           </div>
+          <div className="flex justify-between">
+            <Button variant="ghost" onClick={() => setStep("preview")}>
+              <ArrowRight className="mr-2 h-3.5 w-3.5 rotate-180" /> Volver
+            </Button>
+            <Button onClick={goToMapping} className="pg-btn-platinum-icon">
+              Continuar <ArrowRight className="ml-2 h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
 
-          {/* Progress bar */}
-          {isUploading && (
-            <div className="rounded-lg border bg-card p-3">
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span>Progreso: {progress.current} / {progress.total}</span>
-                <span className="text-emerald-600">{progress.success} ok</span>
-                <span className="text-red-600">{progress.error} err</span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* ── Panel de mapeo (colapsable) ── */}
+      {/* ══════════ PASO 4: MAPEO DE CAMPOS ══════════ */}
+      {step === "mapping" && (
+        <div className="space-y-3">
+          {/* Panel de mapeo colapsable */}
           <div className="bulk-mapper-panel">
             <button
               type="button"
@@ -1524,8 +1636,77 @@ export default function CargaSiniestrosPage() {
             )}
           </div>
 
+          {/* Navegación */}
+          <div className="flex justify-between">
+            <Button variant="ghost" onClick={() => setStep("fixed")}>
+              <ArrowRight className="mr-2 h-3.5 w-3.5 rotate-180" /> Volver
+            </Button>
+            <Button
+              onClick={() => setStep("homologation")}
+              disabled={missingRequiredCount > 0}
+              className="pg-btn-platinum-icon"
+            >
+              Continuar <ArrowRight className="ml-2 h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ PASO 5: HOMOLOGACIÓN DE VALORES + CARGA ══════════ */}
+      {step === "homologation" && (
+        <div className="space-y-3">
+          {/* Barra de estado + botón Cargar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-sm">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-emerald-500" />
+                {validCount} válidos
+              </span>
+              <span className="flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                {invalidCount} con errores
+              </span>
+              {totalUnmappedCount > 0 && (
+                <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  {totalUnmappedCount} valor(es) sin homologar
+                </span>
+              )}
+            </div>
+            {canCreate("operaciones") && (
+              <Button
+                onClick={() => loadMutation.mutate(parsedRows)}
+                disabled={isUploading || validCount === 0 || totalUnmappedCount > 0}
+                className="pg-btn-platinum-icon"
+              >
+                {isUploading ? (
+                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando</>
+                ) : (
+                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar a staging</>
+                )}
+              </Button>
+            )}
+          </div>
+
+          {/* Progress bar */}
+          {isUploading && (
+            <div className="rounded-lg border bg-card p-3">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span>Progreso: {progress.current} / {progress.total}</span>
+                <span className="text-emerald-600">{progress.success} ok</span>
+                <span className="text-red-600">{progress.error} err</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* ── Panel de mapeo de valores: catálogos no reconocidos ── */}
-          {step === "review" && totalUnmappedCount > 0 && (
+          {totalUnmappedCount > 0 && (
             <div className="bulk-value-mapper-panel">
               <div className="bulk-value-mapper-header">
                 <SlidersHorizontal className="h-5 w-5 text-amber-500" />
@@ -1660,6 +1841,13 @@ export default function CargaSiniestrosPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Navegación */}
+          <div className="flex justify-start">
+            <Button variant="ghost" onClick={() => setStep("mapping")}>
+              <ArrowRight className="mr-2 h-3.5 w-3.5 rotate-180" /> Volver a mapeo
+            </Button>
+          </div>
         </div>
       )}
 
@@ -1685,7 +1873,7 @@ export default function CargaSiniestrosPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setStep("review")}
+                onClick={() => setStep("homologation")}
                 disabled={isConfirming}
               >
                 <X className="mr-1.5 h-3.5 w-3.5" /> Volver
