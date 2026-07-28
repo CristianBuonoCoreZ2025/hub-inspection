@@ -170,7 +170,7 @@ export default function EmailTemplatesPage() {
                 <th>Asunto</th>
                 <th>Acciones vinculadas</th>
                 <th>Activa</th>
-                <th className="w-[80px]"></th>
+                <th className="w-20"></th>
               </tr>
             </thead>
             <tbody>
@@ -223,7 +223,7 @@ export default function EmailTemplatesPage() {
                           )}
                         </span>
                       </td>
-                      <td className="text-[11px] text-muted-foreground truncate max-w-[220px]">
+                      <td className="text-[11px] text-muted-foreground truncate max-w-55">
                         {t.subject || "—"}
                       </td>
                       <td>

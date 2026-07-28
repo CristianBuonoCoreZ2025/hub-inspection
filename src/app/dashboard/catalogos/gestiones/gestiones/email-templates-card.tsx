@@ -288,7 +288,7 @@ export function EmailTemplatesCard({ actionTemplateId, businessLineId }: Props) 
                 ? `Solo se muestran plantillas de la línea: ${businessLineName(businessLineId)}`
                 : "La gestión no tiene línea de negocio; se muestran todas las plantillas activas."}
             </p>
-            <div className="max-h-[320px] overflow-auto space-y-1 rounded-lg border border-border">
+            <div className="max-h-80 overflow-auto space-y-1 rounded-lg border border-border">
               {allTemplatesQuery.isLoading ? (
                 <div className="text-center py-4 text-[11px] text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
