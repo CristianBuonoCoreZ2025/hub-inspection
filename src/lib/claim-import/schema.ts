@@ -432,6 +432,130 @@ export const CLAIM_FIELDS: ClaimField[] = [
     required: false,
     synonyms: ["telefono persona contacto", "teléfono persona contacto", "fono persona contacto", "contact phone", "contact_phone", "telefono contacto", "tel contacto"],
   },
+  // ── Campos adicionales de claims (texto/boolean/numero) ──
+  {
+    key: "clientReference",
+    label: "Referencia Cliente",
+    required: false,
+    synonyms: ["referencia cliente", "client reference", "client_reference", "clientreference", "ref cliente", "referencia"],
+  },
+  {
+    key: "recoveryTypeLegal",
+    label: "Recuperación Legal",
+    required: false,
+    synonyms: ["recuperacion legal", "recuperación legal", "recovery type legal", "recovery_type_legal", "recupero legal"],
+  },
+  {
+    key: "recoveryTypeMaterial",
+    label: "Recuperación Material",
+    required: false,
+    synonyms: ["recuperacion material", "recuperación material", "recovery type material", "recovery_type_material", "recupero material"],
+  },
+  {
+    key: "recoveryComments",
+    label: "Comentarios Recuperación",
+    required: false,
+    synonyms: ["comentarios recuperacion", "comentarios recuperación", "recovery comments", "recovery_comments", "obs recuperacion"],
+  },
+  {
+    key: "claimLatitude",
+    label: "Latitud Siniestro",
+    required: false,
+    synonyms: ["latitud siniestro", "latitud", "latitude", "claim latitude", "claim_latitude", "lat"],
+  },
+  {
+    key: "claimLongitude",
+    label: "Longitud Siniestro",
+    required: false,
+    synonyms: ["longitud siniestro", "longitud", "longitude", "claim longitude", "claim_longitude", "lon", "lng"],
+  },
+  // ── Campos de referencia → catálogos geográficos del siniestro (se resuelven a UUID) ──
+  {
+    key: "claimCountryRef",
+    label: "País Siniestro (catálogo)",
+    required: false,
+    description: "Nombre del país del siniestro (se resuelve a country_id via catálogo countries)",
+    synonyms: ["pais siniestro catalogo", "país siniestro catálogo", "pais claim ref", "país claim ref", "country ref", "country_ref"],
+  },
+  {
+    key: "claimRegionRef",
+    label: "Región Siniestro (catálogo)",
+    required: false,
+    description: "Nombre de la región del siniestro (se resuelve a region_id via catálogo regions)",
+    synonyms: ["region siniestro catalogo", "región siniestro catálogo", "region claim ref", "región claim ref", "region ref", "region_ref"],
+  },
+  {
+    key: "claimCityRef",
+    label: "Ciudad Siniestro (catálogo)",
+    required: false,
+    description: "Nombre de la ciudad del siniestro (se resuelve a city_id via catálogo cities)",
+    synonyms: ["ciudad siniestro catalogo", "city claim ref", "city ref", "city_ref"],
+  },
+  {
+    key: "claimCommuneRef",
+    label: "Comuna Siniestro (catálogo)",
+    required: false,
+    description: "Nombre de la comuna del siniestro (se resuelve a commune_id via catálogo communes)",
+    synonyms: ["comuna siniestro catalogo", "commune claim ref", "commune ref", "commune_ref"],
+  },
+  // ── Campos de referencia → otros catálogos (se resuelven a UUID) ──
+  {
+    key: "broker",
+    label: "Corredor",
+    required: false,
+    description: "Nombre del corredor (se resuelve a broker_id)",
+    synonyms: ["corredor", "broker", "broker name", "nombre corredor"],
+  },
+  {
+    key: "advisor",
+    label: "Asesor",
+    required: false,
+    description: "Nombre del asesor (se resuelve a advisor_id)",
+    synonyms: ["asesor", "advisor", "advisor name", "nombre asesor"],
+  },
+  {
+    key: "propertyClassification",
+    label: "Clasificación Propiedad",
+    required: false,
+    description: "Nombre de la clasificación de propiedad (se resuelve a property_classification_id)",
+    synonyms: ["clasificacion propiedad", "clasificación propiedad", "property classification", "property_classification", "clasif propiedad", "tipo propiedad"],
+  },
+  {
+    key: "policyRef",
+    label: "Póliza (referencia)",
+    required: false,
+    description: "N° de póliza existente en el sistema (se resuelve a policy_id)",
+    synonyms: ["poliza referencia", "póliza referencia", "policy ref", "policy_ref", "policyref", "poliza existente", "póliza existente"],
+  },
+  // ── Campos de referencia → profiles (usuarios del sistema, se resuelven a UUID) ──
+  {
+    key: "assignedAdjuster",
+    label: "Liquidador Asignado",
+    required: false,
+    description: "Nombre del liquidador (se resuelve a assigned_adjuster_id)",
+    synonyms: ["liquidador asignado", "ajustador asignado", "assigned adjuster", "assigned_adjuster", "liquidador", "ajustador"],
+  },
+  {
+    key: "auditor",
+    label: "Auditor",
+    required: false,
+    description: "Nombre del auditor (se resuelve a auditor_id)",
+    synonyms: ["auditor", "auditor name", "nombre auditor"],
+  },
+  {
+    key: "dispatcher",
+    label: "Despachador",
+    required: false,
+    description: "Nombre del despachador (se resuelve a dispatcher_id)",
+    synonyms: ["despachador", "dispatcher", "dispatcher name", "nombre despachador"],
+  },
+  {
+    key: "assistant",
+    label: "Asistente",
+    required: false,
+    description: "Nombre del asistente (se resuelve a assistant_id)",
+    synonyms: ["asistente", "assistant", "assistant name", "nombre asistente"],
+  },
 ];
 
 export const REQUIRED_FIELDS = CLAIM_FIELDS.filter((f) => f.required);

@@ -350,6 +350,18 @@ export async function createClaimMinimal(
     brokerExecutive?: string | null;
     companyReportNumber?: string | null;
     createdAt?: string | null;
+    // ── Campos adicionales de claims ──
+    recoveryTypeLegal?: boolean | null;
+    recoveryTypeMaterial?: boolean | null;
+    recoveryComments?: string | null;
+    claimLatitude?: number | null;
+    claimLongitude?: number | null;
+    regionId?: string | null;
+    cityId?: string | null;
+    communeId?: string | null;
+    policyId?: string | null;
+    typeId?: string | null;
+    assignedAdjusterId?: string | null;
   },
   insured: {
     insuredName: string;
@@ -436,8 +448,8 @@ export async function createClaimMinimal(
     claim_address: claimAddress.claimAddress,
     country_id: input.countryId || null,
     company_id: input.company_id,
-    claim_latitude: claimAddress.claimLatitude ?? null,
-    claim_longitude: claimAddress.claimLongitude ?? null,
+    claim_latitude: input.claimLatitude ?? claimAddress.claimLatitude ?? null,
+    claim_longitude: input.claimLongitude ?? claimAddress.claimLongitude ?? null,
     // ── Campos nuevos para importación masiva ──
     policy_item: input.policyItem || null,
     policy_start_date: input.policyStartDate || null,
@@ -450,6 +462,16 @@ export async function createClaimMinimal(
     broker_executive: input.brokerExecutive || null,
     company_report_number: input.companyReportNumber || null,
     ...(input.createdAt ? { created_at: input.createdAt } : {}),
+    // ── Campos adicionales de claims (que no estaban ya arriba) ──
+    recovery_type_legal: input.recoveryTypeLegal ?? null,
+    recovery_type_material: input.recoveryTypeMaterial ?? null,
+    recovery_comments: input.recoveryComments || null,
+    region_id: input.regionId || null,
+    city_id: input.cityId || null,
+    commune_id: input.communeId || null,
+    policy_id: input.policyId || null,
+    type_id: input.typeId || null,
+    assigned_adjuster_id: input.assignedAdjusterId || null,
   }, CLAIM_SELECT);
 
   // No se geocodifica automáticamente — las coordenadas deben venir del

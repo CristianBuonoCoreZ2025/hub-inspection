@@ -11,8 +11,12 @@ import {
   getInsuranceCompanies, getClaimTypes, getClaimCauses, getBusinessLines,
   getCurrencies, getHousingDestinations, getDamageClassifications, getLookupCatalog,
   getInsuranceProducts, getEvents,
+  getBrokers, getAdvisors, getPropertyClassifications,
+  getCountries, getRegions, getCities, getCommunes,
 } from "@/services/catalogs";
 import { useAuth } from "@/hooks/use-auth";
+import { getUsers } from "@/services/users";
+import { getPolicies } from "@/services/policies";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2, ArrowRight, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,6 +44,7 @@ type Step = "upload" | "review" | "staging" | "done";
 export default function CargaSiniestrosPage() {
   const { canCreate } = usePermissions();
   const { profile } = useAuth();
+  const tenantCompanyId = profile?.company_id || null;
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, success: 0, error: 0 });
@@ -110,9 +115,57 @@ export default function CargaSiniestrosPage() {
     queryFn: getEvents,
     staleTime: 5 * 60 * 1000,
   });
+  // ── Catálogos adicionales para campos de referencia nuevos ──
+  const { data: brokers } = useQuery({
+    queryKey: ["brokers"],
+    queryFn: getBrokers,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: advisors } = useQuery({
+    queryKey: ["advisors"],
+    queryFn: getAdvisors,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: propertyClassifications } = useQuery({
+    queryKey: ["property-classifications"],
+    queryFn: getPropertyClassifications,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: countries } = useQuery({
+    queryKey: ["countries"],
+    queryFn: getCountries,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: regions } = useQuery({
+    queryKey: ["regions-all"],
+    queryFn: () => getRegions(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: cities } = useQuery({
+    queryKey: ["cities-all"],
+    queryFn: () => getCities(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: communes } = useQuery({
+    queryKey: ["communes-all"],
+    queryFn: () => getCommunes(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: companyProfiles } = useQuery({
+    queryKey: ["company-profiles", tenantCompanyId],
+    queryFn: () => getUsers(tenantCompanyId || undefined),
+    enabled: !!tenantCompanyId,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: companyPolicies } = useQuery({
+    queryKey: ["company-policies", tenantCompanyId],
+    queryFn: () => getPolicies({ companyId: tenantCompanyId || undefined }),
+    enabled: !!tenantCompanyId,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Normalización simple: lowercase + sin acentos + sin espacios extra
-  const normalizeName = (s: string): string => {
+  const normalizeName = useCallback((s: string): string => {
     return s
       .toLowerCase()
       .trim()
@@ -120,14 +173,14 @@ export default function CargaSiniestrosPage() {
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, " ")
       .trim();
-  };
+  }, []);
 
   // Mapas nombre (normalizado) → UUID
   const buildMap = useCallback((items: { id: string; name: string }[] | undefined) => {
     const map = new Map<string, string>();
     for (const c of items ?? []) map.set(normalizeName(c.name), c.id);
     return map;
-  }, []);
+  }, [normalizeName]);
 
   const insuranceCompanyMap = useMemo(() => buildMap(insuranceCompanies), [buildMap, insuranceCompanies]);
   const claimTypeMap = useMemo(() => buildMap(claimTypes), [buildMap, claimTypes]);
@@ -139,9 +192,26 @@ export default function CargaSiniestrosPage() {
   const claimStatusMap = useMemo(() => buildMap(claimStatuses), [buildMap, claimStatuses]);
   const insuranceProductMap = useMemo(() => buildMap(insuranceProducts), [buildMap, insuranceProducts]);
   const eventMap = useMemo(() => buildMap(events), [buildMap, events]);
-
-  // Tenant (company_id) del usuario logueado — NO se pide en el Excel
-  const tenantCompanyId = profile?.company_id || null;
+  // ── Mapas nuevos ──
+  const brokerMap = useMemo(() => buildMap(brokers), [buildMap, brokers]);
+  const advisorMap = useMemo(() => buildMap(advisors), [buildMap, advisors]);
+  const propertyClassificationMap = useMemo(() => buildMap(propertyClassifications), [buildMap, propertyClassifications]);
+  const countryMap = useMemo(() => buildMap(countries), [buildMap, countries]);
+  const regionMap = useMemo(() => buildMap(regions), [buildMap, regions]);
+  const cityMap = useMemo(() => buildMap(cities), [buildMap, cities]);
+  const communeMap = useMemo(() => buildMap(communes), [buildMap, communes]);
+  const profileMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of companyProfiles ?? []) map.set(normalizeName(p.full_name || ""), p.id);
+    return map;
+  }, [companyProfiles, normalizeName]);
+  const policyMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of companyPolicies ?? []) {
+      if (p.policy_number) map.set(normalizeName(p.policy_number), p.id);
+    }
+    return map;
+  }, [companyPolicies, normalizeName]);
 
   // ── Resolver texto → UUID para campos de referencia ──
   // Orden: 1) UUID directo, 2) mapeo manual del usuario, 3) match exacto normalizado
@@ -156,7 +226,7 @@ export default function CargaSiniestrosPage() {
       if (valueMappings[manualKey]) return valueMappings[manualKey];
       return catalogMap.get(normalizeName(trimmed)) || null;
     },
-    [valueMappings]
+    [valueMappings, normalizeName]
   );
 
   const resolveInsuranceCompanyId = useCallback(
@@ -199,6 +269,55 @@ export default function CargaSiniestrosPage() {
     (value: string) => resolveRefId("event", value, eventMap),
     [resolveRefId, eventMap]
   );
+  // ── Resolvers nuevos ──
+  const resolveBrokerId = useCallback(
+    (value: string) => resolveRefId("broker", value, brokerMap),
+    [resolveRefId, brokerMap]
+  );
+  const resolveAdvisorId = useCallback(
+    (value: string) => resolveRefId("advisor", value, advisorMap),
+    [resolveRefId, advisorMap]
+  );
+  const resolvePropertyClassificationId = useCallback(
+    (value: string) => resolveRefId("propertyClassification", value, propertyClassificationMap),
+    [resolveRefId, propertyClassificationMap]
+  );
+  const resolveCountryId = useCallback(
+    (value: string) => resolveRefId("claimCountryRef", value, countryMap),
+    [resolveRefId, countryMap]
+  );
+  const resolveRegionId = useCallback(
+    (value: string) => resolveRefId("claimRegionRef", value, regionMap),
+    [resolveRefId, regionMap]
+  );
+  const resolveCityId = useCallback(
+    (value: string) => resolveRefId("claimCityRef", value, cityMap),
+    [resolveRefId, cityMap]
+  );
+  const resolveCommuneId = useCallback(
+    (value: string) => resolveRefId("claimCommuneRef", value, communeMap),
+    [resolveRefId, communeMap]
+  );
+  const resolveAssignedAdjusterId = useCallback(
+    (value: string) => resolveRefId("assignedAdjuster", value, profileMap),
+    [resolveRefId, profileMap]
+  );
+  const resolveAuditorId = useCallback(
+    (value: string) => resolveRefId("auditor", value, profileMap),
+    [resolveRefId, profileMap]
+  );
+  const resolveDispatcherId = useCallback(
+    (value: string) => resolveRefId("dispatcher", value, profileMap),
+    [resolveRefId, profileMap]
+  );
+  const resolveAssistantId = useCallback(
+    (value: string) => resolveRefId("assistant", value, profileMap),
+    [resolveRefId, profileMap]
+  );
+  const resolvePolicyId = useCallback(
+    (value: string) => resolveRefId("policyRef", value, policyMap),
+    [resolveRefId, policyMap]
+  );
 
   // ── Configuración de campos de referencia (para UI y validación) ──
   const refFields = useMemo(() => [
@@ -212,12 +331,30 @@ export default function CargaSiniestrosPage() {
     { fieldKey: "damageClassification", label: "Clasif. Daño", dataKey: "damageClassification" as const, resolver: resolveDamageClassificationId, options: damageClassifications ?? [] },
     { fieldKey: "insuranceProduct", label: "Ramo/Producto", dataKey: "insuranceProduct" as const, resolver: resolveInsuranceProductId, options: insuranceProducts ?? [] },
     { fieldKey: "event", label: "Evento", dataKey: "event" as const, resolver: resolveEventId, options: events ?? [] },
+    // ── Campos de referencia nuevos ──
+    { fieldKey: "broker", label: "Corredor", dataKey: "broker" as const, resolver: resolveBrokerId, options: brokers ?? [] },
+    { fieldKey: "advisor", label: "Asesor", dataKey: "advisor" as const, resolver: resolveAdvisorId, options: advisors ?? [] },
+    { fieldKey: "propertyClassification", label: "Clasificación Propiedad", dataKey: "propertyClassification" as const, resolver: resolvePropertyClassificationId, options: propertyClassifications ?? [] },
+    { fieldKey: "claimCountryRef", label: "País Siniestro (catálogo)", dataKey: "claimCountryRef" as const, resolver: resolveCountryId, options: countries ?? [] },
+    { fieldKey: "claimRegionRef", label: "Región Siniestro (catálogo)", dataKey: "claimRegionRef" as const, resolver: resolveRegionId, options: regions ?? [] },
+    { fieldKey: "claimCityRef", label: "Ciudad Siniestro (catálogo)", dataKey: "claimCityRef" as const, resolver: resolveCityId, options: cities ?? [] },
+    { fieldKey: "claimCommuneRef", label: "Comuna Siniestro (catálogo)", dataKey: "claimCommuneRef" as const, resolver: resolveCommuneId, options: communes ?? [] },
+    { fieldKey: "assignedAdjuster", label: "Liquidador Asignado", dataKey: "assignedAdjuster" as const, resolver: resolveAssignedAdjusterId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
+    { fieldKey: "auditor", label: "Auditor", dataKey: "auditor" as const, resolver: resolveAuditorId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
+    { fieldKey: "dispatcher", label: "Despachador", dataKey: "dispatcher" as const, resolver: resolveDispatcherId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
+    { fieldKey: "assistant", label: "Asistente", dataKey: "assistant" as const, resolver: resolveAssistantId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
+    { fieldKey: "policyRef", label: "Póliza (referencia)", dataKey: "policyRef" as const, resolver: resolvePolicyId, options: (companyPolicies ?? []).map(p => ({ id: p.id, name: p.policy_number || "" })) },
   ], [
     resolveInsuranceCompanyId, resolveClaimTypeId, resolveClaimCauseId, resolveStatusId,
     resolveBusinessLineId, resolveCurrencyId, resolveDestinationHousingId, resolveDamageClassificationId,
     resolveInsuranceProductId, resolveEventId,
+    resolveBrokerId, resolveAdvisorId, resolvePropertyClassificationId,
+    resolveCountryId, resolveRegionId, resolveCityId, resolveCommuneId,
+    resolveAssignedAdjusterId, resolveAuditorId, resolveDispatcherId, resolveAssistantId, resolvePolicyId,
     insuranceCompanies, claimTypes, claimCauses, claimStatuses, businessLines, currencies,
     housingDestinations, damageClassifications, insuranceProducts, events,
+    brokers, advisors, propertyClassifications, countries, regions, cities, communes,
+    companyProfiles, companyPolicies,
   ]);
 
   // ── Valores distinct del Excel por campo de referencia ──
@@ -403,6 +540,19 @@ export default function CargaSiniestrosPage() {
         const damageClassificationId = str(d.damageClassification) ? resolveDamageClassificationId(str(d.damageClassification)) : null;
         const insuranceProductId = str(d.insuranceProduct) ? resolveInsuranceProductId(str(d.insuranceProduct)) : null;
         const eventId = str(d.event) ? resolveEventId(str(d.event)) : null;
+        // ── UUIDs nuevos ──
+        const brokerId = str(d.broker) ? resolveBrokerId(str(d.broker)) : null;
+        const advisorId = str(d.advisor) ? resolveAdvisorId(str(d.advisor)) : null;
+        const propertyClassificationId = str(d.propertyClassification) ? resolvePropertyClassificationId(str(d.propertyClassification)) : null;
+        const countryId = str(d.claimCountryRef) ? resolveCountryId(str(d.claimCountryRef)) : null;
+        const regionId = str(d.claimRegionRef) ? resolveRegionId(str(d.claimRegionRef)) : null;
+        const cityId = str(d.claimCityRef) ? resolveCityId(str(d.claimCityRef)) : null;
+        const communeId = str(d.claimCommuneRef) ? resolveCommuneId(str(d.claimCommuneRef)) : null;
+        const assignedAdjusterId = str(d.assignedAdjuster) ? resolveAssignedAdjusterId(str(d.assignedAdjuster)) : null;
+        const auditorId = str(d.auditor) ? resolveAuditorId(str(d.auditor)) : null;
+        const dispatcherId = str(d.dispatcher) ? resolveDispatcherId(str(d.dispatcher)) : null;
+        const assistantId = str(d.assistant) ? resolveAssistantId(str(d.assistant)) : null;
+        const policyId = str(d.policyRef) ? resolvePolicyId(str(d.policyRef)) : null;
 
         // Construir raw_data con todos los campos normalizados + UUIDs resueltos
         const rawData: Record<string, unknown> = {
@@ -427,6 +577,26 @@ export default function CargaSiniestrosPage() {
           damageClassificationId,
           insuranceProductId,
           eventId,
+          // UUIDs nuevos
+          brokerId,
+          advisorId,
+          propertyClassificationId,
+          countryId,
+          regionId,
+          cityId,
+          communeId,
+          assignedAdjusterId,
+          auditorId,
+          dispatcherId,
+          assistantId,
+          policyId,
+          // Campos adicionales de claims (texto/boolean/numero)
+          clientReference: str(d.clientReference) || null,
+          recoveryTypeLegal: bool(d.recoveryTypeLegal),
+          recoveryTypeMaterial: bool(d.recoveryTypeMaterial),
+          recoveryComments: str(d.recoveryComments) || null,
+          claimLatitude: num(d.claimLatitude),
+          claimLongitude: num(d.claimLongitude),
           // Valores originales (para mostrar en preview)
           insuranceCompanyName: str(d.insuranceCompany),
           claimTypeName: str(d.claimType),
@@ -596,6 +766,25 @@ export default function CargaSiniestrosPage() {
               companyReportNumber: (d.companyReportNumber as string) || null,
               createdAt: (d.createdAt as string) || null,
               internalNumber: (d.internalNumber as string) || null,
+              // ── Campos adicionales ──
+              clientReference: (d.clientReference as string) || null,
+              recoveryTypeLegal: (d.recoveryTypeLegal as boolean | null) ?? null,
+              recoveryTypeMaterial: (d.recoveryTypeMaterial as boolean | null) ?? null,
+              recoveryComments: (d.recoveryComments as string) || null,
+              claimLatitude: (d.claimLatitude as number | null) ?? null,
+              claimLongitude: (d.claimLongitude as number | null) ?? null,
+              regionId: (d.regionId as string) || null,
+              cityId: (d.cityId as string) || null,
+              communeId: (d.communeId as string) || null,
+              brokerId: (d.brokerId as string) || null,
+              advisorId: (d.advisorId as string) || null,
+              propertyClassificationId: (d.propertyClassificationId as string) || null,
+              policyId: (d.policyId as string) || null,
+              typeId: null,
+              assignedAdjusterId: (d.assignedAdjusterId as string) || null,
+              auditorId: (d.auditorId as string) || null,
+              dispatcherId: (d.dispatcherId as string) || null,
+              assistantId: (d.assistantId as string) || null,
             },
             {
               insuredName: String(d.insuredName || ""),
