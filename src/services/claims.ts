@@ -1,4 +1,4 @@
-import { fetchAll, fetchById, insertRow, updateRow, deleteRow } from "@/lib/supabase/db";
+import { fetchAll, fetchById, insertRow, updateRow, deleteRow, deleteWhere } from "@/lib/supabase/db";
 import type { Claim, ClaimInput, ClaimsParticipant } from "@/types";
 
 const CLAIM_SELECT =
@@ -608,4 +608,104 @@ export async function updateClaimParticipant(id: string, input: Partial<{
     if (value !== undefined) set[key] = value;
   }
   return updateRow<{ id: string }>("claims_participants", id, set, "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STAGING — Carga temporal de siniestros (flujo de 2 fases)
+// ═══════════════════════════════════════════════════════════════
+
+export interface ClaimStagingRow {
+  id: string;
+  company_id: string | null;
+  raw_data: Record<string, unknown>;
+  status: string;
+  error_message: string | null;
+  claim_id: string | null;
+  processed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const STAGING_SELECT = "id, company_id, raw_data, status, error_message, claim_id, processed_at, created_at, updated_at";
+
+/**
+ * Limpia todos los rows de staging de la empresa.
+ * Se llama antes de cada carga nueva.
+ */
+export async function cleanStaging(companyId: string): Promise<void> {
+  await deleteWhere("claims_staging", { company_id: companyId });
+}
+
+/**
+ * Inserta múltiples rows en staging en bulk.
+ */
+export async function insertStagingRows(
+  companyId: string,
+  rows: Record<string, unknown>[]
+): Promise<ClaimStagingRow[]> {
+  const supabase = (await import("@/lib/supabase/client")).getSupabaseClient();
+  const payload = rows.map((raw_data) => ({
+    company_id: companyId,
+    raw_data,
+    status: "pending",
+  }));
+  const { data, error } = await supabase
+    .from("claims_staging")
+    .insert(payload)
+    .select(STAGING_SELECT);
+  if (error) throw new Error(error.message);
+  return (data as ClaimStagingRow[]) ?? [];
+}
+
+/**
+ * Obtiene todos los rows de staging de la empresa.
+ */
+export async function getStagingRows(companyId: string): Promise<ClaimStagingRow[]> {
+  return fetchAll<ClaimStagingRow>("claims_staging", {
+    select: STAGING_SELECT,
+    eq: { company_id: companyId },
+    order: { column: "created_at", ascending: true },
+  });
+}
+
+/**
+ * Marca un row de staging con error de validación.
+ */
+export async function markStagingError(
+  stagingId: string,
+  errorMessage: string
+): Promise<void> {
+  await updateRow<ClaimStagingRow>(
+    "claims_staging",
+    stagingId,
+    { status: "error", error_message: errorMessage },
+    STAGING_SELECT
+  );
+}
+
+/**
+ * Marca un row de staging como importado (con el claim_id creado).
+ */
+export async function markStagingImported(
+  stagingId: string,
+  claimId: string
+): Promise<void> {
+  await updateRow<ClaimStagingRow>(
+    "claims_staging",
+    stagingId,
+    { status: "imported", claim_id: claimId, processed_at: new Date().toISOString() },
+    STAGING_SELECT
+  );
+}
+
+/**
+ * Marca un row de staging como validado (sin errores).
+ */
+export async function markStagingValid(stagingId: string): Promise<void> {
+  await updateRow<ClaimStagingRow>(
+    "claims_staging",
+    stagingId,
+    { status: "valid", error_message: null },
+    STAGING_SELECT
+  );
 }

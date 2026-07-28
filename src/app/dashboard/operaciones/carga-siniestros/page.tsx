@@ -2,7 +2,11 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createClaimMinimal } from "@/services/claims";
+import {
+  createClaimMinimal,
+  cleanStaging, insertStagingRows, getStagingRows, markStagingError, markStagingImported, markStagingValid,
+  type ClaimStagingRow,
+} from "@/services/claims";
 import {
   getInsuranceCompanies, getClaimTypes, getClaimCauses, getBusinessLines,
   getCurrencies, getHousingDestinations, getDamageClassifications, getLookupCatalog,
@@ -31,7 +35,7 @@ interface ExcelRow {
   [key: string]: string | number | null;
 }
 
-type Step = "upload" | "review";
+type Step = "upload" | "review" | "staging" | "done";
 
 export default function CargaSiniestrosPage() {
   const { canCreate } = usePermissions();
@@ -49,6 +53,11 @@ export default function CargaSiniestrosPage() {
   const [mapperOpen, setMapperOpen] = useState(true);
   // Mapeo manual de valores: "fieldKey::excelValue" → UUID del catálogo
   const [valueMappings, setValueMappings] = useState<Record<string, string>>({});
+
+  // Staging (carga temporal)
+  const [stagingRows, setStagingRows] = useState<ClaimStagingRow[]>([]);
+  const [confirmProgress, setConfirmProgress] = useState({ current: 0, total: 0, success: 0, error: 0 });
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // ── Cargar catálogos de referencia para resolver texto → UUID ──
   const { data: insuranceCompanies } = useQuery({
@@ -341,7 +350,9 @@ export default function CargaSiniestrosPage() {
     });
   };
 
-  // ── Cargar siniestros al backend ──
+  // ── Fase 1: Cargar a staging (claims_staging) ──
+  // Inserta todas las filas válidas en la tabla temporal claims_staging
+  // con raw_data = datos parseados. No toca claims todavía.
   const loadMutation = useMutation({
     mutationFn: async (rows: ParsedRow[]) => {
       if (!tenantCompanyId) {
@@ -350,138 +361,300 @@ export default function CargaSiniestrosPage() {
       setIsUploading(true);
       setProgress({ current: 0, total: rows.length, success: 0, error: 0 });
       const validRows = rows.filter((r) => r.valid);
+
+      // 1) Limpiar staging de la empresa
+      await cleanStaging(tenantCompanyId);
+
+      // 2) Preparar raw_data para cada fila válida
+      //    Incluye los datos parseados + los UUIDs resueltos de catálogos
+      const payload: Record<string, unknown>[] = [];
+      for (const row of validRows) {
+        const d = row.data;
+        const str = (v: unknown) => (v ? String(v) : "");
+        const date = (v: unknown): string | null => {
+          const s = str(v).trim();
+          if (!s) return null;
+          return parseDate(s);
+        };
+        const num = (v: unknown) => {
+          const s = str(v).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
+          const n = parseFloat(s);
+          return isNaN(n) ? null : n;
+        };
+        const bool = (v: unknown) => {
+          const s = str(v).toLowerCase().trim();
+          return s === "si" || s === "sí" || s === "true" || s === "1" || s === "yes"
+            ? true
+            : s === "no" || s === "false" || s === "0" || s === ""
+            ? false
+            : null;
+        };
+
+        // Resolver UUIDs de catálogos
+        const insuranceCompanyId = str(d.insuranceCompany) ? resolveInsuranceCompanyId(str(d.insuranceCompany)) : null;
+        const claimTypeId = str(d.claimType) ? resolveClaimTypeId(str(d.claimType)) : null;
+        const claimCauseId = str(d.claimCause) ? resolveClaimCauseId(str(d.claimCause)) : null;
+        const statusId = str(d.status) ? resolveStatusId(str(d.status)) : null;
+        const businessLineId = str(d.businessLine) ? resolveBusinessLineId(str(d.businessLine)) : null;
+        const currencyId = str(d.currency) ? resolveCurrencyId(str(d.currency)) : null;
+        const destinationHousingId = str(d.destination) ? resolveDestinationHousingId(str(d.destination)) : null;
+        const damageClassificationId = str(d.damageClassification) ? resolveDamageClassificationId(str(d.damageClassification)) : null;
+        const insuranceProductId = str(d.insuranceProduct) ? resolveInsuranceProductId(str(d.insuranceProduct)) : null;
+        const eventId = str(d.event) ? resolveEventId(str(d.event)) : null;
+
+        // Construir raw_data con todos los campos normalizados + UUIDs resueltos
+        const rawData: Record<string, unknown> = {
+          // Campos básicos
+          claimNumber: str(d.claimNumber),
+          policyNumber: str(d.policyNumber),
+          claimDate: date(d.claimDate),
+          summary: str(d.summary) || null,
+          reportDate: date(d.reportDate),
+          assignmentDate: date(d.assignmentDate),
+          companyReportNumber: str(d.companyReportNumber) || null,
+          // UUIDs resueltos
+          insuranceCompanyId,
+          claimTypeId,
+          claimCauseId,
+          statusId,
+          businessLineId,
+          currencyId,
+          destinationHousingId,
+          damageClassificationId,
+          insuranceProductId,
+          eventId,
+          // Valores originales (para mostrar en preview)
+          insuranceCompanyName: str(d.insuranceCompany),
+          claimTypeName: str(d.claimType),
+          claimCauseName: str(d.claimCause),
+          statusName: str(d.status),
+          businessLineName: str(d.businessLine),
+          currencyName: str(d.currency),
+          destinationName: str(d.destination),
+          damageClassificationName: str(d.damageClassification),
+          insuranceProductName: str(d.insuranceProduct),
+          eventName: str(d.event),
+          // Campos de póliza
+          policyItem: str(d.policyItem) || null,
+          policyStartDate: date(d.policyStartDate),
+          policyEndDate: date(d.policyEndDate),
+          policyAmount: num(d.policyAmount),
+          policyPremium: num(d.policyPremium),
+          isSpecialClaim: bool(d.isSpecialClaim),
+          brokerExecutive: str(d.brokerExecutive) || null,
+          ownerSameAsInsured: bool(d.ownerSameAsInsured),
+          // Contratante/Asegurado
+          insuredName: str(d.insuredName),
+          lastName: str(d.lastName) || null,
+          rut: str(d.rut) || null,
+          insuredEmail: str(d.insuredEmail) || null,
+          insuredPhone: str(d.insuredPhone) || null,
+          cellPhone: str(d.cellPhone || d.insuredPhone),
+          insuredAddress: str(d.address) || null,
+          insuredCountry: str(d.country) || null,
+          insuredRegion: str(d.region) || null,
+          insuredCity: str(d.city) || null,
+          insuredCommune: str(d.commune) || null,
+          // Dirección del siniestro
+          claimAddress: str(d.claimAddress) || str(d.address),
+          claimCountry: str(d.claimCountry) || str(d.country) || null,
+          claimRegion: str(d.claimRegion) || str(d.region) || null,
+          claimCity: str(d.claimCity) || str(d.city),
+          claimCommune: str(d.claimCommune) || str(d.commune) || null,
+          // Beneficiario
+          beneficiaryName: str(d.beneficiaryName) || null,
+          beneficiaryLastName: str(d.beneficiaryLastName) || null,
+          beneficiaryRut: str(d.beneficiaryRut) || null,
+          beneficiaryEmail: str(d.beneficiaryEmail) || null,
+          beneficiaryPhone: str(d.beneficiaryPhone) || null,
+          beneficiaryCellPhone: str(d.beneficiaryCellPhone) || null,
+          beneficiaryAddress: str(d.beneficiaryAddress) || null,
+          beneficiaryCountry: str(d.beneficiaryCountry) || null,
+          beneficiaryRegion: str(d.beneficiaryRegion) || null,
+          beneficiaryCity: str(d.beneficiaryCity) || null,
+          beneficiaryCommune: str(d.beneficiaryCommune) || null,
+          // Contacto
+          contactEmail: str(d.contactEmail) || null,
+          contactPhone: str(d.contactPhone) || null,
+          // Metadata
+          rowNum: row.rowNum,
+        };
+        payload.push(rawData);
+      }
+
+      // 3) Insertar en staging
+      const inserted = await insertStagingRows(tenantCompanyId, payload);
+      setProgress({ current: payload.length, total: rows.length, success: payload.length, error: rows.length - payload.length });
+
+      // 4) Validar cada row: marcar error si hay UUIDs no resueltos
+      for (const sr of inserted) {
+        const rd = sr.raw_data;
+        const errors: string[] = [];
+        if (rd.insuranceCompanyName && !rd.insuranceCompanyId) {
+          errors.push(`Aseguradora "${rd.insuranceCompanyName}" no encontrada en catálogo`);
+        }
+        if (rd.claimTypeName && !rd.claimTypeId) {
+          errors.push(`Tipo siniestro "${rd.claimTypeName}" no encontrado en catálogo`);
+        }
+        if (rd.claimCauseName && !rd.claimCauseId) {
+          errors.push(`Causal "${rd.claimCauseName}" no encontrada en catálogo`);
+        }
+        if (rd.statusName && !rd.statusId) {
+          errors.push(`Estatus "${rd.statusName}" no encontrado en catálogo`);
+        }
+        if (rd.businessLineName && !rd.businessLineId) {
+          errors.push(`Línea negocio "${rd.businessLineName}" no encontrada en catálogo`);
+        }
+        if (rd.currencyName && !rd.currencyId) {
+          errors.push(`Moneda "${rd.currencyName}" no encontrada en catálogo`);
+        }
+        if (rd.destinationName && !rd.destinationHousingId) {
+          errors.push(`Destino "${rd.destinationName}" no encontrado en catálogo`);
+        }
+        if (rd.damageClassificationName && !rd.damageClassificationId) {
+          errors.push(`Clasif. daño "${rd.damageClassificationName}" no encontrada en catálogo`);
+        }
+        if (rd.insuranceProductName && !rd.insuranceProductId) {
+          errors.push(`Ramo/Producto "${rd.insuranceProductName}" no encontrado en catálogo`);
+        }
+        if (rd.eventName && !rd.eventId) {
+          errors.push(`Evento "${rd.eventName}" no encontrado en catálogo`);
+        }
+        if (!rd.claimNumber) errors.push("Falta N° Siniestro");
+        if (!rd.policyNumber) errors.push("Falta N° Póliza");
+        if (!rd.claimDate) errors.push("Falta Fecha Siniestro");
+        if (!rd.insuredName) errors.push("Falta Nombre Asegurado");
+
+        if (errors.length > 0) {
+          await markStagingError(sr.id, errors.join("; "));
+        } else {
+          await markStagingValid(sr.id);
+        }
+      }
+
+      // 5) Recargar staging rows con estado actualizado
+      const finalRows = await getStagingRows(tenantCompanyId);
+      setStagingRows(finalRows);
+
+      setIsUploading(false);
+      return { inserted: payload.length, skipped: rows.length - payload.length, total: rows.length };
+    },
+    onSuccess: (result) => {
+      toast.success(`Staging cargado: ${result.inserted} filas listas para revisión`);
+      setStep("staging");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // ── Fase 2: Confirmar — mover staging a claims ──
+  const confirmMutation = useMutation({
+    mutationFn: async () => {
+      if (!tenantCompanyId) {
+        throw new Error("No se pudo determinar la empresa (tenant) del usuario.");
+      }
+      const validStaging = stagingRows.filter((r) => r.status === "valid");
+      setIsConfirming(true);
+      setConfirmProgress({ current: 0, total: validStaging.length, success: 0, error: 0 });
       let success = 0;
       let error = 0;
 
-      for (let i = 0; i < validRows.length; i++) {
-        const row = validRows[i];
+      for (let i = 0; i < validStaging.length; i++) {
+        const sr = validStaging[i];
+        const d = sr.raw_data;
         try {
-          const d = row.data;
-          const str = (v: unknown) => (v ? String(v) : "");
-          const num = (v: unknown) => {
-            const s = str(v).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
-            const n = parseFloat(s);
-            return isNaN(n) ? null : n;
-          };
-          const bool = (v: unknown) => {
-            const s = str(v).toLowerCase().trim();
-            return s === "si" || s === "sí" || s === "true" || s === "1" || s === "yes"
-              ? true
-              : s === "no" || s === "false" || s === "0" || s === ""
-              ? false
-              : null;
-          };
-          // Normaliza fechas del Excel a YYYY-MM-DD (formato que espera Postgres).
-          // Usa parseDate del schema que maneja DD-MM-YYYY, DD/MM/YYYY,
-          // YYYY-MM-DD, YYYY/MM/DD, DD-MM-YY y serial de Excel.
-          const date = (v: unknown): string | null => {
-            const s = str(v).trim();
-            if (!s) return null;
-            return parseDate(s);
-          };
-
-          // Resolver campos de referencia (UUID) — solo si hay valor
-          const insuranceCompanyId = str(d.insuranceCompany) ? resolveInsuranceCompanyId(str(d.insuranceCompany)) : null;
-          if (str(d.insuranceCompany) && !insuranceCompanyId) {
-            throw new Error(`Aseguradora "${d.insuranceCompany}" no encontrada.`);
-          }
-          const claimTypeId = str(d.claimType) ? resolveClaimTypeId(str(d.claimType)) : null;
-          if (str(d.claimType) && !claimTypeId) {
-            throw new Error(`Tipo de siniestro "${d.claimType}" no encontrado.`);
-          }
-          const claimCauseId = str(d.claimCause) ? resolveClaimCauseId(str(d.claimCause)) : null;
-          const statusId = str(d.status) ? resolveStatusId(str(d.status)) : null;
-          const businessLineId = str(d.businessLine) ? resolveBusinessLineId(str(d.businessLine)) : null;
-          const currencyId = str(d.currency) ? resolveCurrencyId(str(d.currency)) : null;
-          const destinationHousingId = str(d.destination) ? resolveDestinationHousingId(str(d.destination)) : null;
-          const damageClassificationId = str(d.damageClassification) ? resolveDamageClassificationId(str(d.damageClassification)) : null;
-          const insuranceProductId = str(d.insuranceProduct) ? resolveInsuranceProductId(str(d.insuranceProduct)) : null;
-          const eventId = str(d.event) ? resolveEventId(str(d.event)) : null;
-
-          await createClaimMinimal(
+          const claim = await createClaimMinimal(
             {
-              claimNumber: str(d.claimNumber),
-              policyNumber: str(d.policyNumber),
-              claimDate: date(d.claimDate) || "",
-              summary: str(d.summary) || null,
-              reportDate: date(d.reportDate),
-              assignmentDate: date(d.assignmentDate),
+              claimNumber: String(d.claimNumber || ""),
+              policyNumber: String(d.policyNumber || ""),
+              claimDate: String(d.claimDate || ""),
+              summary: (d.summary as string) || null,
+              reportDate: (d.reportDate as string) || null,
+              assignmentDate: (d.assignmentDate as string) || null,
               company_id: tenantCompanyId,
-              insuranceCompanyId,
-              claimTypeId,
-              claimCauseId,
-              statusId,
-              businessLineId,
-              currencyId,
-              destinationHousingId,
-              damageClassificationId,
-              insuranceProductId,
-              eventId,
-              ownerSameAsInsured: bool(d.ownerSameAsInsured),
-              // Campos de póliza
-              policyItem: str(d.policyItem) || null,
-              policyStartDate: date(d.policyStartDate),
-              policyEndDate: date(d.policyEndDate),
-              policyAmount: num(d.policyAmount),
-              policyPremium: num(d.policyPremium),
-              isSpecialClaim: bool(d.isSpecialClaim),
-              brokerExecutive: str(d.brokerExecutive) || null,
-              companyReportNumber: str(d.companyReportNumber) || null,
+              insuranceCompanyId: (d.insuranceCompanyId as string) || null,
+              claimTypeId: (d.claimTypeId as string) || null,
+              claimCauseId: (d.claimCauseId as string) || null,
+              statusId: (d.statusId as string) || null,
+              businessLineId: (d.businessLineId as string) || null,
+              currencyId: (d.currencyId as string) || null,
+              destinationHousingId: (d.destinationHousingId as string) || null,
+              damageClassificationId: (d.damageClassificationId as string) || null,
+              insuranceProductId: (d.insuranceProductId as string) || null,
+              eventId: (d.eventId as string) || null,
+              ownerSameAsInsured: (d.ownerSameAsInsured as boolean | null) ?? null,
+              policyItem: (d.policyItem as string) || null,
+              policyStartDate: (d.policyStartDate as string) || null,
+              policyEndDate: (d.policyEndDate as string) || null,
+              policyAmount: (d.policyAmount as number | null) ?? null,
+              policyPremium: (d.policyPremium as number | null) ?? null,
+              isSpecialClaim: (d.isSpecialClaim as boolean | null) ?? null,
+              brokerExecutive: (d.brokerExecutive as string) || null,
+              companyReportNumber: (d.companyReportNumber as string) || null,
             },
             {
-              insuredName: str(d.insuredName),
-              lastName: str(d.lastName) || null,
-              rut: str(d.rut) || null,
-              insuredEmail: str(d.insuredEmail) || null,
-              insuredPhone: str(d.insuredPhone) || null,
-              cellPhone: str(d.cellPhone || d.insuredPhone),
-              insuredAddress: str(d.address) || null,
-              insuredCountry: str(d.country) || null,
-              insuredRegion: str(d.region) || null,
-              insuredCity: str(d.city) || null,
-              insuredCommune: str(d.commune) || null,
+              insuredName: String(d.insuredName || ""),
+              lastName: (d.lastName as string) || null,
+              rut: (d.rut as string) || null,
+              insuredEmail: (d.insuredEmail as string) || null,
+              insuredPhone: (d.insuredPhone as string) || null,
+              cellPhone: String(d.cellPhone || d.insuredPhone || ""),
+              insuredAddress: (d.insuredAddress as string) || null,
+              insuredCountry: (d.insuredCountry as string) || null,
+              insuredRegion: (d.insuredRegion as string) || null,
+              insuredCity: (d.insuredCity as string) || null,
+              insuredCommune: (d.insuredCommune as string) || null,
             },
             {
-              // Dirección del Siniestro (separada de la del contratante)
-              // Si no viene claimAddress, usar address del contratante como fallback
-              claimAddress: str(d.claimAddress) || str(d.address),
-              claimCountry: str(d.claimCountry) || str(d.country) || null,
-              claimRegion: str(d.claimRegion) || str(d.region) || null,
-              claimCity: str(d.claimCity) || str(d.city),
-              claimCommune: str(d.claimCommune) || str(d.commune) || null,
+              claimAddress: String(d.claimAddress || ""),
+              claimCountry: (d.claimCountry as string) || null,
+              claimRegion: (d.claimRegion as string) || null,
+              claimCity: String(d.claimCity || ""),
+              claimCommune: (d.claimCommune as string) || null,
             },
-            null, // contractor
-            str(d.beneficiaryName) ? {
-              beneficiaryName: str(d.beneficiaryName),
-              beneficiaryLastName: str(d.beneficiaryLastName) || null,
-              beneficiaryRut: str(d.beneficiaryRut) || null,
-              beneficiaryEmail: str(d.beneficiaryEmail) || null,
-              beneficiaryPhone: str(d.beneficiaryPhone) || null,
-              beneficiaryCellPhone: str(d.beneficiaryCellPhone) || null,
-              beneficiaryAddress: str(d.beneficiaryAddress) || null,
-              beneficiaryCountry: str(d.beneficiaryCountry) || null,
-              beneficiaryRegion: str(d.beneficiaryRegion) || null,
-              beneficiaryCity: str(d.beneficiaryCity) || null,
-              beneficiaryCommune: str(d.beneficiaryCommune) || null,
+            null,
+            (d.beneficiaryName as string) ? {
+              beneficiaryName: String(d.beneficiaryName),
+              beneficiaryLastName: (d.beneficiaryLastName as string) || null,
+              beneficiaryRut: (d.beneficiaryRut as string) || null,
+              beneficiaryEmail: (d.beneficiaryEmail as string) || null,
+              beneficiaryPhone: (d.beneficiaryPhone as string) || null,
+              beneficiaryCellPhone: (d.beneficiaryCellPhone as string) || null,
+              beneficiaryAddress: (d.beneficiaryAddress as string) || null,
+              beneficiaryCountry: (d.beneficiaryCountry as string) || null,
+              beneficiaryRegion: (d.beneficiaryRegion as string) || null,
+              beneficiaryCity: (d.beneficiaryCity as string) || null,
+              beneficiaryCommune: (d.beneficiaryCommune as string) || null,
             } : null,
-            (str(d.contactEmail) || str(d.contactPhone)) ? {
-              contactEmail: str(d.contactEmail) || null,
-              contactPhone: str(d.contactPhone) || null,
+            ((d.contactEmail as string) || (d.contactPhone as string)) ? {
+              contactEmail: (d.contactEmail as string) || null,
+              contactPhone: (d.contactPhone as string) || null,
             } : null
           );
+          await markStagingImported(sr.id, claim.id);
           success++;
         } catch (err) {
           error++;
-          console.error(`Fila ${row.rowNum}:`, err);
+          const msg = err instanceof Error ? err.message : String(err);
+          await markStagingError(sr.id, msg);
+          console.error(`Staging ${sr.id}:`, err);
         }
-        setProgress({ current: i + 1, total: validRows.length, success, error });
+        setConfirmProgress({ current: i + 1, total: validStaging.length, success, error });
       }
 
-      setIsUploading(false);
-      return { success, error, total: validRows.length };
+      // Recargar staging para mostrar estado final
+      const finalRows = await getStagingRows(tenantCompanyId);
+      setStagingRows(finalRows);
+
+      setIsConfirming(false);
+      return { success, error, total: validStaging.length };
     },
     onSuccess: (result) => {
-      toast.success(`Carga completada: ${result.success} exitosos, ${result.error} errores`);
+      if (result.error === 0) {
+        toast.success(`Carga confirmada: ${result.success} siniestros importados`);
+      } else {
+        toast.warning(`Carga parcial: ${result.success} importados, ${result.error} errores`);
+      }
+      setStep("done");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -527,6 +700,7 @@ export default function CargaSiniestrosPage() {
     setExcelHeaders([]);
     setMapping({});
     setValueMappings({});
+    setStagingRows([]);
     setStep("upload");
     setMapperOpen(true);
   };
@@ -627,9 +801,9 @@ export default function CargaSiniestrosPage() {
                 className="pg-btn-platinum-icon"
               >
                 {isUploading ? (
-                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando...</>
+                  <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando a staging...</>
                 ) : (
-                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar {validCount} siniestros</>
+                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar {validCount} filas a staging</>
                 )}
               </Button>
             )}
@@ -943,6 +1117,215 @@ export default function CargaSiniestrosPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step Staging: revisión de carga temporal ── */}
+      {step === "staging" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-sm">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-emerald-500" />
+                {stagingRows.filter((r) => r.status === "valid").length} válidos
+              </span>
+              <span className="flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                {stagingRows.filter((r) => r.status === "error").length} con errores
+              </span>
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5" />
+                {stagingRows.filter((r) => r.status === "imported").length} importados
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setStep("review")}
+                disabled={isConfirming}
+              >
+                <X className="mr-1.5 h-3.5 w-3.5" /> Volver
+              </Button>
+              {canCreate("operaciones") && (
+                <Button
+                  onClick={() => confirmMutation.mutate()}
+                  disabled={isConfirming || stagingRows.filter((r) => r.status === "valid").length === 0}
+                  className="pg-btn-platinum-icon"
+                >
+                  {isConfirming ? (
+                    <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Confirmando...</>
+                  ) : (
+                    <><CheckCircle className="mr-2 h-3.5 w-3.5" /> Confirmar carga ({stagingRows.filter((r) => r.status === "valid").length})</>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Progress bar de confirmación */}
+          {isConfirming && (
+            <div className="rounded-lg border bg-card p-3">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span>Confirmando: {confirmProgress.current} / {confirmProgress.total}</span>
+                <span className="text-emerald-600">{confirmProgress.success} ok</span>
+                <span className="text-red-600">{confirmProgress.error} err</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${confirmProgress.total > 0 ? (confirmProgress.current / confirmProgress.total) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Aviso de errores bloqueantes */}
+          {stagingRows.filter((r) => r.status === "error").length > 0 && (
+            <div className="staging-warning-banner">
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <span>
+                {stagingRows.filter((r) => r.status === "error").length} fila(s) tienen errores y no se importarán.
+                Las filas válidas se pueden confirmar. Las con errores quedan en staging para revisión.
+              </span>
+            </div>
+          )}
+
+          {/* Tabla de staging */}
+          <div className="app-data-table-wrap max-h-125 overflow-auto">
+            <table className="app-data-table">
+              <thead>
+                <tr>
+                  <th className="w-8">#</th>
+                  <th className="w-8">Estado</th>
+                  <th>N° Siniestro</th>
+                  <th>N° Póliza</th>
+                  <th>Asegurado</th>
+                  <th>Dirección Siniestro</th>
+                  <th>Fecha</th>
+                  <th>Aseguradora</th>
+                  <th>Liquidación</th>
+                  <th className="bulk-error-col">Errores</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stagingRows.map((sr, idx) => {
+                  const d = sr.raw_data;
+                  const isError = sr.status === "error";
+                  const isImported = sr.status === "imported";
+                  return (
+                    <tr
+                      key={sr.id}
+                      className={isError ? "bg-red-50/50 dark:bg-red-950/20" : isImported ? "bg-emerald-50/50 dark:bg-emerald-950/20" : ""}
+                    >
+                      <td className="text-muted-foreground">{idx + 1}</td>
+                      <td>
+                        {isImported ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-500" />
+                        ) : isError ? (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 text-emerald-500" />
+                        )}
+                      </td>
+                      <td className="font-medium">{String(d.claimNumber || "—")}</td>
+                      <td>{String(d.policyNumber || "—")}</td>
+                      <td>{String(d.insuredName || "—")}</td>
+                      <td className="bulk-cell-narrow">{String(d.claimAddress || "—")}</td>
+                      <td>{String(d.claimDate || "—")}</td>
+                      <td className="bulk-cell-medium">{String(d.insuranceCompanyName || "—")}</td>
+                      <td className="text-muted-foreground">{isImported ? "Importado" : "—"}</td>
+                      <td>
+                        {sr.error_message ? (
+                          <div className="bulk-error-list">
+                            <span className="bulk-error-badge bulk-error-badge-invalid_value" title={sr.error_message}>
+                              {sr.error_message}
+                            </span>
+                          </div>
+                        ) : isImported ? (
+                          <span className="text-emerald-600 text-xs">Importado OK</span>
+                        ) : (
+                          <span className="text-emerald-600 text-xs">Listo para importar</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step Done: resultado final ── */}
+      {step === "done" && (
+        <div className="space-y-3">
+          <div className="staging-done-banner">
+            <CheckCircle className="h-8 w-8 text-emerald-500" />
+            <div>
+              <h2 className="app-section-title">Carga completada</h2>
+              <p className="text-sm text-muted-foreground">
+                {confirmProgress.success} siniestro(s) importado(s) correctamente
+                {confirmProgress.error > 0 && `, ${confirmProgress.error} con errores`}
+              </p>
+            </div>
+          </div>
+
+          {/* Tabla final de staging con estado */}
+          <div className="app-data-table-wrap max-h-125 overflow-auto">
+            <table className="app-data-table">
+              <thead>
+                <tr>
+                  <th className="w-8">#</th>
+                  <th className="w-8">Estado</th>
+                  <th>N° Siniestro</th>
+                  <th>N° Póliza</th>
+                  <th>Asegurado</th>
+                  <th>Aseguradora</th>
+                  <th>Resultado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stagingRows.map((sr, idx) => {
+                  const d = sr.raw_data;
+                  const isImported = sr.status === "imported";
+                  const isError = sr.status === "error";
+                  return (
+                    <tr
+                      key={sr.id}
+                      className={isImported ? "bg-emerald-50/50 dark:bg-emerald-950/20" : isError ? "bg-red-50/50 dark:bg-red-950/20" : ""}
+                    >
+                      <td className="text-muted-foreground">{idx + 1}</td>
+                      <td>
+                        {isImported ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        )}
+                      </td>
+                      <td className="font-medium">{String(d.claimNumber || "—")}</td>
+                      <td>{String(d.policyNumber || "—")}</td>
+                      <td>{String(d.insuredName || "—")}</td>
+                      <td>{String(d.insuranceCompanyName || "—")}</td>
+                      <td>
+                        {isImported ? (
+                          <span className="text-emerald-600 text-xs">Importado OK</span>
+                        ) : (
+                          <span className="text-red-600 text-xs">{sr.error_message || "Error desconocido"}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={handleReset} className="pg-btn-platinum-icon">
+              <Upload className="mr-2 h-3.5 w-3.5" /> Nueva carga
+            </Button>
           </div>
         </div>
       )}
