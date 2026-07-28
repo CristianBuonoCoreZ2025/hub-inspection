@@ -737,7 +737,7 @@ export function EmailComposeModal({
                   onChange={(html) => setBodyOverride(html)}
                   editorRef={htmlEditorRef}
                   placeholder="Escribe el cuerpo del correo…"
-                  className="flex-1 min-h-0"
+                  className="email-composer-editor flex-1 min-h-0"
                 />
               ) : (
                 /* ─── Texto plano — siempre textarea ─── */
