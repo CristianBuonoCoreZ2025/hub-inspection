@@ -53,8 +53,10 @@ Si necesitas corregir un siniestro mal cargado:
 
 1. Usuario sube archivo Excel (.xlsx, .xls)
 2. `autoDetectMapping()` mapea automáticamente las columnas del Excel a los campos del sistema usando sinónimos
-3. Usuario puede ajustar el mapeo manualmente
-4. Si hay valores del Excel que no coinciden con catálogos (ej: "BCI Seguros Generales S.A." vs "BCI Seguros"), aparece el **panel de mapeo de valores** para asociar manualmente cada valor a su UUID del catálogo
+3. **Tabla de mapeo INVERTIDA:** las filas son las **columnas del Excel** y cada una tiene un dropdown para elegir a qué campo del sistema se mapea. Así ninguna columna del Excel se pierde — el usuario ve todos sus datos y decide dónde va cada uno.
+4. Usuario puede ajustar el mapeo manualmente
+5. Si hay valores del Excel que no coinciden con catálogos (ej: "BCI Seguros Generales S.A." vs "BCI Seguros"), aparece el **panel de mapeo de valores** para asociar manualmente cada valor a su UUID del catálogo
+6. Al final de la tabla, un banner amarillo muestra qué campos requeridos faltan mapear
 
 ### Fase 2: Cargar a Staging
 
@@ -117,33 +119,55 @@ Estructura existente en la base de datos:
 
 ### Campos OPCIONALES — Claims (texto/fecha/numero/boolean)
 
-| Campo Excel | Campo claims | Tipo |
-|---|---|---|
-| Resumen | `summary` | text |
-| Fecha Denuncio | `report_date` | date |
-| Fecha Asignación | `assignment_date` | date |
-| No. Siniestro Compañía | `company_report_number` | text |
-| Ramo/Item Póliza | `policy_item` | text |
-| Fecha Inicio Póliza | `policy_start_date` | date |
-| Fecha Fin Póliza | `policy_end_date` | date |
-| Monto Asegurado Póliza | `policy_amount` | numeric |
-| Prima Anual | `policy_premium` | numeric |
-| Siniestro Especial | `is_special_claim` | boolean |
-| Ejecutivo Cia | `broker_executive` | text |
-| Propietario / Asegurado | `owner_same_as_insured` | boolean |
-
-### Campos OPCIONALES — Claims (UUID → catálogo)
-
-| Campo Excel | Campo claims | Catálogo | Tabla |
+| Campo Excel | Campo claims | Tipo | Notas |
 |---|---|---|---|
-| Causal Siniestro | `claim_cause_id` | `claim_causes` | 12 filas |
-| Estatus | `status_id` | `lookup_catalog` (claim_status) | 5 valores |
-| Línea Negocio | `business_line_id` | `business_lines` | 5 filas |
-| Moneda Póliza | `currency_id` | `currencies` | 18 filas |
-| Destino | `destination_housing_id` | `housing_destinations` | 2 filas |
-| Clasif. Daño | `damage_classification_id` | `damage_classifications` | 4 filas |
-| Ramo/Producto | `insurance_product_id` | `insurance_products` | 5 filas |
-| Evento | `event_id` | `events` | 10 filas |
+| Resumen Siniestro | `summary` | text | |
+| Fecha Denuncio | `report_date` | date | |
+| Fecha Asignación | `assignment_date` | date | |
+| Fecha Creación | `created_at` | timestamptz | Solo se sobreescribe si viene valor; si no, usa `default=now()`. Útil para siniestros históricos importados. |
+| No. Siniestro Compañía | `company_report_number` | text | N° de reporte/denuncio de la cia |
+| N° McLarens One | `internal_number` | text | N° interno (no es automático) |
+| Referencia Cliente | `client_reference` | text | |
+| Ramo/Item Póliza | `policy_item` | text | |
+| Fecha Inicio Póliza | `policy_start_date` | date | |
+| Fecha Fin Póliza | `policy_end_date` | date | |
+| Monto Asegurado Póliza | `policy_amount` | numeric | |
+| Prima Anual | `policy_premium` | numeric | |
+| Siniestro Especial | `is_special_claim` | boolean | |
+| Ejecutivo Cia | `broker_executive` | text | |
+| Propietario / Asegurado | `owner_same_as_insured` | boolean | |
+| Recuperación Legal | `recovery_type_legal` | boolean | |
+| Recuperación Material | `recovery_type_material` | boolean | |
+| Comentarios Recuperación | `recovery_comments` | text | |
+| Latitud Siniestro | `claim_latitude` | double precision | |
+| Longitud Siniestro | `claim_longitude` | double precision | |
+
+### Campos OPCIONALES — Claims (UUID → catálogo, se pide el NOMBRE y se resuelve)
+
+| Campo Excel | Campo claims | Catálogo | Tabla | Filas |
+|---|---|---|---|---|
+| Causal Siniestro | `claim_cause_id` | `claim_causes` | `claim_causes` | 12 |
+| Estatus | `status_id` | `lookup_catalog` (claim_status) | `lookup_catalog` | 5 |
+| Línea Negocio | `business_line_id` | `business_lines` | `business_lines` | 5 |
+| Moneda Póliza | `currency_id` | `currencies` | `currencies` | 18 |
+| Destino | `destination_housing_id` | `housing_destinations` | `housing_destinations` | 2 |
+| Clasif. Daño | `damage_classification_id` | `damage_classifications` | `damage_classifications` | 4 |
+| Ramo/Producto | `insurance_product_id` | `insurance_products` | `insurance_products` | 5 |
+| Evento | `event_id` | `events` | `events` | 10 |
+| Corredor | `broker_id` | `brokers` | `brokers` | 20 |
+| Asesor | `advisor_id` | `advisors` | `advisors` | 0 |
+| Clasificación Propiedad | `property_classification_id` | `property_classifications` | `property_classifications` | 8 |
+| País Siniestro (catálogo) | `country_id` | `countries` | `countries` | 12 |
+| Región Siniestro (catálogo) | `region_id` | `regions` | `regions` | 41 |
+| Ciudad Siniestro (catálogo) | `city_id` | `cities` | `cities` | 252 |
+| Comuna Siniestro (catálogo) | `commune_id` | `communes` | `communes` | 2183 |
+| Liquidador Asignado | `assigned_adjuster_id` | `profiles` (empresa) | `profiles` | — |
+| Auditor | `auditor_id` | `profiles` (empresa) | `profiles` | — |
+| Despachador | `dispatcher_id` | `profiles` (empresa) | `profiles` | — |
+| Asistente | `assistant_id` | `profiles` (empresa) | `profiles` | — |
+| Póliza (referencia) | `policy_id` | `policies` (empresa) | `policies` | 90 |
+
+> **Regla:** Los campos UUID **NUNCA** se piden como UUID directo. Se pide el **NOMBRE** del Excel y se resuelve al UUID via el catálogo correspondiente. Si el nombre no coincide exacto, el usuario lo mapea manualmente en el panel de mapeo de valores.
 
 ### Campos OPCIONALES — Contratante/Asegurado (va a `claims_participants` tipo `insured`)
 
@@ -198,12 +222,19 @@ Estructura existente en la base de datos:
 | Campo | Motivo |
 |---|---|
 | **N° Liquidación** (`liquidation_number`) | Correlativo automático generado por trigger `set_liquidation_number` → `generate_liquidation_number()`. Secuencia `claims_liquidation_seq`. Si el Excel lo trae y se toma, queda el desastre con números duplicados o saltados. |
-| **No. McLarens One** (`internal_number`) | Número interno automático del sistema. |
-| **Fecha Creación** (`created_at`) | Auto-set por la base de datos (`default=now()`). |
 | **Fecha Cierre** | No existe columna `closed_date` en `claims`. |
 | **Tipo Construcción** | No existe tabla `construction_types` en la base. |
 | **Es Habitable?** | No existe tabla `habitations` ni `habitability` en la base. |
 | **Hora Siniestro** | No existe columna `claim_time` en `claims`. |
+| **`company_id`** | Se obtiene del perfil del usuario autenticado (tenant). NUNCA del Excel. |
+| **`updated_at`** | Auto-set por la base de datos (`default=now()`). |
+| **`updated_by`** | Se setea por el sistema según el usuario que hace la acción. |
+| **`disabled`** / **`disabled_at`** / **`disabled_by`** / **`disabled_reason`** | Se gestionan desde la pantalla de inhabilitar, no desde el Excel. |
+| **`reopened_at`** / **`reopened_by`** / **`reopened_reason`** | Se gestionan desde la pantalla de reabrir, no desde el Excel. |
+
+> **Nota sobre `internal_number` y `created_at`:** Ambos **SÍ se piden** del Excel.
+> - `internal_number` (N° McLarens One) es un `text` nullable sin default — no es automático.
+> - `created_at` solo se sobreescribe si viene valor del Excel; si no, usa el default `now()`. Útil para siniestros históricos importados.
 
 ---
 
@@ -219,7 +250,7 @@ La función `parseDate()` en `schema.ts` maneja:
 - `DD-MM-YY` → `20YY-MM-DD`
 - Serial de Excel (ej: 45800) → fecha correspondiente
 
-`applyMappingToRow()` normaliza automáticamente: `claimDate`, `reportDate`, `assignmentDate`, `policyStartDate`, `policyEndDate`.
+`applyMappingToRow()` normaliza automáticamente: `claimDate`, `reportDate`, `assignmentDate`, `createdAt`, `policyStartDate`, `policyEndDate`.
 
 ---
 
@@ -327,20 +358,30 @@ $$ LANGUAGE plpgsql;
 
 ## Catálogos Cargados en la Página
 
-| Catálogo | Función | Tabla | Filas |
-|---|---|---|---|
-| Aseguradoras | `getInsuranceCompanies()` | `insurance_companies` | 72 |
-| Tipos de Siniestro | `getClaimTypes()` | `claim_types` | 11 |
-| Causales | `getClaimCauses()` | `claim_causes` | 12 |
-| Líneas de Negocio | `getBusinessLines()` | `business_lines` | 5 |
-| Monedas | `getCurrencies()` | `currencies` | 18 |
-| Destinos Housing | `getHousingDestinations()` | `housing_destinations` | 2 |
-| Clasif. Daño | `getDamageClassifications()` | `damage_classifications` | 4 |
-| Estatus | `getLookupCatalog("claim_status")` | `lookup_catalog` | 5 |
-| Productos | `getInsuranceProducts()` | `insurance_products` | 5 |
-| Eventos | `getEvents()` | `events` | 10 |
+| Catálogo | Función | Tabla | Filas | Scope |
+|---|---|---|---|---|
+| Aseguradoras | `getInsuranceCompanies()` | `insurance_companies` | 72 | Global |
+| Tipos de Siniestro | `getClaimTypes()` | `claim_types` | 11 | Global |
+| Causales | `getClaimCauses()` | `claim_causes` | 12 | Global |
+| Líneas de Negocio | `getBusinessLines()` | `business_lines` | 5 | Global |
+| Monedas | `getCurrencies()` | `currencies` | 18 | Global |
+| Destinos Housing | `getHousingDestinations()` | `housing_destinations` | 2 | Global |
+| Clasif. Daño | `getDamageClassifications()` | `damage_classifications` | 4 | Global |
+| Estatus | `getLookupCatalog("claim_status")` | `lookup_catalog` | 5 | Global |
+| Productos | `getInsuranceProducts()` | `insurance_products` | 5 | Global |
+| Eventos | `getEvents()` | `events` | 10 | Global |
+| Corredores | `getBrokers()` | `brokers` | 20 | Global |
+| Asesores | `getAdvisors()` | `advisors` | 0 | Global |
+| Clasif. Propiedad | `getPropertyClassifications()` | `property_classifications` | 8 | Global |
+| Países | `getCountries()` | `countries` | 12 | Global |
+| Regiones | `getRegions()` | `regions` | 41 | Global |
+| Ciudades | `getCities()` | `cities` | 252 | Global |
+| Comunas | `getCommunes()` | `communes` | 2183 | Global |
+| Perfiles (empresa) | `getUsers(companyId)` | `profiles` | — | Por empresa |
+| Pólizas (empresa) | `getPolicies({ companyId })` | `policies` | 90 | Por empresa |
 
 Todos se cargan con `useQuery` y `staleTime: 5 * 60 * 1000` (5 minutos de cache).
+Los catálogos por empresa (`profiles`, `policies`) solo se cargan si `tenantCompanyId` está disponible.
 
 ---
 
@@ -375,3 +416,7 @@ Todos se cargan con `useQuery` y `staleTime: 5 * 60 * 1000` (5 minutos de cache)
 | `43a9e1a` | Labels Asegurado/Contratante + sinónimos completos |
 | `b35ae4f` | Flujo de 2 fases con staging |
 | `23179c0` | Eliminar liquidation_number + botones 1 palabra + limpiar staging |
+| `072418d` | Documentación completa (este MD) |
+| `f6eecd6` | Invertir mapper (filas=columnas Excel) + agregar internalNumber y resumen siniestro |
+| `519e14a` | Agregar Fecha Creación + arreglar lint warnings |
+| `ad19734` | Agregar TODAS las columnas de claims al mapper (client_reference, recovery_*, lat/lng, brokers, advisors, property_classifications, geo, profiles, policies) |
