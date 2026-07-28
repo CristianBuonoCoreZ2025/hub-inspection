@@ -84,7 +84,6 @@ const ALLOWED_ON_CREATE = [
   "default_issuer_role",
   "default_reviewer_role",
   "default_approver_role",
-  "company_id",
   "insurance_company_id",
   "event_id",
   "country_id",
@@ -171,7 +170,7 @@ async function getCurrentTemplate(id: string): Promise<Record<string, unknown>> 
       days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve,
       issuer_roles, reviewer_roles, approver_roles,
       default_issuer_role, default_reviewer_role, default_approver_role,
-      is_active, code, company_id, insurance_company_id, event_id, country_id
+      is_active, code, insurance_company_id, event_id, country_id
     `)
     .eq("id", id)
     .maybeSingle();
@@ -234,7 +233,7 @@ export async function createGestion(
         days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve,
         issuer_roles, reviewer_roles, approver_roles,
         default_issuer_role, default_reviewer_role, default_approver_role,
-        is_active, code, company_id, sort_order
+        is_active, code, sort_order
       `)
       .single();
 

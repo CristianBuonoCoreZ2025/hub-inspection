@@ -1737,7 +1737,7 @@ export default function ClaimDetailPage() {
  const tags: string[] = [];
  if (tpl.line_business_id) tags.push("Línea");
  if (tpl.event_id) tags.push("Evento");
- if (tpl.company_id) tags.push("Cía");
+ if (tpl.insurance_company_id) tags.push("Cía");
  const matchLabel = tags.length > 0 ? ` · ${tags.join("+")}` : " · General";
  return (
  <SelectItem key={tpl.id} value={tpl.id}>

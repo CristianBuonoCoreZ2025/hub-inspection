@@ -33,7 +33,7 @@ const ACTION_FEATURE_SELECT =
   `id, name, has_specific_screen, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, created_at, updated_at, color, local_name, document_template, email_template, document_type, screen:gestion_screens!action_features_screen_id_fkey(id, code, name, description, icon, form_schema, is_dynamic)`;
 
 const ACTION_TEMPLATE_SELECT =
-  `id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, reviewer_roles, approver_roles, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, issuer_roles, default_issuer_role, default_reviewer_role, default_approver_role, code, is_dispatch_applicable, company_id, event_id, sort_order, created_at, updated_at, action_feature:action_features!action_template_action_features_id_fkey(${ACTION_FEATURE_SELECT}), action_type:lookup_catalog!action_template_action_type_id_fkey(id, category, code, name), claim_statuses:action_template_claim_status!action_template_claim_status_action_template_id_fkey(id, claim_status_id, is_active, claim_status:lookup_catalog!action_template_claim_status_claim_status_id_fkey(id, category, code, name))`;
+  `id, action_type_id, action_features_id, line_business_id, name, description, is_blocker, is_review_applicable, is_approval_applicable, reviewer_roles, approver_roles, days_to_issue, days_to_review, days_to_approve, days_to_alert_to_issue, days_to_alert_to_review, days_to_alert_to_approve, is_active, issuer_roles, default_issuer_role, default_reviewer_role, default_approver_role, code, is_dispatch_applicable, insurance_company_id, event_id, sort_order, created_at, updated_at, action_feature:action_features!action_template_action_features_id_fkey(${ACTION_FEATURE_SELECT}), action_type:lookup_catalog!action_template_action_type_id_fkey(id, category, code, name), claim_statuses:action_template_claim_status!action_template_claim_status_action_template_id_fkey(id, claim_status_id, is_active, claim_status:lookup_catalog!action_template_claim_status_claim_status_id_fkey(id, category, code, name))`;
 
 const CLAIM_ACTION_SELECT =
   `id, claim_id, action_type_id, action_features_id, action_template_id, line_business_id, name, description, code, action_data, action_status_id, created_by, created_on, issued_by, issued_on, issuer_id, issue_rejected_by, issue_rejected_on, issuer_rejection_comment, reviewed_by, reviewed_on, reviewer_id, review_rejected_by, review_rejected_on, reviewer_rejection_comment, approved_by, approved_on, approver_id, approve_rejected_by, approve_rejected_on, approver_rejection_comment, dispatched_by, dispatched_on, dispatcher_id, dispatch_rejected_by, dispatch_rejected_on, dispatcher_rejection_comment, expected_date, is_blocker, is_active, is_automatic, origin, updated_on, updated_by, screen_snapshot, screen_snapshot_at, action_feature:action_features!claim_actions_action_features_id_fkey(${ACTION_FEATURE_SELECT}), action_type:lookup_catalog!claim_actions_action_type_id_fkey(id, category, code, name), action_status:lookup_catalog!claim_actions_action_status_id_fkey(id, category, code, name), action_template:action_template(id, name, code, issuer_roles, reviewer_roles, approver_roles, days_to_issue, days_to_review, days_to_approve), issuer:profiles!claim_actions_issuer_id_fkey(id, full_name, email), reviewer:profiles!claim_actions_reviewer_id_fkey(id, full_name, email), approver:profiles!claim_actions_approver_id_fkey(id, full_name, email)`;
@@ -56,7 +56,7 @@ export interface TemplateMatchContext {
   businessLineId?: string | null;
   /** Si se omite (undefined), no se filtra por esta dimensión. Si es null, solo pasa tpl con event_id null. */
   eventId?: string | null;
-  /** Si se omite (undefined), no se filtra por esta dimensión. Si es null, solo pasa tpl con company_id null. */
+  /** Si se omite (undefined), no se filtra por esta dimensión. Si es null, solo pasa tpl con insurance_company_id null. */
   insuranceCompanyId?: string | null;
 }
 
@@ -71,7 +71,7 @@ export interface TemplateMatchContext {
  * - Una plantilla se ofrece si TODAS sus dimensiones restrictivas coinciden con el claim:
  *     • si tpl.event_id != null  → debe == ctx.eventId
  *     • si tpl.line_business_id != null → debe == ctx.businessLineId
- *     • si tpl.company_id != null → debe == ctx.insuranceCompanyId
+ *     • si tpl.insurance_company_id != null → debe == ctx.insuranceCompanyId
  *   Las dimensiones null (abiertas) del template siempre pasan.
  * - Las plantillas con restricciones que NO cuadran con el claim se DESCARTAN.
  * - Orden: más específica primero (más dimensiones restrictivas = mayor prioridad).
@@ -108,7 +108,7 @@ export async function getActionTemplatesByClaimStatus(ctx: TemplateMatchContext)
   const matches = rows.filter((tpl) => {
     if (businessLineId !== undefined && tpl.line_business_id !== null && tpl.line_business_id !== businessLineId) return false;
     if (eventId !== undefined && tpl.event_id !== null && tpl.event_id !== eventId) return false;
-    if (insuranceCompanyId !== undefined && tpl.company_id !== null && tpl.company_id !== insuranceCompanyId) return false;
+    if (insuranceCompanyId !== undefined && tpl.insurance_company_id !== null && tpl.insurance_company_id !== insuranceCompanyId) return false;
     return true;
   });
 
@@ -119,7 +119,7 @@ export async function getActionTemplatesByClaimStatus(ctx: TemplateMatchContext)
     let score = 0;
     if (tpl.line_business_id) score += 4;
     if (tpl.event_id) score += 2;
-    if (tpl.company_id) score += 1;
+    if (tpl.insurance_company_id) score += 1;
     return score;
   };
 

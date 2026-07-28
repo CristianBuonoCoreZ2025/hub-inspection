@@ -934,7 +934,7 @@ export interface ActionTemplate {
   auto_email_template_id: string | null;
   auto_email_recipients: string[];
   auto_field_mapping: Record<string, string>;
-  company_id: string | null;
+  insurance_company_id: string | null;
   event_id: string | null;
   sort_order: number;
   created_at: string;
