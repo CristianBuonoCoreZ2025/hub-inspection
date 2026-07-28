@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { createClaim } from "@/services/claims";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createClaimMinimal } from "@/services/claims";
+import { getCompanies } from "@/services/companies";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2, ArrowRight, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,23 @@ export default function CargaSiniestrosPage() {
   const [mapping, setMapping] = useState<Record<string, ColumnMapping>>({});
   const [mapperOpen, setMapperOpen] = useState(true);
 
+  // ── Cargar empresas para resolver nombre → UUID ──
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: getCompanies,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Mapa nombre (normalizado) → UUID
+  const companyMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of companies ?? []) {
+      map.set(c.name.toLowerCase().trim(), c.id);
+      if (c.slug) map.set(c.slug.toLowerCase().trim(), c.id);
+    }
+    return map;
+  }, [companies]);
+
   // ── Parsed rows: estado derivado de mapping + rawRows ──
   // Se recalcula en vivo cuando el usuario cambia el mapeo, sin useEffect.
   const parsedRows = useMemo<ParsedRow[]>(() => {
@@ -47,9 +65,24 @@ export default function CargaSiniestrosPage() {
     return rawRows.map((raw, idx) => {
       const data = applyMappingToRow(raw, mapping);
       const { valid, errors } = validateRowWithMapping(data, mapping);
-      return { rowNum: idx + 2, data, valid, errors };
+
+      // Validación adicional: resolver nombre de empresa → UUID
+      const companyValue = String(data.companyId || "").trim();
+      if (companyValue && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyValue)) {
+        const normalized = companyValue.toLowerCase().trim();
+        if (!companyMap.has(normalized)) {
+          errors.push({
+            fieldKey: "companyId",
+            fieldLabel: "Empresa",
+            kind: "invalid_value",
+            message: `Empresa "${companyValue}" no encontrada en el sistema. Nombres válidos: ${companies?.map(c => c.name).join(", ") || "cargando..."}`,
+          });
+        }
+      }
+
+      return { rowNum: idx + 2, data, valid: valid && errors.length === 0, errors };
     });
-  }, [rawRows, mapping]);
+  }, [rawRows, mapping, companyMap, companies]);
 
   // ── Cargar y parsear el Excel ──
   const parseFile = useCallback((f: File) => {
@@ -124,6 +157,18 @@ export default function CargaSiniestrosPage() {
     });
   };
 
+  // ── Resolver nombre de empresa → UUID ──
+  const resolveCompanyId = (value: string): string | null => {
+    if (!value) return null;
+    // Si ya es un UUID, usarlo directo
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+      return value;
+    }
+    // Buscar por nombre o slug (case-insensitive)
+    const normalized = value.toLowerCase().trim();
+    return companyMap.get(normalized) || null;
+  };
+
   // ── Cargar siniestros al backend ──
   const loadMutation = useMutation({
     mutationFn: async (rows: ParsedRow[]) => {
@@ -136,7 +181,43 @@ export default function CargaSiniestrosPage() {
       for (let i = 0; i < validRows.length; i++) {
         const row = validRows[i];
         try {
-          await createClaim(row.data as Parameters<typeof createClaim>[0]);
+          const d = row.data;
+          const companyId = resolveCompanyId(String(d.companyId || ""));
+          if (!companyId) {
+            throw new Error(`Empresa "${d.companyId}" no encontrada. Verifica que el nombre coincida con una empresa del sistema.`);
+          }
+
+          await createClaimMinimal(
+            {
+              claimNumber: String(d.claimNumber || ""),
+              policyNumber: String(d.policyNumber || ""),
+              claimDate: String(d.claimDate || ""),
+              summary: d.summary ? String(d.summary) : null,
+              reportDate: d.reportDate ? String(d.reportDate) : null,
+              assignmentDate: d.assignmentDate ? String(d.assignmentDate) : null,
+              company_id: companyId,
+            },
+            {
+              insuredName: String(d.insuredName || ""),
+              lastName: d.lastName ? String(d.lastName) : null,
+              rut: d.rut ? String(d.rut) : null,
+              insuredEmail: d.insuredEmail ? String(d.insuredEmail) : null,
+              insuredPhone: d.insuredPhone ? String(d.insuredPhone) : null,
+              cellPhone: String(d.cellPhone || d.insuredPhone || ""),
+              insuredAddress: d.address ? String(d.address) : null,
+              insuredCountry: d.country ? String(d.country) : null,
+              insuredRegion: d.region ? String(d.region) : null,
+              insuredCity: d.city ? String(d.city) : null,
+              insuredCommune: d.commune ? String(d.commune) : null,
+            },
+            {
+              claimAddress: String(d.address || ""),
+              claimCountry: d.country ? String(d.country) : null,
+              claimRegion: d.region ? String(d.region) : null,
+              claimCity: String(d.city || ""),
+              claimCommune: d.commune ? String(d.commune) : null,
+            }
+          );
           success++;
         } catch (err) {
           error++;
