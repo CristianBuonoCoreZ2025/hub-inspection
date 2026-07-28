@@ -234,36 +234,13 @@ export const CLAIM_FIELDS: ClaimField[] = [
     required: false,
     synonyms: ["comuna contratante", "contractor commune", "contractor_commune", "comuna del contratante"],
   },
-  // ── Dirección del Siniestro (separada de la del contratante) ──
+  // ── Dirección del Siniestro (separada de la del asegurado) ──
+  // Nota: País/Región/Ciudad/Comuna del siniestro van por catálogo (claimCountryRef etc.)
   {
     key: "claimAddress",
     label: "Dirección Siniestro",
     required: false,
     synonyms: ["direccion siniestro", "dirección siniestro", "lugar siniestro", "domicilio siniestro", "claim address", "claim_address", "ubicacion siniestro", "ubicación siniestro", "calle siniestro"],
-  },
-  {
-    key: "claimCountry",
-    label: "País Siniestro",
-    required: false,
-    synonyms: ["pais siniestro", "país siniestro", "claim country", "claim_country", "pais del siniestro", "país del siniestro"],
-  },
-  {
-    key: "claimRegion",
-    label: "Región Siniestro",
-    required: false,
-    synonyms: ["region siniestro", "región siniestro", "claim region", "claim_region", "region del siniestro", "región del siniestro"],
-  },
-  {
-    key: "claimCity",
-    label: "Ciudad Siniestro",
-    required: false,
-    synonyms: ["ciudad siniestro", "claim city", "claim_city", "ciudad del siniestro"],
-  },
-  {
-    key: "claimCommune",
-    label: "Comuna Siniestro",
-    required: false,
-    synonyms: ["comuna siniestro", "claim commune", "claim_commune", "comuna del siniestro"],
   },
   // ── No. Siniestro Compañía → company_report_number ──
   {
@@ -459,6 +436,18 @@ export const CLAIM_FIELDS: ClaimField[] = [
     synonyms: ["comuna beneficiario", "beneficiary commune", "beneficiary_commune", "comuna benef"],
   },
   // ── Persona Contacto (va a claims_participants tipo contact) ──
+  {
+    key: "contactName",
+    label: "Nombre Persona Contacto",
+    required: false,
+    synonyms: ["nombre persona contacto", "nombre contacto", "contacto", "contact name", "contact_name", "contactname", "persona contacto", "contacto siniestro"],
+  },
+  {
+    key: "contactRole",
+    label: "Cargo Persona Contacto",
+    required: false,
+    synonyms: ["cargo persona contacto", "cargo contacto", "cargo", "relación", "relacion", "contact role", "contact_role", "contactrole", "parentesco"],
+  },
   {
     key: "contactEmail",
     label: "E-mail Persona Contacto",

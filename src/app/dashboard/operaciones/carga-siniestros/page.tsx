@@ -660,12 +660,8 @@ export default function CargaSiniestrosPage() {
           insuredRegion: str(d.region) || null,
           insuredCity: str(d.city) || null,
           insuredCommune: str(d.commune) || null,
-          // Dirección del siniestro
+          // Dirección del siniestro (solo texto, país/región/ciudad/comuna van por catálogo)
           claimAddress: str(d.claimAddress) || str(d.address),
-          claimCountry: str(d.claimCountry) || str(d.country) || null,
-          claimRegion: str(d.claimRegion) || str(d.region) || null,
-          claimCity: str(d.claimCity) || str(d.city),
-          claimCommune: str(d.claimCommune) || str(d.commune) || null,
           // Beneficiario
           beneficiaryName: str(d.beneficiaryName) || null,
           beneficiaryLastName: str(d.beneficiaryLastName) || null,
@@ -679,6 +675,8 @@ export default function CargaSiniestrosPage() {
           beneficiaryCity: str(d.beneficiaryCity) || null,
           beneficiaryCommune: str(d.beneficiaryCommune) || null,
           // Contacto
+          contactName: str(d.contactName) || null,
+          contactRole: str(d.contactRole) || null,
           contactEmail: str(d.contactEmail) || null,
           contactPhone: str(d.contactPhone) || null,
           // Metadata
@@ -834,10 +832,6 @@ export default function CargaSiniestrosPage() {
             },
             {
               claimAddress: String(d.claimAddress || ""),
-              claimCountry: (d.claimCountry as string) || null,
-              claimRegion: (d.claimRegion as string) || null,
-              claimCity: String(d.claimCity || ""),
-              claimCommune: (d.claimCommune as string) || null,
             },
             // Contractor (si tiene nombre)
             (d.contractorName as string) ? {
@@ -866,7 +860,9 @@ export default function CargaSiniestrosPage() {
               beneficiaryCity: (d.beneficiaryCity as string) || null,
               beneficiaryCommune: (d.beneficiaryCommune as string) || null,
             } : null,
-            ((d.contactEmail as string) || (d.contactPhone as string)) ? {
+            ((d.contactName as string) || (d.contactEmail as string) || (d.contactPhone as string)) ? {
+              contactName: (d.contactName as string) || null,
+              contactRole: (d.contactRole as string) || null,
               contactEmail: (d.contactEmail as string) || null,
               contactPhone: (d.contactPhone as string) || null,
             } : null

@@ -381,7 +381,7 @@ export async function createClaimMinimal(
     claimAddress: string;
     claimCountry?: string | null;
     claimRegion?: string | null;
-    claimCity: string;
+    claimCity?: string | null;
     claimCommune?: string | null;
     claimLatitude?: number | null;
     claimLongitude?: number | null;
@@ -413,6 +413,8 @@ export async function createClaimMinimal(
     beneficiaryCommune?: string | null;
   } | null,
   contact?: {
+    contactName?: string | null;
+    contactRole?: string | null;
     contactEmail?: string | null;
     contactPhone?: string | null;
   } | null
@@ -538,13 +540,14 @@ export async function createClaimMinimal(
   }
 
   // 5. Crear participant contact (si existe)
-  if (contact && (contact.contactEmail || contact.contactPhone)) {
+  if (contact && (contact.contactName || contact.contactEmail || contact.contactPhone)) {
     await createClaimParticipant({
       claim_id: claim.id,
       type: "contact",
-      full_name: "Contacto",
+      full_name: contact.contactName || "Contacto",
       email: contact.contactEmail || null,
       phone: contact.contactPhone || null,
+      notes: contact.contactRole || null,
     });
   }
 
@@ -609,9 +612,10 @@ export async function createClaimParticipant(input: {
   region?: string | null;
   city?: string | null;
   commune?: string | null;
+  notes?: string | null;
   linked_to_insured?: boolean;
 }) {
-  return insertRow<{ id: string }>("claims_participants", input, "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, linked_to_insured");
+  return insertRow<{ id: string }>("claims_participants", input, "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, notes, linked_to_insured");
 }
 
 export async function updateClaimParticipant(id: string, input: Partial<{
