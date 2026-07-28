@@ -50,6 +50,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Faltan datos obligatorios" }, { status: 400 });
     }
 
+    // Validar formato de todos los destinatarios (to + cc) antes de enviar al
+    // proveedor. Resend/SendGrid rechazan con 422 si un email es inválido, pero
+    // su mensaje es genérico. Aquí damos feedback específico al usuario.
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const invalidTo = to.filter((e) => !EMAIL_RE.test(e));
+    const invalidCc = (cc || []).filter((e) => !EMAIL_RE.test(e));
+    if (invalidTo.length || invalidCc.length) {
+      const allInvalid = [...invalidTo, ...invalidCc];
+      return NextResponse.json(
+        {
+          error: `Dirección(es) de correo inválida(s): ${allInvalid.join(", ")}. Usa el formato email@ejemplo.com y separa múltiples destinatarios con coma o punto y coma.`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Modo: plantilla (con emailTemplateId) o escrito a mano (con manualSubject + manualBody)
     const isManual = !emailTemplateId;
     if (isManual && (!manualSubject || !manualBody)) {
@@ -297,6 +313,46 @@ export async function POST(request: NextRequest) {
       html: body_format === "html",
     });
 
+    // Si el proveedor rechazó el envío, devolver error con detalle para que
+    // el usuario vea la causa real (ej: dominio no verificado, API key inválida,
+    // destinatario inválido). Antes esto se silenciaba y el toast decía "enviado".
+    if (result.status === "failed") {
+      const providerMsg =
+        (result.provider_response?.message as string | undefined) ||
+        (result.provider_response?.error as string | undefined) ||
+        JSON.stringify(result.provider_response);
+      console.error("[email/send] Proveedor rechazó el envío:", {
+        provider: result.provider,
+        provider_response: result.provider_response,
+        to,
+        from: process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL,
+      });
+      // Igual registramos el intento fallido en email_logs para auditoría
+      await supabase.from("email_logs").insert({
+        company_id: companyId,
+        claim_id: claim.id as string,
+        claim_action_id: claimActionId,
+        email_template_id: emailTemplateId ?? null,
+        to_address: to,
+        cc_address: cc,
+        subject,
+        body: finalBody,
+        body_format,
+        status: "failed",
+        provider_response: result.provider_response,
+        sent_by: profileId,
+        parent_action_code: actionCode,
+        template_subject: orig_template_subject,
+        template_body: orig_template_body,
+        template_body_format: orig_template_body_format,
+        was_modified: was_modified,
+      }).select("id, correlativo").single();
+      return NextResponse.json(
+        { error: `Proveedor (${result.provider}) rechazó el envío: ${providerMsg}` },
+        { status: 502 }
+      );
+    }
+
     const { data: log, error: logError } = await supabase.from("email_logs").insert({
       company_id: companyId,
       claim_id: claim.id as string,
@@ -325,6 +381,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, log, result });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error inesperado";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[email/send] Error inesperado:", err);
+    return NextResponse.json(
+      { error: `Error enviando e-mail: ${message}` },
+      { status: 500 }
+    );
   }
 }

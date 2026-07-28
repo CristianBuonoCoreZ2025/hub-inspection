@@ -1154,7 +1154,7 @@ export default function PolicyDetailPage() {
  <table className="app-data-table">
  <thead className="bg-muted/50">
  <tr>
- <th className="px-3 py-2 text-left font-medium" style={{ width: "45%" }}>Cobertura / Subcobertura</th>
+ <th className="px-3 py-2 text-left font-medium col-coverage">Cobertura / Subcobertura</th>
  <th className="px-3 py-2 text-right font-medium">Asegurado</th>
  <th className="px-3 py-2 text-right font-medium">Deducible</th>
  <th className="px-3 py-2 text-left font-medium">Moneda</th>

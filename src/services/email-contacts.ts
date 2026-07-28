@@ -185,12 +185,13 @@ export async function getClaimContacts(claimId: string): Promise<EmailContact[]>
 }
 
 /**
- * Versión cliente del servicio (usa fetch a una API route).
- * Usa para componentes "use client" que no pueden importar server-only.
+ * Wrapper para componentes "use client" que necesitan la libreta de contactos.
+ *
+ * Como este archivo tiene "use server", esta función se ejecuta como Server Action
+ * (en el servidor). Por eso NO puede hacer fetch a una API route con URL relativa
+ * (falla con ERR_INVALID_URL en SSR). En su lugar, llama directamente a
+ * getClaimContacts que está en el mismo archivo y ya tiene acceso a Supabase.
  */
 export async function fetchClaimContacts(claimId: string): Promise<EmailContact[]> {
-  const res = await fetch(`/api/email/contacts?claimId=${claimId}`);
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.contacts as EmailContact[];
+  return getClaimContacts(claimId);
 }

@@ -273,7 +273,7 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  <p className="app-title text-muted-foreground">Vista del formulario</p>
  <span className="app-body text-muted-foreground">{fields.length} campo(s)</span>
  </div>
- <div className="flex-1 overflow-y-auto p-5 space-y-3">
+ <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-3">
  {fields.length === 0 && (
  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-2 py-12">
  <LayoutTemplate className="h-10 w-10 opacity-20" />
@@ -303,7 +303,7 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  <div className="border-b px-4 py-2">
  <p className="app-title text-muted-foreground">Propiedades</p>
  </div>
- <div className="flex-1 overflow-y-auto p-3">
+ <div className="flex-1 overflow-y-auto min-h-0 p-3">
  {selectedField ? (
  <PropertiesPanel
  field={selectedField}

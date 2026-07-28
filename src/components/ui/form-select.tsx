@@ -31,7 +31,7 @@ export function FormSelect<TFieldValues extends FieldValues = FieldValues>({ con
       name={name as FieldPath<TFieldValues>}
       render={({ field }) => (
         <Select
-          value={field.value || CLEAR_VALUE}
+          value={field.value || null}
           onValueChange={(v: string | null) => {
             const value = !v || v === CLEAR_VALUE ? "" : v;
             field.onChange(value);

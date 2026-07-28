@@ -111,7 +111,7 @@ export function EmailContactBook({
       </div>
 
       {/* Lista */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
             <p className="text-[11px]">Cargando contactos…</p>

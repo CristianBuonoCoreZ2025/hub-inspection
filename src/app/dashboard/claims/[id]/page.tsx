@@ -47,6 +47,7 @@ import {
  ArrowDown,
  Inbox,
  MailCheck,
+ RotateCw,
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import L from "leaflet";
@@ -161,6 +162,25 @@ export default function ClaimDetailPage() {
  const id = params.id as string;
  const queryClient = useQueryClient();
  const { canEdit, canView } = usePermissions();
+
+ // Mutación para reenviar un correo fallido desde la lista de emails
+ const resendEmailMutation = useMutation({
+   mutationFn: async (emailLogId: string) => {
+     const res = await fetch("/api/email/resend", {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ emailLogId }),
+     });
+     const json = await res.json();
+     if (!res.ok) throw new Error(json.error || "Error reenviando e-mail");
+     return json;
+   },
+   onSuccess: () => {
+     toast.success("Correo reenviado");
+     queryClient.invalidateQueries({ queryKey: ["email-logs-by-claim", id] });
+   },
+   onError: (err: Error) => toast.error(err.message),
+ });
  useRealtime("claims", [["claim", id], ["claims"]]);
  useRealtime("claim_actions", [["claim-actions", id], ["claim-action"]]);
  useRealtime("claims_participants", [["claim-participants", id]]);
@@ -1616,9 +1636,25 @@ export default function ClaimDetailPage() {
                      <div className="flex flex-col min-w-0 flex-1 gap-0.5">
                        <div className="flex items-center justify-between gap-2">
                          <span className="font-mono app-body text-primary font-medium">{emailCode}</span>
-                         <span className="text-[10px] text-muted-foreground tabular-nums">
-                           {new Date(log.sent_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
-                         </span>
+                         <div className="flex items-center gap-1.5">
+                           {log.status === "failed" && (
+                             <button
+                               type="button"
+                               onClick={(e: { stopPropagation: () => void }) => {
+                                 e.stopPropagation();
+                                 resendEmailMutation.mutate(log.id);
+                               }}
+                               disabled={resendEmailMutation.isPending && resendEmailMutation.variables === log.id}
+                               title="Reenviar correo"
+                               className="inline-flex h-5 w-5 items-center justify-center rounded border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors disabled:opacity-50"
+                             >
+                               <RotateCw className={`h-3 w-3 ${resendEmailMutation.isPending && resendEmailMutation.variables === log.id ? "animate-spin" : ""}`} />
+                             </button>
+                           )}
+                           <span className="text-[10px] text-muted-foreground tabular-nums">
+                             {new Date(log.sent_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+                           </span>
+                         </div>
                        </div>
                        <p className="app-body truncate">{log.subject || "(sin asunto)"}</p>
                        <div className="flex items-center justify-between gap-2">
@@ -1931,7 +1967,7 @@ export default function ClaimDetailPage() {
  <MapContainer
  center={[claim.claim_latitude, claim.claim_longitude]}
  zoom={16}
- style={{ height: "100%", width: "100%" }}
+ className="h-full w-full"
  scrollWheelZoom={false}
  >
  <TileLayer

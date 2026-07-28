@@ -205,7 +205,7 @@ export default function LineasNegocioPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="modal-field" style={{ flex: "0 0 100px" }}>
+                <div className="modal-field field-fixed-100">
                   <Label className="app-field-label">
                     Código {!editingId && <span className="text-red-500">*</span>}
                     {editingId && <span className="text-amber-600 ml-1">(inmutable)</span>}

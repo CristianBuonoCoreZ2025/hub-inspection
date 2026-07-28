@@ -601,10 +601,9 @@ export default function DashboardPage() {
                 <div className="mt-3 w-full flex items-center gap-2">
                   <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all"
+                      className="h-full rounded-full transition-all progress-bar-amber"
                       style={{
                         width: `${Math.min(stats.avgResolutionDays * 10, 100)}%`,
-                        background: "linear-gradient(90deg, #f59e0b, #d97706)",
                       }}
                     />
                   </div>
@@ -794,7 +793,7 @@ export default function DashboardPage() {
                   Actividad Reciente
                 </div>
               </div>
-              <div className="glass-panel-body" style={{ maxHeight: 240, overflow: "auto" }}>
+              <div className="glass-panel-body scroll-box-sm">
                 {recentActivity.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">
                     No hay actividad reciente.
@@ -806,10 +805,7 @@ export default function DashboardPage() {
                       return (
                         <div key={item.id} className="activity-item">
                           <div
-                            className="activity-icon"
-                            style={{
-                              background: "linear-gradient(135deg, color-mix(in srgb, var(--primary) 15%, transparent), color-mix(in srgb, var(--primary) 5%, transparent))",
-                            }}
+                            className="activity-icon activity-icon-gradient"
                           >
                             <Icon className="h-3.5 w-3.5 text-primary" />
                           </div>
@@ -885,7 +881,7 @@ export default function DashboardPage() {
                   Actividad Reciente
                 </div>
               </div>
-              <div className="glass-panel-body" style={{ maxHeight: 240, overflow: "auto" }}>
+              <div className="glass-panel-body scroll-box-sm">
                 {recentActivity.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">
                     No hay actividad reciente.
@@ -897,10 +893,7 @@ export default function DashboardPage() {
                       return (
                         <div key={item.id} className="activity-item">
                           <div
-                            className="activity-icon"
-                            style={{
-                              background: "linear-gradient(135deg, color-mix(in srgb, var(--primary) 15%, transparent), color-mix(in srgb, var(--primary) 5%, transparent))",
-                            }}
+                            className="activity-icon activity-icon-gradient"
                           >
                             <Icon className="h-3.5 w-3.5 text-primary" />
                           </div>

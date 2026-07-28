@@ -2377,3 +2377,68 @@
   background: color-mix(in srgb, #10b981 12%, transparent) !important;
 }
 
+  /* ═══════════════════════════════════════════════════════════════
+   * CLASES UTILITARIAS PARA REEMPLAZAR INLINE STYLES (regla #2)
+   * Creadas en Fase 12 del plan v2 de responsive.
+   * ═══════════════════════════════════════════════════════════════ */
+
+  /* ── Scroll containers para contenido acotado ── */
+  .scroll-box-sm {
+    max-height: 240px !important;
+    overflow-y: auto !important;
+  }
+  .ai-summary-scroll {
+    max-height: 60vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* ── Gradientes estáticos de dashboard ── */
+  .progress-bar-amber {
+    background: linear-gradient(90deg, #f59e0b, #d97706) !important;
+  }
+  .activity-icon-gradient {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--primary) 15%, transparent),
+      color-mix(in srgb, var(--primary) 5%, transparent)
+    ) !important;
+  }
+
+  /* ── Glass variants para backdrop filter ── */
+  .glass-heavy {
+    backdrop-filter: blur(20px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  }
+  .glass-medium {
+    backdrop-filter: blur(12px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+  }
+
+  /* ── Input mini para alertas ── */
+  .alert-input-mini {
+    border-radius: 6px !important;
+    height: 28px !important;
+    width: 56px !important;
+    padding: 0 !important;
+    font-size: 12px !important;
+  }
+
+  /* ── Email preview dimensions ── */
+  .email-preview-container {
+    max-width: 600px !important;
+  }
+  .email-preview-iframe {
+    min-height: 70vh !important;
+    height: 100% !important;
+  }
+
+  /* ── Field fixed width ── */
+  .field-fixed-100 {
+    flex: 0 0 100px !important;
+  }
+
+  /* ── Table column coverage ── */
+  .col-coverage {
+    width: 45% !important;
+  }
+
