@@ -108,9 +108,9 @@ export const CLAIM_FIELDS: ClaimField[] = [
   },
   {
     key: "summary",
-    label: "Resumen",
+    label: "Resumen Siniestro",
     required: false,
-    synonyms: ["resumen", "descripción", "descripcion", "summary", "descripción resumida", "descripcion resumida", "detalle", "observacion general"],
+    synonyms: ["resumen siniestro", "resumen", "descripción", "descripcion", "summary", "descripción resumida", "descripcion resumida", "detalle", "observacion general", "descripcion siniestro", "descripción siniestro"],
   },
   {
     key: "lastName",
@@ -315,7 +315,12 @@ export const CLAIM_FIELDS: ClaimField[] = [
     required: false,
     synonyms: ["prima anual", "prima", "policy premium", "policy_premium", "prima poliza", "prima póliza", "valor prima"],
   },
-  // Nota: internal_number (No. McLarens One) NO se pide en el Excel — es automático
+  {
+    key: "internalNumber",
+    label: "N° McLarens One",
+    required: false,
+    synonyms: ["no mclarens one", "n mclarens one", "numero mclarens one", "mclarens one", "mcone", "n° mclarens one", "no mclarens", "n° mclarens", "internal number", "internal_number", "numero interno", "n° interno", "no interno"],
+  },
   {
     key: "isSpecialClaim",
     label: "Siniestro Especial",

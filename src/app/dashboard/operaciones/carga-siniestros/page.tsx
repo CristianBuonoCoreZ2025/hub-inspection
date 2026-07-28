@@ -324,27 +324,29 @@ export default function CargaSiniestrosPage() {
     reader.readAsArrayBuffer(f);
   }, []);
 
-  // ── Cambiar el mapeo de un campo ──
-  const handleFieldMappingChange = (fieldKey: string, excelHeader: string | null) => {
-    const header = excelHeader || "__none__";
+  // ── Cambiar el mapeo: desde una columna del Excel a un campo del sistema ──
+  // excelHeader = columna del Excel que se está mapeando
+  // fieldKey = campo del sistema al que se mapea (o null para desmapear)
+  const handleExcelHeaderMapping = (excelHeader: string, fieldKey: string | null) => {
     setMapping((prev) => {
       const next = { ...prev };
 
-      // Si el header nuevo ya estaba asignado a otro campo, quitarlo de ahí
-      if (header !== "__none__") {
-        for (const [k, m] of Object.entries(next)) {
-          if (k !== fieldKey && m?.excelHeader === header) {
-            next[k] = { ...m, fieldKey: null, excelHeader: "", autoDetected: false, confidence: 0 };
-          }
+      // 1) Qitar este excelHeader de cualquier campo que lo tenga asignado
+      for (const [k, m] of Object.entries(next)) {
+        if (m?.excelHeader === excelHeader) {
+          next[k] = { ...m, fieldKey: null, excelHeader: "", autoDetected: false, confidence: 0 };
         }
       }
 
-      next[fieldKey] = {
-        fieldKey: header === "__none__" ? null : fieldKey,
-        excelHeader: header === "__none__" ? "" : header,
-        autoDetected: false,
-        confidence: 1,
-      };
+      // 2) Si se está asignando a un fieldKey, quitar el excelHeader que tenía ese fieldKey antes
+      if (fieldKey) {
+        next[fieldKey] = {
+          fieldKey,
+          excelHeader,
+          autoDetected: false,
+          confidence: 1,
+        };
+      }
 
       return next;
     });
@@ -412,6 +414,7 @@ export default function CargaSiniestrosPage() {
           reportDate: date(d.reportDate),
           assignmentDate: date(d.assignmentDate),
           companyReportNumber: str(d.companyReportNumber) || null,
+          internalNumber: str(d.internalNumber) || null,
           // UUIDs resueltos
           insuranceCompanyId,
           claimTypeId,
@@ -590,6 +593,7 @@ export default function CargaSiniestrosPage() {
               isSpecialClaim: (d.isSpecialClaim as boolean | null) ?? null,
               brokerExecutive: (d.brokerExecutive as string) || null,
               companyReportNumber: (d.companyReportNumber as string) || null,
+              internalNumber: (d.internalNumber as string) || null,
             },
             {
               insuredName: String(d.insuredName || ""),
@@ -896,63 +900,59 @@ export default function CargaSiniestrosPage() {
                   </div>
                 </div>
 
-                {/* Tabla de mapeo campo → columna */}
+                {/* Tabla de mapeo INVERTIDA: filas = columnas del Excel, dropdown = campos del sistema */}
                 <div className="bulk-mapper-table-wrap">
                   <table className="bulk-mapper-table">
                     <thead>
                       <tr>
-                        <th className="bulk-mapper-th-field">Campo del sistema</th>
-                        <th className="bulk-mapper-th-arrow"></th>
                         <th className="bulk-mapper-th-column">Columna del Excel</th>
+                        <th className="bulk-mapper-th-arrow"></th>
+                        <th className="bulk-mapper-th-field">Campo del sistema</th>
                         <th className="bulk-mapper-th-status">Estado</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {CLAIM_FIELDS.map((field) => {
-                        const m = mapping[field.key];
-                        const isMapped = m?.fieldKey && m?.excelHeader;
+                      {excelHeaders.map((header) => {
+                        const fieldKey = usedHeaders.get(header);
+                        const field = fieldKey ? CLAIM_FIELDS.find((f) => f.key === fieldKey) : null;
+                        const isMapped = !!field;
+                        const m = fieldKey ? mapping[fieldKey] : null;
                         const confidence = m?.confidence ?? 0;
                         const isLowConfidence = isMapped && confidence < 1 && m?.autoDetected;
 
                         return (
-                          <tr key={field.key} className={field.required ? "bulk-mapper-row-required" : ""}>
-                            <td className="bulk-mapper-td-field">
-                              <div className="bulk-mapper-field-info">
-                                <span className="bulk-mapper-field-label">{field.label}</span>
-                                {field.required && <span className="bulk-mapper-required-badge">Requerido</span>}
-                                {field.description && (
-                                  <span className="bulk-mapper-field-desc">{field.description}</span>
-                                )}
-                              </div>
+                          <tr key={header} className={field?.required ? "bulk-mapper-row-required" : ""}>
+                            <td className="bulk-mapper-td-column">
+                              <span className="bulk-mapper-field-label">{header}</span>
                             </td>
                             <td className="bulk-mapper-td-arrow">
                               <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                             </td>
-                            <td className="bulk-mapper-td-column">
+                            <td className="bulk-mapper-td-field">
                               <Select
-                                value={m?.excelHeader || "__none__"}
-                                onValueChange={(val) => handleFieldMappingChange(field.key, val)}
+                                value={fieldKey || "__none__"}
+                                onValueChange={(val) => handleExcelHeaderMapping(header, val === "__none__" ? null : val)}
                               >
                                 <SelectTrigger className="bulk-mapper-select">
                                   <SelectValue placeholder="— Sin mapear —" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="__none__">— Sin mapear —</SelectItem>
-                                  {excelHeaders.map((h) => {
-                                    const usedByField = usedHeaders.get(h);
-                                    const usedByOther = usedByField && usedByField !== field.key;
-                                    const usedLabel = usedByOther
-                                      ? CLAIM_FIELDS.find((f) => f.key === usedByField)?.label
-                                      : null;
+                                  {CLAIM_FIELDS.map((f) => {
+                                    // Un campo está disponible si no tiene ningún header asignado,
+                                    // o si el header que tiene es este mismo (el actual)
+                                    const currentHeaderForField = mapping[f.key]?.excelHeader;
+                                    const isAvailable = !currentHeaderForField || currentHeaderForField === header;
                                     return (
                                       <SelectItem
-                                        key={h}
-                                        value={h}
-                                        disabled={!!usedByOther}
-                                        className={usedByOther ? "bulk-mapper-option-used" : ""}
+                                        key={f.key}
+                                        value={f.key}
+                                        disabled={!isAvailable}
+                                        className={!isAvailable ? "bulk-mapper-option-used" : ""}
                                       >
-                                        {h}
-                                        {usedLabel && ` (asignada a: ${usedLabel})`}
+                                        {f.label}
+                                        {f.required && " *"}
+                                        {!isAvailable && " (en uso)"}
                                       </SelectItem>
                                     );
                                   })}
@@ -960,14 +960,9 @@ export default function CargaSiniestrosPage() {
                               </Select>
                             </td>
                             <td className="bulk-mapper-td-status">
-                              {!isMapped && field.required && (
-                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-error">
-                                  Falta mapear
-                                </span>
-                              )}
-                              {!isMapped && !field.required && (
+                              {!isMapped && (
                                 <span className="bulk-mapper-status-pill bulk-mapper-status-pill-neutral">
-                                  Opcional
+                                  Sin mapear
                                 </span>
                               )}
                               {isMapped && isLowConfidence && (
@@ -987,6 +982,18 @@ export default function CargaSiniestrosPage() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Resumen de campos requeridos sin mapear */}
+                {missingRequiredCount > 0 && (
+                  <div className="bulk-mapper-required-warning">
+                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                    <span>
+                      {missingRequiredCount} campo(s) requerido(s) sin mapear:{" "}
+                      {REQUIRED_FIELDS.filter((f) => !mapping[f.key]?.fieldKey || !mapping[f.key]?.excelHeader)
+                        .map((f) => f.label).join(", ")}
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </div>
