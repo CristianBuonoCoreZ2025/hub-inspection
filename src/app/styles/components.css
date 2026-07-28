@@ -1135,6 +1135,45 @@
     }
   }
 
+  /* ═══════════════════════════════════════════════════════════════
+   * DYNAMIC SCREEN FIELDS GRID — grid de 60 columnas para pantallas
+   * dinámicas de gestiones. Tailwind v4 no incluye grid-cols-60 por
+   * defecto (solo 1-12), así que se define aquí.
+   * Responsive: en mobile (<=639px) se apila en 1 columna.
+   * ═══════════════════════════════════════════════════════════════ */
+  .dynamic-screen-fields-grid {
+    grid-template-columns: repeat(60, minmax(0, 1fr)) !important;
+  }
+
+  @media (max-width: 639px) {
+    .dynamic-screen-fields-grid {
+      grid-template-columns: 1fr !important;
+    }
+    /* En mobile, todos los col-span-* se ignoran y ocupan 1 columna */
+    .dynamic-screen-fields-grid > * {
+      grid-column: span 1 / span 1 !important;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * ADMIN MENU PALETTE — paleta lateral del editor de menú
+   * Responsive: en mobile ocupa 100% (apilada bajo el canvas),
+   * en tablet/desktop tiene ancho fijo.
+   * ═══════════════════════════════════════════════════════════════ */
+  .admin-menu-palette {
+    width: 100% !important;
+  }
+  @media (min-width: 640px) {
+    .admin-menu-palette {
+      width: 240px !important;
+    }
+  }
+  @media (min-width: 1024px) {
+    .admin-menu-palette {
+      width: 280px !important;
+    }
+  }
+
   .app-sub-tab {
     @apply px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-200 text-muted-foreground;
   }

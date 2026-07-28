@@ -470,7 +470,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  {/* ─── Datos de la gestión (entidades de acción) ─── */}
  {actionEntities.length > 0 && (
  <section className="app-panel p-2.5">
- <div className="grid grid-cols-60 gap-2.5">
+ <div className="grid dynamic-screen-fields-grid gap-2.5">
  {actionEntities.map((field) => {
  if (!isFieldVisible(field, values)) return null;
  return (
@@ -486,7 +486,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  {/* ─── Otras entidades simples (cards del siniestro, informativos) ─── */}
  {otherEntities.length > 0 && (
  <section className="app-panel p-2.5">
- <div className="grid grid-cols-60 gap-2.5">
+ <div className="grid dynamic-screen-fields-grid gap-2.5">
  {otherEntities.map((field) => {
  if (!isFieldVisible(field, values)) return null;
  return (
@@ -502,7 +502,7 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  {/* ─── Formulario (campos propios) ─── */}
  {filteredOwnFields.length > 0 && (
  <section className="app-panel p-2.5">
- <div className="grid grid-cols-60 gap-2.5">
+ <div className="grid dynamic-screen-fields-grid gap-2.5">
  {filteredOwnFields.map((field) => {
  // Visibilidad condicional genérica via visibilityRule
  if (!isFieldVisible(field, values)) return null;
@@ -1550,7 +1550,7 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  autoFocus
  />
  </div>
- <div className="overflow-y-auto flex-1">
+ <div className="overflow-y-auto flex-1 min-h-0">
  {availableCoverages.length === 0 ? (
  <p className="app-body text-muted-foreground text-center py-4">
  {policyCoverages && policyCoverages.length === 0

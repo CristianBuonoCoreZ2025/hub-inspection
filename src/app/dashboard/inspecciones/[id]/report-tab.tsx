@@ -315,7 +315,20 @@ export default function ReportTab({
       </html>
     `);
     printWindow.document.close();
-    printWindow.print();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      // Cerrar la ventana después de imprimir (o cancelar) —
+      // onafterprint se dispara tanto si se imprime como si se cancela
+      printWindow.onafterprint = () => {
+        printWindow.close();
+      };
+      // Fallback: si onafterprint no se dispara (algunos navegadores),
+      // cerrar tras un tiempo prudencial
+      setTimeout(() => {
+        if (!printWindow.closed) printWindow.close();
+      }, 1000);
+    }, 300);
   };
 
   const evidences = useMemo(() => session.inspection_evidences || [], [session.inspection_evidences]);

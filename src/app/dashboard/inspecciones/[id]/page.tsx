@@ -979,7 +979,7 @@ export default function InspectionDetailPage() {
  </div>
  )}
 
- <div className="flex-1 overflow-hidden">
+ <div className="flex-1 overflow-hidden min-h-0">
  <ChatTab sessionId={session.id} compact />
  </div>
  </div>

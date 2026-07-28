@@ -64,7 +64,7 @@ export default function ChatTab({ sessionId, compact = false }: { sessionId: str
  )}
 
  {/* Messages */}
- <div className="flex-1 space-y-3 overflow-y-auto pr-1" style={{ maxHeight: compact ? "calc(100vh - 220px)" : "400px" }}>
+ <div className="flex-1 space-y-3 overflow-y-auto pr-1 min-h-0" style={{ maxHeight: compact ? "calc(100vh - 220px)" : "400px" }}>
  {messages && messages.length > 0 ? (
  messages.map((msg) => {
  const isCurrentUser = msg.sender_id === profile?.id;

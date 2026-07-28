@@ -1081,7 +1081,7 @@ export default function AdminMenuPage() {
       <div className="relative overflow-hidden rounded-2xl border border-white/10 dark:border-white/5
         bg-white/5 dark:bg-white/2 backdrop-blur-xl
         shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)]
-        px-5 py-4">
+        px-4 py-3 sm:px-5 sm:py-4">
         <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-violet-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-sky-500/10 blur-3xl" />
 
@@ -1129,7 +1129,7 @@ export default function AdminMenuPage() {
         onDragCancel={onDragCancel}
         modifiers={[snapCenterToCursor]}
       >
-        <div className="flex gap-4 flex-1 min-h-0">
+        <div className="flex flex-col sm:flex-row gap-4 flex-1 min-h-0">
           {/* Canvas: estructura del menú */}
           <div className="flex-1 min-w-0">
             {isLoading ? (
@@ -1168,7 +1168,7 @@ export default function AdminMenuPage() {
           </div>
 
           {/* Paleta: items disponibles */}
-          <div className="w-[280px] shrink-0 relative overflow-auto rounded-2xl border border-white/10 dark:border-white/5
+          <div className="admin-menu-palette shrink-0 relative overflow-auto rounded-2xl border border-white/10 dark:border-white/5
             bg-white/5 dark:bg-white/2 backdrop-blur-xl
             shadow-[0_8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.2)]
             p-4">
