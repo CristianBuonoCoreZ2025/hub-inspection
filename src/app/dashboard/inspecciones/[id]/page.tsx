@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -940,7 +940,7 @@ export default function InspectionDetailPage() {
  {/* Panel lateral de Comunicación — solo para inspecciones remotas */}
  {chatPanelOpen && session.inspection_type === "remote" && (
  <div className="w-[340px] shrink-0 hidden lg:flex flex-col">
- <div className="app-panel flex flex-col flex-1" style={{ position: "sticky", top: "80px", maxHeight: "calc(100vh - 100px)" }}>
+ <div className="app-panel flex flex-col flex-1 sticky-panel-80">
  <div className="flex items-center justify-between mb-3 pb-2 border-b">
  <h3 className="app-body font-semibold text-muted-foreground flex items-center gap-2">
  <MessageSquare className="h-4 w-4" />
