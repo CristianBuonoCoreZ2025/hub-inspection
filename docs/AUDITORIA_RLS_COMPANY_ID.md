@@ -1,139 +1,179 @@
-# Auditoría RLS — Tablas con `company_id` exigido vs. NULL
+# Auditoría `company_id` — Dónde está, dónde es NULL, dónde no se carga
 
 > **Fecha:** 2026-07-28
-> **Generado por:** Devin (auditoría completa de políticas RLS)
-> **Contexto:** Bug encontrado en `updateGestion` — `action_template` tenía
-> `company_id = NULL` (38 filas globales) pero la política UPDATE exigía
-> `is_tenant_allowed(company_id)` que devuelve `false` para NULL. Nadie podía
-> editar gestiones. Fix aplicado en migración 268.
+> **Propósito:** Identificar todas las tablas con columna `company_id`,
+> clasificarlas por uso real (NULL vs. con valor), y detectar qué
+> mantenedores NO lo envían al crear/editar registros.
 >
-> Esta auditoría identifica **todas** las tablas con el mismo patrón problemático
-> para corregirlas definitivamente.
+> **Objetivo:** Decidir de qué tablas quitar `company_id` definitivamente
+> (las que son globales y nunca lo usan) vs. las que sí lo necesitan.
 
 ---
 
-## Resumen ejecutivo
+## 1. Dónde está `company_id` (18 tablas)
 
-| Estado | Tablas | Acción |
-|--------|--------|--------|
-| ❌ **Bloqueadas** (filas NULL + RLS exige company_id) | 3 | **Corregir YA** |
-| ⚠️ **Riesgo** (0 filas NULL hoy, pero RLS exige) | 12 | Revisar caso a caso |
-| ✅ **OK** (RLS permite NULL o no usa tenant) | 3 | Sin acción |
+Todas las tablas con columna `company_id` en el schema:
 
----
-
-## Detalle tabla por tabla
-
-### ❌ BLOQUEADAS — Corregir YA (tienen filas NULL + RLS exige company_id)
-
-#### 1. `action_template` (gestiones)
-- **Filas:** 38 total, **38 con `company_id = NULL`** (100% globales)
-- **RLS:** SÍ habilitado
-- **Políticas problemáticas:**
-  - `action_template_tenant_delete` — DELETE: `is_tenant_allowed(company_id)` ❌
-  - `action_template_tenant_insert` — INSERT: `with_check = is_tenant_allowed(company_id)` ❌
-  - `action_template_tenant_update` — UPDATE: ✅ **YA CORREGIDO** (migración 268)
-- **Impacto:**
-  - No se pueden **eliminar** gestiones globales (deleteGestion falla)
-  - No se pueden **crear** gestiones globales (createGestion falla si no setea company_id)
-  - UPDATE ya funciona (fix 268)
-- **Fix necesario:** Aplicar `(company_id IS NULL) OR is_tenant_allowed(company_id)` en DELETE e INSERT
-
-#### 2. `document_requirements` (requisitos de documento)
-- **Filas:** 11 total, **11 con `company_id = NULL`** (100% globales)
-- **RLS:** SÍ habilitado
-- **Políticas problemáticas:**
-  - `document_requirements_tenant_delete` — DELETE: `is_tenant_allowed(company_id)` ❌
-  - `document_requirements_tenant_insert` — INSERT: `with_check = is_tenant_allowed(company_id)` ❌
-  - `document_requirements_tenant_update` — UPDATE: `is_tenant_allowed(company_id)` ❌
-- **Impacto:** No se pueden editar, crear ni eliminar requisitos de documento globales
-- **Fix necesario:** Aplicar `(company_id IS NULL) OR is_tenant_allowed(company_id)` en las 3 políticas
-
-#### 3. `document_templates` (plantillas de documento)
-- **Filas:** 6 total, **4 con `company_id = NULL`** (67% globales)
-- **RLS:** SÍ habilitado
-- **Políticas problemáticas:**
-  - `document_templates_tenant_delete` — DELETE: `is_tenant_allowed(company_id)` ❌
-  - `document_templates_tenant_insert` — INSERT: `with_check = is_tenant_allowed(company_id)` ❌
-  - `document_templates_tenant_update` — UPDATE: `is_tenant_allowed(company_id)` ❌
-- **Impacto:** No se pueden editar, crear ni eliminar plantillas globales (las 4 con NULL)
-- **Fix necesario:** Aplicar `(company_id IS NULL) OR is_tenant_allowed(company_id)` en las 3 políticas
+| # | Tabla | Total filas | NULL | % NULL | RLS | NOT NULL constraint |
+|---|-------|-------------|------|--------|-----|---------------------|
+| 1 | `action_template` | 38 | 38 | **100%** | SÍ | nullable |
+| 2 | `audit_logs` | 120 | 0 | 0% | SÍ | nullable |
+| 3 | `claim_document_requests` | 0 | 0 | 0% | SÍ | nullable |
+| 4 | `claims` | 20 | 0 | 0% | SÍ | **NOT NULL** |
+| 5 | `claims_staging` | 0 | 0 | 0% | SÍ | nullable |
+| 6 | `document_requirements` | 11 | 11 | **100%** | SÍ | nullable |
+| 7 | `document_templates` | 6 | 4 | **67%** | SÍ | nullable |
+| 8 | `email_logs` | 0 | 0 | 0% | SÍ | **NOT NULL** |
+| 9 | `email_templates` | 3 | 0 | 0% | SÍ | **NOT NULL** |
+| 10 | `import_field_mappings` | 71 | 0 | 0% | SÍ | **NOT NULL** |
+| 11 | `import_fixed_values` | 5 | 0 | 0% | SÍ | **NOT NULL** |
+| 12 | `import_logs` | 4 | 0 | 0% | SÍ | **NOT NULL** |
+| 13 | `import_value_mappings` | 14 | 0 | 0% | SÍ | **NOT NULL** |
+| 14 | `inspection_sessions` | 0 | 0 | 0% | SÍ | **NOT NULL** |
+| 15 | `policies` | 107 | 0 | 0% | SÍ | **NOT NULL** |
+| 16 | `profiles` | 34 | 0 | 0% | SÍ | nullable |
+| 17 | `user_clients` | 34 | 0 | 0% | SÍ | **NOT NULL** |
+| 18 | `user_secondary_roles` | 2 | 0 | 0% | SÍ | nullable |
 
 ---
 
-### ⚠️ RIESGO — 0 filas NULL hoy, pero RLS exige company_id
+## 2. Tablas donde TODAS las filas son NULL (globales)
 
-Estas tablas hoy no tienen filas con `company_id = NULL`, así que funcionan.
-Pero si alguna vez se inserta una fila global (sin company_id), quedará
-**bloqueada** para UPDATE/INSERT/DELETE. Revisar si alguna debería admitir
-filas globales en el futuro.
+Estas tablas tienen `company_id` pero **nunca se usa** — todas las filas son NULL:
 
-| # | Tabla | Total filas | Políticas que EXIGEN | ¿Debería admitir NULL? |
-|---|-------|-------------|---------------------|------------------------|
-| 4 | `audit_logs` | 120 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 5 | `claim_document_requests` | 0 | DELETE, INSERT, UPDATE | ❌ No — siempre es de un claim |
-| 6 | `claims` | 20 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 7 | `claims_staging` | 0 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 8 | `email_logs` | 0 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 9 | `email_templates` | 3 | DELETE, INSERT, UPDATE | ⚠️ Revisar — ¿plantillas globales? |
-| 10 | `import_field_mappings` | 71 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 11 | `import_fixed_values` | 5 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 12 | `import_logs` | 4 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 13 | `import_value_mappings` | 14 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 14 | `policies` | 107 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 15 | `profiles` | 34 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 16 | `user_clients` | 34 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
-| 17 | `user_secondary_roles` | 2 | DELETE, INSERT, UPDATE | ❌ No — siempre es de una empresa |
+### 2.1 `action_template` (gestiones) — 38 filas, 100% NULL
 
-> **Nota sobre `email_templates`:** Hoy tiene 3 filas, todas con `company_id`.
-> Si en el futuro se quieren plantillas de email globales (compartidas entre
-> empresas), esta tabla necesitará el mismo fix que `action_template`.
+- **Columna:** nullable (acepta NULL)
+- **Mantenedor:** `src/app/dashboard/catalogos/gestiones/gestiones/page.tsx`
+- **Server action:** `src/server/actions/gestiones.ts` → `createGestion()`
+- **¿Envía `company_id`?** ❌ **NO**
+  - `FormState` no tiene campo `company_id`
+  - `createGestion()` recibe `input` sin `company_id`
+  - El INSERT se hace con `filtered` que no incluye `company_id`
+- **Conclusión:** `company_id` en esta tabla **nunca se setea**.
+  Las 38 gestiones son globales (visibles para todas las empresas).
+  **Se puede quitar la columna.**
+
+### 2.2 `document_requirements` (requisitos de documento) — 11 filas, 100% NULL
+
+- **Columna:** nullable
+- **Mantenedor:** `src/app/dashboard/catalogos/lineas-negocio/page.tsx`
+- **Service:** `src/services/claim-documents.ts` → `createDocumentRequirement()`
+- **¿Envía `company_id`?** ❌ **NO**
+  - `createDocumentRequirement()` recibe: `business_line_id`, `document_type_code`,
+    `description`, `is_required`, `sort_order`
+  - No recibe ni setea `company_id`
+  - El INSERT no incluye `company_id`
+- **Conclusión:** `company_id` en esta tabla **nunca se setea**.
+  Los requisitos son globales (asociados a línea de negocio, no a empresa).
+  **Se puede quitar la columna.**
+
+### 2.3 `document_templates` (plantillas de documento) — 4 de 6 NULL (67%)
+
+- **Columna:** nullable
+- **Mantenedor:** `src/app/dashboard/catalogos/gestiones/gestiones/document-templates-card.tsx`
+- **Service:** `src/services/document-templates.ts` → `createDocumentTemplate()`
+- **¿Envía `company_id`?** ⚠️ **SÍ, opcional** (`input.company_id ?? null`)
+  - El service SÍ acepta `company_id` en `DocumentTemplateInput`
+  - Pero el mantenedor (`document-templates-card.tsx`) lo gestiona como
+    **asociación posterior** (no en la creación):
+    - Crea la plantilla sin `company_id` (global)
+    - Luego permite asociarla a una empresa via `handleAssociationChange()`
+  - 4 plantillas son globales (NULL), 2 tienen `company_id` asignado
+- **Conclusión:** `company_id` aquí **sí se usa** para asociar plantillas a
+  empresas específicas, pero es opcional. Las globales (NULL) son visibles
+  para todos. **NO quitar la columna** — es funcional.
 
 ---
 
-### ✅ OK — RLS permite NULL o no usa tenant
+## 3. Tablas donde NO se carga `company_id` por el mantenedor
 
-| # | Tabla | Estado |
-|---|-------|--------|
-| 18 | `action_template` (SELECT) | ✅ `(company_id IS NULL) OR is_tenant_allowed(company_id)` |
-| 19 | `action_template` (UPDATE) | ✅ Fix migración 268 |
-| 20 | `inspection_sessions` | ✅ Políticas "other" (no usa is_tenant_allowed) |
+Resumen de las 3 tablas auditadas a nivel código:
+
+| Tabla | ¿Mantenedor envía `company_id`? | Tipo | Conclusión |
+|-------|--------------------------------|------|------------|
+| `action_template` | ❌ NO | nullable | **Quitar columna** — nunca se usa |
+| `document_requirements` | ❌ NO | nullable | **Quitar columna** — nunca se usa |
+| `document_templates` | ⚠️ SÍ (opcional, post-creación) | nullable | **Conservar** — es funcional |
+
+### Detalle por mantenedor
+
+#### `action_template` — Gestiones
+- **Archivo UI:** `src/app/dashboard/catalogos/gestiones/gestiones/page.tsx`
+- **FormState (líneas 55-83):** NO incluye `company_id`
+- **createGestion (línea 202):** envía `...rest` sin `company_id`
+- **Server action:** `src/server/actions/gestiones.ts`
+  - `ALLOWED_ON_CREATE` (línea 87) incluye `"company_id"` pero el frontend
+    nunca lo envía, así que llega como `undefined` y no se inserta
+- **Resultado:** 38 filas, todas con `company_id = NULL`
+
+#### `document_requirements` — Requisitos de documento
+- **Archivo UI:** `src/app/dashboard/catalogos/lineas-negocio/page.tsx`
+- **createDocumentRequirement (línea 311):** envía solo `business_line_id`,
+  `document_type_code`, `is_required`, `sort_order`
+- **Service:** `src/services/claim-documents.ts` (línea 235)
+  - El INSERT no incluye `company_id`
+- **Resultado:** 11 filas, todas con `company_id = NULL`
+
+#### `document_templates` — Plantillas de documento
+- **Archivo UI:** `src/app/dashboard/catalogos/gestiones/gestiones/document-templates-card.tsx`
+- **createDocumentTemplate (línea 88):** envía `input` que puede incluir `company_id`
+- **Service:** `src/services/document-templates.ts` (línea 105)
+  - El INSERT incluye `company_id: input.company_id ?? null`
+  - Si no se envía, queda NULL (global)
+- **Asociación post-creación (línea 327):** `handleAssociationChange()`
+  permite asignar `company_id` después de crear
+- **Resultado:** 4 globales (NULL) + 2 con empresa asignada
 
 ---
 
-## Patrón del fix
+## 4. Recomendación final
 
-Para cada tabla bloqueada, cambiar las políticas de:
+### Quitar `company_id` definitivamente (2 tablas)
+
+| Tabla | Razón | Migración necesaria |
+|-------|-------|---------------------|
+| `action_template` | 38/38 filas NULL. Nunca se setea. Gestiones son globales. | DROP COLUMN + dropear políticas RLS que la referencian |
+| `document_requirements` | 11/11 filas NULL. Nunca se setea. Requisitos son por línea de negocio. | DROP COLUMN + dropear políticas RLS que la referencian |
+
+### Conservar `company_id` (16 tablas)
+
+| Tabla | Razón |
+|-------|-------|
+| `document_templates` | 2/6 filas lo usan. Es opcional pero funcional. |
+| `claims`, `policies`, `profiles`, etc. (15 tablas) | 0% NULL. NOT NULL constraint. Esencial para multi-tenant. |
+
+---
+
+## 5. Plan de migración (si se aprueba quitar)
+
+Para `action_template` y `document_requirements`:
 
 ```sql
--- ANTES (bloquea NULL)
-USING (is_tenant_allowed(company_id))
-WITH CHECK (is_tenant_allowed(company_id))
+-- 1. Dropear políticas RLS que referencian company_id
+DROP POLICY IF EXISTS action_template_tenant_select ON action_template;
+DROP POLICY IF EXISTS action_template_tenant_insert ON action_template;
+DROP POLICY IF EXISTS action_template_tenant_update ON action_template;
+DROP POLICY IF EXISTS action_template_tenant_delete ON action_template;
+
+DROP POLICY IF EXISTS document_requirements_tenant_select ON document_requirements;
+DROP POLICY IF EXISTS document_requirements_tenant_insert ON document_requirements;
+DROP POLICY IF EXISTS document_requirements_tenant_update ON document_requirements;
+DROP POLICY IF EXISTS document_requirements_tenant_delete ON document_requirements;
+
+-- 2. Dropear la columna
+ALTER TABLE action_template DROP COLUMN IF EXISTS company_id;
+ALTER TABLE document_requirements DROP COLUMN IF EXISTS company_id;
+
+-- 3. Crear políticas RLS simples (sin company_id)
+--    o deshabilitar RLS si no hay otro criterio de aislamiento
 ```
 
-a:
+**Nota:** Si se quita `company_id`, hay que decidir qué política RLS aplicar:
+- Sin RLS: cualquier usuario autenticado ve/edita todas las filas
+- RLS por rol: solo usuarios con permiso `catalogos` pueden editar
+- RLS por otra columna: si existe otro criterio de aislamiento
 
-```sql
--- DESPUÉS (permite NULL = globales)
-USING ((company_id IS NULL) OR is_tenant_allowed(company_id))
-WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id))
-```
-
-El control de permisos (quién puede editar) lo hacen las server actions con
-`requirePermission("seccion", "accion")`, no la RLS. La RLS solo asegura
-aislamiento entre tenants — las filas globales (NULL) son visibles/editables
-para todos los usuarios autenticados con permiso.
-
----
-
-## Acción inmediata recomendada
-
-Crear migración `269_fix_global_tables_rls.sql` que corrija las 3 tablas
-bloqueadas:
-
-1. `action_template` — DELETE e INSERT (UPDATE ya corregido en 268)
-2. `document_requirements` — DELETE, INSERT, UPDATE
-3. `document_templates` — DELETE, INSERT, UPDATE
-
-**No tocar** las 12 tablas en "riesgo" — hoy funcionan y no deben admitir
-filas globales. Solo revisar `email_templates` si se planean plantillas globales.
+**Recomendación:** Deshabilitar RLS en estas 2 tablas (son catálogos
+globales de configuración) y dejar el control de permisos en las server
+actions con `requirePermission("catalogos", "edit")`.
