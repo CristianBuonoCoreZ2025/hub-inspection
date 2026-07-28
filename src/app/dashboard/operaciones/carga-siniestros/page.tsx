@@ -31,6 +31,7 @@ import {
   saveImportValueMappingsBatch,
   saveImportFixedValuesBatch,
   deleteImportFixedValue,
+  createImportLog,
 } from "@/services/import-mappings";
 import {
   CLAIM_FIELDS,
@@ -836,6 +837,7 @@ export default function CargaSiniestrosPage() {
       setConfirmProgress({ current: 0, total: validStaging.length, success: 0, error: 0 });
       let success = 0;
       let error = 0;
+      const importedLiquidationNumbers: string[] = [];
 
       for (let i = 0; i < validStaging.length; i++) {
         const sr = validStaging[i];
@@ -944,6 +946,9 @@ export default function CargaSiniestrosPage() {
             } : null
           );
           await markStagingImported(sr.id, claim.id);
+          if (claim.liquidation_number) {
+            importedLiquidationNumbers.push(claim.liquidation_number);
+          }
           success++;
         } catch (err) {
           error++;
@@ -1015,7 +1020,28 @@ export default function CargaSiniestrosPage() {
         queryClient.invalidateQueries({ queryKey: ["import-fixed-values", tenantCompanyId] });
       } catch (learnErr) {
         console.error("Error guardando mappings aprendidos:", learnErr);
-        // No fallar la importación por esto
+      }
+
+      // ── LOG DE IMPORTACIÓN ──
+      try {
+        await createImportLog(tenantCompanyId, {
+          userId: profile?.id,
+          fileName: file?.name || null,
+          totalRows: validStaging.length,
+          importedRows: success,
+          errorRows: error,
+          liquidationNumbers: importedLiquidationNumbers,
+          fieldMappingsUsed: Object.fromEntries(
+            Object.entries(mapping).filter(([, m]) => m?.excelHeader).map(([k, m]) => [k, m?.excelHeader])
+          ),
+          valueMappingsUsed: valueMappings,
+          fixedValuesUsed: Object.fromEntries(
+            Object.entries(effectiveFixedValues).map(([k, v]) => [k, v])
+          ),
+        });
+        queryClient.invalidateQueries({ queryKey: ["import-logs", tenantCompanyId] });
+      } catch (logErr) {
+        console.error("Error guardando log de importación:", logErr);
       }
 
       setIsConfirming(false);
@@ -1253,15 +1279,16 @@ export default function CargaSiniestrosPage() {
 
             {mapperOpen && (
               <>
-                {/* Columnas detectadas en el Excel */}
+                {/* Columnas detectadas en el Excel (paso 2: preview) */}
                 <div className="bulk-mapper-detected">
                   <p className="bulk-mapper-detected-label">
-                    Columnas detectadas en tu Excel ({excelHeaders.length}):
+                    Columnas detectadas en tu Excel ({excelHeaders.length}) · {rawRows.length} filas
                   </p>
                   <div className="bulk-mapper-detected-chips">
                     {excelHeaders.map((h) => {
                       const usedBy = usedHeaders.get(h);
                       const field = usedBy ? CLAIM_FIELDS.find((f) => f.key === usedBy) : null;
+                      const sample = headerSamples.get(h);
                       return (
                         <span
                           key={h}
@@ -1269,6 +1296,7 @@ export default function CargaSiniestrosPage() {
                           title={field ? `Asignada a: ${field.label}` : "Sin asignar"}
                         >
                           {h}
+                          {sample && <em className="bulk-detected-chip-sample">· {sample}</em>}
                           {field && <em>→ {field.label}</em>}
                         </span>
                       );
@@ -1276,110 +1304,13 @@ export default function CargaSiniestrosPage() {
                   </div>
                 </div>
 
-                {/* Tabla de mapeo INVERTIDA: filas = columnas del Excel, dropdown = campos del sistema */}
-                <div className="bulk-mapper-table-wrap">
-                  <table className="bulk-mapper-table">
-                    <thead>
-                      <tr>
-                        <th className="bulk-mapper-th-column">Columna del Excel</th>
-                        <th className="bulk-mapper-th-arrow"></th>
-                        <th className="bulk-mapper-th-field">Campo del sistema</th>
-                        <th className="bulk-mapper-th-status">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {excelHeaders.map((header) => {
-                        const fieldKey = usedHeaders.get(header);
-                        const field = fieldKey ? CLAIM_FIELDS.find((f) => f.key === fieldKey) : null;
-                        const isMapped = !!field;
-                        const m = fieldKey ? mapping[fieldKey] : null;
-                        const confidence = m?.confidence ?? 0;
-                        const isLowConfidence = isMapped && confidence < 1 && m?.autoDetected;
-
-                        return (
-                          <tr key={header} className={field?.required ? "bulk-mapper-row-required" : ""}>
-                            <td className="bulk-mapper-td-column">
-                              <span
-                                className="bulk-mapper-field-label"
-                                title={headerSamples.get(header) ? `Ej: "${headerSamples.get(header)}"` : "(columna vacía)"}
-                              >
-                                {header}
-                              </span>
-                              {headerSamples.get(header) && (
-                                <em className="bulk-mapper-field-sample">{headerSamples.get(header)}</em>
-                              )}
-                            </td>
-                            <td className="bulk-mapper-td-arrow">
-                              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                            </td>
-                            <td className="bulk-mapper-td-field">
-                              <Select
-                                value={fieldKey || "__none__"}
-                                onValueChange={(val) => handleExcelHeaderMapping(header, val === "__none__" ? null : val)}
-                              >
-                                <SelectTrigger className="bulk-mapper-select">
-                                  <SelectValue placeholder="— Sin mapear —" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">— Sin mapear —</SelectItem>
-                                  {CLAIM_FIELDS
-                                    .filter((f) => {
-                                      // Filtrar campos ya asignados a OTRA columna del Excel
-                                      const currentHeaderForField = mapping[f.key]?.excelHeader;
-                                      return !currentHeaderForField || currentHeaderForField === header;
-                                    })
-                                    .map((f) => (
-                                      <SelectItem key={f.key} value={f.key}>
-                                        {f.label}
-                                        {f.required && " *"}
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
-                            <td className="bulk-mapper-td-status">
-                              {!isMapped && (
-                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-neutral">
-                                  Sin mapear
-                                </span>
-                              )}
-                              {isMapped && isLowConfidence && (
-                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-warn">
-                                  Sugerencia ({Math.round(confidence * 100)}%)
-                                </span>
-                              )}
-                              {isMapped && !isLowConfidence && (
-                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-ok">
-                                  <CheckCircle className="h-3 w-3" /> Mapeado
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Resumen de campos requeridos sin mapear */}
-                {missingRequiredCount > 0 && (
-                  <div className="bulk-mapper-required-warning">
-                    <AlertCircle className="h-4 w-4 text-amber-500" />
-                    <span>
-                      {missingRequiredCount} campo(s) requerido(s) sin mapear:{" "}
-                      {REQUIRED_FIELDS.filter((f) => !mapping[f.key]?.fieldKey || !mapping[f.key]?.excelHeader)
-                        .map((f) => f.label).join(", ")}
-                    </span>
-                  </div>
-                )}
-
-                {/* ── Valores fijos: campos del sistema sin columna en el Excel ── */}
+                {/* ── PASO 3: Valores fijos (ANTES del mapeo) ── */}
                 <div className="bulk-fixed-values-section">
                   <div className="bulk-fixed-values-header">
                     <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
                     <span className="bulk-fixed-values-title">Valores fijos</span>
                     <span className="bulk-fixed-values-desc">
-                      Asigna un valor en duro a campos que no tienen columna en el Excel. Se guardan para futuras importaciones.
+                      Setea defaults para campos que NO vienen en el Excel. Se guardan para futuras importaciones.
                     </span>
                   </div>
                   <div className="bulk-fixed-values-list">
@@ -1388,7 +1319,6 @@ export default function CargaSiniestrosPage() {
                         {Object.entries(effectiveFixedValues).map(([fk, fv]) => {
                           const f = CLAIM_FIELDS.find((cf) => cf.key === fk);
                           const refField = refFields.find((rf) => rf.fieldKey === fk);
-                          // Para campos de referencia, mostrar el nombre del catálogo
                           const displayValue = refField && fv.catalogUuid
                             ? (refField.options.find((o) => o.id === fv.catalogUuid)?.name || fv.value)
                             : fv.value;
@@ -1406,7 +1336,6 @@ export default function CargaSiniestrosPage() {
                                     delete next[fk];
                                     return next;
                                   });
-                                  // También eliminar de la DB
                                   if (tenantCompanyId) {
                                     deleteImportFixedValue(tenantCompanyId, fk).catch(console.error);
                                     queryClient.invalidateQueries({ queryKey: ["import-fixed-values", tenantCompanyId] });
@@ -1429,10 +1358,8 @@ export default function CargaSiniestrosPage() {
                             if (!fk || fk === "__none__") return;
                             const refField = refFields.find((rf) => rf.fieldKey === fk);
                             if (refField) {
-                              // Campo de referencia: mostrar combo del catálogo
                               setPendingFixedField(fk);
                             } else {
-                              // Campo de texto: prompt
                               const val = window.prompt(`Valor fijo para: ${CLAIM_FIELDS.find(f => f.key === fk)?.label || fk}`);
                               if (val !== null && val.trim()) {
                                 setFixedValues((prev) => ({ ...prev, [fk]: { value: val.trim(), catalogUuid: null } }));
@@ -1497,6 +1424,102 @@ export default function CargaSiniestrosPage() {
                     )}
                   </div>
                 </div>
+
+                {/* ── PASO 4: Mapeo de campos (columnas Excel → campos sistema) ── */}
+                <div className="bulk-mapper-table-wrap">
+                  <table className="bulk-mapper-table">
+                    <thead>
+                      <tr>
+                        <th className="bulk-mapper-th-column">Columna del Excel</th>
+                        <th className="bulk-mapper-th-arrow"></th>
+                        <th className="bulk-mapper-th-field">Campo del sistema</th>
+                        <th className="bulk-mapper-th-status">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {excelHeaders.map((header) => {
+                        const fieldKey = usedHeaders.get(header);
+                        const field = fieldKey ? CLAIM_FIELDS.find((f) => f.key === fieldKey) : null;
+                        const isMapped = !!field;
+                        const m = fieldKey ? mapping[fieldKey] : null;
+                        const confidence = m?.confidence ?? 0;
+                        const isLowConfidence = isMapped && confidence < 1 && m?.autoDetected;
+
+                        return (
+                          <tr key={header} className={field?.required ? "bulk-mapper-row-required" : ""}>
+                            <td className="bulk-mapper-td-column">
+                              <span
+                                className="bulk-mapper-field-label"
+                                title={headerSamples.get(header) ? `Ej: "${headerSamples.get(header)}"` : "(columna vacía)"}
+                              >
+                                {header}
+                              </span>
+                              {headerSamples.get(header) && (
+                                <em className="bulk-mapper-field-sample">{headerSamples.get(header)}</em>
+                              )}
+                            </td>
+                            <td className="bulk-mapper-td-arrow">
+                              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                            </td>
+                            <td className="bulk-mapper-td-field">
+                              <Select
+                                value={fieldKey || "__none__"}
+                                onValueChange={(val) => handleExcelHeaderMapping(header, val === "__none__" ? null : val)}
+                              >
+                                <SelectTrigger className="bulk-mapper-select">
+                                  <SelectValue placeholder="— Omitir (no importar) —" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">— Omitir (no importar) —</SelectItem>
+                                  {CLAIM_FIELDS
+                                    .filter((f) => {
+                                      const currentHeaderForField = mapping[f.key]?.excelHeader;
+                                      return !currentHeaderForField || currentHeaderForField === header;
+                                    })
+                                    .map((f) => (
+                                      <SelectItem key={f.key} value={f.key}>
+                                        {f.label}
+                                        {f.required && " *"}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="bulk-mapper-td-status">
+                              {!isMapped && (
+                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-neutral">
+                                  Omitido
+                                </span>
+                              )}
+                              {isMapped && isLowConfidence && (
+                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-warn">
+                                  Sugerencia ({Math.round(confidence * 100)}%)
+                                </span>
+                              )}
+                              {isMapped && !isLowConfidence && (
+                                <span className="bulk-mapper-status-pill bulk-mapper-status-pill-ok">
+                                  <CheckCircle className="h-3 w-3" /> Mapeado
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Resumen de campos requeridos sin mapear */}
+                {missingRequiredCount > 0 && (
+                  <div className="bulk-mapper-required-warning">
+                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                    <span>
+                      {missingRequiredCount} campo(s) requerido(s) sin mapear:{" "}
+                      {REQUIRED_FIELDS.filter((f) => !mapping[f.key]?.fieldKey || !mapping[f.key]?.excelHeader)
+                        .map((f) => f.label).join(", ")}
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </div>

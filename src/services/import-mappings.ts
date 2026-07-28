@@ -271,3 +271,56 @@ export async function saveImportFixedValuesBatch(
     }
   }
 }
+
+// ── Import Logs (trazabilidad de importaciones) ──
+
+export interface ImportLog {
+  id: string;
+  company_id: string;
+  user_id: string | null;
+  file_name: string | null;
+  total_rows: number;
+  imported_rows: number;
+  error_rows: number;
+  liquidation_numbers: string[];
+  field_mappings_used: Record<string, unknown> | null;
+  value_mappings_used: Record<string, unknown> | null;
+  fixed_values_used: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export async function createImportLog(
+  companyId: string,
+  data: {
+    userId?: string | null;
+    fileName?: string | null;
+    totalRows: number;
+    importedRows: number;
+    errorRows: number;
+    liquidationNumbers: string[];
+    fieldMappingsUsed?: Record<string, unknown> | null;
+    valueMappingsUsed?: Record<string, unknown> | null;
+    fixedValuesUsed?: Record<string, unknown> | null;
+  }
+): Promise<ImportLog> {
+  return insertRow<ImportLog>("import_logs", {
+    company_id: companyId,
+    user_id: data.userId || null,
+    file_name: data.fileName || null,
+    total_rows: data.totalRows,
+    imported_rows: data.importedRows,
+    error_rows: data.errorRows,
+    liquidation_numbers: data.liquidationNumbers,
+    field_mappings_used: data.fieldMappingsUsed || null,
+    value_mappings_used: data.valueMappingsUsed || null,
+    fixed_values_used: data.fixedValuesUsed || null,
+  });
+}
+
+export async function getImportLogs(companyId: string): Promise<ImportLog[]> {
+  return fetchAll<ImportLog>("import_logs", {
+    eq: { company_id: companyId },
+    order: { column: "created_at", ascending: false },
+    limit: 50,
+  });
+}

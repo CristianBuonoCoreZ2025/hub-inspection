@@ -606,6 +606,16 @@
     font-weight: 600 !important;
   }
 
+  .bulk-detected-chip-sample {
+    color: var(--muted-foreground) !important;
+    font-weight: 400 !important;
+    font-style: italic !important;
+    max-width: 120px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
   .bulk-detected-chip-used {
     border-color: color-mix(in srgb, var(--primary) 40%, transparent) !important;
     background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
