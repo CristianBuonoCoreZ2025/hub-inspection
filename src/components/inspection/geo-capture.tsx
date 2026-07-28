@@ -294,8 +294,7 @@ export function GeoCapture({
             type="button"
             disabled={disabled || loading}
             onClick={handleCapture}
-            className="liquid-date-picker flex w-full items-center justify-center gap-2 mb-3"
-            style={{ height: "36px" }}
+            className="liquid-date-picker flex w-full items-center justify-center gap-2 mb-3 h-9"
           >
             {loading ? (
               <>
@@ -373,7 +372,7 @@ export function GeoCapture({
           <MapContainer
             center={[captured.lat, captured.lng]}
             zoom={16}
-            style={{ height: "300px", width: "100%" }}
+            className="h-75 w-full"
             scrollWheelZoom={false}
           >
             <TileLayer
