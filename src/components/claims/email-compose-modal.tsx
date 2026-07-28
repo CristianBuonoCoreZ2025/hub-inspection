@@ -176,7 +176,6 @@ export function EmailComposeModal({
   const [showHistory, setShowHistory] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [viewMode, setViewMode] = useState<"preview" | "edit">("preview");
-  const [tiptapError, setTiptapError] = useState(false);
   const htmlEditorRef = useRef<Editor | null>(null);
   const queryClient = useQueryClient();
 
@@ -188,7 +187,6 @@ export function EmailComposeModal({
     setSelectedTemplateId(newId);
     setSubjectOverride(null);
     setBodyOverride(null);
-    setTiptapError(false);
     setViewMode("preview");
   };
 
@@ -699,7 +697,7 @@ export function EmailComposeModal({
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setViewMode("edit"); setTiptapError(false); }}
+                    onClick={() => setViewMode("edit")}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
                       viewMode === "edit"
                         ? "bg-primary text-primary-foreground"
@@ -720,30 +718,19 @@ export function EmailComposeModal({
                   className="email-preview-iframe-composer flex-1 min-h-0 w-full bg-white border-0"
                   sandbox="allow-same-origin"
                 />
-              ) : effectiveFormat === "html" && viewMode === "edit" && !tiptapError ? (
-                /* ─── Vista EDITAR (HtmlEditor/Tiptap) con fallback a textarea ─── */
+              ) : effectiveFormat === "html" && viewMode === "edit" ? (
+                /* ─── Vista EDITAR (HtmlEditor/Tiptap) — igual al EmailTemplateEditor ─── */
+                /* key={effectiveTemplateId} fuerza re-crear el editor al cambiar plantilla,
+                   igual que el template editor carga el body inicial. Sin esto, Tiptap
+                   puede no parsear bien el HTML al hacer setContent. */
                 <HtmlEditor
+                  key={effectiveTemplateId || "manual"}
                   value={effectiveBody || ""}
                   onChange={(html) => setBodyOverride(html)}
                   editorRef={htmlEditorRef}
                   placeholder="Escribe el cuerpo del correo…"
                   className="flex-1 min-h-0"
-                  showCodeView={false}
-                  onError={() => setTiptapError(true)}
                 />
-              ) : effectiveFormat === "html" && tiptapError ? (
-                /* Fallback: textarea si Tiptap no puede parsear el HTML */
-                <div className="flex-1 flex flex-col min-h-0">
-                  <div className="px-4 py-1 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-[10px] text-amber-700 dark:text-amber-300 shrink-0">
-                    El editor visual no soporta este HTML. Editando en modo código.
-                  </div>
-                  <textarea
-                    value={effectiveBody}
-                    onChange={(e) => setBodyOverride(e.target.value)}
-                    placeholder="Escribe el cuerpo del correo…"
-                    className="flex-1 min-h-40 w-full resize-none bg-background px-4 pt-4 pb-5 text-sm leading-relaxed text-foreground outline-none border border-border rounded-lg overflow-y-auto font-mono"
-                  />
-                </div>
               ) : (
                 /* ─── Texto plano — siempre textarea ─── */
                 <textarea
