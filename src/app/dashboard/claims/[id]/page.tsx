@@ -1967,7 +1967,7 @@ export default function ClaimDetailPage() {
  <MapContainer
  center={[claim.claim_latitude, claim.claim_longitude]}
  zoom={16}
- style={{ height: "100%", width: "100%" }}
+ className="h-full w-full"
  scrollWheelZoom={false}
  >
  <TileLayer

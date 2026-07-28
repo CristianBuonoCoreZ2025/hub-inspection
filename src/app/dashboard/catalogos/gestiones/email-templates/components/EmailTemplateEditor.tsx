@@ -786,12 +786,11 @@ export function EmailTemplateEditor({ templateId }: Props) {
 
                     {/* Preview iframe */}
                     <div className="flex-1 overflow-auto p-6 bg-muted/20">
-                      <div className="rounded-lg border border-border bg-white overflow-hidden shadow-sm mx-auto" style={{ maxWidth: 600 }}>
+                      <div className="rounded-lg border border-border bg-white overflow-hidden shadow-sm mx-auto email-preview-container">
                         <iframe
                           title="preview"
                           srcDoc={previewHtml}
-                          className="w-full bg-white"
-                          style={{ minHeight: "70vh", height: "100%" }}
+                          className="w-full bg-white email-preview-iframe"
                           sandbox="allow-same-origin"
                         />
                       </div>

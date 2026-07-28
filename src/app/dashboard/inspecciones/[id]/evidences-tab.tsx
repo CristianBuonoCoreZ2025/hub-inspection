@@ -330,15 +330,11 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={`relative flex items-center gap-3 rounded-2xl border border-dashed px-4 py-3 transition-all ${
+        className={`relative flex items-center gap-3 rounded-2xl border border-dashed px-4 py-3 transition-all glass-heavy ${
           isDragging
             ? "border-blue-400/60 bg-blue-500/10"
             : "border-border bg-card/40 hover:border-border/80"
         }`}
-        style={{
-          backdropFilter: "blur(20px) saturate(160%)",
-          WebkitBackdropFilter: "blur(20px) saturate(160%)",
-        }}
       >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Upload className="h-4 w-4" />
@@ -514,8 +510,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           <div className="modal-body modal-grid">
             <div className="text-[11px] font-medium text-foreground">{aiSummaryModal.title}</div>
             <div
-              style={{ maxHeight: "60vh", overflowY: "auto" }}
-              className="rounded-md bg-violet-50/50 p-3 text-[11px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap"
+              className="ai-summary-scroll rounded-md bg-violet-50/50 p-3 text-[11px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap"
             >
               {aiSummaryModal.summary}
             </div>
@@ -608,13 +603,9 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummar
 
   return (
     <div
-      className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/30"
+      className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/30 glass-medium"
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
-      style={{
-        backdropFilter: "blur(12px) saturate(140%)",
-        WebkitBackdropFilter: "blur(12px) saturate(140%)",
-      }}
     >
       {/* ─── Thumbnail (cuadrado, pequeño) ─── */}
       <div className="relative aspect-square w-full overflow-hidden bg-muted/30">

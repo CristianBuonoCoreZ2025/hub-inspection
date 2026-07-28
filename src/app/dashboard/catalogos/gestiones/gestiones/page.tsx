@@ -522,8 +522,7 @@ export default function GestionesPage() {
  setForm({ ...form, [cfg.daysField]: newDays, [cfg.alertField]: Math.min(currentAlert, newDays) });
  }}
  disabled={daysDisabled}
- style={{ borderRadius: "6px", height: "28px", width: "56px", padding: 0, fontSize: "12px" }}
- className="border border-border bg-card text-center font-semibold tabular-nums focus-visible:ring-1 focus-visible:ring-primary/30"
+ className="alert-input-mini border border-border bg-card text-center font-semibold tabular-nums focus-visible:ring-1 focus-visible:ring-primary/30"
  />
  <span className="app-body text-muted-foreground shrink-0 w-6">días</span>
  </div>

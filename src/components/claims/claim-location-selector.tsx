@@ -322,7 +322,7 @@ export function ClaimLocationSelector({
             <MapContainer
               center={[mapCenter.lat, mapCenter.lng]}
               zoom={16}
-              style={{ height: "100%", width: "100%" }}
+              className="h-full w-full"
               scrollWheelZoom={false}
             >
               <TileLayer
