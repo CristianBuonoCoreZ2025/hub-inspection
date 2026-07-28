@@ -414,6 +414,7 @@ export default function CargaSiniestrosPage() {
           reportDate: date(d.reportDate),
           assignmentDate: date(d.assignmentDate),
           companyReportNumber: str(d.companyReportNumber) || null,
+          createdAt: date(d.createdAt),
           internalNumber: str(d.internalNumber) || null,
           // UUIDs resueltos
           insuranceCompanyId,
@@ -593,6 +594,7 @@ export default function CargaSiniestrosPage() {
               isSpecialClaim: (d.isSpecialClaim as boolean | null) ?? null,
               brokerExecutive: (d.brokerExecutive as string) || null,
               companyReportNumber: (d.companyReportNumber as string) || null,
+              createdAt: (d.createdAt as string) || null,
               internalNumber: (d.internalNumber as string) || null,
             },
             {

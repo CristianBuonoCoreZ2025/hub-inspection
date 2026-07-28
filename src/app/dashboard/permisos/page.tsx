@@ -295,7 +295,7 @@ export default function PermisosPage() {
                           </th>
                         );
                       })}
-                      <th className="text-center py-2 px-2 font-medium text-muted-foreground w-[60px]">Todo</th>
+                      <th className="text-center py-2 px-2 font-medium text-muted-foreground w-15">Todo</th>
                     </tr>
                   </thead>
                   <tbody>

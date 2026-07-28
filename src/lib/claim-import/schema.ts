@@ -107,6 +107,13 @@ export const CLAIM_FIELDS: ClaimField[] = [
     synonyms: ["fecha asignacion", "fecha asignación", "assignment date", "assignment_date", "assignmentdate", "asignacion", "asignación", "f asignacion"],
   },
   {
+    key: "createdAt",
+    label: "Fecha Creación",
+    required: false,
+    description: "Fecha de creación del registro original (para siniestros históricos importados)",
+    synonyms: ["fecha creacion", "fecha creación", "created at", "created_at", "createdat", "fecha alta", "fecha registro", "f creacion", "f creación"],
+  },
+  {
     key: "summary",
     label: "Resumen Siniestro",
     required: false,
@@ -755,6 +762,10 @@ export function applyMappingToRow(
   if (data.policyEndDate && typeof data.policyEndDate === "string") {
     const parsed = parseDate(data.policyEndDate);
     if (parsed) data.policyEndDate = parsed;
+  }
+  if (data.createdAt && typeof data.createdAt === "string") {
+    const parsed = parseDate(data.createdAt);
+    if (parsed) data.createdAt = parsed;
   }
 
   return data;

@@ -330,7 +330,7 @@ export default function CargaCatalogosPage() {
           )}
 
           {/* Table preview */}
-          <div className="app-data-table-wrap max-h-[300px] sm:max-h-[400px] overflow-auto">
+          <div className="app-data-table-wrap max-h-75 sm:max-h-100 overflow-auto">
             <table className="app-data-table">
               <thead>
                 <tr>
@@ -356,7 +356,7 @@ export default function CargaCatalogosPage() {
                       )}
                     </td>
                     {catalogType === "causas" && (
-                      <><td className="font-medium">{String(row.data.name || "—")}</td><td className="max-w-[200px] truncate">{String(row.data.description || "—")}</td></>
+                      <><td className="font-medium">{String(row.data.name || "—")}</td><td className="max-w-50 truncate">{String(row.data.description || "—")}</td></>
                     )}
                     {catalogType === "companias" && (
                       <><td className="font-medium">{String(row.data.name || "—")}</td><td>{String(row.data.rut || "—")}</td><td>{String(row.data.line_of_business || "—")}</td><td>{String(row.data.code || "—")}</td></>
@@ -370,7 +370,7 @@ export default function CargaCatalogosPage() {
                     {catalogType === "lineas" && (
                       <><td className="font-medium">{String(row.data.name || "—")}</td><td>{String(row.data.claim_type || "—")}</td><td>{String(row.data.ramo_fecu || "—")}</td></>
                     )}
-                    <td className="text-xs text-red-600 max-w-[160px] truncate">
+                    <td className="text-xs text-red-600 max-w-40 truncate">
                       {row.errors.join(", ")}
                     </td>
                   </tr>
