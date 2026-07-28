@@ -134,7 +134,7 @@ export default function EmailTemplatesPage() {
               />
             </div>
             <Select value={businessLineFilter} onValueChange={(v) => setBusinessLineFilter(v ?? "all")} items={businessLineFilterItems}>
-              <SelectTrigger className="app-input h-7 w-[180px]">
+              <SelectTrigger className="app-input app-filter-narrow h-7">
                 <SelectValue placeholder="Todas las líneas" />
               </SelectTrigger>
               <SelectContent>
@@ -147,7 +147,7 @@ export default function EmailTemplatesPage() {
               </SelectContent>
             </Select>
             <Select value={formatFilter} onValueChange={(v) => setFormatFilter(v ?? "all")} items={formatFilterItems}>
-              <SelectTrigger className="app-input h-7 w-[140px]">
+              <SelectTrigger className="app-input app-filter-narrow h-7">
                 <SelectValue placeholder="Todos los formatos" />
               </SelectTrigger>
               <SelectContent>
