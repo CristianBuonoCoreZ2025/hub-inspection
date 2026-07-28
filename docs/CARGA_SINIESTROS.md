@@ -27,7 +27,10 @@ Si necesitas corregir un siniestro mal cargado:
 | `src/app/dashboard/operaciones/carga-siniestros/page.tsx` | Página principal del importador (UI + lógica) |
 | `src/lib/claim-import/schema.ts` | Definición de campos, sinónimos, autodetección, validación |
 | `src/services/claims.ts` | `createClaimMinimal` + funciones de staging |
+| `src/services/import-mappings.ts` | Service de aprendizaje (field/value/fixed mappings) |
 | `src/app/styles/components.css` | Clases CSS del mapper y staging (`.bulk-*`, `.staging-*`) |
+| `migrations/100_import_mappings.sql` | Tablas `import_field_mappings` + `import_value_mappings` |
+| `migrations/101_import_fixed_values.sql` | Tabla `import_fixed_values` |
 
 ---
 
@@ -113,9 +116,9 @@ Estructura existente en la base de datos:
 | Fecha Siniestro | `claim_date` | date NOT NULL | Normalizada a YYYY-MM-DD |
 | Tipo Siniestro | `claim_type_id` | uuid → `claim_types` | Resuelto por nombre |
 | Empresa / Cía Seguros | `insurance_company_id` | uuid → `insurance_companies` | Resuelto por nombre |
-| Nombre Asegurado/Contratante | `claims_participants.first_name` | text | Tipo `insured` |
-| Dirección Asegurado/Contratante | `claims_participants.address` | text | |
-| Ciudad Asegurado/Contratante | `claims_participants.city` | text | |
+| Nombre Asegurado | `claims_participants.first_name` | text | Tipo `insured` |
+| Dirección Asegurado | `claims_participants.address` | text | |
+| Ciudad Asegurado | `claims_participants.city` | text | |
 
 ### Campos OPCIONALES — Claims (texto/fecha/numero/boolean)
 
@@ -161,7 +164,8 @@ Estructura existente en la base de datos:
 | Región Siniestro (catálogo) | `region_id` | `regions` | `regions` | 41 |
 | Ciudad Siniestro (catálogo) | `city_id` | `cities` | `cities` | 252 |
 | Comuna Siniestro (catálogo) | `commune_id` | `communes` | `communes` | 2183 |
-| Liquidador Asignado | `assigned_adjuster_id` | `profiles` (empresa) | `profiles` | — |
+| Liquidador/Ajustador | `adjuster_id` | `profiles` (empresa) | `profiles` | — |
+| Inspector | `inspector_id` | `profiles` (empresa) | `profiles` | — |
 | Auditor | `auditor_id` | `profiles` (empresa) | `profiles` | — |
 | Despachador | `dispatcher_id` | `profiles` (empresa) | `profiles` | — |
 | Asistente | `assistant_id` | `profiles` (empresa) | `profiles` | — |
@@ -169,28 +173,44 @@ Estructura existente en la base de datos:
 
 > **Regla:** Los campos UUID **NUNCA** se piden como UUID directo. Se pide el **NOMBRE** del Excel y se resuelve al UUID via el catálogo correspondiente. Si el nombre no coincide exacto, el usuario lo mapea manualmente en el panel de mapeo de valores.
 
-### Campos OPCIONALES — Contratante/Asegurado (va a `claims_participants` tipo `insured`)
+### Campos OPCIONALES — Asegurado (va a `claims_participants` tipo `insured`)
 
 | Campo Excel | Campo claims_participants | Tipo |
 |---|---|---|
-| Apellido Asegurado/Contratante | `last_name` | text |
-| RUT Asegurado/Contratante | `rut` | text |
-| E-mail Asegurado/Contratante | `email` | text |
-| Teléfono Asegurado/Contratante | `phone` | text |
-| Celular Asegurado/Contratante | `cell_phone` | text |
-| País Asegurado/Contratante | `country` | text |
-| Región Asegurado/Contratante | `region` | text |
-| Comuna Asegurado/Contratante | `commune` | text |
+| Apellido Asegurado | `last_name` | text |
+| RUT Asegurado | `rut` | text |
+| E-mail Asegurado | `email` | text |
+| Teléfono Asegurado | `phone` | text |
+| Celular Asegurado | `cell_phone` | text |
+| País Asegurado | `country` | text |
+| Región Asegurado | `region` | text |
+| Ciudad Asegurado | `city` | text |
+| Comuna Asegurado | `commune` | text |
+
+### Campos OPCIONALES — Contratante (va a `claims_participants` tipo `contractor`)
+
+| Campo Excel | Campo claims_participants | Tipo |
+|---|---|---|
+| Nombre Contratante | `first_name` | text |
+| Apellido Contratante | `last_name` | text |
+| RUT Contratante | `rut` | text |
+| E-mail Contratante | `email` | text |
+| Teléfono Contratante | `phone` | text |
+| Celular Contratante | `cell_phone` | text |
+| Dirección Contratante | `address` | text |
+| País Contratante | `country` | text |
+| Región Contratante | `region` | text |
+| Ciudad Contratante | `city` | text |
+| Comuna Contratante | `commune` | text |
 
 ### Campos OPCIONALES — Dirección del Siniestro (va a `claims`)
 
 | Campo Excel | Campo claims | Tipo | Fallback |
 |---|---|---|---|
-| Dirección Siniestro | `claim_address` | text | Usa dirección del contratante si no viene |
-| País Siniestro | (text en `claim_country` de raw_data) | text | Usa país del contratante |
-| Región Siniestro | (text en `claim_region` de raw_data) | text | Usa región del contratante |
-| Ciudad Siniestro | (text en `claim_city` de raw_data) | text | Usa ciudad del contratante |
-| Comuna Siniestro | (text en `claim_commune` de raw_data) | text | Usa comuna del contratante |
+| Dirección Siniestro | `claim_address` | text | Usa dirección del asegurado si no viene |
+
+> **Nota:** País/Región/Ciudad/Comuna del Siniestro van por **catálogo** (UUID),
+> no por texto. Ver sección "Campos UUID → catálogo" arriba.
 
 ### Campos OPCIONALES — Beneficiario (va a `claims_participants` tipo `beneficiary`)
 
@@ -212,6 +232,8 @@ Estructura existente en la base de datos:
 
 | Campo Excel | Campo claims_participants | Tipo |
 |---|---|---|
+| Nombre Persona Contacto | `full_name` | text |
+| Cargo Persona Contacto | `notes` | text |
 | E-mail Persona Contacto | `email` | text |
 | Teléfono Persona Contacto | `phone` | text |
 
@@ -282,22 +304,32 @@ await createClaimMinimal(
     policyItem, policyStartDate, policyEndDate,
     policyAmount, policyPremium,
     isSpecialClaim, brokerExecutive,
-    companyReportNumber,
+    companyReportNumber, internalNumber, createdAt,
+    clientReference, recoveryTypeLegal, recoveryTypeMaterial,
+    recoveryComments, claimLatitude, claimLongitude,
+    brokerId, advisorId, propertyClassificationId,
+    countryId, regionId, cityId, communeId,
+    inspectorId, adjusterId, auditorId, dispatcherId, assistantId,
+    policyId, notes,
   },
-  // 2. Contratante/Asegurado → claims_participants tipo "insured"
+  // 2. Asegurado → claims_participants tipo "insured"
   {
     insuredName, lastName, rut, insuredEmail,
     insuredPhone, cellPhone,
     insuredAddress, insuredCountry, insuredRegion,
     insuredCity, insuredCommune,
   },
-  // 3. Dirección del siniestro → claims.claim_address + campos de raw_data
+  // 3. Dirección del siniestro → claims.claim_address
   {
-    claimAddress, claimCountry, claimRegion,
-    claimCity, claimCommune,
+    claimAddress,
   },
-  // 4. Contractor (null por ahora)
-  null,
+  // 4. Contratante → claims_participants tipo "contractor" (opcional)
+  {
+    contractorName, contractorLastName, contractorRut,
+    contractorEmail, contractorPhone, contractorCellPhone,
+    contractorAddress, contractorCountry, contractorRegion,
+    contractorCity, contractorCommune,
+  } | null,
   // 5. Beneficiario → claims_participants tipo "beneficiary" (opcional)
   {
     beneficiaryName, beneficiaryLastName, beneficiaryRut,
@@ -307,7 +339,7 @@ await createClaimMinimal(
   } | null,
   // 6. Contacto → claims_participants tipo "contact" (opcional)
   {
-    contactEmail, contactPhone,
+    contactName, contactRole, contactEmail, contactPhone,
   } | null
 );
 ```
@@ -420,3 +452,285 @@ Los catálogos por empresa (`profiles`, `policies`) solo se cargan si `tenantCom
 | `f6eecd6` | Invertir mapper (filas=columnas Excel) + agregar internalNumber y resumen siniestro |
 | `519e14a` | Agregar Fecha Creación + arreglar lint warnings |
 | `ad19734` | Agregar TODAS las columnas de claims al mapper (client_reference, recovery_*, lat/lng, brokers, advisors, property_classifications, geo, profiles, policies) |
+| `f7eafd9` | docs: actualizar CARGA_SINIESTROS con todos los campos nuevos |
+| `b32b299` | Separar participantes (asegurado/contratante) + filtrar duplicados del dropdown + valores fijos |
+| `3c87457` | Valores fijos no aparecen si el campo ya está mapeado del Excel |
+| `15a950f` | Eliminar geo duplicados (País/Región/Ciudad/Comuna Siniestro texto) + agregar Nombre/Cargo Contacto |
+| `97c1930` | **Sistema de aprendizaje**: tablas import_field_mappings + import_value_mappings (autodetección con memoria) |
+| `e16ea25` | **Tooltip con muestra** + **fixed values persistentes** (import_fixed_values) + **combo para refs** |
+
+---
+
+## Sistema de Aprendizaje (commit `97c1930` + `e16ea25`)
+
+El sistema **aprende** de cada importación y reutiliza los mapeos en futuras cargas
+del mismo Excel, sin preguntar al usuario.
+
+### Tablas de aprendizaje
+
+#### `import_field_mappings` (migración 100)
+Mapeo de **columnas Excel → campos del sistema** por empresa.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | uuid PK | |
+| `company_id` | uuid FK → `companies` | Empresa (tenant) |
+| `excel_header` | text | Nombre de la columna en el Excel |
+| `field_key` | text | Key del campo del sistema (ej: `claimNumber`) |
+| `times_used` | integer | Cuántas veces se usó este mapeo |
+| `created_at` / `updated_at` | timestamptz | |
+
+**Constraint:** `UNIQUE (company_id, excel_header)` — una columna del Excel mapea a un solo campo.
+
+#### `import_value_mappings` (migración 100)
+Mapeo de **valores Excel → UUID del catálogo** por empresa.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | uuid PK | |
+| `company_id` | uuid FK → `companies` | Empresa (tenant) |
+| `field_key` | text | Campo del sistema (ej: `currency`) |
+| `excel_value` | text | Valor que viene en el Excel (ej: "UF") |
+| `catalog_uuid` | uuid | UUID del catálogo resuelto (ej: uuid de moneda UF) |
+| `times_used` | integer | Cuántas veces se usó este mapeo |
+| `created_at` / `updated_at` | timestamptz | |
+
+**Constraint:** `UNIQUE (company_id, field_key, excel_value)`.
+
+#### `import_fixed_values` (migración 101)
+**Valores fijos** por empresa: campos que no vienen en el Excel pero se cargan
+con un valor en duro (ej: auditor = Juan Pérez, cia = Santander).
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | uuid PK | |
+| `company_id` | uuid FK → `companies` | Empresa (tenant) |
+| `field_key` | text | Campo del sistema (ej: `auditor`) |
+| `fixed_value` | text | Valor en duro para campos de texto (ej: "Santander") |
+| `catalog_uuid` | uuid | UUID del catálogo para campos de referencia (ej: uuid de Juan Pérez) |
+| `times_used` | integer | Cuántas veces se usó |
+| `created_at` / `updated_at` | timestamptz | |
+
+**Constraint:** `UNIQUE (company_id, field_key)` — un campo tiene un solo valor fijo.
+
+### RLS
+Las 3 tablas usan `is_tenant_allowed(company_id)` — cada empresa solo ve/edita
+sus propios mappings.
+
+### Service: `src/services/import-mappings.ts`
+
+```typescript
+// Field mappings (columna Excel → campo sistema)
+getImportFieldMappings(companyId)
+saveImportFieldMapping(companyId, excelHeader, fieldKey)        // upsert + times_used++
+saveImportFieldMappingsBatch(companyId, mappings[])             // batch
+
+// Value mappings (valor Excel → UUID catálogo)
+getImportValueMappings(companyId)
+saveImportValueMapping(companyId, fieldKey, excelValue, uuid)   // upsert + times_used++
+saveImportValueMappingsBatch(companyId, mappings[])             // batch
+
+// Fixed values (valor fijo, no viene del Excel)
+getImportFixedValues(companyId)
+saveImportFixedValue(companyId, fieldKey, fixedValue, catalogUuid)
+saveImportFixedValuesBatch(companyId, fixedValues[])
+deleteImportFixedValue(companyId, fieldKey)
+```
+
+### Flujo de aprendizaje
+
+1. **Carga inicial** (`useQuery`): carga los 3 tipos de mappings de la empresa
+2. **Autodetección** (`autoDetectMapping`):
+   - **Pasada 0**: usa los field mappings aprendidos (confianza = 1, máxima)
+   - **Pasada 1**: match exacto de sinónimos
+   - **Pasada 2**: fuzzy matching
+3. **Resolución de valores** (`resolveRefId`):
+   - 1) UUID directo
+   - 2) Mapeo manual del usuario (`valueMappings`)
+   - 3) **Mapeo aprendido** de la empresa (`learnedValueMap`)
+   - 4) Match exacto normalizado del catálogo
+4. **Fixed values** (`effectiveFixedValues`):
+   - Se cargan automáticamente de la DB al iniciar
+   - El usuario puede agregar/modificar/eliminar
+   - Se aplican **solo si el campo no viene del Excel** (no sobrescriben)
+5. **Guardado** (al confirmar importación):
+   - Guarda en batch todos los field mappings usados
+   - Guarda en batch todos los value mappings usados
+   - Guarda en batch todos los fixed values
+   - Invalida las queries para recargar
+
+### Resultado esperado
+
+| Importación | Comportamiento |
+|-------------|----------------|
+| 1ra | Pregunta todo (mapeo de campos + valores) |
+| 2da (mismo Excel) | **Autodetecta todo** con confianza 1, no abre el mapper |
+| Si el usuario corrige un mapeo | Se actualiza (`times_used++`) |
+| Valor no estaba en catálogo pero se mapeó manual | La próxima vez se resuelve solo |
+| Fixed value seteado (ej: auditor) | Se carga automáticamente en la próxima importación |
+
+---
+
+## Tooltip con muestra de datos (commit `e16ea25`)
+
+Cada columna del Excel en el mapper muestra el **primer valor no vacío** debajo
+del nombre, en gris itálico:
+
+```
+┌─────────────────┐
+│ N° Siniestro    │
+│ S-2024-001      │  ← muestra en gris itálico
+└─────────────────┘
+```
+
+Y tooltip al hover: `Ej: "S-2024-001"`.
+
+**Implementación:** `headerSamples` es un `useMemo` que recorre `rawRows` y
+extrae el primer valor no vacío de cada header. Se muestra en
+`.bulk-mapper-field-sample` (CSS).
+
+No hay que abrir el Excel para ver qué contiene cada columna.
+
+---
+
+## Valores Fijos (commit `b32b299` + `3c87457` + `e16ea25`)
+
+### Qué son
+Campos del sistema que **no tienen columna en el Excel** pero se cargan con un
+valor en duro. Ejemplos:
+- "Toda esta carga es para Santander" → `insuranceCompany` = Santander
+- "El auditor siempre es Juan Pérez" → `auditor` = Juan Pérez
+- "La moneda de esta carga es UF" → `currency` = UF
+
+### UI
+Sección **"Valores fijos"** debajo de la tabla del mapper:
+1. Dropdown para seleccionar el campo del sistema
+2. Si es **campo de referencia** (auditor, liquidador, corredor, etc.):
+   abre un **combo del catálogo** (dropdown con los valores existentes)
+   → se relaciona con un valor existente, no ensucia la base con texto libre
+3. Si es **campo de texto**: prompt de texto libre
+4. Cada valor fijo se muestra como chip con botón X para eliminar
+5. Al eliminar, también se borra de la DB (`deleteImportFixedValue`)
+
+### Lógica de aplicación
+- `effectiveFixedValues` = DB (defaults) + overrides del usuario
+- Se aplican **solo si el campo no viene del Excel** (no sobrescriben)
+- Si el Excel trae valor para ese campo, el valor fijo **no se aplica**
+
+### Persistencia
+- Se guardan en `import_fixed_values` al confirmar la importación
+- Se cargan automáticamente al iniciar una nueva importación
+- Se eliminan de la DB al quitarlos de la UI
+
+### Orden de prioridad (flujo recomendado)
+1. **Setear fixed values** (ej: cia = Santander, auditor = Juan)
+2. **Mapear Excel** (autodetectado con lo aprendido)
+3. **Ajustar** lo que no esté bien
+4. **Agregar más fixed values** si faltó algo
+5. **Confirmar** → staging → productivas
+
+---
+
+## Separación de Participantes (commit `b32b299` + `15a950f`)
+
+### Asegurado (va a `claims_participants` tipo `insured`)
+Labels cambiados de "Asegurado/Contratante" a solo "Asegurado":
+- Nombre Asegurado, Apellido Asegurado, RUT Asegurado
+- E-mail Asegurado, Teléfono Asegurado, Celular Asegurado
+- Dirección Asegurado, País Asegurado, Región Asegurado
+- Ciudad Asegurado, Comuna Asegurado
+
+### Contratante (va a `claims_participants` tipo `contractor`)
+**11 campos nuevos** con prefijo `contractor*`:
+- Nombre Contratante, Apellido Contratante, RUT Contratante
+- E-mail Contratante, Teléfono Contratante, Celular Contratante
+- Dirección Contratante, País Contratante, Región Contratante
+- Ciudad Contratante, Comuna Contratante
+
+Antes el `contractor` se pasaba como `null` al `createClaimMinimal`.
+Ahora se pasan los datos del Excel.
+
+### Persona Contacto (va a `claims_participants` tipo `contact`)
+**2 campos nuevos**: `contactName` (Nombre) y `contactRole` (Cargo).
+- `contactName` se guarda como `full_name` del participant (antes era "Contacto" hardcodeado)
+- `contactRole` se guarda en el campo `notes` del participant
+
+### Beneficiario (va a `claims_participants` tipo `beneficiary`)
+Sin cambios — ya existía.
+
+---
+
+## Campos geográficos (commit `15a950f`)
+
+### Eliminados (duplicados)
+Se eliminaron del schema los campos de texto del siniestro:
+- `claimCountry` (País Siniestro texto)
+- `claimRegion` (Región Siniestro texto)
+- `claimCity` (Ciudad Siniestro texto)
+- `claimCommune` (Comuna Siniestro texto)
+
+**Motivo:** ya existen los del catálogo (`claimCountryRef`, `claimRegionRef`,
+`claimCityRef`, `claimCommuneRef`) que resuelven a UUID. Tener ambos causaba
+confusión en el mapper (aparecían 2 veces País Siniestro, Región Siniestro, etc.).
+
+### Mapeo final
+| Campo Excel | Campo claims | Tipo |
+|---|---|---|
+| País Asegurado | `claims_participants.country` | text |
+| Región Asegurado | `claims_participants.region` | text |
+| Ciudad Asegurado | `claims_participants.city` | text |
+| Comuna Asegurado | `claims_participants.commune` | text |
+| País Siniestro (catálogo) | `claims.country_id` | uuid → `countries` |
+| Región Siniestro (catálogo) | `claims.region_id` | uuid → `regions` |
+| Ciudad Siniestro (catálogo) | `claims.city_id` | uuid → `cities` |
+| Comuna Siniestro (catálogo) | `claims.commune_id` | uuid → `communes` |
+| Dirección Siniestro | `claims.claim_address` | text |
+
+---
+
+## Unificación de campos duplicados (commit `b32b299`)
+
+### Eliminados del schema
+- `advisor` (duplicado — key repetida causaba error React)
+- `brokerName` (duplicado de `broker` que resuelve a catálogo)
+- `brokerNumber` (no se usaba)
+- `contactName` (duplicado — re-agregado correctamente después)
+- `contactRole` (duplicado — re-agregado correctamente después)
+- `assignedAdjuster` (duplicado de `adjuster`)
+
+### Unificados
+- **Liquidador/Ajustador** → un solo campo `adjuster` → `adjuster_id` via profiles
+- **Inspector** → `inspector` → `inspector_id` via profiles (antes era `inspectorId` como texto)
+
+---
+
+## Filtrado del dropdown del mapper (commit `b32b299`)
+
+**Antes:** el dropdown mostraba todos los campos del sistema, los ya asignados
+aparecían como disabled "(en uso)" — lista interminable.
+
+**Ahora:** los campos ya asignados a otra columna del Excel **no aparecen** en
+el dropdown. Solo aparecen los disponibles. Lista más corta y limpia.
+
+---
+
+## Archivos del sistema de aprendizaje
+
+| Archivo | Descripción |
+|---------|-------------|
+| `migrations/100_import_mappings.sql` | Tablas `import_field_mappings` + `import_value_mappings` |
+| `migrations/101_import_fixed_values.sql` | Tabla `import_fixed_values` |
+| `src/services/import-mappings.ts` | Service con CRUD + batch para las 3 tablas |
+| `src/lib/claim-import/schema.ts` | `autoDetectMapping` con `learnedMappings` (pasada 0) |
+| `src/app/dashboard/operaciones/carga-siniestros/page.tsx` | Integración: carga, uso, guardado |
+
+---
+
+## Notas (commit `b32b299`)
+
+El campo `notes` se agregó al flujo completo:
+- **Schema:** `notes` con sinónimos (notas, observaciones, comentarios, etc.)
+- **`createClaimMinimal`:** acepta `notes` en el input + INSERT en `claims.notes`
+- **`loadMutation`:** guarda `notes` en `raw_data`
+- **`confirmMutation`:** pasa `notes` a `createClaimMinimal`
+- **`createClaimParticipant`:** acepta `notes` (para `contactRole` del contacto)
