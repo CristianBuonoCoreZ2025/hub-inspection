@@ -178,12 +178,6 @@ export const CLAIM_FIELDS: ClaimField[] = [
     synonyms: ["cargo contacto", "cargo", "relación", "relacion", "contact role", "contact_role", "contactrole", "parentesco"],
   },
   {
-    key: "contactEmail",
-    label: "Email Contacto",
-    required: false,
-    synonyms: ["email contacto", "correo contacto", "contact email", "contact_email", "contactemail", "mail contacto"],
-  },
-  {
     key: "inspectorId",
     label: "Inspector",
     required: false,
