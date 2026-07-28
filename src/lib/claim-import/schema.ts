@@ -295,8 +295,10 @@ export const CLAIM_FIELDS: ClaimField[] = [
   // ── Campos del Excel de McLareens (opcionales) ──
   {
     key: "status",
-    label: "Estatus",
+    label: "Estatus (referencial)",
     required: false,
+    type: "ref",
+    description: "Status reportado por el cliente. El claim SIEMPRE se crea en 'Creación'. Este valor va a notes. Si tiene país+línea+evento+liquidador+inspector → UPDATE al status reportado (dispara workflow).",
     synonyms: ["estatus", "estado", "status", "state", "situacion", "situación"],
   },
   {
@@ -517,13 +519,7 @@ export const CLAIM_FIELDS: ClaimField[] = [
     synonyms: ["longitud siniestro", "longitud", "longitude", "claim longitude", "claim_longitude", "lon", "lng"],
   },
   // ── Campos de referencia → catálogos geográficos del siniestro (se resuelven a UUID) ──
-  {
-    key: "claimCountryRef",
-    label: "País Siniestro (catálogo)",
-    required: false,
-    description: "Nombre del país del siniestro (se resuelve a country_id via catálogo countries)",
-    synonyms: ["pais siniestro catalogo", "país siniestro catálogo", "pais claim ref", "país claim ref", "country ref", "country_ref"],
-  },
+  // NOTA: claimCountryRef NO está aquí — country_id se hereda de insurance_companies.country_id
   {
     key: "claimRegionRef",
     label: "Región Siniestro (catálogo)",

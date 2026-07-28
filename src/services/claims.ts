@@ -739,3 +739,175 @@ export async function markStagingValid(stagingId: string): Promise<void> {
     STAGING_SELECT
   );
 }
+
+// ═══════════════════════════════════════════════════════════════
+// VINCULACIÓN DE PÓLIZAS (importación masiva)
+// Ver docs/CARGA_SINIESTROS.md sección "Vinculación de Pólizas"
+// ═══════════════════════════════════════════════════════════════
+
+export interface PolicyResolution {
+  policyId: string | null;
+  note: string | null;
+}
+
+/**
+ * Busca o crea una póliza según (company_id, policy_number, insurance_company_id, policy_item).
+ * - Si policy_number viene en 0 o blanco → no vincula (policyId = null).
+ * - Si existe y vigencias coinciden con claimDate → vincula.
+ * - Si existe pero vigencias NO coinciden → no vincula + nota.
+ * - Si no existe → crea con todos los datos del Excel + país de la cia.
+ * - Si existe pero sin la línea de negocio → la activa en policy_business_lines.
+ */
+export async function resolveOrCreatePolicy(input: {
+  companyId: string;
+  policyNumber: string;
+  policyItem: string | null;
+  insuranceCompanyId: string | null;
+  businessLineId: string | null;
+  claimDate: string | null;
+  policyStartDate: string | null;
+  policyEndDate: string | null;
+  policyAmount: number | null;
+  policyPremium: number | null;
+  currencyId: string | null;
+  brokerId: string | null;
+}): Promise<PolicyResolution> {
+  const {
+    companyId, policyNumber, policyItem, insuranceCompanyId,
+    businessLineId, claimDate, policyStartDate, policyEndDate,
+    policyAmount, policyPremium, currencyId, brokerId,
+  } = input;
+
+  // No vincular si policy_number es 0 o blanco
+  if (!policyNumber || policyNumber.trim() === "" || policyNumber.trim() === "0") {
+    return { policyId: null, note: null };
+  }
+  if (!insuranceCompanyId) {
+    return { policyId: null, note: null };
+  }
+
+  const item = policyItem && policyItem.trim() !== "" ? policyItem.trim() : "0";
+  const supabase = (await import("@/lib/supabase/client")).getSupabaseClient();
+
+  // 1. Buscar póliza existente
+  const { data: existing, error: errFind } = await supabase
+    .from("policies")
+    .select("id, policy_number, start_date, end_date, business_line_id, currency")
+    .eq("company_id", companyId)
+    .eq("policy_number", policyNumber.trim())
+    .eq("insurance_company_id", insuranceCompanyId)
+    .eq("policy_item", item)
+    .maybeSingle();
+
+  if (errFind) throw new Error(`Error buscando póliza: ${errFind.message}`);
+
+  if (existing) {
+    // 2. Verificar vigencias vs claim_date
+    if (claimDate && existing.start_date && existing.end_date) {
+      const claimDateOnly = claimDate.split("T")[0];
+      const startDate = String(existing.start_date).split("T")[0];
+      const endDate = String(existing.end_date).split("T")[0];
+      if (claimDateOnly < startDate || claimDateOnly > endDate) {
+        return {
+          policyId: null,
+          note: `Póliza ${policyNumber} (item ${item}) encontrada para la cia pero vigencias no coinciden (vigencia: ${startDate} a ${endDate}, siniestro: ${claimDateOnly}).`,
+        };
+      }
+    }
+
+    // 3. Verificar/activar línea de negocio en policy_business_lines
+    if (businessLineId) {
+      const { data: pbl } = await supabase
+        .from("policy_business_lines")
+        .select("id")
+        .eq("policy_id", existing.id)
+        .eq("business_line_id", businessLineId)
+        .maybeSingle();
+      if (!pbl) {
+        await supabase
+          .from("policy_business_lines")
+          .insert({ policy_id: existing.id, business_line_id: businessLineId, is_primary: false });
+      }
+    }
+
+    return { policyId: existing.id, note: null };
+  }
+
+  // 4. No existe → crear
+  // País de la póliza = país de la cia de seguros
+  const { data: cia } = await supabase
+    .from("insurance_companies")
+    .select("country_id")
+    .eq("id", insuranceCompanyId)
+    .maybeSingle();
+  const policyCountryId = cia?.country_id || null;
+
+  // Moneda: usar currencyId (UUID) → buscar código, o default 'CLP'
+  let currencyCode = "CLP";
+  if (currencyId) {
+    const { data: curr } = await supabase
+      .from("currencies")
+      .select("code")
+      .eq("id", currencyId)
+      .maybeSingle();
+    if (curr?.code) currencyCode = curr.code;
+  }
+
+  // Fechas de vigencia: si no vienen, usar defaults razonables
+  const startDate = policyStartDate || claimDate || new Date().toISOString().split("T")[0];
+  const endDate = policyEndDate || (() => {
+    const d = new Date(startDate);
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().split("T")[0];
+  })();
+
+  const { data: created, error: errCreate } = await supabase
+    .from("policies")
+    .insert({
+      policy_name: policyNumber.trim(),
+      policy_number: policyNumber.trim(),
+      policy_item: item,
+      policy_type: "individual",
+      insurance_company_id: insuranceCompanyId,
+      country_id: policyCountryId,
+      broker_id: brokerId || null,
+      business_line_id: businessLineId || null,
+      currency: currencyCode,
+      premium_amount: policyPremium ?? null,
+      insured_amount: policyAmount ?? null,
+      start_date: startDate,
+      end_date: endDate,
+      status: "active",
+      company_id: companyId,
+    })
+    .select("id")
+    .single();
+
+  if (errCreate) throw new Error(`Error creando póliza ${policyNumber}: ${errCreate.message}`);
+
+  // 5. Insertar en policy_business_lines
+  if (businessLineId && created) {
+    await supabase
+      .from("policy_business_lines")
+      .insert({ policy_id: created.id, business_line_id: businessLineId, is_primary: true });
+  }
+
+  return { policyId: created?.id || null, note: null };
+}
+
+/**
+ * Obtiene el country_id de una cia de seguros.
+ * Usado para heredar el país del claim desde la cia.
+ */
+export async function getCountryIdFromInsuranceCompany(
+  insuranceCompanyId: string
+): Promise<string | null> {
+  const supabase = (await import("@/lib/supabase/client")).getSupabaseClient();
+  const { data, error } = await supabase
+    .from("insurance_companies")
+    .select("country_id")
+    .eq("id", insuranceCompanyId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.country_id || null;
+}

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createClaimMinimal,
   cleanStaging, insertStagingRows, getStagingRows, markStagingError, markStagingImported, markStagingValid,
+  resolveOrCreatePolicy, getCountryIdFromInsuranceCompany,
   type ClaimStagingRow,
 } from "@/services/claims";
 import {
@@ -12,7 +13,7 @@ import {
   getCurrencies, getHousingDestinations, getDamageClassifications, getLookupCatalog,
   getInsuranceProducts, getEvents,
   getBrokers, getAdvisors, getPropertyClassifications,
-  getCountries, getRegions, getCities, getCommunes,
+  getRegions, getCities, getCommunes,
 } from "@/services/catalogs";
 import { useAuth } from "@/hooks/use-auth";
 import { getUsers, getUsersByRoleForCompany } from "@/services/users";
@@ -185,11 +186,7 @@ export default function CargaSiniestrosPage() {
     queryFn: getPropertyClassifications,
     staleTime: 5 * 60 * 1000,
   });
-  const { data: countries } = useQuery({
-    queryKey: ["countries"],
-    queryFn: getCountries,
-    staleTime: 5 * 60 * 1000,
-  });
+  // countries eliminado — country_id se hereda de insurance_companies.country_id
   const { data: regions } = useQuery({
     queryKey: ["regions-all"],
     queryFn: () => getRegions(),
@@ -318,7 +315,7 @@ export default function CargaSiniestrosPage() {
   const brokerMap = useMemo(() => buildMap(brokers), [buildMap, brokers]);
   const advisorMap = useMemo(() => buildMap(advisors), [buildMap, advisors]);
   const propertyClassificationMap = useMemo(() => buildMap(propertyClassifications), [buildMap, propertyClassifications]);
-  const countryMap = useMemo(() => buildMap(countries), [buildMap, countries]);
+  // countryMap eliminado — country_id se hereda de insurance_companies.country_id
   const regionMap = useMemo(() => buildMap(regions), [buildMap, regions]);
   const cityMap = useMemo(() => buildMap(cities), [buildMap, cities]);
   const communeMap = useMemo(() => buildMap(communes), [buildMap, communes]);
@@ -423,10 +420,7 @@ export default function CargaSiniestrosPage() {
     (value: string) => resolveRefId("propertyClassification", value, propertyClassificationMap),
     [resolveRefId, propertyClassificationMap]
   );
-  const resolveCountryId = useCallback(
-    (value: string) => resolveRefId("claimCountryRef", value, countryMap),
-    [resolveRefId, countryMap]
-  );
+  // resolveCountryId eliminado — country_id se hereda de insurance_companies.country_id
   const resolveRegionId = useCallback(
     (value: string) => resolveRefId("claimRegionRef", value, regionMap),
     [resolveRefId, regionMap]
@@ -480,7 +474,7 @@ export default function CargaSiniestrosPage() {
     { fieldKey: "broker", label: "Corredor", dataKey: "broker" as const, resolver: resolveBrokerId, options: brokers ?? [] },
     { fieldKey: "advisor", label: "Asesor", dataKey: "advisor" as const, resolver: resolveAdvisorId, options: advisors ?? [] },
     { fieldKey: "propertyClassification", label: "Clasificación Propiedad", dataKey: "propertyClassification" as const, resolver: resolvePropertyClassificationId, options: propertyClassifications ?? [] },
-    { fieldKey: "claimCountryRef", label: "País Siniestro (catálogo)", dataKey: "claimCountryRef" as const, resolver: resolveCountryId, options: countries ?? [] },
+    // NOTA: claimCountryRef eliminado — country_id se hereda de insurance_companies.country_id
     { fieldKey: "claimRegionRef", label: "Región Siniestro (catálogo)", dataKey: "claimRegionRef" as const, resolver: resolveRegionId, options: regions ?? [] },
     { fieldKey: "claimCityRef", label: "Ciudad Siniestro (catálogo)", dataKey: "claimCityRef" as const, resolver: resolveCityId, options: cities ?? [] },
     { fieldKey: "claimCommuneRef", label: "Comuna Siniestro (catálogo)", dataKey: "claimCommuneRef" as const, resolver: resolveCommuneId, options: communes ?? [] },
@@ -495,11 +489,11 @@ export default function CargaSiniestrosPage() {
     resolveBusinessLineId, resolveCurrencyId, resolveDestinationHousingId, resolveDamageClassificationId,
     resolveInsuranceProductId, resolveEventId,
     resolveBrokerId, resolveAdvisorId, resolvePropertyClassificationId,
-    resolveCountryId, resolveRegionId, resolveCityId, resolveCommuneId,
+    resolveRegionId, resolveCityId, resolveCommuneId,
     resolveInspectorId, resolveAdjusterId, resolveAuditorId, resolveDispatcherId, resolveAssistantId, resolvePolicyId,
     insuranceCompanies, claimTypes, claimCauses, claimStatuses, businessLines, currencies,
     housingDestinations, damageClassifications, insuranceProducts, events,
-    brokers, advisors, propertyClassifications, countries, regions, cities, communes,
+    brokers, advisors, propertyClassifications, regions, cities, communes,
     inspectorUsers, adjusterUsers, auditorUsers, dispatcherUsers, assistantUsers,
     companyPolicies,
   ]);
@@ -692,7 +686,8 @@ export default function CargaSiniestrosPage() {
         const brokerId = str(d.broker) ? resolveBrokerId(str(d.broker)) : null;
         const advisorId = str(d.advisor) ? resolveAdvisorId(str(d.advisor)) : null;
         const propertyClassificationId = str(d.propertyClassification) ? resolvePropertyClassificationId(str(d.propertyClassification)) : null;
-        const countryId = str(d.claimCountryRef) ? resolveCountryId(str(d.claimCountryRef)) : null;
+        // countryId se hereda de insurance_companies.country_id en el paso 8 (no del Excel)
+        const countryId = null; // se setea en paso 8
         const regionId = str(d.claimRegionRef) ? resolveRegionId(str(d.claimRegionRef)) : null;
         const cityId = str(d.claimCityRef) ? resolveCityId(str(d.claimCityRef)) : null;
         const communeId = str(d.claimCommuneRef) ? resolveCommuneId(str(d.claimCommuneRef)) : null;
@@ -894,10 +889,55 @@ export default function CargaSiniestrosPage() {
       let error = 0;
       const importedLiquidationNumbers: string[] = [];
 
+      // UUID del status "Creación" (lookup_catalog, code='created')
+      const STATUS_CREATED_UUID = "99c36f4e-4868-44c0-8fb4-78517424d727";
+
       for (let i = 0; i < validStaging.length; i++) {
         const sr = validStaging[i];
         const d = sr.raw_data;
         try {
+          // ── PRE-RESOLUCIÓN: póliza + país de la cia ──
+          const insuranceCompanyId = (d.insuranceCompanyId as string) || null;
+          const businessLineId = (d.businessLineId as string) || null;
+          const reportedStatusId = (d.statusId as string) || null;
+
+          // 1. Heredar país de la cia de seguros
+          let countryId: string | null = null;
+          if (insuranceCompanyId) {
+            countryId = await getCountryIdFromInsuranceCompany(insuranceCompanyId);
+          }
+
+          // 2. Resolver o crear póliza
+          const policyResolution = await resolveOrCreatePolicy({
+            companyId: tenantCompanyId,
+            policyNumber: String(d.policyNumber || ""),
+            policyItem: (d.policyItem as string) || null,
+            insuranceCompanyId,
+            businessLineId,
+            claimDate: (d.claimDate as string) || null,
+            policyStartDate: (d.policyStartDate as string) || null,
+            policyEndDate: (d.policyEndDate as string) || null,
+            policyAmount: (d.policyAmount as number | null) ?? null,
+            policyPremium: (d.policyPremium as number | null) ?? null,
+            currencyId: (d.currencyId as string) || null,
+            brokerId: (d.brokerId as string) || null,
+          });
+
+          // 3. Construir notes: status reportado + nota de póliza
+          const notesParts: string[] = [];
+          if (reportedStatusId && reportedStatusId !== STATUS_CREATED_UUID) {
+            const statusName = claimStatuses?.find((s) => s.id === reportedStatusId)?.name || reportedStatusId;
+            notesParts.push(`Cliente reporta estado: ${statusName}`);
+          }
+          if (policyResolution.note) {
+            notesParts.push(policyResolution.note);
+          }
+          if (d.notes as string) {
+            notesParts.push(String(d.notes));
+          }
+          const finalNotes = notesParts.length > 0 ? notesParts.join(" | ") : null;
+
+          // 4. Crear claim SIEMPRE en status "Creación"
           const claim = await createClaimMinimal(
             {
               claimNumber: String(d.claimNumber || ""),
@@ -907,11 +947,11 @@ export default function CargaSiniestrosPage() {
               reportDate: (d.reportDate as string) || null,
               assignmentDate: (d.assignmentDate as string) || null,
               company_id: tenantCompanyId,
-              insuranceCompanyId: (d.insuranceCompanyId as string) || null,
+              insuranceCompanyId,
               claimTypeId: (d.claimTypeId as string) || null,
               claimCauseId: (d.claimCauseId as string) || null,
-              statusId: (d.statusId as string) || null,
-              businessLineId: (d.businessLineId as string) || null,
+              statusId: STATUS_CREATED_UUID, // SIEMPRE "Creación"
+              businessLineId,
               currencyId: (d.currencyId as string) || null,
               destinationHousingId: (d.destinationHousingId as string) || null,
               damageClassificationId: (d.damageClassificationId as string) || null,
@@ -935,20 +975,21 @@ export default function CargaSiniestrosPage() {
               recoveryComments: (d.recoveryComments as string) || null,
               claimLatitude: (d.claimLatitude as number | null) ?? null,
               claimLongitude: (d.claimLongitude as number | null) ?? null,
+              countryId, // heredado de la cia
               regionId: (d.regionId as string) || null,
               cityId: (d.cityId as string) || null,
               communeId: (d.communeId as string) || null,
               brokerId: (d.brokerId as string) || null,
               advisorId: (d.advisorId as string) || null,
               propertyClassificationId: (d.propertyClassificationId as string) || null,
-              policyId: (d.policyId as string) || null,
+              policyId: policyResolution.policyId, // vinculado o null
               typeId: null,
               inspectorId: (d.inspectorId as string) || null,
               adjusterId: (d.adjusterId as string) || null,
               auditorId: (d.auditorId as string) || null,
               dispatcherId: (d.dispatcherId as string) || null,
               assistantId: (d.assistantId as string) || null,
-              notes: (d.notes as string) || null,
+              notes: finalNotes,
             },
             {
               insuredName: String(d.insuredName || ""),
@@ -1000,6 +1041,28 @@ export default function CargaSiniestrosPage() {
               contactPhone: (d.contactPhone as string) || null,
             } : null
           );
+
+          // 5. Transición de status: si tiene los 5 campos → UPDATE al status reportado
+          //    (dispara trigger trg_execute_workflow automáticamente)
+          if (
+            reportedStatusId &&
+            reportedStatusId !== STATUS_CREATED_UUID &&
+            countryId &&              // país (heredado de cia)
+            businessLineId &&         // línea de negocio
+            (d.eventId as string) &&  // evento
+            (d.adjusterId as string) && // liquidador
+            (d.inspectorId as string)   // inspector
+          ) {
+            const { getSupabaseClient } = await import("@/lib/supabase/client");
+            const { error: updErr } = await getSupabaseClient()
+              .from("claims")
+              .update({ status_id: reportedStatusId })
+              .eq("id", claim.id);
+            if (updErr) {
+              console.error(`Error actualizando status de ${claim.liquidation_number}:`, updErr.message);
+            }
+          }
+
           await markStagingImported(sr.id, claim.id);
           if (claim.liquidation_number) {
             importedLiquidationNumbers.push(claim.liquidation_number);

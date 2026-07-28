@@ -156,6 +156,31 @@ Si necesitas corregir un siniestro mal cargado:
 ### Paso 8 — Pasar a producción
 - Click **"Confirmar"** → `confirmMutation`:
   - Para cada row `valid`: llama `createClaimMinimal()` → crea claim + participants
+  - **El claim SIEMPRE se crea en status "Creación"** (igual que creación manual)
+  - **El status del Excel es referencial** — se guarda en `claims.notes`:
+    "Cliente reporta estado: Liquidación" (o el que sea)
+  - **`created_at` del Excel** = fecha que el cliente dice que lo envió
+    (no es la fecha real de creación en el sistema)
+  - **Vincula o crea la póliza** (ver "Vinculación de Pólizas" abajo):
+    - Si `policy_number` > 0 + cia + item → busca o crea en `policies`
+    - Si no coincide vigencia → no vincula, deja nota en `claims.notes`
+    - Si la póliza no tiene la línea de negocio → la activa en `policy_business_lines`
+  - **Transición de status (dispara workflow automáticamente):**
+    - Después de crear el claim en "Creación", si tiene:
+      - `country_id` (heredado de la cia) ✓
+      - `business_line_id` ✓
+      - `event_id` ✓
+      - `adjuster_id` (liquidador) ✓
+      - `inspector_id` ✓
+    - → El sistema hace `UPDATE claims SET status_id = <status reportado>`
+    - → Ese UPDATE **dispara automáticamente el trigger `trg_execute_workflow`**
+      (es un trigger de tabla `AFTER UPDATE OF status_id`)
+    - → El trigger busca `workflow_configs` que coincidan con
+      (status, business_line, country, event) y crea las gestiones automáticas
+    - **No se llama a `sync_workflow_for_claim` manualmente** — el trigger
+      se encarga de todo al hacer el UPDATE
+    - Si falta alguno de los 5 campos → el claim se queda en "Creación"
+      (no hay suficiente info para disparar el workflow)
   - Marca cada row como `imported` (con `claim_id` + `processed_at`) o `error`
   - **0 errores** → `cleanStaging()` borra todo el staging
   - **Con errores** → borra solo los importados, deja los con error
@@ -239,10 +264,24 @@ Estructura existente en la base de datos:
 | N° Póliza | `policy_number` | text NOT NULL | |
 | Fecha Siniestro | `claim_date` | date NOT NULL | Normalizada a YYYY-MM-DD |
 | Tipo Siniestro | `claim_type_id` | uuid → `claim_types` | Resuelto por nombre |
-| Empresa / Cía Seguros | `insurance_company_id` | uuid → `insurance_companies` | Resuelto por nombre |
+| Empresa / Cía Seguros | `insurance_company_id` | uuid → `insurance_companies` | Resuelto por nombre. **Obligatorio** — el país del claim se hereda de `insurance_companies.country_id`. |
 | Nombre Asegurado | `claims_participants.first_name` | text | Tipo `insured` |
 | Dirección Asegurado | `claims_participants.address` | text | |
 | Ciudad Asegurado | `claims_participants.city` | text | |
+
+> **País del claim (regla de herencia):** El `country_id` del claim **NO se pide
+> del Excel**. Se hereda de `insurance_companies.country_id` de la cia de seguros
+> del claim. Como `insurance_company_id` es obligatorio, el país siempre estará.
+> Si la cia no tiene `country_id` seteado → error en staging ("La cia X no tiene
+> país configurado"). El Excel puede traer una columna de país, pero se ignora
+> — la fuente de verdad es la cia de seguros.
+
+> **Status del claim (regla de creación):** El `status_id` del Excel es
+> **referencial** — el claim **SIEMPRE se crea en status "Creación"** (igual que
+> la creación manual). El status del Excel se guarda en `claims.notes`:
+> "Cliente reporta estado: X". Después de crear, si el claim tiene país + línea
+> + evento + liquidador + inspector, el sistema hace UPDATE al status reportado,
+> lo que dispara el workflow automáticamente (ver paso 8).
 
 ### Campos OPCIONALES — Claims (texto/fecha/numero/boolean)
 
@@ -255,7 +294,7 @@ Estructura existente en la base de datos:
 | No. Siniestro Compañía | `company_report_number` | text | N° de reporte/denuncio de la cia |
 | N° McLarens One | `internal_number` | text | N° interno (no es automático) |
 | Referencia Cliente | `client_reference` | text | |
-| Ramo/Item Póliza | `policy_item` | text | |
+| Ramo/Item Póliza | `policy_item` | text | Default `'0'` si viene vacío. Usado en el chequeo único de póliza (poliza + cia + item). |
 | Fecha Inicio Póliza | `policy_start_date` | date | |
 | Fecha Fin Póliza | `policy_end_date` | date | |
 | Monto Asegurado Póliza | `policy_amount` | numeric | |
@@ -274,7 +313,7 @@ Estructura existente en la base de datos:
 | Campo Excel | Campo claims | Catálogo | Tabla | Filas |
 |---|---|---|---|---|
 | Causal Siniestro | `claim_cause_id` | `claim_causes` | `claim_causes` | 12 |
-| Estatus | `status_id` | `lookup_catalog` (claim_status) | `lookup_catalog` | 5 |
+| Estatus | `status_id` | `lookup_catalog` (claim_status) | `lookup_catalog` | 5 | **Referencial** — el claim se crea en "Creación". El status del Excel va a `notes`. Si tiene país + línea + evento + liquidador + inspector → UPDATE al status reportado (dispara trigger de workflow automáticamente). |
 | Línea Negocio | `business_line_id` | `business_lines` | `business_lines` | 5 |
 | Moneda Póliza | `currency_id` | `currencies` | `currencies` | 18 |
 | Destino | `destination_housing_id` | `housing_destinations` | `housing_destinations` | 2 |
@@ -284,7 +323,7 @@ Estructura existente en la base de datos:
 | Corredor | `broker_id` | `brokers` | `brokers` | 20 |
 | Asesor | `advisor_id` | `advisors` | `advisors` | 0 |
 | Clasificación Propiedad | `property_classification_id` | `property_classifications` | `property_classifications` | 8 |
-| País Siniestro (catálogo) | `country_id` | `countries` | `countries` | 12 |
+| País Siniestro (catálogo) | `country_id` | `countries` | `countries` | 12 | **No se pide del Excel** — se hereda de `insurance_companies.country_id`. |
 | Región Siniestro (catálogo) | `region_id` | `regions` | `regions` | 41 |
 | Ciudad Siniestro (catálogo) | `city_id` | `cities` | `cities` | 252 |
 | Comuna Siniestro (catálogo) | `commune_id` | `communes` | `communes` | 2183 |
@@ -293,7 +332,7 @@ Estructura existente en la base de datos:
 | Auditor | `auditor_id` | `profiles` (empresa) | `profiles` | — |
 | Despachador | `dispatcher_id` | `profiles` (empresa) | `profiles` | — |
 | Asistente | `assistant_id` | `profiles` (empresa) | `profiles` | — |
-| Póliza (referencia) | `policy_id` | `policies` (empresa) | `policies` | 90 |
+| Póliza (referencia) | `policy_id` | `policies` (empresa) | `policies` | 90 | Se vincula/crea automáticamente en paso 8 (ver "Vinculación de Pólizas"). |
 
 > **Regla:** Los campos UUID **NUNCA** se piden como UUID directo. Se pide el **NOMBRE** del Excel y se resuelve al UUID via el catálogo correspondiente. Si el nombre no coincide exacto, el usuario lo mapea manualmente en el panel de mapeo de valores.
 
@@ -371,8 +410,10 @@ Estructura existente en la base de datos:
 | **Fecha Cierre** | No existe columna `closed_date` en `claims`. |
 | **Tipo Construcción** | No existe tabla `construction_types` en la base. |
 | **Es Habitable?** | No existe tabla `habitations` ni `habitability` en la base. |
-| **Hora Siniestro** | No existe columna `claim_time` en `claims`. |
+| **Hora Siniestro** | Existe columna `claim_time` en `claims` (tipo `time`). Se importa como fixed value con picker de reloj. |
 | **`company_id`** | Se obtiene del perfil del usuario autenticado (tenant). NUNCA del Excel. |
+| **`country_id`** (claim) | Se hereda de `insurance_companies.country_id` de la cia del claim. NUNCA del Excel. La cia es obligatoria, así que el país siempre estará. |
+| **`status_id`** (claim, al crear) | El claim SIEMPRE se crea en status "Creación". El status del Excel es referencial y va a `notes`. Después de crear, si tiene país + línea + evento + liquidador + inspector → UPDATE al status reportado, lo que dispara el trigger `trg_execute_workflow` automáticamente (crea las gestiones del workflow). |
 | **`updated_at`** | Auto-set por la base de datos (`default=now()`). |
 | **`updated_by`** | Se setea por el sistema según el usuario que hace la acción. |
 | **`disabled`** / **`disabled_at`** / **`disabled_by`** / **`disabled_reason`** | Se gestionan desde la pantalla de inhabilitar, no desde el Excel. |
@@ -500,6 +541,148 @@ $$ LANGUAGE plpgsql;
 **Importante:** `createClaimMinimal` NO pasa `liquidation_number` (lo deja en NULL) para que el trigger lo genere automáticamente.
 
 **Reset:** `ALTER SEQUENCE claims_liquidation_seq RESTART WITH 1;` — **SOLO en desarrollo inicial. NUNCA en producción.**
+
+### Pre-validación estricta (sin saltos en el correlativo)
+
+**Problema:** PostgreSQL sequences **NO son transaccionales**. El trigger
+`set_liquidation_number` llama `nextval('claims_liquidation_seq')` en el
+`BEFORE INSERT`. Si el `INSERT` falla después (violación de FK, RLS, error
+al insertar participantes), el valor de la secuencia **ya se consumió y no
+se puede devolver**. Esto produce saltos en el correlativo (ej: L-000000001,
+L-000000002, L-000000003 faltan; empieza en L-000000004).
+
+**Solución:** Pre-validación estricta en staging (paso 6) para que **ningún
+`INSERT` falle** en producción (paso 8). Todas las validaciones (required
+fields, UUIDs resueltos, FKs válidas, fechas normalizadas) se hacen en
+staging, no en el insert. Solo las filas `valid` pasan a producción.
+
+Si una fila falla en producción (caso excepcional), se marca como `error`
+en staging y el usuario la corrige — pero el número consumido se pierde.
+La pre-validación estricta minimiza este caso a casi cero.
+
+---
+
+## Vinculación de Pólizas (Paso 8 — Producción)
+
+Cuando el Excel trae `policy_number` (N° Póliza), `insurance_company_id`
+(Cía Seguros) y `policy_item` (Ramo/Item), el sistema vincula o crea la
+póliza correspondiente en la tabla `policies`.
+
+### Regla del `policy_item`
+
+- El `policy_item` por defecto es **`0`** si viene vacío o en blanco.
+- El chequeo único es: **`policy_number` + `insurance_company_id` + `policy_item`**.
+- Una misma póliza puede tener varios items (ej: póliza 12345 item 0, item 1, item 2).
+
+### País de la póliza
+
+- La póliza **siempre tiene país** (`country_id`).
+- El país **lo da la compañía de seguros** (`insurance_companies.country_id`).
+- No se pide del Excel — se hereda de la aseguradora.
+
+### Tabla `policies` — estructura
+
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `policy_name` | text | Nombre/display (ej: "12345") |
+| `policy_number` | text | N° de póliza |
+| `policy_item` | text | Item/ramo (default `'0'`) |
+| `policy_type` | text | `'individual'` por defecto |
+| `insurance_company_id` | uuid FK → `insurance_companies` | |
+| `country_id` | uuid FK → `countries` | Heredado de la cia de seguros |
+| `broker_id` | uuid FK → `brokers` | Opcional |
+| `business_line_id` | uuid FK → `business_lines` | Línea principal (referencial) |
+| `currency` | text | Código de moneda (ej: `'CLP'`, `'UF'`) |
+| `premium_amount` | numeric | Prima anual |
+| `insured_amount` | numeric | Monto asegurado |
+| `start_date` | date | Inicio vigencia |
+| `end_date` | date | Fin vigencia |
+| `status` | text | `'active'` por defecto |
+| `company_id` | uuid FK → `companies` | Empresa (tenant) |
+| `created_at` / `updated_at` | timestamptz | |
+
+**Constraint UNIQUE:** `(company_id, policy_number, insurance_company_id, policy_item)`
+— una póliza es única por empresa + número + cia + item.
+
+### Tabla `policy_business_lines` (N:M)
+
+Una póliza puede tener **múltiples líneas de negocio**. La relación N:M
+vive en `policy_business_lines`:
+
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `policy_id` | uuid FK → `policies` | |
+| `business_line_id` | uuid FK → `business_lines` | |
+| `is_primary` | boolean | `true` para la línea principal |
+| `created_at` | timestamptz | |
+
+**Constraint UNIQUE:** `(policy_id, business_line_id)` — sin duplicar.
+
+### Lógica de vinculación/creación (paso 8)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ ¿policy_number viene en 0 o en blanco?                          │
+│   SÍ → No vincular. policy_id = null. Fin.                      │
+│   NO ↓                                                           │
+│ ¿policy_number > 0 AND insurance_company_id AND policy_item?    │
+│   (item default = '0' si viene vacío)                           │
+│   ↓                                                              │
+│ Buscar en policies WHERE:                                        │
+│   company_id = tenant                                            │
+│   AND policy_number = <excel>                                    │
+│   AND insurance_company_id = <excel>                             │
+│   AND policy_item = <excel o '0'>                                │
+│   ↓                                                              │
+│ ┌───────────────┐                ┌───────────────────────────┐  │
+│ │ NO ENCONTRADA │                │ ENCONTRADA                │  │
+│ │ → CREAR       │                │ → Verificar vigencias     │  │
+│ │   policy      │                │   vs claim_date           │  │
+│ │   con todos   │                │   ↓                       │  │
+│ │   los datos   │                │ ┌─────────┐ ┌──────────┐  │  │
+│ │   del Excel   │                │ │VIGENCIAS│ │VIGENCIAS │  │  │
+│ │   + país de   │                │ │COINCIDEN│ │NO COINC. │  │  │
+│ │   la cia      │                │ │→ vinc.  │ │→ NO     │  │  │
+│ │   + business_ │                │ │policy_id│ │vincular │  │  │
+│ │   line_id     │                │ │al claim │ │→ nota   │  │  │
+│ │   + vigencias │                │ │         │ │en claim │  │  │
+│ │   + primas    │                │ └─────────┘ └──────────┘  │  │
+│ │   + montos    │                │                           │  │
+│ │   + moneda    │                │ Verificar business_line:  │  │
+│ │   → vinc.     │                │   ¿la línea del claim está │  │
+│ │   policy_id   │                │   en policy_business_lines?│  │
+│ │   al claim    │                │   SÍ → ok                 │  │
+│ │   + insertar  │                │   NO → activarla (insert) │  │
+│ │   en policy_  │                │                           │  │
+│ │   business_   │                │                           │  │
+│ │   lines       │                │                           │  │
+│ └───────────────┘                └───────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Escenarios y acciones
+
+| Escenario | Acción |
+|-----------|--------|
+| `policy_number` en 0 o blanco | No vincular. `policy_id = null`. El claim se crea igual. |
+| Póliza + cia + item **no existe** | **Crear** la póliza con: número, item, cia, país (de la cia), línea de negocio, vigencias, primas, montos, moneda. Vincular `policy_id` al claim. Insertar en `policy_business_lines`. |
+| Póliza + cia + item **existe** y vigencias coinciden con `claim_date` | **Vincular** `policy_id` al claim. |
+| Póliza + cia + item **existe** pero vigencias **NO** coinciden | **No vincular**. `policy_id = null`. **Dejar nota en el claim** (`notes`): "Póliza X encontrada para cia Y pero vigencias no coinciden (vigencia: AAAA-MM-DD a BBBB-MM-DD, siniestro: CCCC-MM-DD)". El claim se crea igual. |
+| Póliza existe pero **sin** la línea de negocio del claim | **Activar** la línea: insertar en `policy_business_lines` (con `is_primary = false`). La línea principal (`business_line_id` en `policies`) no se cambia. |
+
+### Nota en el claim
+
+Cuando la póliza existe pero las vigencias no coinciden, se deja una nota
+en `claims.notes` (no se bloquea la importación). El usuario puede revisar
+la póliza manualmente después.
+
+### País de la póliza
+
+El `country_id` de la póliza se obtiene de `insurance_companies.country_id`
+(igual que el país del claim). **Nunca** se pide del Excel. Si la cia no
+tiene país seteado → error en staging.
 
 ---
 
@@ -649,7 +832,7 @@ Mapeo de **valores Excel → UUID del catálogo** por empresa.
 
 #### `import_fixed_values` (migración 101)
 **Valores fijos** por empresa: campos que no vienen en el Excel pero se cargan
-con un valor en duro (ej: auditor = Juan Pérez, cia = Santander).
+con un valor en duro (ej: auditor = Juan Pérez, aseguradora = Santander).
 
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
