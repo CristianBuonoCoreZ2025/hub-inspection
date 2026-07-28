@@ -148,7 +148,7 @@ export default function TiposGestionPage() {
  </DialogTitle>
  </div>
  <form onSubmit={handleSubmit}>
- <div className="modal-body space-y-2">
+ <div className="modal-body modal-grid">
  <div className="modal-grid">
  <div className="modal-field">
  <Label className="app-field-label">Código</Label>

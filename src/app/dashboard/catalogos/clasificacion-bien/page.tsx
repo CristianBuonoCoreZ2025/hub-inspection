@@ -195,7 +195,7 @@ export default function PropertyClassificationPage() {
  </DialogTitle>
  </div>
  <form onSubmit={handleSubmit}>
- <div className="modal-body space-y-2">
+ <div className="modal-body modal-grid">
  <div className="modal-field">
  <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre" className="app-input" />

@@ -237,7 +237,7 @@ export default function ProductosBienPage() {
             </DialogTitle>
           </div>
           <form onSubmit={handleSubmit}>
-            <div className="modal-body space-y-2">
+            <div className="modal-body modal-grid">
               <div className="modal-field">
                 <Label className="app-field-label">Tipo de Bien <span className="text-red-500">*</span></Label>
                 <Select

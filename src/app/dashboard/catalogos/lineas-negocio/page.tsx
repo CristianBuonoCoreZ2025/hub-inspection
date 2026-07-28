@@ -173,7 +173,7 @@ export default function LineasNegocioPage() {
             </DialogTitle>
           </div>
           <form onSubmit={handleSubmit}>
-            <div className="modal-body space-y-2">
+            <div className="modal-body modal-grid">
               <div className="modal-grid">
                 <div className="modal-field">
                   <Label className="app-field-label">País</Label>
@@ -339,7 +339,7 @@ function DocumentosModal({ lineId, lineName, onClose }: { lineId: string; lineNa
           </DialogTitle>
           <p className="modal-subtitle">{lineName}</p>
         </div>
-        <div className="modal-body space-y-2">
+        <div className="modal-body modal-grid">
           <p className="text-[10px] text-muted-foreground">
             Activa los documentos que se deben solicitar para esta línea de negocio e indica cuáles son obligatorios.
           </p>
