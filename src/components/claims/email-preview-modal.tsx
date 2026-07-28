@@ -1,13 +1,15 @@
 "use client";
 
-import { Mail, X, Download, Printer } from "lucide-react";
+import { Mail, X, Download, Printer, RotateCw, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { wrapHtmlEmail } from "@/services/email-render";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 /** Extrae solo el código de gestión del formato compuesto {liquidation}-{code}.
  *  Ej: "L-000000141-HINS-003" → "HINS-003" */
@@ -29,6 +31,7 @@ function liquidationFromCode(code: string | null | undefined): string {
 
 interface EmailLogLite {
   id: string;
+  claim_id: string;
   to_address: string[];
   cc_address: string[];
   bcc_address: string[];
@@ -36,6 +39,7 @@ interface EmailLogLite {
   body: string;
   body_format: "plain" | "html";
   status: string;
+  provider_response: Record<string, unknown> | null;
   sent_at: string;
   correlativo: number;
   parent_action_code: string | null;
@@ -49,6 +53,9 @@ interface EmailPreviewModalProps {
 }
 
 export function EmailPreviewModal({ open, onOpenChange, log }: EmailPreviewModalProps) {
+  const queryClient = useQueryClient();
+  const [showLogDetail, setShowLogDetail] = useState(false);
+
   const fullCode = useMemo(() => {
     if (!log) return "";
     return `EML-${String(log.correlativo).padStart(3, "0")}`;
@@ -58,6 +65,42 @@ export function EmailPreviewModal({ open, onOpenChange, log }: EmailPreviewModal
     if (!log || log.body_format !== "html") return "";
     return wrapHtmlEmail({ body: log.body });
   }, [log]);
+
+  const isFailed = log?.status === "failed";
+
+  // Extraer mensaje legible del provider_response
+  const providerErrorMsg = useMemo(() => {
+    if (!log?.provider_response) return "Error desconocido del proveedor";
+    const pr = log.provider_response;
+    return (
+      (pr.message as string | undefined) ||
+      (pr.error as string | undefined) ||
+      JSON.stringify(pr, null, 2)
+    );
+  }, [log]);
+
+  // Mutación de reenvío
+  const resendMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/email/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailLogId: log!.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Error reenviando e-mail");
+      return json;
+    },
+    onSuccess: () => {
+      toast.success("Correo reenviado");
+      // Invalidar queries de email logs para que la lista se actualice
+      if (log?.claim_id) {
+        queryClient.invalidateQueries({ queryKey: ["email-logs-by-claim", log.claim_id] });
+      }
+      onOpenChange(false);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const handlePrint = () => {
     if (!log) return;
@@ -201,6 +244,18 @@ ${bodyHtml}
             </div>
           </DialogTitle>
           <div className="flex items-center gap-1.5 shrink-0">
+            {isFailed && (
+              <button
+                type="button"
+                onClick={() => resendMutation.mutate()}
+                disabled={resendMutation.isPending}
+                title="Reenviar correo"
+                className="inline-flex h-8 items-center gap-1.5 px-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors text-[12px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RotateCw className={`h-3.5 w-3.5 ${resendMutation.isPending ? "animate-spin" : ""}`} />
+                {resendMutation.isPending ? "Reenviando..." : "Reenviar"}
+              </button>
+            )}
             <button type="button" onClick={handleDownload} title="Descargar .eml" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <Download className="h-3.5 w-3.5" />
             </button>
@@ -212,6 +267,38 @@ ${bodyHtml}
             </button>
           </div>
         </div>
+
+        {/* Banner de error (solo si status = failed) */}
+        {isFailed && (
+          <div className="px-4 py-3 border-b border-rose-200 bg-rose-50 shrink-0">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] font-semibold text-rose-900">
+                    Error en el envío
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowLogDetail((v) => !v)}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-700 hover:text-rose-900 transition-colors"
+                  >
+                    {showLogDetail ? "Ocultar detalle" : "Ver log"}
+                    {showLogDetail ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-rose-800 mt-1 break-words">
+                  {providerErrorMsg}
+                </p>
+                {showLogDetail && (
+                  <pre className="mt-2 p-2 bg-rose-100/70 rounded text-[10px] text-rose-900 overflow-auto max-h-40 whitespace-pre-wrap break-all">
+                    {JSON.stringify(log.provider_response, null, 2)}
+                  </pre>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Metadatos: Para, CC, Fecha */}
         <div className="px-4 py-3 border-b border-border bg-muted/20 grid grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] shrink-0">
@@ -241,7 +328,7 @@ ${bodyHtml}
               />
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto min-h-0 p-4">
               <pre className="whitespace-pre-wrap font-sans">{log.body}</pre>
               <div className="email-bottom-spacer" />
             </div>

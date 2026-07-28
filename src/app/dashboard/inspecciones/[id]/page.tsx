@@ -1063,7 +1063,7 @@ export default function InspectionDetailPage() {
  Registra el motivo de cancelación. Se generará un informe de cancelación.
  </DialogDescription>
  </div>
- <div className="modal-body space-y-2">
+ <div className="modal-body modal-grid">
  <div className="modal-field">
  <Label className="app-field-label">Motivo de cancelación *</Label>
  <Select disabled={cancelMutation.isPending} value={cancelReasonId || null} onValueChange={(v) => setCancelReasonId(v ?? "")}>
@@ -1121,7 +1121,7 @@ export default function InspectionDetailPage() {
  La inspección actual se cancelará y se creará una nueva agendada.
  </DialogDescription>
  </div>
- <div className="modal-body space-y-2">
+ <div className="modal-body modal-grid">
  <div className="modal-grid-2">
  <div className="modal-field">
  <Label className="app-field-label">Inspector *</Label>

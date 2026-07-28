@@ -5370,7 +5370,7 @@ function DocumentTemplatePicker({
             Elige una plantilla para generar el documento con los datos del siniestro
           </DialogDescription>
         </div>
-        <div className="modal-body space-y-2">
+        <div className="modal-body modal-grid">
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground app-body">
               <Loader2 className="h-4 w-4 animate-spin" />

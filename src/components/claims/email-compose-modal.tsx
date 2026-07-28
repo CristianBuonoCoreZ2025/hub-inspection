@@ -349,8 +349,16 @@ export function EmailComposeModal({
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      const toArr = to.split(",").map((s) => s.trim()).filter(Boolean);
-      const ccArr = cc.split(",").map((s) => s.trim()).filter(Boolean);
+      // Separar destinatarios por coma O punto y coma (Outlook usa ;).
+      // Sin esto, si el usuario pega "a@x.com;b@y.com" se envía como un
+      // solo "email" inválido y Resend rechaza con validation_error 422.
+      const splitRecipients = (raw: string) =>
+        raw
+          .split(/[,;]\s*/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+      const toArr = splitRecipients(to);
+      const ccArr = splitRecipients(cc);
 
       const payload: Record<string, unknown> = {
         claimActionId: action.id,

@@ -409,7 +409,7 @@ export default function ScreenBuilderPage() {
                 <p className="app-body font-semibold text-muted-foreground">Componentes</p>
                 <p className="app-body text-muted-foreground/70 mt-0.5">Arrastra al lienzo →</p>
               </div>
-              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              <div className="flex-1 overflow-y-auto min-h-0 p-3 space-y-3">
                 {/* Campos propios */}
                 <PaletteSection title="Campos propios" subtitle="Editables por el usuario" theme="blue">
                   <PaletteSubSection title="Básicos">
@@ -494,7 +494,7 @@ export default function ScreenBuilderPage() {
               </div>
 
               {/* Canvas scrollable */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto min-h-0 p-6">
                 {/* "Hoja" del formulario — glass máximo */}
                 <div className="mx-auto max-w-3xl rounded-xl border border-white/15 dark:border-white/10
                                 bg-card/70 backdrop-blur-2xl saturate-150
@@ -536,7 +536,7 @@ export default function ScreenBuilderPage() {
               <div className="border-b border-white/10 dark:border-white/5 px-3 py-2">
                 <p className="app-body font-semibold text-muted-foreground">Propiedades</p>
               </div>
-              <div className="flex-1 overflow-y-auto p-3">
+              <div className="flex-1 overflow-y-auto min-h-0 p-3">
                 {selectedField ? (
                   <FieldPropertiesPanel
                     field={selectedField}
@@ -685,7 +685,7 @@ function PreviewMode({ fields, screenName }: { fields: ScreenField[]; screenName
   const complexEntities = fields.filter((f) => f.category === "complex_entity");
 
   return (
-    <div className="flex-1 overflow-y-auto bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-sm p-6">
+    <div className="flex-1 overflow-y-auto min-h-0 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-sm p-6">
       <div className="mx-auto max-w-3xl space-y-4">
         <div className="rounded-xl border border-white/15 dark:border-white/10
                         bg-card/70 backdrop-blur-2xl saturate-150 p-5

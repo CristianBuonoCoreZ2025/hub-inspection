@@ -215,8 +215,11 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      const toArr = to.split(",").map((s) => s.trim()).filter(Boolean);
-      const ccArr = cc.split(",").map((s) => s.trim()).filter(Boolean);
+      // Separar destinatarios por coma O punto y coma (Outlook usa ;).
+      const splitRecipients = (raw: string) =>
+        raw.split(/[,;]\s*/).map((s) => s.trim()).filter(Boolean);
+      const toArr = splitRecipients(to);
+      const ccArr = splitRecipients(cc);
 
       const res = await fetch("/api/email/send", {
         method: "POST",

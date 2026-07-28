@@ -511,7 +511,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
               Análisis IA
             </DialogTitle>
           </div>
-          <div className="modal-body space-y-2">
+          <div className="modal-body modal-grid">
             <div className="text-[11px] font-medium text-foreground">{aiSummaryModal.title}</div>
             <div
               style={{ maxHeight: "60vh", overflowY: "auto" }}
