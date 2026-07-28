@@ -707,6 +707,14 @@ export function applyMappingToRow(
     const parsed = parseDate(data.assignmentDate);
     if (parsed) data.assignmentDate = parsed;
   }
+  if (data.policyStartDate && typeof data.policyStartDate === "string") {
+    const parsed = parseDate(data.policyStartDate);
+    if (parsed) data.policyStartDate = parsed;
+  }
+  if (data.policyEndDate && typeof data.policyEndDate === "string") {
+    const parsed = parseDate(data.policyEndDate);
+    if (parsed) data.policyEndDate = parsed;
+  }
 
   return data;
 }

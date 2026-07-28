@@ -20,6 +20,7 @@ import {
   autoDetectMapping,
   applyMappingToRow,
   validateRowWithMapping,
+  parseDate,
   type ColumnMapping,
   type ParsedRow,
   type RowError,
@@ -346,6 +347,14 @@ export default function CargaSiniestrosPage() {
               ? false
               : null;
           };
+          // Normaliza fechas del Excel a YYYY-MM-DD (formato que espera Postgres).
+          // Usa parseDate del schema que maneja DD-MM-YYYY, DD/MM/YYYY,
+          // YYYY-MM-DD, YYYY/MM/DD, DD-MM-YY y serial de Excel.
+          const date = (v: unknown): string | null => {
+            const s = str(v).trim();
+            if (!s) return null;
+            return parseDate(s);
+          };
 
           // Resolver campos de referencia (UUID) — solo si hay valor
           const insuranceCompanyId = str(d.insuranceCompany) ? resolveInsuranceCompanyId(str(d.insuranceCompany)) : null;
@@ -367,10 +376,10 @@ export default function CargaSiniestrosPage() {
             {
               claimNumber: str(d.claimNumber),
               policyNumber: str(d.policyNumber),
-              claimDate: str(d.claimDate),
+              claimDate: date(d.claimDate) || "",
               summary: str(d.summary) || null,
-              reportDate: str(d.reportDate) || null,
-              assignmentDate: str(d.assignmentDate) || null,
+              reportDate: date(d.reportDate),
+              assignmentDate: date(d.assignmentDate),
               company_id: tenantCompanyId,
               insuranceCompanyId,
               claimTypeId,
@@ -383,8 +392,8 @@ export default function CargaSiniestrosPage() {
               ownerSameAsInsured: bool(d.ownerSameAsInsured),
               // Campos nuevos de póliza
               policyItem: str(d.policyItem) || null,
-              policyStartDate: str(d.policyStartDate) || null,
-              policyEndDate: str(d.policyEndDate) || null,
+              policyStartDate: date(d.policyStartDate),
+              policyEndDate: date(d.policyEndDate),
               policyAmount: num(d.policyAmount),
               policyPremium: num(d.policyPremium),
               internalNumber: str(d.internalNumber) || null,
