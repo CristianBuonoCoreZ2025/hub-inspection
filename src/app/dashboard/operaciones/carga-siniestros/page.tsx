@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createClaimMinimal,
   cleanStaging, insertStagingRows, getStagingRows, markStagingError, markStagingImported, markStagingValid,
@@ -24,6 +24,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePermissions } from "@/hooks/use-permissions";
 import * as XLSX from "xlsx";
 import {
+  getImportFieldMappings,
+  getImportValueMappings,
+  saveImportFieldMappingsBatch,
+  saveImportValueMappingsBatch,
+} from "@/services/import-mappings";
+import {
   CLAIM_FIELDS,
   REQUIRED_FIELDS,
   autoDetectMapping,
@@ -45,6 +51,7 @@ export default function CargaSiniestrosPage() {
   const { canCreate } = usePermissions();
   const { profile } = useAuth();
   const tenantCompanyId = profile?.company_id || null;
+  const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, success: 0, error: 0 });
@@ -165,6 +172,19 @@ export default function CargaSiniestrosPage() {
     enabled: !!tenantCompanyId,
     staleTime: 5 * 60 * 1000,
   });
+  // ── Mappings aprendidos (campo + valor) ──
+  const { data: learnedFieldMappings } = useQuery({
+    queryKey: ["import-field-mappings", tenantCompanyId],
+    queryFn: () => getImportFieldMappings(tenantCompanyId!),
+    enabled: !!tenantCompanyId,
+    staleTime: 60 * 1000, // 1 min — se recarga tras guardar
+  });
+  const { data: learnedValueMappings } = useQuery({
+    queryKey: ["import-value-mappings", tenantCompanyId],
+    queryFn: () => getImportValueMappings(tenantCompanyId!),
+    enabled: !!tenantCompanyId,
+    staleTime: 60 * 1000,
+  });
 
   // Normalización simple: lowercase + sin acentos + sin espacios extra
   const normalizeName = useCallback((s: string): string => {
@@ -216,7 +236,15 @@ export default function CargaSiniestrosPage() {
   }, [companyPolicies, normalizeName]);
 
   // ── Resolver texto → UUID para campos de referencia ──
-  // Orden: 1) UUID directo, 2) mapeo manual del usuario, 3) match exacto normalizado
+  // Orden: 1) UUID directo, 2) mapeo manual del usuario, 3) mapeo aprendido, 4) match exacto normalizado
+  const learnedValueMap = useMemo(() => {
+    const map = new Map<string, string>(); // "fieldKey::normalizedValue" → catalog_uuid
+    for (const m of learnedValueMappings ?? []) {
+      map.set(`${m.field_key}::${normalizeName(m.excel_value)}`, m.catalog_uuid);
+    }
+    return map;
+  }, [learnedValueMappings, normalizeName]);
+
   const resolveRefId = useCallback(
     (fieldKey: string, value: string, catalogMap: Map<string, string>): string | null => {
       if (!value) return null;
@@ -226,9 +254,14 @@ export default function CargaSiniestrosPage() {
       }
       const manualKey = `${fieldKey}::${trimmed}`;
       if (valueMappings[manualKey]) return valueMappings[manualKey];
+      // 3) Mapeo aprendido de la empresa
+      const learnedKey = `${fieldKey}::${normalizeName(trimmed)}`;
+      const learned = learnedValueMap.get(learnedKey);
+      if (learned) return learned;
+      // 4) Match exacto normalizado en el catálogo
       return catalogMap.get(normalizeName(trimmed)) || null;
     },
-    [valueMappings, normalizeName]
+    [valueMappings, learnedValueMap, normalizeName]
   );
 
   const resolveInsuranceCompanyId = useCallback(
@@ -446,7 +479,15 @@ export default function CargaSiniestrosPage() {
         }
 
         const headers = Object.keys(jsonData[0]);
-        const autoMapping = autoDetectMapping(headers);
+        // Autodetectar mapeo usando primero los mapeos aprendidos de la empresa
+        const autoMapping = autoDetectMapping(
+          headers,
+          (learnedFieldMappings ?? []).map((m) => ({
+            excel_header: m.excel_header,
+            field_key: m.field_key,
+            times_used: m.times_used,
+          }))
+        );
 
         setExcelHeaders(headers);
         setRawRows(jsonData);
@@ -475,7 +516,7 @@ export default function CargaSiniestrosPage() {
       }
     };
     reader.readAsArrayBuffer(f);
-  }, []);
+  }, [learnedFieldMappings]);
 
   // ── Cambiar el mapeo: desde una columna del Excel a un campo del sistema ──
   // excelHeader = columna del Excel que se está mapeando
@@ -889,6 +930,41 @@ export default function CargaSiniestrosPage() {
         const finalRows = await getStagingRows(tenantCompanyId);
         const remaining = finalRows.filter((r) => r.status !== "imported");
         setStagingRows(remaining);
+      }
+
+      // ── APRENDIZAJE: guardar mapeos para futuras importaciones ──
+      try {
+        // 1. Guardar mapeo de campos (excel_header → field_key)
+        const fieldMappingsToSave: Array<{ excelHeader: string; fieldKey: string }> = [];
+        for (const [fieldKey, m] of Object.entries(mapping)) {
+          if (m?.fieldKey && m?.excelHeader) {
+            fieldMappingsToSave.push({ excelHeader: m.excelHeader, fieldKey });
+          }
+        }
+        if (fieldMappingsToSave.length > 0) {
+          await saveImportFieldMappingsBatch(tenantCompanyId, fieldMappingsToSave);
+        }
+
+        // 2. Guardar mapeo de valores (excel_value → catalog_uuid)
+        const valueMappingsToSave: Array<{ fieldKey: string; excelValue: string; catalogUuid: string }> = [];
+        for (const [key, uuid] of Object.entries(valueMappings)) {
+          // key = "fieldKey::excelValue"
+          const [fieldKey, ...rest] = key.split("::");
+          const excelValue = rest.join("::");
+          if (fieldKey && excelValue && uuid) {
+            valueMappingsToSave.push({ fieldKey, excelValue, catalogUuid: uuid });
+          }
+        }
+        if (valueMappingsToSave.length > 0) {
+          await saveImportValueMappingsBatch(tenantCompanyId, valueMappingsToSave);
+        }
+
+        // Invalidar queries para recargar en próxima importación
+        queryClient.invalidateQueries({ queryKey: ["import-field-mappings", tenantCompanyId] });
+        queryClient.invalidateQueries({ queryKey: ["import-value-mappings", tenantCompanyId] });
+      } catch (learnErr) {
+        console.error("Error guardando mappings aprendidos:", learnErr);
+        // No fallar la importación por esto
       }
 
       setIsConfirming(false);

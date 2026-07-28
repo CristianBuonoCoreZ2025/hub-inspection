@@ -614,22 +614,63 @@ export interface ColumnMapping {
 }
 
 /**
+ * Mapeo aprendido de una empresa: excel_header → field_key
+ */
+export interface LearnedFieldMapping {
+  excel_header: string;
+  field_key: string;
+  times_used: number;
+}
+
+/**
  * Dado los headers del Excel, produce un mapeo inicial autodetectando
  * qué columna corresponde a qué campo del sistema.
  *
  * Estrategia:
+ *  0. PRIMERO usa los mapeos aprendidos de la empresa (si existen)
  *  1. Para cada campo, busca match exacto (normalizado) con algún sinónimo
  *  2. Si no hay match exacto, busca el header más similar (fuzzy) y lo marca
  *     como sugerencia con confidence < 1 (el usuario debe confirmar)
  *  3. Un header solo puede mapear a un campo (el primero que matchee)
  */
-export function autoDetectMapping(excelHeaders: string[]): Record<string, ColumnMapping> {
+export function autoDetectMapping(
+  excelHeaders: string[],
+  learnedMappings?: LearnedFieldMapping[]
+): Record<string, ColumnMapping> {
   const normalizedHeaders = excelHeaders.map((h) => ({ original: h, normalized: normalize(h) }));
   const usedHeaders = new Set<string>(); // headers ya asignados a un campo
   const mapping: Record<string, ColumnMapping> = {};
 
-  // Pasada 1: match exacto de sinónimos
+  // ── Pasada 0: mapeos aprendidos de la empresa (confianza máxima) ──
+  if (learnedMappings && learnedMappings.length > 0) {
+    // Ordenar por times_used descendente para usar el más frecuente primero
+    const sorted = [...learnedMappings].sort((a, b) => b.times_used - a.times_used);
+    for (const learned of sorted) {
+      // Buscar el header en el Excel que coincida (case-insensitive)
+      const match = normalizedHeaders.find(
+        ({ original, normalized }) =>
+          !usedHeaders.has(original) &&
+          (original === learned.excel_header || normalized === normalize(learned.excel_header))
+      );
+      if (match) {
+        // Verificar que el field_key sea válido
+        const field = CLAIM_FIELDS.find((f) => f.key === learned.field_key);
+        if (field) {
+          mapping[field.key] = {
+            fieldKey: field.key,
+            excelHeader: match.original,
+            autoDetected: true,
+            confidence: 1, // Aprendido = confianza máxima
+          };
+          usedHeaders.add(match.original);
+        }
+      }
+    }
+  }
+
+  // Pasada 1: match exacto de sinónimos (solo para campos no ya mapeados por aprendizaje)
   for (const field of CLAIM_FIELDS) {
+    if (mapping[field.key]) continue; // Ya mapeado por aprendizaje
     const synonyms = field.synonyms.map(normalize);
     let bestMatch: { header: string; confidence: number } | null = null;
 
