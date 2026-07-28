@@ -399,10 +399,14 @@ export default function CargaSiniestrosPage() {
     if (rawRows.length === 0) return [];
     return rawRows.map((raw, idx) => {
       const data = applyMappingToRow(raw, mapping);
-      // Inyectar valores fijos (campos sin columna en el Excel, cargados con valor en duro)
+      // Inyectar valores fijos SOLO si el campo no viene del Excel (no tiene valor)
+      // Si el Excel ya trae un valor para ese campo, el valor fijo NO se aplica
       for (const [fieldKey, value] of Object.entries(fixedValues)) {
-        if (value && !(fieldKey in data)) data[fieldKey] = value;
-        else if (value && !data[fieldKey]) data[fieldKey] = value;
+        if (!value) continue;
+        const currentValue = data[fieldKey];
+        if (currentValue === undefined || currentValue === null || currentValue === "") {
+          data[fieldKey] = value;
+        }
       }
       const { valid, errors } = validateRowWithMapping(data, mapping);
 
@@ -1275,7 +1279,12 @@ export default function CargaSiniestrosPage() {
                         <SelectContent>
                           <SelectItem value="__none__">— Seleccionar campo —</SelectItem>
                           {CLAIM_FIELDS
-                            .filter((f) => !mapping[f.key]?.fieldKey && !(f.key in fixedValues))
+                            .filter((f) => {
+                              // No mostrar si ya está mapeado desde el Excel O ya tiene valor fijo
+                              const isMappedFromExcel = !!(mapping[f.key]?.fieldKey && mapping[f.key]?.excelHeader);
+                              const hasFixedValue = f.key in fixedValues;
+                              return !isMappedFromExcel && !hasFixedValue;
+                            })
                             .map((f) => (
                               <SelectItem key={f.key} value={f.key}>
                                 {f.label}
