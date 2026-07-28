@@ -883,7 +883,36 @@ export async function resolveOrCreatePolicy(input: {
     .select("id")
     .single();
 
-  if (errCreate) throw new Error(`Error creando póliza ${policyNumber}: ${errCreate.message}`);
+  if (errCreate) {
+    // Si falla por duplicate key, buscar por (policy_number + cia) sin item y vincular
+    if (errCreate.code === "23505") {
+      const { data: fallback } = await supabase
+        .from("policies")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("policy_number", policyNumber.trim())
+        .eq("insurance_company_id", insuranceCompanyId)
+        .maybeSingle();
+      if (fallback) {
+        // Activar línea de negocio si no la tiene
+        if (businessLineId) {
+          const { data: pbl } = await supabase
+            .from("policy_business_lines")
+            .select("id")
+            .eq("policy_id", fallback.id)
+            .eq("business_line_id", businessLineId)
+            .maybeSingle();
+          if (!pbl) {
+            await supabase
+              .from("policy_business_lines")
+              .insert({ policy_id: fallback.id, business_line_id: businessLineId, is_primary: false });
+          }
+        }
+        return { policyId: fallback.id, note: null };
+      }
+    }
+    throw new Error(`Error creando póliza ${policyNumber}: ${errCreate.message}`);
+  }
 
   // 5. Insertar en policy_business_lines
   if (businessLineId && created) {
