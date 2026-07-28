@@ -54,8 +54,46 @@ type Step = "upload" | "preview" | "fixed" | "mapping" | "homologation" | "stagi
 export default function CargaSiniestrosPage() {
   const { canCreate } = usePermissions();
   const { profile } = useAuth();
-  const tenantCompanyId = profile?.company_id || null;
   const queryClient = useQueryClient();
+
+  // Clientes del usuario (user_clients + company_id del perfil)
+  const { data: userClients } = useQuery({
+    queryKey: ["user-clients", profile?.user_id],
+    queryFn: async () => {
+      if (!profile?.user_id) return [];
+      const { getSupabaseClient } = await import("@/lib/supabase/client");
+      const { data, error } = await getSupabaseClient()
+        .from("user_clients")
+        .select("id, user_id, company_id, company:companies!user_clients_company_id_fkey(id, name, logo_url)")
+        .eq("user_id", profile.user_id);
+      if (error) throw new Error(error.message);
+      return (data || []) as Array<{ id: string; company_id: string; company: { id: string; name: string; logo_url: string | null } | null }>;
+    },
+    enabled: !!profile?.user_id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Lista de clientes disponibles: user_clients + company_id del perfil (sin duplicar)
+  const availableClients = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    // company_id del perfil
+    if (profile?.company_id && profile?.company) {
+      map.set(profile.company_id, { id: profile.company_id, name: profile.company.name });
+    }
+    // user_clients
+    for (const uc of userClients ?? []) {
+      if (uc.company) {
+        map.set(uc.company_id, { id: uc.company.id, name: uc.company.name });
+      }
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [profile, userClients]);
+
+  // Si solo 1 cliente → automático. Si varios → estado seleccionable.
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const tenantCompanyId = availableClients.length === 1
+    ? availableClients[0].id
+    : selectedCompanyId;
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, success: 0, error: 0 });
@@ -1191,8 +1229,29 @@ export default function CargaSiniestrosPage() {
         )}
       </div>
 
-      {/* Drop Zone — solo visible en step upload */}
-      {step === "upload" && (
+      {/* Selector de cliente (solo si tiene múltiples) */}
+      {step === "upload" && availableClients.length > 1 && (
+        <div className="rounded-lg border bg-card p-4 mb-3">
+          <label className="text-sm font-medium mb-2 block">Cliente (obligatorio)</label>
+          <Select
+            value={selectedCompanyId || "__none__"}
+            onValueChange={(val) => setSelectedCompanyId(val === "__none__" ? null : val)}
+          >
+            <SelectTrigger className="w-full max-w-xs">
+              <SelectValue placeholder="— Seleccionar cliente —" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— Seleccionar cliente —</SelectItem>
+              {availableClients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Drop Zone — visible en step upload (si 1 cliente, o si ya seleccionó) */}
+      {step === "upload" && (availableClients.length <= 1 || !!selectedCompanyId) && (
         <div
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
@@ -1217,6 +1276,15 @@ export default function CargaSiniestrosPage() {
             </span>
           </label>
           {file && <p className="mt-2 text-xs text-muted-foreground">{file.name}</p>}
+        </div>
+      )}
+
+      {/* Aviso: seleccionar cliente antes de subir */}
+      {step === "upload" && availableClients.length > 1 && !selectedCompanyId && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-4 text-center">
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            Selecciona un cliente arriba para poder subir el Excel.
+          </p>
         </div>
       )}
 
@@ -1265,7 +1333,7 @@ export default function CargaSiniestrosPage() {
               <h2 className="text-base font-semibold">Valores fijos</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Setea defaults para campos que NO vienen en el Excel (ej: auditor, despachador, cia).
+              Setea defaults para campos que NO vienen en el Excel (ej: auditor, despachador, aseguradora).
               Se guardan para futuras importaciones.
             </p>
 
