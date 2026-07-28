@@ -34,54 +34,159 @@ Si necesitas corregir un siniestro mal cargado:
 
 ---
 
-## Flujo de 2 Fases (Staging → Claims)
+## Flujo de Importación (9 pasos)
+
+> **PRINCIPIO FUNDAMENTAL:** El orden es estricto. Cada paso depende del anterior.
+> No se puede resolver un valor antes de saber a qué campo apunta.
+> "Baja" puede ser estatura, riesgo crediticio o daño de un bien — solo sabiendo
+> el campo se sabe en qué catálogo buscar.
 
 ```
-┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
-│  Upload  │────▶│  Review  │────▶│ Staging  │────▶│   Done   │
-│  Excel   │     │  Mapeo   │     │ Revisión │     │ Resultado│
-└──────────┘     └──────────┘     └──────────┘     └──────────┘
-                       │                │
-                       │                ▼
-                       │         ┌──────────┐
-                       │         │ Confirmar│──▶ claims (producción)
-                       │         └──────────┘
-                       │
-                       ▼
-                 claims_staging (temporal)
-                 raw_data + status + error_message
+┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐
+│ 1.Upload│─▶│2.Preview│─▶│3.Fixed  │─▶│4.Mapeo  │─▶│5.Valores│
+│  Excel  │  │Headers  │  │ Values  │  │ Campos  │  │Homolog. │
+└─────────┘  └─────────┘  └─────────┘  └─────────┘  └─────────┘
+                                                      │
+┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐    │
+│9.Log    │◀─│8.Pasar  │◀─│7.Ajuste │◀─│6.Staging│◀───┘
+│Resumen  │  │Prod.    │  │Fixed    │  │Temporales│
+└─────────┘  └─────────┘  └─────────┘  └─────────┘
 ```
 
-### Fase 1: Upload + Review (mapeo de columnas)
+### Paso 1 — Seleccionar Excel
+- Usuario arrastra o selecciona archivo `.xlsx` / `.xls`
+- No se procesa nada todavía, solo se lee el archivo
 
-1. Usuario sube archivo Excel (.xlsx, .xls)
-2. `autoDetectMapping()` mapea automáticamente las columnas del Excel a los campos del sistema usando sinónimos
-3. **Tabla de mapeo INVERTIDA:** las filas son las **columnas del Excel** y cada una tiene un dropdown para elegir a qué campo del sistema se mapea. Así ninguna columna del Excel se pierde — el usuario ve todos sus datos y decide dónde va cada uno.
-4. Usuario puede ajustar el mapeo manualmente
-5. Si hay valores del Excel que no coinciden con catálogos (ej: "BCI Seguros Generales S.A." vs "BCI Seguros"), aparece el **panel de mapeo de valores** para asociar manualmente cada valor a su UUID del catálogo
-6. Al final de la tabla, un banner amarillo muestra qué campos requeridos faltan mapear
+### Paso 2 — Preview de cabeceras + muestra
+- El sistema lee el Excel y muestra:
+  - Lista de **cabeceras** detectadas
+  - **Primer valor no vacío** de cada columna (muestra de datos)
+- Botón/toggle/notificación: "Excel leído: 25 columnas, 3000 filas. Revisar."
+- **Propósito:** el usuario ve qué trajo el Excel sin abrirlo
+- No se hace ningún mapeo todavía
 
-### Fase 2: Cargar a Staging
+### Paso 3 — Agregar valores fijos (ANTES de mapear)
+- El usuario ya vio las cabeceras y sabe qué **NO** viene en el Excel
+- Agrega valores fijos para campos que faltan:
+  - `auditor` = Juan Pérez (combo de profiles)
+  - `despachador` = María López (combo de profiles)
+  - `insuranceCompany` = Santander (combo de insurance_companies)
+- **Para campos de referencia:** combo del catálogo (no texto libre)
+- **Para campos de fecha:** calendario o "imitar otro campo + offset" (ver nota abajo)
+- **Para campos de texto:** input de texto libre
+- Los fixed values se cargan desde la DB (aprendizaje) y se pueden editar
+- **Propósito:** setear defaults antes de mapear, así el mapeo es solo lo que viene del Excel
 
-1. Click **"Cargar"** → `loadMutation` ejecuta:
-   - `cleanStaging(companyId)` — borra el staging anterior de la empresa
-   - `insertStagingRows(companyId, rows)` — inserta todas las filas válidas en `claims_staging` con `raw_data` = datos parseados + UUIDs resueltos
-   - Valida cada row: required fields, UUIDs de catálogos, fechas normalizadas
-   - Marca cada row como `valid` o `error` con mensaje
-2. Se muestra tabla de staging con estado por fila:
-   - **verde** = válido (listo para importar)
-   - **rojo** = error (con mensaje de qué falló)
-3. Usuario revisa qué podría fallar antes de confirmar
+### Paso 4 — Mapeo de campos (columnas Excel → campos sistema)
+- El sistema renderiza la tabla de mapeo:
+  - Filas = columnas del Excel (con muestra de cada una)
+  - Dropdown = campos del sistema disponibles
+- **Autodetección con aprendizaje:**
+  - **Pasada 0:** mapeos aprendidos de importaciones anteriores (confianza 1)
+  - **Pasada 1:** match exacto de sinónimos
+  - **Pasada 2:** fuzzy matching
+- El usuario ajusta lo que no esté bien
+- **Opción: omitir columna** — si una columna viene mala (ej: comuna mal escrita en 3000 filas), el usuario la deja sin mapear y no se importa ni se analiza
+- **Botón "Mapear campos"** → confirma el mapeo
+- **Propósito:** saber a qué campo del sistema apunta cada columna del Excel
 
-### Fase 3: Confirmar
+### Paso 5 — Homologación de valores (DESPUÉS de mapear)
+> **CRÍTICO:** Este paso solo se ejecuta después de que el mapeo de campos está confirmado.
+> Solo sabiendo que la columna "Comuna Asegurado" → `commune` (asegurado),
+> se puede ir a buscar al catálogo `communes` los valores correctos.
 
-1. Click **"Confirmar"** → `confirmMutation` ejecuta:
-   - Para cada row `valid`: llama `createClaimMinimal()` que crea el claim + claims_participants
-   - Marca cada row como `imported` (con `claim_id` + `processed_at`) o `error`
-2. Al finalizar:
-   - **0 errores** → `cleanStaging()` borra todo el staging
-   - **Con errores** → borra solo los importados, deja los con error para revisión
-3. Pantalla final muestra resultado: `N registros importados` · `N errores`
+- El sistema analiza los valores del Excel **por cada campo mapeado**:
+  - Para cada campo de referencia (UUID → catálogo), extrae los valores distinct
+  - Intenta resolver cada valor contra el catálogo correspondiente:
+    1. UUID directo
+    2. Mapeo aprendido (import_value_mappings)
+    3. Mapeo manual del usuario (valueMappings)
+    4. Match exacto normalizado en el catálogo
+  - Los que **no se encuentran** se muestran en el panel de homologación:
+    - "Comuna 'SANTIAGO ESTE' no encontrada en catálogo `communes`"
+    - El usuario la mapea al UUID correcto o decide omitirla
+- **Auto-guardado:** cada homologación que hace el usuario se guarda automáticamente
+  en `import_value_mappings` (sin esperar a confirmar la importación)
+  - Así si el usuario se equivoca y vuelve, no tiene que rehacerlo
+  - Sin duplicar asociaciones (UNIQUE constraint)
+- **Propósito:** que cada valor del Excel tenga su UUID del catálogo correcto
+
+### Paso 6 — Cargar a tablas temporales (staging)
+- Click **"Cargar"** → `loadMutation`:
+  - `cleanStaging(companyId)` — borra staging anterior (auto-limpieza)
+  - Inserta todas las filas en `claims_staging` con `raw_data` = datos parseados + UUIDs resueltos
+  - Valida cada row: required fields, UUIDs, fechas normalizadas
+  - Marca cada row como `valid` o `error`
+- Se muestra tabla de staging con estado por fila:
+  - **verde** = válido
+  - **rojo** = error (con mensaje)
+- **Las temporales son un espejo de claims, claims_participants, etc.**
+- **Auto-limpieza:** si el usuario vuelve a subir otro Excel o se va de la página,
+  las temporales se borran solas. Solo están vivas mientras el usuario está en la pantalla.
+
+### Paso 7 — Ajuste de fixed values (durante revisión)
+- El usuario revisa el staging y puede decidir:
+  - "La columna X viene mala en todos los casos" → omitirla y agregar un fixed value
+  - Ej: 3000 casos con comuna mala → omitir columna `commune` del Excel
+    y setear fixed value `commune` = "SANTIAGO" para todos
+  - La columna omitida **no se importa ni se analiza** (no aparece en homologación)
+  - El fixed value se aplica a todas las filas
+- También puede agregar nuevos fixed values que no había puesto en el paso 3
+- **Propósito:** corrección masiva sin homologar 3000 casos uno por uno
+
+### Paso 8 — Pasar a producción
+- Click **"Confirmar"** → `confirmMutation`:
+  - Para cada row `valid`: llama `createClaimMinimal()` → crea claim + participants
+  - Marca cada row como `imported` (con `claim_id` + `processed_at`) o `error`
+  - **0 errores** → `cleanStaging()` borra todo el staging
+  - **Con errores** → borra solo los importados, deja los con error
+- Guarda el aprendizaje (field mappings, value mappings, fixed values)
+- **Propósito:** los datos pasan de staging a claims (producción)
+
+### Paso 9 — Log de importación
+- Se guarda un **log del proceso de importación**:
+  - Fecha/hora de la importación
+  - Empresa (company_id)
+  - Usuario que ejecutó
+  - Cantidad de registros importados
+  - Cantidad de errores
+  - **Lista de números de liquidación** asociados (L-000000123, L-000000124, ...)
+  - Resumen de qué se importó
+- **Propósito:** saber que un caso se creó por importación/carga masiva
+  y tener trazabilidad de qué números de liquidación se generaron
+- Tabla: `import_logs` (ver sección "Tabla import_logs" abajo)
+
+---
+
+## Nota sobre campos compuestos (fecha = otro campo + offset)
+
+Para campos que **no son de catálogo** (ej: fechas), el sistema ofrece:
+
+1. **Calendario** — seleccionar una fecha fija
+2. **Imitar otro campo** — copiar el valor de otro campo mapeado del Excel
+   - Con offset opcional: `+1 día`, `-1 mes`, etc.
+   - Ej: `assignmentDate` = `createdAt` + 1 día
+   - **El campo original sigue disponible para mapear** porque lo que se asignó
+     al campo destino es una **operación**, no el campo en crudo
+   - Ej: si `assignmentDate` = `createdAt + 1 día`, el campo `createdAt`
+     del Excel sigue libre para mapearlo a `createdAt` del sistema
+
+Esto permite operaciones como:
+- `assignmentDate` = `claimDate` + 2 días
+- `reportDate` = `claimDate` (mismo valor)
+- `policyEndDate` = `policyStartDate` + 1 año
+
+---
+
+## Auto-limpieza de tablas temporales
+
+- `claims_staging` se **borra automáticamente** cuando:
+  1. El usuario sube un nuevo Excel (antes de cargar el nuevo)
+  2. El usuario se va de la página (opcional, via cleanup)
+  3. La importación se completa exitosamente (0 errores)
+- **Solo están vivas mientras el usuario está en la pantalla**
+- Si el usuario vuelve a entrar, ve la pantalla de upload limpia
+- `cleanStaging(companyId)` borra solo los rows de la empresa del usuario
 
 ---
 
@@ -434,6 +539,32 @@ Los catálogos por empresa (`profiles`, `policies`) solo se cargan si `tenantCom
 ### Error: RLS (`company_id` no seteado)
 **Causa:** `claims.company_id` debe venir del perfil del usuario autenticado, no del Excel.
 **Fix:** `tenantCompanyId = profile?.company_id` se pasa automáticamente a `createClaimMinimal`.
+
+---
+
+## Tabla `import_logs` (pendiente de implementar)
+
+Log de cada importación exitosa, para trazabilidad.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | uuid PK | |
+| `company_id` | uuid FK → `companies` | Empresa |
+| `user_id` | uuid FK → `profiles` | Usuario que ejecutó la importación |
+| `file_name` | text | Nombre del archivo Excel importado |
+| `total_rows` | integer | Total de filas del Excel |
+| `imported_rows` | integer | Filas importadas exitosamente |
+| `error_rows` | integer | Filas con error |
+| `liquidation_numbers` | text[] | Lista de L-numbers generados |
+| `field_mappings_used` | jsonb | Snapshot de los mapeos de campos usados |
+| `value_mappings_used` | jsonb | Snapshot de las homologaciones de valores usadas |
+| `fixed_values_used` | jsonb | Snapshot de los valores fijos usados |
+| `created_at` | timestamptz | Fecha de la importación |
+
+**RLS:** `is_tenant_allowed(company_id)`.
+
+**Uso:** saber que un caso se creó por importación y tener trazabilidad de
+qué números de liquidación se generaron en cada carga.
 
 ---
 
