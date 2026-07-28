@@ -15,7 +15,7 @@ import {
   getCountries, getRegions, getCities, getCommunes,
 } from "@/services/catalogs";
 import { useAuth } from "@/hooks/use-auth";
-import { getUsers } from "@/services/users";
+import { getUsers, getUsersByRoleForCompany } from "@/services/users";
 import { getPolicies } from "@/services/policies";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2, ArrowRight, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
@@ -173,6 +173,37 @@ export default function CargaSiniestrosPage() {
     enabled: !!tenantCompanyId,
     staleTime: 5 * 60 * 1000,
   });
+  // Usuarios por rol (primary + secondary + internal) — para combos de fixed values
+  const { data: inspectorUsers } = useQuery({
+    queryKey: ["users-by-role", "inspector", tenantCompanyId],
+    queryFn: () => getUsersByRoleForCompany("inspector", tenantCompanyId!),
+    enabled: !!tenantCompanyId,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: adjusterUsers } = useQuery({
+    queryKey: ["users-by-role", "adjuster", tenantCompanyId],
+    queryFn: () => getUsersByRoleForCompany("adjuster", tenantCompanyId!),
+    enabled: !!tenantCompanyId,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: auditorUsers } = useQuery({
+    queryKey: ["users-by-role", "auditor", tenantCompanyId],
+    queryFn: () => getUsersByRoleForCompany("auditor", tenantCompanyId!),
+    enabled: !!tenantCompanyId,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: dispatcherUsers } = useQuery({
+    queryKey: ["users-by-role", "dispatcher", tenantCompanyId],
+    queryFn: () => getUsersByRoleForCompany("dispatcher", tenantCompanyId!),
+    enabled: !!tenantCompanyId,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: assistantUsers } = useQuery({
+    queryKey: ["users-by-role", "assistant", tenantCompanyId],
+    queryFn: () => getUsersByRoleForCompany("assistant", tenantCompanyId!),
+    enabled: !!tenantCompanyId,
+    staleTime: 5 * 60 * 1000,
+  });
   const { data: companyPolicies } = useQuery({
     queryKey: ["company-policies", tenantCompanyId],
     queryFn: () => getPolicies({ companyId: tenantCompanyId || undefined }),
@@ -255,9 +286,15 @@ export default function CargaSiniestrosPage() {
   const communeMap = useMemo(() => buildMap(communes), [buildMap, communes]);
   const profileMap = useMemo(() => {
     const map = new Map<string, string>();
+    // Perfiles directos de la empresa
     for (const p of companyProfiles ?? []) map.set(normalizeName(p.full_name || ""), p.id);
+    // Usuarios por rol (primary + secondary + internal) — incluye usuarios de
+    // otras empresas con secondary_roles en esta empresa
+    for (const u of [...(inspectorUsers ?? []), ...(adjusterUsers ?? []), ...(auditorUsers ?? []), ...(dispatcherUsers ?? []), ...(assistantUsers ?? [])]) {
+      if (u.full_name) map.set(normalizeName(u.full_name), u.id);
+    }
     return map;
-  }, [companyProfiles, normalizeName]);
+  }, [companyProfiles, inspectorUsers, adjusterUsers, auditorUsers, dispatcherUsers, assistantUsers, normalizeName]);
   const policyMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of companyPolicies ?? []) {
@@ -409,11 +446,11 @@ export default function CargaSiniestrosPage() {
     { fieldKey: "claimRegionRef", label: "Región Siniestro (catálogo)", dataKey: "claimRegionRef" as const, resolver: resolveRegionId, options: regions ?? [] },
     { fieldKey: "claimCityRef", label: "Ciudad Siniestro (catálogo)", dataKey: "claimCityRef" as const, resolver: resolveCityId, options: cities ?? [] },
     { fieldKey: "claimCommuneRef", label: "Comuna Siniestro (catálogo)", dataKey: "claimCommuneRef" as const, resolver: resolveCommuneId, options: communes ?? [] },
-    { fieldKey: "inspector", label: "Inspector", dataKey: "inspector" as const, resolver: resolveInspectorId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
-    { fieldKey: "adjuster", label: "Liquidador/Ajustador", dataKey: "adjuster" as const, resolver: resolveAdjusterId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
-    { fieldKey: "auditor", label: "Auditor", dataKey: "auditor" as const, resolver: resolveAuditorId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
-    { fieldKey: "dispatcher", label: "Despachador", dataKey: "dispatcher" as const, resolver: resolveDispatcherId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
-    { fieldKey: "assistant", label: "Asistente", dataKey: "assistant" as const, resolver: resolveAssistantId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
+    { fieldKey: "inspector", label: "Inspector", dataKey: "inspector" as const, resolver: resolveInspectorId, options: (inspectorUsers ?? []).map(p => ({ id: p.id, name: p.full_name || p.email || "" })) },
+    { fieldKey: "adjuster", label: "Liquidador/Ajustador", dataKey: "adjuster" as const, resolver: resolveAdjusterId, options: (adjusterUsers ?? []).map(p => ({ id: p.id, name: p.full_name || p.email || "" })) },
+    { fieldKey: "auditor", label: "Auditor", dataKey: "auditor" as const, resolver: resolveAuditorId, options: (auditorUsers ?? []).map(p => ({ id: p.id, name: p.full_name || p.email || "" })) },
+    { fieldKey: "dispatcher", label: "Despachador", dataKey: "dispatcher" as const, resolver: resolveDispatcherId, options: (dispatcherUsers ?? []).map(p => ({ id: p.id, name: p.full_name || p.email || "" })) },
+    { fieldKey: "assistant", label: "Asistente", dataKey: "assistant" as const, resolver: resolveAssistantId, options: (assistantUsers ?? []).map(p => ({ id: p.id, name: p.full_name || p.email || "" })) },
     { fieldKey: "policyRef", label: "Póliza (referencia)", dataKey: "policyRef" as const, resolver: resolvePolicyId, options: (companyPolicies ?? []).map(p => ({ id: p.id, name: p.policy_number || "" })) },
   ], [
     resolveInsuranceCompanyId, resolveClaimTypeId, resolveClaimCauseId, resolveStatusId,
@@ -425,7 +462,8 @@ export default function CargaSiniestrosPage() {
     insuranceCompanies, claimTypes, claimCauses, claimStatuses, businessLines, currencies,
     housingDestinations, damageClassifications, insuranceProducts, events,
     brokers, advisors, propertyClassifications, countries, regions, cities, communes,
-    companyProfiles, companyPolicies,
+    inspectorUsers, adjusterUsers, auditorUsers, dispatcherUsers, assistantUsers,
+    companyPolicies,
   ]);
 
   // ── Valores distinct del Excel por campo de referencia ──
