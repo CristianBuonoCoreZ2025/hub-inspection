@@ -541,8 +541,7 @@ export default function GestionesPage() {
  value={alertValue ?? 0}
  onChange={(e) => setForm({ ...form, [cfg.alertField]: clampAlert(parseInt(e.target.value)) })}
  disabled={alertDisabled}
- style={{ borderRadius: "6px", height: "28px", width: "56px", padding: 0, fontSize: "12px" }}
- className={`bg-card text-center font-semibold tabular-nums focus-visible:ring-1 focus-visible:ring-primary/30 border ${
+  className={`alert-input-mini bg-card text-center font-semibold tabular-nums focus-visible:ring-1 focus-visible:ring-primary/30 border ${
  alertInvalid ? "border-red-500/60" : "border-border"
  }`}
  />
