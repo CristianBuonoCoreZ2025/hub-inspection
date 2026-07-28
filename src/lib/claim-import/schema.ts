@@ -74,11 +74,11 @@ export const CLAIM_FIELDS: ClaimField[] = [
     synonyms: ["tipo siniestro", "tipo de siniestro", "claim type", "claim_type", "claimtype", "tiposiniestro", "tipo", "categoria", "categoría"],
   },
   {
-    key: "companyId",
-    label: "Empresa",
+    key: "insuranceCompany",
+    label: "Empresa / Compañía de Seguros",
     required: true,
-    description: "Empresa/cliente al que pertenece el siniestro (nombre o ID)",
-    synonyms: ["empresa", "company", "company_id", "companyid", "cliente", "id empresa", "razon social", "razón social", "compania", "compañía"],
+    description: "Compañía de seguros (HDI Seguros, Mapfre, etc.). Se busca por nombre en el catálogo de aseguradoras.",
+    synonyms: ["empresa", "compañía de seguros", "compania seguros", "compañia seguros", "cia seguros", "compañía", "compañia", "insurance company", "insurance_company", "cia", "aseguradora", "company", "compania de seguros", "cia de seguros"],
   },
   // ── Opcionales ──
   {
@@ -86,12 +86,6 @@ export const CLAIM_FIELDS: ClaimField[] = [
     label: "N° Liquidación",
     required: false,
     synonyms: ["n liquidacion", "n° liquidacion", "numero liquidacion", "nro liquidacion", "liquidacion", "liquidación", "n° liquidación", "liquidation number", "liquidation_number", "liquidationnumber"],
-  },
-  {
-    key: "insuranceCompany",
-    label: "Compañía de Seguros",
-    required: false,
-    synonyms: ["compañía de seguros", "compania seguros", "compañia seguros", "cia seguros", "compañía", "compañia", "insurance company", "insurance_company", "cia", "aseguradora"],
   },
   {
     key: "claimCause",

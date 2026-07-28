@@ -3,7 +3,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createClaimMinimal } from "@/services/claims";
-import { getCompanies } from "@/services/companies";
+import { getInsuranceCompanies } from "@/services/catalogs";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2, ArrowRight, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ type Step = "upload" | "review";
 
 export default function CargaSiniestrosPage() {
   const { canCreate } = usePermissions();
+  const { profile } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, success: 0, error: 0 });
@@ -41,22 +43,24 @@ export default function CargaSiniestrosPage() {
   const [mapping, setMapping] = useState<Record<string, ColumnMapping>>({});
   const [mapperOpen, setMapperOpen] = useState(true);
 
-  // ── Cargar empresas para resolver nombre → UUID ──
-  const { data: companies } = useQuery({
-    queryKey: ["companies"],
-    queryFn: getCompanies,
+  // ── Cargar aseguradoras para resolver nombre → UUID ──
+  const { data: insuranceCompanies } = useQuery({
+    queryKey: ["insurance-companies"],
+    queryFn: getInsuranceCompanies,
     staleTime: 5 * 60 * 1000,
   });
 
-  // Mapa nombre (normalizado) → UUID
-  const companyMap = useMemo(() => {
+  // Mapa nombre aseguradora (normalizado) → UUID
+  const insuranceCompanyMap = useMemo(() => {
     const map = new Map<string, string>();
-    for (const c of companies ?? []) {
+    for (const c of insuranceCompanies ?? []) {
       map.set(c.name.toLowerCase().trim(), c.id);
-      if (c.slug) map.set(c.slug.toLowerCase().trim(), c.id);
     }
     return map;
-  }, [companies]);
+  }, [insuranceCompanies]);
+
+  // Tenant (company_id) del usuario logueado — NO se pide en el Excel
+  const tenantCompanyId = profile?.company_id || null;
 
   // ── Parsed rows: estado derivado de mapping + rawRows ──
   // Se recalcula en vivo cuando el usuario cambia el mapeo, sin useEffect.
@@ -66,23 +70,23 @@ export default function CargaSiniestrosPage() {
       const data = applyMappingToRow(raw, mapping);
       const { valid, errors } = validateRowWithMapping(data, mapping);
 
-      // Validación adicional: resolver nombre de empresa → UUID
-      const companyValue = String(data.companyId || "").trim();
-      if (companyValue && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyValue)) {
-        const normalized = companyValue.toLowerCase().trim();
-        if (!companyMap.has(normalized)) {
+      // Validación adicional: resolver nombre de aseguradora → UUID
+      const insuranceValue = String(data.insuranceCompany || "").trim();
+      if (insuranceValue && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(insuranceValue)) {
+        const normalized = insuranceValue.toLowerCase().trim();
+        if (!insuranceCompanyMap.has(normalized)) {
           errors.push({
-            fieldKey: "companyId",
-            fieldLabel: "Empresa",
+            fieldKey: "insuranceCompany",
+            fieldLabel: "Empresa / Compañía de Seguros",
             kind: "invalid_value",
-            message: `Empresa "${companyValue}" no encontrada en el sistema. Nombres válidos: ${companies?.map(c => c.name).join(", ") || "cargando..."}`,
+            message: `Aseguradora "${insuranceValue}" no encontrada. Nombres válidos: ${insuranceCompanies?.map(c => c.name).join(", ") || "cargando..."}`,
           });
         }
       }
 
       return { rowNum: idx + 2, data, valid: valid && errors.length === 0, errors };
     });
-  }, [rawRows, mapping, companyMap, companies]);
+  }, [rawRows, mapping, insuranceCompanyMap, insuranceCompanies]);
 
   // ── Cargar y parsear el Excel ──
   const parseFile = useCallback((f: File) => {
@@ -157,21 +161,24 @@ export default function CargaSiniestrosPage() {
     });
   };
 
-  // ── Resolver nombre de empresa → UUID ──
-  const resolveCompanyId = (value: string): string | null => {
+  // ── Resolver nombre de aseguradora → UUID ──
+  const resolveInsuranceCompanyId = (value: string): string | null => {
     if (!value) return null;
     // Si ya es un UUID, usarlo directo
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
       return value;
     }
-    // Buscar por nombre o slug (case-insensitive)
+    // Buscar por nombre (case-insensitive)
     const normalized = value.toLowerCase().trim();
-    return companyMap.get(normalized) || null;
+    return insuranceCompanyMap.get(normalized) || null;
   };
 
   // ── Cargar siniestros al backend ──
   const loadMutation = useMutation({
     mutationFn: async (rows: ParsedRow[]) => {
+      if (!tenantCompanyId) {
+        throw new Error("No se pudo determinar la empresa (tenant) del usuario. Vuelve a iniciar sesión.");
+      }
       setIsUploading(true);
       setProgress({ current: 0, total: rows.length, success: 0, error: 0 });
       const validRows = rows.filter((r) => r.valid);
@@ -182,9 +189,9 @@ export default function CargaSiniestrosPage() {
         const row = validRows[i];
         try {
           const d = row.data;
-          const companyId = resolveCompanyId(String(d.companyId || ""));
-          if (!companyId) {
-            throw new Error(`Empresa "${d.companyId}" no encontrada. Verifica que el nombre coincida con una empresa del sistema.`);
+          const insuranceCompanyId = resolveInsuranceCompanyId(String(d.insuranceCompany || ""));
+          if (!insuranceCompanyId) {
+            throw new Error(`Aseguradora "${d.insuranceCompany}" no encontrada en el catálogo de insurance_companies.`);
           }
 
           await createClaimMinimal(
@@ -195,7 +202,9 @@ export default function CargaSiniestrosPage() {
               summary: d.summary ? String(d.summary) : null,
               reportDate: d.reportDate ? String(d.reportDate) : null,
               assignmentDate: d.assignmentDate ? String(d.assignmentDate) : null,
-              company_id: companyId,
+              company_id: tenantCompanyId,
+              insuranceCompanyId,
+              claimTypeId: d.claimType ? String(d.claimType) : null,
             },
             {
               insuredName: String(d.insuredName || ""),
@@ -559,7 +568,7 @@ export default function CargaSiniestrosPage() {
                   <th>Dirección</th>
                   <th>Fecha</th>
                   <th>Tipo</th>
-                  <th>Empresa</th>
+                  <th>Aseguradora</th>
                   <th className="bulk-error-col">Errores</th>
                 </tr>
               </thead>
@@ -580,7 +589,7 @@ export default function CargaSiniestrosPage() {
                     <td className="bulk-cell-narrow">{String(row.data.address || "—")}</td>
                     <td>{String(row.data.claimDate || "—")}</td>
                     <td>{String(row.data.claimType || "—")}</td>
-                    <td className="bulk-cell-medium">{String(row.data.companyId || "—")}</td>
+                    <td className="bulk-cell-medium">{String(row.data.insuranceCompany || "—")}</td>
                     <td>
                       {row.errors.length > 0 ? (
                         <div className="bulk-error-list">
