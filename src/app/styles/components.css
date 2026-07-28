@@ -884,6 +884,20 @@
     white-space: nowrap !important;
   }
 
+  .bulk-fixed-values-input {
+    padding: 6px 10px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+    outline: none !important;
+  }
+
+  .bulk-fixed-values-input:focus {
+    border-color: var(--primary) !important;
+  }
+
   .dark .bulk-mapper-status-pill-error {
     color: #fca5a5 !important;
     background: color-mix(in srgb, #ef4444 18%, transparent) !important;

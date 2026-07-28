@@ -9,6 +9,8 @@
 //   3. Validar filas y producir errores claros y accionables
 // ═══════════════════════════════════════════════════════════════
 
+export type ClaimFieldType = "text" | "date" | "time" | "number" | "boolean" | "ref";
+
 export interface ClaimField {
   /** Clave interna del campo (coincide con keys de data en ParsedRow) */
   key: string;
@@ -21,6 +23,8 @@ export interface ClaimField {
   synonyms: string[];
   /** Descripción corta para tooltip/ayuda */
   description?: string;
+  /** Tipo de campo para UI (picker de fixed values) */
+  type?: ClaimFieldType;
 }
 
 export const CLAIM_FIELDS: ClaimField[] = [
@@ -63,6 +67,7 @@ export const CLAIM_FIELDS: ClaimField[] = [
     key: "claimDate",
     label: "Fecha Siniestro",
     required: true,
+    type: "date",
     description: "Fecha en que ocurrió el siniestro (formato DD-MM-AAAA)",
     synonyms: ["fecha siniestro", "fecha del siniestro", "claim date", "claim_date", "claimdate", "fecha", "fecha ocurrencia", "f siniestro"],
   },
@@ -92,24 +97,28 @@ export const CLAIM_FIELDS: ClaimField[] = [
     key: "claimTime",
     label: "Hora Siniestro",
     required: false,
+    type: "time",
     synonyms: ["hora siniestro", "hora del siniestro", "claim time", "claim_time", "claimtime", "hora", "hora ocurrencia"],
   },
   {
     key: "reportDate",
     label: "Fecha Denuncio",
     required: false,
+    type: "date",
     synonyms: ["fecha denuncio", "fecha denuncia", "report date", "report_date", "reportdate", "denuncio", "f denuncio"],
   },
   {
     key: "assignmentDate",
     label: "Fecha Asignación",
     required: false,
+    type: "date",
     synonyms: ["fecha asignacion", "fecha asignación", "assignment date", "assignment_date", "assignmentdate", "asignacion", "asignación", "f asignacion"],
   },
   {
     key: "createdAt",
     label: "Fecha Creación",
     required: false,
+    type: "date",
     description: "Fecha de creación del registro original (para siniestros históricos importados)",
     synonyms: ["fecha creacion", "fecha creación", "created at", "created_at", "createdat", "fecha alta", "fecha registro", "f creacion", "f creación"],
   },
@@ -312,12 +321,14 @@ export const CLAIM_FIELDS: ClaimField[] = [
     key: "policyStartDate",
     label: "Fecha Inicio Póliza",
     required: false,
+    type: "date",
     synonyms: ["fecha inicio poliza", "fecha inicio póliza", "inicio poliza", "inicio póliza", "policy start date", "policy_start_date", "vigencia inicio", "f inicio poliza"],
   },
   {
     key: "policyEndDate",
     label: "Fecha Fin Póliza",
     required: false,
+    type: "date",
     synonyms: ["fecha fin poliza", "fecha fin póliza", "fin poliza", "fin póliza", "policy end date", "policy_end_date", "vigencia fin", "f fin poliza", "vencimiento poliza"],
   },
   {
@@ -330,12 +341,14 @@ export const CLAIM_FIELDS: ClaimField[] = [
     key: "policyAmount",
     label: "Monto Asegurado Póliza",
     required: false,
+    type: "number",
     synonyms: ["monto asegurado poliza", "monto asegurado póliza", "monto asegurado", "suma asegurada", "policy amount", "policy_amount", "valor asegurado", "monto poliza"],
   },
   {
     key: "policyPremium",
     label: "Prima Anual",
     required: false,
+    type: "number",
     synonyms: ["prima anual", "prima", "policy premium", "policy_premium", "prima poliza", "prima póliza", "valor prima"],
   },
   {
@@ -348,6 +361,7 @@ export const CLAIM_FIELDS: ClaimField[] = [
     key: "isSpecialClaim",
     label: "Siniestro Especial",
     required: false,
+    type: "boolean",
     synonyms: ["siniestro especial", "especial", "is special claim", "is_special_claim", "caso especial", "relevante"],
   },
   {
@@ -366,6 +380,7 @@ export const CLAIM_FIELDS: ClaimField[] = [
     key: "ownerSameAsInsured",
     label: "Propietario / Asegurado",
     required: false,
+    type: "boolean",
     synonyms: ["propietario asegurado", "propietario/asegurado", "owner same as insured", "owner_same_as_insured", "es propietario", "mismo propietario", "propietario"],
   },
   // ── Beneficiario (va a claims_participants tipo beneficiary) ──
@@ -471,12 +486,14 @@ export const CLAIM_FIELDS: ClaimField[] = [
     key: "recoveryTypeLegal",
     label: "Recuperación Legal",
     required: false,
+    type: "boolean",
     synonyms: ["recuperacion legal", "recuperación legal", "recovery type legal", "recovery_type_legal", "recupero legal"],
   },
   {
     key: "recoveryTypeMaterial",
     label: "Recuperación Material",
     required: false,
+    type: "boolean",
     synonyms: ["recuperacion material", "recuperación material", "recovery type material", "recovery_type_material", "recupero material"],
   },
   {
@@ -489,12 +506,14 @@ export const CLAIM_FIELDS: ClaimField[] = [
     key: "claimLatitude",
     label: "Latitud Siniestro",
     required: false,
+    type: "number",
     synonyms: ["latitud siniestro", "latitud", "latitude", "claim latitude", "claim_latitude", "lat"],
   },
   {
     key: "claimLongitude",
     label: "Longitud Siniestro",
     required: false,
+    type: "number",
     synonyms: ["longitud siniestro", "longitud", "longitude", "claim longitude", "claim_longitude", "lon", "lng"],
   },
   // ── Campos de referencia → catálogos geográficos del siniestro (se resuelven a UUID) ──

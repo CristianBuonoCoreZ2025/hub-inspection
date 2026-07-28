@@ -1380,10 +1380,20 @@ export default function CargaSiniestrosPage() {
                     onValueChange={(fk) => {
                       if (!fk || fk === "__none__") return;
                       const refField = refFields.find((rf) => rf.fieldKey === fk);
+                      const field = CLAIM_FIELDS.find((f) => f.key === fk);
+                      const fieldType = field?.type || "text";
                       if (refField) {
+                        // Campo de referencia: combo del catálogo
+                        setPendingFixedField(fk);
+                      } else if (fieldType === "boolean") {
+                        // Boolean: setear true directamente
+                        setFixedValues((prev) => ({ ...prev, [fk]: { value: "true", catalogUuid: null } }));
+                      } else if (fieldType === "date" || fieldType === "time" || fieldType === "number") {
+                        // Date/Time/Number: abrir input específico
                         setPendingFixedField(fk);
                       } else {
-                        const val = window.prompt(`Valor fijo para: ${CLAIM_FIELDS.find(f => f.key === fk)?.label || fk}`);
+                        // Texto: prompt
+                        const val = window.prompt(`Valor fijo para: ${field?.label || fk}`);
                         if (val !== null && val.trim()) {
                           setFixedValues((prev) => ({ ...prev, [fk]: { value: val.trim(), catalogUuid: null } }));
                         }
@@ -1606,40 +1616,117 @@ export default function CargaSiniestrosPage() {
                         </Select>
                       </div>
                     )}
-                    {/* Combo del catálogo para campos de referencia */}
-                    {pendingFixedField && (
-                      <div className="bulk-fixed-values-add">
-                        <span className="bulk-fixed-values-pending-label">
-                          {CLAIM_FIELDS.find(f => f.key === pendingFixedField)?.label}:
-                        </span>
-                        <Select
-                          value=""
-                          onValueChange={(uuid) => {
-                            if (!uuid || uuid === "__none__") {
-                              setPendingFixedField(null);
-                              return;
-                            }
-                            const refField = refFields.find((rf) => rf.fieldKey === pendingFixedField);
-                            const opt = refField?.options.find((o) => o.id === uuid);
-                            setFixedValues((prev) => ({
-                              ...prev,
-                              [pendingFixedField]: { value: opt?.name || "", catalogUuid: uuid },
-                            }));
-                            setPendingFixedField(null);
-                          }}
-                        >
-                          <SelectTrigger className="bulk-fixed-values-select">
-                            <SelectValue placeholder="Seleccionar valor del catálogo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">— Cancelar —</SelectItem>
-                            {refFields.find((rf) => rf.fieldKey === pendingFixedField)?.options.map((o) => (
-                              <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                    {/* Picker según tipo de campo */}
+                    {pendingFixedField && (() => {
+                      const field = CLAIM_FIELDS.find((f) => f.key === pendingFixedField);
+                      const refField = refFields.find((rf) => rf.fieldKey === pendingFixedField);
+                      const fieldType = field?.type || "text";
+                      const label = field?.label || pendingFixedField;
+
+                      // Campo de referencia: combo del catálogo
+                      if (refField) {
+                        return (
+                          <div className="bulk-fixed-values-add">
+                            <span className="bulk-fixed-values-pending-label">{label}:</span>
+                            <Select
+                              value=""
+                              onValueChange={(uuid) => {
+                                if (!uuid || uuid === "__none__") { setPendingFixedField(null); return; }
+                                const opt = refField.options.find((o) => o.id === uuid);
+                                setFixedValues((prev) => ({ ...prev, [pendingFixedField]: { value: opt?.name || "", catalogUuid: uuid } }));
+                                setPendingFixedField(null);
+                              }}
+                            >
+                              <SelectTrigger className="bulk-fixed-values-select">
+                                <SelectValue placeholder="Seleccionar valor del catálogo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">— Cancelar —</SelectItem>
+                                {refField.options.map((o) => (
+                                  <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      }
+
+                      // Date: calendario
+                      if (fieldType === "date") {
+                        return (
+                          <div className="bulk-fixed-values-add">
+                            <span className="bulk-fixed-values-pending-label">{label}:</span>
+                            <input
+                              type="date"
+                              className="bulk-fixed-values-input"
+                              autoFocus
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  setFixedValues((prev) => ({ ...prev, [pendingFixedField]: { value: e.target.value, catalogUuid: null } }));
+                                  setPendingFixedField(null);
+                                }
+                              }}
+                              onBlur={() => setPendingFixedField(null)}
+                            />
+                          </div>
+                        );
+                      }
+
+                      // Time: reloj
+                      if (fieldType === "time") {
+                        return (
+                          <div className="bulk-fixed-values-add">
+                            <span className="bulk-fixed-values-pending-label">{label}:</span>
+                            <input
+                              type="time"
+                              className="bulk-fixed-values-input"
+                              autoFocus
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  setFixedValues((prev) => ({ ...prev, [pendingFixedField]: { value: e.target.value, catalogUuid: null } }));
+                                  setPendingFixedField(null);
+                                }
+                              }}
+                              onBlur={() => setPendingFixedField(null)}
+                            />
+                          </div>
+                        );
+                      }
+
+                      // Number: input numérico
+                      if (fieldType === "number") {
+                        return (
+                          <div className="bulk-fixed-values-add">
+                            <span className="bulk-fixed-values-pending-label">{label}:</span>
+                            <input
+                              type="number"
+                              step="any"
+                              className="bulk-fixed-values-input"
+                              autoFocus
+                              placeholder="Ingresar valor..."
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const val = (e.target as HTMLInputElement).value;
+                                  if (val) {
+                                    setFixedValues((prev) => ({ ...prev, [pendingFixedField]: { value: val, catalogUuid: null } }));
+                                    setPendingFixedField(null);
+                                  }
+                                }
+                              }}
+                              onBlur={(e) => {
+                                if (e.target.value) {
+                                  setFixedValues((prev) => ({ ...prev, [pendingFixedField]: { value: e.target.value, catalogUuid: null } }));
+                                }
+                                setPendingFixedField(null);
+                              }}
+                            />
+                          </div>
+                        );
+                      }
+
+                      // Text: prompt (fallback)
+                      return null;
+                    })()}
                   </div>
                 </div>
 
