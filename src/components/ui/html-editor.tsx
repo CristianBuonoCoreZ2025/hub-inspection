@@ -189,6 +189,9 @@ export interface HtmlEditorProps {
   /** Mostrar toggle de vista código HTML (default: true).
    *  En el compose de email se oculta — el usuario final no debe ver HTML crudo. */
   showCodeView?: boolean;
+  /** Callback cuando Tiptap no puede parsear el HTML.
+   *  El composer lo usa para hacer fallback a textarea. */
+  onError?: (error: Error) => void;
 }
 
 const FONT_FAMILIES = [
@@ -438,6 +441,7 @@ export function HtmlEditor({
   className,
   editorRef,
   showCodeView = true,
+  onError,
 }: HtmlEditorProps) {
   const [mode, setMode] = React.useState<"visual" | "code">("visual");
   const [codeValue, setCodeValue] = React.useState(value);
@@ -490,9 +494,14 @@ export function HtmlEditor({
     if (!editor) return;
     const current = editor.getHTML();
     if (value !== current && value !== codeValue) {
-      editor.commands.setContent(value || "", { emitUpdate: false });
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate desde prop externa (load plantilla); no hay forma más limpia de sincronizar TipTap con un valor controlado
-      setCodeValue(value || "");
+      try {
+        editor.commands.setContent(value || "", { emitUpdate: false });
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate desde prop externa (load plantilla); no hay forma más limpia de sincronizar TipTap con un valor controlado
+        setCodeValue(value || "");
+      } catch (err) {
+        // Tiptap no pudo parsear el HTML — notificar al composer para fallback
+        if (onError) onError(err as Error);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor]);

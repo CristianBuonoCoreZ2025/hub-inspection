@@ -194,6 +194,17 @@
     z-index: 1;
   }
 
+  /* ═══════════════ IFRAME PREVIEW (composer de email) ═══════════════ */
+  .email-preview-iframe-composer {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 200px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #f1f5f9 !important;
+    display: block !important;
+  }
+
   /* ═══════════════ ESTRUCTURA INTERNA (inmune) ═══════════════ */
   .modal-header {
     flex-shrink: 0 !important;

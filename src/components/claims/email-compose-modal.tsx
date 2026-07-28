@@ -17,7 +17,9 @@ import { HtmlEditor } from "@/components/ui/html-editor";
 import { getEmailTemplatesForAction } from "@/services/email-template-actions";
 import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
 import { getSupabaseClient } from "@/lib/supabase/db";
+import { wrapHtmlEmail } from "@/lib/email-wrapper";
 import { toast } from "sonner";
+import { Eye, Pencil } from "lucide-react";
 
 interface EmailComposeModalProps {
   open: boolean;
@@ -173,6 +175,8 @@ export function EmailComposeModal({
   const [manualBodyFormat] = useState<"plain" | "html">("html");
   const [showHistory, setShowHistory] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [viewMode, setViewMode] = useState<"preview" | "edit">("preview");
+  const [tiptapError, setTiptapError] = useState(false);
   const htmlEditorRef = useRef<Editor | null>(null);
   const queryClient = useQueryClient();
 
@@ -184,6 +188,8 @@ export function EmailComposeModal({
     setSelectedTemplateId(newId);
     setSubjectOverride(null);
     setBodyOverride(null);
+    setTiptapError(false);
+    setViewMode("preview");
   };
 
   const { data: templates } = useQuery({
@@ -203,6 +209,29 @@ export function EmailComposeModal({
     queryFn: () => fetchClaimContacts(action.claim_id),
     enabled: open,
     staleTime: 60_000,
+  });
+
+  // ─── Datos de empresa para el wrapper HTML (logo, color, nombre) ───
+  interface CompanyForWrapper {
+    id: string;
+    name: string;
+    logo_url: string | null;
+    primary_color: string | null;
+  }
+  const { data: company } = useQuery<CompanyForWrapper | null>({
+    queryKey: ["company-for-email-wrapper", action.company_id],
+    queryFn: async () => {
+      if (!action.company_id) return null;
+      const supabase = getSupabaseClient();
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name, logo_url, primary_color")
+        .eq("id", action.company_id)
+        .maybeSingle();
+      return data as CompanyForWrapper | null;
+    },
+    enabled: open && !!action.company_id,
+    staleTime: 300_000, // 5 min — los datos de empresa casi no cambian
   });
 
   interface EmailLogLite {
@@ -289,6 +318,19 @@ export function EmailComposeModal({
   const effectiveSubject = subjectOverride ?? rendered.subject;
   const effectiveBody = bodyOverride ?? rendered.body;
   const effectiveFormat = effectiveMode === "manual" ? manualBodyFormat : rendered.body_format;
+
+  // ─── Body envuelto con branding (logo, header color, footer) ───
+  // Esto es lo que se ve en el preview y lo que se va a enviar.
+  const wrappedBody = useMemo(() => {
+    if (!effectiveBody) return "";
+    if (effectiveFormat !== "html") return effectiveBody;
+    return wrapHtmlEmail({
+      body: effectiveBody,
+      logoUrl: company?.logo_url ?? null,
+      headerColor: company?.primary_color ?? null,
+      companyName: company?.name ?? null,
+    });
+  }, [effectiveBody, effectiveFormat, company]);
 
   // Versión original de la plantilla (para auditoría — se envía al backend)
   const templateOriginalSubject = effectiveMode === "template" ? rendered.subject : null;
@@ -610,7 +652,7 @@ export function EmailComposeModal({
           )}
         </div>
 
-        {/* ═══ 4 + 5. BODY — Asunto integrado + editor que ocupa todo ═══ */}
+        {/* ═══ 4 + 5. BODY — Asunto integrado + toggle Preview/Editar ═══ */}
         <div className="flex-1 overflow-hidden flex flex-col bg-background">
           {previewLoading && effectiveMode === "template" ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -630,8 +672,46 @@ export function EmailComposeModal({
                 />
               </div>
 
-              {/* Editor — mismo componente y className que el configurador de plantillas */}
-              {effectiveFormat === "html" ? (
+              {/* Toggle Preview/Editar — solo visible en HTML */}
+              {effectiveFormat === "html" && (
+                <div className="px-4 py-1.5 border-b border-border bg-muted/30 shrink-0 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("preview")}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                      viewMode === "preview"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Eye className="h-3 w-3" />
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setViewMode("edit"); setTiptapError(false); }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                      viewMode === "edit"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Pencil className="h-3 w-3" />
+                    Editar
+                  </button>
+                </div>
+              )}
+
+              {/* ─── Vista PREVIEW (iframe con branding) — default para HTML ─── */}
+              {effectiveFormat === "html" && viewMode === "preview" ? (
+                <iframe
+                  srcDoc={wrappedBody}
+                  title="Preview del correo"
+                  className="email-preview-iframe-composer flex-1 min-h-0 w-full bg-white border-0"
+                  sandbox="allow-same-origin"
+                />
+              ) : effectiveFormat === "html" && viewMode === "edit" && !tiptapError ? (
+                /* ─── Vista EDITAR (HtmlEditor/Tiptap) con fallback a textarea ─── */
                 <HtmlEditor
                   value={effectiveBody || ""}
                   onChange={(html) => setBodyOverride(html)}
@@ -639,8 +719,23 @@ export function EmailComposeModal({
                   placeholder="Escribe el cuerpo del correo…"
                   className="flex-1 min-h-0"
                   showCodeView={false}
+                  onError={() => setTiptapError(true)}
                 />
+              ) : effectiveFormat === "html" && tiptapError ? (
+                /* Fallback: textarea si Tiptap no puede parsear el HTML */
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="px-4 py-1 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-[10px] text-amber-700 dark:text-amber-300 shrink-0">
+                    El editor visual no soporta este HTML. Editando en modo código.
+                  </div>
+                  <textarea
+                    value={effectiveBody}
+                    onChange={(e) => setBodyOverride(e.target.value)}
+                    placeholder="Escribe el cuerpo del correo…"
+                    className="flex-1 min-h-40 w-full resize-none bg-background px-4 pt-4 pb-5 text-sm leading-relaxed text-foreground outline-none border border-border rounded-lg overflow-y-auto font-mono"
+                  />
+                </div>
               ) : (
+                /* ─── Texto plano — siempre textarea ─── */
                 <textarea
                   value={effectiveBody}
                   onChange={(e) => setBodyOverride(e.target.value)}
