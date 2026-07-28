@@ -58,6 +58,8 @@ export default function CargaSiniestrosPage() {
   const [mapperOpen, setMapperOpen] = useState(true);
   // Mapeo manual de valores: "fieldKey::excelValue" → UUID del catálogo
   const [valueMappings, setValueMappings] = useState<Record<string, string>>({});
+  // Valores fijos: fieldKey → valor en duro (no viene del Excel)
+  const [fixedValues, setFixedValues] = useState<Record<string, string>>({});
 
   // Staging (carga temporal)
   const [stagingRows, setStagingRows] = useState<ClaimStagingRow[]>([]);
@@ -298,8 +300,12 @@ export default function CargaSiniestrosPage() {
     (value: string) => resolveRefId("claimCommuneRef", value, communeMap),
     [resolveRefId, communeMap]
   );
-  const resolveAssignedAdjusterId = useCallback(
-    (value: string) => resolveRefId("assignedAdjuster", value, profileMap),
+  const resolveInspectorId = useCallback(
+    (value: string) => resolveRefId("inspector", value, profileMap),
+    [resolveRefId, profileMap]
+  );
+  const resolveAdjusterId = useCallback(
+    (value: string) => resolveRefId("adjuster", value, profileMap),
     [resolveRefId, profileMap]
   );
   const resolveAuditorId = useCallback(
@@ -339,7 +345,8 @@ export default function CargaSiniestrosPage() {
     { fieldKey: "claimRegionRef", label: "Región Siniestro (catálogo)", dataKey: "claimRegionRef" as const, resolver: resolveRegionId, options: regions ?? [] },
     { fieldKey: "claimCityRef", label: "Ciudad Siniestro (catálogo)", dataKey: "claimCityRef" as const, resolver: resolveCityId, options: cities ?? [] },
     { fieldKey: "claimCommuneRef", label: "Comuna Siniestro (catálogo)", dataKey: "claimCommuneRef" as const, resolver: resolveCommuneId, options: communes ?? [] },
-    { fieldKey: "assignedAdjuster", label: "Liquidador Asignado", dataKey: "assignedAdjuster" as const, resolver: resolveAssignedAdjusterId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
+    { fieldKey: "inspector", label: "Inspector", dataKey: "inspector" as const, resolver: resolveInspectorId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
+    { fieldKey: "adjuster", label: "Liquidador/Ajustador", dataKey: "adjuster" as const, resolver: resolveAdjusterId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
     { fieldKey: "auditor", label: "Auditor", dataKey: "auditor" as const, resolver: resolveAuditorId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
     { fieldKey: "dispatcher", label: "Despachador", dataKey: "dispatcher" as const, resolver: resolveDispatcherId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
     { fieldKey: "assistant", label: "Asistente", dataKey: "assistant" as const, resolver: resolveAssistantId, options: (companyProfiles ?? []).map(p => ({ id: p.id, name: p.full_name || "" })) },
@@ -350,7 +357,7 @@ export default function CargaSiniestrosPage() {
     resolveInsuranceProductId, resolveEventId,
     resolveBrokerId, resolveAdvisorId, resolvePropertyClassificationId,
     resolveCountryId, resolveRegionId, resolveCityId, resolveCommuneId,
-    resolveAssignedAdjusterId, resolveAuditorId, resolveDispatcherId, resolveAssistantId, resolvePolicyId,
+    resolveInspectorId, resolveAdjusterId, resolveAuditorId, resolveDispatcherId, resolveAssistantId, resolvePolicyId,
     insuranceCompanies, claimTypes, claimCauses, claimStatuses, businessLines, currencies,
     housingDestinations, damageClassifications, insuranceProducts, events,
     brokers, advisors, propertyClassifications, countries, regions, cities, communes,
@@ -387,11 +394,16 @@ export default function CargaSiniestrosPage() {
     return Object.values(unmappedRefValues).reduce((sum, arr) => sum + arr.length, 0);
   }, [unmappedRefValues]);
 
-  // ── Parsed rows: estado derivado de mapping + rawRows + valueMappings ──
+  // ── Parsed rows: estado derivado de mapping + rawRows + valueMappings + fixedValues ──
   const parsedRows = useMemo<ParsedRow[]>(() => {
     if (rawRows.length === 0) return [];
     return rawRows.map((raw, idx) => {
       const data = applyMappingToRow(raw, mapping);
+      // Inyectar valores fijos (campos sin columna en el Excel, cargados con valor en duro)
+      for (const [fieldKey, value] of Object.entries(fixedValues)) {
+        if (value && !(fieldKey in data)) data[fieldKey] = value;
+        else if (value && !data[fieldKey]) data[fieldKey] = value;
+      }
       const { valid, errors } = validateRowWithMapping(data, mapping);
 
       // Validación: resolver cada campo de referencia → UUID
@@ -412,7 +424,7 @@ export default function CargaSiniestrosPage() {
 
       return { rowNum: idx + 2, data, valid: valid && errors.length === 0, errors };
     });
-  }, [rawRows, mapping, refFields]);
+  }, [rawRows, mapping, refFields, fixedValues]);
 
   // ── Cargar y parsear el Excel ──
   const parseFile = useCallback((f: File) => {
@@ -548,7 +560,8 @@ export default function CargaSiniestrosPage() {
         const regionId = str(d.claimRegionRef) ? resolveRegionId(str(d.claimRegionRef)) : null;
         const cityId = str(d.claimCityRef) ? resolveCityId(str(d.claimCityRef)) : null;
         const communeId = str(d.claimCommuneRef) ? resolveCommuneId(str(d.claimCommuneRef)) : null;
-        const assignedAdjusterId = str(d.assignedAdjuster) ? resolveAssignedAdjusterId(str(d.assignedAdjuster)) : null;
+        const inspectorId = str(d.inspector) ? resolveInspectorId(str(d.inspector)) : null;
+        const adjusterId = str(d.adjuster) ? resolveAdjusterId(str(d.adjuster)) : null;
         const auditorId = str(d.auditor) ? resolveAuditorId(str(d.auditor)) : null;
         const dispatcherId = str(d.dispatcher) ? resolveDispatcherId(str(d.dispatcher)) : null;
         const assistantId = str(d.assistant) ? resolveAssistantId(str(d.assistant)) : null;
@@ -585,7 +598,8 @@ export default function CargaSiniestrosPage() {
           regionId,
           cityId,
           communeId,
-          assignedAdjusterId,
+          inspectorId,
+          adjusterId,
           auditorId,
           dispatcherId,
           assistantId,
@@ -597,6 +611,19 @@ export default function CargaSiniestrosPage() {
           recoveryComments: str(d.recoveryComments) || null,
           claimLatitude: num(d.claimLatitude),
           claimLongitude: num(d.claimLongitude),
+          notes: str(d.notes) || null,
+          // ── Contratante (va a claims_participants tipo "contractor") ──
+          contractorName: str(d.contractorName) || null,
+          contractorLastName: str(d.contractorLastName) || null,
+          contractorRut: str(d.contractorRut) || null,
+          contractorEmail: str(d.contractorEmail) || null,
+          contractorPhone: str(d.contractorPhone) || null,
+          contractorCellPhone: str(d.contractorCellPhone) || null,
+          contractorAddress: str(d.contractorAddress) || null,
+          contractorCountry: str(d.contractorCountry) || null,
+          contractorRegion: str(d.contractorRegion) || null,
+          contractorCity: str(d.contractorCity) || null,
+          contractorCommune: str(d.contractorCommune) || null,
           // Valores originales (para mostrar en preview)
           insuranceCompanyName: str(d.insuranceCompany),
           claimTypeName: str(d.claimType),
@@ -781,10 +808,12 @@ export default function CargaSiniestrosPage() {
               propertyClassificationId: (d.propertyClassificationId as string) || null,
               policyId: (d.policyId as string) || null,
               typeId: null,
-              assignedAdjusterId: (d.assignedAdjusterId as string) || null,
+              inspectorId: (d.inspectorId as string) || null,
+              adjusterId: (d.adjusterId as string) || null,
               auditorId: (d.auditorId as string) || null,
               dispatcherId: (d.dispatcherId as string) || null,
               assistantId: (d.assistantId as string) || null,
+              notes: (d.notes as string) || null,
             },
             {
               insuredName: String(d.insuredName || ""),
@@ -806,7 +835,20 @@ export default function CargaSiniestrosPage() {
               claimCity: String(d.claimCity || ""),
               claimCommune: (d.claimCommune as string) || null,
             },
-            null,
+            // Contractor (si tiene nombre)
+            (d.contractorName as string) ? {
+              contractorName: String(d.contractorName),
+              contractorLastName: (d.contractorLastName as string) || null,
+              contractorRut: (d.contractorRut as string) || null,
+              contractorEmail: (d.contractorEmail as string) || null,
+              contractorPhone: (d.contractorPhone as string) || null,
+              contractorCellPhone: (d.contractorCellPhone as string) || null,
+              contractorAddress: (d.contractorAddress as string) || null,
+              contractorCountry: (d.contractorCountry as string) || null,
+              contractorRegion: (d.contractorRegion as string) || null,
+              contractorCity: (d.contractorCity as string) || null,
+              contractorCommune: (d.contractorCommune as string) || null,
+            } : null,
             (d.beneficiaryName as string) ? {
               beneficiaryName: String(d.beneficiaryName),
               beneficiaryLastName: (d.beneficiaryLastName as string) || null,
@@ -904,6 +946,7 @@ export default function CargaSiniestrosPage() {
     setExcelHeaders([]);
     setMapping({});
     setValueMappings({});
+    setFixedValues({});
     setStagingRows([]);
     setStep("upload");
     setMapperOpen(true);
@@ -1129,24 +1172,18 @@ export default function CargaSiniestrosPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="__none__">— Sin mapear —</SelectItem>
-                                  {CLAIM_FIELDS.map((f) => {
-                                    // Un campo está disponible si no tiene ningún header asignado,
-                                    // o si el header que tiene es este mismo (el actual)
-                                    const currentHeaderForField = mapping[f.key]?.excelHeader;
-                                    const isAvailable = !currentHeaderForField || currentHeaderForField === header;
-                                    return (
-                                      <SelectItem
-                                        key={f.key}
-                                        value={f.key}
-                                        disabled={!isAvailable}
-                                        className={!isAvailable ? "bulk-mapper-option-used" : ""}
-                                      >
+                                  {CLAIM_FIELDS
+                                    .filter((f) => {
+                                      // Filtrar campos ya asignados a OTRA columna del Excel
+                                      const currentHeaderForField = mapping[f.key]?.excelHeader;
+                                      return !currentHeaderForField || currentHeaderForField === header;
+                                    })
+                                    .map((f) => (
+                                      <SelectItem key={f.key} value={f.key}>
                                         {f.label}
                                         {f.required && " *"}
-                                        {!isAvailable && " (en uso)"}
                                       </SelectItem>
-                                    );
-                                  })}
+                                    ))}
                                 </SelectContent>
                               </Select>
                             </td>
@@ -1185,6 +1222,71 @@ export default function CargaSiniestrosPage() {
                     </span>
                   </div>
                 )}
+
+                {/* ── Valores fijos: campos del sistema sin columna en el Excel ── */}
+                <div className="bulk-fixed-values-section">
+                  <div className="bulk-fixed-values-header">
+                    <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                    <span className="bulk-fixed-values-title">Valores fijos</span>
+                    <span className="bulk-fixed-values-desc">
+                      Asigna un valor en duro a campos del sistema que no tienen columna en el Excel
+                    </span>
+                  </div>
+                  <div className="bulk-fixed-values-list">
+                    {Object.entries(fixedValues).length > 0 && (
+                      <div className="bulk-fixed-values-existing">
+                        {Object.entries(fixedValues).map(([fk, val]) => {
+                          const f = CLAIM_FIELDS.find((cf) => cf.key === fk);
+                          return (
+                            <div key={fk} className="bulk-fixed-value-item">
+                              <span className="bulk-fixed-value-field">{f?.label || fk}</span>
+                              <span className="bulk-fixed-value-arrow">=</span>
+                              <span className="bulk-fixed-value-val">{val}</span>
+                              <button
+                                className="bulk-fixed-value-remove"
+                                onClick={() => setFixedValues((prev) => {
+                                  const next = { ...prev };
+                                  delete next[fk];
+                                  return next;
+                                })}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="bulk-fixed-values-add">
+                      <Select
+                        value=""
+                        onValueChange={(fk) => {
+                          if (!fk || fk === "__none__") return;
+                          // Abrir input para escribir el valor
+                          const val = window.prompt(`Valor fijo para: ${CLAIM_FIELDS.find(f => f.key === fk)?.label || fk}`);
+                          if (val !== null && val.trim()) {
+                            setFixedValues((prev) => ({ ...prev, [fk]: val.trim() }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="bulk-fixed-values-select">
+                          <SelectValue placeholder="+ Agregar valor fijo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— Seleccionar campo —</SelectItem>
+                          {CLAIM_FIELDS
+                            .filter((f) => !mapping[f.key]?.fieldKey && !(f.key in fixedValues))
+                            .map((f) => (
+                              <SelectItem key={f.key} value={f.key}>
+                                {f.label}
+                                {f.required && " *"}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
               </>
             )}
           </div>

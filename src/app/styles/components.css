@@ -767,6 +767,92 @@
     background: color-mix(in srgb, #f59e0b 12%, transparent) !important;
   }
 
+  .bulk-fixed-values-section {
+    margin-top: 12px !important;
+    padding: 14px !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
+    background: color-mix(in srgb, var(--muted) 20%, var(--card)) !important;
+  }
+
+  .bulk-fixed-values-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .bulk-fixed-values-title {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+  }
+
+  .bulk-fixed-values-desc {
+    font-size: 11px !important;
+    color: var(--muted-foreground) !important;
+  }
+
+  .bulk-fixed-values-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .bulk-fixed-values-existing {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+
+  .bulk-fixed-value-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    font-size: 12px !important;
+  }
+
+  .bulk-fixed-value-field {
+    font-weight: 500 !important;
+    color: var(--foreground) !important;
+  }
+
+  .bulk-fixed-value-arrow {
+    color: var(--muted-foreground) !important;
+  }
+
+  .bulk-fixed-value-val {
+    color: var(--primary) !important;
+    font-weight: 500 !important;
+  }
+
+  .bulk-fixed-value-remove {
+    margin-left: auto !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    color: var(--muted-foreground) !important;
+    padding: 2px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .bulk-fixed-value-remove:hover {
+    color: #ef4444 !important;
+  }
+
+  .bulk-fixed-values-add {
+    display: flex !important;
+  }
+
+  .bulk-fixed-values-select {
+    width: 100% !important;
+  }
+
   .dark .bulk-mapper-status-pill-error {
     color: #fca5a5 !important;
     background: color-mix(in srgb, #ef4444 18%, transparent) !important;

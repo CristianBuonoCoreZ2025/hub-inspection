@@ -362,6 +362,7 @@ export async function createClaimMinimal(
     policyId?: string | null;
     typeId?: string | null;
     assignedAdjusterId?: string | null;
+    notes?: string | null;
   },
   insured: {
     insuredName: string;
@@ -472,6 +473,7 @@ export async function createClaimMinimal(
     policy_id: input.policyId || null,
     type_id: input.typeId || null,
     assigned_adjuster_id: input.assignedAdjusterId || null,
+    notes: input.notes || null,
   }, CLAIM_SELECT);
 
   // No se geocodifica automáticamente — las coordenadas deben venir del
