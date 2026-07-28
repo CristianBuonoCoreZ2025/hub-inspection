@@ -175,7 +175,7 @@ export default function ReabrirPage() {
  value={reason}
  onChange={(e) => setReason(e.target.value)}
  placeholder="Explique el motivo (ej: impugnación aceptada, error en cierre, solicitud de compañía...)"
- className="app-input w-full min-h-[60px] text-[13px]"
+ className="app-input w-full min-h-[50px] sm:min-h-[60px] text-[13px]"
  rows={2}
  />
  </div>
@@ -214,7 +214,7 @@ export default function ReabrirPage() {
  No hay siniestros reabiertos.
  </p>
  ) : (
- <div className="overflow-auto border rounded-lg">
+ <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
  <tr>

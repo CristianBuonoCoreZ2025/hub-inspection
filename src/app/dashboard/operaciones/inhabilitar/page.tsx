@@ -180,7 +180,7 @@ export default function InhabilitarPage() {
  value={reason}
  onChange={(e) => setReason(e.target.value)}
  placeholder="Explique el motivo (ej: siniestro duplicado, error de carga, caso especial...)"
- className="app-input w-full min-h-[60px] text-[13px]"
+ className="app-input w-full min-h-[50px] sm:min-h-[60px] text-[13px]"
  rows={2}
  />
  </div>
@@ -224,7 +224,7 @@ export default function InhabilitarPage() {
  No hay siniestros inhabilitados.
  </p>
  ) : (
- <div className="overflow-auto border rounded-lg">
+ <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
  <tr>
@@ -259,7 +259,7 @@ export default function InhabilitarPage() {
  <Button
  variant="ghost"
  size="sm"
- className="pg-btn-platinum h-7 px-2 text-xs"
+ className="pg-btn-platinum h-9 px-3 sm:h-7 sm:px-2 text-xs"
  disabled={enableMutation.isPending}
  onClick={() => {
  if (confirm("¿Reactivar este siniestro?")) enableMutation.mutate(claim.id);

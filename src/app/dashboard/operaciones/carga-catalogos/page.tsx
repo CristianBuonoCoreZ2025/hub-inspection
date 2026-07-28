@@ -261,7 +261,7 @@ export default function CargaCatalogosPage() {
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={`rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+        className={`rounded-xl border-2 border-dashed p-4 sm:p-8 text-center transition-colors ${
           isDragging ? "border-primary bg-primary/5" : "border-border bg-card"
         }`}
       >
@@ -330,7 +330,7 @@ export default function CargaCatalogosPage() {
           )}
 
           {/* Table preview */}
-          <div className="app-data-table-wrap max-h-[400px] overflow-auto">
+          <div className="app-data-table-wrap max-h-[300px] sm:max-h-[400px] overflow-auto">
             <table className="app-data-table">
               <thead>
                 <tr>

@@ -187,7 +187,7 @@ export default function GestionesPage() {
             ) : actions?.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">No hay gestiones abiertas para este siniestro.</p>
             ) : (
-              <div className="overflow-auto border rounded-lg mb-4">
+              <div className="app-data-table-wrap mb-4">
                 <table className="app-data-table">
                   <thead>
                     <tr>
@@ -211,7 +211,7 @@ export default function GestionesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 px-2 text-xs"
+                                className="h-9 px-3 sm:h-7 sm:px-2 text-xs"
                                 disabled={rejectMutation.isPending && rejectMutation.variables?.id === action.id}
                                 onClick={() => {
                                   const reason = rejectReason.trim() || "Rechazo operacional";
@@ -226,7 +226,7 @@ export default function GestionesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 px-2 text-xs text-rose-600 hover:text-rose-700"
+                                className="h-9 px-3 sm:h-7 sm:px-2 text-xs text-rose-600 hover:text-rose-700"
                                 disabled={deleteMutation.isPending && deleteMutation.variables === action.id}
                                 onClick={() => {
                                   if (confirm(`¿Eliminar permanentemente la gestión ${action.code}?`)) {
