@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { renderEmailTemplate } from "@/services/email-render";
+import { renderEmailTemplate, type EmailBodyFormat } from "@/services/email-render";
 import { sendEmail } from "@/services/email-sender";
 import { buildDocumentDataForClaim } from "@/services/document-data";
 import { buildTemplateData } from "@/lib/document-fields";
@@ -96,28 +96,30 @@ export async function POST(request: NextRequest) {
     const companyId = claim.company_id;
 
     // Validar plantilla (solo si se usa plantilla — no en modo manual)
-    let template: {
+    type EmailTpl = {
       id: string;
       company_id: string;
       business_line_id: string | null;
       action_template_id: string | null;
       name: string;
       description: string | null;
-      body_format: "plain" | "html";
+      body_format: EmailBodyFormat;
       subject: string;
       body: string;
       logo_url: string | null;
       header_color: string | null;
+      logo_position: "left" | "center" | "right" | null;
       placeholder_mapping: Record<string, string> | null;
       is_active: boolean;
       actions?: { action_template_id: string; is_default: boolean }[];
-    } | null = null;
+    };
+    let template: EmailTpl | null = null;
 
     if (!isManual && emailTemplateId) {
       const { data: tpl, error: templateError } = await supabase
         .from("email_templates")
         .select(
-          "id, company_id, business_line_id, action_template_id, name, description, body_format, subject, body, logo_url, header_color, placeholder_mapping, is_active, actions:email_template_actions(action_template_id, is_default)"
+          "id, company_id, business_line_id, action_template_id, name, description, body_format, subject, body, logo_url, header_color, logo_position, placeholder_mapping, is_active, actions:email_template_actions(action_template_id, is_default)"
         )
         .eq("id", emailTemplateId)
         .eq("is_active", true)
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      template = tpl as (typeof template & object);
+      template = tpl as EmailTpl;
     }
 
     // ── Construir datos completos del siniestro usando el mismo sistema que
@@ -204,8 +206,8 @@ export async function POST(request: NextRequest) {
       // <coord_inspection_date> = fecha de la última inspección agendada (formateada)
       coord_inspection_date: fmtDateTime(lastSession?.scheduled_at),
       coord_inspection_datetime: fmtDateTime(lastSession?.scheduled_at),
-      // Header color de la empresa para el wrapper HTML
-      company_header_color: docData.company?.logo_url ? "#0095DA" : "#0095DA",
+      // Header color: prioridad de la plantilla, fallback al color de la empresa
+      company_header_color: template?.header_color ?? "#0095DA",
     };
 
     // Aplanar action_data como top-level keys (por si la plantilla usa campos
@@ -228,7 +230,12 @@ export async function POST(request: NextRequest) {
     let was_modified = false;
 
     if (template) {
-      const rendered = renderEmailTemplate(template, data);
+      const rendered = renderEmailTemplate({
+        subject: template.subject,
+        body: template.body,
+        body_format: template.body_format,
+        placeholder_mapping: template.placeholder_mapping ?? undefined,
+      }, data);
       orig_template_subject = rendered.subject;
       orig_template_body = rendered.body;
       orig_template_body_format = rendered.body_format;
@@ -268,14 +275,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Si la plantilla es HTML, envolver en estructura de email completa
+    // Usa header_color, logo_url y logo_position de la PLANTILLA (configurados
+    // en el editor de plantillas), no de la empresa.
     const { wrapHtmlEmail } = await import("@/services/email-render");
     const finalBody =
       body_format === "html"
         ? wrapHtmlEmail({
             body,
-            logoUrl: data.company_logo as string,
-            headerColor: data.company_header_color as string,
+            logoUrl: template?.logo_url ?? (data.company_logo as string) ?? null,
+            headerColor: template?.header_color ?? null,
             companyName: data.company_name as string,
+            logoPosition: template?.logo_position ?? "center",
           })
         : body;
 

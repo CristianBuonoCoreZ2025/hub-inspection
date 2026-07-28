@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         const { data: template } = await supabase
           .from("email_templates")
           .select(
-            "id, company_id, business_line_id, name, description, body_format, subject, body, logo_url, header_color, placeholder_mapping, is_active"
+            "id, company_id, business_line_id, name, description, body_format, subject, body, logo_url, header_color, logo_position, placeholder_mapping, is_active"
           )
           .eq("id", log.email_template_id)
           .maybeSingle();
@@ -204,13 +204,16 @@ export async function POST(request: NextRequest) {
         }
 
         // Envolver HTML si corresponde
+        // Usa header_color, logo_url y logo_position de la PLANTILLA
+        const tplTyped = template as { logo_url: string | null; header_color: string | null; logo_position: "left" | "center" | "right" | null } | null;
         const finalBody =
           body_format === "html"
             ? wrapHtmlEmail({
                 body,
-                logoUrl: data.company_logo as string,
-                headerColor: data.company_header_color as string,
+                logoUrl: tplTyped?.logo_url ?? (data.company_logo as string) ?? null,
+                headerColor: tplTyped?.header_color ?? null,
                 companyName: data.company_name as string,
+                logoPosition: tplTyped?.logo_position ?? "center",
               })
             : body;
 

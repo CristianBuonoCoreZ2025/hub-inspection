@@ -211,12 +211,13 @@ export function EmailComposeModal({
     staleTime: 60_000,
   });
 
-  // ─── Datos de empresa para el wrapper HTML (logo, color, nombre) ───
+  // ─── Datos de empresa para el wrapper HTML (nombre, fallback de logo) ───
+  // El header_color, logo_url y logo_position vienen de la PLANTILLA,
+  // no de la empresa — son configurados en el editor de plantillas.
   interface CompanyForWrapper {
     id: string;
     name: string;
     logo_url: string | null;
-    primary_color: string | null;
   }
   const { data: company } = useQuery<CompanyForWrapper | null>({
     queryKey: ["company-for-email-wrapper", action.company_id],
@@ -225,7 +226,7 @@ export function EmailComposeModal({
       const supabase = getSupabaseClient();
       const { data } = await supabase
         .from("companies")
-        .select("id, name, logo_url, primary_color")
+        .select("id, name, logo_url")
         .eq("id", action.company_id)
         .maybeSingle();
       return data as CompanyForWrapper | null;
@@ -276,6 +277,12 @@ export function EmailComposeModal({
 
   const effectiveTemplateId = selectedTemplateId || defaultTemplateId;
 
+  // ─── Plantilla seleccionada (para obtener header_color, logo_url, logo_position) ───
+  const selectedTemplate = useMemo(
+    () => activeTemplates.find((t) => t.id === effectiveTemplateId) ?? null,
+    [activeTemplates, effectiveTemplateId]
+  );
+
   const { data: previewData, isLoading: previewLoading } = useQuery({
     queryKey: ["email-preview", action.id, effectiveMode, effectiveTemplateId, manualBodyFormat],
     queryFn: async () => {
@@ -320,17 +327,20 @@ export function EmailComposeModal({
   const effectiveFormat = effectiveMode === "manual" ? manualBodyFormat : rendered.body_format;
 
   // ─── Body envuelto con branding (logo, header color, footer) ───
-  // Esto es lo que se ve en el preview y lo que se va a enviar.
+  // Usa los datos de la PLANTILLA (header_color, logo_url, logo_position)
+  // configurados en el editor de plantillas — igual que el EmailTemplateEditor.
+  // En modo manual sin plantilla, usa datos de la empresa como fallback.
   const wrappedBody = useMemo(() => {
     if (!effectiveBody) return "";
     if (effectiveFormat !== "html") return effectiveBody;
     return wrapHtmlEmail({
       body: effectiveBody,
-      logoUrl: company?.logo_url ?? null,
-      headerColor: company?.primary_color ?? null,
+      logoUrl: selectedTemplate?.logo_url ?? company?.logo_url ?? null,
+      headerColor: selectedTemplate?.header_color ?? null,
       companyName: company?.name ?? null,
+      logoPosition: selectedTemplate?.logo_position ?? "center",
     });
-  }, [effectiveBody, effectiveFormat, company]);
+  }, [effectiveBody, effectiveFormat, selectedTemplate, company]);
 
   // Versión original de la plantilla (para auditoría — se envía al backend)
   const templateOriginalSubject = effectiveMode === "template" ? rendered.subject : null;

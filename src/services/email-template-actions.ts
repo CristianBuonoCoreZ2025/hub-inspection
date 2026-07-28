@@ -190,7 +190,7 @@ export async function getEmailTemplatesForAction(
   let q = supabase
     .from("email_templates")
     .select(
-      "id, company_id, business_line_id, action_template_id, name, description, body_format, subject, body, logo_url, header_color, detected_placeholders, placeholder_mapping, is_active, sort_order, created_by, created_at, updated_at, business_line:business_lines!email_templates_business_line_id_fkey(id, name), actions:email_template_actions(id, action_template_id, is_default, action_template:action_template!email_template_actions_action_template_id_fkey(id, name, code))"
+      "id, company_id, business_line_id, action_template_id, name, description, body_format, subject, body, logo_url, header_color, logo_position, detected_placeholders, placeholder_mapping, is_active, sort_order, created_by, created_at, updated_at, business_line:business_lines!email_templates_business_line_id_fkey(id, name), actions:email_template_actions(id, action_template_id, is_default, action_template:action_template!email_template_actions_action_template_id_fkey(id, name, code))"
     )
     .in("id", templateIds);
   if (opts?.companyId) q = q.eq("company_id", opts.companyId);
