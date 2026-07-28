@@ -42,6 +42,8 @@ export default function CargaSiniestrosPage() {
   const [rawRows, setRawRows] = useState<ExcelRow[]>([]);
   const [mapping, setMapping] = useState<Record<string, ColumnMapping>>({});
   const [mapperOpen, setMapperOpen] = useState(true);
+  // Mapeo manual de valores: valorExactoDelExcel → UUID de aseguradora
+  const [valueMappings, setValueMappings] = useState<Record<string, string>>({});
 
   // ── Cargar aseguradoras para resolver nombre → UUID ──
   const { data: insuranceCompanies } = useQuery({
@@ -50,11 +52,22 @@ export default function CargaSiniestrosPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Normalización simple: lowercase + sin acentos + sin espacios extra
+  const normalizeName = (s: string): string => {
+    return s
+      .toLowerCase()
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
   // Mapa nombre aseguradora (normalizado) → UUID
   const insuranceCompanyMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const c of insuranceCompanies ?? []) {
-      map.set(c.name.toLowerCase().trim(), c.id);
+      map.set(normalizeName(c.name), c.id);
     }
     return map;
   }, [insuranceCompanies]);
@@ -62,31 +75,63 @@ export default function CargaSiniestrosPage() {
   // Tenant (company_id) del usuario logueado — NO se pide en el Excel
   const tenantCompanyId = profile?.company_id || null;
 
-  // ── Parsed rows: estado derivado de mapping + rawRows ──
-  // Se recalcula en vivo cuando el usuario cambia el mapeo, sin useEffect.
+  // ── Resolver nombre de aseguradora → UUID ──
+  // 1) Si es UUID, directo
+  // 2) Si está en valueMappings (mapeo manual del usuario), usarlo
+  // 3) Match exacto normalizado contra insurance_companies
+  // 4) Si no se encuentra → null (el usuario verá el panel de mapeo de valores)
+  const resolveInsuranceCompanyId = useCallback((value: string): string | null => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+      return trimmed;
+    }
+    // Mapeo manual del usuario (clave = valor exacto del Excel)
+    if (valueMappings[trimmed]) return valueMappings[trimmed];
+    // Match exacto normalizado
+    return insuranceCompanyMap.get(normalizeName(trimmed)) || null;
+  }, [valueMappings, insuranceCompanyMap]);
+
+  // ── Valores distinct del Excel para la columna aseguradora ──
+  const distinctInsuranceValues = useMemo(() => {
+    const values = new Set<string>();
+    for (const row of rawRows) {
+      const data = applyMappingToRow(row, mapping);
+      const v = String(data.insuranceCompany || "").trim();
+      if (v) values.add(v);
+    }
+    return [...values].sort();
+  }, [rawRows, mapping]);
+
+  // ── Valores sin resolver (que necesitan mapeo manual) ──
+  const unmappedInsuranceValues = useMemo(() => {
+    return distinctInsuranceValues.filter((v) => !resolveInsuranceCompanyId(v));
+  }, [distinctInsuranceValues, resolveInsuranceCompanyId]);
+
+  // ── Parsed rows: estado derivado de mapping + rawRows + valueMappings ──
   const parsedRows = useMemo<ParsedRow[]>(() => {
     if (rawRows.length === 0) return [];
     return rawRows.map((raw, idx) => {
       const data = applyMappingToRow(raw, mapping);
       const { valid, errors } = validateRowWithMapping(data, mapping);
 
-      // Validación adicional: resolver nombre de aseguradora → UUID
+      // Validación: resolver nombre de aseguradora → UUID
       const insuranceValue = String(data.insuranceCompany || "").trim();
       if (insuranceValue && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(insuranceValue)) {
-        const normalized = insuranceValue.toLowerCase().trim();
-        if (!insuranceCompanyMap.has(normalized)) {
+        const resolved = resolveInsuranceCompanyId(insuranceValue);
+        if (!resolved) {
           errors.push({
             fieldKey: "insuranceCompany",
             fieldLabel: "Empresa / Compañía de Seguros",
             kind: "invalid_value",
-            message: `Aseguradora "${insuranceValue}" no encontrada. Nombres válidos: ${insuranceCompanies?.map(c => c.name).join(", ") || "cargando..."}`,
+            message: `Aseguradora "${insuranceValue}" no reconocida. Mapea este valor en el panel de mapeo de valores.`,
           });
         }
       }
 
       return { rowNum: idx + 2, data, valid: valid && errors.length === 0, errors };
     });
-  }, [rawRows, mapping, insuranceCompanyMap, insuranceCompanies]);
+  }, [rawRows, mapping, resolveInsuranceCompanyId]);
 
   // ── Cargar y parsear el Excel ──
   const parseFile = useCallback((f: File) => {
@@ -159,18 +204,6 @@ export default function CargaSiniestrosPage() {
 
       return next;
     });
-  };
-
-  // ── Resolver nombre de aseguradora → UUID ──
-  const resolveInsuranceCompanyId = (value: string): string | null => {
-    if (!value) return null;
-    // Si ya es un UUID, usarlo directo
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
-      return value;
-    }
-    // Buscar por nombre (case-insensitive)
-    const normalized = value.toLowerCase().trim();
-    return insuranceCompanyMap.get(normalized) || null;
   };
 
   // ── Cargar siniestros al backend ──
@@ -264,11 +297,21 @@ export default function CargaSiniestrosPage() {
     }
   };
 
+  // ── Mapear un valor del Excel a una aseguradora del sistema ──
+  const handleValueMappingChange = (excelValue: string, insuranceCompanyId: string | null) => {
+    const id = insuranceCompanyId || "__none__";
+    setValueMappings((prev) => ({
+      ...prev,
+      [excelValue]: id === "__none__" ? "" : id,
+    }));
+  };
+
   const handleReset = () => {
     setFile(null);
     setRawRows([]);
     setExcelHeaders([]);
     setMapping({});
+    setValueMappings({});
     setStep("upload");
     setMapperOpen(true);
   };
@@ -549,6 +592,69 @@ export default function CargaSiniestrosPage() {
               </>
             )}
           </div>
+
+          {/* ── Panel de mapeo de valores: aseguradoras no reconocidas ── */}
+          {step === "review" && unmappedInsuranceValues.length > 0 && (
+            <div className="bulk-value-mapper-panel">
+              <div className="bulk-value-mapper-header">
+                <SlidersHorizontal className="h-5 w-5 text-amber-500" />
+                <div>
+                  <h2 className="bulk-mapper-title">Mapeo de aseguradoras</h2>
+                  <p className="bulk-mapper-subtitle">
+                    Estos valores de la columna &ldquo;Empresa&rdquo; del Excel no coinciden exactamente
+                    con ninguna aseguradora del sistema. Mapea cada valor a la aseguradora
+                    correcta para que las filas se validen.
+                  </p>
+                </div>
+                <span className="bulk-mapper-status-warn">
+                  <AlertCircle className="h-4 w-4" />
+                  {unmappedInsuranceValues.length} sin mapear
+                </span>
+              </div>
+
+              <div className="bulk-value-mapper-table-wrap">
+                <table className="bulk-mapper-table">
+                  <thead>
+                    <tr>
+                      <th className="bulk-mapper-th-field">Valor en tu Excel</th>
+                      <th className="bulk-mapper-th-arrow"></th>
+                      <th className="bulk-mapper-th-column">Aseguradora del sistema</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unmappedInsuranceValues.map((excelValue) => (
+                      <tr key={excelValue}>
+                        <td className="bulk-mapper-td-field">
+                          <span className="bulk-mapper-field-label">{excelValue}</span>
+                        </td>
+                        <td className="bulk-mapper-td-arrow">
+                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                        </td>
+                        <td className="bulk-mapper-td-column">
+                          <Select
+                            value={valueMappings[excelValue] || "__none__"}
+                            onValueChange={(val) => handleValueMappingChange(excelValue, val)}
+                          >
+                            <SelectTrigger className="bulk-mapper-select">
+                              <SelectValue placeholder="— Selecciona una aseguradora —" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— Sin mapear —</SelectItem>
+                              {insuranceCompanies?.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Resumen de errores por tipo (si hay inválidas) */}
           {invalidCount > 0 && (
