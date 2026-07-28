@@ -221,6 +221,23 @@ export async function createGestion(
     filtered.is_review_applicable = reviewLevels >= 2;
     filtered.is_approval_applicable = reviewLevels >= 3;
 
+    // Sanitizar UUIDs vacíos: "" → null (Postgres rechaza "" como uuid)
+    const uuidFields = [
+      "auto_email_template_id",
+      "default_issuer_role",
+      "default_reviewer_role",
+      "default_approver_role",
+      "line_business_id",
+    ];
+    for (const field of uuidFields) {
+      if (field in filtered) {
+        const val = filtered[field];
+        if (val === "" || val === undefined) {
+          filtered[field] = null;
+        }
+      }
+    }
+
     const supabase = await createServerClient();
     const { data, error } = await supabase
       .from("action_template")
@@ -301,6 +318,22 @@ export async function updateGestion(
     const reviewLevels = Number(filtered.review_levels ?? current.review_levels ?? 1);
     filtered.is_review_applicable = reviewLevels >= 2;
     filtered.is_approval_applicable = reviewLevels >= 3;
+
+    // Sanitizar UUIDs vacíos: "" → null (Postgres rechaza "" como uuid)
+    const uuidFields = [
+      "auto_email_template_id",
+      "default_issuer_role",
+      "default_reviewer_role",
+      "default_approver_role",
+    ];
+    for (const field of uuidFields) {
+      if (field in filtered) {
+        const val = filtered[field];
+        if (val === "" || val === undefined) {
+          filtered[field] = null;
+        }
+      }
+    }
 
     const supabase = await createServerClient();
     const { data, error } = await supabase
