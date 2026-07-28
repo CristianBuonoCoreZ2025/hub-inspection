@@ -83,9 +83,9 @@ export default function LandingPage() {
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
       {/* ═══ Animated gradient background ═══ */}
       <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute -top-40 -left-40 size-[500px] rounded-full bg-violet-500/10 blur-[120px] animate-pulse animate-pulse-slow" />
-        <div className="absolute top-1/3 -right-40 size-[500px] rounded-full bg-cyan-500/10 blur-[120px] animate-pulse animate-pulse-slower" />
-        <div className="absolute -bottom-40 left-1/3 size-[500px] rounded-full bg-rose-500/10 blur-[120px] animate-pulse animate-pulse-slowest" />
+        <div className="absolute -top-40 -left-40 size-125 rounded-full bg-violet-500/10 blur-[120px] animate-pulse animate-pulse-slow" />
+        <div className="absolute top-1/3 -right-40 size-125 rounded-full bg-cyan-500/10 blur-[120px] animate-pulse animate-pulse-slower" />
+        <div className="absolute -bottom-40 left-1/3 size-125 rounded-full bg-rose-500/10 blur-[120px] animate-pulse animate-pulse-slowest" />
       </div>
 
       {/* ═══ Navbar ═══ */}
@@ -375,7 +375,7 @@ export default function LandingPage() {
                       {/* Name */}
                       <span className="mt-0.5 text-[10px] font-medium text-center">{g.name}</span>
                       {/* Desc */}
-                      <span className="mt-1 text-[9px] text-muted-foreground text-center leading-tight max-w-[120px]">{g.desc}</span>
+                      <span className="mt-1 text-[9px] text-muted-foreground text-center leading-tight max-w-30">{g.desc}</span>
                       {/* Connector — positioned relative to this node's wrapper */}
                       {i < 5 && (
                         <div className="absolute top-7 left-[calc(50%+28px)] h-0.5 w-[calc(100%-56px)]">
