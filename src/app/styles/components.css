@@ -2442,3 +2442,47 @@
     width: 45% !important;
   }
 
+  /* ═══════════════════════════════════════════════════════════════
+   * CLASES UTILITARIAS — Fase 14 (inline styles finales)
+   * ═══════════════════════════════════════════════════════════════ */
+
+  .sticky-panel-80 {
+    position: sticky !important;
+    top: 80px !important;
+    max-height: calc(100vh - 100px) !important;
+  }
+
+  .chat-max-vh-220 {
+    max-height: calc(100vh - 220px) !important;
+  }
+
+  .cn-global-loading-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: auto !important;
+    background: color-mix(in oklab, var(--background) 60%, transparent) !important;
+    backdrop-filter: blur(2px) !important;
+    -webkit-backdrop-filter: blur(2px) !important;
+  }
+
+  .cn-global-loading-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 20px 28px !important;
+    border-radius: var(--radius) !important;
+    background: var(--popover) !important;
+    color: var(--popover-foreground) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .cn-global-loading-text {
+    text-transform: capitalize !important;
+  }
+

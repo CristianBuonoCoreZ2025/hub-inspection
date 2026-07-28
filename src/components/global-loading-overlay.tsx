@@ -47,36 +47,10 @@ export function GlobalLoadingOverlay() {
       aria-live="polite"
       role="status"
       className="cn-global-loading-overlay"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        pointerEvents: "auto",
-        background: "color-mix(in oklab, var(--background) 60%, transparent)",
-        backdropFilter: "blur(2px)",
-        WebkitBackdropFilter: "blur(2px)",
-      }}
     >
-      <div
-        className="cn-global-loading-card"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 10,
-          padding: "20px 28px",
-          borderRadius: "var(--radius)",
-          background: "var(--popover)",
-          color: "var(--popover-foreground)",
-          border: "1px solid var(--border)",
-          boxShadow: "var(--shadow-sm)",
-        }}
-      >
+      <div className="cn-global-loading-card">
         <Loader2Icon className="size-5 animate-spin" />
-        <span className="app-body" style={{ textTransform: "capitalize" }}>
+        <span className="app-body cn-global-loading-text">
           Procesando…
         </span>
       </div>

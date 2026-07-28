@@ -1352,7 +1352,7 @@ function ChatPanel({ session }: { session: LiveSession }) {
 
   return (
     <div className="flex flex-col gap-2 h-full">
-        <div className="flex-1 space-y-2 overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 220px)" }}>
+        <div className="flex-1 space-y-2 overflow-y-auto pr-1 chat-max-vh-220">
           {messages.length === 0 ? (
             <p className="app-body text-slate-500 text-center py-8">
               No hay mensajes aún. Puede escribir un mensaje al inspector.

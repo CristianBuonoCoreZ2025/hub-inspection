@@ -125,6 +125,9 @@ export const claimCreateMinimalSchema = z.object({
   brokerId: z.string().optional().or(z.literal("")),
   inspectorId: z.string().min(1, "Inspector requerido"),
   adjusterId: z.string().optional().or(z.literal("")),
+  auditorId: z.string().optional().or(z.literal("")),
+  dispatcherId: z.string().optional().or(z.literal("")),
+  assistantId: z.string().optional().or(z.literal("")),
   // ── Paso 2: Detalles Incidente ──
   claimCauseId: z.string().optional().or(z.literal("")),
   summary: z.string().optional().or(z.literal("")),

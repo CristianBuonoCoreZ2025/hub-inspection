@@ -82,7 +82,7 @@ export function SpaceClassificationMatrix({
           </DialogDescription>
         </div>
 
-        <div className="modal-body overflow-auto" style={{ maxHeight: "60vh" }}>
+        <div className="modal-body overflow-auto ai-summary-scroll">
           <table className="app-data-table">
             <thead>
               <tr>

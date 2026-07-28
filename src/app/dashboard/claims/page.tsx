@@ -9,7 +9,7 @@ import { getClaims, getClaimsParticipants, createClaimMinimal, checkClaimNumberE
 import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
 import type { GeocodeCandidate } from "@/lib/geo";
 import { getCompanies } from "@/services/companies";
-import { getUsers } from "@/services/users";
+import { getUsersByRoleForCompany } from "@/services/users";
 import {
  getClaimCauses,
  getClaimTypes,
@@ -167,6 +167,9 @@ function ClaimsPageContent() {
  brokerId: "",
  inspectorId: "",
  adjusterId: "",
+ auditorId: "",
+ dispatcherId: "",
+ assistantId: "",
  claimCauseId: "",
  summary: "",
  constructionTypeId: "",
@@ -241,11 +244,6 @@ function ClaimsPageContent() {
  const { data: companies } = useQuery({
  queryKey: ["companies"],
  queryFn: () => getCompanies(),
- });
-
- const { data: users } = useQuery({
- queryKey: ["users"],
- queryFn: () => getUsers(),
  });
 
  const selectedCompanyId = useWatch({ control: form.control, name: "companyId" });
@@ -418,12 +416,39 @@ function ClaimsPageContent() {
  const selectedBeneficiaryRegion = useWatch({ control: form.control, name: "beneficiaryRegion" });
  const selectedBeneficiaryCity = useWatch({ control: form.control, name: "beneficiaryCity" });
 
- const inspectors = users
- ?.filter((u) => u.role === "inspector" && (!selectedCompanyId || u.user_clients?.some(uc => uc.company_id === selectedCompanyId)))
- .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
- const adjusters = users
- ?.filter((u) => u.role === "adjuster" && (!selectedCompanyId || u.user_clients?.some(uc => uc.company_id === selectedCompanyId)))
- .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+ // ── Usuarios por rol via RPC (incluye rol principal, secundario e internal) ──
+ // Antes se filtraba client-side con u.role === "inspector", lo que no incluía
+ // roles secundarios ni usuarios internal. Ahora usamos getUsersByRoleForCompany
+ // que es SECURITY DEFINER y bypassa RLS (migración 273).
+ const { data: inspectorList } = useQuery({
+ queryKey: ["users-by-role", "inspector", selectedCompanyId],
+ queryFn: () => getUsersByRoleForCompany("inspector", selectedCompanyId || undefined),
+ });
+ const { data: adjusterList } = useQuery({
+ queryKey: ["users-by-role", "adjuster", selectedCompanyId],
+ queryFn: () => getUsersByRoleForCompany("adjuster", selectedCompanyId || undefined),
+ });
+ const { data: auditorList } = useQuery({
+ queryKey: ["users-by-role", "auditor", selectedCompanyId],
+ queryFn: () => getUsersByRoleForCompany("auditor", selectedCompanyId || undefined),
+ });
+ const { data: dispatcherList } = useQuery({
+ queryKey: ["users-by-role", "dispatcher", selectedCompanyId],
+ queryFn: () => getUsersByRoleForCompany("dispatcher", selectedCompanyId || undefined),
+ });
+ const { data: assistantList } = useQuery({
+ queryKey: ["users-by-role", "assistant", selectedCompanyId],
+ queryFn: () => getUsersByRoleForCompany("assistant", selectedCompanyId || undefined),
+ });
+
+ const toUserItems = (list?: { id: string; full_name: string; email: string; source?: string }[]) =>
+ (list || []).map((u) => ({ value: u.id, label: u.full_name || u.email || "—", isInternal: u.source === "internal" }));
+
+ const inspectorItems = toUserItems(inspectorList);
+ const adjusterItems = toUserItems(adjusterList);
+ const auditorItems = toUserItems(auditorList);
+ const dispatcherItems = toUserItems(dispatcherList);
+ const assistantItems = toUserItems(assistantList);
 
  const { data: claimCauses } = useQuery({
  queryKey: ["claim-causes"],
@@ -676,6 +701,9 @@ function ClaimsPageContent() {
  : (codeToId["created"] || null),
  inspectorId: values.inspectorId,
  adjusterId: values.adjusterId || null,
+ auditorId: values.auditorId || null,
+ dispatcherId: values.dispatcherId || null,
+ assistantId: values.assistantId || null,
  insuranceCompanyId: values.insuranceCompanyId,
  claimTypeId: values.claimTypeId,
  claimCauseId: values.claimCauseId || null,
@@ -1221,11 +1249,16 @@ function ClaimsPageContent() {
  name="inspectorId"
  placeholder="Seleccionar inspector..."
  className="app-input"
- items={inspectors?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
+ items={inspectorItems}
  >
- {inspectors?.map((u) => (
- <SelectItem key={u.id} value={u.id}>
- {u.full_name || u.email}
+ {inspectorItems.map((item) => (
+ <SelectItem
+ key={item.value}
+ value={item.value}
+ className={item.isInternal ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+ >
+ {item.label}
+ {item.isInternal && <span className="app-body text-amber-600 ml-1">· Interno</span>}
  </SelectItem>
  ))}
  </FormSelect>
@@ -1240,11 +1273,85 @@ function ClaimsPageContent() {
  placeholder="Seleccionar ajustador..."
  className="app-input"
  clearable
- items={adjusters?.map((u) => ({ value: u.id, label: u.full_name ?? u.email ?? "" })) || []}
+ items={adjusterItems}
  >
- {adjusters?.map((u) => (
- <SelectItem key={u.id} value={u.id}>
- {u.full_name || u.email}
+ {adjusterItems.map((item) => (
+ <SelectItem
+ key={item.value}
+ value={item.value}
+ className={item.isInternal ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+ >
+ {item.label}
+ {item.isInternal && <span className="app-body text-amber-600 ml-1">· Interno</span>}
+ </SelectItem>
+ ))}
+ </FormSelect>
+ </div>
+
+ <div className="flex flex-col gap-1">
+ <Label className="app-body text-muted-foreground">Auditor</Label>
+ <FormSelect
+ control={form.control}
+ name="auditorId"
+ placeholder="Seleccionar auditor..."
+ className="app-input"
+ clearable
+ items={auditorItems}
+ >
+ {auditorItems.map((item) => (
+ <SelectItem
+ key={item.value}
+ value={item.value}
+ className={item.isInternal ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+ >
+ {item.label}
+ {item.isInternal && <span className="app-body text-amber-600 ml-1">· Interno</span>}
+ </SelectItem>
+ ))}
+ </FormSelect>
+ </div>
+
+ <div className="flex flex-col gap-1">
+ <Label className="app-body text-muted-foreground">Despachador</Label>
+ <FormSelect
+ control={form.control}
+ name="dispatcherId"
+ placeholder="Seleccionar despachador..."
+ className="app-input"
+ clearable
+ items={dispatcherItems}
+ >
+ {dispatcherItems.map((item) => (
+ <SelectItem
+ key={item.value}
+ value={item.value}
+ className={item.isInternal ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+ >
+ {item.label}
+ {item.isInternal && <span className="app-body text-amber-600 ml-1">· Interno</span>}
+ </SelectItem>
+ ))}
+ </FormSelect>
+ </div>
+
+ <div className="flex flex-col gap-1">
+ <Label className="app-body text-muted-foreground">Asistente</Label>
+ <FormSelect
+ control={form.control}
+ name="assistantId"
+ placeholder="Seleccionar asistente..."
+ className="app-input"
+ clearable
+ items={assistantItems}
+ >
+ {assistantItems.map((item) => (
+ <SelectItem
+ key={item.value}
+ value={item.value}
+ className={item.isInternal ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+ >
+ {item.label}
+ {item.isInternal && <span className="app-body text-amber-600 ml-1">· Interno</span>}
  </SelectItem>
  ))}
  </FormSelect>
@@ -1254,7 +1361,7 @@ function ClaimsPageContent() {
  </div>
  )}
 
- {/* PASO 2: ASEGURADO, CONTRATANTE, BENEFICIARIO */}
+{/* PASO 2: ASEGURADO, CONTRATANTE, BENEFICIARIO */}
  {step === 2 && (
  <div className="space-y-3">
  {/* Asegurado (siempre expandido) */}
