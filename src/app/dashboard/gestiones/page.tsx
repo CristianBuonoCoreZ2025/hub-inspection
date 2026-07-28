@@ -122,7 +122,7 @@ function GestionesContent() {
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="dash-grid" style={{ marginTop: 12 }}>
+      <div className="dash-grid dash-grid-mt">
         <div className="kpi-card dash-col-4" style={{ ["--kpi-glow" as string]: config.glow }}>
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon" style={{ background: `linear-gradient(135deg, ${config.glow.replace("0.08", "0.9")}, ${config.glow.replace("0.08", "1")})` }}>
@@ -133,9 +133,9 @@ function GestionesContent() {
           <div className="kpi-label mt-1">Total gestiones</div>
         </div>
 
-        <div className="kpi-card dash-col-4" style={{ ["--kpi-glow" as string]: "rgba(245, 158, 11, 0.08)" }}>
+        <div className="kpi-card dash-col-4 kpi-glow-amber">
           <div className="flex items-start justify-between mb-3">
-            <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 1))" }}>
+            <div className="kpi-icon kpi-icon-amber">
               <Calendar className="h-4 w-4 text-white" />
             </div>
           </div>
@@ -143,9 +143,9 @@ function GestionesContent() {
           <div className="kpi-label mt-1">Con fecha límite</div>
         </div>
 
-        <div className="kpi-card dash-col-4" style={{ ["--kpi-glow" as string]: "rgba(100, 116, 139, 0.08)" }}>
+        <div className="kpi-card dash-col-4 kpi-glow-slate">
           <div className="flex items-start justify-between mb-3">
-            <div className="kpi-icon" style={{ background: "linear-gradient(135deg, rgba(100, 116, 139, 0.9), rgba(71, 85, 105, 1))" }}>
+            <div className="kpi-icon kpi-icon-slate">
               <Clock className="h-4 w-4 text-white" />
             </div>
           </div>

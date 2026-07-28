@@ -83,9 +83,9 @@ export default function LandingPage() {
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
       {/* ═══ Animated gradient background ═══ */}
       <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute -top-40 -left-40 size-[500px] rounded-full bg-violet-500/10 blur-[120px] animate-pulse" style={{ animationDuration: "8s" }} />
-        <div className="absolute top-1/3 -right-40 size-[500px] rounded-full bg-cyan-500/10 blur-[120px] animate-pulse" style={{ animationDuration: "10s" }} />
-        <div className="absolute -bottom-40 left-1/3 size-[500px] rounded-full bg-rose-500/10 blur-[120px] animate-pulse" style={{ animationDuration: "12s" }} />
+        <div className="absolute -top-40 -left-40 size-[500px] rounded-full bg-violet-500/10 blur-[120px] animate-pulse animate-pulse-slow" />
+        <div className="absolute top-1/3 -right-40 size-[500px] rounded-full bg-cyan-500/10 blur-[120px] animate-pulse animate-pulse-slower" />
+        <div className="absolute -bottom-40 left-1/3 size-[500px] rounded-full bg-rose-500/10 blur-[120px] animate-pulse animate-pulse-slowest" />
       </div>
 
       {/* ═══ Navbar ═══ */}

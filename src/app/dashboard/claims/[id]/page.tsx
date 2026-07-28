@@ -1475,8 +1475,7 @@ export default function ClaimDetailPage() {
  title={light.title}
  >
  <div
- className={`flex items-center justify-center rounded-full ${sty.dot} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
- style={{ width: 16, height: 16 }}
+ className={`flex items-center justify-center rounded-full gestion-light-dot ${sty.dot} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
  />
  <span className={`app-body font-bold leading-none ${sty.label}`}>
  {light.letter}

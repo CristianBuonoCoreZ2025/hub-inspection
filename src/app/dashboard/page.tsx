@@ -325,8 +325,7 @@ export default function DashboardPage() {
           label: "Siniestros Totales",
           value: stats.totalClaims,
           icon: FileText,
-          glow: "rgba(59, 130, 246, 0.1)",
-          iconBg: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+          color: "blue",
           trend: "neutral" as const,
           trendValue: "Total",
         },
@@ -334,8 +333,7 @@ export default function DashboardPage() {
           label: "Casos Abiertos",
           value: stats.openClaims,
           icon: AlertCircle,
-          glow: "rgba(245, 158, 11, 0.1)",
-          iconBg: "linear-gradient(135deg, #f59e0b, #d97706)",
+          color: "amber",
           trend: stats.openClaims > 10 ? "up" as const : "neutral" as const,
           trendValue: stats.openClaims > 10 ? "Alto volumen" : "Normal",
         },
@@ -343,8 +341,7 @@ export default function DashboardPage() {
           label: "Casos Cerrados",
           value: stats.closedClaims,
           icon: CheckCircle,
-          glow: "rgba(16, 185, 129, 0.1)",
-          iconBg: "linear-gradient(135deg, #10b981, #059669)",
+          color: "emerald",
           trend: "up" as const,
           trendValue: `${stats.closeRate.toFixed(0)}% cierre`,
         },
@@ -352,8 +349,7 @@ export default function DashboardPage() {
           label: "Inspecciones Activas",
           value: stats.activeSessions + stats.scheduledSessions,
           icon: ClipboardCheck,
-          glow: "rgba(139, 92, 246, 0.1)",
-          iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+          color: "violet",
           trend: "neutral" as const,
           trendValue: `${stats.scheduledSessions} agendadas`,
         },
@@ -361,8 +357,7 @@ export default function DashboardPage() {
           label: "Empresas",
           value: stats.totalCompanies,
           icon: Building2,
-          glow: "rgba(0, 149, 218, 0.1)",
-          iconBg: "linear-gradient(135deg, #0095DA, #005BBB)",
+          color: "sky",
           trend: "neutral" as const,
           trendValue: "Activas",
         },
@@ -370,8 +365,7 @@ export default function DashboardPage() {
           label: "Usuarios",
           value: stats.totalUsers,
           icon: Users,
-          glow: "rgba(236, 72, 153, 0.1)",
-          iconBg: "linear-gradient(135deg, #ec4899, #be185d)",
+          color: "pink",
           trend: "neutral" as const,
           trendValue: `${stats.activeUsers} activos`,
         },
@@ -381,8 +375,7 @@ export default function DashboardPage() {
           label: "Mis Casos",
           value: stats.totalClaims,
           icon: Briefcase,
-          glow: "rgba(59, 130, 246, 0.1)",
-          iconBg: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+          color: "blue",
           trend: "neutral" as const,
           trendValue: "Asignados",
         },
@@ -390,8 +383,7 @@ export default function DashboardPage() {
           label: "Abiertos",
           value: stats.openClaims,
           icon: AlertCircle,
-          glow: "rgba(245, 158, 11, 0.1)",
-          iconBg: "linear-gradient(135deg, #f59e0b, #d97706)",
+          color: "amber",
           trend: stats.openClaims > 10 ? "up" as const : "neutral" as const,
           trendValue: stats.openClaims > 10 ? "Alto volumen" : "Normal",
         },
@@ -399,8 +391,7 @@ export default function DashboardPage() {
           label: "Cerrados",
           value: stats.closedClaims,
           icon: CheckCircle,
-          glow: "rgba(16, 185, 129, 0.1)",
-          iconBg: "linear-gradient(135deg, #10b981, #059669)",
+          color: "emerald",
           trend: "up" as const,
           trendValue: `${stats.closeRate.toFixed(0)}% cierre`,
         },
@@ -408,8 +399,7 @@ export default function DashboardPage() {
           label: "Inspecciones",
           value: stats.activeSessions + stats.scheduledSessions,
           icon: ClipboardCheck,
-          glow: "rgba(139, 92, 246, 0.1)",
-          iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+          color: "violet",
           trend: "neutral" as const,
           trendValue: `${stats.scheduledSessions} agendadas`,
         },
@@ -458,13 +448,11 @@ export default function DashboardPage() {
           return (
             <div
               key={kpi.label}
-              className="kpi-card"
-              style={{ ["--kpi-glow" as string]: kpi.glow }}
+              className={`kpi-card kpi-glow-${kpi.color}`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div
-                  className="kpi-icon"
-                  style={{ background: kpi.iconBg }}
+                  className={`kpi-icon kpi-icon-${kpi.color}`}
                 >
                   <Icon className="h-4 w-4 text-white" />
                 </div>
@@ -483,7 +471,7 @@ export default function DashboardPage() {
 
       {/* Empty state para usuarios sin casos */}
       {stats.totalClaims === 0 && !isGlobalUser && (
-        <div className="glass-panel" style={{ ["--glass-glow" as string]: "rgba(59, 130, 246, 0.04)" }}>
+        <div className="glass-panel glass-glow-blue-soft">
           <div className="glass-panel-body flex flex-col items-center justify-center py-16">
             <Briefcase className="h-12 w-12 text-muted-foreground/30 mb-4" />
             <p className="text-base font-medium text-muted-foreground">No tienes casos asignados</p>
@@ -509,7 +497,7 @@ export default function DashboardPage() {
 
           {/* Row 1: Donut (estado) + Gauge (tasa cierre) + Area (evolución) */}
           <div className="dash-grid">
-            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(59, 130, 246, 0.06)" }}>
+            <div className="glass-panel dash-col-4 glass-glow-blue">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <FileText className="h-4 w-4" />
@@ -527,7 +515,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(16, 185, 129, 0.06)" }}>
+            <div className="glass-panel dash-col-4 glass-glow-emerald">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <CheckCircle className="h-4 w-4" />
@@ -545,7 +533,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(0, 149, 218, 0.06)" }}>
+            <div className="glass-panel dash-col-4 glass-glow-sky">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Activity className="h-4 w-4" />
@@ -575,7 +563,7 @@ export default function DashboardPage() {
 
           {/* Row 2: Bar (por día) + Tiempo Resolución + En Creación + En Liquidación */}
           <div className="dash-grid">
-            <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(236, 72, 153, 0.06)" }}>
+            <div className="glass-panel dash-col-3 glass-glow-pink">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Calendar className="h-4 w-4" />
@@ -591,7 +579,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(245, 158, 11, 0.06)" }}>
+            <div className="glass-panel dash-col-3 glass-glow-amber">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Timer className="h-4 w-4" />
@@ -627,7 +615,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(59, 130, 246, 0.06)" }}>
+            <div className="glass-panel dash-col-3 glass-glow-blue">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Clock className="h-4 w-4" />
@@ -650,7 +638,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-3" style={{ ["--glass-glow" as string]: "rgba(245, 158, 11, 0.06)" }}>
+            <div className="glass-panel dash-col-3 glass-glow-amber">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <AlertCircle className="h-4 w-4" />
@@ -691,7 +679,7 @@ export default function DashboardPage() {
 
           <div className="dash-grid">
             {/* Gauge: Completitud inspecciones */}
-            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(139, 92, 246, 0.06)" }}>
+            <div className="glass-panel dash-col-4 glass-glow-violet">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <ClipboardCheck className="h-4 w-4" />
@@ -710,7 +698,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Bar: Inspecciones por estado */}
-            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(245, 158, 11, 0.06)" }}>
+            <div className="glass-panel dash-col-4 glass-glow-amber">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Activity className="h-4 w-4" />
@@ -727,7 +715,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Inspecciones OK + desglose agendadas/activas */}
-            <div className="glass-panel dash-col-4" style={{ ["--glass-glow" as string]: "rgba(16, 185, 129, 0.06)" }}>
+            <div className="glass-panel dash-col-4 glass-glow-emerald">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <CheckCircle className="h-4 w-4" />
@@ -776,7 +764,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="dash-grid">
-            <div className="glass-panel dash-col-6" style={{ ["--glass-glow" as string]: "rgba(0, 149, 218, 0.06)" }}>
+            <div className="glass-panel dash-col-6 glass-glow-sky">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Building2 className="h-4 w-4" />
@@ -799,7 +787,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-6" style={{ ["--glass-glow" as string]: "rgba(99, 102, 241, 0.06)" }}>
+            <div className="glass-panel dash-col-6 glass-glow-indigo">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Activity className="h-4 w-4" />
@@ -854,7 +842,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="dash-grid">
-            <div className="glass-panel dash-col-6" style={{ ["--glass-glow" as string]: "rgba(99, 102, 241, 0.06)" }}>
+            <div className="glass-panel dash-col-6 glass-glow-indigo">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Shield className="h-4 w-4" />
@@ -890,7 +878,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-6" style={{ ["--glass-glow" as string]: "rgba(99, 102, 241, 0.06)" }}>
+            <div className="glass-panel dash-col-6 glass-glow-indigo">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Activity className="h-4 w-4" />

@@ -135,7 +135,7 @@ function MisCasosContent() {
       </div>
 
       {/* ── KPI Cards — Liquid Glass ── */}
-      <div className="dash-grid" style={{ marginTop: 12 }}>
+      <div className="dash-grid dash-grid-mt">
         <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: glow }}>
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon">
@@ -146,7 +146,7 @@ function MisCasosContent() {
           <div className="kpi-label mt-1">Total casos</div>
         </div>
 
-        <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(14, 165, 233, 0.08)" }}>
+        <div className="kpi-card dash-col-3 kpi-glow-sky">
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon">
               <FilePen className="h-4 w-4" />
@@ -156,7 +156,7 @@ function MisCasosContent() {
           <div className="kpi-label mt-1">En liquidación</div>
         </div>
 
-        <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(139, 92, 246, 0.08)" }}>
+        <div className="kpi-card dash-col-3 kpi-glow-violet">
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon">
               <FileSearch className="h-4 w-4" />
@@ -166,7 +166,7 @@ function MisCasosContent() {
           <div className="kpi-label mt-1">Con inspecciones activas</div>
         </div>
 
-        <div className="kpi-card dash-col-3" style={{ ["--kpi-glow" as string]: "rgba(16, 185, 129, 0.08)" }}>
+        <div className="kpi-card dash-col-3 kpi-glow-emerald">
           <div className="flex items-start justify-between mb-3">
             <div className="kpi-icon">
               <Navigation className="h-4 w-4" />
