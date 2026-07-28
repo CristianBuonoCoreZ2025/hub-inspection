@@ -219,6 +219,171 @@ export const CLAIM_FIELDS: ClaimField[] = [
     required: false,
     synonyms: ["notas", "observaciones", "notes", "comentarios", "notas adicionales", "observacion", "observación"],
   },
+  // ── Campos del Excel de McLareens (opcionales) ──
+  {
+    key: "status",
+    label: "Estatus",
+    required: false,
+    synonyms: ["estatus", "estado", "status", "state", "situacion", "situación"],
+  },
+  {
+    key: "brokerExecutive",
+    label: "Ejecutivo Cia",
+    required: false,
+    synonyms: ["ejecutivo cia", "ejecutivo compania", "ejecutivo compañía", "ejecutivo", "broker executive", "broker_executive", "ejecutivo aseguradora"],
+  },
+  {
+    key: "businessLine",
+    label: "Línea Negocio",
+    required: false,
+    synonyms: ["linea negocio", "línea negocio", "linea de negocio", "línea de negocio", "business line", "business_line", "ramo negocio", "area negocio"],
+  },
+  {
+    key: "policyItem",
+    label: "Ramo/Item Póliza",
+    required: false,
+    synonyms: ["ramo item poliza", "ramo/item poliza", "ramo item póliza", "ramo/item póliza", "item poliza", "item póliza", "policy item", "policy_item", "ramo", "item"],
+  },
+  {
+    key: "policyStartDate",
+    label: "Fecha Inicio Póliza",
+    required: false,
+    synonyms: ["fecha inicio poliza", "fecha inicio póliza", "inicio poliza", "inicio póliza", "policy start date", "policy_start_date", "vigencia inicio", "f inicio poliza"],
+  },
+  {
+    key: "policyEndDate",
+    label: "Fecha Fin Póliza",
+    required: false,
+    synonyms: ["fecha fin poliza", "fecha fin póliza", "fin poliza", "fin póliza", "policy end date", "policy_end_date", "vigencia fin", "f fin poliza", "vencimiento poliza"],
+  },
+  {
+    key: "currency",
+    label: "Moneda Póliza",
+    required: false,
+    synonyms: ["moneda poliza", "moneda póliza", "moneda", "currency", "currency_id", "moneda asegurada", "tipo moneda"],
+  },
+  {
+    key: "policyAmount",
+    label: "Monto Asegurado Póliza",
+    required: false,
+    synonyms: ["monto asegurado poliza", "monto asegurado póliza", "monto asegurado", "suma asegurada", "policy amount", "policy_amount", "valor asegurado", "monto poliza"],
+  },
+  {
+    key: "policyPremium",
+    label: "Prima Anual",
+    required: false,
+    synonyms: ["prima anual", "prima", "policy premium", "policy_premium", "prima poliza", "prima póliza", "valor prima"],
+  },
+  {
+    key: "internalNumber",
+    label: "No. McLarens One",
+    required: false,
+    synonyms: ["no mclarens one", "n mclarens one", "numero mclarens one", "mclarens one", "internal number", "internal_number", "n° mclarens", "no mclarens"],
+  },
+  {
+    key: "isSpecialClaim",
+    label: "Siniestro Especial",
+    required: false,
+    synonyms: ["siniestro especial", "especial", "is special claim", "is_special_claim", "caso especial", "relevante"],
+  },
+  {
+    key: "destination",
+    label: "Destino",
+    required: false,
+    synonyms: ["destino", "destination", "destination_housing", "destino vivienda", "uso", "tipo destino"],
+  },
+  {
+    key: "damageClassification",
+    label: "Clasif. Daño",
+    required: false,
+    synonyms: ["clasif daño", "clasif dano", "clasificacion daño", "clasificación daño", "damage classification", "damage_classification", "grado daño", "nivel daño", "clasif daños"],
+  },
+  {
+    key: "ownerSameAsInsured",
+    label: "Propietario / Asegurado",
+    required: false,
+    synonyms: ["propietario asegurado", "propietario/asegurado", "owner same as insured", "owner_same_as_insured", "es propietario", "mismo propietario", "propietario"],
+  },
+  // ── Beneficiario (va a claims_participants tipo beneficiary) ──
+  {
+    key: "beneficiaryRut",
+    label: "RUT Beneficiario",
+    required: false,
+    synonyms: ["rut beneficiario", "rut_beneficiario", "documento beneficiario", "rut benef"],
+  },
+  {
+    key: "beneficiaryName",
+    label: "Nombre Beneficiario",
+    required: false,
+    synonyms: ["nombre beneficiario", "beneficiario", "beneficiary name", "beneficiary_name", "nombre benef", "nombre del beneficiario"],
+  },
+  {
+    key: "beneficiaryLastName",
+    label: "Apellido Beneficiario",
+    required: false,
+    synonyms: ["apellido beneficiario", "apellido benef", "beneficiary last name", "beneficiary_last_name", "apellidos beneficiario"],
+  },
+  {
+    key: "beneficiaryEmail",
+    label: "E-mail Beneficiario",
+    required: false,
+    synonyms: ["e-mail beneficiario", "email beneficiario", "correo beneficiario", "beneficiary email", "beneficiary_email", "mail beneficiario"],
+  },
+  {
+    key: "beneficiaryPhone",
+    label: "Teléfono Beneficiario",
+    required: false,
+    synonyms: ["telefono beneficiario", "teléfono beneficiario", "fono beneficiario", "beneficiary phone", "beneficiary_phone", "tel benef"],
+  },
+  {
+    key: "beneficiaryCellPhone",
+    label: "Celular Beneficiario",
+    required: false,
+    synonyms: ["celular beneficiario", "cel benef", "beneficiary cell phone", "beneficiary_cell_phone", "movil beneficiario", "móvil beneficiario"],
+  },
+  {
+    key: "beneficiaryAddress",
+    label: "Dirección Beneficiario",
+    required: false,
+    synonyms: ["direccion beneficiario", "dirección beneficiario", "beneficiary address", "beneficiary_address", "domicilio beneficiario", "dir benef"],
+  },
+  {
+    key: "beneficiaryCountry",
+    label: "País Beneficiario",
+    required: false,
+    synonyms: ["pais beneficiario", "país beneficiario", "beneficiary country", "beneficiary_country", "pais benef"],
+  },
+  {
+    key: "beneficiaryRegion",
+    label: "Región Beneficiario",
+    required: false,
+    synonyms: ["region beneficiario", "región beneficiario", "beneficiary region", "beneficiary_region", "region benef"],
+  },
+  {
+    key: "beneficiaryCity",
+    label: "Ciudad Beneficiario",
+    required: false,
+    synonyms: ["ciudad beneficiario", "beneficiary city", "beneficiary_city", "ciudad benef"],
+  },
+  {
+    key: "beneficiaryCommune",
+    label: "Comuna Beneficiario",
+    required: false,
+    synonyms: ["comuna beneficiario", "beneficiary commune", "beneficiary_commune", "comuna benef"],
+  },
+  // ── Persona Contacto (va a claims_participants tipo contact) ──
+  {
+    key: "contactEmail",
+    label: "E-mail Persona Contacto",
+    required: false,
+    synonyms: ["e-mail persona contacto", "email persona contacto", "correo persona contacto", "contact email", "contact_email", "email contacto", "mail contacto"],
+  },
+  {
+    key: "contactPhone",
+    label: "Teléfono Persona Contacto",
+    required: false,
+    synonyms: ["telefono persona contacto", "teléfono persona contacto", "fono persona contacto", "contact phone", "contact_phone", "telefono contacto", "tel contacto"],
+  },
 ];
 
 export const REQUIRED_FIELDS = CLAIM_FIELDS.filter((f) => f.required);

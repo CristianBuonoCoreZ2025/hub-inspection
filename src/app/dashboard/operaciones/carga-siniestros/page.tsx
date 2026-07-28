@@ -3,7 +3,10 @@
 import { useState, useCallback, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createClaimMinimal } from "@/services/claims";
-import { getInsuranceCompanies, getClaimTypes } from "@/services/catalogs";
+import {
+  getInsuranceCompanies, getClaimTypes, getClaimCauses, getBusinessLines,
+  getCurrencies, getHousingDestinations, getDamageClassifications, getLookupCatalog,
+} from "@/services/catalogs";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2, ArrowRight, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
@@ -56,6 +59,36 @@ export default function CargaSiniestrosPage() {
     queryFn: getClaimTypes,
     staleTime: 5 * 60 * 1000,
   });
+  const { data: claimCauses } = useQuery({
+    queryKey: ["claim-causes"],
+    queryFn: getClaimCauses,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: businessLines } = useQuery({
+    queryKey: ["business-lines"],
+    queryFn: getBusinessLines,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: currencies } = useQuery({
+    queryKey: ["currencies"],
+    queryFn: getCurrencies,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: housingDestinations } = useQuery({
+    queryKey: ["housing-destinations"],
+    queryFn: getHousingDestinations,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: damageClassifications } = useQuery({
+    queryKey: ["damage-classifications"],
+    queryFn: getDamageClassifications,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: claimStatuses } = useQuery({
+    queryKey: ["lookup-catalog", "claim_status"],
+    queryFn: () => getLookupCatalog("claim_status"),
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Normalización simple: lowercase + sin acentos + sin espacios extra
   const normalizeName = (s: string): string => {
@@ -69,17 +102,20 @@ export default function CargaSiniestrosPage() {
   };
 
   // Mapas nombre (normalizado) → UUID
-  const insuranceCompanyMap = useMemo(() => {
+  const buildMap = useCallback((items: { id: string; name: string }[] | undefined) => {
     const map = new Map<string, string>();
-    for (const c of insuranceCompanies ?? []) map.set(normalizeName(c.name), c.id);
+    for (const c of items ?? []) map.set(normalizeName(c.name), c.id);
     return map;
-  }, [insuranceCompanies]);
+  }, []);
 
-  const claimTypeMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const c of claimTypes ?? []) map.set(normalizeName(c.name), c.id);
-    return map;
-  }, [claimTypes]);
+  const insuranceCompanyMap = useMemo(() => buildMap(insuranceCompanies), [buildMap, insuranceCompanies]);
+  const claimTypeMap = useMemo(() => buildMap(claimTypes), [buildMap, claimTypes]);
+  const claimCauseMap = useMemo(() => buildMap(claimCauses), [buildMap, claimCauses]);
+  const businessLineMap = useMemo(() => buildMap(businessLines), [buildMap, businessLines]);
+  const currencyMap = useMemo(() => buildMap(currencies), [buildMap, currencies]);
+  const housingDestinationMap = useMemo(() => buildMap(housingDestinations), [buildMap, housingDestinations]);
+  const damageClassificationMap = useMemo(() => buildMap(damageClassifications), [buildMap, damageClassifications]);
+  const claimStatusMap = useMemo(() => buildMap(claimStatuses), [buildMap, claimStatuses]);
 
   // Tenant (company_id) del usuario logueado — NO se pide en el Excel
   const tenantCompanyId = profile?.company_id || null;
@@ -108,24 +144,47 @@ export default function CargaSiniestrosPage() {
     (value: string) => resolveRefId("claimType", value, claimTypeMap),
     [resolveRefId, claimTypeMap]
   );
+  const resolveClaimCauseId = useCallback(
+    (value: string) => resolveRefId("claimCause", value, claimCauseMap),
+    [resolveRefId, claimCauseMap]
+  );
+  const resolveBusinessLineId = useCallback(
+    (value: string) => resolveRefId("businessLine", value, businessLineMap),
+    [resolveRefId, businessLineMap]
+  );
+  const resolveCurrencyId = useCallback(
+    (value: string) => resolveRefId("currency", value, currencyMap),
+    [resolveRefId, currencyMap]
+  );
+  const resolveDestinationHousingId = useCallback(
+    (value: string) => resolveRefId("destination", value, housingDestinationMap),
+    [resolveRefId, housingDestinationMap]
+  );
+  const resolveDamageClassificationId = useCallback(
+    (value: string) => resolveRefId("damageClassification", value, damageClassificationMap),
+    [resolveRefId, damageClassificationMap]
+  );
+  const resolveStatusId = useCallback(
+    (value: string) => resolveRefId("status", value, claimStatusMap),
+    [resolveRefId, claimStatusMap]
+  );
 
   // ── Configuración de campos de referencia (para UI y validación) ──
   const refFields = useMemo(() => [
-    {
-      fieldKey: "insuranceCompany",
-      label: "Aseguradora",
-      dataKey: "insuranceCompany" as const,
-      resolver: resolveInsuranceCompanyId,
-      options: insuranceCompanies ?? [],
-    },
-    {
-      fieldKey: "claimType",
-      label: "Tipo de Siniestro",
-      dataKey: "claimType" as const,
-      resolver: resolveClaimTypeId,
-      options: claimTypes ?? [],
-    },
-  ], [resolveInsuranceCompanyId, resolveClaimTypeId, insuranceCompanies, claimTypes]);
+    { fieldKey: "insuranceCompany", label: "Aseguradora", dataKey: "insuranceCompany" as const, resolver: resolveInsuranceCompanyId, options: insuranceCompanies ?? [] },
+    { fieldKey: "claimType", label: "Tipo de Siniestro", dataKey: "claimType" as const, resolver: resolveClaimTypeId, options: claimTypes ?? [] },
+    { fieldKey: "claimCause", label: "Causal Siniestro", dataKey: "claimCause" as const, resolver: resolveClaimCauseId, options: claimCauses ?? [] },
+    { fieldKey: "status", label: "Estatus", dataKey: "status" as const, resolver: resolveStatusId, options: claimStatuses ?? [] },
+    { fieldKey: "businessLine", label: "Línea Negocio", dataKey: "businessLine" as const, resolver: resolveBusinessLineId, options: businessLines ?? [] },
+    { fieldKey: "currency", label: "Moneda Póliza", dataKey: "currency" as const, resolver: resolveCurrencyId, options: currencies ?? [] },
+    { fieldKey: "destination", label: "Destino", dataKey: "destination" as const, resolver: resolveDestinationHousingId, options: housingDestinations ?? [] },
+    { fieldKey: "damageClassification", label: "Clasif. Daño", dataKey: "damageClassification" as const, resolver: resolveDamageClassificationId, options: damageClassifications ?? [] },
+  ], [
+    resolveInsuranceCompanyId, resolveClaimTypeId, resolveClaimCauseId, resolveStatusId,
+    resolveBusinessLineId, resolveCurrencyId, resolveDestinationHousingId, resolveDamageClassificationId,
+    insuranceCompanies, claimTypes, claimCauses, claimStatuses, businessLines, currencies,
+    housingDestinations, damageClassifications,
+  ]);
 
   // ── Valores distinct del Excel por campo de referencia ──
   const distinctRefValues = useMemo(() => {
@@ -273,47 +332,103 @@ export default function CargaSiniestrosPage() {
         const row = validRows[i];
         try {
           const d = row.data;
-          const insuranceCompanyId = resolveInsuranceCompanyId(String(d.insuranceCompany || ""));
-          if (!insuranceCompanyId) {
-            throw new Error(`Aseguradora "${d.insuranceCompany}" no encontrada en el catálogo de insurance_companies.`);
+          const str = (v: unknown) => (v ? String(v) : "");
+          const num = (v: unknown) => {
+            const s = str(v).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
+            const n = parseFloat(s);
+            return isNaN(n) ? null : n;
+          };
+          const bool = (v: unknown) => {
+            const s = str(v).toLowerCase().trim();
+            return s === "si" || s === "sí" || s === "true" || s === "1" || s === "yes"
+              ? true
+              : s === "no" || s === "false" || s === "0" || s === ""
+              ? false
+              : null;
+          };
+
+          // Resolver campos de referencia (UUID) — solo si hay valor
+          const insuranceCompanyId = str(d.insuranceCompany) ? resolveInsuranceCompanyId(str(d.insuranceCompany)) : null;
+          if (str(d.insuranceCompany) && !insuranceCompanyId) {
+            throw new Error(`Aseguradora "${d.insuranceCompany}" no encontrada.`);
           }
-          const claimTypeId = d.claimType ? resolveClaimTypeId(String(d.claimType)) : null;
-          if (d.claimType && !claimTypeId) {
-            throw new Error(`Tipo de siniestro "${d.claimType}" no encontrado en el catálogo de claim_types.`);
+          const claimTypeId = str(d.claimType) ? resolveClaimTypeId(str(d.claimType)) : null;
+          if (str(d.claimType) && !claimTypeId) {
+            throw new Error(`Tipo de siniestro "${d.claimType}" no encontrado.`);
           }
+          const claimCauseId = str(d.claimCause) ? resolveClaimCauseId(str(d.claimCause)) : null;
+          const statusId = str(d.status) ? resolveStatusId(str(d.status)) : null;
+          const businessLineId = str(d.businessLine) ? resolveBusinessLineId(str(d.businessLine)) : null;
+          const currencyId = str(d.currency) ? resolveCurrencyId(str(d.currency)) : null;
+          const destinationHousingId = str(d.destination) ? resolveDestinationHousingId(str(d.destination)) : null;
+          const damageClassificationId = str(d.damageClassification) ? resolveDamageClassificationId(str(d.damageClassification)) : null;
 
           await createClaimMinimal(
             {
-              claimNumber: String(d.claimNumber || ""),
-              policyNumber: String(d.policyNumber || ""),
-              claimDate: String(d.claimDate || ""),
-              summary: d.summary ? String(d.summary) : null,
-              reportDate: d.reportDate ? String(d.reportDate) : null,
-              assignmentDate: d.assignmentDate ? String(d.assignmentDate) : null,
+              claimNumber: str(d.claimNumber),
+              policyNumber: str(d.policyNumber),
+              claimDate: str(d.claimDate),
+              summary: str(d.summary) || null,
+              reportDate: str(d.reportDate) || null,
+              assignmentDate: str(d.assignmentDate) || null,
               company_id: tenantCompanyId,
               insuranceCompanyId,
               claimTypeId,
+              claimCauseId,
+              statusId,
+              businessLineId,
+              currencyId,
+              destinationHousingId,
+              damageClassificationId,
+              ownerSameAsInsured: bool(d.ownerSameAsInsured),
+              // Campos nuevos de póliza
+              policyItem: str(d.policyItem) || null,
+              policyStartDate: str(d.policyStartDate) || null,
+              policyEndDate: str(d.policyEndDate) || null,
+              policyAmount: num(d.policyAmount),
+              policyPremium: num(d.policyPremium),
+              internalNumber: str(d.internalNumber) || null,
+              isSpecialClaim: bool(d.isSpecialClaim),
+              brokerExecutive: str(d.brokerExecutive) || null,
             },
             {
-              insuredName: String(d.insuredName || ""),
-              lastName: d.lastName ? String(d.lastName) : null,
-              rut: d.rut ? String(d.rut) : null,
-              insuredEmail: d.insuredEmail ? String(d.insuredEmail) : null,
-              insuredPhone: d.insuredPhone ? String(d.insuredPhone) : null,
-              cellPhone: String(d.cellPhone || d.insuredPhone || ""),
-              insuredAddress: d.address ? String(d.address) : null,
-              insuredCountry: d.country ? String(d.country) : null,
-              insuredRegion: d.region ? String(d.region) : null,
-              insuredCity: d.city ? String(d.city) : null,
-              insuredCommune: d.commune ? String(d.commune) : null,
+              insuredName: str(d.insuredName),
+              lastName: str(d.lastName) || null,
+              rut: str(d.rut) || null,
+              insuredEmail: str(d.insuredEmail) || null,
+              insuredPhone: str(d.insuredPhone) || null,
+              cellPhone: str(d.cellPhone || d.insuredPhone),
+              insuredAddress: str(d.address) || null,
+              insuredCountry: str(d.country) || null,
+              insuredRegion: str(d.region) || null,
+              insuredCity: str(d.city) || null,
+              insuredCommune: str(d.commune) || null,
             },
             {
-              claimAddress: String(d.address || ""),
-              claimCountry: d.country ? String(d.country) : null,
-              claimRegion: d.region ? String(d.region) : null,
-              claimCity: String(d.city || ""),
-              claimCommune: d.commune ? String(d.commune) : null,
-            }
+              claimAddress: str(d.address),
+              claimCountry: str(d.country) || null,
+              claimRegion: str(d.region) || null,
+              claimCity: str(d.city),
+              claimCommune: str(d.commune) || null,
+            },
+            null, // contractor
+            str(d.beneficiaryName) ? {
+              beneficiaryName: str(d.beneficiaryName),
+              beneficiaryLastName: str(d.beneficiaryLastName) || null,
+              beneficiaryRut: str(d.beneficiaryRut) || null,
+              beneficiaryEmail: str(d.beneficiaryEmail) || null,
+              beneficiaryPhone: str(d.beneficiaryPhone) || null,
+              beneficiaryCellPhone: str(d.beneficiaryCellPhone) || null,
+              beneficiaryAddress: str(d.beneficiaryAddress) || null,
+              beneficiaryCountry: str(d.beneficiaryCountry) || null,
+              beneficiaryRegion: str(d.beneficiaryRegion) || null,
+              beneficiaryCity: str(d.beneficiaryCity) || null,
+              beneficiaryCommune: str(d.beneficiaryCommune) || null,
+            } : null,
+            (str(d.contactEmail) || str(d.contactPhone)) ? {
+              contactEmail: str(d.contactEmail) || null,
+              contactPhone: str(d.contactPhone) || null,
+            } : null
           );
           success++;
         } catch (err) {

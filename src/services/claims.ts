@@ -338,6 +338,16 @@ export async function createClaimMinimal(
     ownerSameAsInsured?: boolean | null;
     company_id: string;
     countryId?: string | null;
+    // ── Campos nuevos para importación masiva ──
+    policyItem?: string | null;
+    policyStartDate?: string | null;
+    policyEndDate?: string | null;
+    policyAmount?: number | null;
+    policyPremium?: number | null;
+    currencyId?: string | null;
+    internalNumber?: string | null;
+    isSpecialClaim?: boolean | null;
+    brokerExecutive?: string | null;
   },
   insured: {
     insuredName: string;
@@ -386,6 +396,10 @@ export async function createClaimMinimal(
     beneficiaryRegion?: string | null;
     beneficiaryCity?: string | null;
     beneficiaryCommune?: string | null;
+  } | null,
+  contact?: {
+    contactEmail?: string | null;
+    contactPhone?: string | null;
   } | null
 ) {
   // 1. Crear claim
@@ -422,6 +436,16 @@ export async function createClaimMinimal(
     company_id: input.company_id,
     claim_latitude: claimAddress.claimLatitude ?? null,
     claim_longitude: claimAddress.claimLongitude ?? null,
+    // ── Campos nuevos para importación masiva ──
+    policy_item: input.policyItem || null,
+    policy_start_date: input.policyStartDate || null,
+    policy_end_date: input.policyEndDate || null,
+    policy_amount: input.policyAmount ?? null,
+    policy_premium: input.policyPremium ?? null,
+    currency_id: input.currencyId || null,
+    internal_number: input.internalNumber || null,
+    is_special_claim: input.isSpecialClaim ?? null,
+    broker_executive: input.brokerExecutive || null,
   }, CLAIM_SELECT);
 
   // No se geocodifica automáticamente — las coordenadas deben venir del
@@ -482,6 +506,17 @@ export async function createClaimMinimal(
       region: beneficiary.beneficiaryRegion || null,
       city: beneficiary.beneficiaryCity || null,
       commune: beneficiary.beneficiaryCommune || null,
+    });
+  }
+
+  // 5. Crear participant contact (si existe)
+  if (contact && (contact.contactEmail || contact.contactPhone)) {
+    await createClaimParticipant({
+      claim_id: claim.id,
+      type: "contact",
+      full_name: "Contacto",
+      email: contact.contactEmail || null,
+      phone: contact.contactPhone || null,
     });
   }
 
