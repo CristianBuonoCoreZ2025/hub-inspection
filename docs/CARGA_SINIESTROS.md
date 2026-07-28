@@ -50,7 +50,11 @@ Si necesitas corregir un siniestro mal cargado:
 ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐    │
 │9.Log    │◀─│8.Pasar  │◀─│7.Ajuste │◀─│6.Staging│◀───┘
 │Resumen  │  │Prod.    │  │Fixed    │  │Temporales│
-└─────────┘  └─────────┘  └─────────┘  └─────────┘
+└─────────┘  └─────────┘  └───┬─────┘  └────┬────┘
+                             │              │
+                             └───── ◀ ─────┘
+                              ciclo iterativo
+                              (no empezar de nuevo)
 ```
 
 ### Paso 1 — Seleccionar Excel
@@ -124,7 +128,20 @@ Si necesitas corregir un siniestro mal cargado:
 - **Auto-limpieza:** si el usuario vuelve a subir otro Excel o se va de la página,
   las temporales se borran solas. Solo están vivas mientras el usuario está en la pantalla.
 
-### Paso 7 — Ajuste de fixed values (durante revisión)
+> **CICLO ITERATIVO (6 ↔ 7):** Si el staging muestra muchos errores, el usuario
+> **NO empieza de nuevo**. Hace las correcciones (paso 7: ajustar fixed values,
+> omitir columnas, homologar valores) y **vuelve a cargar a staging** (paso 6)
+> para ver cuántos errores bajaron. Repite hasta que los errores sean cero o
+> aceptables. Solo entonces pasa a producción (paso 8).
+>
+> ```
+> 6.Staging → "500 errores" → 7.Ajuste → 6.Staging → "50 errores" → 7.Ajuste → 6.Staging → "0 errores" → 8.Producción
+> ```
+>
+> El Excel **no se vuelve a subir** — se re-procesa con las correcciones hechas.
+> El staging se reemplaza (cleanStaging + insert nuevo) en cada iteración.
+
+### Paso 7 — Ajuste de fixed values y homologaciones (durante revisión)
 - El usuario revisa el staging y puede decidir:
   - "La columna X viene mala en todos los casos" → omitirla y agregar un fixed value
   - Ej: 3000 casos con comuna mala → omitir columna `commune` del Excel
@@ -132,6 +149,8 @@ Si necesitas corregir un siniestro mal cargado:
   - La columna omitida **no se importa ni se analiza** (no aparece en homologación)
   - El fixed value se aplica a todas las filas
 - También puede agregar nuevos fixed values que no había puesto en el paso 3
+- Puede ajustar homologaciones de valores que no se resolvieron
+- Después de ajustar → **vuelve al paso 6** (re-cargar staging) para ver el resultado
 - **Propósito:** corrección masiva sin homologar 3000 casos uno por uno
 
 ### Paso 8 — Pasar a producción
