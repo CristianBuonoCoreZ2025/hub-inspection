@@ -15,7 +15,8 @@
   /* ═══════════════ TAMAÑOS (inmunes a --radius) ═══════════════ */
   .modal-sm {
     @apply flex max-h-[90vh] w-[min(96vw,520px)] flex-col gap-0
-           overflow-hidden border-0 p-0;
+           border-0 p-0;
+    overflow: hidden !important;
     border-radius: 18px !important;
     background: color-mix(in srgb, var(--card) 85%, transparent) !important;
     backdrop-filter: blur(20px) saturate(140%);
@@ -26,7 +27,8 @@
 
   .modal-md {
     @apply flex max-h-[90vh] w-[min(96vw,560px)] flex-col gap-0
-           overflow-hidden border-0 p-0;
+           border-0 p-0;
+    overflow: hidden !important;
     border-radius: 18px !important;
     background: color-mix(in srgb, var(--card) 85%, transparent) !important;
     backdrop-filter: blur(20px) saturate(140%);
@@ -55,7 +57,8 @@
 
   .modal-lg {
     @apply flex max-h-[90vh] w-[min(98vw,910px)] flex-col gap-0
-           overflow-hidden border-0 p-0;
+           border-0 p-0;
+    overflow: hidden !important;
     border-radius: 18px !important;
     background: color-mix(in srgb, var(--card) 85%, transparent) !important;
     backdrop-filter: blur(20px) saturate(140%);
@@ -71,7 +74,8 @@
   /* modal-xl → 1100px → modales de gestión con pantalla dinámica (más anchos) */
   .modal-xl {
     @apply flex max-h-[92vh] w-[min(98vw,1100px)] flex-col gap-0
-           overflow-hidden border-0 p-0;
+           border-0 p-0;
+    overflow: hidden !important;
     border-radius: 18px !important;
     background: color-mix(in srgb, var(--card) 85%, transparent) !important;
     backdrop-filter: blur(20px) saturate(140%);

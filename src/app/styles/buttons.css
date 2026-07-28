@@ -544,6 +544,26 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════
+   * OVERRIDE MOBILE: btn-icon-sm táctil (44×44px)
+   * El tamaño base (28×28px) es muy pequeño para touch en mobile.
+   * El design system requiere mínimo 44×44px para targets táctiles.
+   * Aplica en ≤639px (mobile + mobile large hasta 430px).
+   * ═══════════════════════════════════════════════════════════════ */
+  @media (max-width: 639px) {
+    .btn-icon-sm,
+    .app-row-actions .btn-icon-sm {
+      width: 44px !important;
+      height: 44px !important;
+      border-radius: 10px !important;
+    }
+    /* Asegurar que el override por especificidad de .app-row-actions no gane */
+    .app-row-actions .btn-icon-sm {
+      width: 44px !important;
+      height: 44px !important;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
    * BTN-ICON-XS — Glass Icon Solid extra pequeño (20px) para sub-filas
    * Mismo estilo glass que btn-icon-sm pero más compacto.
    * ═══════════════════════════════════════════════════════════════ */
