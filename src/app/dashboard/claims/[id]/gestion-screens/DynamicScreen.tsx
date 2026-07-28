@@ -5033,7 +5033,7 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
       // Abrir descarga en nueva pestaña
       window.open(data.document.file_url, "_blank");
       queryClient.invalidateQueries({ queryKey: ["claim-action-document-current", action.id] });
-      toast.success("Documento descargado y bloqueado para edición. Subí la nueva versión cuando termines.");
+      toast.success("Documento descargado y bloqueado para edición. Sube la nueva versión cuando termines.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -5169,7 +5169,7 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
             isUploading={uploadMut.isPending}
             accept=".docx,.xlsx,.pptx"
             title="Subir documento"
-            description="Subí un archivo Word, Excel o PowerPoint. No se pueden subir PDFs directamente."
+            description="Sube un archivo Word, Excel o PowerPoint. No se pueden subir PDFs directamente."
           />
         )}
       </div>
@@ -5367,7 +5367,7 @@ function DocumentTemplatePicker({
         <div className="modal-header">
           <DialogTitle className="modal-title">Plantilla del sistema</DialogTitle>
           <DialogDescription className="modal-subtitle">
-            Elegí una plantilla para generar el documento con los datos del siniestro
+            Elige una plantilla para generar el documento con los datos del siniestro
           </DialogDescription>
         </div>
         <div className="modal-body space-y-2">
@@ -5380,7 +5380,7 @@ function DocumentTemplatePicker({
             <div className="text-center py-8">
               <p className="app-body text-muted-foreground">No hay plantillas configuradas para esta gestión.</p>
               <p className="app-body text-muted-foreground mt-1">
-                Configurá plantillas en Catálogos → Gestiones → Plantillas de Documento
+                Configura plantillas en Catálogos → Gestiones → Plantillas de Documento
               </p>
             </div>
           ) : (
@@ -5460,7 +5460,7 @@ function DocumentUploadDialog({
           >
             <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
             <p className="app-body text-muted-foreground">
-              {selectedFile ? selectedFile.name : "Hacé click para seleccionar un archivo"}
+              {selectedFile ? selectedFile.name : "Haz clic para seleccionar un archivo"}
             </p>
             <p className="app-body text-muted-foreground mt-1">
               Formatos aceptados: {accept}

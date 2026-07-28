@@ -69,7 +69,7 @@ export function FieldInsertor({ activeTarget, onInsert, className }: Props) {
         </div>
         {!activeTarget && (
           <p className="text-[10px] text-amber-600 mt-1.5">
-            Hacé clic en Asunto o Cuerpo para insertar campos.
+            Haz clic en Asunto o Cuerpo para insertar campos.
           </p>
         )}
         {activeTarget && (

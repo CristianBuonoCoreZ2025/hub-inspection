@@ -363,7 +363,7 @@ function MapProvidersSection() {
             disabled={isLoading}
           />
           <p className="mt-1 app-body text-muted-foreground">
-            El token es obligatorio si seleccionás Mapbox. Se guarda cifrado en la base de datos.
+            El token es obligatorio si seleccionas Mapbox. Se guarda cifrado en la base de datos.
           </p>
         </div>
       ) : null}

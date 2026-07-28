@@ -182,8 +182,8 @@ export function EmailTemplatesCard({ actionTemplateId, businessLineId }: Props) 
       </div>
 
       <p className="text-[11px] text-muted-foreground mb-3">
-        Vinculá plantillas de e-mail a esta gestión. Una misma plantilla puede
-        usarse en varias gestiones. Marcá una como <strong>por defecto</strong> para
+        Vincula plantillas de e-mail a esta gestión. Una misma plantilla puede
+        usarse en varias gestiones. Marca una como <strong>por defecto</strong> para
         el auto-envío.
       </p>
 

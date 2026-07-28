@@ -31,7 +31,7 @@ const features = [
   {
     icon: FileText,
     title: "Recepción Total de Antecedentes",
-    desc: "Subí el último documento y la RTA se auto-emite. Eliminá uno y se reversa automáticamente. Cero fricción.",
+    desc: "Sube el último documento y la RTA se auto-emite. Elimina uno y se reversa automáticamente. Cero fricción.",
     gradient: "from-violet-500/20 to-purple-500/20",
     iconColor: "text-violet-500",
   },
