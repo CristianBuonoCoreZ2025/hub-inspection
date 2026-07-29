@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -1627,9 +1627,18 @@ export default function ClaimDetailPage() {
  {chainFilteredTemplates.map((tpl) => {
  // Indicador de especificidad del match
  const tags: string[] = [];
- if (tpl.line_business_id) tags.push("Línea");
- if (tpl.event_id) tags.push("Evento");
- if (tpl.insurance_company_id) tags.push("Cía");
+ if (tpl.line_business_id) {
+ const lineName = businessLinesCatalog?.find(b => b.id === tpl.line_business_id)?.name;
+ tags.push(lineName || "Línea");
+ }
+ if (tpl.event_id) {
+ const eventName = eventsCatalog?.find(e => e.id === tpl.event_id)?.name;
+ tags.push(eventName || "Evento");
+ }
+ if (tpl.insurance_company_id) {
+ const ciaName = insuranceCompaniesCatalog?.find(c => c.id === tpl.insurance_company_id)?.name;
+ tags.push(ciaName || "Cía");
+ }
  const matchLabel = tags.length > 0 ? ` · ${tags.join("+")}` : " · General";
  return (
  <SelectItem key={tpl.id} value={tpl.id}>

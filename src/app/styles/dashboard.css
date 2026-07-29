@@ -972,6 +972,20 @@
     background: color-mix(in srgb, var(--primary) 8%, transparent);
   }
 
+  /* Links grandes — mobile simplificado (4 íconos app-like) */
+  .mobile-nav-link-lg {
+    padding: 14px 16px !important;
+    gap: 14px !important;
+    min-height: 52px;
+    border-radius: 14px !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-nav-section-main {
+    padding-top: 4px;
+  }
+
   /* Grupos acordeón */
   .mobile-nav-group {
     display: flex;
@@ -2030,12 +2044,20 @@
     );
   }
 
-  /* Select de inspectores — ancho fijo + fuente 11px (trigger + dropdown) */
+  /* Select de inspectores — responsive: full width en mobile, 260px en desktop */
   .agenda-toolbar [data-slot="select-trigger"] {
-    width: 260px !important;
-    min-width: 260px !important;
-    max-width: 260px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     font-size: 11px !important;
+  }
+
+  @media (min-width: 640px) {
+    .agenda-toolbar [data-slot="select-trigger"] {
+      width: 260px !important;
+      min-width: 260px !important;
+      max-width: 260px !important;
+    }
   }
   .agenda-inspector-dropdown,
   .agenda-inspector-dropdown [data-slot="select-item"],
@@ -2066,7 +2088,7 @@
       0 4px 12px rgba(0, 0, 0, 0.04),
       0 1px 0 0.5px rgba(255, 255, 255, 0.4) inset,
       0 -1px 0 0.5px rgba(0, 0, 0, 0.02) inset !important;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .dark .agenda-calendar {

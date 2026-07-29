@@ -18,7 +18,7 @@ import {
 } from "@/components/layout/nav-data";
 import { getNavMenuConfig, type NavMenuItem } from "@/services/nav-menu-config";
 
-export function useNavLinks() {
+export function useNavLinks(isMobile = false) {
   const { permissions } = useAuth();
 
   // Cargar configuración del menú desde la BD.
@@ -49,6 +49,7 @@ export function useNavLinks() {
 
   // ── Filtrar por permisos ──
   const isLinkVisible = (link: NavLink): boolean => {
+    if (isMobile && link.hideOnMobile) return false;
     const section = link.section;
     if (!section) {
       if (link.href.startsWith("/dashboard/catalogos/inspeccion")) return canView("catalogos_inspeccion");
@@ -62,7 +63,10 @@ export function useNavLinks() {
     return canView(section);
   };
 
-  const isGroupVisible = (section: string): boolean => canView(section);
+  const isGroupVisible = (section: string, hideOnMobile?: boolean): boolean => {
+    if (isMobile && hideOnMobile) return false;
+    return canView(section);
+  };
 
   // ── Construir resultado ──
   const visibleMainLinks: NavLink[] = [];
@@ -83,7 +87,7 @@ export function useNavLinks() {
     if (usedKeys.has(`group:${item.key}`)) return null;
     usedKeys.add(`group:${item.key}`);
     const group = groupBySection.get(item.key);
-    if (!group || !isGroupVisible(group.section)) return null;
+    if (!group || !isGroupVisible(group.section, group.hideOnMobile)) return null;
 
     const title = item.label?.trim() || group.title;
 
@@ -143,7 +147,7 @@ export function useNavLinks() {
       }
     }
     for (const g of navGroups) {
-      if (!isGroupVisible(g.section)) continue;
+      if (!isGroupVisible(g.section, g.hideOnMobile)) continue;
       // Links de este grupo que no fueron procesados por la config
       const missingLinks = g.links.filter(l => !usedKeys.has(`link:${l.href}`) && isLinkVisible(l));
       if (missingLinks.length === 0) continue;
@@ -188,7 +192,7 @@ export function useNavLinks() {
       if (isLinkVisible(l)) visibleMainLinks.push(l);
     }
     for (const g of navGroups) {
-      if (!isGroupVisible(g.section)) continue;
+      if (!isGroupVisible(g.section, g.hideOnMobile)) continue;
       const childLinks = g.links.filter(isLinkVisible);
       if (childLinks.length > 0) {
         const children: VisibleNavChild[] = childLinks.map(link => ({ kind: "link", link }));
