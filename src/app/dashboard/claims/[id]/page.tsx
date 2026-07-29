@@ -1312,7 +1312,9 @@ export default function ClaimDetailPage() {
  }
  }}
  >
- <td className="pl-2 pr-1">
+ <td className="whitespace-nowrap pr-1">
+ <div className="flex items-center gap-1">
+ <GestionCodeCell g={g} />
  <span
  className={`app-origin-badge app-origin-${
  g.origin === "W" ? "w" : g.origin === "A" ? "a" : g.origin === "M" ? "m" : "default"
@@ -1321,9 +1323,7 @@ export default function ClaimDetailPage() {
  >
  {g.origin}
  </span>
- </td>
- <td className="whitespace-nowrap">
- <GestionCodeCell g={g} />
+ </div>
  </td>
  <td className="font-medium app-body">
  <div className="flex items-center gap-2">
