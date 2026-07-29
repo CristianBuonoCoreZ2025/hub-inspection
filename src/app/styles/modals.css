@@ -666,10 +666,16 @@
   gap: 4px !important;
 }
 .gestion-code-tooltip-legend-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 10px !important;
+  padding: 0 !important;
   font-size: 8px !important;
   font-weight: 700 !important;
   font-style: normal !important;
   color: var(--muted-foreground) !important;
   flex-shrink: 0 !important;
+  margin-top: 1px !important;
 }
 
