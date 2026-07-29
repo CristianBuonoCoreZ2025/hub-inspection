@@ -172,10 +172,10 @@ export async function POST(request: NextRequest) {
       logger.error("analyze-document: error guardando análisis", new Error(updateErr.message), {
         component: "ai-analyze",
         action: "update",
-        metadata: { table, id },
+        metadata: { table, id, code: updateErr.code, details: updateErr.details, hint: updateErr.hint },
       });
       return NextResponse.json(
-        { error: "No se pudo guardar el análisis en la BD" },
+        { error: `No se pudo guardar el análisis en la BD: ${updateErr.code} — ${updateErr.message}${updateErr.hint ? ` (hint: ${updateErr.hint})` : ""}` },
         { status: 500 }
       );
     }

@@ -73,6 +73,9 @@ export async function GET() {
     resolvedReferer: refererValue,
     nodeEnv: process.env.NODE_ENV,
     vercelEnv: process.env.VERCEL_ENV || null,
+    // Supabase (necesario para que analyze-document guarde el resultado)
+    NEXT_PUBLIC_SUPABASE_URL: { present: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) },
+    SUPABASE_SERVICE_ROLE_KEY: { present: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY) },
   };
 
   // Si no hay API key, no tiene sentido hacer ping — reportar y salir.
