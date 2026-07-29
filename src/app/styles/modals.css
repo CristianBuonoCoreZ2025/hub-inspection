@@ -654,7 +654,7 @@
   font-size: 10px !important;
 }
 .gestion-code-tooltip-legend {
-  font-size: 7px !important;
+  font-size: 8px !important;
   font-style: italic !important;
   color: var(--muted-foreground) !important;
   line-height: 1.35 !important;
@@ -669,13 +669,13 @@
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  min-width: 10px !important;
-  height: 10px !important;
-  padding: 0 2px !important;
+  min-width: 12px !important;
+  height: 12px !important;
+  padding: 0 3px !important;
   border: 1px solid var(--border) !important;
   border-radius: 2px !important;
-  font-size: 7px !important;
-  font-weight: 700 !important;
+  font-size: 8px !important;
+  font-weight: 400 !important;
   font-style: italic !important;
   text-transform: lowercase !important;
   color: var(--muted-foreground) !important;
