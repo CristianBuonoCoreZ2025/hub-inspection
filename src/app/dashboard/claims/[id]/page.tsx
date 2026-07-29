@@ -2088,6 +2088,7 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  onOpenChange={(open) => { if (!open) setHoveredLight(null); }}
  >
  <PopoverTrigger
+ nativeButton={false}
  render={
  <div
  className="flex flex-col items-center gap-0.5"
@@ -2379,6 +2380,7 @@ function GestionCodeCell({ g }: { g: {
  <div className="flex items-center gap-1.5">
  <Popover open={open} onOpenChange={setOpen}>
  <PopoverTrigger
+ nativeButton={false}
  render={
  <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
  {hexColor ? (
