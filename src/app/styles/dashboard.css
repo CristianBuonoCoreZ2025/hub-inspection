@@ -2280,7 +2280,7 @@
   .gestion-light-dot { width: 16px !important; height: 16px !important; }
   .gestion-light-pill {
     font-family: var(--font-dm-sans), system-ui, sans-serif !important;
-    font-size: 9px !important;
+    font-size: 10px !important;
     font-weight: 500 !important;
     line-height: 1 !important;
   }
