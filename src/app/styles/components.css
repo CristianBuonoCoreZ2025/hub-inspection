@@ -1649,9 +1649,9 @@
   .app-gestion-code {
     @apply relative inline-flex items-center justify-center gap-1 rounded-md px-2 backdrop-blur-sm border transition-all font-bold leading-none;
     font-family: var(--font-sora), system-ui, sans-serif;
-    font-size: 10px;
-    min-width: 64px;
-    height: 20px;
+    font-size: 8px;
+    min-width: 56px;
+    height: 17px;
     /* Fondo y borde usan la variable --gestion-color con opacidad baja */
     background-color: color-mix(in srgb, var(--gestion-color, transparent) 6%, transparent);
     border-color: color-mix(in srgb, var(--gestion-color, transparent) 18%, transparent);
