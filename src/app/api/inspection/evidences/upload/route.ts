@@ -224,12 +224,12 @@ export async function POST(request: NextRequest) {
           );
 
           // Actualizar url + metadata.fileSize con el tamaño optimizado real
+          // NOTA: inspection_evidences no tiene columna updated_at (solo created_at).
           await supabase
             .from("inspection_evidences")
             .update({
               url: optimized.url,
               metadata: { ...metadata, fileSize: optimized.optimizedSize, originalFileSize: file.size },
-              updated_at: new Date().toISOString(),
             })
             .eq("id", evidenceId);
 
@@ -257,7 +257,6 @@ export async function POST(request: NextRequest) {
                 .from("inspection_evidences")
                 .update({
                   metadata: { ...metadata, pdfSummary: pdfSummary.summary, pdfPageCount: pdfSummary.pageCount },
-                  updated_at: new Date().toISOString(),
                 })
                 .eq("id", evidenceId);
             }
@@ -288,7 +287,6 @@ export async function POST(request: NextRequest) {
                 ai_summary: ai.summary,
                 ai_model: ai.model,
                 ai_status: aiStatus,
-                updated_at: new Date().toISOString(),
               })
               .eq("id", evidenceId);
 
@@ -301,7 +299,7 @@ export async function POST(request: NextRequest) {
             aiStatus = "skipped";
             await supabase
               .from("inspection_evidences")
-              .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
+              .update({ ai_status: aiStatus })
               .eq("id", evidenceId);
             logger.warn("IA: no se pudo generar resumen de evidencia", {
               component: "inspection-evidences-upload",
@@ -312,7 +310,7 @@ export async function POST(request: NextRequest) {
         } catch (aiErr) {
           await supabase
             .from("inspection_evidences")
-            .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
+            .update({ ai_status: aiStatus })
             .eq("id", evidenceId);
           logger.warn("IA: error generando resumen de evidencia (no crítico)", {
             component: "inspection-evidences-upload",

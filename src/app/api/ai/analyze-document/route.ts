@@ -120,6 +120,9 @@ export async function POST(request: NextRequest) {
     let aiSummary: string | null = null;
     let aiModel: string | null = null;
     const hasAiStatusCol = table !== "policy_documents";
+    // inspection_evidences no tiene columna updated_at (solo created_at).
+    // Incluirla en el update causa PGRST204 en PostgREST.
+    const hasUpdatedAtCol = table !== "inspection_evidences";
 
     try {
       const ai = await summarizeFile(buffer, mimeType, record.document_name || record.name || record.original_filename);
@@ -133,7 +136,8 @@ export async function POST(request: NextRequest) {
           action: "ai.summary.skipped",
           metadata: { table, id, mimeType, reason: ai.reason },
         });
-        const updatesSkipped: Record<string, unknown> = { updated_at: new Date().toISOString() };
+        const updatesSkipped: Record<string, unknown> = {};
+        if (hasUpdatedAtCol) updatesSkipped.updated_at = new Date().toISOString();
         if (hasAiStatusCol) updatesSkipped.ai_status = "skipped";
         await supabase.from(table).update(updatesSkipped).eq("id", id);
         return NextResponse.json(
@@ -147,7 +151,8 @@ export async function POST(request: NextRequest) {
         action: "ai.summary",
         metadata: { table, id, error: String(aiErr) },
       });
-      const updatesError: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      const updatesError: Record<string, unknown> = {};
+      if (hasUpdatedAtCol) updatesError.updated_at = new Date().toISOString();
       if (hasAiStatusCol) updatesError.ai_status = "error";
       await supabase.from(table).update(updatesError).eq("id", id);
       return NextResponse.json(
@@ -160,8 +165,8 @@ export async function POST(request: NextRequest) {
     const updatesDone: Record<string, unknown> = {
       ai_summary: aiSummary,
       ai_model: aiModel,
-      updated_at: new Date().toISOString(),
     };
+    if (hasUpdatedAtCol) updatesDone.updated_at = new Date().toISOString();
     if (hasAiStatusCol) updatesDone.ai_status = "done";
     const { error: updateErr } = await supabase
       .from(table)
