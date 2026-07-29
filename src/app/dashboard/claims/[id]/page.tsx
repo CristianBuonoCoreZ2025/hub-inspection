@@ -1280,8 +1280,7 @@ export default function ClaimDetailPage() {
  <table className="app-data-table">
  <thead>
  <tr>
- <th className="w-6 pl-2" title="Origen: W=Workflow, M=Manual, A=Automática"></th>
- {renderSortHeader("codigo", "Código", "w-[90px]")}
+ {renderSortHeader("codigo", "Código", "w-[110px]")}
  {renderSortHeader("nombre", "Nombre Gestión")}
  {renderSortHeader("fecha", "Fecha Ejecución")}
  {renderSortHeader("dias", "Días Restantes")}
