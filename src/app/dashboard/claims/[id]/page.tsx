@@ -714,7 +714,7 @@ export default function ClaimDetailPage() {
  <Button
  variant="outline"
  size="sm"
- className="pg-btn-platinum"
+ className="pg-btn-platinum hidden sm:inline-flex"
  onClick={() => setIsEditing(true)}
  >
  Editar
@@ -2097,7 +2097,7 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  <div
  className={`flex items-center justify-center rounded-full gestion-light-dot ${sty.dot} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
  />
- <span className={`app-body font-bold leading-none gestion-light-letter ${sty.label}`}>
+ <span className={`app-body leading-none gestion-light-letter ${sty.label}`}>
  {light.letter}
  </span>
  </div>
