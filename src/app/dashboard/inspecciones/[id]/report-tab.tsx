@@ -272,7 +272,7 @@ export default function ReportTab({
           <title>Acta de Inspección - ${claimLiquidationNumber || claimNumber || ""}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px 40px; max-width: 800px; margin: 0 auto; color: #222; font-size: 11px; line-height: 1.6; }
+            body { font-family: 'DM Sans', system-ui, sans-serif; padding: 30px 40px; max-width: 800px; margin: 0 auto; color: #222; font-size: 11px; line-height: 1.6; }
             .report-acta-header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 3px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 16px; }
             .report-acta-header .report-logo { max-height: 50px; max-width: 180px; }
             .report-acta-header .report-logo-text { font-size: 14px; font-weight: 700; color: #1a1a1a; }

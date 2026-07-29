@@ -222,7 +222,7 @@
   background: var(--muted);
   padding: 0.6em 0.8em;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
   font-size: 0.85em;
   overflow-x: auto;
 }

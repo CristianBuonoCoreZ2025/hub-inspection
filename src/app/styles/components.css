@@ -2184,7 +2184,7 @@
 /* Página A4-like del reporte */
 .report-pdf-page {
   @apply shadow-lg mx-auto relative;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
   max-width: 800px;
   padding: 30px 40px;
   background-color: #ffffff;
