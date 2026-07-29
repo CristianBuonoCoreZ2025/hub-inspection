@@ -8,7 +8,6 @@ import {
 } from "@/lib/storage/inspection-upload";
 import { extractGpsFromExif } from "@/lib/storage/exif";
 import { summarizePdf } from "@/lib/storage/pdf-summary";
-import { summarizeFile } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logger";
 
 /**
@@ -203,10 +202,11 @@ export async function POST(request: NextRequest) {
     // ── PASO 5: Devolver éxito al cliente ──
     const response = NextResponse.json({ evidence });
 
-    // ── PASO 6-9: Procesamiento en background (optimización + IA) ──
-    // after() ejecuta después de que la respuesta se envía al cliente.
-    // Si falla, no afecta al usuario — la evidencia ya está subida y registrada.
-    // La IA es un EXTRA: se dispara en segundo plano para no bloquear nuevas subidas.
+    // ── PASO 6: Optimización en background (after) ──
+    // La optimización con sharp es rápida (~1-2s) y local, after() la maneja bien.
+    // La IA NO va aquí — after() en Vercel serverless no es confiable para tareas
+    // largas (30-60s de IA). La IA se dispara desde el frontend vía
+    // /api/ai/process-pending después de que todas las subidas terminan.
     after(async () => {
       const evidenceId = evidence.id;
       // Las grabaciones de sesión no se optimizan ni analizan con IA
@@ -268,58 +268,10 @@ export async function POST(request: NextRequest) {
             });
           }
         }
-
-        // ── IA: resumen/descripción automático (EXTRA — no bloquea) ──
-        // Se ejecuta después de la optimización, dentro de after().
-        // Si falla, no afecta al usuario: la evidencia ya está subida y visible.
-        // El usuario puede reintentar con el botón Brain en la tarjeta.
-        // NOTA: NO usar setImmediate aquí — en Vercel serverless, setImmediate
-        // dentro de after() difiere la IA tanto que la función se congela/mata
-        // antes de que el callback arranque. Llamar directamente.
-        let aiStatus: "done" | "error" | "skipped" = "error";
-        try {
-          const ai = await summarizeFile(buffer, mimeType, file.name);
-          if (ai.ok) {
-            aiStatus = "done";
-            await supabase
-              .from("inspection_evidences")
-              .update({
-                ai_summary: ai.summary,
-                ai_model: ai.model,
-                ai_status: aiStatus,
-              })
-              .eq("id", evidenceId);
-
-            logger.info("IA: resumen de evidencia generado y guardado", {
-              component: "inspection-evidences-upload",
-              action: "ai.summary.success",
-              metadata: { evidenceId, model: ai.model, type: dbType },
-            });
-          } else {
-            aiStatus = "skipped";
-            await supabase
-              .from("inspection_evidences")
-              .update({ ai_status: aiStatus })
-              .eq("id", evidenceId);
-            logger.warn("IA: no se pudo generar resumen de evidencia", {
-              component: "inspection-evidences-upload",
-              action: "ai.summary.skipped",
-              metadata: { evidenceId, reason: ai.reason, mimeType },
-            });
-          }
-        } catch (aiErr) {
-          await supabase
-            .from("inspection_evidences")
-            .update({ ai_status: aiStatus })
-            .eq("id", evidenceId);
-          logger.warn("IA: error generando resumen de evidencia (no crítico)", {
-            component: "inspection-evidences-upload",
-            action: "ai.summary.error",
-            metadata: {
-              error: aiErr instanceof Error ? aiErr.message : String(aiErr),
-            },
-          });
-        }
+        // NOTA: La IA NO se ejecuta aquí. El frontend dispara
+        // /api/ai/process-pending después de que todas las subidas terminan.
+        // Ese endpoint procesa las evidencias pending una por una, secuencialmente,
+        // con maxDuration=300 (5 min) — suficiente para varias imágenes.
       } catch (bgErr) {
         logger.error("Background processing de evidencia falló", bgErr as Error, {
           component: "inspection-evidences-upload",

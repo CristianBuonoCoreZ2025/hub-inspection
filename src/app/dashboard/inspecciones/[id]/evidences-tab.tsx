@@ -150,17 +150,17 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     // quedar pegado infinitamente si el after() de Next.js falla.
     refetchInterval: (query) => {
       const evs = query.state.data;
-      if (!evs || !evs.some((e) => e.ai_status === "pending")) return false;
-      // Calcular cuánto tiempo llevan las pending
+      if (!evs || !evs.some((e) => e.ai_status === "pending" || e.ai_status === "processing")) return false;
+      // Calcular cuánto tiempo llevan las pending/processing
       const oldestPending = evs
-        .filter((e) => e.ai_status === "pending")
+        .filter((e) => e.ai_status === "pending" || e.ai_status === "processing")
         .reduce((oldest, e) => {
           const t = new Date(e.created_at).getTime();
           return t < oldest ? t : oldest;
         }, Date.now());
       const elapsedMs = Date.now() - oldestPending;
-      // Después de 2 minutos, dejar de pollar (el usuario puede reintentar manualmente)
-      if (elapsedMs > 120_000) return false;
+      // Después de 5 minutos, dejar de pollar (el usuario puede reintentar manualmente)
+      if (elapsedMs > 300_000) return false;
       return 5000;
     },
   });
@@ -304,13 +304,30 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   };
 
   // Cerrar modal automáticamente 1.5s después de que todas las subidas terminen
+  // y disparar el procesamiento de IA en background (endpoint dedicado, no after())
   useEffect(() => {
     if (uploadQueue.length === 0) return;
     const allDone = uploadQueue.every((it) => it.status === "done" || it.status === "error");
     if (!allDone) return;
+
+    // Disparar /api/ai/process-pending para que analice las evidencias
+    // recién subidas (ai_status='pending') una por una, secuencialmente.
+    // No esperamos la respuesta — es fire-and-forget. El polling del
+    // useQuery refrescará las evidencias cuando el ai_status cambie.
+    const hadSuccessfulUploads = uploadQueue.some((it) => it.status === "done");
+    if (hadSuccessfulUploads) {
+      fetch("/api/ai/process-pending", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      }).catch(() => {
+        // Silenciar — el usuario puede reintentar con el botón Brain
+      });
+    }
+
     const id = setTimeout(() => setUploadQueue([]), 1500);
     return () => clearTimeout(id);
-  }, [uploadQueue]);
+  }, [uploadQueue, sessionId]);
 
   const photos = evidences?.filter((e) => e.type === "photo") || [];
   const videos = evidences?.filter((e) => e.type === "video") || [];
@@ -611,11 +628,11 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummar
   // No se usa la ubicación del dispositivo para evidencias.
   const hasGps = evidence.exif_lat != null && evidence.exif_lng != null;
 
-  // IA atascada: si está pending por más de 2 min, mostrar mensaje de retry
+  // IA atascada: si está pending/processing por más de 5 min, mostrar mensaje de retry
   useEffect(() => {
-    if (evidence.ai_status !== "pending") return;
+    if (evidence.ai_status !== "pending" && evidence.ai_status !== "processing") return;
     const elapsedMs = Date.now() - new Date(evidence.created_at).getTime();
-    const remaining = Math.max(0, 120_000 - elapsedMs);
+    const remaining = Math.max(0, 300_000 - elapsedMs);
     const timer = setTimeout(() => setIsAiStuck(true), remaining);
     return () => clearTimeout(timer);
   }, [evidence.ai_status, evidence.created_at]);
@@ -776,7 +793,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummar
         </div>
 
         {/* Resumen IA */}
-        {evidence.ai_status === "pending" ? (
+        {evidence.ai_status === "pending" || evidence.ai_status === "processing" ? (
           isAiStuck ? (
             <div className="mt-0.5 flex items-center gap-1 text-[9px] text-red-500 dark:text-red-400 pt-1">
               <span className="font-medium">IA timeout — usa el botón Brain para reintentar</span>
