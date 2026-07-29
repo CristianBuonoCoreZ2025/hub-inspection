@@ -57,6 +57,7 @@ import { ToggleChip } from "@/components/ui/toggle-chip";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
  Dialog,
  DialogContent,
@@ -1186,6 +1187,8 @@ export default function ClaimDetailPage() {
  expectedDate: a.expected_date,
  createdOn: a.created_on,
  daysToIssue: a.action_template?.days_to_issue ?? 0,
+ daysToReview: a.action_template?.days_to_review ?? 0,
+ daysToApprove: a.action_template?.days_to_approve ?? 0,
  hasIssue: a.action_feature?.has_issue ?? false,
  hasReview: a.action_feature?.has_review ?? false,
  hasApprove: a.action_feature?.has_approve ?? false,
@@ -1292,115 +1295,7 @@ export default function ClaimDetailPage() {
  : null;
 
  // ── Semáforo: siempre 3 espacios (E, R, A) ──
- // state: "done" | "active" | "alert" | "late" | "rejected" | "pending" | "none"
- const fmtDate = (d: string | null) => d ? new Date(d).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : null;
-
- type LightState = "done" | "active" | "alert" | "late" | "rejected" | "pending" | "none";
-
- const lightStyles: Record<LightState, { dot: string; label: string }> = {
- done: { dot: "bg-emerald-500", label: "text-emerald-600 dark:text-emerald-400" },
- active: { dot: "bg-amber-400", label: "text-amber-600 dark:text-amber-400" },
- alert: { dot: "bg-amber-400", label: "text-amber-600 dark:text-amber-400" },
- late: { dot: "bg-red-500", label: "text-red-600 dark:text-red-400" },
- rejected: { dot: "bg-rose-500", label: "text-rose-600 dark:text-rose-400" },
- pending: { dot: "bg-slate-300 dark:bg-slate-600", label: "text-muted-foreground" },
- none: { dot: "bg-transparent border border-dashed border-slate-200 dark:border-slate-700", label: "text-muted-foreground/40" },
- };
-
- let lights: { letter: string; state: LightState; title: string }[];
-
- if (!g.esAccion) {
- // Inspecciones: una sola luz en el primer espacio
- const st = g.estado;
- const inspState: LightState =
- st === "rejected" || st === "cancelled" ? "rejected" :
- st === "completed" || st === "signed" ? "done" :
- st === "active" || st === "scheduled" ? "active" : "pending";
- const inspTitle =
- st === "rejected" || st === "cancelled" ? "Rechazada" :
- st === "completed" || st === "signed" ? "Completada" :
- st === "active" || st === "scheduled" ? "En curso" : "Pendiente";
- lights = [
- { letter: "I", state: inspState, title: inspTitle },
- { letter: "R", state: "none", title: "" },
- { letter: "A", state: "none", title: "" },
- ];
- } else {
- // Gestiones: calcular estado de cada nivel
- // Emisión (E)
- let issueState: LightState = "none";
- let issueTitle = "";
- if (g.hasIssue) {
- if (g.estado === "rejected") {
- issueState = "rejected";
- issueTitle = "Emisión rechazada";
- } else if (g.issuedOn && g.issuedBy) {
- issueState = "done";
- issueTitle = `Emisión ✓\nPor: ${g.issuedBy}${g.issuedByEmail ? ` (${g.issuedByEmail})` : ""}\nFecha: ${fmtDate(g.issuedOn)}`;
- } else if (g.estado === "todo") {
- const createdDate = g.createdOn ? new Date(g.createdOn) : null;
- const daysSince = createdDate ? Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
- const dti = g.daysToIssue || 0;
- if (dti > 0 && daysSince > dti) {
- issueState = "late";
- issueTitle = `Emisión ATRASADA\n${daysSince} días (plazo: ${dti} días)`;
- } else if (dti > 0 && daysSince >= dti * 0.7) {
- issueState = "alert";
- issueTitle = `Emisión EN ALERTA\n${daysSince}/${dti} días`;
- } else {
- issueState = "pending";
- issueTitle = "Emisión pendiente";
- }
- } else {
- issueState = "pending";
- issueTitle = "Emisión pendiente";
- }
- }
-
- // Revisión (R)
- let reviewState: LightState = "none";
- let reviewTitle = "";
- if (g.hasReview) {
- if (g.reviewedOn && g.reviewedBy) {
- reviewState = "done";
- reviewTitle = `Revisión ✓\nPor: ${g.reviewedBy}${g.reviewedByEmail ? ` (${g.reviewedByEmail})` : ""}\nFecha: ${fmtDate(g.reviewedOn)}`;
- } else if (g.estado === "issued") {
- reviewState = "active";
- reviewTitle = "Revisión en curso";
- } else if (g.estado === "todo" || g.estado === "rejected") {
- reviewState = "pending";
- reviewTitle = "Revisión pendiente";
- } else {
- reviewState = "done";
- reviewTitle = "Revisión completada";
- }
- }
-
- // Aprobación (A)
- let approveState: LightState = "none";
- let approveTitle = "";
- if (g.hasApprove) {
- if (g.approvedOn && g.approvedBy) {
- approveState = "done";
- approveTitle = `Aprobación ✓\nPor: ${g.approvedBy}${g.approvedByEmail ? ` (${g.approvedByEmail})` : ""}\nFecha: ${fmtDate(g.approvedOn)}`;
- } else if (g.estado === "reviewed") {
- approveState = "active";
- approveTitle = "Aprobación en curso";
- } else if (g.estado === "todo" || g.estado === "rejected") {
- approveState = "pending";
- approveTitle = "Aprobación pendiente";
- } else {
- approveState = "pending";
- approveTitle = "Aprobación pendiente";
- }
- }
-
- lights = [
- { letter: "E", state: issueState, title: issueTitle },
- { letter: "R", state: reviewState, title: reviewTitle },
- { letter: "A", state: approveState, title: approveTitle },
- ];
- }
+ // Las luces ahora se renderizan con GestionStatusLights (tooltip interactivo)
 
  return (
  <tr
@@ -1485,25 +1380,7 @@ export default function ClaimDetailPage() {
  )}
  </td>
  <td className="text-center">
- <div className="inline-flex items-center gap-1.5">
- {lights.map((light, i) => {
- const sty = lightStyles[light.state];
- return (
- <div
- key={i}
- className="flex flex-col items-center gap-0.5 cursor-help"
- title={light.title}
- >
- <div
- className={`flex items-center justify-center rounded-full gestion-light-dot ${sty.dot} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
- />
- <span className={`app-body font-bold leading-none ${sty.label}`}>
- {light.letter}
- </span>
- </div>
- );
- })}
- </div>
+ <GestionStatusLights g={g} />
  </td>
  <td>
  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -2099,4 +1976,253 @@ function DataField({ label, value }: { label: string; value: React.ReactNode }) 
  );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Luces de estado de gestión con tooltip interactivo (hover)
+// Muestra: emisor/revisor/aprobador asignado, fechas, días restantes
+// ═══════════════════════════════════════════════════════════════
 
+type LightState = "done" | "active" | "alert" | "late" | "rejected" | "pending" | "none";
+
+interface GestionLightData {
+ nombre: string;
+ codigo: string;
+ estado: string;
+ createdOn: string | undefined;
+ expectedDate: string | null;
+ daysToIssue: number;
+ daysToReview: number;
+ daysToApprove: number;
+ hasIssue: boolean;
+ hasReview: boolean;
+ hasApprove: boolean;
+ issuedOn: string | null;
+ issuedBy: string | null;
+ reviewedOn: string | null;
+ reviewedBy: string | null;
+ approvedOn: string | null;
+ approvedBy: string | null;
+}
+
+function GestionStatusLights({ g }: { g: GestionLightData }) {
+ const [hoveredLight, setHoveredLight] = useState<number | null>(null);
+ const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+ const lightStyles: Record<LightState, { dot: string; label: string }> = {
+ done: { dot: "bg-emerald-500", label: "text-emerald-600 dark:text-emerald-400" },
+ active: { dot: "bg-amber-400", label: "text-amber-600 dark:text-amber-400" },
+ alert: { dot: "bg-amber-400", label: "text-amber-600 dark:text-amber-400" },
+ late: { dot: "bg-red-500", label: "text-red-600 dark:text-red-400" },
+ rejected: { dot: "bg-rose-500", label: "text-rose-600 dark:text-rose-400" },
+ pending: { dot: "bg-slate-300 dark:bg-slate-600", label: "text-muted-foreground" },
+ none: { dot: "bg-transparent border border-dashed border-slate-200 dark:border-slate-700", label: "text-muted-foreground/40" },
+ };
+
+ const handleMouseEnter = (i: number) => {
+ if (hoverTimer.current) clearTimeout(hoverTimer.current);
+ hoverTimer.current = setTimeout(() => setHoveredLight(i), 200);
+ };
+ const handleMouseLeave = () => {
+ if (hoverTimer.current) clearTimeout(hoverTimer.current);
+ setHoveredLight(null);
+ };
+
+ // daysSinceCreated: días transcurridos desde la creación.
+ // Date.now() es impura pero necesaria para cálculos de plazo.
+ // Se calcula en render porque el valor cambia con el tiempo y debe refrescarse.
+ const daysSinceCreated = g.createdOn
+ // eslint-disable-next-line react-hooks/purity
+ ? Math.floor((Date.now() - new Date(g.createdOn).getTime()) / (1000 * 60 * 60 * 24))
+ : 0;
+
+ const levels: { letter: string; state: LightState; level: "issue" | "review" | "approve" }[] = [];
+
+ let issueState: LightState = "none";
+ if (g.hasIssue) {
+ if (g.estado === "rejected") {
+ issueState = "rejected";
+ } else if (g.issuedOn && g.issuedBy) {
+ issueState = "done";
+ } else if (g.estado === "todo") {
+ const dti = g.daysToIssue || 0;
+ if (dti > 0 && daysSinceCreated > dti) {
+ issueState = "late";
+ } else if (dti > 0 && daysSinceCreated >= dti * 0.7) {
+ issueState = "alert";
+ } else {
+ issueState = "pending";
+ }
+ } else {
+ issueState = "pending";
+ }
+ }
+ levels.push({ letter: "E", state: issueState, level: "issue" });
+
+ let reviewState: LightState = "none";
+ if (g.hasReview) {
+ if (g.reviewedOn && g.reviewedBy) {
+ reviewState = "done";
+ } else if (g.estado === "issued") {
+ reviewState = "active";
+ } else if (g.estado === "todo" || g.estado === "rejected") {
+ reviewState = "pending";
+ } else {
+ reviewState = "done";
+ }
+ }
+ levels.push({ letter: "R", state: reviewState, level: "review" });
+
+ let approveState: LightState = "none";
+ if (g.hasApprove) {
+ if (g.approvedOn && g.approvedBy) {
+ approveState = "done";
+ } else if (g.estado === "reviewed") {
+ approveState = "active";
+ } else if (g.estado === "todo" || g.estado === "rejected") {
+ approveState = "pending";
+ } else {
+ approveState = "pending";
+ }
+ }
+ levels.push({ letter: "A", state: approveState, level: "approve" });
+
+ return (
+ <div className="inline-flex items-center gap-1.5">
+ {levels.map((light, i) => {
+ const sty = lightStyles[light.state];
+ const isNone = light.state === "none";
+ const tooltipContent = isNone ? null : (
+ <GestionLevelTooltip g={g} level={light.level} state={light.state} />
+ );
+ return (
+ <Popover
+ key={i}
+ open={hoveredLight === i && !isNone}
+ onOpenChange={(open) => { if (!open) setHoveredLight(null); }}
+ >
+ <PopoverTrigger
+ render={
+ <div
+ className={`flex flex-col items-center gap-0.5 ${isNone ? "" : "cursor-help"}`}
+ onMouseEnter={() => !isNone && handleMouseEnter(i)}
+ onMouseLeave={handleMouseLeave}
+ >
+ <div
+ className={`flex items-center justify-center rounded-full gestion-light-dot ${sty.dot} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
+ />
+ <span className={`app-body font-bold leading-none ${sty.label}`}>
+ {light.letter}
+ </span>
+ </div>
+ }
+ />
+ {tooltipContent && (
+ <PopoverContent
+ side="bottom"
+ sideOffset={4}
+ align="center"
+ className="gestion-light-tooltip"
+ onMouseEnter={() => setHoveredLight(i)}
+ onMouseLeave={handleMouseLeave}
+ >
+ {tooltipContent}
+ </PopoverContent>
+ )}
+ </Popover>
+ );
+ })}
+ </div>
+ );
+}
+
+function GestionLevelTooltip({ g, level, state }: { g: GestionLightData; level: "issue" | "review" | "approve"; state: LightState }) {
+ const levelLabel = level === "issue" ? "Emisión" : level === "review" ? "Revisión" : "Aprobación";
+ const Icon = level === "issue" ? Send : level === "review" ? Eye : CheckCircle;
+
+ const responsible = level === "issue" ? g.issuedBy : level === "review" ? g.reviewedBy : g.approvedBy;
+ const completedOn = level === "issue" ? g.issuedOn : level === "review" ? g.reviewedOn : g.approvedOn;
+ const daysLimit = level === "issue" ? g.daysToIssue : level === "review" ? g.daysToReview : g.daysToApprove;
+
+ // daysSinceCreated: Date.now() es impura pero necesaria para cálculos de plazo.
+ const daysSinceCreated = g.createdOn
+ // eslint-disable-next-line react-hooks/purity
+ ? Math.floor((Date.now() - new Date(g.createdOn).getTime()) / (1000 * 60 * 60 * 24))
+ : 0;
+ const daysLeft = daysLimit > 0 ? daysLimit - daysSinceCreated : null;
+
+ const stateText =
+ state === "done" ? "Completada" :
+ state === "active" ? "En curso" :
+ state === "late" ? "Atrasada" :
+ state === "alert" ? "En alerta" :
+ state === "pending" ? "Pendiente" :
+ state === "rejected" ? "Rechazada" : "—";
+
+ const stateClass =
+ state === "done" ? "gestion-light-tooltip-value-done" :
+ state === "late" ? "gestion-light-tooltip-value-late" :
+ state === "alert" ? "gestion-light-tooltip-value-alert" :
+ state === "active" ? "gestion-light-tooltip-value-active" :
+ "gestion-light-tooltip-value-pending";
+
+ return (
+ <div>
+ <div className="gestion-light-tooltip-header">
+ <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+ <span className="gestion-light-tooltip-title">{levelLabel}</span>
+ <span className={`gestion-light-tooltip-value ${stateClass} ml-auto`}>{stateText}</span>
+ </div>
+
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Responsable</span>
+ <span className="gestion-light-tooltip-value">
+ {responsible || "Por asignar"}
+ </span>
+ </div>
+
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Creada</span>
+ <span className="gestion-light-tooltip-value">
+ {g.createdOn ? formatDate(g.createdOn) : "—"}
+ </span>
+ </div>
+
+ {state === "done" && completedOn && (
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Completada</span>
+ <span className="gestion-light-tooltip-value">
+ {formatDate(completedOn)}
+ </span>
+ </div>
+ )}
+
+ {state !== "done" && daysLimit > 0 && (
+ <>
+ <div className="gestion-light-tooltip-divider" />
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Plazo</span>
+ <span className="gestion-light-tooltip-value">{daysLimit} días</span>
+ </div>
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Transcurridos</span>
+ <span className="gestion-light-tooltip-value">{daysSinceCreated} días</span>
+ </div>
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Restantes</span>
+ <span className={`gestion-light-tooltip-value ${stateClass}`}>
+ {daysLeft !== null && daysLeft < 0 ? `${Math.abs(daysLeft)} días de atraso` : `${daysLeft} días`}
+ </span>
+ </div>
+ </>
+ )}
+
+ {g.expectedDate && (
+ <>
+ <div className="gestion-light-tooltip-divider" />
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Fecha esp.</span>
+ <span className="gestion-light-tooltip-value">{formatDate(g.expectedDate)}</span>
+ </div>
+ </>
+ )}
+ </div>
+ );
+}

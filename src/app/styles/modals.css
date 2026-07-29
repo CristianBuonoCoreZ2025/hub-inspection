@@ -559,3 +559,78 @@
   opacity: 0.45 !important;
   cursor: not-allowed !important;
 }
+
+/* ── Tooltip interactivo de luces de gestión ── */
+.gestion-light-tooltip {
+  min-width: 240px !important;
+  max-width: 320px !important;
+  padding: 10px 12px !important;
+}
+.gestion-light-tooltip-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 8px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.gestion-light-tooltip-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--foreground) !important;
+}
+.gestion-light-tooltip-row {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+  margin-bottom: 4px !important;
+}
+.gestion-light-tooltip-row:last-child {
+  margin-bottom: 0 !important;
+}
+.gestion-light-tooltip-label {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: var(--muted-foreground) !important;
+  min-width: 64px !important;
+  flex-shrink: 0 !important;
+}
+.gestion-light-tooltip-value {
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  color: var(--foreground) !important;
+  flex: 1 !important;
+}
+.gestion-light-tooltip-value-done {
+  color: #10b981 !important;
+  font-weight: 500 !important;
+}
+.gestion-light-tooltip-value-pending {
+  color: var(--muted-foreground) !important;
+}
+.gestion-light-tooltip-value-late {
+  color: #ef4444 !important;
+  font-weight: 500 !important;
+}
+.gestion-light-tooltip-value-alert {
+  color: #f59e0b !important;
+  font-weight: 500 !important;
+}
+.gestion-light-tooltip-value-active {
+  color: #3b82f6 !important;
+  font-weight: 500 !important;
+}
+.gestion-light-tooltip-divider {
+  height: 1px !important;
+  background: var(--border) !important;
+  margin: 6px 0 !important;
+}
+.gestion-light-tooltip-section-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  color: var(--muted-foreground) !important;
+  margin-bottom: 4px !important;
+}
+
