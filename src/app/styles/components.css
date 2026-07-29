@@ -1653,7 +1653,7 @@
     background-color: color-mix(in srgb, var(--gestion-color, transparent) 6%, transparent);
     border-color: color-mix(in srgb, var(--gestion-color, transparent) 18%, transparent);
     color: var(--gestion-color, inherit);
-    opacity: 0.75;
+    opacity: 0.85;
   }
   /* Glow decorativo detrás del badge */
   .app-gestion-code-glow {
