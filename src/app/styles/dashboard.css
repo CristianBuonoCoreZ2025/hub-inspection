@@ -2280,14 +2280,14 @@
   .gestion-light-dot { width: 16px !important; height: 16px !important; }
   .gestion-light-letter {
     font-family: var(--font-dm-sans), system-ui, sans-serif !important;
-    font-size: 9px !important;
+    font-size: 8px !important;
     font-weight: 700 !important;
-    line-height: 16px !important;
+    line-height: 12px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    min-width: 16px !important;
-    height: 16px !important;
+    min-width: 12px !important;
+    height: 12px !important;
     padding: 0 1px !important;
     border-radius: 3px !important;
     border: 1px solid color-mix(in srgb, currentColor 22%, transparent) !important;
