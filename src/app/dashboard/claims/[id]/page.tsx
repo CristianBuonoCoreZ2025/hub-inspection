@@ -2101,7 +2101,7 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  <PopoverTrigger
  render={
  <div
- className={`flex flex-col items-center gap-0.5 ${isNone ? "" : "cursor-help"}`}
+ className="flex flex-col items-center gap-0.5"
  onMouseEnter={() => !isNone && handleMouseEnter(i)}
  onMouseLeave={handleMouseLeave}
  >
