@@ -17,9 +17,7 @@ import { HtmlEditor } from "@/components/ui/html-editor";
 import { getEmailTemplatesForAction } from "@/services/email-template-actions";
 import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
 import { getSupabaseClient } from "@/lib/supabase/db";
-import { wrapHtmlEmail } from "@/lib/email-wrapper";
 import { toast } from "sonner";
-import { Eye, Pencil } from "lucide-react";
 
 interface EmailComposeModalProps {
   open: boolean;
@@ -172,10 +170,8 @@ export function EmailComposeModal({
   const [cc, setCc] = useState<string>("");
   const [subjectOverride, setSubjectOverride] = useState<string | null>(null);
   const [bodyOverride, setBodyOverride] = useState<string | null>(null);
-  const [manualBodyFormat] = useState<"plain" | "html">("html");
   const [showHistory, setShowHistory] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [viewMode, setViewMode] = useState<"preview" | "edit">("preview");
   const htmlEditorRef = useRef<Editor | null>(null);
   const queryClient = useQueryClient();
 
@@ -187,7 +183,6 @@ export function EmailComposeModal({
     setSelectedTemplateId(newId);
     setSubjectOverride(null);
     setBodyOverride(null);
-    setViewMode("preview");
   };
 
   const { data: templates } = useQuery({
@@ -282,18 +277,18 @@ export function EmailComposeModal({
   );
 
   const { data: previewData, isLoading: previewLoading } = useQuery({
-    queryKey: ["email-preview", action.id, effectiveMode, effectiveTemplateId, manualBodyFormat],
+    queryKey: ["email-preview", action.id, effectiveMode, effectiveTemplateId],
     queryFn: async () => {
       try {
         if (effectiveMode === "manual") {
           return {
             subject: subjectOverride ?? "",
             body: bodyOverride ?? "",
-            body_format: manualBodyFormat,
+            body_format: "html" as const,
           };
         }
         if (!effectiveTemplateId) {
-          return { subject: "", body: "", body_format: "plain" as const };
+          return { subject: "", body: "", body_format: "html" as const };
         }
         const res = await fetch("/api/email/preview", {
           method: "POST",
@@ -303,7 +298,7 @@ export function EmailComposeModal({
             emailTemplateId: effectiveTemplateId,
           }),
         });
-        if (!res.ok) return { subject: "", body: "", body_format: "plain" as const };
+        if (!res.ok) return { subject: "", body: "", body_format: "html" as const };
         return await res.json();
       } catch {
         return { subject: "", body: "", body_format: "plain" as const };
@@ -322,23 +317,6 @@ export function EmailComposeModal({
 
   const effectiveSubject = subjectOverride ?? rendered.subject;
   const effectiveBody = bodyOverride ?? rendered.body;
-  const effectiveFormat = effectiveMode === "manual" ? manualBodyFormat : rendered.body_format;
-
-  // ─── Body envuelto con branding (logo, header color, footer) ───
-  // Usa los datos de la PLANTILLA (header_color, logo_url, logo_position)
-  // configurados en el editor de plantillas — igual que el EmailTemplateEditor.
-  // En modo manual sin plantilla, usa datos de la empresa como fallback.
-  const wrappedBody = useMemo(() => {
-    if (!effectiveBody) return "";
-    if (effectiveFormat !== "html") return effectiveBody;
-    return wrapHtmlEmail({
-      body: effectiveBody,
-      logoUrl: selectedTemplate?.logo_url ?? company?.logo_url ?? null,
-      headerColor: selectedTemplate?.header_color ?? null,
-      companyName: company?.name ?? null,
-      logoPosition: selectedTemplate?.logo_position ?? "center",
-    });
-  }, [effectiveBody, effectiveFormat, selectedTemplate, company]);
 
   // Versión original de la plantilla (para auditoría — se envía al backend)
   const templateOriginalSubject = effectiveMode === "template" ? rendered.subject : null;
@@ -372,12 +350,12 @@ export function EmailComposeModal({
         if (subjectOverride !== null || bodyOverride !== null) {
           payload.manualSubject = effectiveSubject;
           payload.manualBody = effectiveBody;
-          payload.manualBodyFormat = effectiveFormat;
+          payload.manualBodyFormat = "html";
         }
       } else {
         payload.manualSubject = effectiveSubject;
         payload.manualBody = effectiveBody;
-        payload.manualBodyFormat = effectiveFormat;
+        payload.manualBodyFormat = "html";
       }
 
       const res = await fetch("/api/email/send", {
@@ -688,66 +666,51 @@ export function EmailComposeModal({
                 />
               </div>
 
-              {/* Toggle Preview/Editar — solo visible en HTML */}
-              {effectiveFormat === "html" && (
-                <div className="px-4 py-1.5 border-b border-border bg-muted/30 shrink-0 flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("preview")}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
-                      viewMode === "preview"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
+              {/* ─── CANVAS WYSIWYG — se ve como va a salir, editable ─── */}
+              {/* Header del email (branding) + body editable (Tiptap) + footer */}
+              <div className="email-composer-canvas-scroll flex-1 min-h-0 overflow-y-auto bg-slate-100">
+                <div className="email-composer-canvas mx-auto my-4 bg-white rounded-xl shadow-md overflow-hidden" style={{ maxWidth: 600 }}>
+                  {/* Header del email — logo/color de la plantilla */}
+                  <div
+                    className="email-composer-header"
+                    style={{
+                      padding: "24px 32px",
+                      backgroundColor: selectedTemplate?.header_color ?? "#0095DA",
+                      textAlign: selectedTemplate?.logo_position ?? "center",
+                    }}
                   >
-                    <Eye className="h-3 w-3" />
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("edit")}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
-                      viewMode === "edit"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <Pencil className="h-3 w-3" />
-                    Editar
-                  </button>
-                </div>
-              )}
+                    {selectedTemplate?.logo_url || company?.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- logo dinámico de la empresa/plantilla
+                      <img
+                        src={selectedTemplate?.logo_url ?? company?.logo_url ?? ""}
+                        alt={company?.name ?? "Logo"}
+                        style={{ maxHeight: 56, maxWidth: 200, display: "block", margin: selectedTemplate?.logo_position === "center" ? "0 auto" : undefined }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: 20, fontWeight: 600, color: "#ffffff", letterSpacing: "0.2px" }}>
+                        {company?.name ?? "Empresa"}
+                      </span>
+                    )}
+                  </div>
 
-              {/* ─── Vista PREVIEW (iframe con branding) — default para HTML ─── */}
-              {effectiveFormat === "html" && viewMode === "preview" ? (
-                <iframe
-                  srcDoc={wrappedBody}
-                  title="Preview del correo"
-                  className="email-preview-iframe-composer flex-1 min-h-0 w-full bg-white border-0"
-                  sandbox="allow-same-origin"
-                />
-              ) : effectiveFormat === "html" && viewMode === "edit" ? (
-                /* ─── Vista EDITAR (HtmlEditor/Tiptap) — igual al EmailTemplateEditor ─── */
-                /* key={effectiveTemplateId} fuerza re-crear el editor al cambiar plantilla,
-                   igual que el template editor carga el body inicial. Sin esto, Tiptap
-                   puede no parsear bien el HTML al hacer setContent. */
-                <HtmlEditor
-                  key={effectiveTemplateId || "manual"}
-                  value={effectiveBody || ""}
-                  onChange={(html) => setBodyOverride(html)}
-                  editorRef={htmlEditorRef}
-                  placeholder="Escribe el cuerpo del correo…"
-                  className="email-composer-editor flex-1 min-h-0"
-                />
-              ) : (
-                /* ─── Texto plano — siempre textarea ─── */
-                <textarea
-                  value={effectiveBody}
-                  onChange={(e) => setBodyOverride(e.target.value)}
-                  placeholder="Escribe el cuerpo del correo…"
-                  className="flex-1 min-h-40 w-full resize-none bg-background px-4 pt-4 pb-5 text-sm leading-relaxed text-foreground outline-none border border-border rounded-lg overflow-y-auto"
-                />
-              )}
+                  {/* Body editable — Tiptap con estilos del email final */}
+                  <HtmlEditor
+                    key={effectiveTemplateId || "manual"}
+                    value={effectiveBody || ""}
+                    onChange={(html) => setBodyOverride(html)}
+                    editorRef={htmlEditorRef}
+                    placeholder="Escribe el cuerpo del correo…"
+                    className="email-composer-editor-body"
+                  />
+
+                  {/* Footer del email */}
+                  <div className="email-composer-footer">
+                    &copy; {new Date().getFullYear()} {company?.name ?? ""}
+                    <br />
+                    <span>Este correo fue enviado de forma automática, por favor no responda a este mensaje.</span>
+                  </div>
+                </div>
+              </div>
             </>
           )}
         </div>
