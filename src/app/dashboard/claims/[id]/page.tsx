@@ -2388,7 +2388,7 @@ function GestionCodeCell({ g }: { g: {
  <span>{code}</span>
  </div>
  ) : (
- <span className="font-mono app-body text-primary tabular-nums">{code}</span>
+ <span className="app-gestion-code-plain text-primary tabular-nums">{code}</span>
  )}
  </div>
  }
