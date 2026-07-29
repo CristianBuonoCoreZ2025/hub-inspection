@@ -2278,7 +2278,7 @@
 
   /* ── gestion-light-dot: punto indicador de gestión (16x16) ── */
   .gestion-light-dot { width: 16px !important; height: 16px !important; }
-  .gestion-light-letter { font-family: var(--font-sora), system-ui, sans-serif !important; }
+  .gestion-light-letter { font-family: var(--font-dm-sans), system-ui, sans-serif !important; }
 
   /* ── tab-glow: CSS var para my-casos-tab-glow ── */
   .tab-glow-blue    { --tab-glow: rgba(59, 130, 246, 0.08) !important; }

@@ -1648,7 +1648,7 @@
    * ═══════════════════════════════════════════════════════════════ */
   .app-gestion-code {
     @apply relative inline-flex items-center justify-center gap-1 rounded-md px-2 backdrop-blur-sm border transition-all font-bold;
-    font-family: var(--font-sora), system-ui, sans-serif;
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
     font-size: 9px;
     line-height: 18px;
     min-width: 60px;
@@ -1660,7 +1660,7 @@
     opacity: 0.85;
   }
   .app-gestion-code-plain {
-    font-family: var(--font-sora), system-ui, sans-serif;
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
     font-size: 9px;
     font-weight: 600;
     line-height: 18px;
