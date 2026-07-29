@@ -1647,10 +1647,11 @@
    * El color se setea via --gestion-color (hex) en style inline
    * ═══════════════════════════════════════════════════════════════ */
   .app-gestion-code {
-    @apply relative inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 backdrop-blur-sm border transition-all font-bold leading-none;
-    font-family: var(--font-space-grotesk), system-ui, sans-serif;
+    @apply relative inline-flex items-center justify-center gap-1 rounded-md px-2 backdrop-blur-sm border transition-all font-bold leading-none;
+    font-family: var(--font-sora), system-ui, sans-serif;
     font-size: 10px;
-    font-style: italic;
+    min-width: 64px;
+    height: 20px;
     /* Fondo y borde usan la variable --gestion-color con opacidad baja */
     background-color: color-mix(in srgb, var(--gestion-color, transparent) 6%, transparent);
     border-color: color-mix(in srgb, var(--gestion-color, transparent) 18%, transparent);
