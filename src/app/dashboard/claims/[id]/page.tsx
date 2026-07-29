@@ -2095,7 +2095,7 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  onMouseLeave={handleMouseLeave}
  >
  <span
- className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium gestion-light-pill ${isNone ? "bg-transparent border border-dashed border-slate-200 dark:border-slate-700 text-muted-foreground/40" : `${sty.dot} ${sty.label}`} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
+ className={`inline-flex items-center rounded-full px-1.5 py-0 text-[8px] font-medium gestion-light-pill ${isNone ? "bg-transparent border border-dashed border-slate-200 dark:border-slate-700 text-muted-foreground/40" : `${sty.dot} ${sty.label}`} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
  >
  {light.letter}
  </span>
