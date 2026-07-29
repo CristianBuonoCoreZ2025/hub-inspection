@@ -2094,13 +2094,11 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  onMouseEnter={() => !isNone && handleMouseEnter(i)}
  onMouseLeave={handleMouseLeave}
  >
- <div
- className={`relative flex items-center justify-center rounded-full gestion-light-dot ${sty.dot} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
+ <span
+ className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium gestion-light-pill ${isNone ? "bg-transparent border border-dashed border-slate-200 dark:border-slate-700 text-muted-foreground/40" : `${sty.dot} ${sty.label}`} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
  >
- <span className={`absolute inset-0 flex items-center justify-center leading-none gestion-light-letter ${isNone ? "text-muted-foreground/40" : sty.label}`}>
  {light.letter}
  </span>
- </div>
  </div>
  }
  />
