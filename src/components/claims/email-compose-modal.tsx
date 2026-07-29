@@ -301,10 +301,10 @@ export function EmailComposeModal({
         if (!res.ok) return { subject: "", body: "", body_format: "html" as const };
         return await res.json();
       } catch {
-        return { subject: "", body: "", body_format: "plain" as const };
+        return { subject: "", body: "", body_format: "html" as const };
       }
     },
-    enabled: open,
+    enabled: open && (effectiveMode === "manual" || !!effectiveTemplateId),
     staleTime: 0,
     retry: 1,
   });
@@ -649,9 +649,9 @@ export function EmailComposeModal({
           )}
         </div>
 
-        {/* ═══ 4 + 5. BODY — Asunto integrado + toggle Preview/Editar ═══ */}
+        {/* ═══ 4 + 5. BODY — Asunto + canvas WYSIWYG ═══ */}
         <div className="flex-1 overflow-hidden flex flex-col bg-background">
-          {previewLoading && effectiveMode === "template" ? (
+          {effectiveMode === "template" && (previewLoading || !effectiveTemplateId) ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-2 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
               <p className="text-[11px]">Generando correo…</p>
@@ -672,8 +672,9 @@ export function EmailComposeModal({
               {/* ─── CANVAS WYSIWYG — se ve como va a salir, editable ─── */}
               {/* Toolbar del Tiptap + header del email (branding) + body editable + footer */}
               <div className="email-composer-canvas-scroll flex-1 min-h-0 overflow-y-auto">
-                <div className="email-composer-canvas mx-auto my-4" style={{ maxWidth: 600 }}>
+                <div className="email-composer-canvas">
                   <HtmlEditor
+                    key={`${effectiveTemplateId || "manual"}-${!!previewData}`}
                     value={effectiveBody || ""}
                     onChange={(html) => setBodyOverride(html)}
                     editorRef={htmlEditorRef}
@@ -681,22 +682,18 @@ export function EmailComposeModal({
                     className="email-composer-editor-body"
                     header={
                       <div
-                        className="email-composer-header"
-                        style={{
-                          padding: "24px 32px",
-                          backgroundColor: selectedTemplate?.header_color ?? "#0095DA",
-                          textAlign: selectedTemplate?.logo_position ?? "center",
-                        }}
+                        className={`email-composer-header email-composer-header-${selectedTemplate?.logo_position ?? "center"}`}
+                        style={{ backgroundColor: selectedTemplate?.header_color ?? "#0095DA" }}
                       >
                         {selectedTemplate?.logo_url || company?.logo_url ? (
                           // eslint-disable-next-line @next/next/no-img-element -- logo dinámico de la empresa/plantilla
                           <img
                             src={selectedTemplate?.logo_url ?? company?.logo_url ?? ""}
                             alt={company?.name ?? "Logo"}
-                            style={{ maxHeight: 56, maxWidth: 200, display: "block", margin: selectedTemplate?.logo_position === "center" ? "0 auto" : undefined }}
+                            className="email-composer-logo"
                           />
                         ) : (
-                          <span style={{ fontSize: 20, fontWeight: 600, color: "#ffffff", letterSpacing: "0.2px" }}>
+                          <span className="email-composer-company-name">
                             {company?.name ?? "Empresa"}
                           </span>
                         )}

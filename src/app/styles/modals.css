@@ -197,14 +197,16 @@
   /* ═══════════════ CANVAS WYSIWYG DEL COMPOSER ═══════════════ */
   /* El composer muestra el email como va a salir: toolbar + header branding + body editable + footer */
   .email-composer-canvas-scroll {
-    background: #f1f5f9 !important;
-    padding: 0 16px 32px 16px !important;
+    background: #ffffff !important;
+    padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;
   }
   .email-composer-canvas {
     width: 100% !important;
-    flex: 1 !important;
+    height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
   }
@@ -212,23 +214,37 @@
     flex: 1 !important;
     display: flex !important;
     flex-direction: column !important;
-    border-radius: 12px !important;
+    border-radius: 0 !important;
     overflow: hidden !important;
-    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06) !important;
     background: #ffffff !important;
     border: 0 !important;
   }
   .email-composer-header {
+    padding: 24px 32px !important;
     min-height: 56px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
   }
-  .email-composer-header[style*="text-align: left"] {
+  .email-composer-header-left {
     justify-content: flex-start !important;
   }
-  .email-composer-header[style*="text-align: right"] {
+  .email-composer-header-right {
     justify-content: flex-end !important;
+  }
+  .email-composer-logo {
+    max-height: 56px !important;
+    max-width: 200px !important;
+    display: block !important;
+  }
+  .email-composer-header-center .email-composer-logo {
+    margin: 0 auto !important;
+  }
+  .email-composer-company-name {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    letter-spacing: 0.2px !important;
   }
 
   /* El editor (Tiptap) dentro del canvas — sin borde, sin sombra, integrado en el email */
