@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import type { Editor } from "@tiptap/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Mail, Send, Loader2, X, History, FileText, Users } from "lucide-react";
@@ -175,6 +175,12 @@ export function EmailComposeModal({
   const htmlEditorRef = useRef<Editor | null>(null);
   const queryClient = useQueryClient();
 
+  // ─── Tracking de cuándo el preview carga por primera vez para cada template ───
+  // Fuerza al HtmlEditor a re-montarse cuando el body del preview pasa de vacío
+  // a con contenido, asegurando que Tiptap inicialice con el HTML correcto.
+  const [previewVersion, setPreviewVersion] = useState(0);
+  const lastLoadedTemplate = useRef<string>("");
+
   // ─── Autocomplete state ───
   const [activeField, setActiveField] = useState<"to" | "cc" | null>(null);
   const [autocompleteQuery, setAutocompleteQuery] = useState("");
@@ -183,6 +189,8 @@ export function EmailComposeModal({
     setSelectedTemplateId(newId);
     setSubjectOverride(null);
     setBodyOverride(null);
+    // Reset para que el previewVersion vuelva a incrementar cuando el nuevo template cargue
+    lastLoadedTemplate.current = "";
   };
 
   const { data: templates } = useQuery({
@@ -314,6 +322,19 @@ export function EmailComposeModal({
     body: previewData?.body ?? "",
     body_format: (previewData?.body_format ?? "plain") as "plain" | "html",
   };
+
+  // ─── Re-montar HtmlEditor cuando el preview carga con body para un template nuevo ───
+  useEffect(() => {
+    if (
+      effectiveMode === "template" &&
+      effectiveTemplateId &&
+      rendered.body &&
+      lastLoadedTemplate.current !== effectiveTemplateId
+    ) {
+      lastLoadedTemplate.current = effectiveTemplateId;
+      setPreviewVersion((v) => v + 1);
+    }
+  }, [effectiveMode, effectiveTemplateId, rendered.body]);
 
   const effectiveSubject = subjectOverride ?? rendered.subject;
   // Fallback al body original de la plantilla si el preview API devuelve vacío
@@ -674,37 +695,41 @@ export function EmailComposeModal({
               <div className="email-composer-canvas-scroll flex-1 min-h-0 overflow-y-auto">
                 <div className="email-composer-canvas">
                   <HtmlEditor
-                    key={`${effectiveTemplateId || "manual"}-${!!previewData}`}
+                    key={`${effectiveTemplateId || "manual"}-${previewVersion}`}
                     value={effectiveBody || ""}
                     onChange={(html) => setBodyOverride(html)}
                     editorRef={htmlEditorRef}
                     placeholder="Escribe el cuerpo del correo…"
                     className="email-composer-editor-body"
                     header={
-                      <div
-                        className={`email-composer-header email-composer-header-${selectedTemplate?.logo_position ?? "center"}`}
-                        style={{ backgroundColor: selectedTemplate?.header_color ?? "#0095DA" }}
-                      >
-                        {selectedTemplate?.logo_url || company?.logo_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- logo dinámico de la empresa/plantilla
-                          <img
-                            src={selectedTemplate?.logo_url ?? company?.logo_url ?? ""}
-                            alt={company?.name ?? "Logo"}
-                            className="email-composer-logo"
-                          />
-                        ) : (
-                          <span className="email-composer-company-name">
-                            {company?.name ?? "Empresa"}
-                          </span>
-                        )}
-                      </div>
+                      effectiveMode === "template" && selectedTemplate ? (
+                        <div
+                          className={`email-composer-header email-composer-header-${selectedTemplate.logo_position ?? "center"}`}
+                          style={{ backgroundColor: selectedTemplate.header_color ?? "#0095DA" }}
+                        >
+                          {selectedTemplate.logo_url || company?.logo_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- logo dinámico de la empresa/plantilla
+                            <img
+                              src={selectedTemplate.logo_url ?? company?.logo_url ?? ""}
+                              alt={company?.name ?? "Logo"}
+                              className="email-composer-logo"
+                            />
+                          ) : (
+                            <span className="email-composer-company-name">
+                              {company?.name ?? "Empresa"}
+                            </span>
+                          )}
+                        </div>
+                      ) : null
                     }
                     footer={
-                      <div className="email-composer-footer">
-                        &copy; {new Date().getFullYear()} {company?.name ?? ""}
-                        <br />
-                        <span>Este correo fue enviado de forma automática, por favor no responda a este mensaje.</span>
-                      </div>
+                      effectiveMode === "template" && selectedTemplate ? (
+                        <div className="email-composer-footer">
+                          &copy; {new Date().getFullYear()} {company?.name ?? ""}
+                          <br />
+                          <span>Este correo fue enviado de forma automática, por favor no responda a este mensaje.</span>
+                        </div>
+                      ) : null
                     }
                   />
                 </div>
