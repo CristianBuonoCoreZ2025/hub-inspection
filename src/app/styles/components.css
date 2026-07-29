@@ -1607,10 +1607,12 @@
   /* Sin fondo — solo la letra con definición HD */
   .app-origin-badge {
     @apply inline-flex items-center justify-center rounded font-bold leading-none;
-    font-size: 9px;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 3px;
+    font-size: 8px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 2px;
+    font-style: italic;
+    text-transform: lowercase;
     background-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
