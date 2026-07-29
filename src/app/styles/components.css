@@ -1649,6 +1649,7 @@
   .app-gestion-code {
     @apply relative inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 backdrop-blur-sm border transition-all font-mono font-bold leading-none;
     font-size: 10px;
+    font-style: italic;
     /* Fondo y borde usan la variable --gestion-color con opacidad baja */
     background-color: color-mix(in srgb, var(--gestion-color, transparent) 6%, transparent);
     border-color: color-mix(in srgb, var(--gestion-color, transparent) 18%, transparent);
