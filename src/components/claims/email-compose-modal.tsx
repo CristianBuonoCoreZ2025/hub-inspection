@@ -316,7 +316,10 @@ export function EmailComposeModal({
   };
 
   const effectiveSubject = subjectOverride ?? rendered.subject;
-  const effectiveBody = bodyOverride ?? rendered.body;
+  // Fallback al body original de la plantilla si el preview API devuelve vacío
+  // (evita que el editor se muestre vacío mientras hay contenido disponible).
+  const templateBodyFallback = effectiveMode === "template" ? (selectedTemplate?.body ?? "") : "";
+  const effectiveBody = bodyOverride ?? (rendered.body || templateBodyFallback);
 
   // Versión original de la plantilla (para auditoría — se envía al backend)
   const templateOriginalSubject = effectiveMode === "template" ? rendered.subject : null;
@@ -667,48 +670,46 @@ export function EmailComposeModal({
               </div>
 
               {/* ─── CANVAS WYSIWYG — se ve como va a salir, editable ─── */}
-              {/* Header del email (branding) + body editable (Tiptap) + footer */}
-              <div className="email-composer-canvas-scroll flex-1 min-h-0 overflow-y-auto bg-slate-100">
-                <div className="email-composer-canvas mx-auto my-4 bg-white rounded-xl shadow-md overflow-hidden" style={{ maxWidth: 600 }}>
-                  {/* Header del email — logo/color de la plantilla */}
-                  <div
-                    className="email-composer-header"
-                    style={{
-                      padding: "24px 32px",
-                      backgroundColor: selectedTemplate?.header_color ?? "#0095DA",
-                      textAlign: selectedTemplate?.logo_position ?? "center",
-                    }}
-                  >
-                    {selectedTemplate?.logo_url || company?.logo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- logo dinámico de la empresa/plantilla
-                      <img
-                        src={selectedTemplate?.logo_url ?? company?.logo_url ?? ""}
-                        alt={company?.name ?? "Logo"}
-                        style={{ maxHeight: 56, maxWidth: 200, display: "block", margin: selectedTemplate?.logo_position === "center" ? "0 auto" : undefined }}
-                      />
-                    ) : (
-                      <span style={{ fontSize: 20, fontWeight: 600, color: "#ffffff", letterSpacing: "0.2px" }}>
-                        {company?.name ?? "Empresa"}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Body editable — Tiptap con estilos del email final */}
+              {/* Toolbar del Tiptap + header del email (branding) + body editable + footer */}
+              <div className="email-composer-canvas-scroll flex-1 min-h-0 overflow-y-auto">
+                <div className="email-composer-canvas mx-auto my-4" style={{ maxWidth: 600 }}>
                   <HtmlEditor
-                    key={effectiveTemplateId || "manual"}
                     value={effectiveBody || ""}
                     onChange={(html) => setBodyOverride(html)}
                     editorRef={htmlEditorRef}
                     placeholder="Escribe el cuerpo del correo…"
                     className="email-composer-editor-body"
+                    header={
+                      <div
+                        className="email-composer-header"
+                        style={{
+                          padding: "24px 32px",
+                          backgroundColor: selectedTemplate?.header_color ?? "#0095DA",
+                          textAlign: selectedTemplate?.logo_position ?? "center",
+                        }}
+                      >
+                        {selectedTemplate?.logo_url || company?.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- logo dinámico de la empresa/plantilla
+                          <img
+                            src={selectedTemplate?.logo_url ?? company?.logo_url ?? ""}
+                            alt={company?.name ?? "Logo"}
+                            style={{ maxHeight: 56, maxWidth: 200, display: "block", margin: selectedTemplate?.logo_position === "center" ? "0 auto" : undefined }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 20, fontWeight: 600, color: "#ffffff", letterSpacing: "0.2px" }}>
+                            {company?.name ?? "Empresa"}
+                          </span>
+                        )}
+                      </div>
+                    }
+                    footer={
+                      <div className="email-composer-footer">
+                        &copy; {new Date().getFullYear()} {company?.name ?? ""}
+                        <br />
+                        <span>Este correo fue enviado de forma automática, por favor no responda a este mensaje.</span>
+                      </div>
+                    }
                   />
-
-                  {/* Footer del email */}
-                  <div className="email-composer-footer">
-                    &copy; {new Date().getFullYear()} {company?.name ?? ""}
-                    <br />
-                    <span>Este correo fue enviado de forma automática, por favor no responda a este mensaje.</span>
-                  </div>
                 </div>
               </div>
             </>

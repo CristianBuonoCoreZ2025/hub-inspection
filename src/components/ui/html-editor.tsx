@@ -192,6 +192,10 @@ export interface HtmlEditorProps {
   /** Callback cuando Tiptap no puede parsear el HTML.
    *  El composer lo usa para hacer fallback a textarea. */
   onError?: (error: Error) => void;
+  /** Renderiza contenido entre la toolbar y el area editable (ej: header de un email). */
+  header?: React.ReactNode;
+  /** Renderiza contenido debajo del area editable (ej: footer de un email). */
+  footer?: React.ReactNode;
 }
 
 const FONT_FAMILIES = [
@@ -442,6 +446,8 @@ export function HtmlEditor({
   editorRef,
   showCodeView = true,
   onError,
+  header,
+  footer,
 }: HtmlEditorProps) {
   const [mode, setMode] = React.useState<"visual" | "code">("visual");
   const [codeValue, setCodeValue] = React.useState(value);
@@ -748,6 +754,9 @@ export function HtmlEditor({
         )}
       </div>
 
+      {/* Contenido opcional entre toolbar y editor (ej: header de email) */}
+      {header}
+
       {/* Contenido */}
       {mode === "visual" ? (
         <div className="html-editor-wrap">
@@ -771,6 +780,9 @@ export function HtmlEditor({
           placeholder="<p>...</p>"
         />
       )}
+
+      {/* Contenido opcional debajo del editor (ej: footer de email) */}
+      {footer}
     </div>
   );
 }

@@ -195,16 +195,28 @@
   }
 
   /* ═══════════════ CANVAS WYSIWYG DEL COMPOSER ═══════════════ */
-  /* El composer muestra el email como va a salir: header branding + body editable + footer */
+  /* El composer muestra el email como va a salir: toolbar + header branding + body editable + footer */
   .email-composer-canvas-scroll {
     background: #f1f5f9 !important;
     padding: 0 16px 32px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
   .email-composer-canvas {
+    width: 100% !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .email-composer-canvas > .email-composer-editor-body {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
     border-radius: 12px !important;
     overflow: hidden !important;
     box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06) !important;
     background: #ffffff !important;
+    border: 0 !important;
   }
   .email-composer-header {
     min-height: 56px !important;
