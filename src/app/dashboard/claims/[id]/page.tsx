@@ -2272,9 +2272,9 @@ function GestionCodeTooltip({ nombre, codigo, createdOn, updatedOn, origin, hasI
  hasIssue ? "Emisión" : "";
 
  const originText =
- origin === "W" ? "Workflow — generada automáticamente por el workflow" :
- origin === "A" ? "Automática — gestión de dependencia automática" :
- origin === "M" ? "Manual — generada manualmente" : "";
+ origin === "W" ? "Generada por workflow" :
+ origin === "A" ? "Generada automáticamente" :
+ origin === "M" ? "Generada manualmente" : "";
 
  return (
  <div className="gestion-light-tooltip">
@@ -2326,13 +2326,10 @@ function GestionCodeTooltip({ nombre, codigo, createdOn, updatedOn, origin, hasI
  </div>
 
  {originText && (
- <>
- <div className="gestion-light-tooltip-divider" />
  <p className="gestion-code-tooltip-legend">
  <span className="gestion-code-tooltip-legend-badge">{origin}</span>{" "}
  {originText}
  </p>
- </>
  )}
  </div>
  );
