@@ -518,35 +518,52 @@ async function autoAssignResponsibles(
       .map((r) => roleToUser[r])
       .filter((id): id is string => !!id);
 
-    if (candidateIds.length === 0) return null;
-    if (candidateIds.length === 1) return candidateIds[0];
+    if (candidateIds.length > 0) {
+      if (candidateIds.length === 1) return candidateIds[0];
 
-    // 3. De los candidatos, elegir el que tenga menos gestiones pendientes
-    const supabase = getSupabaseClient();
-    const orFilter = candidateIds
-      .map((id) => `issuer_id.eq.${id},reviewer_id.eq.${id},approver_id.eq.${id}`)
-      .join(",");
-    const { data: countData, error } = await supabase
-      .from("claim_actions")
-      .select("issuer_id, reviewer_id, approver_id")
-      .eq("action_status_id", todoStatusId)
-      .eq("is_active", true)
-      .or(orFilter);
-    if (error) throw new Error(error.message);
+      // 3. De los candidatos, elegir el que tenga menos gestiones pendientes
+      const supabase = getSupabaseClient();
+      const orFilter = candidateIds
+        .map((id) => `issuer_id.eq.${id},reviewer_id.eq.${id},approver_id.eq.${id}`)
+        .join(",");
+      const { data: countData, error } = await supabase
+        .from("claim_actions")
+        .select("issuer_id, reviewer_id, approver_id")
+        .eq("action_status_id", todoStatusId)
+        .eq("is_active", true)
+        .or(orFilter);
+      if (error) throw new Error(error.message);
 
-    const actions = (countData as { issuer_id: string | null; reviewer_id: string | null; approver_id: string | null }[]) ?? [];
+      const actions = (countData as { issuer_id: string | null; reviewer_id: string | null; approver_id: string | null }[]) ?? [];
 
-    // Contar gestiones pendientes por usuario
-    const counts: Record<string, number> = {};
-    for (const id of candidateIds) counts[id] = 0;
-    for (const action of actions) {
-      if (action.issuer_id && counts[action.issuer_id] !== undefined) counts[action.issuer_id]++;
-      if (action.reviewer_id && counts[action.reviewer_id] !== undefined) counts[action.reviewer_id]++;
-      if (action.approver_id && counts[action.approver_id] !== undefined) counts[action.approver_id]++;
+      // Contar gestiones pendientes por usuario
+      const counts: Record<string, number> = {};
+      for (const id of candidateIds) counts[id] = 0;
+      for (const action of actions) {
+        if (action.issuer_id && counts[action.issuer_id] !== undefined) counts[action.issuer_id]++;
+        if (action.reviewer_id && counts[action.reviewer_id] !== undefined) counts[action.reviewer_id]++;
+        if (action.approver_id && counts[action.approver_id] !== undefined) counts[action.approver_id]++;
+      }
+
+      // Elegir el de menos gestiones
+      return candidateIds.reduce((min, id) => (counts[id] < counts[min] ? id : min), candidateIds[0]);
     }
 
-    // Elegir el de menos gestiones
-    return candidateIds.reduce((min, id) => (counts[id] < counts[min] ? id : min), candidateIds[0]);
+    // 4. Fallback: si nadie del siniestro cumple los roles, asignar al primer
+    //    usuario internal activo. La gestión nunca debe quedar "Por asignar".
+    //    El usuario internal es el super-rol que aparece en todos los combos.
+    try {
+      const internalUsers = await fetchAll<{ id: string }>("profiles", {
+        select: "id",
+        eq: { role: "internal", is_active: true },
+        limit: 1,
+      });
+      if (internalUsers.length > 0) return internalUsers[0].id;
+    } catch (err) {
+      console.warn("[autoAssignResponsibles] No se pudo obtener usuario internal:", err);
+    }
+
+    return null;
   }
 
   return {

@@ -330,7 +330,7 @@ export default function AgendaPage() {
  return (
  <div
  key={idx}
- className={`flex flex-col border-r border-border/20 last:border-r-0 min-h-[280px] sm:min-h-[400px] shrink-0 w-[85%] sm:w-1/3 md:w-1/4 lg:w-auto lg:flex-1 ${
+ className={`flex flex-col border-r border-border/20 last:border-r-0 min-h-[380px] sm:min-h-[500px] shrink-0 w-[85%] sm:w-1/3 md:w-1/4 lg:w-auto lg:flex-1 ${
  isToday ? "bg-primary/3" : ""
  }`}
  >

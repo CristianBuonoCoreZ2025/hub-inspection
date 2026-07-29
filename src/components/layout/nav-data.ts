@@ -54,6 +54,7 @@ export interface NavLink {
   label: string;
   icon: LucideIcon;
   section?: string;
+  hideOnMobile?: boolean;
 }
 
 export interface NavGroup {
@@ -61,6 +62,7 @@ export interface NavGroup {
   section: string;
   icon: LucideIcon;
   links: NavLink[];
+  hideOnMobile?: boolean;
 }
 
 // ── Tipos para grupos visibles (con permisos aplicados) ──
@@ -89,8 +91,8 @@ export interface VisibleNavGroup {
 
 // ── Links principales ──
 export const mainLinks: NavLink[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "dashboard" },
-  { href: "/dashboard/catalogos/polizas", label: "Pólizas", icon: FileCheck, section: "claims" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "dashboard", hideOnMobile: true },
+  { href: "/dashboard/catalogos/polizas", label: "Pólizas", icon: FileCheck, section: "claims", hideOnMobile: true },
   { href: "/dashboard/claims", label: "Siniestros", icon: FileText, section: "claims" },
   { href: "/dashboard/inspecciones", label: "Inspecciones", icon: ClipboardCheck, section: "inspecciones" },
   { href: "/dashboard/agenda", label: "Agenda", icon: Calendar, section: "agenda" },
@@ -177,29 +179,34 @@ export const navGroups: NavGroup[] = [
     section: "catalogos",
     icon: Tag,
     links: catalogLinks,
+    hideOnMobile: true,
   },
   {
     title: "Catálogos Inspección",
     section: "catalogos_inspeccion",
     icon: ClipboardCheck,
     links: inspectionCatalogLinks,
+    hideOnMobile: true,
   },
   {
     title: "Configuración de Gestiones",
     section: "gestiones",
     icon: ListChecks,
     links: gestionCatalogLinks,
+    hideOnMobile: true,
   },
   {
     title: "Operaciones",
     section: "operaciones",
     icon: Upload,
     links: operationLinks,
+    hideOnMobile: true,
   },
   {
     title: "Administración",
     section: "administracion",
     icon: Settings,
     links: adminLinks,
+    hideOnMobile: true,
   },
 ];

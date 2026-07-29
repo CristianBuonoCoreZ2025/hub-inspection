@@ -149,13 +149,13 @@ function InspectionsPageContent() {
  <thead>
  <tr>
  <th className="min-w-[120px] sm:w-[140px]">Inspección</th>
- <th className="min-w-[90px] sm:w-[110px]">N° Interno</th>
- <th className="min-w-[90px] sm:w-[110px]">Ref. Cliente</th>
- <th className="min-w-[100px] sm:w-[140px]">Inspector</th>
+ <th className="min-w-[90px] sm:w-[110px] hidden lg:table-cell">N° Interno</th>
+ <th className="min-w-[90px] sm:w-[110px] hidden sm:table-cell">Ref. Cliente</th>
+ <th className="min-w-[100px] sm:w-[140px] hidden lg:table-cell">Inspector</th>
  <th className="min-w-[100px] sm:w-[160px]">Asegurado</th>
- <th className="w-60 sm:w-80">Direccion</th>
+ <th className="w-60 sm:w-80 hidden lg:table-cell">Direccion</th>
  <th className="min-w-[80px] sm:w-[90px]">Estado</th>
- <th className="w-32">Programada</th>
+ <th className="w-32 hidden sm:table-cell">Programada</th>
  <th className="min-w-[90px] sm:w-[160px] text-right">Acciones</th>
  </tr>
  </thead>
@@ -201,7 +201,7 @@ function InspectionsPageContent() {
  />
  </div>
  </td>
- <td className="whitespace-nowrap">
+ <td className="whitespace-nowrap hidden lg:table-cell">
  <span className="font-mono text-[11px] font-medium">
  {session.claim?.liquidation_number ? (
  <Link href={`/dashboard/claims/${session.claim_id}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
@@ -212,12 +212,12 @@ function InspectionsPageContent() {
  )}
  </span>
  </td>
- <td className="whitespace-nowrap">
+ <td className="whitespace-nowrap hidden sm:table-cell">
  <span className="text-[11px] text-muted-foreground">
  {session.claim?.client_reference || "—"}
  </span>
  </td>
- <td>
+ <td className="hidden lg:table-cell">
  <div className="flex items-center gap-1">
  <User className="h-3 w-3 text-muted-foreground shrink-0" />
  <span className="text-[11px]">
@@ -230,7 +230,7 @@ function InspectionsPageContent() {
  {session.claim?.claims_participants?.[0]?.full_name || "—"}
  </span>
  </td>
- <td className="max-w-60 sm:max-w-80">
+ <td className="max-w-60 sm:max-w-80 hidden lg:table-cell">
  <div className="flex items-center gap-1">
  <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
  <span className="text-[11px] truncate">
@@ -245,7 +245,7 @@ function InspectionsPageContent() {
  label={sessionStatusLabels[session.status] || session.status}
  />
  </td>
- <td>
+ <td className="hidden sm:table-cell">
  <div className="flex items-center gap-1 text-[11px] whitespace-nowrap">
  {session.scheduled_at ? (
  <>

@@ -36,7 +36,7 @@ import { getDocumentTemplates, type DocumentTemplate } from "@/services/document
 import { toUserISO, formatUserDateTime, fromDateTimeLocalInput, toDateTimeLocalInput } from "@/lib/timezone";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Plus, Ban, ChevronDown, ChevronRight, Check, CheckCircle, Circle, Clock, X, XCircle, FileText, Download, Loader2, Play, Upload, History, Lock, LockOpen, AlertTriangle, Star, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw, MapPin } from "lucide-react";
+import { Plus, Ban, ChevronDown, ChevronRight, Check, CheckCircle, Circle, Clock, X, XCircle, FileText, Download, Loader2, Play, Upload, History, Lock, LockOpen, AlertTriangle, Star, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw, MapPin, UserCog } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { ClaimAction, Claim, ClaimsParticipant } from "@/types";
@@ -966,6 +966,7 @@ function LevelCard({
  const queryClient = useQueryClient();
  const [showRejectBox, setShowRejectBox] = useState(false);
  const [rejectComment, setRejectComment] = useState("");
+ const [showReassign, setShowReassign] = useState(false);
  const { data: candidates } = useQuery({
  queryKey: ["users-by-roles", level.roles, claimId],
  queryFn: async () => {
@@ -1111,7 +1112,7 @@ function LevelCard({
   - no hay responsable y la etapa está activa, o
   - hay responsable pero no es el usuario actual y el usuario actual está en el combo
     (puede reasignarse a sí mismo para poder actuar) */}
- {level.active && !level.done && (!level.currentId || (!isCurrentUser && isCandidate)) && (
+ {level.active && !level.done && !showReassign && (!level.currentId || (!isCurrentUser && isCandidate)) && (
  <div className="flex flex-col gap-1 pt-0.5">
  <Select
  value=""
@@ -1136,8 +1137,46 @@ function LevelCard({
  </Select>
  </div>
  )}
- {/* Botones de acción: avanzar (solo si canAdvance) / rechazar (si canReject) */}
- {(canAdvance || canReject) && !showRejectBox && (
+ {/* Panel de reasignación: el responsable actual puede pasársela a otra persona del combo */}
+ {level.active && !level.done && showReassign && isCandidate && (
+ <div className="flex flex-col gap-1 pt-0.5">
+ <Select
+ value=""
+ onValueChange={(v: string | null) => {
+ if (v) {
+ assignMut.mutate(v);
+ setShowReassign(false);
+ }
+ }}
+ disabled={assignMut.isPending}
+ items={allCandidates
+ .filter((c) => c.id !== level.currentId)
+ .map((c) => ({ value: c.id, label: c.full_name || c.email || c.id.slice(0, 8) }))}
+ >
+ <SelectTrigger className="app-input w-full h-7">
+ <SelectValue placeholder="Reasignar a..." />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="" disabled>Reasignar a...</SelectItem>
+ {(allCandidates || []).filter((c) => c.id !== level.currentId).map((c) => (
+ <SelectItem key={c.id} value={c.id}>
+ {c.full_name || c.email || c.id.slice(0, 8)}
+ {c.source === "internal" && <span className="app-body text-amber-600 ml-1">· Interno</span>}
+ </SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
+ <button
+ type="button"
+ onClick={() => setShowReassign(false)}
+ className="app-body text-muted-foreground hover:text-foreground text-left"
+ >
+ Cancelar
+ </button>
+ </div>
+ )}
+ {/* Botones de acción: avanzar (solo si canAdvance) / rechazar (si canReject) / reasignar (si es responsable y candidato) */}
+ {(canAdvance || canReject || (isCurrentUser && isCandidate)) && !showRejectBox && !showReassign && (
  <div className="flex gap-1 pt-0.5">
  {canAdvance && (
  <Button
@@ -1157,6 +1196,17 @@ function LevelCard({
  className="btn-icon-sm"
  >
  <X className="h-3.5 w-3.5" />
+ </Button>
+ )}
+ {/* Botón Reasignar: solo el responsable actual que además está en el combo */}
+ {isCurrentUser && isCandidate && allCandidates.length > 1 && (
+ <Button
+ type="button"
+ onClick={() => setShowReassign(true)}
+ title="Reasignar"
+ className="btn-icon-sm"
+ >
+ <UserCog className="h-3.5 w-3.5" />
  </Button>
  )}
  </div>
@@ -3515,7 +3565,7 @@ function AdjustmentEditorForm({
 // ═══════════════════════════════════════════════════════════════
 
 function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string; actionId?: string; readOnly?: boolean }) {
- // Cargar el siniestro para obtener business_line_id + código de la gestión
+ // Cargar el siniestro para obtener business_line_id + company_id + código de la gestión
  const { data: claim } = useQuery({
  queryKey: ["claim-for-docs", claimId],
  queryFn: async () => {
@@ -3523,7 +3573,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  const supabase = getSupabaseClient();
  const { data, error } = await supabase
  .from("claims")
- .select("business_line_id")
+ .select("business_line_id, company_id")
  .eq("id", claimId!)
  .maybeSingle();
  if (error) throw new Error(error.message);
@@ -3628,6 +3678,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  await createClaimDocumentRequest({
  claim_id: claimId!,
  claim_action_id: actionId,
+ company_id: claim?.company_id,
  notes,
  items,
  });

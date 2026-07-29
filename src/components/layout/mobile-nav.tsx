@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -9,7 +9,6 @@ import {
   Loader2,
   Palette,
   X,
-  ChevronDown,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -33,142 +32,12 @@ import {
   type UiStyleSkin,
 } from "@/lib/ui-style-client-store";
 import { useSyncExternalStore } from "react";
-import type { VisibleNavGroup, VisibleNavSubgroup } from "@/components/layout/nav-data";
 
 function getInitials(email?: string | null) {
   if (!email) return "U";
   const parts = email.split("@")[0].split(/[._-]/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Subgrupo dentro de un acordeón — acordeón anidado
-// ═══════════════════════════════════════════════════════════════
-function MobileSubGroupAccordion({
-  subgroup,
-  pathname,
-  onNavigate,
-}: {
-  subgroup: VisibleNavSubgroup;
-  pathname: string;
-  onNavigate?: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const isGroupActive = subgroup.visibleLinks.some(l => pathname.startsWith(l.href));
-  const Icon = subgroup.icon;
-
-  return (
-    <div className="mobile-nav-group">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={cn(
-          "mobile-nav-group-header !pl-8",
-          isGroupActive && "mobile-nav-group-active"
-        )}
-      >
-        <Icon className="size-3.5 shrink-0" />
-        <span className="text-[11px] font-medium flex-1 text-left">{subgroup.title}</span>
-        <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", open && "rotate-180")} />
-      </button>
-
-      {open && (
-        <div className="mobile-nav-group-links !pl-12">
-          {subgroup.visibleLinks.map((link) => {
-            const isActive = pathname.startsWith(link.href);
-            const LinkIcon = link.icon;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => { onNavigate?.(); setOpen(false); }}
-                className={cn(
-                  "mobile-nav-link",
-                  isActive && "mobile-nav-link-active"
-                )}
-              >
-                <LinkIcon className="size-3.5 shrink-0" />
-                <span className="flex-1 truncate">{link.label}</span>
-                {isActive && <span className="h-3 w-0.5 rounded-full bg-primary" />}
-              </Link>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MobileGroupAccordion({
-  group,
-  pathname,
-  onNavigate,
-}: {
-  group: VisibleNavGroup;
-  pathname: string;
-  onNavigate?: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const isGroupActive = group.children.some(c =>
-    c.kind === "link"
-      ? pathname.startsWith(c.link.href)
-      : c.subgroup.visibleLinks.some(l => pathname.startsWith(l.href))
-  );
-  const Icon = group.icon;
-
-  return (
-    <div className="mobile-nav-group">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={cn(
-          "mobile-nav-group-header",
-          isGroupActive && "mobile-nav-group-active"
-        )}
-      >
-        <Icon className="size-4 shrink-0" />
-        <span className="text-[13px] font-medium flex-1 text-left">{group.title}</span>
-        <ChevronDown className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} />
-      </button>
-
-      {open && (
-        <div className="mobile-nav-group-links">
-          {/* Children en orden interleaved: links y subgrupos */}
-          {group.children.map((child) => {
-            if (child.kind === "link") {
-              const link = child.link;
-              const isActive = pathname.startsWith(link.href);
-              const LinkIcon = link.icon;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => { onNavigate?.(); setOpen(false); }}
-                  className={cn(
-                    "mobile-nav-link",
-                    isActive && "mobile-nav-link-active"
-                  )}
-                >
-                  <LinkIcon className="size-3.5 shrink-0" />
-                  <span className="flex-1 truncate">{link.label}</span>
-                  {isActive && <span className="h-3 w-0.5 rounded-full bg-primary" />}
-                </Link>
-              );
-            }
-            return (
-              <MobileSubGroupAccordion
-                key={child.subgroup.section}
-                subgroup={child.subgroup}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
 }
 
 function MobileSkinToggle() {
@@ -209,7 +78,7 @@ function MobileSkinToggle() {
 export function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const { user, isLoading, signOut } = useAuth();
-  const { visibleMainLinks, visibleGroups } = useNavLinks();
+  const { visibleMainLinks } = useNavLinks(true);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   // Cerrar al cambiar de ruta
@@ -296,10 +165,9 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
             </div>
           </div>
 
-          {/* Links principales */}
-          <div className="mobile-nav-section">
-            <span className="mobile-nav-section-label">Principal</span>
-            <div className="flex flex-col gap-1">
+          {/* Links principales — mobile simplificado (4 íconos grandes) */}
+          <div className="mobile-nav-section mobile-nav-section-main">
+            <div className="flex flex-col gap-1.5">
               {visibleMainLinks.map((link) => {
                 const isActive = link.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(link.href);
                 const Icon = link.icon;
@@ -308,29 +176,14 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
                     key={link.href}
                     href={link.href}
                     onClick={onClose}
-                    className={cn("mobile-nav-link", isActive && "mobile-nav-link-active")}
+                    className={cn("mobile-nav-link mobile-nav-link-lg", isActive && "mobile-nav-link-active")}
                   >
-                    <Icon className="size-4 shrink-0" />
-                    <span className="text-[13px] font-medium flex-1">{link.label}</span>
-                    {isActive && <span className="h-3 w-0.5 rounded-full bg-primary" />}
+                    <Icon className="size-5 shrink-0" />
+                    <span className="text-[15px] font-medium flex-1">{link.label}</span>
+                    {isActive && <span className="h-4 w-1 rounded-full bg-primary" />}
                   </Link>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Grupos (catálogos, operaciones, admin) */}
-          <div className="mobile-nav-section">
-            <span className="mobile-nav-section-label">Módulos</span>
-            <div className="flex flex-col gap-1">
-              {visibleGroups.map((group) => (
-                <MobileGroupAccordion
-                  key={group.title}
-                  group={group}
-                  pathname={pathname}
-                  onNavigate={onClose}
-                />
-              ))}
             </div>
           </div>
 

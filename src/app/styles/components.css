@@ -1606,34 +1606,39 @@
   /* Origin badge — W (Workflow) morado, A (Automática) azul, M (Manual) café */
   /* Sin fondo — solo la letra con definición HD */
   .app-origin-badge {
-    @apply inline-flex items-center justify-center rounded font-bold leading-none;
+    @apply inline-flex items-center justify-center rounded leading-none;
     font-size: 9px;
-    min-width: 16px;
-    height: 16px;
+    font-weight: 400;
+    min-width: 13px;
+    height: 13px;
     padding: 0 3px;
+    font-style: italic;
+    text-transform: lowercase;
     background-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: geometricPrecision;
     font-feature-settings: "kern" 1;
-    paint-order: stroke fill;
-    -webkit-text-stroke: 0.3px currentColor;
   }
   .app-origin-w {
     @apply text-purple-700 dark:text-purple-300;
     border: 1px solid rgb(168 85 247 / 0.15);
+    opacity: 0.75;
   }
   .app-origin-a {
     @apply text-blue-600 dark:text-blue-400;
     border: 1px solid rgb(59 130 246 / 0.15);
+    opacity: 0.75;
   }
   .app-origin-m {
     @apply text-amber-700 dark:text-amber-300;
     border: 1px solid rgb(245 158 11 / 0.15);
+    opacity: 0.75;
   }
   .app-origin-default {
     @apply text-slate-500 dark:text-slate-400;
     border: 1px solid rgb(115 115 115 / 0.15);
+    opacity: 0.75;
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -1642,12 +1647,23 @@
    * El color se setea via --gestion-color (hex) en style inline
    * ═══════════════════════════════════════════════════════════════ */
   .app-gestion-code {
-    @apply relative inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 backdrop-blur-sm border transition-all font-mono font-bold leading-none;
-    font-size: 10px;
+    @apply relative inline-flex items-center justify-center gap-1 rounded-md px-2 backdrop-blur-sm border transition-all font-bold;
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    font-size: 9px;
+    line-height: 18px;
+    min-width: 60px;
+    height: 18px;
     /* Fondo y borde usan la variable --gestion-color con opacidad baja */
     background-color: color-mix(in srgb, var(--gestion-color, transparent) 6%, transparent);
     border-color: color-mix(in srgb, var(--gestion-color, transparent) 18%, transparent);
     color: var(--gestion-color, inherit);
+    opacity: 0.85;
+  }
+  .app-gestion-code-plain {
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 18px;
   }
   /* Glow decorativo detrás del badge */
   .app-gestion-code-glow {
@@ -2177,7 +2193,7 @@
 /* Página A4-like del reporte */
 .report-pdf-page {
   @apply shadow-lg mx-auto relative;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
   max-width: 800px;
   padding: 30px 40px;
   background-color: #ffffff;
