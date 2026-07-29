@@ -92,10 +92,10 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
     // Timeout: deja de pollar después de 2 min si el after() falló.
     refetchInterval: (query) => {
       const imgs = query.state.data;
-      if (!imgs || !imgs.some((i) => i.ai_status === "pending")) return false;
-      const oldest = imgs.filter((i) => i.ai_status === "pending")
+      if (!imgs || !imgs.some((i) => i.ai_status === "pending" || i.ai_status === "processing")) return false;
+      const oldest = imgs.filter((i) => i.ai_status === "pending" || i.ai_status === "processing")
         .reduce((min, i) => Math.min(min, new Date(i.created_at).getTime()), Date.now());
-      if (Date.now() - oldest > 120_000) return false;
+      if (Date.now() - oldest > 300_000) return false;
       return 5000;
     },
   });
@@ -106,10 +106,10 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
     // Polling cada 5s mientras hay fotos de inspección siendo procesadas por IA
     refetchInterval: (query) => {
       const photos = query.state.data;
-      if (!photos || !photos.some((p) => p.ai_status === "pending")) return false;
-      const oldest = photos.filter((p) => p.ai_status === "pending")
+      if (!photos || !photos.some((p) => p.ai_status === "pending" || p.ai_status === "processing")) return false;
+      const oldest = photos.filter((p) => p.ai_status === "pending" || p.ai_status === "processing")
         .reduce((min, p) => Math.min(min, new Date(p.created_at).getTime()), Date.now());
-      if (Date.now() - oldest > 120_000) return false;
+      if (Date.now() - oldest > 300_000) return false;
       return 5000;
     },
   });
@@ -269,6 +269,12 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
     onSuccess: () => {
       toast.success("Imagen subida");
       queryClient.invalidateQueries({ queryKey: ["claim-images", claimId] });
+      // Disparar análisis de IA en background (fire-and-forget)
+      fetch("/api/ai/process-pending", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claimId }),
+      }).catch(() => {});
     },
     onError: (e: Error) => {
       toast.error(e.message);

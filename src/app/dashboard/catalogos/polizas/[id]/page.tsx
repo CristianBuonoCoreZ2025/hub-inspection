@@ -344,6 +344,12 @@ export default function PolicyDetailPage() {
  queryKey: ["policy-documents", policyId],
  queryFn: () => getPolicyDocuments(policyId),
  enabled: !!policyId && !isNew,
+ // Polling cada 5s mientras hay documentos sin análisis de IA (ai_summary IS NULL)
+ refetchInterval: (query) => {
+   const docs = query.state.data;
+   if (docs && docs.some((d) => !d.ai_summary)) return 5000;
+   return false;
+ },
  });
 
  // Documentos online: derivados de las coberturas asociadas (document_url del catálogo)
@@ -399,6 +405,12 @@ export default function PolicyDetailPage() {
  onSuccess: () => {
  queryClient.invalidateQueries({ queryKey: ["policy-documents", policyId] });
  toast.success("Documento subido");
+ // Disparar análisis de IA en background (fire-and-forget)
+ fetch("/api/ai/process-pending", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({ policyId }),
+ }).catch(() => {});
  },
  onError: (e: Error) => toast.error(e.message),
  });

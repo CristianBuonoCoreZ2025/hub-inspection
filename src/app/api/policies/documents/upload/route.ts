@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { uploadPolicyDocument } from "@/lib/storage/policy-upload";
-import { summarizeFile } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logger";
 
 /**
@@ -12,19 +11,14 @@ import { logger } from "@/lib/logger";
  *   - policyId: UUID de la póliza
  *
  * Flujo:
- *  1. Resuelve policyId → policy.policy_number
- *  2. Obtiene el siguiente correlativo DOC-NNNN atómico desde la BD
- *  3. Sube a R2 con path: policies/{policy_number}/documents/{policy_number}-DOC-NNNN.ext
- *  4. Inserta el registro en policy_documents
- *
- * Devuelve: { document: { id, document_name, document_url, ... } }
- *
- * maxDuration=120: el análisis de IA es síncrono (espera antes de responder)
- * y puede tardar 30-60s con fallback de modelos. Sin este límite, Vercel mata
- * la función en el default del plan (10-15s) antes de que la IA termine.
+ *  1. Sube a R2 con path estructurado del plan
+ *  2. Inserta el registro en policy_documents con ai_summary=null
+ *  3. Responde al cliente inmediatamente
+ *  4. El frontend dispara /api/ai/process-pending { policyId } para
+ *     que la IA analice el documento en segundo plano.
  */
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,35 +44,8 @@ export async function POST(request: NextRequest) {
     // Subir a R2 con path estructurado del plan
     const { url } = await uploadPolicyDocument(policyId, buffer, mimeType, ext || ".bin");
 
-    // ── IA: resumen automático (free → paid) ──
-    let aiSummary: string | null = null;
-    let aiModel: string | null = null;
-    try {
-      const ai = await summarizeFile(buffer, mimeType, file.name);
-      if (ai.ok) {
-        aiSummary = ai.summary;
-        aiModel = ai.model;
-        logger.info("IA: resumen de documento de póliza generado", {
-          component: "policy-doc-upload",
-          action: "ai.summary",
-          metadata: { model: ai.model, summaryLength: ai.summary.length },
-        });
-      } else {
-        logger.warn("IA: documento de póliza no procesado", {
-          component: "policy-doc-upload",
-          action: "ai.summary.skipped",
-          metadata: { mimeType, reason: ai.reason },
-        });
-      }
-    } catch (aiErr) {
-      logger.warn("IA: no se pudo generar resumen de póliza", {
-        component: "policy-doc-upload",
-        action: "ai.summary.error",
-        metadata: { error: aiErr instanceof Error ? aiErr.message : String(aiErr) },
-      });
-    }
-
-    // Insertar en policy_documents
+    // Insertar en policy_documents (sin IA — la IA la dispara el frontend
+    // vía /api/ai/process-pending después de subir)
     const supabase = createAdminClient();
     const { data: document, error } = await supabase
       .from("policy_documents")
@@ -89,8 +56,8 @@ export async function POST(request: NextRequest) {
         document_type: mimeType,
         file_size: file.size,
         is_active: true,
-        ai_summary: aiSummary,
-        ai_model: aiModel,
+        ai_summary: null,
+        ai_model: null,
       })
       .select("id, policy_id, document_name, document_url, document_type, file_size, is_active, ai_summary, ai_model, created_at, updated_at")
       .single();

@@ -3,7 +3,6 @@ import { after } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
 import { uploadClaimDocumentRaw, reuploadClaimDocumentOptimized } from "@/lib/storage/claim-upload";
 import { logActionHistory } from "@/services/claim-action-history";
-import { summarizeFile } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logger";
 
 /**
@@ -329,61 +328,35 @@ export async function POST(request: NextRequest) {
     } // cierra if (openRequests)
     } // cierra if (documentTypeCode)
 
-    // ── Background: IA + optimización del archivo ──
-    // Se ejecuta después de responder al cliente para no bloquear la subida
+    // ── Background: solo optimización del archivo ──
+    // La IA NO va aquí — after() en Vercel serverless no es confiable para
+    // tareas largas. El frontend dispara /api/ai/process-pending después
+    // de que todas las subidas terminan.
     const docId = document.id;
     const docBuffer = buffer;
     const docMimeType = mimeType;
-    const docFileName = file.name;
     const docExt = ext || ".bin";
     const docSeq = seq;
 
     after(async () => {
-      // 1. IA: resumen automático
-      let aiSummary: string | null = null;
-      let aiModel: string | null = null;
-      let aiStatus: "done" | "error" | "skipped" = "error";
-      try {
-        const ai = await summarizeFile(docBuffer, docMimeType, docFileName);
-        if (ai.ok) {
-          aiSummary = ai.summary;
-          aiModel = ai.model;
-          aiStatus = "done";
-          logger.info("IA (bg): resumen generado", {
-            component: "claim-doc-upload",
-            action: "ai.summary.bg",
-            metadata: { docId, model: ai.model, summaryLength: ai.summary.length },
-          });
-        } else {
-          aiStatus = "skipped";
-          logger.warn("IA (bg): documento no procesado", {
-            component: "claim-doc-upload",
-            action: "ai.summary.skipped.bg",
-            metadata: { docId, mimeType: docMimeType, reason: ai.reason },
-          });
-        }
-      } catch (aiErr) {
-        aiStatus = "error";
-        logger.warn("IA (bg): no se pudo generar resumen", {
-          component: "claim-doc-upload",
-          action: "ai.summary.error.bg",
-          metadata: { docId, error: aiErr instanceof Error ? aiErr.message : String(aiErr) },
-        });
-      }
-
-      // 2. Optimización del archivo (re-subir versión optimizada a R2)
-      let optimizedUrl: string | null = null;
-      let optimizedKey: string | null = null;
+      // Optimización del archivo (re-subir versión optimizada a R2)
       try {
         const result = await reuploadClaimDocumentOptimized(
           claimId, docSeq, docBuffer, docMimeType, docExt
         );
-        optimizedUrl = result.url;
-        optimizedKey = result.key;
+        await createAdminClient()
+          .from("claim_documents")
+          .update({
+            file_url: result.url,
+            file_path: result.key,
+            document_url: result.url,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", docId);
         logger.info("Optimización (bg): documento optimizado", {
           component: "claim-doc-upload",
           action: "optimize.bg",
-          metadata: { docId, originalSize: docBuffer.length, optimizedKey },
+          metadata: { docId, optimizedKey: result.key },
         });
       } catch (optErr) {
         logger.warn("Optimización (bg): no se pudo optimizar", {
@@ -392,35 +365,8 @@ export async function POST(request: NextRequest) {
           metadata: { docId, error: optErr instanceof Error ? optErr.message : String(optErr) },
         });
       }
-
-      // 3. Actualizar el registro con IA + URL optimizada + estado
-      try {
-        const updateFields: Record<string, unknown> = { ai_status: aiStatus };
-        if (aiSummary) {
-          updateFields.ai_summary = aiSummary;
-          updateFields.ai_model = aiModel;
-        }
-        if (optimizedUrl && optimizedKey) {
-          updateFields.file_url = optimizedUrl;
-          updateFields.file_path = optimizedKey;
-          updateFields.document_url = optimizedUrl;
-        }
-        await createAdminClient()
-          .from("claim_documents")
-          .update(updateFields)
-          .eq("id", docId);
-        logger.info("Background: documento actualizado", {
-          component: "claim-doc-upload",
-          action: "bg.update",
-          metadata: { docId, aiStatus, fields: Object.keys(updateFields) },
-        });
-      } catch (updErr) {
-        logger.error("Background: error actualizando documento", updErr as Error, {
-          component: "claim-doc-upload",
-          action: "bg.update.error",
-          metadata: { docId },
-        });
-      }
+      // NOTA: La IA NO se ejecuta aquí. El frontend dispara
+      // /api/ai/process-pending después de que todas las subidas terminan.
     });
 
     return NextResponse.json({ document });

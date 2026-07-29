@@ -6,182 +6,302 @@ import { logger } from "@/lib/logger";
 /**
  * POST /api/ai/process-pending
  *
- * Procesa las evidencias de una sesión que están con ai_status='pending'
- * y las analiza con IA una por una, secuencialmente.
+ * Procesa los archivos con IA pendiente y los analiza UNO POR UNO,
+ * secuencialmente. Un único endpoint para TODOS los tipos de archivo:
+ *   - inspection_evidences (sessionId)
+ *   - claim_images         (claimId)
+ *   - claim_documents      (claimId)
+ *   - policy_documents     (policyId)
  *
  * Body:
- *   { sessionId: string }   — UUID de la inspection_session
+ *   { sessionId: string }  → inspection_evidences
+ *   { claimId: string }    → claim_images + claim_documents (procesa ambas)
+ *   { policyId: string }   → policy_documents
  *
- * Flujo:
- *   1. Busca evidencias con ai_status='pending' de la sesión
- *   2. Para cada una:
- *      a. Descarga el archivo desde R2 (url pública)
- *      b. Determina el MIME type
- *      c. Llama a summarizeFile (visión / texto / PDF)
- *      d. Actualiza ai_summary + ai_model + ai_status='done' (o 'skipped'/'error')
- *   3. Retorna resumen de cuántas se procesaron
- *
- * Este endpoint reemplaza el after() del upload, que no es confiable en
- * Vercel serverless para tareas largas. El frontend lo dispara después
- * de subir evidencias.
+ * Este endpoint reemplaza el after() de todos los uploads. El frontend
+ * lo dispara después de subir archivos (fire-and-forget).
  */
 export const runtime = "nodejs";
-export const maxDuration = 300; // 5 min — puede haber varias evidencias pendientes
+export const maxDuration = 300; // 5 min — puede haber varios archivos pendientes
+
+// Tablas con columna updated_at (inspection_evidences NO la tiene)
+const TABLES_WITH_UPDATED_AT = new Set(["claim_images", "claim_documents", "policy_documents"]);
+
+interface PendingRecord {
+  id: string;
+  url: string;
+  type?: string | null;
+  mime_type?: string | null;
+  document_type?: string | null;
+  original_filename?: string | null;
+  document_name?: string | null;
+  description?: string | null;
+  metadata?: Record<string, unknown> | null;
+  source?: string | null;
+  created_at: string;
+}
+
+interface TableConfig {
+  table: string;
+  filterColumn: string;
+  filterValue: string;
+  urlColumn: string;
+  nameColumn: string;
+  mimeColumn: string | null;
+  hasAiStatus: boolean;
+  excludeLiveVideo: boolean;
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId } = body as { sessionId?: string };
+    const { sessionId, claimId, policyId } = body as {
+      sessionId?: string;
+      claimId?: string;
+      policyId?: string;
+    };
 
-    if (!sessionId || typeof sessionId !== "string") {
+    if (!sessionId && !claimId && !policyId) {
       return NextResponse.json(
-        { error: "Falta sessionId" },
+        { error: "Falta sessionId, claimId o policyId" },
         { status: 400 }
       );
     }
 
     const supabase = createAdminClient();
 
-    // Buscar evidencias pending de esta sesión (excluyendo live_video que no se analiza)
-    const { data: pendingEvidences, error: fetchErr } = await supabase
-      .from("inspection_evidences")
-      .select("id, url, type, description, metadata, source")
-      .eq("session_id", sessionId)
-      .eq("ai_status", "pending")
-      .neq("source", "live_video")
-      .order("created_at", { ascending: true });
+    // Determinar qué tablas procesar según el contexto
+    const configs: TableConfig[] = [];
+    if (sessionId) {
+      configs.push({
+        table: "inspection_evidences",
+        filterColumn: "session_id",
+        filterValue: sessionId,
+        urlColumn: "url",
+        nameColumn: "description",
+        mimeColumn: null,
+        hasAiStatus: true,
+        excludeLiveVideo: true,
+      });
+    }
+    if (claimId) {
+      configs.push({
+        table: "claim_images",
+        filterColumn: "claim_id",
+        filterValue: claimId,
+        urlColumn: "url",
+        nameColumn: "original_filename",
+        mimeColumn: "mime_type",
+        hasAiStatus: true,
+        excludeLiveVideo: false,
+      });
+      configs.push({
+        table: "claim_documents",
+        filterColumn: "claim_id",
+        filterValue: claimId,
+        urlColumn: "file_url",
+        nameColumn: "original_filename",
+        mimeColumn: "mime_type",
+        hasAiStatus: true,
+        excludeLiveVideo: false,
+      });
+    }
+    if (policyId) {
+      configs.push({
+        table: "policy_documents",
+        filterColumn: "policy_id",
+        filterValue: policyId,
+        urlColumn: "document_url",
+        nameColumn: "document_name",
+        mimeColumn: "document_type",
+        hasAiStatus: false, // policy_documents no tiene ai_status
+        excludeLiveVideo: false,
+      });
+    }
 
-    if (fetchErr) {
-      logger.error("process-pending: error buscando evidencias", new Error(fetchErr.message), {
+    const allResults: Array<{
+      table: string;
+      processed: number;
+      success: number;
+      fail: number;
+    }> = [];
+
+    for (const cfg of configs) {
+      const hasUpdatedAt = TABLES_WITH_UPDATED_AT.has(cfg.table);
+
+      // Construir query según la tabla
+      const selectCols = `id, ${cfg.urlColumn}, ${cfg.nameColumn}, ${cfg.mimeColumn || "type"}, metadata, source, created_at`;
+      let query = supabase
+        .from(cfg.table)
+        .select(selectCols)
+        .eq(cfg.filterColumn, cfg.filterValue)
+        .order("created_at", { ascending: true });
+
+      // Filtro de "pending"
+      if (cfg.hasAiStatus) {
+        query = query.eq("ai_status", "pending");
+      } else {
+        // policy_documents: no tiene ai_status, usar ai_summary IS NULL
+        query = query.is("ai_summary", null);
+      }
+
+      if (cfg.excludeLiveVideo) {
+        query = query.neq("source", "live_video");
+      }
+
+      const { data: pendingRecords, error: fetchErr } = await query;
+
+      if (fetchErr) {
+        logger.error("process-pending: error buscando registros", new Error(fetchErr.message), {
+          component: "ai-process-pending",
+          action: "fetch.pending",
+          metadata: { table: cfg.table, error: fetchErr.message },
+        });
+        allResults.push({ table: cfg.table, processed: 0, success: 0, fail: 0 });
+        continue;
+      }
+
+      if (!pendingRecords || pendingRecords.length === 0) {
+        allResults.push({ table: cfg.table, processed: 0, success: 0, fail: 0 });
+        continue;
+      }
+
+      logger.info("process-pending: iniciando procesamiento", {
         component: "ai-process-pending",
-        action: "fetch.pending",
-        metadata: { sessionId, error: fetchErr.message },
+        action: "start",
+        metadata: { table: cfg.table, count: pendingRecords.length },
       });
-      return NextResponse.json(
-        { error: `Error al buscar evidencias pendientes: ${fetchErr.message}` },
-        { status: 500 }
-      );
-    }
 
-    if (!pendingEvidences || pendingEvidences.length === 0) {
-      return NextResponse.json({
-        ok: true,
-        processed: 0,
-        message: "No hay evidencias pendientes de análisis",
-      });
-    }
+      let successCount = 0;
+      let failCount = 0;
 
-    logger.info("process-pending: iniciando procesamiento", {
-      component: "ai-process-pending",
-      action: "start",
-      metadata: { sessionId, count: pendingEvidences.length },
-    });
+      // Procesar UNO POR UNO, secuencialmente
+      for (const record of pendingRecords as unknown as PendingRecord[]) {
+        try {
+          // Marcar como "processing" (solo si tiene ai_status)
+          if (cfg.hasAiStatus) {
+            const processingUpdate: Record<string, unknown> = { ai_status: "processing" };
+            if (hasUpdatedAt) processingUpdate.updated_at = new Date().toISOString();
+            await supabase.from(cfg.table).update(processingUpdate).eq("id", record.id);
+          }
 
-    const results: Array<{ id: string; ok: boolean; model?: string; error?: string }> = [];
-    let successCount = 0;
-    let failCount = 0;
+          // Resolver URL del archivo
+          const fileUrl = (record as unknown as Record<string, string>)[cfg.urlColumn];
+          if (!fileUrl) {
+            throw new Error("Sin URL de archivo");
+          }
 
-    // Procesar UNA POR UNA, secuencialmente (no en paralelo)
-    for (const evidence of pendingEvidences) {
-      try {
-        // Marcar como "processing" para evitar doble procesamiento
-        // (si el usuario dispara dos veces, la segunda no toma las que ya están siendo procesadas)
-        // NOTA: inspection_evidences no tiene columna updated_at
-        await supabase
-          .from("inspection_evidences")
-          .update({ ai_status: "processing" })
-          .eq("id", evidence.id);
+          // Resolver MIME type
+          const meta = record.metadata;
+          let mimeType: string | null = null;
+          if (cfg.mimeColumn) {
+            mimeType = (record as unknown as Record<string, string | null>)[cfg.mimeColumn] || null;
+          }
+          if (!mimeType) {
+            mimeType = (meta?.mimeType as string) || null;
+          }
+          if (!mimeType) {
+            if (record.type === "photo") mimeType = "image/jpeg";
+            else if (record.type === "video") mimeType = "video/mp4";
+            else if (record.type === "pdf") mimeType = "application/pdf";
+            else if (cfg.table === "policy_documents" && record.document_type) {
+              mimeType = record.document_type;
+            } else {
+              mimeType = "application/octet-stream";
+            }
+          }
 
-        // Resolver MIME type desde metadata o type
-        const meta = evidence.metadata as Record<string, unknown> | null;
-        let mimeType = (meta?.mimeType as string) || null;
-        if (!mimeType) {
-          // Inferir desde el type de la BD
-          if (evidence.type === "photo") mimeType = "image/jpeg";
-          else if (evidence.type === "video") mimeType = "video/mp4";
-          else if (evidence.type === "pdf") mimeType = "application/pdf";
-          else mimeType = "application/octet-stream";
-        }
+          // Descargar el archivo desde R2
+          const dlRes = await fetch(fileUrl, { signal: AbortSignal.timeout(30000) });
+          if (!dlRes.ok) {
+            throw new Error(`No se pudo descargar el archivo (HTTP ${dlRes.status})`);
+          }
+          const arrayBuffer = await dlRes.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
 
-        // Descargar el archivo desde R2
-        const fileUrl = evidence.url;
-        const dlRes = await fetch(fileUrl, { signal: AbortSignal.timeout(30000) });
-        if (!dlRes.ok) {
-          throw new Error(`No se pudo descargar el archivo (HTTP ${dlRes.status})`);
-        }
-        const arrayBuffer = await dlRes.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+          // Resolver nombre del archivo
+          const fileName =
+            (record as unknown as Record<string, string | null>)[cfg.nameColumn] ||
+            (meta?.originalName as string) ||
+            record.id;
 
-        // Analizar con IA
-        const fileName = (meta?.originalName as string) || evidence.description || evidence.id;
-        const ai = await summarizeFile(buffer, mimeType, fileName);
+          // Analizar con IA
+          const ai = await summarizeFile(buffer, mimeType, fileName);
 
-        if (ai.ok) {
-          // Guardar resultado (sin updated_at — inspection_evidences no lo tiene)
-          await supabase
-            .from("inspection_evidences")
-            .update({
+          if (ai.ok) {
+            // Guardar resultado
+            const doneUpdate: Record<string, unknown> = {
               ai_summary: ai.summary,
               ai_model: ai.model,
-              ai_status: "done",
-            })
-            .eq("id", evidence.id);
+            };
+            if (cfg.hasAiStatus) doneUpdate.ai_status = "done";
+            if (hasUpdatedAt) doneUpdate.updated_at = new Date().toISOString();
+            await supabase.from(cfg.table).update(doneUpdate).eq("id", record.id);
 
-          successCount++;
-          results.push({ id: evidence.id, ok: true, model: ai.model });
+            successCount++;
+            logger.info("process-pending: archivo analizado", {
+              component: "ai-process-pending",
+              action: "record.done",
+              metadata: { table: cfg.table, recordId: record.id, model: ai.model },
+            });
+          } else {
+            // IA no procesó — marcar como skipped (o dejar ai_summary null)
+            const skippedUpdate: Record<string, unknown> = {};
+            if (cfg.hasAiStatus) skippedUpdate.ai_status = "skipped";
+            if (hasUpdatedAt) skippedUpdate.updated_at = new Date().toISOString();
+            if (Object.keys(skippedUpdate).length > 0) {
+              await supabase.from(cfg.table).update(skippedUpdate).eq("id", record.id);
+            }
 
-          logger.info("process-pending: evidencia analizada", {
-            component: "ai-process-pending",
-            action: "evidence.done",
-            metadata: { sessionId, evidenceId: evidence.id, model: ai.model },
-          });
-        } else {
-          // IA no procesó — marcar como skipped
-          await supabase
-            .from("inspection_evidences")
-            .update({ ai_status: "skipped" })
-            .eq("id", evidence.id);
-
+            failCount++;
+            logger.warn("process-pending: IA no procesó archivo", {
+              component: "ai-process-pending",
+              action: "record.skipped",
+              metadata: { table: cfg.table, recordId: record.id, reason: ai.reason, mimeType },
+            });
+          }
+        } catch (err) {
           failCount++;
-          results.push({ id: evidence.id, ok: false, error: ai.reason });
+          const errMsg = err instanceof Error ? err.message : String(err);
 
-          logger.warn("process-pending: IA no procesó evidencia", {
+          if (cfg.hasAiStatus) {
+            const errorUpdate: Record<string, unknown> = { ai_status: "error" };
+            if (hasUpdatedAt) errorUpdate.updated_at = new Date().toISOString();
+            await supabase.from(cfg.table).update(errorUpdate).eq("id", record.id);
+          }
+
+          logger.warn("process-pending: error en archivo", {
             component: "ai-process-pending",
-            action: "evidence.skipped",
-            metadata: { sessionId, evidenceId: evidence.id, reason: ai.reason, mimeType },
+            action: "record.error",
+            metadata: { table: cfg.table, recordId: record.id, error: errMsg },
           });
         }
-      } catch (err) {
-        // Error en esta evidencia — marcar como error y continuar con la siguiente
-        failCount++;
-        const errMsg = err instanceof Error ? err.message : String(err);
-        results.push({ id: evidence.id, ok: false, error: errMsg });
-
-        await supabase
-          .from("inspection_evidences")
-          .update({ ai_status: "error" })
-          .eq("id", evidence.id);
-
-        logger.warn("process-pending: error en evidencia", {
-          component: "ai-process-pending",
-          action: "evidence.error",
-          metadata: { sessionId, evidenceId: evidence.id, error: errMsg },
-        });
       }
+
+      logger.info("process-pending: tabla completada", {
+        component: "ai-process-pending",
+        action: "table.complete",
+        metadata: { table: cfg.table, total: pendingRecords.length, success: successCount, fail: failCount },
+      });
+
+      allResults.push({
+        table: cfg.table,
+        processed: pendingRecords.length,
+        success: successCount,
+        fail: failCount,
+      });
     }
 
-    logger.info("process-pending: procesamiento completado", {
-      component: "ai-process-pending",
-      action: "complete",
-      metadata: { sessionId, total: pendingEvidences.length, success: successCount, fail: failCount },
-    });
+    const totalProcessed = allResults.reduce((sum, r) => sum + r.processed, 0);
+    const totalSuccess = allResults.reduce((sum, r) => sum + r.success, 0);
+    const totalFail = allResults.reduce((sum, r) => sum + r.fail, 0);
 
     return NextResponse.json({
       ok: true,
-      processed: pendingEvidences.length,
-      success: successCount,
-      fail: failCount,
-      results,
+      processed: totalProcessed,
+      success: totalSuccess,
+      fail: totalFail,
+      tables: allResults,
     });
   } catch (err) {
     logger.error("process-pending: error general", err as Error, {

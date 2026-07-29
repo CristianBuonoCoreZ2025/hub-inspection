@@ -71,7 +71,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     // Polling cada 5s mientras hay documentos siendo procesados por IA
     refetchInterval: (query) => {
       const docs = query.state.data;
-      if (docs && docs.some((d) => d.ai_status === "pending")) return 5000;
+      if (docs && docs.some((d) => d.ai_status === "pending" || d.ai_status === "processing")) return 5000;
       return false;
     },
   });
@@ -336,6 +336,12 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
       queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
       queryClient.invalidateQueries({ queryKey: ["gestion-screens"] });
       setUploadModal((p) => ({ ...p, status: "done" }));
+      // Disparar análisis de IA en background (fire-and-forget)
+      fetch("/api/ai/process-pending", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claimId }),
+      }).catch(() => {});
     },
     onError: (e: Error) => {
       toast.error(e.message);

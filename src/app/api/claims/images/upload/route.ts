@@ -2,7 +2,6 @@ import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
 import { uploadClaimImageRaw, reuploadClaimImageOptimized } from "@/lib/storage/claim-upload";
-import { summarizeFile } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logger";
 
 /**
@@ -137,10 +136,11 @@ export async function POST(request: NextRequest) {
     // ── PASO 3: Devolver éxito al cliente ──
     const response = NextResponse.json({ image });
 
-    // ── PASO 4-8: Procesamiento en background (optimización + IA) ──
-    // after() ejecuta después de que la respuesta se envía al cliente.
-    // Si falla, no afecta al usuario — la imagen ya está subida y registrada.
-    // La IA es un EXTRA: se dispara en segundo plano para no bloquear nuevas subidas.
+    // ── PASO 4: Optimización en background (after) ──
+    // La optimización con sharp es rápida (~1-2s) y local, after() la maneja bien.
+    // La IA NO va aquí — after() en Vercel serverless no es confiable para tareas
+    // largas (30-60s de IA). La IA se dispara desde el frontend vía
+    // /api/ai/process-pending después de que todas las subidas terminan.
     after(async () => {
       const imageId = image.id;
       try {
@@ -178,64 +178,13 @@ export async function POST(request: NextRequest) {
             },
           });
         }
+        // NOTA: La IA NO se ejecuta aquí. El frontend dispara
+        // /api/ai/process-pending después de que todas las subidas terminan.
       } catch (bgErr) {
         logger.error("Background processing falló", bgErr as Error, {
           component: "claim-image-upload",
           action: "background.error",
           metadata: { imageId },
-        });
-      }
-
-      // ── IA: descripción automática de la imagen (EXTRA — no bloquea) ──
-      // Se ejecuta después de la optimización, dentro de after().
-      // Si falla, no afecta al usuario: la imagen ya está subida y visible.
-      // El usuario puede reintentar manualmente con el botón Brain.
-      // NOTA: NO usar setImmediate aquí — en Vercel serverless, setImmediate
-      // dentro de after() difiere la IA tanto que la función se congela/mata
-      // antes de que el callback arranque. Llamar directamente.
-      let aiStatus: "done" | "error" | "skipped" = "error";
-      try {
-        const ai = await summarizeFile(buffer, mimeType, file.name);
-        if (ai.ok) {
-          aiStatus = "done";
-          await supabase
-            .from("claim_images")
-            .update({
-              ai_summary: ai.summary,
-              ai_model: ai.model,
-              ai_status: aiStatus,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", imageId);
-
-          logger.info("IA: descripción de imagen generada y guardada", {
-            component: "claim-image-upload",
-            action: "ai.summary.success",
-            metadata: { imageId, model: ai.model },
-          });
-        } else {
-          aiStatus = "skipped";
-          await supabase
-            .from("claim_images")
-            .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
-            .eq("id", imageId);
-          logger.warn("IA: no se pudo generar descripción", {
-            component: "claim-image-upload",
-            action: "ai.summary.skipped",
-            metadata: { imageId, reason: ai.reason },
-          });
-        }
-      } catch (aiErr) {
-        await supabase
-          .from("claim_images")
-          .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
-          .eq("id", imageId);
-        logger.warn("IA: error generando descripción (no crítico)", {
-          component: "claim-image-upload",
-          action: "ai.summary.error",
-          metadata: {
-            error: aiErr instanceof Error ? aiErr.message : String(aiErr),
-          },
         });
       }
     });
