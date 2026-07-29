@@ -1619,24 +1619,22 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: geometricPrecision;
     font-feature-settings: "kern" 1;
-    paint-order: stroke fill;
-    -webkit-text-stroke: 0.3px currentColor;
   }
   .app-origin-w {
     @apply text-purple-700 dark:text-purple-300;
-    border: 1px solid currentColor;
+    border: 1px solid rgb(168 85 247 / 0.15);
   }
   .app-origin-a {
     @apply text-blue-600 dark:text-blue-400;
-    border: 1px solid currentColor;
+    border: 1px solid rgb(59 130 246 / 0.15);
   }
   .app-origin-m {
     @apply text-amber-700 dark:text-amber-300;
-    border: 1px solid currentColor;
+    border: 1px solid rgb(245 158 11 / 0.15);
   }
   .app-origin-default {
     @apply text-slate-500 dark:text-slate-400;
-    border: 1px solid currentColor;
+    border: 1px solid rgb(115 115 115 / 0.15);
   }
 
   /* ═══════════════════════════════════════════════════════════════
