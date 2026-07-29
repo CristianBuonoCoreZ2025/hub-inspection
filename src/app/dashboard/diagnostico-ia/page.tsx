@@ -88,7 +88,7 @@ export default function DiagnosticoIAPage() {
             onChange={(e) => onPick(e.target.files?.[0] ?? null)}
           />
           {file && (
-            <span className="text-xs text-muted-foreground truncate max-w-[280px]">
+            <span className="text-xs text-muted-foreground truncate max-w-70">
               {file.name} ({(file.size / 1024).toFixed(1)} KB)
             </span>
           )}
