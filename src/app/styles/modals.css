@@ -669,11 +669,14 @@
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  min-width: 10px !important;
-  padding: 0 !important;
+  min-width: 12px !important;
+  height: 12px !important;
+  padding: 0 2px !important;
+  border-radius: 3px !important;
   font-size: 8px !important;
   font-weight: 700 !important;
   font-style: normal !important;
+  background: var(--muted) !important;
   color: var(--muted-foreground) !important;
   flex-shrink: 0 !important;
   margin-top: 1px !important;
