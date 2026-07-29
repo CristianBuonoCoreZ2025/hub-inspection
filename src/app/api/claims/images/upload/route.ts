@@ -187,57 +187,57 @@ export async function POST(request: NextRequest) {
       }
 
       // ── IA: descripción automática de la imagen (EXTRA — no bloquea) ──
-      // Se ejecuta después de la optimización. Si falla, no afecta al usuario:
-      // la imagen ya está subida y visible. El usuario puede reintentar manualmente.
-      // Usar setImmediate para ceder el event loop y permitir que otras
-      // peticiones (nuevas subidas) se procesen primero.
-      setImmediate(async () => {
-        let aiStatus: "done" | "error" | "skipped" = "error";
-        try {
-          const ai = await summarizeFile(buffer, mimeType, file.name);
-          if (ai.ok) {
-            aiStatus = "done";
-            await supabase
-              .from("claim_images")
-              .update({
-                ai_summary: ai.summary,
-                ai_model: ai.model,
-                ai_status: aiStatus,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", imageId);
+      // Se ejecuta después de la optimización, dentro de after().
+      // Si falla, no afecta al usuario: la imagen ya está subida y visible.
+      // El usuario puede reintentar manualmente con el botón Brain.
+      // NOTA: NO usar setImmediate aquí — en Vercel serverless, setImmediate
+      // dentro de after() difiere la IA tanto que la función se congela/mata
+      // antes de que el callback arranque. Llamar directamente.
+      let aiStatus: "done" | "error" | "skipped" = "error";
+      try {
+        const ai = await summarizeFile(buffer, mimeType, file.name);
+        if (ai.ok) {
+          aiStatus = "done";
+          await supabase
+            .from("claim_images")
+            .update({
+              ai_summary: ai.summary,
+              ai_model: ai.model,
+              ai_status: aiStatus,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", imageId);
 
-            logger.info("IA: descripción de imagen generada y guardada", {
-              component: "claim-image-upload",
-              action: "ai.summary.success",
-              metadata: { imageId, model: ai.model },
-            });
-          } else {
-            aiStatus = "skipped";
-            await supabase
-              .from("claim_images")
-              .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
-              .eq("id", imageId);
-            logger.warn("IA: no se pudo generar descripción", {
-              component: "claim-image-upload",
-              action: "ai.summary.skipped",
-              metadata: { imageId, reason: ai.reason },
-            });
-          }
-        } catch (aiErr) {
+          logger.info("IA: descripción de imagen generada y guardada", {
+            component: "claim-image-upload",
+            action: "ai.summary.success",
+            metadata: { imageId, model: ai.model },
+          });
+        } else {
+          aiStatus = "skipped";
           await supabase
             .from("claim_images")
             .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
             .eq("id", imageId);
-          logger.warn("IA: error generando descripción (no crítico)", {
+          logger.warn("IA: no se pudo generar descripción", {
             component: "claim-image-upload",
-            action: "ai.summary.error",
-            metadata: {
-              error: aiErr instanceof Error ? aiErr.message : String(aiErr),
-            },
+            action: "ai.summary.skipped",
+            metadata: { imageId, reason: ai.reason },
           });
         }
-      });
+      } catch (aiErr) {
+        await supabase
+          .from("claim_images")
+          .update({ ai_status: aiStatus, updated_at: new Date().toISOString() })
+          .eq("id", imageId);
+        logger.warn("IA: error generando descripción (no crítico)", {
+          component: "claim-image-upload",
+          action: "ai.summary.error",
+          metadata: {
+            error: aiErr instanceof Error ? aiErr.message : String(aiErr),
+          },
+        });
+      }
     });
 
     return response;
