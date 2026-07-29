@@ -1995,12 +1995,12 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  const [hoveredLight, setHoveredLight] = useState<number | null>(null);
  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
  const lightStyles: Record<LightState, { dot: string; label: string }> = {
- done: { dot: "bg-emerald-500", label: "text-emerald-600 dark:text-emerald-400" },
- active: { dot: "bg-amber-400", label: "text-amber-600 dark:text-amber-400" },
- alert: { dot: "bg-amber-400", label: "text-amber-600 dark:text-amber-400" },
- late: { dot: "bg-red-500", label: "text-red-600 dark:text-red-400" },
- rejected: { dot: "bg-rose-500", label: "text-rose-600 dark:text-rose-400" },
- pending: { dot: "bg-slate-300 dark:bg-slate-600", label: "text-muted-foreground" },
+ done: { dot: "bg-emerald-100 dark:bg-emerald-900/30", label: "text-emerald-700 dark:text-emerald-300" },
+ active: { dot: "bg-amber-100 dark:bg-amber-900/30", label: "text-amber-700 dark:text-amber-300" },
+ alert: { dot: "bg-amber-100 dark:bg-amber-900/30", label: "text-amber-700 dark:text-amber-300" },
+ late: { dot: "bg-rose-100 dark:bg-rose-900/30", label: "text-rose-700 dark:text-rose-300" },
+ rejected: { dot: "bg-rose-100 dark:bg-rose-900/30", label: "text-rose-700 dark:text-rose-300" },
+ pending: { dot: "bg-slate-100 dark:bg-slate-800/50", label: "text-slate-600 dark:text-slate-400" },
  none: { dot: "bg-transparent border border-dashed border-slate-200 dark:border-slate-700", label: "text-muted-foreground/40" },
  };
 

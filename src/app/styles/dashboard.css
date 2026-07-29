@@ -2280,8 +2280,8 @@
   .gestion-light-dot { width: 16px !important; height: 16px !important; }
   .gestion-light-letter {
     font-family: var(--font-dm-sans), system-ui, sans-serif !important;
-    font-size: 7px !important;
-    font-weight: 700 !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
     line-height: 1 !important;
   }
 
