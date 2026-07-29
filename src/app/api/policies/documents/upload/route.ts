@@ -18,7 +18,14 @@ import { logger } from "@/lib/logger";
  *  4. Inserta el registro en policy_documents
  *
  * Devuelve: { document: { id, document_name, document_url, ... } }
+ *
+ * maxDuration=120: el análisis de IA es síncrono (espera antes de responder)
+ * y puede tardar 30-60s con fallback de modelos. Sin este límite, Vercel mata
+ * la función en el default del plan (10-15s) antes de que la IA termine.
  */
+export const runtime = "nodejs";
+export const maxDuration = 120;
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();

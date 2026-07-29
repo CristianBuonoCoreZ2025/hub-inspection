@@ -15,7 +15,14 @@ import { logger } from "@/lib/logger";
  *     force?: boolean }   // si true, re-analiza aunque ya tenga ai_summary
  *
  * El registro debe tener una URL pública (document_url o url) accesible.
+ *
+ * maxDuration=120: la cadena de fallback de OpenRouter puede probar varios
+ * modelos (free → paid) con 30s de timeout cada uno. Sin este límite, Vercel
+ * mata la función en el default del plan (10-15s) antes de que la IA termine.
  */
+export const runtime = "nodejs";
+export const maxDuration = 120;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

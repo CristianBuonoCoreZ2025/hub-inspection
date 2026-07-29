@@ -24,7 +24,14 @@ import { logger } from "@/lib/logger";
  *  6. Si todos los items del request están recibidos/no_necesarios → cierra el request
  *
  * Devuelve: { document: { id, document_name, document_url, ... } }
+ *
+ * maxDuration=120: el procesamiento en background (after) incluye IA
+ * (que puede tardar 30-60s con fallback de modelos). Sin este límite,
+ * Vercel mata la función antes de que el after() termine la IA.
  */
+export const runtime = "nodejs";
+export const maxDuration = 120;
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();

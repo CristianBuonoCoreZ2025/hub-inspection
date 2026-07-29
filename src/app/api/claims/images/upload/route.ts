@@ -23,7 +23,14 @@ import { logger } from "@/lib/logger";
  *  6. Actualiza url + file_path en claim_images
  *  7. Genera descripción con IA (visión)
  *  8. Actualiza ai_summary + ai_model en claim_images
+ *
+ * maxDuration=120: el procesamiento en background (after) incluye optimización
+ * + IA (que puede tardar 30-60s con fallback de modelos). Sin este límite,
+ * Vercel mata la función antes de que el after() termine la IA.
  */
+export const runtime = "nodejs";
+export const maxDuration = 120;
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
