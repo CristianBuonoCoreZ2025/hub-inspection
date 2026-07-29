@@ -1606,10 +1606,11 @@
   /* Origin badge — W (Workflow) morado, A (Automática) azul, M (Manual) café */
   /* Sin fondo — solo la letra con definición HD */
   .app-origin-badge {
-    @apply inline-flex items-center justify-center rounded font-bold leading-none;
+    @apply inline-flex items-center justify-center rounded leading-none;
     font-size: 9px;
+    font-weight: 400;
     min-width: 16px;
-    height: 14px;
+    height: 16px;
     padding: 0 4px;
     font-style: italic;
     text-transform: lowercase;
