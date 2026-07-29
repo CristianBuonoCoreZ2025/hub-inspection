@@ -4021,6 +4021,67 @@ El script `scripts/sync-all-workflows.cjs` recorre todos los `claims` y ejecuta
 node scripts/sync-all-workflows.cjs
 ```
 
+---
+
+## Asignación y Reasignación de Gestiones (claim_actions)
+
+### Regla de permisos (OBLIGATORIA, no negociable)
+
+**Solo el responsable actual de un nivel puede actuar en ese nivel:**
+- **Emitir** → solo el `issuer_id` asignado
+- **Revisar** → solo el `reviewer_id` asignado
+- **Aprobar** → solo el `approver_id` asignado
+- **Despachar** → solo el `dispatcher_id` asignado
+
+Si el usuario no es el responsable del nivel, **no ve los botones de actuar**,
+aunque esté en el combo de posibles emisores. Punto. Sin excepciones.
+
+### Flujo de asignación al crear la gestión
+
+Cuando se crea una `claim_action` (via `createClaimAction`), el sistema
+auto-asigna los responsables (`issuer_id`, `reviewer_id`, `approver_id`) así:
+
+1. **Rol por defecto**: Si el template tiene `default_issuer_role` configurado
+   y ese rol está en `issuer_roles`, buscar la persona del siniestro que tenga
+   ese rol (ej: `default_issuer_role = "inspector"` → `claim.inspector_id`).
+2. **Cualquier candidato del siniestro**: Si no hay rol por defecto o la persona
+   del rol por defecto no existe en el siniestro, buscar entre todos los roles
+   del nivel (`issuer_roles`) las personas asignadas al siniestro.
+3. **Menos gestiones pendientes**: Si hay varios candidatos, elegir el que tenga
+   menos gestiones pendientes (balanceo de carga).
+4. **Fallback a usuario internal**: Si nadie del siniestro cumple los roles del
+   nivel, asignar al primer usuario `internal` activo disponible. **La gestión
+   nunca debe quedar "Por asignar"** — siempre tiene un responsable desde que
+   se crea.
+
+### Flujo al entrar a una gestión existente
+
+**Caso A — El usuario es el responsable actual:**
+- Ve los botones de actuar (Emitir/Revisar/Aprobar/Despachar).
+- Ve un botón "Reasignar" que abre el combo de candidatos.
+- Si reasigna a otra persona, deja de ser el responsable y pierde los botones
+  de actuar. La gestión queda asignada a la nueva persona.
+
+**Caso B — El usuario está en el combo pero NO es el responsable:**
+- NO ve los botones de actuar.
+- Ve un botón "Tomar gestión" que lo auto-asigna como responsable.
+- Después de tomar la gestión, puede actuar.
+- También puede reasignar a otra persona del combo (pasársela a un tercero).
+
+**Caso C — El usuario NO está en el combo:**
+- No ve botones de actuar.
+- No ve el combo de reasignación.
+- No puede tomar la gestión ni reasignarla.
+- Solo ve la información de quién es el responsable actual (read-only).
+
+### Quién puede reasignar
+
+Solo puede reasignar quien cumple **ambas** condiciones:
+1. Está en el combo de posibles emisores del nivel (tiene el rol).
+2. Es el responsable actual O está tomando la gestión.
+
+Si no tiene el rol, no ve el combo ni el botón de reasignar.
+
 Útil tras cambiar configuración de workflows o re-sincronizar claims migrados.
 
 
