@@ -162,10 +162,10 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
  const next = statuses[(statuses.indexOf(item.status as Status) + 1) % statuses.length];
  updateMutation.mutate({ id: item.id, data: { status: next } });
  }}
- className="shrink-0"
+ className="shrink-0 p-1.5 rounded-lg touch-manipulation"
  title={config.label}
  >
- <Icon className={`h-5 w-5 ${config.className}`} />
+ <Icon className={`h-6 w-6 ${config.className}`} />
  </button>
  <div className="flex-1 min-w-0">
  <p className="text-[13px] font-medium">{item.item}</p>
@@ -180,7 +180,7 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
  updateMutation.mutate({ id: item.id, data: { notes: e.target.value || null } });
  }
  }}
- className="app-input h-6 w-[120px] text-[11px]"
+ className="app-input h-6 flex-1 min-w-[100px] text-[11px]"
  />
  <Button
  variant="ghost"

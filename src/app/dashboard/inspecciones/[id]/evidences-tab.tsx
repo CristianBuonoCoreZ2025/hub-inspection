@@ -137,6 +137,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [aiSummaryModal, setAiSummaryModal] = useState<{ visible: boolean; title: string; summary: string }>({ visible: false, title: "", summary: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
   const uploadModalOpen = uploadQueue.length > 0;
@@ -289,6 +290,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     Array.from(e.target.files || []).forEach(handleFile);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
   };
 
   const closeUploadModal = () => {
@@ -357,6 +359,23 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           className="hidden"
           id="evidence-upload"
         />
+        {/* Botón tomar foto — solo mobile */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleInput}
+          className="hidden"
+          id="evidence-camera"
+        />
+        <label
+          htmlFor="evidence-camera"
+          className="sm:hidden flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-[12px] font-medium text-primary touch-manipulation"
+        >
+          <Camera className="h-4 w-4" />
+          Tomar foto
+        </label>
         {uploadQueue.length > 0 && (
           <button
             type="button"
