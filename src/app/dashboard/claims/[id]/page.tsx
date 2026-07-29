@@ -2212,12 +2212,60 @@ function GestionLevelTooltip({ g, level, state }: { g: GestionLightData; level: 
 // Muestra: nombre completo, código, fechas de creación/actualización
 // ═══════════════════════════════════════════════════════════════
 
-function GestionCodeTooltip({ nombre, codigo, createdOn, updatedOn }: {
+function GestionCodeTooltip({ nombre, codigo, createdOn, updatedOn, origin, hasIssue, hasReview, hasApprove, issuedBy, issuedOn, reviewedBy, reviewedOn, approvedBy, approvedOn, daysToIssue, daysToReview, daysToApprove, expectedDate }: {
  nombre: string;
  codigo: string;
  createdOn: string | undefined;
  updatedOn: string | null;
+ origin: string;
+ hasIssue: boolean;
+ hasReview: boolean;
+ hasApprove: boolean;
+ issuedBy: string | null;
+ issuedOn: string | null;
+ reviewedBy: string | null;
+ reviewedOn: string | null;
+ approvedBy: string | null;
+ approvedOn: string | null;
+ daysToIssue: number;
+ daysToReview: number;
+ daysToApprove: number;
+ expectedDate: string | null;
 }) {
+ // Fecha máxima = fecha esperada (expected_date) del último nivel que tiene la gestión
+ const lastLevelDate =
+ hasApprove ? (issuedOn && reviewedOn && approvedOn ? null : expectedDate) :
+ hasReview ? (issuedOn && reviewedOn ? null : expectedDate) :
+ hasIssue ? (issuedOn ? null : expectedDate) :
+ expectedDate;
+
+ // Responsables por nivel (solo los que tiene la gestión)
+ const levels: { label: string; who: string | null; when: string | null }[] = [];
+ if (hasIssue) {
+ levels.push({ label: "Emisor", who: issuedBy, when: issuedOn });
+ }
+ if (hasReview) {
+ levels.push({ label: "Revisor", who: reviewedBy, when: reviewedOn });
+ }
+ if (hasApprove) {
+ levels.push({ label: "Aprobador", who: approvedBy, when: approvedOn });
+ }
+
+ // Plazo del último nivel
+ const lastLevelPlazo =
+ hasApprove ? daysToApprove :
+ hasReview ? daysToReview :
+ hasIssue ? daysToIssue : 0;
+ const lastLevelLabel =
+ hasApprove ? "Aprobación" :
+ hasReview ? "Revisión" :
+ hasIssue ? "Emisión" : "";
+
+ const originText =
+ origin === "W" ? "Workflow — generada automáticamente por el workflow" :
+ origin === "A" ? "Automática — gestión de dependencia automática" :
+ origin === "M" ? "Manual — generada manualmente" : "";
+
  return (
  <div className="gestion-light-tooltip">
  <div className="gestion-light-tooltip-header">
@@ -2228,6 +2276,36 @@ function GestionCodeTooltip({ nombre, codigo, createdOn, updatedOn }: {
  <span className="gestion-light-tooltip-label">Gestión</span>
  <span className="gestion-light-tooltip-value font-medium">{nombre}</span>
  </div>
+
+ {levels.length > 0 && (
+ <>
+ <div className="gestion-light-tooltip-divider" />
+ {levels.map((lvl) => (
+ <div key={lvl.label} className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">{lvl.label}</span>
+ <span className="gestion-light-tooltip-value">
+ {lvl.who || "Por asignar"}
+ {lvl.when && <span className="gestion-light-tooltip-sub"> · {formatDate(lvl.when)}</span>}
+ </span>
+ </div>
+ ))}
+ </>
+ )}
+
+ {lastLevelLabel && lastLevelPlazo > 0 && (
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Plazo {lastLevelLabel}</span>
+ <span className="gestion-light-tooltip-value">{lastLevelPlazo} días</span>
+ </div>
+ )}
+
+ {lastLevelDate && (
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Fecha esp.</span>
+ <span className="gestion-light-tooltip-value">{formatDate(lastLevelDate)}</span>
+ </div>
+ )}
+
  <div className="gestion-light-tooltip-row">
  <span className="gestion-light-tooltip-label">Creada</span>
  <span className="gestion-light-tooltip-value">{createdOn ? formatDateTime(createdOn) : "—"}</span>
@@ -2236,12 +2314,43 @@ function GestionCodeTooltip({ nombre, codigo, createdOn, updatedOn }: {
  <span className="gestion-light-tooltip-label">Actualizada</span>
  <span className="gestion-light-tooltip-value">{updatedOn ? formatDateTime(updatedOn) : "—"}</span>
  </div>
+
+ {originText && (
+ <>
+ <div className="gestion-light-tooltip-divider" />
+ <p className="gestion-code-tooltip-legend">
+ <span className="gestion-code-tooltip-legend-badge">{origin}</span>{" "}
+ {originText}
+ </p>
+ </>
+ )}
  </div>
  );
 }
 
 // Celda del código de gestión con tooltip al hover
-function GestionCodeCell({ g }: { g: { nombre: string; codigo: string; createdOn: string | undefined; updatedOn: string | null; color: string | null; isActive: boolean } }) {
+function GestionCodeCell({ g }: { g: {
+ nombre: string;
+ codigo: string;
+ createdOn: string | undefined;
+ updatedOn: string | null;
+ color: string | null;
+ isActive: boolean;
+ origin: string;
+ hasIssue: boolean;
+ hasReview: boolean;
+ hasApprove: boolean;
+ issuedBy: string | null;
+ issuedOn: string | null;
+ reviewedBy: string | null;
+ reviewedOn: string | null;
+ approvedBy: string | null;
+ approvedOn: string | null;
+ daysToIssue: number;
+ daysToReview: number;
+ daysToApprove: number;
+ expectedDate: string | null;
+} }) {
  const [open, setOpen] = useState(false);
  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -2290,6 +2399,20 @@ function GestionCodeCell({ g }: { g: { nombre: string; codigo: string; createdOn
  codigo={g.codigo}
  createdOn={g.createdOn}
  updatedOn={g.updatedOn}
+ origin={g.origin}
+ hasIssue={g.hasIssue}
+ hasReview={g.hasReview}
+ hasApprove={g.hasApprove}
+ issuedBy={g.issuedBy}
+ issuedOn={g.issuedOn}
+ reviewedBy={g.reviewedBy}
+ reviewedOn={g.reviewedOn}
+ approvedBy={g.approvedBy}
+ approvedOn={g.approvedOn}
+ daysToIssue={g.daysToIssue}
+ daysToReview={g.daysToReview}
+ daysToApprove={g.daysToApprove}
+ expectedDate={g.expectedDate}
  />
  </PopoverContent>
  </Popover>
