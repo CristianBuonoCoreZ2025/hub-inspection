@@ -3565,7 +3565,7 @@ function AdjustmentEditorForm({
 // ═══════════════════════════════════════════════════════════════
 
 function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string; actionId?: string; readOnly?: boolean }) {
- // Cargar el siniestro para obtener business_line_id + código de la gestión
+ // Cargar el siniestro para obtener business_line_id + company_id + código de la gestión
  const { data: claim } = useQuery({
  queryKey: ["claim-for-docs", claimId],
  queryFn: async () => {
@@ -3573,7 +3573,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  const supabase = getSupabaseClient();
  const { data, error } = await supabase
  .from("claims")
- .select("business_line_id")
+ .select("business_line_id, company_id")
  .eq("id", claimId!)
  .maybeSingle();
  if (error) throw new Error(error.message);
@@ -3678,6 +3678,7 @@ function DocumentRequestView({ claimId, actionId, readOnly }: { claimId?: string
  await createClaimDocumentRequest({
  claim_id: claimId!,
  claim_action_id: actionId,
+ company_id: claim?.company_id,
  notes,
  items,
  });

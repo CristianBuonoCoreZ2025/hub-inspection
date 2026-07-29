@@ -1186,6 +1186,7 @@ export default function ClaimDetailPage() {
  fecha: a.issued_on || a.created_on,
  expectedDate: a.expected_date,
  createdOn: a.created_on,
+ updatedOn: a.updated_on,
  daysToIssue: a.action_template?.days_to_issue ?? 0,
  daysToReview: a.action_template?.days_to_review ?? 0,
  daysToApprove: a.action_template?.days_to_approve ?? 0,
@@ -1322,29 +1323,7 @@ export default function ClaimDetailPage() {
  </span>
  </td>
  <td className="whitespace-nowrap">
- <div className="flex items-center gap-1.5">
- {(() => {
-   const code = shortActionCode(g.codigo);
-   const hexColor = g.color;
-   if (hexColor) {
-     // Estilo via CSS class — color se setea con variable --gestion-color
-     return (
-       <div
-         className="app-gestion-code"
-         style={{ "--gestion-color": hexColor } as React.CSSProperties}
-       >
-         <div className="app-gestion-code-glow" />
-         <span>{code}</span>
-       </div>
-     );
-   }
-   // Sin color configurado → estilo original
-   return <span className="font-mono app-body text-primary tabular-nums">{code}</span>;
- })()}
- {g.isActive === false && (
- <span className="inline-flex items-center justify-center rounded px-0.5 app-body font-bold bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" title="Gestión deshabilitada">OFF</span>
- )}
- </div>
+ <GestionCodeCell g={g} />
  </td>
  <td className="font-medium app-body">
  <div className="flex items-center gap-2">
@@ -1988,6 +1967,7 @@ interface GestionLightData {
  codigo: string;
  estado: string;
  createdOn: string | undefined;
+ updatedOn: string | null;
  expectedDate: string | null;
  daysToIssue: number;
  daysToReview: number;
@@ -2222,6 +2202,99 @@ function GestionLevelTooltip({ g, level, state }: { g: GestionLightData; level: 
  <span className="gestion-light-tooltip-value">{formatDate(g.expectedDate)}</span>
  </div>
  </>
+ )}
+ </div>
+ );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Tooltip del código de gestión (hover)
+// Muestra: nombre completo, código, fechas de creación/actualización
+// ═══════════════════════════════════════════════════════════════
+
+function GestionCodeTooltip({ nombre, codigo, createdOn, updatedOn }: {
+ nombre: string;
+ codigo: string;
+ createdOn: string | undefined;
+ updatedOn: string | null;
+}) {
+ return (
+ <div className="gestion-light-tooltip">
+ <div className="gestion-light-tooltip-header">
+ <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+ <span className="gestion-light-tooltip-title">{shortActionCode(codigo)}</span>
+ </div>
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Gestión</span>
+ <span className="gestion-light-tooltip-value font-medium">{nombre}</span>
+ </div>
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Creada</span>
+ <span className="gestion-light-tooltip-value">{createdOn ? formatDateTime(createdOn) : "—"}</span>
+ </div>
+ <div className="gestion-light-tooltip-row">
+ <span className="gestion-light-tooltip-label">Actualizada</span>
+ <span className="gestion-light-tooltip-value">{updatedOn ? formatDateTime(updatedOn) : "—"}</span>
+ </div>
+ </div>
+ );
+}
+
+// Celda del código de gestión con tooltip al hover
+function GestionCodeCell({ g }: { g: { nombre: string; codigo: string; createdOn: string | undefined; updatedOn: string | null; color: string | null; isActive: boolean } }) {
+ const [open, setOpen] = useState(false);
+ const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+ const handleMouseEnter = () => {
+ if (hoverTimer.current) clearTimeout(hoverTimer.current);
+ hoverTimer.current = setTimeout(() => setOpen(true), 200);
+ };
+ const handleMouseLeave = () => {
+ if (hoverTimer.current) clearTimeout(hoverTimer.current);
+ setOpen(false);
+ };
+
+ const code = shortActionCode(g.codigo);
+ const hexColor = g.color;
+
+ return (
+ <div className="flex items-center gap-1.5">
+ <Popover open={open} onOpenChange={setOpen}>
+ <PopoverTrigger
+ render={
+ <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+ {hexColor ? (
+ <div
+ className="app-gestion-code"
+ style={{ "--gestion-color": hexColor } as React.CSSProperties}
+ >
+ <div className="app-gestion-code-glow" />
+ <span>{code}</span>
+ </div>
+ ) : (
+ <span className="font-mono app-body text-primary tabular-nums">{code}</span>
+ )}
+ </div>
+ }
+ />
+ <PopoverContent
+ side="bottom"
+ sideOffset={4}
+ align="start"
+ className="gestion-light-tooltip-popover"
+ onMouseEnter={() => setOpen(true)}
+ onMouseLeave={handleMouseLeave}
+ >
+ <GestionCodeTooltip
+ nombre={g.nombre}
+ codigo={g.codigo}
+ createdOn={g.createdOn}
+ updatedOn={g.updatedOn}
+ />
+ </PopoverContent>
+ </Popover>
+ {g.isActive === false && (
+ <span className="inline-flex items-center justify-center rounded px-0.5 app-body font-bold bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" title="Gestión deshabilitada">OFF</span>
  )}
  </div>
  );
