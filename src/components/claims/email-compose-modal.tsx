@@ -193,7 +193,7 @@ export function EmailComposeModal({
     lastLoadedTemplate.current = "";
   };
 
-  const { data: templates } = useQuery({
+  const { data: templates, isLoading: templatesLoading } = useQuery({
     queryKey: ["email-templates-for-action", action.action_template_id, businessLineId, action.company_id],
     queryFn: () =>
       getEmailTemplatesForAction(action.action_template_id, {
@@ -284,7 +284,7 @@ export function EmailComposeModal({
     [activeTemplates, effectiveTemplateId]
   );
 
-  const { data: previewData, isLoading: previewLoading } = useQuery({
+  const { data: previewData } = useQuery({
     queryKey: ["email-preview", action.id, effectiveMode, effectiveTemplateId],
     queryFn: async () => {
       try {
@@ -672,7 +672,15 @@ export function EmailComposeModal({
 
         {/* ═══ 4 + 5. BODY — Asunto + canvas WYSIWYG ═══ */}
         <div className="flex-1 overflow-hidden flex flex-col bg-background">
-          {effectiveMode === "template" && (previewLoading || !effectiveTemplateId) ? (
+          {(() => {
+            // No renderizar el canvas hasta que los datos estén listos.
+            // Esto evita la race condition donde el editor se monta vacío
+            // antes de que el preview API responda.
+            const templatesReady = !templatesLoading;
+            const previewReady = effectiveMode === "manual" || !!previewData;
+            const showSpinner = !templatesReady || !previewReady;
+            return showSpinner;
+          })() ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-2 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
               <p className="text-[11px]">Generando correo…</p>
