@@ -2293,15 +2293,15 @@ function ClaimsPageContent() {
  <thead>
  <tr>
  <th className="w-[130px]">N° Liquidación</th>
- <th className="w-[130px]">N° Ref Cliente</th>
- <th className="w-[130px]">N° Siniestro Cía</th>
+ <th className="w-[130px] hidden sm:table-cell">N° Ref Cliente</th>
+ <th className="w-[130px] hidden lg:table-cell">N° Siniestro Cía</th>
  <th className="min-w-[200px]">Asegurado</th>
- <th className="min-w-[250px]">Dirección</th>
+ <th className="min-w-[250px] hidden lg:table-cell">Dirección</th>
  <th className="w-[110px]">Estado</th>
- <th className="w-[100px]">Siniestro</th>
- <th className="w-[100px]">Denuncio</th>
- <th className="w-[100px]">Creación</th>
- <th className="w-[70px] text-center">Tipo/País</th>
+ <th className="w-[100px] hidden lg:table-cell">Siniestro</th>
+ <th className="w-[100px] hidden lg:table-cell">Denuncio</th>
+ <th className="w-[100px] hidden lg:table-cell">Creación</th>
+ <th className="w-[70px] text-center hidden lg:table-cell">Tipo/País</th>
  </tr>
  </thead>
  <tbody>
@@ -2329,15 +2329,15 @@ function ClaimsPageContent() {
  </Link>
  </div>
  </td>
- <td>{claim.client_reference || "—"}</td>
- <td>{claim.claim_number || "—"}</td>
+ <td className="hidden sm:table-cell">{claim.client_reference || "—"}</td>
+ <td className="hidden lg:table-cell">{claim.claim_number || "—"}</td>
  <td>{getParticipant(claim, 'insured')?.full_name || "—"}</td>
- <td className="truncate">{getParticipant(claim, 'insured')?.address || "—"}, {getParticipant(claim, 'insured')?.city || "—"}</td>
+ <td className="truncate hidden lg:table-cell">{getParticipant(claim, 'insured')?.address || "—"}, {getParticipant(claim, 'insured')?.city || "—"}</td>
  <td><StatusBadge status={statusCode(claim.status_id) ?? ""} label={statusLabel(claim.status_id) || "—"} /></td>
- <td>{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
- <td>{claim.report_date ? new Date(claim.report_date).toLocaleDateString("es-CL") : "—"}</td>
- <td>{new Date(claim.created_at).toLocaleDateString("es-CL")}</td>
- <td className="text-center">
+ <td className="hidden lg:table-cell">{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
+ <td className="hidden lg:table-cell">{claim.report_date ? new Date(claim.report_date).toLocaleDateString("es-CL") : "—"}</td>
+ <td className="hidden lg:table-cell">{new Date(claim.created_at).toLocaleDateString("es-CL")}</td>
+ <td className="text-center hidden lg:table-cell">
  <div className="flex items-center justify-center gap-1.5">
  <span title={claimType?.name ?? "Tipo de Siniestro"}>
  <BlIcon className="size-3.5 text-muted-foreground" />

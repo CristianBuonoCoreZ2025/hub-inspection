@@ -724,7 +724,7 @@ export default function ClaimDetailPage() {
  <Button
  variant="outline"
  size="sm"
- className="pg-btn-platinum"
+ className="pg-btn-platinum hidden sm:inline-flex"
  onClick={() => {
  if (confirm("¿Cerrar este caso? No se podrá revertir.")) closeMutation.mutate();
  }}
@@ -1108,7 +1108,7 @@ export default function ClaimDetailPage() {
  {canEdit("claims") && gestionSubTab === "lista" && (
  <Button
  size="sm"
- className="pg-btn-platinum"
+ className="pg-btn-platinum hidden sm:inline-flex"
  onClick={() => setOpenGestionModal(true)}
  disabled={!claim?.policy_id}
  title={!claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined}
