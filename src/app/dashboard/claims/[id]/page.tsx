@@ -2095,7 +2095,7 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  onMouseLeave={handleMouseLeave}
  >
  <span
- className={`inline-flex items-center justify-center rounded-full w-6 h-6 text-[10px] font-medium gestion-light-pill ${isNone ? "bg-transparent border border-dashed border-slate-200 dark:border-slate-700 text-muted-foreground/40" : `${sty.dot} ${sty.label}`} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
+ className={`inline-flex items-center justify-center rounded-full w-5 h-5 text-[9px] font-medium gestion-light-pill ${isNone ? "bg-transparent border border-dashed border-slate-200 dark:border-slate-700 text-muted-foreground/40" : `${sty.dot} ${sty.label}`} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
  >
  {light.letter}
  </span>
@@ -2428,3 +2428,4 @@ function GestionCodeCell({ g }: { g: {
  </div>
  );
 }
+
