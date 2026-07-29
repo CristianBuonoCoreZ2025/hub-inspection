@@ -2098,7 +2098,7 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  className={`relative flex items-center justify-center rounded-full gestion-light-dot ${sty.dot} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
  >
  {!isNone && (
- <span className={`absolute inset-0 flex items-center justify-center leading-none gestion-light-letter text-white`}>
+ <span className={`absolute inset-0 flex items-center justify-center leading-none gestion-light-letter ${sty.label}`}>
  {light.letter}
  </span>
  )}
