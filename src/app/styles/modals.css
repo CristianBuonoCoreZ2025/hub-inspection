@@ -654,7 +654,7 @@
   font-size: 10px !important;
 }
 .gestion-code-tooltip-legend {
-  font-size: 9px !important;
+  font-size: 8px !important;
   font-style: italic !important;
   color: var(--muted-foreground) !important;
   line-height: 1.35 !important;
@@ -666,19 +666,10 @@
   gap: 4px !important;
 }
 .gestion-code-tooltip-legend-badge {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  min-width: 13px !important;
-  height: 13px !important;
-  padding: 0 3px !important;
-  border-radius: 3px !important;
   font-size: 8px !important;
   font-weight: 700 !important;
   font-style: normal !important;
-  background: var(--muted) !important;
   color: var(--muted-foreground) !important;
   flex-shrink: 0 !important;
-  margin-top: 1px !important;
 }
 
