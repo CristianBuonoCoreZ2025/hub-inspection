@@ -230,11 +230,11 @@
   }
 
   @media (min-width: 768px) {
-    .sketch-stage { height: 480px; }
+    .sketch-stage { height: 530px; }
   }
 
   @media (min-width: 1280px) {
-    .sketch-stage { height: 530px; }
+    .sketch-stage { height: 580px; }
   }
 
   /* Override de altura cuando el consumidor pasa `height` explicito.
