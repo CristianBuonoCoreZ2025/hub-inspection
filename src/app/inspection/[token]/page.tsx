@@ -8,9 +8,11 @@ import {
   ClipboardCheck, Video, User, Calendar, WifiOff, Loader2,
   Camera, FileText, AlertTriangle, MessageSquare, Send,
   ShieldCheck, MapPin, PenTool, XCircle, CheckCircle,
+  MonitorSmartphone,
 } from "lucide-react";
 import { DrawingCanvas } from "@/components/ui/drawing-canvas";
 import { LiveVideoCall } from "@/components/inspection/live-video-call";
+import { useClaimsAppPresence } from "@/hooks/use-claims-app-presence";
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
 
@@ -162,6 +164,23 @@ export default function MagicLinkPage() {
   const [videoCallOpen, setVideoCallOpen] = useState(false);
   const autoVideoOpenedRef = useRef(false);
 
+  // Identificador único por pestaña para el signaling WebRTC.
+  // Se persiste en sessionStorage para que al recargar la misma pestaña
+  // se mantenga el mismo ID (evita generar peers fantasma). Cada pestaña
+  // nueva genera un ID distinto, evitando colisiones en Presence de
+  // Supabase Realtime cuando dos personas abren el mismo magic link.
+  const [clientUserId] = useState(() => {
+    if (typeof window === "undefined") return `client:${token}`;
+    const storageKey = `webrtc:clientId:${token}`;
+    let id = sessionStorage.getItem(storageKey);
+    if (!id) {
+      const rand = Math.random().toString(36).slice(2, 10);
+      id = `client:${token}:${rand}`;
+      sessionStorage.setItem(storageKey, id);
+    }
+    return id;
+  });
+
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
@@ -181,7 +200,32 @@ export default function MagicLinkPage() {
     }
   }, [session]);
 
-  if (isLoading) {
+  // Detectar si la aplicación Claims está abierta en otra pestaña del mismo navegador
+  const { active: claimsAppActive, loading: claimsAppLoading } = useClaimsAppPresence();
+
+  if (claimsAppActive) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="text-center max-w-md px-6">
+          <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-amber-500/10 mb-4">
+            <MonitorSmartphone className="h-8 w-8 text-amber-400" />
+          </div>
+          <h1 className="app-page-title text-white mb-3">Aplicación Claims detectada</h1>
+          <p className="text-slate-400 app-body">
+            Usted ya tiene abierta la aplicación Claims en este navegador.
+            No puede abrir el link de inspección en el mismo dispositivo donde
+            está ejecutando la aplicación del liquidador.
+          </p>
+          <p className="text-slate-500 app-body mt-3">
+            Cierre la aplicación Claims en esta ventana y abra el link de
+            inspección en un navegador distinto o en el dispositivo del asegurado.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || claimsAppLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center gap-3">
@@ -417,10 +461,11 @@ export default function MagicLinkPage() {
                 <div className="h-48 shrink-0 mb-3 rounded-lg overflow-hidden border border-slate-700">
                   <LiveVideoCall
                     sessionId={session.id}
-                    userId={`client:${token}`}
+                    userId={clientUserId}
                     role="client"
                     compact
                     onHangup={() => setVideoCallOpen(false)}
+                    onKicked={() => setVideoCallOpen(false)}
                     onScreenshotSaved={() => refetch()}
                   />
                 </div>

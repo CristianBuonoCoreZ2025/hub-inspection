@@ -19,9 +19,12 @@ import { createClient } from "@/lib/supabase/client";
  *   { type: "ice",       from, role, candidate }
  *   { type: "hangup",    from, role }
  *   { type: "screenshot", from, role, blobUrl } // aviso al otro par
+ *   { type: "busy",      from, role, reason }   // rechazo: ya hay una sesión en curso
+ *   { type: "kick",      from, role, target, reason } // inspector/supervisor fuerza desconexión de un peer
+ *   { type: "preview",   from, role, remoteThumb, localThumb } // inspector envía thumbnails al supervisor
  */
 
-export type SignalingRole = "inspector" | "client";
+export type SignalingRole = "inspector" | "client" | "supervisor";
 
 export type SignalingMessage =
   | { type: "ready"; from: string; role: SignalingRole }
@@ -29,7 +32,10 @@ export type SignalingMessage =
   | { type: "answer"; from: string; role: SignalingRole; sdp: RTCSessionDescriptionInit }
   | { type: "ice"; from: string; role: SignalingRole; candidate: RTCIceCandidateInit }
   | { type: "hangup"; from: string; role: SignalingRole }
-  | { type: "screenshot"; from: string; role: SignalingRole; evidenceId: string; url: string };
+  | { type: "screenshot"; from: string; role: SignalingRole; evidenceId: string; url: string }
+  | { type: "busy"; from: string; role: SignalingRole; reason: string }
+  | { type: "kick"; from: string; role: SignalingRole; target: string; reason: string }
+  | { type: "preview"; from: string; role: SignalingRole; remoteThumb: string; localThumb: string };
 
 export interface SignalingChannel {
   send: (msg: SignalingMessage) => void;

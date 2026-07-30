@@ -969,6 +969,7 @@ export default function InspectionDetailPage() {
  queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
  }}
  onPeerJoined={() => toast.success("El asegurado se ha conectado a la videollamada")}
+ onPeerRejected={() => toast.warning("Otra persona intentó conectarse a la videollamada y fue rechazada. Ya hay un asegurado en sesión.")}
  onRecordingSaved={() => {
  queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });

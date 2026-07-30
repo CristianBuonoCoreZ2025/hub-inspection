@@ -19,7 +19,7 @@ import {
 import { getNavMenuConfig, type NavMenuItem } from "@/services/nav-menu-config";
 
 export function useNavLinks(isMobile = false) {
-  const { permissions } = useAuth();
+  const { permissions, profile } = useAuth();
 
   // Cargar configuración del menú desde la BD.
   // Si es null o falla, se usa el orden hardcoded de nav-data.ts.
@@ -50,6 +50,10 @@ export function useNavLinks(isMobile = false) {
   // ── Filtrar por permisos ──
   const isLinkVisible = (link: NavLink): boolean => {
     if (isMobile && link.hideOnMobile) return false;
+    // Supervisión: solo visible para rol internal
+    if (link.section === "supervision") {
+      return profile?.role === "internal";
+    }
     const section = link.section;
     if (!section) {
       if (link.href.startsWith("/dashboard/catalogos/inspeccion")) return canView("catalogos_inspeccion");

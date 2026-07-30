@@ -136,6 +136,20 @@ export async function getInspectionSessions(claimId?: string) {
   return sessions;
 }
 
+/**
+ * Obtener sesiones de inspección remotas activas para supervisión.
+ * Solo retorna sesiones con status 'active' e inspection_type 'remote'.
+ */
+export async function getActiveRemoteSessions() {
+  const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
+    eq: { status: "active", inspection_type: "remote" },
+    order: { column: "started_at", ascending: false },
+  });
+
+  return sessions;
+}
+
 export async function getInspectionSessionByToken(token: string) {
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
     select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,

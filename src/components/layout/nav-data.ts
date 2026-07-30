@@ -47,6 +47,7 @@ import {
   Mail,
   Menu as MenuIcon,
   Sparkles,
+  Radio,
   type LucideIcon,
 } from "lucide-react";
 
@@ -98,6 +99,7 @@ export const mainLinks: NavLink[] = [
   { href: "/dashboard/inspecciones", label: "Inspecciones", icon: ClipboardCheck, section: "inspecciones" },
   { href: "/dashboard/agenda", label: "Agenda", icon: Calendar, section: "agenda" },
   { href: "/dashboard/informes", label: "Informes", icon: BarChart3, section: "informes" },
+  { href: "/dashboard/supervision", label: "Supervisión", icon: Radio, section: "supervision", hideOnMobile: true },
 ];
 
 // ── Catálogos ──

@@ -18,6 +18,7 @@ import {
   Image as ImageIcon,
   Circle,
   Square,
+  UserCheck,
 } from "lucide-react";
 import { joinSignalingChannel, ICE_SERVERS, type SignalingRole, type SignalingMessage } from "@/lib/webrtc/signaling";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,10 @@ interface LiveVideoCallProps {
   onHangup: () => void;
   onScreenshotSaved?: (evidence: { id: string; url: string; description: string }) => void;
   onPeerJoined?: () => void;
+  onPeerRejected?: () => void;
   onRecordingSaved?: (evidence: { id: string; url: string; description: string }) => void;
+  onKicked?: (reason: string) => void;
+  onPeersUpdate?: (peers: ConnectedPeer[]) => void;
 }
 
 interface SavedEvidence {
@@ -39,7 +43,31 @@ interface SavedEvidence {
   description: string;
 }
 
-type ConnectionState = "idle" | "connecting" | "connected" | "disconnected" | "failed";
+export interface ConnectedPeer {
+  userId: string;
+  role: SignalingRole;
+}
+
+type ConnectionState = "idle" | "connecting" | "connected" | "disconnected" | "failed" | "rejected";
+
+/**
+ * Captura un thumbnail JPEG base64 de un elemento <video>.
+ * Retorna string vacío si el video no tiene frames disponibles.
+ */
+function captureVideoThumb(video: HTMLVideoElement | null, w: number, h: number): string {
+  if (!video || !video.videoWidth) return "";
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return "";
+    ctx.drawImage(video, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", 0.5);
+  } catch {
+    return "";
+  }
+}
 
 export function LiveVideoCall({
   sessionId,
@@ -49,7 +77,10 @@ export function LiveVideoCall({
   onHangup,
   onScreenshotSaved,
   onPeerJoined,
+  onPeerRejected,
   onRecordingSaved,
+  onKicked,
+  onPeersUpdate,
 }: LiveVideoCallProps) {
   const localVideoRef = React.useRef<HTMLVideoElement>(null);
   const remoteVideoRef = React.useRef<HTMLVideoElement>(null);
@@ -61,9 +92,14 @@ export function LiveVideoCall({
   const makingOfferRef = React.useRef<boolean>(false);
   const ignoreOfferRef = React.useRef<boolean>(false);
   const hangupSentRef = React.useRef<boolean>(false);
+  // El inspector trackea al cliente que ya está conectado para rechazar a un segundo
+  const connectedClientRef = React.useRef<string | null>(null);
+  // Peers ya rechazados (para no notificar al inspector más de una vez por el mismo peer)
+  const rejectedPeersRef = React.useRef<Set<string>>(new Set());
 
   const [state, setState] = React.useState<ConnectionState>("idle");
   const [error, setError] = React.useState<string | null>(null);
+  const [rejectedReason, setRejectedReason] = React.useState<string | null>(null);
   const [videoOn, setVideoOn] = React.useState(true);
   const [audioOn, setAudioOn] = React.useState(true);
   const [peerJoined, setPeerJoined] = React.useState(false);
@@ -72,10 +108,17 @@ export function LiveVideoCall({
   const [screenshotCount, setScreenshotCount] = React.useState(0);
   const [recording, setRecording] = React.useState(false);
   const [recordingTime, setRecordingTime] = React.useState(0);
+  const [peers, setPeers] = React.useState<ConnectedPeer[]>([]);
+  const [connectedClientId, setConnectedClientId] = React.useState<string | null>(null);
   const peerJoinedNotifiedRef = React.useRef(false);
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const recordedChunksRef = React.useRef<Blob[]>([]);
   const recordingTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  // Refs estables para callbacks que se usan en suscripciones de larga duración
+  const onPeersUpdateRef = React.useRef(onPeersUpdate);
+  React.useEffect(() => {
+    onPeersUpdateRef.current = onPeersUpdate;
+  }, [onPeersUpdate]);
 
   // ── Inicializar media local ──
   const initLocalMedia = React.useCallback(async () => {
@@ -160,7 +203,57 @@ export function LiveVideoCall({
       if (!pc) return;
 
       try {
+        // Kick: el inspector fuerza la desconexión de este peer
+        if (msg.type === "kick") {
+          if (msg.target === userId) {
+            setRejectedReason(msg.reason);
+            setState("rejected");
+            // Liberar cámara/micrófono local
+            if (localStreamRef.current) {
+              localStreamRef.current.getTracks().forEach((t) => t.stop());
+              localStreamRef.current = null;
+            }
+            // Notificar al padre para que cierre el modal
+            onKicked?.(msg.reason);
+          }
+          return;
+        }
+
+        // Rechazo: el inspector nos avisa que ya hay una sesión en curso
+        if (msg.type === "busy") {
+          if (role === "client") {
+            setRejectedReason(msg.reason);
+            setState("rejected");
+            // Liberar cámara/micrófono local
+            if (localStreamRef.current) {
+              localStreamRef.current.getTracks().forEach((t) => t.stop());
+              localStreamRef.current = null;
+            }
+          }
+          return;
+        }
+
         if (msg.type === "ready") {
+          // El supervisor no afecta el estado de peer joined ni dispara notificaciones
+          if (msg.role === "supervisor") return;
+          // Inspector: rechazar a un segundo cliente si ya hay uno conectado
+          if (role === "inspector" && msg.role === "client") {
+            if (connectedClientRef.current && connectedClientRef.current !== msg.from) {
+              channelRef.current?.send({
+                type: "busy",
+                from: userId,
+                role,
+                reason: "Ya existe una sesión de videollamada en curso. Espere a que finalice la inspección en curso.",
+              });
+              if (!rejectedPeersRef.current.has(msg.from)) {
+                rejectedPeersRef.current.add(msg.from);
+                onPeerRejected?.();
+              }
+              return;
+            }
+            connectedClientRef.current = msg.from;
+            setConnectedClientId(msg.from);
+          }
           setPeerJoined(true);
           if (msg.role !== role && !peerJoinedNotifiedRef.current) {
             peerJoinedNotifiedRef.current = true;
@@ -177,6 +270,26 @@ export function LiveVideoCall({
             }
           }
         } else if (msg.type === "offer") {
+          // Ignorar mensajes WebRTC del supervisor (no tiene peer connection)
+          if (msg.role === "supervisor") return;
+          // Inspector: rechazar offer de un segundo cliente
+          if (role === "inspector" && msg.role === "client") {
+            if (connectedClientRef.current && connectedClientRef.current !== msg.from) {
+              channelRef.current?.send({
+                type: "busy",
+                from: userId,
+                role,
+                reason: "Ya existe una sesión de videollamada en curso. Espere a que finalice la inspección en curso.",
+              });
+              if (!rejectedPeersRef.current.has(msg.from)) {
+                rejectedPeersRef.current.add(msg.from);
+                onPeerRejected?.();
+              }
+              return;
+            }
+            connectedClientRef.current = msg.from;
+            setConnectedClientId(msg.from);
+          }
           setPeerJoined(true);
           if (msg.role !== role && !peerJoinedNotifiedRef.current) {
             peerJoinedNotifiedRef.current = true;
@@ -201,12 +314,26 @@ export function LiveVideoCall({
         } else if (msg.type === "answer") {
           await pc.setRemoteDescription(msg.sdp);
         } else if (msg.type === "ice") {
+          // Ignorar ICE candidates de un cliente que no es el conectado (inspector)
+          if (role === "inspector" && msg.role === "client" && connectedClientRef.current && connectedClientRef.current !== msg.from) {
+            return;
+          }
           try {
             await pc.addIceCandidate(msg.candidate);
           } catch (err) {
             if (!ignoreOfferRef.current) throw err;
           }
         } else if (msg.type === "hangup") {
+          // Inspector: si cuelga el cliente conectado, liberar el slot
+          if (role === "inspector" && msg.role === "client") {
+            if (connectedClientRef.current === msg.from) {
+              connectedClientRef.current = null;
+              setConnectedClientId(null);
+            } else {
+              // Hangup de un cliente que no es el conectado — ignorar
+              return;
+            }
+          }
           setPeerJoined(false);
           setState("disconnected");
           // Limpiar stream remoto
@@ -225,7 +352,7 @@ export function LiveVideoCall({
         console.error("[LiveVideoCall] Error procesando signaling:", msg.type, err);
       }
     },
-    [role, userId, onPeerJoined],
+    [role, userId, onPeerJoined, onPeerRejected, onKicked],
   );
 
   // ── Inicializar todo al montar ──
@@ -250,6 +377,11 @@ export function LiveVideoCall({
         const channel = joinSignalingChannel(sessionId, userId, role);
         channelRef.current = channel;
         channel.onMessage(handleSignalingMessage);
+        // Suscribirse a presence para trackear peers conectados
+        channel.onPresence((newPeers) => {
+          setPeers(newPeers);
+          onPeersUpdateRef.current?.(newPeers);
+        });
       } catch {
         if (!cancelled) setState("failed");
       }
@@ -318,6 +450,18 @@ export function LiveVideoCall({
       hangupSentRef.current = true;
     }
     onHangup();
+  };
+
+  // ── Forzar desconexión de un peer (solo inspector) ──
+  const kickPeer = (targetUserId: string, reason?: string) => {
+    if (role !== "inspector" || !channelRef.current) return;
+    channelRef.current.send({
+      type: "kick",
+      from: userId,
+      role,
+      target: targetUserId,
+      reason: reason || "El inspector ha finalizado tu conexión a la videollamada.",
+    });
   };
 
   // ── Capturar screenshot del video remoto ──
@@ -463,6 +607,7 @@ export function LiveVideoCall({
     connected: "Conectado",
     disconnected: "Desconectado",
     failed: "Fallido",
+    rejected: "Sesión en uso",
   };
 
   const stateColor: Record<ConnectionState, string> = {
@@ -471,10 +616,55 @@ export function LiveVideoCall({
     connected: "text-emerald-600",
     disconnected: "text-muted-foreground",
     failed: "text-rose-600",
+    rejected: "text-amber-600",
   };
 
   const [expanded, setExpanded] = React.useState(false);
+  const [showPeersPanel, setShowPeersPanel] = React.useState(false);
   const compact = compactProp && !expanded;
+
+  // Peers cliente conectados (solo relevantes para el inspector)
+  const clientPeers = peers.filter((p) => p.role === "client");
+  // Detectar si hay un supervisor conectado
+  const hasSupervisor = peers.some((p) => p.role === "supervisor");
+  const previewIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Broadcast de thumbnails al supervisor ──
+  // Cuando el inspector detecta un supervisor, captura thumbnails del video
+  // remoto (asegurado) y local (inspector) cada 3 segundos y los envía via signaling.
+  React.useEffect(() => {
+    if (role !== "inspector") return;
+
+    if (hasSupervisor && !previewIntervalRef.current) {
+      const captureAndSend = () => {
+        const remoteVideo = remoteVideoRef.current;
+        const localVideo = localVideoRef.current;
+        const remoteThumb = captureVideoThumb(remoteVideo, 320, 180);
+        const localThumb = captureVideoThumb(localVideo, 160, 90);
+        if ((remoteThumb || localThumb) && channelRef.current) {
+          channelRef.current.send({
+            type: "preview",
+            from: userId,
+            role,
+            remoteThumb: remoteThumb || "",
+            localThumb: localThumb || "",
+          });
+        }
+      };
+      previewIntervalRef.current = setInterval(captureAndSend, 3000);
+      captureAndSend(); // enviar inmediatamente
+    } else if (!hasSupervisor && previewIntervalRef.current) {
+      clearInterval(previewIntervalRef.current);
+      previewIntervalRef.current = null;
+    }
+
+    return () => {
+      if (previewIntervalRef.current) {
+        clearInterval(previewIntervalRef.current);
+        previewIntervalRef.current = null;
+      }
+    };
+  }, [hasSupervisor, role, userId]);
 
   const ctrlBtn = compact ? "p-2" : "p-3";
   const ctrlIcon = compact ? "h-4 w-4" : "h-5 w-5";
@@ -515,6 +705,52 @@ export function LiveVideoCall({
               {screenshotCount} {screenshotCount === 1 ? "foto" : "fotos"}
             </span>
           )}
+          {/* Panel de peers conectados (solo inspector) */}
+          {role === "inspector" && clientPeers.length > 0 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowPeersPanel((v) => !v)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white/80 transition-colors app-body"
+                title="Ver conexiones activas"
+              >
+                <UserCheck className="h-3.5 w-3.5 text-emerald-400" />
+                {clientPeers.length} {clientPeers.length === 1 ? "conectado" : "conectados"}
+              </button>
+              {showPeersPanel && (
+                <div className="absolute right-0 top-full mt-1 w-64 bg-zinc-900 border border-white/15 rounded-lg shadow-xl z-50 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-white/10 bg-white/5">
+                    <p className="app-body font-medium text-white/90">Conexiones activas</p>
+                    <p className="app-body text-white/40 text-xs mt-0.5">
+                      {clientPeers.length} {clientPeers.length === 1 ? "asegurado conectado" : "asegurados conectados"} a este magic link
+                    </p>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {clientPeers.map((p) => (
+                      <div key={p.userId} className="flex items-center justify-between px-3 py-2 hover:bg-white/5 border-b border-white/5 last:border-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="app-body text-white/70 truncate">
+                            {p.userId === connectedClientId ? "Asegurado en sesión" : "Conexión adicional"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            kickPeer(p.userId, "El inspector ha finalizado tu conexión a la videollamada.");
+                          }}
+                          className="shrink-0 px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600 text-white app-body text-xs transition-colors"
+                          title="Desconectar a este usuario"
+                        >
+                          Desconectar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {expanded && (
             <button
               type="button"
@@ -540,7 +776,7 @@ export function LiveVideoCall({
           playsInline
           className="w-full h-full object-contain"
         />
-        {!peerJoined && state !== "failed" && (
+        {!peerJoined && state !== "failed" && state !== "rejected" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50">
             <Video className="h-12 w-12 mb-3 opacity-50" />
             <p className="app-body">
@@ -555,8 +791,21 @@ export function LiveVideoCall({
             <p className="app-body text-white/50 mt-1">{error}</p>
           </div>
         )}
+        {state === "rejected" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 px-6 text-center">
+            <AlertTriangle className="h-12 w-12 mb-3 text-amber-500" />
+            <p className="app-body font-medium text-amber-400">Videollamada no disponible</p>
+            <p className="app-body text-white/60 mt-2 max-w-sm">
+              {rejectedReason || "Ya existe una sesión de videollamada en curso."}
+            </p>
+            <p className="app-body text-white/40 mt-3">
+              Puede continuar revisando las evidencias y firmas de la inspección en las demás pestañas.
+            </p>
+          </div>
+        )}
 
-        {/* Video local (PiP) */}
+        {/* Video local (PiP) — oculto cuando la sesión fue rechazada */}
+        {state !== "rejected" && (
         <div className={cn("absolute overflow-hidden bg-black", compact ? "bottom-2 right-2 w-20 h-14 rounded border border-white/20" : "bottom-4 right-4 w-32 sm:w-48 h-24 sm:h-36 rounded-lg border-2 border-white/20 shadow-2xl")}>
           <video
             ref={localVideoRef}
@@ -574,6 +823,7 @@ export function LiveVideoCall({
             Tú
           </div>
         </div>
+        )}
 
         {/* Botón fullscreen */}
         {peerJoined && (
@@ -606,6 +856,8 @@ export function LiveVideoCall({
 
       {/* Controles inferiores */}
       <div className={cn("flex items-center justify-center bg-black/40 border-t border-white/10", compact ? "gap-2 px-2 py-2" : "gap-3 px-4 py-4")}>
+        {state !== "rejected" && (
+        <>
         <button
           type="button"
           onClick={toggleAudio}
@@ -656,6 +908,8 @@ export function LiveVideoCall({
           >
             {recording ? <Square className={ctrlIcon} /> : <Circle className={cn(ctrlIcon, "fill-white")} />}
           </button>
+        )}
+        </>
         )}
 
         <button
