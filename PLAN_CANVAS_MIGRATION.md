@@ -1,423 +1,487 @@
-# Plan de Migración: DrawingCanvas → Editor de Croquis Vectorial
+# Arquitectura Definitiva del Editor de Croquis
 
-> **Estado:** FASE 1 — Análisis y Planificación (pendiente de aprobación)
+> **Estado:** FASE 1 — Arquitectura y diseño funcional (pendiente de aprobación)
 > **Fecha:** 2026-07-30
-> **Regla aplicable:** No se modificará ningún archivo `.tsx`/`.css` hasta la
-> aprobación explícita de este documento.
+> **Filosofía:** Construir una sola vez. Evolucionar durante 10 años sin rediseñar el núcleo.
 
 ---
 
-## 1. Situación Actual
+## 1. Visión general
 
-### Componente existente
-- **Archivo:** `src/components/ui/drawing-canvas.tsx` (353 líneas)
-- **Tecnología:** HTML5 Canvas puro + API 2D (`getContext("2d")`)
-- **Modelo:** Raster bitmap. Cada trazo se "pinta" directamente sobre el canvas.
-  No hay objetos persistentes: el estado es la imagen misma (`ImageData`).
-- **Herramientas:** `pencil`, `line`, `rectangle`, `circle`, `triangle`, `eraser`
-- **Exportación:** `canvas.toDataURL("image/png")` → PNG en base64
-- **Historial:** stack de `ImageData` (undo limitado, no redo)
-- **Responsividad:** calcula `width` desde `containerRef.getBoundingClientRect()`
-  y aplica `devicePixelRatio` (DPR) para nitidez. Altura fija (prop `height`).
-- **Compatibilidad hacia atrás:** prop `initialImage` (URL de croquis existente)
-  cargada como fondo con `ctx.drawImage(img, 0, 0, w, h)`.
+El Editor de Croquis es el motor gráfico oficial de la plataforma Claims Hub
+para representar visualmente un siniestro. No es un software CAD. No busca
+precisión arquitectónica. Busca que un inspector o un asegurado explique
+visualmente qué pasó, en menos de 2 minutos, con claridad suficiente para que
+cualquier persona que vea el resultado entienda la situación sin haber estado
+presente.
 
-### Contrato de props (a respetar)
-```ts
-interface DrawingCanvasProps {
-  onSave: (dataUrl: string) => void;   // PNG base64
-  saving?: boolean;
-  initialImage?: string;               // URL de croquis previo (edición)
-  width?: number;                      // fallback si no hay container
-  height?: number;                     // alto fijo del canvas
-  className?: string;
+El editor tiene dos usuarios:
+
+- **Liquidador / inspector** — desde el dashboard.
+- **Asegurado** — desde el Magic Link (inspección remota).
+
+Ambos usan exactamente la misma herramienta con las mismas funcionalidades.
+
+---
+
+## 2. Filosofía del producto
+
+- Priorizar velocidad sobre precisión.
+- Priorizar claridad sobre detalle.
+- Priorizar comunicación visual sobre exactitud arquitectónica.
+- Reducir clics. Reducir escritura. Reducir formularios.
+- No interrumpir el flujo.
+- Toda información adicional debe ser opcional.
+- Toda funcionalidad nueva debe responder una sola pregunta:
+  **¿Ayuda al inspector a terminar el croquis más rápido?**
+  Si la respuesta es no, no se implementa.
+
+---
+
+## 3. Principios de UX
+
+- El croquis completo debe poder realizarse en menos de 2 minutos.
+- El usuario nunca debe estar obligado a escribir un nombre (la numeración
+  es automática).
+- El usuario nunca debe estar obligado a ingresar medidas (son opcionales).
+- El usuario nunca debe conectar elementos manualmente (las relaciones son
+  automáticas por proximidad).
+- La interfaz no debe mostrar información vacía ("___ x ___").
+- El color se usa para comunicar, no para decorar.
+
+---
+
+## 4. Modelo de entidades
+
+El editor deja de trabajar con dibujos. Trabaja con **entidades**.
+
+Cada entidad tiene:
+
+- **Identidad** — qué es (dormitorio, muro, puerta, etiqueta, comentario).
+- **Representación gráfica** — cómo se ve en el lienzo.
+- **Propiedades** — nombre, medidas, tipo, destino, etc. (según el tipo).
+- **Eventos** — cómo responde a interacciones (clic, doble clic, arrastre).
+- **Serialización** — cómo se guarda y reconstruye.
+- **Exportación** — cómo aparece en el PNG y en la estructura de datos.
+
+El dibujo es solamente la representación visual de la entidad. Nunca se crea
+un objeto que sea únicamente un rectángulo de color sin identidad.
+
+---
+
+## 5. Categorías de entidades
+
+El catálogo se organiza en **5 categorías**:
+
+### 5.1 Espacios
+
+Representan áreas o recintos del inmueble.
+
+Ejemplos: Dormitorio, Living, Comedor, Cocina, Baño, Oficina, Sala, Hall,
+Pasillo, Patio, Jardín, Bodega, Galpón, Área común, Estacionamiento, Local
+comercial, Otros.
+
+Características:
+
+- Se representan mediante bloques redimensionables.
+- Cada bloque lleva su nombre escrito dentro (numeración automática).
+- Admiten texturas configurables (ver § 12).
+- Admiten medidas opcionales (largo y ancho). Si existen, se muestran
+  automáticamente sobre el bloque. Si no existen, no se muestra nada.
+- Doble clic abre el panel de propiedades.
+
+### 5.2 Estructura
+
+Representan elementos constructivos del inmueble.
+
+Ejemplos: Muro, Puerta, Ventana, Escalera, Portón, Reja, Pilar, Ascensor.
+
+Características:
+
+- Cada elemento tiene representación gráfica propia. Una puerta parece una
+  puerta. Una ventana parece una ventana. Una escalera parece una escalera.
+  Un muro parece un muro. Nunca se utilizan bloques de color genéricos.
+- Las puertas y ventanas se asocian a muros por proximidad (snap). Si el muro
+  se mueve, la puerta o ventana acompaña. No quedan flotando.
+
+Propiedades mínimas por tipo:
+
+| Tipo | Propiedades |
+|---|---|
+| Muro | Nombre, Longitud, Tipo (Interior / Exterior / Medianero) |
+| Puerta | Nombre, Ancho |
+| Ventana | Nombre, Ancho, Alto |
+| Escalera | Nombre, Destino |
+
+Toda propiedad adicional debe justificarse cuidadosamente.
+
+### 5.3 Objetos
+
+Representan mobiliario, vehículos, electrodomésticos y elementos que no son
+espacios ni estructura.
+
+Ejemplos: Vehículo, Bicicleta, Caja, Escritorio, Silla, Mesa, Árbol,
+Lavadora, Refrigerador, WC, Tina, Ducha.
+
+Características:
+
+- Todos utilizan representación gráfica propia (SVG). Nunca rectángulos ni
+  cuadrados de color.
+- Solo permiten escalamiento proporcional. Una silla nunca puede terminar
+  del tamaño de una habitación. Una bicicleta nunca puede ocupar media casa.
+- Siempre conservan la proporción original.
+
+### 5.4 Equipamiento
+
+Representa equipos industriales, eléctricos y mecánicos propios de oficinas,
+galpones e instalaciones.
+
+Ejemplos: Maquinaria, Rack, Tablero eléctrico, Motor, Transformador, Caldera,
+Compresor, Grupo electrógeno.
+
+Características:
+
+- Representación gráfica propia (SVG).
+- Escalamiento proporcional (como Objetos).
+- Es una categoría separada de Objetos porque conceptualmente son equipos
+  fijos de instalación, no mobiliario móvil. Esto permite crecer sin mezclar
+  conceptos.
+
+### 5.5 Anotaciones
+
+Representan información textual sobre el plano. Reemplazan al texto libre.
+
+Dos tipos:
+
+- **Etiqueta** — identifica un sector. Ejemplos: "Zona inundada", "Zona
+  vecino", "Acceso", "Segundo piso". Se representa con formato de etiqueta
+  (fondo y borde propios). Al soltarla, solicita el texto al usuario.
+- **Comentario** — explica una situación. Se representa con formato de
+  comentario (marca visual distinta a la etiqueta). Al soltarlo, solicita el
+  texto al usuario.
+
+Las etiquetas y comentarios admiten color de la paleta reducida (ver § 9)
+para comunicar significado:
+
+| Color | Uso sugerido |
+|---|---|
+| Rojo | Zona dañada |
+| Azul | Ingreso de agua |
+| Verde | Área inspeccionada |
+| Amarillo | Observación |
+| Gris | Referencia |
+
+El color es del usuario: puede asignarlo libremente dentro de la paleta
+reducida. La tabla anterior es una convención sugerida, no obligatoria.
+
+---
+
+## 6. Biblioteca basada en configuración (catalog.json)
+
+**Esta es la decisión arquitectónica más importante del documento.**
+
+El catálogo de entidades NO se codifica directamente en los componentes. Se
+define mediante un archivo de configuración declarativa.
+
+Formato de cada definición de entidad:
+
+```json
+{
+  "id": "bathroom",
+  "category": "spaces",
+  "defaultLabel": "B",
+  "icon": "bath",
+  "texture": "tiles",
+  "defaultProperties": {},
+  "renderer": "block",
+  "scaleMode": "free"
 }
 ```
 
-### Consumidores (2 puntos)
-1. **`src/app/dashboard/inspecciones/[id]/sketches-tab.tsx`** (líneas 173–178)
-   - Tema claro de la app (`app-panel`, `app-stack`, `app-section-title`).
-   - `height={500}`.
-2. **`src/app/inspection/[token]/page.tsx`** (líneas 1075–1080)
-   - Página pública del asegurado (magic link), tema oscuro slate
-     (`border-slate-700`, `bg-slate-950`, `text-slate-200`).
-   - Envuelto en componente `Panel`. `height={450}`.
+Campos:
 
-### Backend (sin cambios)
-- **Endpoint:** `POST /api/inspection/sketch`
-- **Payload:** `{ sessionId, sketchDataUrl: string (base64 PNG), label, sketchId? }`
-- **Flujo:** base64 → `Buffer` → `uploadInspectionFile(..., "CRO", ".png")` → R2
-  → registro en `damage_sketches`.
-- **Conclusión:** el backend **no se toca**. Solo exige `sketchDataUrl` sea un
-  data URL PNG válido. Mantener ese contrato es la restricción crítica.
-
----
-
-## 2. Librería Seleccionada: **Fabric.js v6**
-
-### Por qué Fabric.js v6 y no Konva.js
-
-| Criterio | Fabric.js v6 | Konva.js |
-|---|---|---|
-| Modelo de objetos vectorial nativo | ✅ `Rect`, `Circle`, `Path`, `Group`, `Textbox` con propiedades vivas | ✅ pero más verboso |
-| Selección / resize / rotación **out-of-the-box** | ✅ controles `cornerStyle`, `cornerColor`, `rotatingPoint` listos | ⚠️ hay que construir los transformers manualmente |
-| Drag & drop de figuras predefinidas | ✅ `canvas.add(obj)` + eventos `object:moving` | ✅ |
-| Export a PNG base64 | ✅ `canvas.toDataURL()` idéntico a Canvas API | ✅ `stage.toCanvas().toDataURL()` |
-| Soporte React 19 / Next 16 | ✅ ESM puro, sin peer deps problemáticos | ✅ vía `react-konva` (capa extra) |
-| TypeScript nativo | ✅ v6 reescrito en TS, tipos incluidos | ✅ |
-| Tamaño del bundle | ~140 kB gzip | ~120 kB + react-konva |
-| Madurez para "editor de planos" | ✅ casos de uso reales (floorplanner-like) | ✅ |
-
-**Decisión:** **Fabric.js v6**. El requerimiento central es "construcción
-modular de planos con drag & drop, resize desde esquinas y rotación" — exactamente
-el caso de uso donde Fabric brilla porque los controles de manipulación vienen
-incluidos. Konva requeriría reimplementar la lógica de handles/transformers, lo
-que añade riesgo y tiempo sin beneficio claro.
-
-### Versión a instalar
-- `fabric@^6.x` (publicación estable, >7 días en npm). Se verificará la versión
-  exacta publicada antes del `pnpm add` para respetar la regla de
-  `minimumReleaseAge` del proyecto.
-
-### Riesgos conocidos y mitigaciones
-- **SSR:** Fabric accede al `window`. Es estrictamente client-side → el componente
-  se marca `"use client"` y se inicializa dentro de `useEffect` (nunca en módulo
-  top-level). Next 16 no ejecuta `useEffect` en el servidor.
-- **React 19 Strict Mode:** doble montaje en dev. Se protege la inicialización
-  con un ref guard (`canvasRef.current` + `dispose()` en cleanup).
-- **Bundle size:** se importa solo lo necesario (`fabric` es tree-shakeable en v6).
-
----
-
-## 3. Arquitectura de Componentes
-
-### Estructura de archivos propuesta
-
-```
-src/components/ui/
-  drawing-canvas.tsx              ← EXISTE. Se reescribe como wrapper delgado.
-                                    Mantiene el MISMO contrato de props para
-                                    que los 2 consumidores no cambien.
-
-src/features/inspection-sketch/
-  sketch-editor.tsx               ← NUEVO. Componente principal client-side.
-                                    Orquesta Fabric, toolbar, paleta de bloques,
-                                    exportación y carga de croquis previo.
-  sketch-toolbar.tsx               ← NUEVO. Barra de herramientas (botones
-                                    pg-btn-platinum, app-input, etc.).
-  sketch-blocks-palette.tsx        ← NUEVO. Panel lateral con figuras
-                                    predefinidas arrastrables (Living, Comedor,
-                                    Baño, Cocina, Muros, Puerta, Ventana).
-  sketch-canvas-stage.tsx          ← NUEVO. Contenedor DOM del <canvas> Fabric.
-                                    Maneja ResizeObserver para responsividad.
-  sketch-export.ts                 ← NUEVO. Utilidad pura: serializa el canvas
-                                    Fabric a PNG base64 (multiplier por DPR).
-  sketch-blocks.ts                ← NUEVO. Catálogo de bloques predefinidos
-                                    (tipo, dimensiones default, estilo, label).
-  sketch-types.ts                  ← NUEVO. Tipos compartidos del feature.
-
-src/app/styles/
-  sketch-editor.css                ← NUEVO. Clases CSS del editor (toolbar,
-    palette, stage, handles). CERO inline styles. Cumple REGLA #2.
-```
-
-### Por qué un wrapper delgado en `drawing-canvas.tsx`
-Los 2 consumidores (`sketches-tab.tsx` y `inspection/[token]/page.tsx`) importan
-`<DrawingCanvas onSave saving initialImage height />`. Mantener ese nombre y
-ese contrato significa **cero cambios en los consumidores**. Internamente
-`DrawingCanvas` renderiza `<SketchEditor .../>`. Si en el futuro se quiere
-migrar los consumidores al nuevo componente directamente, se hace sin urgencia.
-
-### Responsabilidades por archivo
-
-**`sketch-editor.tsx`** (orquestador)
-- Crea la instancia `fabric.Canvas` en `useEffect` (con cleanup `dispose()`).
-- Sincroniza el modo activo (select / draw / pan) con la toolbar.
-- Recibe `initialImage` y, si existe, lo carga como **capa de fondo bloqueada**
-  (imagen raster de referencia) para respetar croquis antiguos.
-- Expone `onSave` que llama a `sketch-export.ts` y devuelve el PNG base64.
-- Mantiene historial de objetos (undo/redo) a nivel de objetos Fabric, no de
-  bitmap — más liviano y preciso que el `ImageData` actual.
-
-**`sketch-canvas-stage.tsx`** (contenedor responsivo)
-- `<div ref>` que envuelve el `<canvas>`.
-- `ResizeObserver` que llama a `canvas.setDimensions({ width, height })` y
-  re-aplica `viewportTransform` / zoom para que el contenido escale
-  proporcionalmente al cambiar el tamaño de ventana.
-- Calcula alto responsivo por breakpoint (CSS, no inline):
-  - móvil: 320px, tablet portrait: 400px, desktop: 500px (configurable vía prop).
-
-**`sketch-toolbar.tsx`** (UI)
-- Botones `pg-btn-platinum` (1 palabra cada uno): `Seleccionar`, `Mano`, `Deshacer`,
-  `Rehacer`, `Limpiar`, `Guardar`.
-- Selector de color (`app-input` type color) y grosor (`app-input` type range).
-- Respeta dark mode (variables CSS del tema) — funciona en ambos consumidores.
-
-**`sketch-blocks-palette.tsx`** (panel de bloques)
-- Lista de bloques predefinidos con iconos `lucide-react` (no emojis).
-- Drag & drop: usa HTML5 drag API nativa (sin @dnd-kit para no añadir
-  complejidad) → al soltar sobre el stage, se crea el objeto Fabric en la
-  posición del drop.
-- En móvil (<640px) el panel se colapsa a un `<Select>` o un sheet inferior
-  (CSS responsive) ya que no hay drag con mouse.
-
-**`sketch-blocks.ts`** (catálogo)
-- Define bloques: `{ id, label, type: "rect"|"path"|"group", defaultSize,
-  fill, stroke, icon }`.
-- Habitaciones: Living, Comedor, Baño, Cocina, Dormitorio, Garage, Oficina.
-- Estructurales: Muro (línea gruesa), Puerta (arco), Ventana (rect con líneas),
-  Escalera (líneas paralelas).
-- Cada bloque se instancia como objeto Fabric con `cornerStyle: "circle"`,
-  `hasRotatingPoint: true`, `transparentCorners: false`.
-
-**`sketch-export.ts`** (exportación)
-- `exportToPng(canvas: fabric.Canvas, dpr: number): string`
-- Llama `canvas.toDataURL({ format: "png", multiplier: dpr, enableRetinaScaling: true })`.
-- Antes de exportar, **deselecciona todo** (`canvas.discardActiveObject()`) para
-  que los handles de selección no aparezcan en el PNG final.
-- Asegura fondo blanco (configurado en `backgroundColor` del canvas) para
-  coincidir con el output actual (canvas actual pinta blanco).
-
----
-
-## 4. Estrategia de Responsividad
-
-### Dimensiones del canvas
-- El stage usa `ResizeObserver` sobre su contenedor.
-- Ancho: 100% del contenedor (como hoy).
-- Alto: por breakpoint vía CSS en `sketch-editor.css`:
-  ```css
-  .sketch-stage { height: 320px; }                /* móvil */
-  @media (min-width: 640px)  { .sketch-stage { height: 400px; } }
-  @media (min-width: 768px)  { .sketch-stage { height: 450px; } }
-  @media (min-width: 1280px) { .sketch-stage { height: 500px; } }
-  ```
-- La prop `height` actual se respeta como **override** cuando se pasa
-  explícitamente (consumidores la pasan). Se aplica vía clase CSS modificadora
-  `.sketch-stage--h-{value}` generada, no inline style.
-
-### Escalado del contenido al resize
-- Al cambiar el tamaño del stage, se guarda el `viewportTransform` actual,
-  se reajusta el ancho/alto del canvas Fabric y se recompone el viewport para
-  mantener el centro y el zoom. Así un plano armado en desktop se ve igual
-  (proporcionalmente) en tablet.
-- `devicePixelRatio` se aplica vía `enableRetinaScaling: true` de Fabric
-  (equivalente al `ctx.scale(dpr, dpr)` actual).
-
-### Touch / stylus
-- Fabric v6 soporta pointer events nativamente (mouse + touch + pen).
-- Se configura `canvas.selection = true` y `preserveObjectStacking = true`.
-- En móvil se desactivan efectos hover (CSS `@media (hover: none)`).
-
----
-
-## 5. Estrategia de Exportación (cero impacto en backend)
-
-### Contrato a mantener
-```
-onSave(dataUrl: string)
-donde dataUrl === "data:image/png;base64,...."
-```
-
-### Pasos del export (`sketch-export.ts`)
-1. `canvas.discardActiveObject()` — quitar handles de selección.
-2. `canvas.renderAll()`.
-3. `const dataUrl = canvas.toDataURL({ format: "png", multiplier: dpr,
-   enableRetinaScaling: true })`.
-4. Devolver `dataUrl` (string base64 PNG).
-5. El consumidor lo envía a `/api/inspection/sketch` sin cambios.
-
-### Verificación de paridad
-- Se comparará el output de un croquis simple (un rectángulo) generado con el
-  canvas viejo vs el nuevo: ambos deben producir un `data:image/png;base64,`
-  válido y decodificable a un PNG de dimensiones equivalentes.
-- El backend solo valida `sketchDataUrl` truthy y lo convierte con
-  `fetch(sketchDataUrl).blob()`. Cualquier PNG base64 válido funciona.
-
----
-
-## 6. Compatibilidad Hacia Atrás (croquis antiguos)
-
-### Escenario
-Un `damage_sketch` existente tiene `sketch_url` apuntando a un PNG raster
-(generado por el canvas viejo). Al editar, se pasa `initialImage={sketch_url}`.
-
-### Estrategia
-- `sketch-editor.tsx` recibe `initialImage`.
-- Si existe, crea un `fabric.Image` desde la URL y lo agrega como **capa de
-  fondo bloqueada**:
-  ```ts
-  fabric.Image.fromURL(initialImage, (img) => {
-    img.set({ selectable: false, evented: false, hoverCursor: "default" });
-    canvas.backgroundImage = img;
-    canvas.renderAll();
-  });
-  ```
-- El usuario puede colocar bloques vectoriales **encima** del fondo raster.
-- Al exportar, el fondo se incluye en el PNG (Fabric renderiza
-  `backgroundImage` en `toDataURL`).
-- `crossOrigin = "anonymous"` para evitar tainted canvas (R2 envía CORS
-  headers correctos — verificar en implementación).
-
-### Nota
-No se "vectoriza" el croquis antiguo. Se respeta como referencia de fondo.
-El nuevo guardado genera un PNG nuevo que reemplaza al anterior en R2 (el
-endpoint ya soporta `sketchId` para update).
-
----
-
-## 7. Diseño UI/UX (cumplimiento DESIGN_SYSTEM.md)
-
-### Reglas aplicadas
-- **Botones:** todos `pg-btn-platinum` (clase de `buttons.css`), texto 1 palabra.
-- **Inputs (color, grosor):** `app-input`. Labels `app-field-label`.
-- **Sin checkboxes:** se usan toggles/eye icons si se necesita (no aplica aquí).
-- **Iconos:** `lucide-react` únicamente (PenTool, Square, Circle, DoorOpen,
-  etc.). Cero emojis.
-- **Sin inline styles:** toda estilización en `sketch-editor.css`. Excepción
-  permitida: valores dinámicos (ej. posición de tooltip calculada) — no se
-  prevén necesarios.
-- **Idioma:** español neutro ("Seleccionar", "Mano", "Deshacer", "Rehacer",
-  "Limpiar", "Guardar", "Living", "Comedor", "Baño", "Cocina", "Muro",
-  "Puerta", "Ventana"). Sin argentinismos.
-- **Dark/Light mode:** variables CSS del tema (`--background`, `--border`,
-  `--primary`, etc.). La toolbar y el stage heredan el tema del consumidor.
-  La página magic link (slate oscuro) y el dashboard (claro) renderizan el
-  mismo componente sin variantes — Fabric usa colores del CSS vars para
-  los handles.
-
-### Layout responsivo del editor
-```
-┌─────────────────────────────────────────────────┐
-│  Toolbar (pg-btn-platinum + app-input)          │
-├──────────┬──────────────────────────────────────┤
-│ Paleta   │  Stage (canvas Fabric)               │
-│ bloques  │                                      │
-│ (scroll) │                                      │
-│          │                                      │
-└──────────┴──────────────────────────────────────┘
-```
-- Móvil (<640px): paleta colapsa a un `<Select>` arriba del stage; stage a
-  ancho completo.
-- Tablet/desktop: paleta lateral izquierda (180px), stage flexible.
-
----
-
-## 8. Plan de Implementación (FASE 2 — paso a paso)
-
-Cada paso = 1 commit atómico. Tras cada commit: `npx tsc --noEmit` y
-`npx eslint` deben dar 0 errores y 0 warnings (REGLA OBLIGATORIA).
-
-### Commit 1 — Dependencia y scaffolding
-- `pnpm add fabric@^6.x` (verificar `minimumReleaseAge`).
-- Crear `src/features/inspection-sketch/` con archivos vacíos + tipos base
-  (`sketch-types.ts`, `sketch-blocks.ts` con catálogo).
-- `npx tsc --noEmit` pasa.
-
-### Commit 2 — Stage responsivo con Fabric
-- `sketch-canvas-stage.tsx`: contenedor + `ResizeObserver` + init/dispose
-  de `fabric.Canvas`.
-- `sketch-editor.css`: clases `.sketch-stage`, breakpoints de altura.
-- Render mínimo: canvas blanco, sin toolbar aún.
-- Verificar en ambos consumidores (temporalmente cableado en
-  `drawing-canvas.tsx` tras el commit 6).
-
-### Commit 3 — Exportación a PNG base64
-- `sketch-export.ts`: `exportToPng()` con `discardActiveObject` + `toDataURL`.
-- Test manual: un rect agregado programáticamente → export → validar
-  `data:image/png;base64,`.
-
-### Commit 4 — Toolbar (UI)
-- `sketch-toolbar.tsx`: botones `pg-btn-platinum` (Seleccionar, Mano,
-  Deshacer, Rehacer, Limpiar, Guardar), color y grosor con `app-input`.
-- Cablear al canvas: modos `select`/`draw`, undo/redo sobre stack de objetos,
-  `clear` (remueve todos los objetos), `save` (llama `exportToPng` → `onSave`).
-
-### Commit 5 — Paleta de bloques + drag & drop
-- `sketch-blocks-palette.tsx`: lista de bloques con iconos lucide.
-- Drag & drop HTML5 → crear objeto Fabric en posición del drop.
-- Cada bloque: `cornerStyle: "circle"`, `hasRotatingPoint: true`.
-- Responsive: paleta lateral en desktop, `<Select>` en móvil.
-
-### Commit 6 — Compatibilidad hacia atrás (initialImage)
-- `sketch-editor.tsx`: cargar `initialImage` como `backgroundImage` bloqueado.
-- `crossOrigin = "anonymous"`.
-- Verificar edición de un croquis existente en ambos consumidores.
-
-### Commit 7 — Wrapper y migración de consumidores
-- Reescribir `src/components/ui/drawing-canvas.tsx` como wrapper delgado
-  que renderiza `<SketchEditor .../>` con el MISMO contrato de props.
-- Los 2 consumidores (`sketches-tab.tsx`, `inspection/[token]/page.tsx`)
-  **no se modifican** (verificar que siguen compilando sin cambios).
-- Borrar el código raster viejo (353 líneas) — no se conserva como fallback
-  para no acumular código muerto (REGLA de Cero Redundancia).
-
-### Commit 8 — Limpieza y verificación final
-- `npx tsc --noEmit` → 0 errores.
-- `npx eslint` → 0 errores, 0 warnings.
-- `pnpm build` → success.
-- Revisión manual en dev: crear plano con 4 habitaciones + 2 muros +
-  1 puerta → guardar → validar PNG en R2 → reabrir para editar.
-- Verificar magic link (asegurado) en tema oscuro.
-
----
-
-## 9. Verificación de Reglas del Proyecto
-
-| Regla | Cumplimiento |
+| Campo | Descripción |
 |---|---|
-| REGLA #1 (no borrar datos) | ✅ No toca BD. El endpoint update ya existe. |
-| REGLA #2 (cero inline styles) | ✅ Todo en `sketch-editor.css`. Excepción solo para valores dinámicos (no previstos). |
-| Cero errores/warnings tsc+eslint | ✅ Verificado en cada commit. |
-| Cero redundancia | ✅ Se elimina el canvas raster viejo (commit 7). |
-| Diseño (DESIGN_SYSTEM.md) | ✅ `pg-btn-platinum`, `app-input`, `app-field-label`, lucide, sin emojis, español neutro. |
-| Responsividad (5 breakpoints) | ✅ CSS en `sketch-editor.css` + `ResizeObserver`. |
-| Multi-tenant / seguridad | ✅ Sin cambios en backend ni RLS. |
-| Sin mocks | ✅ Fabric real desde el commit 1. |
+| `id` | Identificador único de la entidad. |
+| `category` | Categoría: `spaces`, `structure`, `objects`, `equipment`, `annotations`. |
+| `defaultLabel` | Etiqueta por defecto para la numeración automática (ver § 11). |
+| `icon` | Icono de la biblioteca (lucide o SVG propio). |
+| `texture` | Textura sugerida (puede cambiarse, ver § 12). |
+| `defaultProperties` | Propiedades iniciales (medidas, tipo, etc.). |
+| `renderer` | Cómo se dibuja: `block` (espacio), `svg` (objeto/equipamiento), `line` (muro), `group` (puerta/ventana). |
+| `scaleMode` | `free` (redimensionar libre) o `proportional` (mantener proporción). |
+
+**Agregar una nueva entidad no requiere modificar el editor.** Solo se agrega
+una nueva definición al archivo de configuración. El editor lee el catálogo,
+renderiza la biblioteca, instancia la entidad y aplica su comportamiento
+según el `renderer` y `scaleMode` declarados.
+
+Esto permite que mañana se agregue "Sala de bombas" o "Batería de
+condensadores" sin tocar el núcleo del editor.
 
 ---
 
-## 10. Riesgos y Mitigaciones
+## 7. Favoritos
 
-| Riesgo | Probabilidad | Mitigación |
-|---|---|---|
-| Fabric v6 incompatible con React 19 Strict Mode (doble montaje) | Media | Ref guard + `dispose()` en cleanup del `useEffect`. |
-| Tainted canvas al cargar `initialImage` (CORS) | Baja | R2 envía CORS headers; usar `crossOrigin="anonymous"`. Verificar en commit 6. |
-| Bundle size (+140kB) | Baja | Fabric v6 tree-shakeable; solo se importa lo usado. |
-| Touch en iPad no fluido | Media | Fabric v6 soporta pointer events; testear en dev con simulación touch. |
-| Handles de selección visibles en el PNG exportado | Baja | `discardActiveObject()` antes de `toDataURL` (commit 3). |
+La biblioteca incluye una sección **Favoritos** en la parte superior.
 
----
+Contiene automáticamente los elementos más utilizados por el inspector. En
+la primera versión, con un conjunto inicial razonable:
 
-## 11. Fuera de Alcance (no se incluye en esta migración)
+- Muro
+- Puerta
+- Ventana
+- Dormitorio
+- Baño
+- Comentario
 
-- Vectorización automática de croquis raster antiguos (se cargan como fondo).
-- Persistencia del modelo vectorial (JSON de Fabric) en BD — el backend
-  sigue recibiendo solo PNG. (Podría añadirse después como columna opcional
-  `sketch_vector_json` si se quiere re-edición sin pérdida, pero requiere
-  migración y no está en este alcance.)
-- Capas nombradas / agrupación avanzada de objetos.
-- Export a SVG (el backend espera PNG).
-- Plantillas de plano prearmadas.
+El sistema registra qué entidades usa cada inspector con más frecuencia y
+reordena los favoritos automáticamente. El objetivo es reducir aún más la
+búsqueda dentro de la biblioteca.
 
 ---
 
-## 12. Criterio de Aceptación de la FASE 2
+## 8. Buscador
 
-- [ ] Un inspector puede arrastrar "Living", "Comedor", "Baño", "Cocina" al
-      canvas y posicionarlos en <30s.
-- [ ] Resize desde esquinas y rotación funcionan con mouse y touch.
-- [ ] El botón "Guardar" produce un PNG base64 que sube a R2 sin cambios en
-      `/api/inspection/sketch`.
-- [ ] Editar un croquis existente muestra el PNG viejo de fondo y permite
-      agregar bloques encima.
-- [ ] Funciona en móvil (375px), tablet (768px) y desktop (1280px+).
-- [ ] Funciona en tema claro (dashboard) y oscuro (magic link).
-- [ ] `tsc` y `eslint` en 0/0.
-- [ ] `pnpm build` exitoso.
+La biblioteca incluye un campo de búsqueda en la parte superior.
+
+Ejemplo de uso:
+
+```
+Buscar...    [ba]
+```
+
+Resultados:
+
+- Baño
+- Bodega
+- Balcón
+
+El buscador filtra todas las entidades del catálogo por nombre, sin importar
+en qué categoría estén. Es más rápido que abrir acordeones cuando el
+inspector sabe qué busca.
+
+---
+
+## 9. Barra superior
+
+Simplificada. Contiene únicamente:
+
+| Herramienta | Función |
+|---|---|
+| Seleccionar | Mover, redimensionar, rotar entidades. |
+| Dibujar | Lápiz a mano alzada. |
+| Etiqueta | Soltar una etiqueta (pide texto). |
+| Comentario | Soltar un comentario (pide texto). |
+| Deshacer | Revertir última acción. |
+| Rehacer | Reaplicar acción deshecha. |
+| Guardar | Exportar PNG y enviar al backend. |
+
+**Paleta de colores reducida:** 5 colores fijos (rojo, azul, verde, amarillo,
+gris). No hay selector de color libre ni personalización completa. Los
+colores se utilizan principalmente para anotaciones, comentarios y resaltado
+de zonas. No hay control de grosor del lápiz visible en la barra (el grosor
+es fijo y propio del croquis).
+
+**Más herramientas:** Las figuras geométricas básicas (línea, rectángulo,
+círculo, polígono) existen pero se agrupan en una sección secundaria
+desplegable "Más herramientas". No forman parte del flujo principal porque la
+mayoría de los croquis utilizarán entidades inteligentes. Existen para casos
+excepcionales donde el inspector necesita representar una forma no contemplada
+en la biblioteca (muro provisorio, cierre, piscina irregular, zona cercada,
+canil, ampliación, galpón con forma extraña).
+
+---
+
+## 10. Propiedades
+
+Al hacer doble clic sobre una entidad, se abre un panel pequeño.
+
+- Nunca formularios largos.
+- Nunca ventanas complejas.
+- Solo las propiedades mínimas del tipo de entidad (ver § 5.2 para estructura;
+  espacios tienen nombre, largo y ancho).
+- Las medidas son opcionales. Si no se llenan, no se muestran sobre el plano.
+- Nunca se muestra información vacía.
+
+---
+
+## 11. Numeración automática
+
+Eliminar escritura innecesaria.
+
+| Entidad | Numeración |
+|---|---|
+| Dormitorio | D1, D2, D3... |
+| Baño | B1, B2... |
+| Living comedor | L-C |
+| Cocina | C |
+| Muro | M1, M2... |
+| Puerta | P1, P2... |
+| Ventana | V1, V2... |
+
+El `defaultLabel` del catálogo (ver § 6) define el prefijo. El editor cuenta
+cuántas entidades del mismo tipo existen y asigna el número automáticamente.
+
+El usuario puede modificar el nombre después con doble clic. Nunca está
+obligado a escribirlo.
+
+---
+
+## 12. Texturas configurables
+
+Las texturas NO representan materiales. Sirven únicamente para distinguir
+visualmente sectores y mejorar la lectura del croquis.
+
+Cada espacio tiene una textura sugerida (definida en el catálogo), pero el
+usuario puede cambiarla:
+
+- Sin textura
+- Textura A
+- Textura B
+- Textura C
+
+Esto permite que dos oficinas se vean iguales si el inspector lo prefiere, o
+distintas si necesita diferenciarlas.
+
+---
+
+## 13. Snap (motor de吸附)
+
+El snap es un comportamiento del **motor**, no una funcionalidad específica de
+cada entidad.
+
+El motor debe soportar snap entre:
+
+- Muros y muros (conexión de extremos).
+- Puertas y muros (asociación por proximidad).
+- Ventanas y muros (asociación por proximidad).
+- Espacios y espacios (alineación de bordes).
+- Objetos y guías de alineación (líneas guía visuales al arrastrar).
+
+Si un muro se mueve, las puertas y ventanas asociadas se mueven con él. No
+quedan flotando.
+
+---
+
+## 14. Relaciones
+
+Las puertas se asocian a muros. Las ventanas se asocian a muros.
+
+La asociación es automática por proximidad (snap). El usuario no conecta nada
+manualmente.
+
+Si un muro cambia de posición, longitud o ángulo, las puertas y ventanas
+asociadas se reubican para mantener la relación.
+
+---
+
+## 15. Tipo de bien
+
+La inspección ya conoce el tipo de bien (casa, departamento, edificio, galpón,
+maquinaria, oficina, otros).
+
+El editor utiliza automáticamente esa información para **reordenar** la
+biblioteca:
+
+- Si es una casa → "Espacios" aparece abierto primero.
+- Si es un galpón → "Estructura" y "Equipamiento" aparecen primero.
+- Si es una oficina → "Espacios" y "Objetos" aparecen primero.
+
+Nunca se ocultan elementos. Solo se reordenan. No se le vuelve a preguntar el
+tipo de bien al usuario. No se agrega otro selector.
+
+---
+
+## 16. API interna de entidades
+
+Cada entidad debe implementar el mismo contrato interno. Como mínimo:
+
+| Método | Descripción |
+|---|---|
+| Identidad | `id`, `type`, `category`, `label` |
+| Representación gráfica | Cómo se dibuja en el lienzo (SVG, bloque, línea, grupo). |
+| Propiedades | Lista de propiedades editables (para el panel de doble clic). |
+| Eventos | Cómo responde a clic, doble clic, arrastre, resize, rotación. |
+| Serialización | Cómo se guarda a JSON y se reconstruye desde JSON. |
+| Exportación | Cómo aparece en el PNG final. |
+
+Todas las entidades se comportan de forma consistente. Agregar un nuevo tipo
+es trivial: se agrega la definición al catálogo y se implementa el contrato.
+
+---
+
+## 17. Compatibilidad (sin cambios)
+
+Se mantiene sin modificaciones:
+
+- Fabric.js como motor del lienzo.
+- Exportación PNG base64.
+- Cloudflare R2 (almacenamiento).
+- Magic Link (asegurado).
+- Dashboard (inspector).
+- Responsive (5 breakpoints).
+- Undo / Redo.
+- API existente (`/api/inspection/sketch`).
+- Payload existente (`{ sessionId, sketchDataUrl, label, sketchId? }`).
+- Carga de croquis anteriores como fondo bloqueado.
+
+El backend no se modifica. El PNG sigue siendo lo que se envía al endpoint.
+
+---
+
+## 18. Estructura de datos (preparada, no enviada aún)
+
+Cada entidad del plano guarda su identidad completa: tipo, nombre, medidas,
+posición, relaciones y color. Esta estructura se puede serializar a JSON
+organizado para que una IA la lea sin interpretar la imagen.
+
+**Hoy el backend sigue recibiendo solo el PNG.** La estructura JSON queda
+disponible en el editor. Cuando se decida integrar análisis con IA, se añade
+el envío del JSON al endpoint sin rediseñar el editor.
+
+---
+
+## 19. Herramientas futuras (arquitectura preparada)
+
+Aunque no se implementen ahora, la arquitectura debe quedar preparada para
+incorporar en el futuro sin rediseñar el núcleo:
+
+- **Flechas** — para indicar direcciones, flujos o accesos.
+- **Polígonos** — para zonas con formas irregulares.
+- **Zonas de daño** — áreas marcadas que se asocian a un tipo de daño.
+- **Capas** — para separar estructura, mobiliario, daños y anotaciones.
+- **IA** — análisis automático del plano a partir de la estructura de datos.
+- **Exportación estructurada** — JSON/XML para integraciones externas.
+
+El motor de entidades y la API interna (§ 16) están diseñados para que estas
+funcionalidades se agreguen como extensiones, no como rediseños.
+
+---
+
+## 20. Visión de largo plazo
+
+Este editor será el **motor gráfico oficial de toda la plataforma**.
+
+Cualquier módulo futuro que necesite representar visualmente un inmueble, una
+oficina, un galpón, una maquinaria o un siniestro deberá reutilizar este mismo
+motor.
+
+La arquitectura debe permitir agregar nuevas entidades, herramientas y
+comportamientos sin modificar el núcleo del editor.
+
+---
+
+## 21. Cierre
+
+No quiero que el resultado sea un editor de dibujo mejorado. Quiero una
+**plataforma gráfica extensible, orientada a inspecciones de siniestros, cuya
+arquitectura pueda evolucionar durante los próximos 10 años sin requerir un
+nuevo rediseño del núcleo.**
 
 ---
 
 > **🛑 PUNTO DE DETENCIÓN.**
-> Este documento queda en revisión. No se iniciará la FASE 2 ni se modificará
-> ningún archivo de código fuente hasta la aprobación explícita del usuario.
+> Este documento queda en revisión. No se iniciará la implementación ni se
+> modificará ningún archivo de código fuente hasta la aprobación explícita del
+> usuario.
