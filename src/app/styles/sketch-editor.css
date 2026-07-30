@@ -1,0 +1,271 @@
+/*
+ * EDITOR DE CROQUIS VECTORIAL — Claims Hub
+ *
+ * Estilos del feature src/features/inspection-sketch.
+ * Cumple REGLA #2: cero inline styles en componentes. Toda la estilización
+ * visual del editor vive aquí como clases CSS semánticas y reutilizables.
+ *
+ * Hereda el tema (light/dark) del consumidor via variables CSS del proyecto
+ * (--background, --border, --foreground, --primary, --muted-foreground...).
+ */
+
+@layer components {
+  /* ═══════════════════════════════════════════════════════════════
+   * Contenedor raíz del editor
+   * ═══════════════════════════════════════════════════════════════ */
+  .sketch-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * Toolbar superior
+   * Reutiliza pg-btn-platinum (buttons.css) y app-input (forms.css).
+   * ═══════════════════════════════════════════════════════════════ */
+  .sketch-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--card) 70%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .sketch-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .sketch-toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 2px;
+  }
+
+  /* Botones de modo compactos (no son pg-btn-platinum porque son toggles
+     de icono, no acciones primarias). Mantienen coherencia visual. */
+  .sketch-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    min-width: 28px;
+    padding: 0 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--card) 60%, transparent);
+    color: var(--muted-foreground);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+
+  .sketch-mode-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--muted) 50%, transparent);
+    color: var(--foreground);
+  }
+
+  .sketch-mode-btn.is-active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  .sketch-mode-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Inputs de color y grosor dentro de la toolbar */
+  .sketch-color-input {
+    width: 32px;
+    height: 28px;
+    padding: 2px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--card) 60%, transparent);
+    cursor: pointer;
+  }
+
+  .sketch-range-input {
+    width: 80px;
+    height: 28px;
+    accent-color: var(--primary);
+    cursor: pointer;
+  }
+
+  .sketch-range-label {
+    font-size: 11px;
+    color: var(--muted-foreground);
+    min-width: 28px;
+    text-align: center;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * Cuerpo: paleta + stage
+   * ═══════════════════════════════════════════════════════════════ */
+  .sketch-body {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  /* Paleta lateral de bloques predefinidos */
+  .sketch-palette {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 180px;
+    flex-shrink: 0;
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--card) 70%, transparent);
+    max-height: 520px;
+    overflow-y: auto;
+  }
+
+  .sketch-palette-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+
+  .sketch-block-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--card) 50%, transparent);
+    cursor: grab;
+    user-select: none;
+    transition: all 0.18s ease;
+  }
+
+  .sketch-block-item:hover {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+
+  .sketch-block-item:active {
+    cursor: grabbing;
+  }
+
+  .sketch-block-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .sketch-block-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--foreground);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * Stage — contenedor del canvas Fabric
+   * Altura responsiva por breakpoint (REGLA de 5 breakpoints).
+   * ═══════════════════════════════════════════════════════════════ */
+  .sketch-stage-wrap {
+    flex: 1;
+    min-width: 0;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Dark mode: fondo del canvas sigue blanco (es papel de dibujo),
+     pero el borde respeta el tema. */
+  .dark .sketch-stage-wrap {
+    background: #ffffff;
+  }
+
+  .sketch-stage {
+    width: 100%;
+    height: 320px;
+  }
+
+  @media (min-width: 640px) {
+    .sketch-stage { height: 400px; }
+  }
+
+  @media (min-width: 768px) {
+    .sketch-stage { height: 450px; }
+  }
+
+  @media (min-width: 1280px) {
+    .sketch-stage { height: 500px; }
+  }
+
+  /* Override de altura cuando el consumidor pasa `height` explicito.
+     Se aplica via clase modificadora generada por el wrapper. */
+  .sketch-stage.sketch-stage--fixed-h {
+    height: var(--sketch-stage-h, 500px) !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * Responsive: en móvil la paleta se colapsa a un select arriba
+   * ═══════════════════════════════════════════════════════════════ */
+  .sketch-palette-mobile {
+    display: none;
+  }
+
+  @media (max-width: 639px) {
+    .sketch-body {
+      flex-direction: column;
+    }
+
+    .sketch-palette {
+      display: none;
+    }
+
+    .sketch-palette-mobile {
+      display: block;
+      width: 100%;
+    }
+  }
+
+  /* Desactivar hover effects en móvil (no hay hover en touch) */
+  @media (hover: none) {
+    .sketch-block-item:hover {
+      border-color: var(--border);
+      background: color-mix(in srgb, var(--card) 50%, transparent);
+    }
+    .sketch-mode-btn:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--card) 60%, transparent);
+      color: var(--muted-foreground);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * Mensaje de carga / estado vacío
+   * ═══════════════════════════════════════════════════════════════ */
+  .sketch-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    pointer-events: none;
+  }
+}
