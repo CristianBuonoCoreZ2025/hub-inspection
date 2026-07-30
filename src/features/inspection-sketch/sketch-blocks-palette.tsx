@@ -114,20 +114,24 @@ function CategoryAccordion({
 
 export function SketchLibrary({ onSelectEntity, bienType }: SketchLibraryProps) {
   const [search, setSearch] = useState("");
-  const [openCategory, setOpenCategory] = useState<EntityCategory | null>(
+  // "favorites" es una pseudo-categoría colapsable como las demás.
+  const [openCategory, setOpenCategory] = useState<string | null>(
     bienType ? CATEGORY_ORDER_BY_BIEN[bienType][0] : "spaces"
   );
 
-  /** Orden de categorías según tipo de bien. */
+  /** Orden de categorías según tipo de bien, excluyendo anotaciones
+   *  (etiquetas y comentarios van en la toolbar, no en la biblioteca). */
   const categoryOrder = useMemo(() => {
-    if (!bienType) return CATEGORY_ORDER;
-    const order = CATEGORY_ORDER_BY_BIEN[bienType];
-    return order.map((id) => CATEGORY_ORDER.find((c) => c.id === id)!).filter(Boolean);
+    const base = bienType ? CATEGORY_ORDER_BY_BIEN[bienType] : CATEGORY_ORDER.map((c) => c.id);
+    return base
+      .filter((id) => id !== "annotations")
+      .map((id) => CATEGORY_ORDER.find((c) => c.id === id)!)
+      .filter(Boolean);
   }, [bienType]);
 
-  /** Resultados de búsqueda (si hay query). */
+  /** Resultados de búsqueda (excluyendo anotaciones). */
   const searchResults = useMemo(() => {
-    return search ? searchEntities(search) : [];
+    return search ? searchEntities(search).filter((e) => e.category !== "annotations") : [];
   }, [search]);
 
   /** Entidades favoritas. */
@@ -138,6 +142,7 @@ export function SketchLibrary({ onSelectEntity, bienType }: SketchLibraryProps) 
   }, []);
 
   const showSearch = search.length > 0;
+  const favoritesOpen = openCategory === "favorites";
 
   return (
     <>
@@ -172,20 +177,28 @@ export function SketchLibrary({ onSelectEntity, bienType }: SketchLibraryProps) 
           </div>
         ) : (
           <>
-            {/* Favoritos */}
+            {/* Favoritos (colapsable como cualquier categoría) */}
             <div className="sketch-palette-category">
-              <p className="sketch-palette-title sketch-palette-title--favorites">
+              <button
+                type="button"
+                className="sketch-palette-title sketch-palette-title--favorites"
+                onClick={() => setOpenCategory(favoritesOpen ? null : "favorites")}
+                aria-expanded={favoritesOpen}
+              >
                 <Star className="size-3.5 text-amber-500" />
                 <span>Favoritos</span>
-              </p>
-              <div className="sketch-palette-items">
-                {favorites.map((entity) => (
-                  <EntityItem key={entity.id} entity={entity} />
-                ))}
-              </div>
+                <ChevronDown className={`size-3 ml-auto transition-transform ${favoritesOpen ? "rotate-180" : ""}`} />
+              </button>
+              {favoritesOpen && (
+                <div className="sketch-palette-items">
+                  {favorites.map((entity) => (
+                    <EntityItem key={entity.id} entity={entity} />
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Categorías con acordeones */}
+            {/* Categorías con acordeones (sin anotaciones) */}
             {categoryOrder.map((cat) => (
               <CategoryAccordion
                 key={cat.id}
