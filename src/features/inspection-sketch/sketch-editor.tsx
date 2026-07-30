@@ -120,9 +120,11 @@ export function SketchEditor({
     }
     setMode(next);
     canvas.isDrawingMode = next === "draw";
-    canvas.selection = next === "select";
-    canvas.defaultCursor = next === "select" ? "default" : "crosshair";
-    canvas.hoverCursor = next === "select" ? "move" : "crosshair";
+    // En select y eraser, selection=true para que Fabric detecte el target
+    // al hacer clic (necesario para que opt.target no sea null en el borrador).
+    canvas.selection = next === "select" || next === "eraser";
+    canvas.defaultCursor = next === "select" ? "default" : next === "eraser" ? "not-allowed" : "crosshair";
+    canvas.hoverCursor = next === "select" ? "move" : next === "eraser" ? "not-allowed" : "crosshair";
   }, []);
 
   /** Crea una figura temporal vacía en el punto inicial. */
@@ -326,6 +328,35 @@ export function SketchEditor({
 
     updateButtons();
   }, [initialImage, pushHistory, handleCanvasMouseDown, handleCanvasMouseMove, handleCanvasMouseUp, handleCanvasDoubleClick, handleObjectModified, updateButtons]);
+
+  // Listener de teclado: Delete/Backspace elimina el objeto seleccionado.
+  // En modo draw no interfere con el dibujo. No intercepta inputs.
+  useEffect(() => {
+    if (!canvasInstance) return;
+    const canvas = canvasInstance;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (modeRef.current === "draw") return;
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const active = canvas.getActiveObject();
+      if (!active) return;
+      e.preventDefault();
+      const meta = getEntityMeta(active);
+      canvas.remove(active);
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      if (meta) renumberEntities(meta.catalogId, canvas, (obj, name) => {
+        setEntityMeta(obj, { name });
+        if (obj instanceof fabric.Group) {
+          const textObj = obj.getObjects().find((o) => o.type === "text" || o.type === "textbox");
+          if (textObj) textObj.set({ text: name });
+        }
+      });
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canvasInstance]);
 
   const handleUndo = useCallback(() => {
     const canvas = canvasRef.current;
