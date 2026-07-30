@@ -200,7 +200,8 @@ export function SketchToolbar({
         {onCancel && (
           <button
             type="button"
-            className="sketch-mode-btn"`n            onClick={onCancel}
+            className="sketch-mode-btn"
+            onClick={onCancel}
             disabled={saving}
           >
             <X className="size-3.5" />
