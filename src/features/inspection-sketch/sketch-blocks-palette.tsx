@@ -3,31 +3,43 @@
 /**
  * Paleta de bloques predefinidos con drag & drop al canvas.
  *
+ * Renderiza los bloques agrupados por categoría (habitaciones, oficina,
+ * estacionamiento, maquinaria, negocio, exterior, estructura) usando
+ * CATEGORY_ORDER y BLOCKS_BY_CATEGORY del catálogo.
+ *
  * En desktop (>=640px) muestra una lista lateral arrastrable via HTML5 Drag
  * API nativa. En móvil (<640px) colapsa a un <select> (app-input) porque no
  * hay drag con mouse; al elegir, el bloque se agrega al centro del canvas.
- *
- * El drop real lo maneja el editor orquestador (sketch-editor.tsx) que
- * conoce la instancia Fabric y traduce coordenadas de pantalla a canvas.
  */
 
-import { Sofa, UtensilsCrossed, Bath, ChefHat, BedDouble, Car, Briefcase, BrickWall, DoorOpen, AppWindow, ArrowUpDown } from "lucide-react";
-import { ROOM_BLOCKS, STRUCTURE_BLOCKS } from "./sketch-blocks";
+import {
+  Sofa, UtensilsCrossed, Bath, ChefHat, BedDouble, Car, Building2,
+  Armchair, Archive, Users, ParkingSquare, Bike, Cog, Fuel, Monitor,
+  Store, ShoppingCart, Gift, TreePine, Flower2, Road,
+  BrickWall, DoorOpen, AppWindow, ArrowUpDown,
+} from "lucide-react";
+import { BLOCKS_BY_CATEGORY } from "./sketch-blocks";
+import { CATEGORY_ORDER } from "./sketch-types";
 import type { BlockDefinition, BlockId } from "./sketch-types";
 
 /** Icono lucide por id de bloque. */
-const BLOCK_ICONS: Record<BlockId, typeof Sofa> = {
-  living: Sofa,
-  comedor: UtensilsCrossed,
-  bano: Bath,
-  cocina: ChefHat,
-  dormitorio: BedDouble,
-  garage: Car,
-  oficina: Briefcase,
-  muro: BrickWall,
-  puerta: DoorOpen,
-  ventana: AppWindow,
-  escalera: ArrowUpDown,
+const BLOCK_ICONS: Partial<Record<BlockId, typeof Sofa>> = {
+  // Habitaciones
+  living: Sofa, comedor: UtensilsCrossed, bano: Bath, cocina: ChefHat,
+  dormitorio: BedDouble, garage: Car, "oficina-room": Building2,
+  // Oficina
+  escritorio: Armchair, silla: Armchair, archivador: Archive,
+  reunion: Users, recepcion: Store,
+  // Estacionamiento
+  vehiculo: Car, plaza: ParkingSquare, rampa: Road, bicicleta: Bike,
+  // Maquinaria
+  motor: Cog, tanque: Fuel, panel: Monitor, equipo: Cog,
+  // Negocio
+  mostrador: Store, estanteria: Archive, caja: ShoppingCart, exhibidor: Gift,
+  // Exterior
+  arbol: TreePine, jardin: Flower2, vereda: Road, porton: DoorOpen,
+  // Estructura
+  muro: BrickWall, puerta: DoorOpen, ventana: AppWindow, escalera: ArrowUpDown,
 };
 
 interface SketchBlocksPaletteProps {
@@ -35,12 +47,12 @@ interface SketchBlocksPaletteProps {
   onSelectBlock: (blockId: BlockId) => void;
 }
 
-function BlockItem({ block, draggable }: { block: BlockDefinition; draggable: boolean }) {
+function BlockItem({ block }: { block: BlockDefinition }) {
   const Icon = BLOCK_ICONS[block.id] ?? Sofa;
   return (
     <div
       className="sketch-block-item"
-      draggable={draggable}
+      draggable
       onDragStart={(e) => {
         e.dataTransfer.setData("text/sketch-block", block.id);
         e.dataTransfer.effectAllowed = "copy";
@@ -62,16 +74,18 @@ export function SketchBlocksPalette({ onSelectBlock }: SketchBlocksPaletteProps)
     <>
       {/* Paleta lateral (desktop >=640px) */}
       <aside className="sketch-palette">
-        <p className="sketch-palette-title">Habitaciones</p>
-        {ROOM_BLOCKS.map((block) => (
-          <BlockItem key={block.id} block={block} draggable />
-        ))}
-        <p className="sketch-palette-title sketch-palette-title--section">
-          Estructura
-        </p>
-        {STRUCTURE_BLOCKS.map((block) => (
-          <BlockItem key={block.id} block={block} draggable />
-        ))}
+        {CATEGORY_ORDER.map((cat) => {
+          const blocks = BLOCKS_BY_CATEGORY[cat.id];
+          if (!blocks || blocks.length === 0) return null;
+          return (
+            <div key={cat.id} className="sketch-palette-category">
+              <p className="sketch-palette-title">{cat.label}</p>
+              {blocks.map((block) => (
+                <BlockItem key={block.id} block={block} />
+              ))}
+            </div>
+          );
+        })}
       </aside>
 
       {/* Select colapsado (móvil <640px) */}
@@ -89,20 +103,19 @@ export function SketchBlocksPalette({ onSelectBlock }: SketchBlocksPaletteProps)
           <option value="" disabled>
             Agregar bloque...
           </option>
-          <optgroup label="Habitaciones">
-            {ROOM_BLOCKS.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.label}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Estructura">
-            {STRUCTURE_BLOCKS.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.label}
-              </option>
-            ))}
-          </optgroup>
+          {CATEGORY_ORDER.map((cat) => {
+            const blocks = BLOCKS_BY_CATEGORY[cat.id];
+            if (!blocks || blocks.length === 0) return null;
+            return (
+              <optgroup key={cat.id} label={cat.label}>
+                {blocks.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label}
+                  </option>
+                ))}
+              </optgroup>
+            );
+          })}
         </select>
       </div>
     </>

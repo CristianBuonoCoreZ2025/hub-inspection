@@ -152,6 +152,17 @@
     margin-top: 6px;
   }
 
+  /* Contenedor de una categoría dentro de la paleta. */
+  .sketch-palette-category {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sketch-palette-category + .sketch-palette-category {
+    margin-top: 8px;
+  }
+
   .sketch-block-item {
     display: flex;
     align-items: center;

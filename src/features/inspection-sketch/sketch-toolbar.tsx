@@ -3,16 +3,20 @@
 /**
  * Barra de herramientas del editor de croquis.
  *
- * Botones de modo (Seleccionar / Mano) usan .sketch-mode-btn (toggles
- * compactos temáticos). La acción principal "Guardar" usa pg-btn-platinum
- * (botón primario del sistema, ver DESIGN_SYSTEM.md). Color y grosor usan
+ * Botones de modo (Seleccionar / Mano alzada / Línea / Rectángulo / Círculo /
+ * Triángulo / Borrador / Texto) usan .sketch-mode-btn (toggles compactos
+ * temáticos). La acción principal "Guardar" usa pg-btn-platinum (botón
+ * primario del sistema, ver DESIGN_SYSTEM.md). Color y grosor usan
  * .app-input para respetar el sistema de formularios.
  *
  * Cero inline styles (REGLA #2): toda la estilización vive en
  * sketch-editor.css. Iconos de lucide-react, sin emojis.
  */
 
-import { MousePointer2, Hand, Undo2, Redo2, Eraser, Save } from "lucide-react";
+import {
+  MousePointer2, Pencil, Slash, Square, Circle, Triangle,
+  Eraser, Type, Undo2, Redo2, Save,
+} from "lucide-react";
 import type { SketchMode } from "./sketch-types";
 
 interface SketchToolbarProps {
@@ -37,6 +41,18 @@ const COLORS = [
   "#f59e0b", "#8b5cf6", "#ec4899", "#6b7280",
 ];
 
+/** Definición de cada botón de modo (icono + label + title). */
+const MODE_BUTTONS: { mode: SketchMode; icon: typeof Pencil; title: string }[] = [
+  { mode: "select", icon: MousePointer2, title: "Seleccionar y mover" },
+  { mode: "draw", icon: Pencil, title: "Dibujar a mano alzada" },
+  { mode: "line", icon: Slash, title: "Línea recta" },
+  { mode: "rectangle", icon: Square, title: "Rectángulo" },
+  { mode: "circle", icon: Circle, title: "Círculo" },
+  { mode: "triangle", icon: Triangle, title: "Triángulo" },
+  { mode: "eraser", icon: Eraser, title: "Borrar objeto" },
+  { mode: "text", icon: Type, title: "Texto" },
+];
+
 export function SketchToolbar({
   mode,
   onModeChange,
@@ -55,24 +71,21 @@ export function SketchToolbar({
 }: SketchToolbarProps) {
   return (
     <div className="sketch-toolbar">
-      {/* Modos de interacción */}
+      {/* Herramientas de interacción / dibujo */}
       <div className="sketch-toolbar-group">
-        <button
-          type="button"
-          className={`sketch-mode-btn ${mode === "select" ? "is-active" : ""}`}
-          onClick={() => onModeChange("select")}
-          title="Seleccionar y mover"
-        >
-          <MousePointer2 className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          className={`sketch-mode-btn ${mode === "draw" ? "is-active" : ""}`}
-          onClick={() => onModeChange("draw")}
-          title="Dibujar a mano alzada"
-        >
-          <Hand className="size-3.5" />
-        </button>
+        {MODE_BUTTONS.map(({ mode: m, icon: Icon, title }) => (
+          <button
+            key={m}
+            type="button"
+            className={`sketch-mode-btn ${mode === m ? "is-active" : ""}`}
+            onClick={() => onModeChange(m)}
+            title={title}
+            aria-label={title}
+            aria-pressed={mode === m}
+          >
+            <Icon className="size-3.5" />
+          </button>
+        ))}
       </div>
 
       <div className="sketch-toolbar-divider" />
@@ -90,8 +103,7 @@ export function SketchToolbar({
           >
             <span
               className="sketch-block-swatch"
-              // Excepción REGLA #2: color dinámico del catálogo, no existe
-              // como clase porque son 8 valores arbitrarios del usuario.
+              // Excepción REGLA #2: color dinámico del catálogo.
               style={{ backgroundColor: c }}
             />
           </button>
@@ -133,6 +145,7 @@ export function SketchToolbar({
           onClick={onUndo}
           disabled={!canUndo}
           title="Deshacer"
+          aria-label="Deshacer"
         >
           <Undo2 className="size-3.5" />
         </button>
@@ -142,6 +155,7 @@ export function SketchToolbar({
           onClick={onRedo}
           disabled={!canRedo}
           title="Rehacer"
+          aria-label="Rehacer"
         >
           <Redo2 className="size-3.5" />
         </button>
@@ -151,6 +165,7 @@ export function SketchToolbar({
           onClick={onClear}
           disabled={!canClear}
           title="Limpiar"
+          aria-label="Limpiar"
         >
           <Eraser className="size-3.5" />
         </button>

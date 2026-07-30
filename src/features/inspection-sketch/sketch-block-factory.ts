@@ -3,8 +3,9 @@
  *
  * Cada bloque del catálogo (sketch-blocks.ts) se materializa en un objeto
  * Fabric con controles de selección/resize/rotación habilitados. Las
- * habitaciones son rectángculos; los muros son líneas gruesas; las puertas,
- * ventanas y escaleras son grupos de líneas para mayor legibilidad.
+ * habitaciones y mobiliario son rectángculos o círculos; los muros son líneas
+ * gruesas; las puertas, ventanas, escaleras, rampas y portones son grupos de
+ * líneas para mayor legibilidad.
  */
 
 import * as fabric from "fabric";
@@ -25,11 +26,10 @@ function applyCommonControls(obj: fabric.Object, def: BlockDefinition) {
     originX: "left",
     originY: "top",
   });
-  // Metadatos para identificar el bloque al serializar / exportar.
   (obj as fabric.Object & { blockId?: BlockId }).blockId = def.id;
 }
 
-/** Crea un rectángculo (habitación). */
+/** Crea un rectángculo (habitación, mobiliario, tanque, etc.). */
 function createRect(def: BlockDefinition, x: number, y: number): fabric.Rect {
   const rect = new fabric.Rect({
     left: x,
@@ -47,16 +47,31 @@ function createRect(def: BlockDefinition, x: number, y: number): fabric.Rect {
   return rect;
 }
 
+/** Crea un círculo (vehículo pequeño, motor, árbol, exhibidor, bicicleta). */
+function createCircle(def: BlockDefinition, x: number, y: number): fabric.Circle {
+  const radius = Math.min(def.defaultWidth, def.defaultHeight) / 2;
+  const circle = new fabric.Circle({
+    left: x,
+    top: y,
+    radius,
+    fill: def.fill,
+    stroke: def.stroke,
+    strokeWidth: def.strokeWidth,
+    opacity: def.opacity,
+    originX: "left",
+    originY: "top",
+  });
+  applyCommonControls(circle, def);
+  return circle;
+}
+
 /** Crea una línea gruesa (muro). */
 function createWall(def: BlockDefinition, x: number, y: number): fabric.Line {
-  const line = new fabric.Line(
-    [x, y, x + def.defaultWidth, y],
-    {
-      stroke: def.stroke,
-      strokeWidth: def.strokeWidth,
-      strokeLineCap: "round",
-    }
-  );
+  const line = new fabric.Line([x, y, x + def.defaultWidth, y], {
+    stroke: def.stroke,
+    strokeWidth: def.strokeWidth,
+    strokeLineCap: "round",
+  });
   applyCommonControls(line, def);
   return line;
 }
@@ -65,25 +80,12 @@ function createWall(def: BlockDefinition, x: number, y: number): fabric.Line {
 function createDoor(def: BlockDefinition, x: number, y: number): fabric.Group {
   const w = def.defaultWidth;
   const h = def.defaultHeight;
-  const frame = new fabric.Line([0, h / 2, w, h / 2], {
-    stroke: def.stroke,
-    strokeWidth: def.strokeWidth,
-  });
-  const leaf = new fabric.Line([0, h / 2, 0, 0], {
-    stroke: def.stroke,
-    strokeWidth: def.strokeWidth,
-  });
-  // Arco de apertura (cuarto de círculo).
+  const frame = new fabric.Line([0, h / 2, w, h / 2], { stroke: def.stroke, strokeWidth: def.strokeWidth });
+  const leaf = new fabric.Line([0, h / 2, 0, 0], { stroke: def.stroke, strokeWidth: def.strokeWidth });
   const arc = new fabric.Path(`M 0 0 Q ${w / 2} 0 ${w} ${h / 2}`, {
-    stroke: def.stroke,
-    strokeWidth: 1.5,
-    fill: "transparent",
-    strokeDashArray: [4, 3],
+    stroke: def.stroke, strokeWidth: 1.5, fill: "transparent", strokeDashArray: [4, 3],
   });
-  const group = new fabric.Group([frame, leaf, arc], {
-    left: x,
-    top: y,
-  });
+  const group = new fabric.Group([frame, leaf, arc], { left: x, top: y });
   applyCommonControls(group, def);
   return group;
 }
@@ -94,11 +96,7 @@ function createWindow(def: BlockDefinition, x: number, y: number): fabric.Group 
   const h = def.defaultHeight;
   const top = new fabric.Line([0, 0, w, 0], { stroke: def.stroke, strokeWidth: def.strokeWidth });
   const bottom = new fabric.Line([0, h, w, h], { stroke: def.stroke, strokeWidth: def.strokeWidth });
-  const center = new fabric.Line([0, h / 2, w, h / 2], {
-    stroke: def.stroke,
-    strokeWidth: 1.5,
-    strokeDashArray: [3, 3],
-  });
+  const center = new fabric.Line([0, h / 2, w, h / 2], { stroke: def.stroke, strokeWidth: 1.5, strokeDashArray: [3, 3] });
   const group = new fabric.Group([top, bottom, center], { left: x, top: y });
   applyCommonControls(group, def);
   return group;
@@ -110,13 +108,41 @@ function createStairs(def: BlockDefinition, x: number, y: number): fabric.Group 
   const h = def.defaultHeight;
   const steps = 6;
   const objects: fabric.Object[] = [];
-  // Marco exterior.
   objects.push(new fabric.Line([0, 0, w, 0], { stroke: def.stroke, strokeWidth: def.strokeWidth }));
   objects.push(new fabric.Line([0, h, w, h], { stroke: def.stroke, strokeWidth: def.strokeWidth }));
-  // Peldaños.
   for (let i = 1; i < steps; i++) {
     const yStep = (h / steps) * i;
     objects.push(new fabric.Line([0, yStep, w, yStep], { stroke: def.stroke, strokeWidth: 1.5 }));
+  }
+  const group = new fabric.Group(objects, { left: x, top: y });
+  applyCommonControls(group, def);
+  return group;
+}
+
+/** Crea un grupo que representa una rampa (triángulo + flecha de pendiente). */
+function createRamp(def: BlockDefinition, x: number, y: number): fabric.Group {
+  const w = def.defaultWidth;
+  const h = def.defaultHeight;
+  const base = new fabric.Line([0, h, w, h], { stroke: def.stroke, strokeWidth: def.strokeWidth });
+  const slope = new fabric.Line([0, h, w, 0], { stroke: def.stroke, strokeWidth: def.strokeWidth });
+  const arrow = new fabric.Path(`M ${w / 2} ${h / 2} L ${w / 2 + 8} ${h / 2 - 8} M ${w / 2} ${h / 2} L ${w / 2 - 6} ${h / 2 - 4}`, {
+    stroke: def.stroke, strokeWidth: 2, fill: "transparent",
+  });
+  const group = new fabric.Group([base, slope, arrow], { left: x, top: y });
+  applyCommonControls(group, def);
+  return group;
+}
+
+/** Crea un grupo que representa un portón (líneas verticales = hojas). */
+function createGate(def: BlockDefinition, x: number, y: number): fabric.Group {
+  const w = def.defaultWidth;
+  const h = def.defaultHeight;
+  const frame = new fabric.Rect({ width: w, height: h, fill: "transparent", stroke: def.stroke, strokeWidth: def.strokeWidth });
+  const slats = 5;
+  const objects: fabric.Object[] = [frame];
+  for (let i = 1; i < slats; i++) {
+    const xSlat = (w / slats) * i;
+    objects.push(new fabric.Line([xSlat, 0, xSlat, h], { stroke: def.stroke, strokeWidth: 1.5 }));
   }
   const group = new fabric.Group(objects, { left: x, top: y });
   applyCommonControls(group, def);
@@ -148,8 +174,14 @@ export function createBlock(
       return createWindow(def, x, y);
     case "escalera":
       return createStairs(def, x, y);
+    case "rampa":
+      return createRamp(def, x, y);
+    case "porton":
+      return createGate(def, x, y);
     default:
-      // Habitaciones (living, comedor, bano, cocina, dormitorio, garage, oficina).
+      // Círculos (motor, árbol, exhibidor, bicicleta).
+      if (def.fabricType === "circle") return createCircle(def, x, y);
+      // Rectángculos (habitaciones, mobiliario, tanque, panel, etc.).
       return createRect(def, x, y);
   }
 }
