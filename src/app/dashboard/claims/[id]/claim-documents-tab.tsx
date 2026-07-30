@@ -625,15 +625,14 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
               )}
             </h3>
             {canCreateDocs && (
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
+                type="button"
                 className="btn-icon-sm"
                 title="Subir documentos"
                 onClick={() => setUploadModal((p) => ({ ...p, visible: true, status: "idle", fileName: "", fileSize: 0, loaded: 0, isDragging: false }))}
               >
                 <Upload className="h-3.5 w-3.5" />
-              </Button>
+              </button>
             )}
           </div>
           {total > 0 && (
@@ -850,9 +849,8 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                         )}
                         {/* Eliminar */}
                         {doc.canDelete && doc.docId && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
+                          <button
+                            type="button"
                             className="btn-icon-sm btn-danger-hover"
                             onClick={() => {
                               setDeleteModal({
@@ -867,7 +865,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             }}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          </button>
                         )}
                       </div>
                     </td>

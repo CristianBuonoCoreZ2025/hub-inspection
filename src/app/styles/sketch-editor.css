@@ -90,6 +90,36 @@
     cursor: not-allowed;
   }
 
+  /* Botones de acción del croquis (Cancelar/Guardar) — plano, gris.
+     No usa pg-btn-platinum porque es un estilo distinto del sistema. */
+  .sketch-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100px !important;
+    height: 30px !important;
+    padding: 0 8px;
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
+    background: color-mix(in srgb, var(--muted) 20%, transparent) !important;
+    color: var(--foreground) !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+
+  .sketch-action-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--muted) 60%, transparent) !important;
+    color: var(--foreground) !important;
+  }
+
+  .sketch-action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   /* Inputs de color y grosor dentro de la toolbar */
   .sketch-color-input {
     width: 32px;
