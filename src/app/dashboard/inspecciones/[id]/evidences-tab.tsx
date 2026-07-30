@@ -1025,6 +1025,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId }:
       aiSummary={evidence.ai_summary}
       aiModel={evidence.ai_model}
       aiPromptSnapshot={evidence.ai_prompt_snapshot as { system_prompt: string; user_prompt: string; refinement_prompt: string | null; source: string } | null}
+      aiAnalyzedAt={evidence.ai_analyzed_at}
       onReanalyze={handleReanalyze}
       extraInfo={extraInfo}
       thumbnailContent={thumbnailContent}
