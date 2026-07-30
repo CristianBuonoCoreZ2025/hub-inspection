@@ -2408,6 +2408,454 @@
     overflow-y: auto !important;
   }
 
+  /* ── Informe de análisis IA ── */
+  .ai-report-body {
+    max-height: 55vh !important;
+    overflow-y: auto !important;
+    padding: 16px 20px !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+  }
+  .ai-report-text {
+    font-size: 13px !important;
+    line-height: 1.7 !important;
+    color: var(--foreground) !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+  }
+  .ai-report-meta {
+    font-size: 10px !important;
+    color: var(--muted-foreground) !important;
+    padding-top: 10px !important;
+    border-top: 1px solid var(--border) !important;
+    margin-top: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  .ai-report-code {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+    font-family: var(--font-mono), monospace !important;
+    letter-spacing: 0.02em !important;
+  }
+
+  /* ── Popover de análisis IA ── */
+  .ai-popover-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 10px 14px !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+  .ai-popover-code {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+    font-family: var(--font-mono), monospace !important;
+  }
+  .ai-popover-body {
+    padding: 12px 14px !important;
+    max-height: 50vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* ── Textareas de configuración de prompts IA ── */
+  .ai-prompt-textarea {
+    width: 100% !important;
+    height: 200px !important;
+    max-height: 200px !important;
+    resize: none !important;
+    overflow-y: auto !important;
+    border-radius: 8px !important;
+    padding: 10px 12px !important;
+    font-family: var(--font-mono), ui-monospace, monospace !important;
+    font-size: 12px !important;
+    line-height: 1.6 !important;
+    white-space: pre-wrap !important;
+  }
+  .ai-prompt-textarea-sm {
+    width: 100% !important;
+    height: 100px !important;
+    max-height: 100px !important;
+    resize: none !important;
+    overflow-y: auto !important;
+    border-radius: 8px !important;
+    padding: 10px 12px !important;
+    font-family: var(--font-mono), ui-monospace, monospace !important;
+    font-size: 12px !important;
+    line-height: 1.6 !important;
+    white-space: pre-wrap !important;
+  }
+
+  /* ── Panel lateral de progreso IA (tipo widget CPU) ── */
+  .ai-progress-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: stretch !important;
+    justify-content: flex-end !important;
+    pointer-events: none !important;
+    z-index: 5 !important;
+  }
+  .ai-progress-panel {
+    pointer-events: auto !important;
+    width: 33% !important;
+    min-width: 100px !important;
+    max-width: 140px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: rgba(2, 12, 27, 0.78) !important;
+    backdrop-filter: blur(10px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.25) !important;
+    overflow: hidden !important;
+  }
+  /* Header: timer + cancel */
+  .ai-progress-panel-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 6px 8px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+  .ai-progress-panel-timer-wrap {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+  .ai-progress-panel-cpu {
+    width: 12px !important;
+    height: 12px !important;
+    flex-shrink: 0 !important;
+  }
+  .ai-progress-cpu-run {
+    color: #fbbf24 !important;
+    animation: ai-cpu-pulse 1.2s ease-in-out infinite !important;
+  }
+  .ai-progress-cpu-ok {
+    color: #4ade80 !important;
+  }
+  .ai-progress-cpu-fail {
+    color: #f87171 !important;
+  }
+  @keyframes ai-cpu-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .ai-progress-panel-timer {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #fbbf24 !important;
+    font-variant-numeric: tabular-nums !important;
+    line-height: 1 !important;
+  }
+  .ai-progress-panel-cancel {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 4px !important;
+    border: none !important;
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #fca5a5 !important;
+    cursor: pointer !important;
+    transition: all 0.15s !important;
+  }
+  .ai-progress-panel-cancel:hover {
+    background: rgba(239, 68, 68, 0.5) !important;
+    color: #fff !important;
+  }
+  .ai-progress-panel-cancel:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+  }
+  /* Log de pasos acumulados */
+  .ai-progress-panel-log {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 6px 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+  .ai-progress-panel-log-init {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    font-size: 9px !important;
+    color: #94a3b8 !important;
+  }
+  .ai-progress-log-phase {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+  .ai-progress-log-phase-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    margin-bottom: 1px !important;
+  }
+  .ai-progress-log-phase-icon {
+    width: 9px !important;
+    height: 9px !important;
+    color: #818cf8 !important;
+    flex-shrink: 0 !important;
+  }
+  .ai-progress-log-phase-label {
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    color: #c7d2fe !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+  }
+  .ai-progress-log-step {
+    display: flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    padding-left: 12px !important;
+    font-size: 9px !important;
+    line-height: 1.4 !important;
+  }
+  .ai-progress-log-step-ok {
+    color: #4ade80 !important;
+  }
+  .ai-progress-log-step-failed {
+    color: #f87171 !important;
+  }
+  .ai-progress-log-step-trying {
+    color: #fbbf24 !important;
+  }
+  .ai-progress-log-step-model {
+    font-family: ui-monospace, monospace !important;
+    font-size: 8px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    min-width: 0 !important;
+  }
+  /* Estado en cola */
+  .ai-progress-panel-queued {
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 8px 10px !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    color: #94a3b8 !important;
+  }
+  .ai-progress-panel-queued button {
+    margin-left: auto !important;
+  }
+  /* Barra de actividad animada */
+  .ai-progress-panel-bar {
+    height: 3px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    overflow: hidden !important;
+  }
+  .ai-progress-panel-bar-pulse {
+    height: 100% !important;
+    width: 40% !important;
+    background: linear-gradient(90deg, transparent, #fbbf24, transparent) !important;
+    animation: ai-bar-slide 1.5s ease-in-out infinite !important;
+  }
+  @keyframes ai-bar-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+
+  /* ── Botones de acciones IA en cards de imágenes ── */
+  .ai-card-skip-btn {
+    display: flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    padding: 3px 6px !important;
+    border-radius: 5px !important;
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+    background: rgba(148, 163, 184, 0.1) !important;
+    color: #94a3b8 !important;
+    font-size: 9px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.15s !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .ai-card-skip-btn:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #f87171 !important;
+  }
+  .ai-card-log-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 5px !important;
+    border: 1px solid rgba(148, 163, 184, 0.3) !important;
+    background: rgba(148, 163, 184, 0.1) !important;
+    color: #94a3b8 !important;
+    cursor: pointer !important;
+    transition: all 0.15s !important;
+    flex-shrink: 0 !important;
+  }
+  .ai-card-log-btn:hover {
+    background: rgba(99, 102, 241, 0.15) !important;
+    border-color: rgba(99, 102, 241, 0.4) !important;
+    color: #818cf8 !important;
+  }
+
+  /* ── Popover del log de IA ── */
+  .ai-log-popover {
+    width: 370px !important;
+    max-width: 90vw !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
+    background: var(--card) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  }
+  .ai-log-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+  .ai-log-code {
+    font-family: ui-monospace, monospace !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+  }
+  /* Modelos separados: visión + razonamiento, una línea cada uno */
+  .ai-log-models {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    padding: 6px 12px !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent) !important;
+  }
+  .ai-log-model-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+  .ai-log-model-tag {
+    font-size: 8px !important;
+    font-weight: 600 !important;
+    color: #818cf8 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+  }
+  .ai-log-model-name {
+    font-size: 9px !important;
+    font-family: ui-monospace, monospace !important;
+    color: var(--muted-foreground) !important;
+  }
+  /* Resumen — sección principal, primero y grande */
+  .ai-log-section {
+    padding: 10px 12px !important;
+  }
+  .ai-log-section-summary {
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent) !important;
+  }
+  .ai-log-summary {
+    font-size: 11px !important;
+    line-height: 1.6 !important;
+    color: var(--foreground) !important;
+    max-height: 180px !important;
+    overflow-y: auto !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+  }
+  /* Trigger del tooltip del prompt */
+  .ai-log-prompt-trigger {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    width: 100% !important;
+    padding: 6px 12px !important;
+    border: none !important;
+    border-top: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+    background: transparent !important;
+    font-size: 9px !important;
+    font-weight: 500 !important;
+    color: var(--muted-foreground) !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: background 0.15s !important;
+  }
+  .ai-log-prompt-trigger:hover {
+    background: color-mix(in srgb, var(--muted) 15%, transparent) !important;
+    color: #818cf8 !important;
+  }
+  /* Tooltip popover del prompt — chiquitito */
+  .ai-prompt-tooltip {
+    width: 280px !important;
+    max-width: 90vw !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--border) !important;
+    background: var(--card) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+  }
+  .ai-log-prompt {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    padding: 8px 10px !important;
+  }
+  .ai-log-prompt-block {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+  .ai-log-prompt-tag {
+    font-size: 8px !important;
+    font-weight: 600 !important;
+    color: #818cf8 !important;
+    text-transform: uppercase !important;
+  }
+  .ai-log-prompt-text {
+    font-size: 9px !important;
+    font-family: ui-monospace, monospace !important;
+    line-height: 1.4 !important;
+    color: var(--muted-foreground) !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    max-height: 100px !important;
+    overflow-y: auto !important;
+    margin: 0 !important;
+    padding: 4px 6px !important;
+    background: color-mix(in srgb, var(--muted) 30%, transparent) !important;
+    border-radius: 4px !important;
+  }
+
+  /* ── Filas de cola de subida ── */
+  .upload-result-row {
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
+    background: color-mix(in srgb, var(--card) 80%, transparent) !important;
+  }
+  .upload-result-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 32px !important;
+    height: 32px !important;
+    flex-shrink: 0 !important;
+    border-radius: 8px !important;
+    background: var(--muted) !important;
+  }
+
   /* ── Gradientes estáticos de dashboard ── */
   .progress-bar-amber {
     background: linear-gradient(90deg, #f59e0b, #d97706) !important;
@@ -2500,5 +2948,83 @@
 
   .cn-global-loading-text {
     text-transform: capitalize !important;
+  }
+
+  /* ────────────────────────────────────────────────────────────
+   * GroupedContactsList — ScrollSpy + Fixed Header Stack.
+   *
+   * Patrón: PanelBar vertical controlado por scroll.
+   * Los headers viven FUERA del contenedor scroll como flex item.
+   * Se acumulan a medida que el ScrollSpy detecta secciones consumidas.
+   * NO es sticky headers: headers e items en capas separadas.
+   * Sin spacers: el header-stack empuja el scroll area hacia abajo.
+   * ──────────────────────────────────────────────────────────── */
+
+  .grouped-contacts-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Capa de headers acumulados — flex item que crece con cada header.
+     Está fuera del scroll area, por lo que los items nunca compiten
+     con los headers por z-index. */
+  .grouped-contacts-header-stack {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    background: var(--card) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  }
+
+  .grouped-contacts-header {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border: 0;
+    background: var(--card) !important;
+    cursor: pointer;
+    user-select: none;
+    text-align: left;
+    width: 100%;
+    transition: background-color 0.15s ease;
+  }
+
+  .grouped-contacts-header:hover {
+    background: color-mix(in srgb, var(--muted) 40%, var(--card)) !important;
+  }
+
+  .grouped-contacts-header-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+  }
+
+  /* Área de scroll — SOLO items, sin headers, sin spacers. */
+  .grouped-contacts-scroll {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    /* position: relative para que offsetTop sea relativo a este contenedor. */
+    position: relative;
+  }
+
+  .grouped-contacts-section {
+    /* Sin estilos especiales. */
+  }
+
+  .grouped-contacts-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .grouped-contacts-item {
+    /* Sin estilos visuales aquí — los define el consumidor via renderItem. */
   }
 

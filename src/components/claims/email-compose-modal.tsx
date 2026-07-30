@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import type { Editor } from "@tiptap/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Mail, Send, Loader2, X, History, FileText, Users } from "lucide-react";
+import { Mail, Send, Loader2, X, History, FileText, Users, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HtmlEditor } from "@/components/ui/html-editor";
+import { GroupedContactsList } from "@/components/ui/grouped-contacts-list";
 import { getEmailTemplatesForAction } from "@/services/email-template-actions";
 import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
 import { getSupabaseClient } from "@/lib/supabase/db";
@@ -55,103 +56,148 @@ interface EmailComposeModalProps {
  * Abre un popover con todos los contactos del siniestro, agrupados.
  * Click en un contacto → lo agrega al campo correspondiente.
  */
+const GROUP_LABELS: Record<string, string> = {
+  participants: "Participantes",
+  team: "Equipo",
+  advisor: "Asesor",
+  global: "Directorio",
+};
+
+const GROUP_ORDER = ["participants", "team", "advisor", "global"];
+
 function ContactBookButton({
   contacts,
   onPick,
+  label,
 }: {
   contacts: EmailContact[];
   onPick: (email: string) => void;
+  label: string;
 }) {
-  if (contacts.length === 0) return null;
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
 
-  // Agrupar contactos por grupo
-  const groups: Record<string, EmailContact[]> = {};
-  for (const c of contacts) {
-    const g = c.group;
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(c);
-  }
-  const groupLabels: Record<string, string> = {
-    participants: "Participantes",
-    team: "Equipo",
-    advisor: "Asesor",
-    global: "Directorio",
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return contacts;
+    return contacts.filter(
+      (c) =>
+        c.email.toLowerCase().includes(q) ||
+        (c.fullName?.toLowerCase().includes(q) ?? false) ||
+        c.roles.some((r) => r.toLowerCase().includes(q))
+    );
+  }, [contacts, search]);
+
+  const groups = useMemo(() => {
+    const map: Record<string, EmailContact[]> = {};
+    for (const c of filtered) {
+      const g = c.group;
+      if (!map[g]) map[g] = [];
+      map[g].push(c);
+    }
+    return GROUP_ORDER
+      .filter((g) => map[g])
+      .map((g) => ({ title: GROUP_LABELS[g] || g, items: map[g] }));
+  }, [filtered]);
+
+  const renderContact = (contact: EmailContact) => {
+    const initials = (contact.fullName || contact.email)
+      .split(" ")
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          onPick(contact.email);
+          setOpen(false);
+          setSearch("");
+        }}
+        className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent transition-colors"
+      >
+        <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0 email-icon-gradient">
+          {initials}
+        </div>
+        <div className="flex flex-col min-w-0 flex-1">
+          <span className="text-[11px] font-medium text-foreground truncate">
+            {contact.fullName || contact.email}
+          </span>
+          {contact.fullName && (
+            <span className="text-[10px] text-muted-foreground truncate font-mono">
+              {contact.email}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-0.5 shrink-0">
+          {contact.roles.slice(0, 2).map((role) => (
+            <span
+              key={role}
+              className={`text-[8px] px-1 py-0.5 rounded font-medium ${
+                contact.isInternal
+                  ? "bg-primary/12 text-primary"
+                  : "bg-muted/40 text-muted-foreground"
+              }`}
+            >
+              {role}
+            </span>
+          ))}
+        </div>
+      </button>
+    );
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
           <button
             type="button"
             title="Abrir libreta de contactos"
-            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+            className="inline-flex h-6 w-16 items-center justify-center gap-1 px-2 rounded-md border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0 text-[11px] font-medium"
           >
             <Users className="h-3.5 w-3.5" />
+            {label}
           </button>
         }
       />
-      <PopoverContent align="end" sideOffset={4} className="w-80 max-h-80 overflow-auto p-0">
-        <div className="px-3 py-2 border-b border-border bg-muted/30 sticky top-0 z-10">
+      <PopoverContent align="start" sideOffset={4} className="w-80 max-h-96 p-0 flex flex-col overflow-hidden">
+        {/* Header fijo */}
+        <div className="px-3 py-2 border-b border-border/50 shrink-0">
           <span className="text-[11px] font-semibold text-foreground">Libreta de contactos</span>
         </div>
-        <div className="py-1">
-          {Object.entries(groups).map(([groupKey, groupContacts]) => (
-            <div key={groupKey}>
-              <div className="px-3 py-1 bg-muted/20 sticky top-7 z-[5]">
-                <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {groupLabels[groupKey] || groupKey}
-                </span>
-              </div>
-              {groupContacts.map((contact) => {
-                const initials = (contact.fullName || contact.email)
-                  .split(" ")
-                  .map((w) => w[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase();
-                return (
-                  <button
-                    key={contact.email + (contact.fullName || "")}
-                    type="button"
-                    onClick={() => onPick(contact.email)}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent transition-colors"
-                  >
-                    <div
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0 email-icon-gradient"
-                    >
-                      {initials}
-                    </div>
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[11px] font-medium text-foreground truncate">
-                        {contact.fullName || contact.email}
-                      </span>
-                      {contact.fullName && (
-                        <span className="text-[10px] text-muted-foreground truncate font-mono">
-                          {contact.email}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-0.5 shrink-0">
-                      {contact.roles.slice(0, 2).map((role) => (
-                        <span
-                          key={role}
-                          className={`text-[8px] px-1 py-0.5 rounded font-medium ${
-                            contact.isInternal
-                              ? "bg-primary/12 text-primary"
-                              : "bg-muted/40 text-muted-foreground"
-                          }`}
-                        >
-                          {role}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+        {/* Buscador — estándar del sistema (app-grid-search-wrap + liquid-search) */}
+        <div className="px-3 py-2 border-b border-border/50 shrink-0">
+          <div className="app-grid-search-wrap">
+            <Search />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar..."
+              className="liquid-search"
+            />
+          </div>
         </div>
+        {/* Lista agrupada con headers sticky estilo iOS */}
+        <GroupedContactsList
+          groups={groups}
+          renderItem={renderContact}
+          getItemKey={(c) => c.email + (c.fullName || "")}
+          emptyState={
+            contacts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
+                <Users className="h-6 w-6 opacity-40" />
+                <p className="text-[11px]">No hay contactos disponibles</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
+                <Search className="h-5 w-5 opacity-40" />
+                <p className="text-[11px]">Sin resultados para &ldquo;{search}&rdquo;</p>
+              </div>
+            )
+          }
+        />
       </PopoverContent>
     </Popover>
   );
@@ -556,7 +602,11 @@ export function EmailComposeModal({
           <div className="flex-1 flex flex-col gap-0.5 min-w-0 relative">
             {/* Fila Para */}
             <div className="flex items-center gap-2 py-0.5 relative">
-              <span className="text-muted-foreground font-medium shrink-0 w-10 text-[11px]">Para</span>
+              <ContactBookButton
+                contacts={contacts || []}
+                onPick={(email) => addRecipientToField(email, "to")}
+                label="Para"
+              />
               <input
                 value={to}
                 onChange={(e) => handleRecipientInput(e.target.value, "to")}
@@ -564,11 +614,6 @@ export function EmailComposeModal({
                 onBlur={handleRecipientBlur}
                 placeholder="nombre o email…"
                 className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
-              />
-              {/* Botón libreta de contactos */}
-              <ContactBookButton
-                contacts={contacts || []}
-                onPick={(email) => addRecipientToField(email, "to")}
               />
               {/* Toggle Plantilla */}
               <div className="flex items-center gap-2 shrink-0">
@@ -598,9 +643,13 @@ export function EmailComposeModal({
               </div>
             </div>
 
-            {/* CC — siempre visible */}
+            {/* cc — siempre visible */}
             <div className="flex items-center gap-2 py-0.5 relative">
-              <span className="text-muted-foreground font-medium shrink-0 w-10 text-[11px]">CC</span>
+              <ContactBookButton
+                contacts={contacts || []}
+                onPick={(email) => addRecipientToField(email, "cc")}
+                label="cc"
+              />
               <input
                 value={cc}
                 onChange={(e) => handleRecipientInput(e.target.value, "cc")}
@@ -608,10 +657,6 @@ export function EmailComposeModal({
                 onBlur={handleRecipientBlur}
                 placeholder="con copia…"
                 className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
-              />
-              <ContactBookButton
-                contacts={contacts || []}
-                onPick={(email) => addRecipientToField(email, "cc")}
               />
             </div>
           </div>
@@ -733,7 +778,8 @@ export function EmailComposeModal({
                     footer={
                       effectiveMode === "template" && selectedTemplate ? (
                         <div className="email-composer-footer">
-                          &copy; {new Date().getFullYear()} {company?.name ?? ""}
+                          &copy; <span>{new Date().getFullYear()} ~ FDP Chile</span>
+                          {/*{company?.name ?? ""}*/}
                           <br />
                           <span>Este correo fue enviado de forma automática, por favor no responda a este mensaje.</span>
                         </div>
