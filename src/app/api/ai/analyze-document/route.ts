@@ -73,6 +73,44 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Obtener la línea de negocio del siniestro para contextualizar el prompt de IA
+    let businessLine: string | undefined;
+    let businessLineId: string | undefined;
+    let claimIdForBL: string | null = null;
+    if (table === "claim_documents" || table === "claim_images") {
+      claimIdForBL = record.claim_id;
+    } else if (table === "inspection_evidences") {
+      const { data: sessionData } = await supabase
+        .from("inspection_sessions")
+        .select("claim_id")
+        .eq("id", record.session_id)
+        .maybeSingle();
+      claimIdForBL = sessionData?.claim_id || null;
+    }
+    if (claimIdForBL) {
+      const { data: claimData } = await supabase
+        .from("claims")
+        .select("business_line_id")
+        .eq("id", claimIdForBL)
+        .maybeSingle();
+      if (claimData?.business_line_id) {
+        businessLineId = claimData.business_line_id;
+        const { data: blData } = await supabase
+          .from("business_lines")
+          .select("name")
+          .eq("id", claimData.business_line_id)
+          .maybeSingle();
+        if (blData?.name) {
+          businessLine = blData.name;
+          logger.info("analyze-document: línea de negocio detectada", {
+            component: "ai-analyze",
+            action: "business_line",
+            metadata: { claimId: claimIdForBL, businessLine },
+          });
+        }
+      }
+    }
+
     // Resolver la URL del archivo
     const fileUrl = record.document_url || record.url || null;
     if (!fileUrl) {
@@ -125,7 +163,7 @@ export async function POST(request: NextRequest) {
     const hasUpdatedAtCol = table !== "inspection_evidences";
 
     try {
-      const ai = await summarizeFile(buffer, mimeType, record.document_name || record.name || record.original_filename);
+      const ai = await summarizeFile(buffer, mimeType, record.document_name || record.name || record.original_filename, businessLineId);
       if (ai.ok) {
         aiSummary = ai.summary;
         aiModel = ai.model;

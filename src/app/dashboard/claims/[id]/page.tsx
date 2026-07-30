@@ -1995,12 +1995,12 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  const [hoveredLight, setHoveredLight] = useState<number | null>(null);
  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
  const lightStyles: Record<LightState, { dot: string; label: string }> = {
- done: { dot: "bg-emerald-100 dark:bg-emerald-900/30", label: "text-emerald-700 dark:text-emerald-300" },
- active: { dot: "bg-amber-100 dark:bg-amber-900/30", label: "text-amber-700 dark:text-amber-300" },
- alert: { dot: "bg-amber-100 dark:bg-amber-900/30", label: "text-amber-700 dark:text-amber-300" },
- late: { dot: "bg-rose-100 dark:bg-rose-900/30", label: "text-rose-700 dark:text-rose-300" },
- rejected: { dot: "bg-rose-100 dark:bg-rose-900/30", label: "text-rose-700 dark:text-rose-300" },
- pending: { dot: "bg-slate-100 dark:bg-slate-800/50", label: "text-slate-600 dark:text-slate-400" },
+ done: { dot: "bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700", label: "text-emerald-700 dark:text-emerald-300" },
+ active: { dot: "bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700", label: "text-amber-700 dark:text-amber-300" },
+ alert: { dot: "bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700", label: "text-amber-700 dark:text-amber-300" },
+ late: { dot: "bg-rose-100 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700", label: "text-rose-700 dark:text-rose-300" },
+ rejected: { dot: "bg-rose-100 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700", label: "text-rose-700 dark:text-rose-300" },
+ pending: { dot: "bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-600", label: "text-slate-600 dark:text-slate-400" },
  none: { dot: "bg-transparent border border-dashed border-slate-200 dark:border-slate-700", label: "text-muted-foreground/40" },
  };
 
@@ -2073,7 +2073,7 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  levels.push({ letter: "A", state: approveState, level: "approve" });
 
  return (
- <div className="inline-flex items-center gap-1.5">
+ <div className="gestion-light-wrap">
  {levels.map((light, i) => {
  const sty = lightStyles[light.state];
  const isNone = light.state === "none";
@@ -2090,15 +2090,17 @@ function GestionStatusLights({ g }: { g: GestionLightData }) {
  nativeButton={false}
  render={
  <div
- className="flex flex-col items-center gap-0.5"
+ className="gestion-light-item"
  onMouseEnter={() => !isNone && handleMouseEnter(i)}
  onMouseLeave={handleMouseLeave}
  >
- <span
- className={`inline-flex items-center justify-center rounded-full w-5 h-5 text-[9px] font-medium gestion-light-pill ${isNone ? "bg-transparent border border-dashed border-slate-200 dark:border-slate-700 text-muted-foreground/40" : `${sty.dot} ${sty.label}`} ${light.state === "active" ? "animate-pulse" : ""} transition-all`}
+ <div
+ className={`gestion-light-dot ${sty.dot} ${light.state === "active" ? "is-active" : ""} ${isNone ? "is-none" : ""}`}
  >
+ <span className={`gestion-light-letter ${isNone ? "text-muted-foreground/40" : sty.label}`}>
  {light.letter}
  </span>
+ </div>
  </div>
  }
  />

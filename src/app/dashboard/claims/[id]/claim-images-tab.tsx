@@ -20,9 +20,11 @@ import {
   Pencil,
   X,
   ZoomIn,
-  Zap,
   CheckCircle2,
   XCircle,
+  Ban,
+  FileText,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +32,14 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
+import { AiProgressOverlay } from "@/components/ai/ai-progress-overlay";
+import { cleanMarkdown } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { usePagination } from "@/hooks/use-pagination";
@@ -50,7 +59,10 @@ type UnifiedImage = {
   url: string;
   fileSize: number | null;
   aiSummary: string | null;
+  aiModel: string | null;
   aiStatus: string | null;
+  aiProgress: string | null;
+  aiPromptSnapshot: { system_prompt: string; user_prompt: string; refinement_prompt: string | null; source: string } | null;
   canDelete: boolean;
   canAnalyze: boolean;
   table: "claim_images" | "inspection_evidences" | null;
@@ -66,20 +78,36 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
-  const [aiSummaryModal, setAiSummaryModal] = useState<{ visible: boolean; title: string; summary: string }>({ visible: false, title: "", summary: "" });
+  // El popover de IA ahora vive dentro de cada card (no estado global)
 
   // ─── Modal de subida (drag&drop + progreso) ───
-  const [uploadModal, setUploadModal] = useState<{
-    visible: boolean;
-    fileName: string;
-    fileSize: number;
+  type UploadItem = {
+    id: string;
+    file: File;
+    status: "queued" | "uploading" | "processing" | "done" | "error";
     loaded: number;
     speed: number;
-    elapsed: number;
-    status: "idle" | "uploading" | "processing" | "done" | "error";
     errorMsg?: string;
+    result?: {
+      imgCode: string;
+      url: string;
+      fileSize: number;
+      ext: string;
+    };
+  };
+
+  const [uploadModal, setUploadModal] = useState<{
+    visible: boolean;
+    items: UploadItem[];
     isDragging: boolean;
-  }>({ visible: false, fileName: "", fileSize: 0, loaded: 0, speed: 0, elapsed: 0, status: "idle", isDragging: false });
+  }>({ visible: false, items: [], isDragging: false });
+
+  const uploadStatus: "idle" | "uploading" | "done" | "error" = (() => {
+    if (uploadModal.items.length === 0) return "idle";
+    if (uploadModal.items.some((i) => i.status === "uploading" || i.status === "processing" || i.status === "queued")) return "uploading";
+    if (uploadModal.items.some((i) => i.status === "error")) return "error";
+    return "done";
+  })();
 
   const canCreateImages = canCreate("claims_imagenes");
   const canDeleteImages = canDelete("claims_imagenes") && !isClaimClosed;
@@ -96,7 +124,9 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
       const oldest = imgs.filter((i) => i.ai_status === "pending" || i.ai_status === "processing")
         .reduce((min, i) => Math.min(min, new Date(i.created_at).getTime()), Date.now());
       if (Date.now() - oldest > 300_000) return false;
-      return 5000;
+      // 2s mientras hay processing (para actualizar el termómetro), 5s si solo hay pending
+      const hasProcessing = imgs.some((i) => i.ai_status === "processing");
+      return hasProcessing ? 2000 : 5000;
     },
   });
 
@@ -133,7 +163,10 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         url: img.url,
         fileSize: img.file_size,
         aiSummary: img.ai_summary,
+        aiModel: img.ai_model,
         aiStatus: img.ai_status,
+        aiProgress: img.ai_progress,
+        aiPromptSnapshot: img.ai_prompt_snapshot,
         canDelete: canDeleteImages,
         canAnalyze: true,
         table: "claim_images",
@@ -156,7 +189,10 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         url: photo.url,
         fileSize: photo.metadata?.fileSize || null,
         aiSummary: photo.ai_summary,
+        aiModel: photo.ai_model,
         aiStatus: photo.ai_status,
+        aiProgress: photo.ai_progress,
+        aiPromptSnapshot: photo.ai_prompt_snapshot,
         canDelete: false,
         canAnalyze: true,
         table: "inspection_evidences",
@@ -179,7 +215,10 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         url: sketch.sketch_url,
         fileSize: null,
         aiSummary: null,
+        aiModel: null,
         aiStatus: null,
+        aiProgress: null,
+        aiPromptSnapshot: null,
         canDelete: false,
         canAnalyze: false,
         table: null,
@@ -194,54 +233,54 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
   const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } =
     usePagination(allImages, 12);
 
-  // ─── Mutation: subir imagen ───
-  const uploadMut = useMutation({
-    mutationFn: async (file: File) => {
-      return new Promise<{ image: ClaimImage }>((resolve, reject) => {
+  // ─── Subir un archivo individual (XHR con progreso) ───
+  const uploadOneFile = useCallback(
+    (item: UploadItem): Promise<{ imgCode: string; url: string; fileSize: number; ext: string }> => {
+      return new Promise((resolve, reject) => {
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", item.file);
         formData.append("claimId", claimId);
 
         const xhr = new XMLHttpRequest();
         const startTime = Date.now();
 
+        const updateItem = (patch: Partial<UploadItem>) => {
+          setUploadModal((p) => ({
+            ...p,
+            items: p.items.map((it) => (it.id === item.id ? { ...it, ...patch } : it)),
+          }));
+        };
+
         xhr.upload.addEventListener("progress", (e) => {
           if (e.lengthComputable) {
             const elapsed = Date.now() - startTime;
             const speed = elapsed > 0 ? (e.loaded / 1024) / (elapsed / 1000) : 0;
-            setUploadModal((p) => ({
-              ...p,
-              loaded: e.loaded,
-              fileSize: e.total,
-              speed,
-              elapsed,
-              status: "uploading",
-            }));
+            updateItem({ loaded: e.loaded, speed, status: "uploading" });
           }
         });
 
         xhr.upload.addEventListener("load", () => {
-          const elapsed = Date.now() - startTime;
-          const finalSpeed = elapsed > 0 ? (file.size / 1024) / (elapsed / 1000) : 0;
-          setUploadModal((p) => ({
-            ...p,
-            loaded: p.fileSize,
-            speed: finalSpeed,
-            elapsed,
-            status: "uploading",
-          }));
-          setTimeout(() => {
-            setUploadModal((p) => ({ ...p, status: "processing" }));
-          }, 400);
+          updateItem({ loaded: item.file.size, status: "processing" });
         });
 
         xhr.addEventListener("load", () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               const data = JSON.parse(xhr.responseText);
-              setUploadModal((p) => ({ ...p, status: "done" }));
-              resolve(data);
+              const img = data.image as ClaimImage;
+              const ext = item.file.name.split(".").pop()?.toUpperCase() || "IMG";
+              updateItem({
+                status: "done",
+                result: {
+                  imgCode: img.img_code,
+                  url: img.url,
+                  fileSize: item.file.size,
+                  ext,
+                },
+              });
+              resolve({ imgCode: img.img_code, url: img.url, fileSize: item.file.size, ext });
             } catch {
+              updateItem({ status: "error", errorMsg: "Respuesta inválida del servidor" });
               reject(new Error("Respuesta inválida del servidor"));
             }
           } else {
@@ -252,13 +291,13 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
             } catch {
               msg = `Error ${xhr.status}`;
             }
-            setUploadModal((p) => ({ ...p, status: "error", errorMsg: msg }));
+            updateItem({ status: "error", errorMsg: msg });
             reject(new Error(msg));
           }
         });
 
         xhr.addEventListener("error", () => {
-          setUploadModal((p) => ({ ...p, status: "error", errorMsg: "Error de red" }));
+          updateItem({ status: "error", errorMsg: "Error de red" });
           reject(new Error("Error de red"));
         });
 
@@ -266,20 +305,59 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         xhr.send(formData);
       });
     },
-    onSuccess: () => {
-      toast.success("Imagen subida");
+    [claimId]
+  );
+
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      e.target.value = "";
+      if (files.length === 0) return;
+
+      // Filtrar solo imágenes
+      const images = files.filter((f) => f.type.startsWith("image/"));
+      const skipped = files.length - images.length;
+      if (skipped > 0) {
+        toast.error(`${skipped} archivo(s) no son imágenes y se omitieron`);
+      }
+      if (images.length === 0) return;
+
+      // Crear items en cola
+      const newItems: UploadItem[] = images.map((file, idx) => ({
+        id: `${Date.now()}-${idx}`,
+        file,
+        status: "queued",
+        loaded: 0,
+        speed: 0,
+      }));
+
+      setUploadModal((p) => ({
+        ...p,
+        visible: true,
+        items: [...p.items, ...newItems],
+      }));
+
+      // Subir secuencialmente
+      for (const item of newItems) {
+        try {
+          await uploadOneFile(item);
+        } catch {
+          // El error ya está en el item, continuar con el siguiente
+        }
+      }
+
+      // Invalidar query para refrescar la grilla
       queryClient.invalidateQueries({ queryKey: ["claim-images", claimId] });
-      // Disparar análisis de IA en background (fire-and-forget)
+
+      // Disparar análisis de IA en background
       fetch("/api/ai/process-pending", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ claimId }),
       }).catch(() => {});
     },
-    onError: (e: Error) => {
-      toast.error(e.message);
-    },
-  });
+    [uploadOneFile, claimId, queryClient]
+  );
 
   // ─── Mutation: eliminar imagen ───
   const deleteMut = useMutation({
@@ -291,30 +369,12 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        if (!file.type.startsWith("image/")) {
-          toast.error(`${file.name} no es una imagen`);
-          return;
-        }
-        uploadMut.mutate(file);
-      }
-      e.target.value = "";
-    },
-    [uploadMut]
-  );
-
   const formatFileSize = (bytes?: number | null) => {
     if (!bytes) return "—";
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
-
-  const formatSpeed = (kbps: number) =>
-    kbps > 1024 ? `${(kbps / 1024).toFixed(1)} MB/s` : `${kbps.toFixed(0)} KB/s`;
 
   // ─── Badge de origen ───
   function OrigenBadge({ origen }: { origen: UnifiedImage["origen"] }) {
@@ -357,7 +417,7 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
             </h3>
             {canCreateImages && (
               <Button
-                onClick={() => setUploadModal((p) => ({ ...p, visible: true, status: "idle", fileName: "", fileSize: 0, loaded: 0, isDragging: false }))}
+                onClick={() => setUploadModal((p) => ({ ...p, visible: true, items: [], isDragging: false }))}
                 className="pg-btn-platinum-icon"
               >
                 <Upload className="mr-2 h-4 w-4" />
@@ -381,10 +441,10 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
                   image={img}
                   onZoom={() => setZoomImage(img.url)}
                   onDelete={() => deleteMut.mutate(img.id)}
-                  onShowSummary={() => setAiSummaryModal({ visible: true, title: img.descripcion || img.codigo, summary: img.aiSummary! })}
                   claimId={claimId}
                   formatFileSize={formatFileSize}
                   OrigenBadge={OrigenBadge}
+                  queryClient={queryClient}
                 />
               ))}
             </div>
@@ -408,31 +468,31 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         )}
       </div>
 
-      {/* ═══ MODAL: Subir imagen (drag&drop + progreso) ═══ */}
+      {/* ═══ MODAL: Subir imágenes (cola + resultados) ═══ */}
       <Dialog
         open={uploadModal.visible}
         onOpenChange={(open) => {
-          if (!open && (uploadModal.status === "uploading" || uploadModal.status === "processing")) return;
-          setUploadModal((p) => ({ ...p, visible: open, status: "idle" }));
+          if (!open && uploadStatus === "uploading") return;
+          setUploadModal((p) => ({ ...p, visible: open, items: [] }));
         }}
         dismissible={false}
       >
         <DialogContent className="modal-md" showCloseButton={false}>
           <div className="modal-header">
             <DialogTitle className="modal-title">
-              {uploadModal.status === "done"
-                ? "Imagen subida"
-                : uploadModal.status === "error"
-                ? "Error"
-                : uploadModal.status === "idle"
-                ? "Subir imagen"
-                : "Subiendo imagen"}
+              {uploadStatus === "done"
+                ? `Subidas completadas (${uploadModal.items.filter((i) => i.status === "done").length}/${uploadModal.items.length})`
+                : uploadStatus === "error"
+                ? "Subida con errores"
+                : uploadStatus === "uploading"
+                ? `Subiendo imágenes (${uploadModal.items.filter((i) => i.status === "done").length}/${uploadModal.items.length})`
+                : "Subir imágenes"}
             </DialogTitle>
           </div>
 
           <div className="modal-body space-y-3">
             {/* ─── Fase idle: drag&drop ─── */}
-            {uploadModal.status === "idle" && (
+            {uploadModal.items.length === 0 && (
               <>
                 <div
                   onDragOver={(e) => {
@@ -443,13 +503,10 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
                   onDrop={(e) => {
                     e.preventDefault();
                     setUploadModal((p) => ({ ...p, isDragging: false }));
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) {
-                      if (!file.type.startsWith("image/")) {
-                        toast.error(`${file.name} no es una imagen`);
-                        return;
-                      }
-                      uploadMut.mutate(file);
+                    const files = Array.from(e.dataTransfer.files || []);
+                    if (files.length > 0) {
+                      const input = { target: { files: e.dataTransfer.files, value: "" } } as unknown as React.ChangeEvent<HTMLInputElement>;
+                      handleFileSelect(input);
                     }
                   }}
                   className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
@@ -460,15 +517,16 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
                 >
                   <Upload className={`h-8 w-8 ${uploadModal.isDragging ? "text-primary" : "text-muted-foreground"}`} />
                   <div className="text-[11px] font-medium text-foreground">
-                    Arrastra la imagen aquí
+                    Arrastra las imágenes aquí
                   </div>
                   <div className="text-[10px] text-muted-foreground">
-                    o haz clic para seleccionar
+                    o haz clic para seleccionar (múltiples)
                   </div>
                   <input
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
+                    multiple
                     accept="image/*"
                     onChange={handleFileSelect}
                   />
@@ -481,96 +539,96 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
                 </div>
 
                 <div className="text-[10px] text-muted-foreground text-center">
-                  JPG, PNG, WebP, GIF · máx. 50 MB
+                  JPG, PNG, WebP, GIF · máx. 50 MB · múltiples archivos
                 </div>
               </>
             )}
 
-            {/* ─── Fase uploading/processing/done/error: info + progreso ─── */}
-            {uploadModal.status !== "idle" && (
-              <>
-                {/* Info del archivo */}
-                <div className="flex items-center gap-2.5 rounded-md bg-muted/40 p-2.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                    <ImageIcon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[11px] font-medium text-foreground">{uploadModal.fileName}</div>
-                    <div className="text-[10px] text-muted-foreground">{formatFileSize(uploadModal.fileSize)}</div>
-                  </div>
-                </div>
+            {/* ─── Cola de subida / Resultados ─── */}
+            {uploadModal.items.length > 0 && (
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                {uploadModal.items.map((item, idx) => {
+                  const ext = item.file.name.split(".").pop()?.toUpperCase() || "IMG";
+                  const pct = item.file.size > 0 ? Math.round((item.loaded / item.file.size) * 100) : 0;
+                  return (
+                    <div key={item.id} className="upload-result-row">
+                      {/* Fila superior: icono + nombre + estado */}
+                      <div className="flex items-center gap-2.5">
+                        {/* Icono / thumbnail */}
+                        <div className="upload-result-icon">
+                          {item.status === "done" ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          ) : item.status === "error" ? (
+                            <XCircle className="h-4 w-4 text-rose-500" />
+                          ) : item.status === "uploading" ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          ) : item.status === "processing" ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+                          ) : (
+                            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
 
-                {/* Subiendo: barra de progreso */}
-                {uploadModal.status === "uploading" && (
-                  <div className="space-y-2">
-                    <div className="flex items-end justify-between">
-                      <span className="text-[11px] text-muted-foreground">Subiendo...</span>
-                      <div className="flex items-end gap-3">
-                        {uploadModal.speed > 0 && (
-                          <span className="text-[10px] text-muted-foreground tabular-nums">
-                            {formatSpeed(uploadModal.speed)}
-                          </span>
-                        )}
-                        <span className="text-lg font-bold tabular-nums text-primary leading-none">
-                          {uploadModal.fileSize > 0
-                            ? Math.round((uploadModal.loaded / uploadModal.fileSize) * 100)
-                            : 0}%
-                        </span>
+                        {/* Info */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-muted-foreground shrink-0">#{idx + 1}</span>
+                            <span className="truncate text-[11px] font-medium text-foreground">
+                              {item.file.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <span>{ext}</span>
+                            <span>·</span>
+                            <span>{formatFileSize(item.file.size)}</span>
+                            {item.result?.imgCode && (
+                              <>
+                                <span>·</span>
+                                <span className="font-mono text-foreground font-medium">{item.result.imgCode}</span>
+                              </>
+                            )}
+                            {item.errorMsg && (
+                              <>
+                                <span>·</span>
+                                <span className="text-rose-500">{item.errorMsg}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Porcentaje / badge */}
+                        <div className="shrink-0">
+                          {item.status === "uploading" && (
+                            <span className="text-sm font-bold tabular-nums text-primary">{pct}%</span>
+                          )}
+                          {item.status === "processing" && (
+                            <span className="text-[10px] text-amber-600">guardando...</span>
+                          )}
+                          {item.status === "queued" && (
+                            <span className="text-[10px] text-muted-foreground">en cola</span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full bg-primary transition-all duration-200 ease-out rounded-full"
-                        style={{
-                          width: `${uploadModal.fileSize > 0 ? (uploadModal.loaded / uploadModal.fileSize) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
-                      <span>
-                        {formatFileSize(uploadModal.loaded)} / {formatFileSize(uploadModal.fileSize)}
-                      </span>
-                    </div>
-                  </div>
-                )}
 
-                {/* Procesando */}
-                {uploadModal.status === "processing" && (
-                  <div className="flex items-center gap-2 py-1">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                    <span className="text-[11px] text-muted-foreground">Registrando imagen...</span>
-                  </div>
-                )}
-
-                {/* Done */}
-                {uploadModal.status === "done" && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 py-1">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                      <span className="text-[11px] font-medium text-emerald-600">Imagen subida correctamente</span>
+                      {/* Barra de progreso */}
+                      {item.status === "uploading" && (
+                        <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-primary transition-all duration-200 ease-out rounded-full"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
-                    <div className="text-[10px] text-muted-foreground pl-6">
-                      {formatFileSize(uploadModal.fileSize)} · {uploadModal.fileName}
-                    </div>
-                  </div>
-                )}
-
-                {/* Error */}
-                {uploadModal.status === "error" && (
-                  <div className="flex items-center gap-2 py-1">
-                    <XCircle className="h-4 w-4 text-rose-500" />
-                    <span className="text-[11px] font-medium text-rose-600">
-                      {uploadModal.errorMsg || "Error al subir"}
-                    </span>
-                  </div>
-                )}
-              </>
+                  );
+                })}
+              </div>
             )}
           </div>
 
           {/* Footer */}
           <div className="modal-footer">
-            {uploadModal.status === "idle" && (
+            {uploadModal.items.length === 0 && (
               <Button
                 className="pg-btn-platinum"
                 onClick={() => setUploadModal((p) => ({ ...p, visible: false }))}
@@ -578,20 +636,17 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
                 Cancelar
               </Button>
             )}
-            {uploadModal.status === "done" && (
+            {uploadStatus === "uploading" && (
+              <div className="text-[10px] text-muted-foreground">
+                Subiendo en orden... no cierres esta ventana
+              </div>
+            )}
+            {(uploadStatus === "done" || uploadStatus === "error") && (
               <Button
                 className="pg-btn-platinum"
-                onClick={() => setUploadModal((p) => ({ ...p, visible: false, status: "idle" }))}
+                onClick={() => setUploadModal((p) => ({ ...p, visible: false, items: [] }))}
               >
                 Cerrar
-              </Button>
-            )}
-            {uploadModal.status === "error" && (
-              <Button
-                className="pg-btn-platinum"
-                onClick={() => setUploadModal((p) => ({ ...p, status: "idle", fileName: "", fileSize: 0, loaded: 0 }))}
-              >
-                Reintentar
               </Button>
             )}
           </div>
@@ -619,35 +674,6 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
           />
         </div>
       )}
-
-      {/* ═══ MODAL: Ver análisis IA completo ═══ */}
-      <Dialog
-        open={aiSummaryModal.visible}
-        onOpenChange={(open) => setAiSummaryModal((p) => ({ ...p, visible: open }))}
-      >
-        <DialogContent className="modal-md-wide" showCloseButton={false}>
-          <div className="modal-header">
-            <DialogTitle className="modal-title flex items-center gap-2">
-              <Zap className="h-4 w-4 text-violet-500" />
-              Análisis IA
-            </DialogTitle>
-          </div>
-          <div className="modal-body modal-grid">
-            <div className="text-[11px] font-medium text-foreground">{aiSummaryModal.title}</div>
-            <div className="ai-summary-scroll rounded-md bg-violet-50/50 p-3 text-[11px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap">
-              {aiSummaryModal.summary}
-            </div>
-          </div>
-          <div className="modal-footer">
-            <Button
-              className="pg-btn-platinum"
-              onClick={() => setAiSummaryModal((p) => ({ ...p, visible: false }))}
-            >
-              Cerrar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -658,20 +684,20 @@ function UnifiedImageCard({
   image,
   onZoom,
   onDelete,
-  onShowSummary,
   claimId,
   formatFileSize,
   OrigenBadge,
+  queryClient,
 }: {
   image: UnifiedImage;
   onZoom: () => void;
   onDelete: () => void;
-  onShowSummary: () => void;
   claimId: string;
   formatFileSize: (bytes?: number | null) => string;
   OrigenBadge: React.ComponentType<{ origen: UnifiedImage["origen"] }>;
+  queryClient: ReturnType<typeof useQueryClient>;
 }) {
-  const isPending = image.aiStatus === "pending";
+  const isPending = image.aiStatus === "pending" || image.aiStatus === "processing";
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
@@ -697,25 +723,24 @@ function UnifiedImageCard({
             href={image.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm ${
-              isPending ? "cursor-not-allowed opacity-40" : "hover:bg-black/80"
-            }`}
-            title={isPending ? "Procesando..." : "Abrir"}
-            onClick={isPending ? (e) => e.preventDefault() : undefined}
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
+            title="Abrir"
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
           {image.canDelete && (
             <button
               onClick={() => {
-                if (isPending) return;
-                if (confirm("¿Eliminar esta imagen?")) onDelete();
+                if (isPending) {
+                  if (confirm("La IA está procesando esta imagen. ¿Eliminar de todos modos? Se cancelará el análisis.")) {
+                    onDelete();
+                  }
+                } else {
+                  if (confirm("¿Eliminar esta imagen?")) onDelete();
+                }
               }}
-              disabled={isPending}
-              className={`flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm ${
-                isPending ? "cursor-not-allowed opacity-40" : "hover:bg-red-500/80"
-              }`}
-              title={isPending ? "Procesando..." : "Eliminar"}
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-red-500/80"
+              title="Eliminar"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -725,6 +750,20 @@ function UnifiedImageCard({
         <div className="absolute left-1.5 top-1.5">
           <OrigenBadge origen={image.origen} />
         </div>
+        {/* Overlay termómetro de progreso IA */}
+        {isPending && (
+          <AiProgressOverlay
+            aiStatus={image.aiStatus}
+            aiProgress={image.aiProgress}
+            table={image.table || "claim_images"}
+            recordId={image.id}
+            onCancel={() => {
+              // Invalidar cache para que se refresque el estado
+              queryClient.invalidateQueries({ queryKey: ["claim-images", claimId] });
+              queryClient.invalidateQueries({ queryKey: ["inspection-photos-by-claim", claimId] });
+            }}
+          />
+        )}
       </div>
 
       {/* Info debajo de la imagen */}
@@ -746,33 +785,134 @@ function UnifiedImageCard({
           </div>
         )}
 
-        {/* Análisis IA */}
-        {isPending ? (
-          <div className="mt-0.5 flex items-center gap-1 text-[9px] text-amber-600 dark:text-amber-400">
-            <Loader2 className="h-2.5 w-2.5 shrink-0 animate-spin" />
-            <span className="font-medium">Analizando con IA...</span>
+        {/* ─── Acciones IA según estado ─── */}
+        {/* pending → botón "Omitir" (sacar de la cola) */}
+        {image.aiStatus === "pending" && (
+          <div className="mt-auto pt-1">
+            <button
+              onClick={async () => {
+                try {
+                  await fetch("/api/ai/cancel", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ table: image.table || "claim_images", id: image.id }),
+                  });
+                  queryClient.invalidateQueries({ queryKey: ["claim-images", claimId] });
+                  queryClient.invalidateQueries({ queryKey: ["inspection-photos-by-claim", claimId] });
+                  toast.success("Análisis omitido");
+                } catch {
+                  toast.error("No se pudo omitir");
+                }
+              }}
+              className="ai-card-skip-btn"
+              title="Omitir análisis IA"
+            >
+              <Ban className="h-3 w-3" />
+              <span>Omitir IA</span>
+            </button>
           </div>
-        ) : image.aiSummary ? (
-          <div
-            className="mt-0.5 flex items-start gap-1 rounded bg-violet-50/50 p-1 dark:bg-violet-950/20 cursor-pointer hover:bg-violet-100/70 dark:hover:bg-violet-900/30"
-            title={image.aiSummary}
-            onClick={onShowSummary}
-          >
-            <Zap className="mt-0.5 h-2.5 w-2.5 shrink-0 text-violet-500" />
-            <p className="line-clamp-2 text-[9px] leading-relaxed text-violet-700 dark:text-violet-300">
-              {image.aiSummary}
-            </p>
-          </div>
-        ) : null}
+        )}
 
-        {/* Botón IA */}
-        {image.canAnalyze && image.table && (
+        {/* done → "Rehacer" + "Log" */}
+        {image.aiSummary && image.aiStatus === "done" && image.table && (
+          <div className="mt-auto flex items-center gap-1 pt-1">
+            {/* Rehacer análisis */}
+            <AiAnalysisButton
+              table={image.table}
+              id={image.id}
+              fileName={image.fileName}
+              hasSummary={true}
+              queryKey={
+                image.origen === "siniestro"
+                  ? ["claim-images", claimId]
+                  : ["inspection-photos-by-claim", claimId]
+              }
+            />
+            {/* Log: popover con resumen + prompt colapsable */}
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <button
+                    className="ai-card-log-btn"
+                    title="Ver log del análisis"
+                  >
+                    <FileText className="h-3 w-3" />
+                  </button>
+                }
+              />
+              <PopoverContent side="top" align="start" className="ai-log-popover">
+                {/* Header: código + modelos separados */}
+                <div className="ai-log-header">
+                  <span className="ai-log-code">{image.codigo}</span>
+                </div>
+                {image.aiModel && (
+                  <div className="ai-log-models">
+                    {image.aiModel.split("|").map((m, i) => {
+                      const trimmed = m.trim();
+                      const isVision = trimmed.startsWith("vision:");
+                      const label = isVision ? "Visión" : "Razonamiento";
+                      const modelName = trimmed.replace(/^(vision|razonamiento):/, "").trim();
+                      return (
+                        <div key={i} className="ai-log-model-row">
+                          <span className="ai-log-model-tag">{label}</span>
+                          <span className="ai-log-model-name">{modelName}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Resumen — lo principal, primero y grande */}
+                <div className="ai-log-section ai-log-section-summary">
+                  <div className="ai-log-summary">{cleanMarkdown(image.aiSummary)}</div>
+                </div>
+                {/* Tooltip: ver prompt enviado */}
+                {image.aiPromptSnapshot && (
+                  <Popover>
+                    <PopoverTrigger
+                      render={
+                        <button className="ai-log-prompt-trigger" title="Ver prompt enviado">
+                          <ChevronDown className="h-2.5 w-2.5" />
+                          <span>Prompt enviado</span>
+                        </button>
+                      }
+                    />
+                    <PopoverContent side="top" align="start" className="ai-prompt-tooltip">
+                      <div className="ai-log-prompt">
+                        {image.aiPromptSnapshot.system_prompt && (
+                          <div className="ai-log-prompt-block">
+                            <span className="ai-log-prompt-tag">system</span>
+                            <pre className="ai-log-prompt-text">{image.aiPromptSnapshot.system_prompt}</pre>
+                          </div>
+                        )}
+                        {image.aiPromptSnapshot.user_prompt && (
+                          <div className="ai-log-prompt-block">
+                            <span className="ai-log-prompt-tag">user</span>
+                            <pre className="ai-log-prompt-text">{image.aiPromptSnapshot.user_prompt}</pre>
+                          </div>
+                        )}
+                        {image.aiPromptSnapshot.refinement_prompt && (
+                          <div className="ai-log-prompt-block">
+                            <span className="ai-log-prompt-tag">refinement</span>
+                            <pre className="ai-log-prompt-text">{image.aiPromptSnapshot.refinement_prompt}</pre>
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+
+        {/* error → "Rehacer" solamente */}
+        {image.aiStatus === "error" && image.table && (
           <div className="mt-auto pt-1">
             <AiAnalysisButton
               table={image.table}
               id={image.id}
               fileName={image.fileName}
-              hasSummary={!!image.aiSummary}
+              hasSummary={false}
               queryKey={
                 image.origen === "siniestro"
                   ? ["claim-images", claimId]
@@ -781,6 +921,8 @@ function UnifiedImageCard({
             />
           </div>
         )}
+
+        {/* skipped → nada. Sin icono IA, sin botones. */}
       </div>
     </div>
   );

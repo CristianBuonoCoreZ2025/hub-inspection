@@ -2276,11 +2276,39 @@
   .animate-pulse-slower  { animation-duration: 10s !important; }
   .animate-pulse-slowest { animation-duration: 12s !important; }
 
-  /* ── gestion-light-dot: punto indicador de gestión (16x16) ── */
-  .gestion-light-dot { width: 16px !important; height: 16px !important; }
-  .gestion-light-pill {
+  /* ── Semáforo E/R/A en grilla de gestiones ── */
+  .gestion-light-wrap {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  .gestion-light-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 2px !important;
+  }
+  .gestion-light-dot {
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    transition: all 0.15s ease !important;
+  }
+  .gestion-light-dot.is-active {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+  }
+  .gestion-light-dot.is-none {
+    border-style: dashed !important;
+    background: transparent !important;
+  }
+  .gestion-light-letter {
     font-family: var(--font-dm-sans), system-ui, sans-serif !important;
-    font-size: 9px !important;
+    font-size: 10px !important;
     font-weight: 500 !important;
     line-height: 1 !important;
   }

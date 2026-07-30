@@ -50,6 +50,7 @@ interface TableConfig {
   mimeColumn: string | null;
   hasAiStatus: boolean;
   excludeLiveVideo: boolean;
+  hasIsActive: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -70,6 +71,45 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
+    // Obtener la línea de negocio del siniestro para contextualizar el prompt de IA
+    let businessLine: string | undefined;
+    let businessLineId: string | undefined;
+    let claimIdForBL: string | null = null;
+    if (claimId) {
+      claimIdForBL = claimId;
+    } else if (sessionId) {
+      const { data: sessionData } = await supabase
+        .from("inspection_sessions")
+        .select("claim_id")
+        .eq("id", sessionId)
+        .maybeSingle();
+      claimIdForBL = sessionData?.claim_id || null;
+    }
+    if (claimIdForBL) {
+      // Lookup en dos pasos: primero el business_line_id, luego el nombre
+      const { data: claimData } = await supabase
+        .from("claims")
+        .select("business_line_id")
+        .eq("id", claimIdForBL)
+        .maybeSingle();
+      if (claimData?.business_line_id) {
+        businessLineId = claimData.business_line_id;
+        const { data: blData } = await supabase
+          .from("business_lines")
+          .select("name")
+          .eq("id", claimData.business_line_id)
+          .maybeSingle();
+        if (blData?.name) {
+          businessLine = blData.name;
+          logger.info("process-pending: línea de negocio detectada", {
+            component: "ai-process-pending",
+            action: "business_line",
+            metadata: { claimId: claimIdForBL, businessLine },
+          });
+        }
+      }
+    }
+
     // Determinar qué tablas procesar según el contexto
     const configs: TableConfig[] = [];
     if (sessionId) {
@@ -82,6 +122,7 @@ export async function POST(request: NextRequest) {
         mimeColumn: null,
         hasAiStatus: true,
         excludeLiveVideo: true,
+        hasIsActive: false,
       });
     }
     if (claimId) {
@@ -94,6 +135,7 @@ export async function POST(request: NextRequest) {
         mimeColumn: "mime_type",
         hasAiStatus: true,
         excludeLiveVideo: false,
+        hasIsActive: true,
       });
       configs.push({
         table: "claim_documents",
@@ -104,6 +146,7 @@ export async function POST(request: NextRequest) {
         mimeColumn: "mime_type",
         hasAiStatus: true,
         excludeLiveVideo: false,
+        hasIsActive: true,
       });
     }
     if (policyId) {
@@ -116,6 +159,7 @@ export async function POST(request: NextRequest) {
         mimeColumn: "document_type",
         hasAiStatus: false, // policy_documents no tiene ai_status
         excludeLiveVideo: false,
+        hasIsActive: true,
       });
     }
 
@@ -128,14 +172,29 @@ export async function POST(request: NextRequest) {
 
     for (const cfg of configs) {
       const hasUpdatedAt = TABLES_WITH_UPDATED_AT.has(cfg.table);
+      // Solo inspection_evidences tiene columna metadata y source
+      const hasMetadata = cfg.table === "inspection_evidences";
+      const hasSource = cfg.table === "inspection_evidences";
 
-      // Construir query según la tabla
-      const selectCols = `id, ${cfg.urlColumn}, ${cfg.nameColumn}, ${cfg.mimeColumn || "type"}, metadata, source, created_at`;
+      // Construir query según la tabla — solo incluir columnas que existen
+      const selectParts = ["id", cfg.urlColumn, cfg.nameColumn];
+      if (cfg.mimeColumn) selectParts.push(cfg.mimeColumn);
+      else selectParts.push("type");
+      if (hasMetadata) selectParts.push("metadata");
+      if (hasSource) selectParts.push("source");
+      selectParts.push("created_at");
+      const selectCols = selectParts.join(", ");
+
       let query = supabase
         .from(cfg.table)
         .select(selectCols)
         .eq(cfg.filterColumn, cfg.filterValue)
         .order("created_at", { ascending: true });
+
+      // Solo registros activos (no eliminados)
+      if (cfg.hasIsActive) {
+        query = query.eq("is_active", true);
+      }
 
       // Filtro de "pending"
       if (cfg.hasAiStatus) {
@@ -178,9 +237,26 @@ export async function POST(request: NextRequest) {
       // Procesar UNO POR UNO, secuencialmente
       for (const record of pendingRecords as unknown as PendingRecord[]) {
         try {
+          // ─── Chequear si el usuario canceló (ai_status = skipped) ───
+          if (cfg.hasAiStatus) {
+            const { data: checkRecord } = await supabase
+              .from(cfg.table)
+              .select("ai_status")
+              .eq("id", record.id)
+              .maybeSingle();
+            if (checkRecord?.ai_status === "skipped") {
+              logger.info("process-pending: registro cancelado por usuario, saltando", {
+                component: "ai-process-pending",
+                action: "record.cancelled",
+                metadata: { table: cfg.table, recordId: record.id },
+              });
+              continue;
+            }
+          }
+
           // Marcar como "processing" (solo si tiene ai_status)
           if (cfg.hasAiStatus) {
-            const processingUpdate: Record<string, unknown> = { ai_status: "processing" };
+            const processingUpdate: Record<string, unknown> = { ai_status: "processing", ai_progress: "iniciando" };
             if (hasUpdatedAt) processingUpdate.updated_at = new Date().toISOString();
             await supabase.from(cfg.table).update(processingUpdate).eq("id", record.id);
           }
@@ -225,14 +301,34 @@ export async function POST(request: NextRequest) {
             (meta?.originalName as string) ||
             record.id;
 
-          // Analizar con IA
-          const ai = await summarizeFile(buffer, mimeType, fileName);
+          // Analizar con IA — onProgress acumula los pasos en ai_progress
+          // Formato: "phase:model:status|phase:model:status|..."
+          // Cada modelo probado se agrega al log. Si el último paso era "trying"
+          // del mismo modelo, se actualiza (trying → failed u ok) sin duplicar.
+          const progressSteps: string[] = [];
+          const onProgress = (phase: string, model: string, status: string) => {
+            const step = `${phase}:${model}:${status}`;
+            const lastIdx = progressSteps.length - 1;
+            const lastStep = progressSteps[lastIdx];
+            if (lastStep && lastStep.startsWith(`${phase}:${model}:trying`)) {
+              progressSteps[lastIdx] = step;
+            } else {
+              progressSteps.push(step);
+            }
+            const progressStr = progressSteps.join("|");
+            const update: Record<string, unknown> = { ai_progress: progressStr };
+            if (hasUpdatedAt) update.updated_at = new Date().toISOString();
+            supabase.from(cfg.table).update(update).eq("id", record.id).then(() => {});
+          };
+
+          const ai = await summarizeFile(buffer, mimeType, fileName, businessLineId, onProgress);
 
           if (ai.ok) {
-            // Guardar resultado
+            // Guardar resultado + snapshot del prompt (ai_progress se conserva para el log)
             const doneUpdate: Record<string, unknown> = {
               ai_summary: ai.summary,
               ai_model: ai.model,
+              ai_prompt_snapshot: ai.promptSnapshot,
             };
             if (cfg.hasAiStatus) doneUpdate.ai_status = "done";
             if (hasUpdatedAt) doneUpdate.updated_at = new Date().toISOString();
@@ -246,7 +342,7 @@ export async function POST(request: NextRequest) {
             });
           } else {
             // IA no procesó — marcar como skipped (o dejar ai_summary null)
-            const skippedUpdate: Record<string, unknown> = {};
+            const skippedUpdate: Record<string, unknown> = { ai_progress: null };
             if (cfg.hasAiStatus) skippedUpdate.ai_status = "skipped";
             if (hasUpdatedAt) skippedUpdate.updated_at = new Date().toISOString();
             if (Object.keys(skippedUpdate).length > 0) {
@@ -265,7 +361,7 @@ export async function POST(request: NextRequest) {
           const errMsg = err instanceof Error ? err.message : String(err);
 
           if (cfg.hasAiStatus) {
-            const errorUpdate: Record<string, unknown> = { ai_status: "error" };
+            const errorUpdate: Record<string, unknown> = { ai_status: "error", ai_progress: null };
             if (hasUpdatedAt) errorUpdate.updated_at = new Date().toISOString();
             await supabase.from(cfg.table).update(errorUpdate).eq("id", record.id);
           }

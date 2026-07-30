@@ -46,6 +46,7 @@ import {
   RotateCcw,
   Mail,
   Menu as MenuIcon,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -149,6 +150,7 @@ export const gestionCatalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/pantallas", label: "Pantallas", icon: Monitor },
   { href: "/dashboard/catalogos/gestiones/gestiones", label: "Gestiones", icon: FileSpreadsheet },
   { href: "/dashboard/catalogos/gestiones/email-templates", label: "Plantillas E-mail", icon: Mail },
+  { href: "/dashboard/catalogos/gestiones/prompts", label: "Prompts IA", icon: Sparkles },
   { href: "/dashboard/catalogos/gestiones/dependencias", label: "Dependencias", icon: Link2 },
   { href: "/dashboard/catalogos/gestiones/campos", label: "Campos Plantillas", icon: Code2 },
   { href: "/dashboard/catalogos/workflows", label: "Workflows", icon: Workflow },

@@ -683,3 +683,204 @@
   margin-top: 1px !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   USUARIOS — Toggle chips de clientes, filtro tabs, badge principal
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Grid de toggle chips para clientes en el modal de invitación */
+.user-client-toggle-grid {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+  padding: 8px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+}
+
+/* Chip base */
+.user-client-toggle-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 6px 14px !important;
+  border-radius: 9999px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  border: 1px solid var(--border) !important;
+  transition: all 0.15s ease !important;
+  user-select: none !important;
+}
+
+/* Chip OFF (no marcado) */
+.user-client-toggle-chip-off {
+  background: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+  opacity: 0.6 !important;
+}
+.user-client-toggle-chip-off:hover {
+  opacity: 0.85 !important;
+  border-color: var(--primary) !important;
+}
+
+/* Chip ON (marcado) */
+.user-client-toggle-chip-on {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+}
+.user-client-toggle-chip-on:hover {
+  filter: brightness(1.05) !important;
+}
+
+/* ── Filtro tabs (Activos / Desactivados / Eliminados) ── */
+.user-filter-tabs {
+  display: flex !important;
+  gap: 4px !important;
+  padding: 2px !important;
+  background: var(--muted) !important;
+  border-radius: 8px !important;
+}
+.user-filter-tab {
+  padding: 5px 14px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+.user-filter-tab:hover {
+  color: var(--foreground) !important;
+}
+.user-filter-tab-active {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ── Badge del cliente principal en la lista ── */
+.user-client-badge-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  margin-right: 6px !important;
+}
+.user-client-primary-icon {
+  width: 12px !important;
+  height: 12px !important;
+  color: #f59e0b !important;
+  fill: #f59e0b !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Filas de usuarios por estado ── */
+.user-row-inactive {
+  opacity: 0.6 !important;
+}
+.user-row-deleted {
+  opacity: 0.4 !important;
+  text-decoration: line-through !important;
+}
+
+/* ── Botón de peligro (eliminar definitivamente) ── */
+.pg-btn-danger {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 36px !important;
+  padding: 0 16px !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  background: #dc2626 !important;
+  color: #fff !important;
+  border: 1px solid #dc2626 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+.pg-btn-danger:hover:not(:disabled) {
+  background: #b91c1c !important;
+  border-color: #b91c1c !important;
+}
+.pg-btn-danger:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* ── Botón del avatar en la topbar (clickeable) ── */
+.topbar-avatar-btn {
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+  transition: transform 0.15s ease !important;
+}
+.topbar-avatar-btn:hover {
+  transform: scale(1.08) !important;
+}
+
+/* ── Wrap del avatar grande en Mi Perfil ── */
+.my-profile-avatar-wrap {
+  display: flex !important;
+  justify-content: center !important;
+  padding: 16px 0 8px !important;
+}
+
+/* ── Sección completa del avatar (foto + botones) ── */
+.my-profile-avatar-section {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding-bottom: 8px !important;
+}
+
+/* ── Botones de subir/quitar foto (mismo patrón que logo de empresa) ── */
+.my-profile-avatar-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+.my-profile-upload-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--background) !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--foreground) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  transition: background 0.15s ease !important;
+}
+.my-profile-upload-btn:hover {
+  background: var(--muted) !important;
+}
+.my-profile-remove-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #ef4444 !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  transition: color 0.15s ease !important;
+}
+.my-profile-remove-btn:hover {
+  color: #dc2626 !important;
+}
+

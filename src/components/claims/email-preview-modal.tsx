@@ -287,7 +287,7 @@ ${bodyHtml}
                     {showLogDetail ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   </button>
                 </div>
-                <p className="text-[11px] text-rose-800 mt-1 break-words">
+                <p className="text-[11px] text-rose-800 mt-1 wrap-break-word">
                   {providerErrorMsg}
                 </p>
                 {showLogDetail && (

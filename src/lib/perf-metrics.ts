@@ -27,6 +27,7 @@ export type DbOperation =
   | "select_one"
   | "select_all"
   | "insert"
+  | "upsert"
   | "update"
   | "delete"
   | "rpc";

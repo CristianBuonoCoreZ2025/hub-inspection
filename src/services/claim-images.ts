@@ -21,13 +21,15 @@ export interface ClaimImage {
   ai_summary: string | null;
   ai_model: string | null;
   ai_status: string | null;
+  ai_progress: string | null;
+  ai_prompt_snapshot: { system_prompt: string; user_prompt: string; refinement_prompt: string | null; source: string } | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
 const IMAGE_FIELDS =
-  "id, claim_id, img_code, url, original_filename, mime_type, file_size, file_path, uploaded_by, ai_summary, ai_model, ai_status, is_active, created_at, updated_at";
+  "id, claim_id, img_code, url, original_filename, mime_type, file_size, file_path, uploaded_by, ai_summary, ai_model, ai_status, ai_progress, ai_prompt_snapshot, is_active, created_at, updated_at";
 
 export async function getClaimImages(claimId: string): Promise<ClaimImage[]> {
   return fetchAll<ClaimImage>("claim_images", {
@@ -102,6 +104,8 @@ export interface InspectionImageFromSession {
   ai_summary: string | null;
   ai_model: string | null;
   ai_status: string | null;
+  ai_progress: string | null;
+  ai_prompt_snapshot: { system_prompt: string; user_prompt: string; refinement_prompt: string | null; source: string } | null;
   metadata: { originalName?: string; mimeType?: string; fileSize?: number } | null;
   session?: InspectionSessionSummary;
 }
@@ -148,7 +152,7 @@ export async function getInspectionPhotosByClaim(
   // 2. Traer todas las evidencias tipo photo de esas sesiones
   const evidences = await fetchAll<InspectionImageFromSession>("inspection_evidences", {
     select:
-      "id, session_id, type, url, description, captured_at, created_at, ai_summary, ai_model, ai_status, metadata",
+      "id, session_id, type, url, description, captured_at, created_at, ai_summary, ai_model, ai_status, ai_progress, ai_prompt_snapshot, metadata",
     in: { session_id: sessionIds },
     eq: { type: "photo" },
     order: { column: "created_at", ascending: false },

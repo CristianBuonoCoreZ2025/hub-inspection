@@ -36,7 +36,14 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
+import { AiProcessingBadge } from "@/components/ai/ai-processing-badge";
+import { cleanMarkdown } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
 import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
@@ -61,7 +68,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
   const { canCreate, canDelete } = usePermissions();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedDocType, setSelectedDocType] = useState<string>("");
-  const [aiSummaryModal, setAiSummaryModal] = useState<{ visible: boolean; title: string; summary: string }>({ visible: false, title: "", summary: "" });
+  // El popover de IA ahora vive dentro de cada fila (no estado global)
 
   // 1. Documentos físicos del siniestro
   const { data: claimDocs, isLoading: claimDocsLoading } = useQuery({
@@ -71,7 +78,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     // Polling cada 5s mientras hay documentos siendo procesados por IA
     refetchInterval: (query) => {
       const docs = query.state.data;
-      if (docs && docs.some((d) => d.ai_status === "pending" || d.ai_status === "processing")) return 5000;
+      if (docs && docs.some((d) => d.ai_status === "pending" || d.ai_status === "processing")) return 3000;
       return false;
     },
   });
@@ -336,12 +343,6 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
       queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
       queryClient.invalidateQueries({ queryKey: ["gestion-screens"] });
       setUploadModal((p) => ({ ...p, status: "done" }));
-      // Disparar análisis de IA en background (fire-and-forget)
-      fetch("/api/ai/process-pending", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ claimId }),
-      }).catch(() => {});
     },
     onError: (e: Error) => {
       toast.error(e.message);
@@ -373,17 +374,31 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     },
   });
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!selectedDocType) {
-        toast.error("Selecciona un tipo de documento antes de subir");
-        e.target.value = "";
-        return;
-      }
-      uploadMut.mutate({ file, docTypeCode: selectedDocType });
-    }
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
     e.target.value = "";
+    if (files.length === 0) return;
+
+    if (!selectedDocType) {
+      toast.error("Selecciona un tipo de documento antes de subir");
+      return;
+    }
+
+    // Subir secuencialmente: uno a uno, esperando que cada uno termine
+    for (const file of files) {
+      await new Promise<void>((resolve) => {
+        uploadMut.mutate({ file, docTypeCode: selectedDocType }, {
+          onSettled: () => resolve(),
+        });
+      });
+    }
+
+    // Disparar análisis de IA en background después de que todos suban
+    fetch("/api/ai/process-pending", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ claimId }),
+    }).catch(() => {});
   }
 
   function formatFileSize(bytes: number | null): string {
@@ -407,6 +422,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     tamano: string;
     url: string;
     aiSummary?: string | null;
+    aiModel?: string | null;
     aiStatus?: string | null;
     docTypeCode?: string;
     canDelete?: boolean;
@@ -432,6 +448,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
         tamano: formatFileSize(doc.file_size),
         url: doc.document_url || "",
         aiSummary: doc.ai_summary,
+        aiModel: doc.ai_model,
         aiStatus: doc.ai_status,
         docTypeCode: doc.document_type || undefined,
         canDelete: canDeleteDocs,
@@ -535,12 +552,12 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
             <table className="app-data-table">
               <thead>
                 <tr>
-                  <th className="w-[100px]">Origen</th>
-                  <th className="w-[90px]">Código</th>
+                  <th className="w-25">Origen</th>
+                  <th className="w-22.5">Código</th>
                   <th className="w-[min(45vw,420px)]">Tipo / Nombre</th>
-                  <th className="w-[60px]">Ext.</th>
-                  <th className="w-[80px]">Tamaño</th>
-                  <th className="w-[80px]"></th>
+                  <th className="w-15">Ext.</th>
+                  <th className="w-20">Tamaño</th>
+                  <th className="w-20"></th>
                 </tr>
               </thead>
               <tbody>
@@ -564,20 +581,36 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                           </>
                         )}
                       </div>
-                      {doc.aiStatus === "pending" ? (
-                        <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
-                          <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
-                          <span className="font-medium">Analizando con IA...</span>
-                        </div>
+                      {(doc.aiStatus === "pending" || doc.aiStatus === "processing") ? (
+                        <AiProcessingBadge status={doc.aiStatus} />
                       ) : doc.aiSummary ? (
-                        <div
-                          className="mt-1 flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400 cursor-pointer hover:text-violet-700 dark:hover:text-violet-300"
-                          title={doc.aiSummary}
-                          onClick={() => setAiSummaryModal({ visible: true, title: doc.nombre, summary: doc.aiSummary! })}
-                        >
-                          <Zap className="h-3 w-3 shrink-0 mt-0.5" />
-                          <span className="italic line-clamp-2 wrap-break-word">{doc.aiSummary}</span>
-                        </div>
+                        <Popover>
+                          <PopoverTrigger
+                            render={
+                              <button
+                                className="mt-1 flex w-full items-start gap-1 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground text-left"
+                                title="Ver informe completo"
+                              >
+                                <Zap className="h-3 w-3 shrink-0 mt-0.5 text-amber-500" />
+                                <span className="line-clamp-2 wrap-break-word">{cleanMarkdown(doc.aiSummary)}</span>
+                              </button>
+                            }
+                          />
+                          <PopoverContent side="top" align="start" className="w-100 max-w-[90vw] p-0">
+                            <div className="ai-popover-header">
+                              <Zap className="h-3.5 w-3.5 text-amber-500" />
+                              <span className="ai-popover-code">{doc.codigo}</span>
+                            </div>
+                            <div className="ai-popover-body">
+                              <div className="ai-report-text">{cleanMarkdown(doc.aiSummary)}</div>
+                              {doc.aiModel && (
+                                <div className="ai-report-meta">
+                                  <span className="font-medium">Modelos:</span> {doc.aiModel}
+                                </div>
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       ) : null}
                     </td>
                     <td className="text-muted-foreground uppercase text-[11px]">
@@ -591,10 +624,8 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             href={doc.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={doc.aiStatus === "pending"
-                              ? "flex h-8 w-8 items-center justify-center rounded text-muted-foreground/30 cursor-not-allowed pointer-events-none"
-                              : "flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"}
-                            title={doc.aiStatus === "pending" ? "Procesando..." : "Ver documento"}
+                            className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"
+                            title="Ver documento"
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
                           </a>
@@ -606,7 +637,6 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             fileName={doc.subnombre || doc.nombre}
                             hasSummary={!!doc.aiSummary}
                             queryKey={["claim-documents", claimId]}
-                            disabled={doc.aiStatus === "pending"}
                           />
                         )}
                         {doc.canDelete && doc.docId && (
@@ -614,9 +644,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             variant="ghost"
                             size="icon"
                             className="btn-icon-sm btn-danger-hover"
-                            disabled={doc.aiStatus === "pending"}
                             onClick={() => {
-                              if (doc.aiStatus === "pending") return;
                               setDeleteModal({
                                 visible: true,
                                 docId: doc.docId!,
@@ -854,6 +882,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
+                    multiple
                     onChange={handleFileSelect}
                     accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
                   />
@@ -986,35 +1015,6 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                 Reintentar
               </Button>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ═══ MODAL: Ver análisis IA completo ═══ */}
-      <Dialog
-        open={aiSummaryModal.visible}
-        onOpenChange={(open) => setAiSummaryModal((p) => ({ ...p, visible: open }))}
-      >
-        <DialogContent className="modal-md-wide" showCloseButton={false}>
-          <div className="modal-header">
-            <DialogTitle className="modal-title flex items-center gap-2">
-              <Zap className="h-4 w-4 text-violet-500" />
-              Análisis IA
-            </DialogTitle>
-          </div>
-          <div className="modal-body modal-grid">
-            <div className="text-[11px] font-medium text-foreground">{aiSummaryModal.title}</div>
-            <div className="ai-summary-scroll rounded-md bg-violet-50/50 p-3 text-[11px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap">
-              {aiSummaryModal.summary}
-            </div>
-          </div>
-          <div className="modal-footer">
-            <Button
-              className="pg-btn-platinum"
-              onClick={() => setAiSummaryModal((p) => ({ ...p, visible: false }))}
-            >
-              Cerrar
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

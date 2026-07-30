@@ -29,7 +29,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMounted } from "@/hooks/use-mounted";
 import { getTopbarStats } from "@/services/topbar-stats";
 import { userTypeLabels } from "@/services/permissions";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +51,7 @@ import { useRecentClaims } from "@/hooks/use-recent-claims";
 import { useDockMagnification } from "@/hooks/use-dock-magnification";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { HelpButton } from "@/components/layout/help-panel";
+import { MyProfileModal } from "@/components/layout/my-profile-modal";
 
 function getInitials(email?: string | null) {
   if (!email) return "U";
@@ -256,6 +257,7 @@ function RecentClaimsButton() {
 export function TopBar() {
   const { user, profile, isLoading, signOut } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
   const topbarInnerRef = useRef<HTMLDivElement>(null);
   useDockMagnification(topbarInnerRef);
@@ -298,11 +300,16 @@ export function TopBar() {
           >
             <Menu />
           </button>
-          <Avatar size="sm">
-            <AvatarFallback className="bg-primary/20 text-primary text-[10px] border border-primary/20">
-              {isLoading ? "..." : getInitials(user?.email)}
-            </AvatarFallback>
-          </Avatar>
+          <button type="button" onClick={() => setProfileOpen(true)} title="Mi perfil" className="topbar-avatar-btn">
+            <Avatar size="sm">
+              {profile?.avatar_url ? (
+                <AvatarImage src={profile.avatar_url} alt={profile.full_name || "Avatar"} />
+              ) : null}
+              <AvatarFallback className="bg-primary/20 text-primary text-[10px] border border-primary/20">
+                {isLoading ? "..." : getInitials(user?.email)}
+              </AvatarFallback>
+            </Avatar>
+          </button>
           <div className="topbar-user-info">
             <span className="topbar-user-name">
               {profile?.full_name || user?.email || "Usuario"}
@@ -359,6 +366,9 @@ export function TopBar() {
           {/* placeholder for help below */}
         </div>
       </div>
+
+      {/* Modal Mi Perfil — se abre al clickar el avatar */}
+      <MyProfileModal open={profileOpen} onOpenChange={setProfileOpen} />
     </div>
   );
 }

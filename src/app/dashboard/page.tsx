@@ -489,7 +489,7 @@ export default function DashboardPage() {
       {stats.totalClaims > 0 && (
         <>
           <div className="dash-section-header">
-            <FileText className="h-[18px] w-[18px]" />
+            <FileText className="h-4.5 w-4.5" />
             <span className="dash-section-title">Siniestros</span>
             <div className="dash-section-line" />
             <span className="dash-section-count">{stats.totalClaims} casos</span>
@@ -508,7 +508,7 @@ export default function DashboardPage() {
                 {stats.claimsByStatus.length > 0 ? (
                   <DonutChart data={stats.claimsByStatus} />
                 ) : (
-                  <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
                     Sin datos
                   </div>
                 )}
@@ -670,7 +670,7 @@ export default function DashboardPage() {
       {stats.totalClaims > 0 && (
         <>
           <div className="dash-section-header">
-            <ClipboardCheck className="h-[18px] w-[18px]" />
+            <ClipboardCheck className="h-4.5 w-4.5" />
             <span className="dash-section-title">Inspecciones</span>
             <div className="dash-section-line" />
             <span className="dash-section-count">{stats.totalSessions} sesiones</span>
@@ -757,7 +757,7 @@ export default function DashboardPage() {
       {stats.totalClaims > 0 && showSystemSection && (
         <>
           <div className="dash-section-header">
-            <Building2 className="h-[18px] w-[18px]" />
+            <Building2 className="h-4.5 w-4.5" />
             <span className="dash-section-title">{isGlobalUser ? "Sistema" : "Mis Compañías"}</span>
             <div className="dash-section-line" />
           </div>
@@ -779,7 +779,7 @@ export default function DashboardPage() {
                     horizontal
                   />
                 ) : (
-                  <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
                     Sin datos
                   </div>
                 )}
@@ -832,7 +832,7 @@ export default function DashboardPage() {
       {stats.totalClaims > 0 && !showSystemSection && (
         <>
           <div className="dash-section-header">
-            <Shield className="h-[18px] w-[18px]" />
+            <Shield className="h-4.5 w-4.5" />
             <span className="dash-section-title">Resumen</span>
             <div className="dash-section-line" />
           </div>
@@ -867,7 +867,7 @@ export default function DashboardPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+                  <div className="h-50 flex items-center justify-center text-sm text-muted-foreground">
                     Sin datos
                   </div>
                 )}

@@ -2951,45 +2951,45 @@
   }
 
   /* ────────────────────────────────────────────────────────────
-   * GroupedContactsList — ScrollSpy + Fixed Header Stack.
+   * GroupedContactsList — iOS Stacking Sticky Headers.
    *
-   * Patrón: PanelBar vertical controlado por scroll.
-   * Los headers viven FUERA del contenedor scroll como flex item.
-   * Se acumulan a medida que el ScrollSpy detecta secciones consumidas.
-   * NO es sticky headers: headers e items en capas separadas.
-   * Sin spacers: el header-stack empuja el scroll area hacia abajo.
+   * Headers sticky dentro del scroll que se apilan al hacer scroll.
+   * z-index decreciente: el primer header pinta encima de todos.
+   *
+   * CLAVE: isolation SOLO en el contenedor scroll, NUNCA en las secciones.
+   * Si las secciones tienen isolation, los items de secciones posteriores
+   * se pintan encima de headers de secciones anteriores (bug conocido).
    * ──────────────────────────────────────────────────────────── */
 
-  .grouped-contacts-container {
-    display: flex;
-    flex-direction: column;
+  .grouped-contacts-scroll {
+    overflow-y: auto;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    /* ÚNICO stacking context aislado. Dentro de él, todos los headers
+       e items comparten el mismo contexto de z-index. */
+    isolation: isolate;
+    position: relative;
+    scroll-behavior: smooth;
   }
 
-  /* Capa de headers acumulados — flex item que crece con cada header.
-     Está fuera del scroll area, por lo que los items nunca compiten
-     con los headers por z-index. */
-  .grouped-contacts-header-stack {
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    background: var(--card) !important;
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  /* SIN isolation en las secciones — deliberado.
+     Si añadimos isolation aquí, los items de la sección 2 se pintan
+     encima del header sticky de la sección 1. */
+  .grouped-contacts-section {
+    /* Sin estilos. */
   }
 
   .grouped-contacts-header {
+    position: sticky;
     height: 24px;
     display: flex;
     align-items: center;
     padding: 0 12px;
-    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+    /* Fondo SÓLIDO (no translúcido) — los items no se ven detrás. */
     background: var(--card) !important;
     cursor: pointer;
     user-select: none;
-    text-align: left;
-    width: 100%;
     transition: background-color 0.15s ease;
   }
 
@@ -3005,23 +3005,15 @@
     color: var(--muted-foreground);
   }
 
-  /* Área de scroll — SOLO items, sin headers, sin spacers. */
-  .grouped-contacts-scroll {
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-    /* position: relative para que offsetTop sea relativo a este contenedor. */
-    position: relative;
-  }
-
-  .grouped-contacts-section {
-    /* Sin estilos especiales. */
-  }
-
   .grouped-contacts-list {
     list-style: none;
     margin: 0;
     padding: 0;
+    /* Items siempre debajo de cualquier header.
+       position: relative + z-index: 0 los mantiene en el fondo
+       del stacking context del contenedor scroll. */
+    position: relative;
+    z-index: 0;
   }
 
   .grouped-contacts-item {

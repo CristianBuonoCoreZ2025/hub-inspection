@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { cleanMarkdown } from "@/lib/utils";
 
 /**
  * AiAnalysisButton
@@ -218,7 +219,7 @@ export function AiAnalysisButton({
               </DialogTitle>
             </div>
             {fileName && (
-              <span className="text-[11px] text-muted-foreground truncate max-w-[300px]">
+              <span className="text-[8px] text-muted-foreground truncate max-w-[300px]">
                 {fileName}
               </span>
             )}
@@ -241,7 +242,7 @@ export function AiAnalysisButton({
                       <Bot className="h-3 w-3 shrink-0 mt-0.5 text-violet-600 dark:text-violet-400" />
                       <div className="space-y-1">
                         <p className="text-[11px] leading-relaxed text-foreground">
-                          {summary}
+                          {cleanMarkdown(summary)}
                         </p>
                         {model && model !== "none" && (
                           <p className="text-[9px] text-muted-foreground">

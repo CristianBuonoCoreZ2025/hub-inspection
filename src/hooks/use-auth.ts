@@ -13,6 +13,11 @@ interface UserProfile {
   user_id: string;
   email: string;
   full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  rut?: string | null;
+  avatar_url?: string | null;
   timezone?: string | null;
   role: UserRole;
   company_id: string | null;
@@ -74,7 +79,7 @@ export function useAuth() {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, user_id, email, full_name, timezone, role, company_id, company:companies!profiles_company_id_fkey(id, name, logo_url, phone, email, address)")
+        .select("id, user_id, email, full_name, first_name, last_name, phone, rut, avatar_url, timezone, role, company_id, company:companies!profiles_company_id_fkey(id, name, logo_url, phone, email, address)")
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw new Error(error.message);

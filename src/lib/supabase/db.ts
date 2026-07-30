@@ -193,6 +193,33 @@ export async function insertMany<T = AnyObj>(
 }
 
 /**
+ * UPSERT múltiples filas (INSERT ... ON CONFLICT DO UPDATE/NOTHING)
+ */
+export async function upsertMany<T = AnyObj>(
+  table: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rows: Record<string, any>[],
+  options?: { onConflict?: string; ignoreDuplicates?: boolean; select?: string }
+): Promise<T[]> {
+  const end = startMeasure(table, "upsert");
+  try {
+    const supabase = getSupabaseClient();
+    let query = supabase.from(table).upsert(rows, {
+      onConflict: options?.onConflict,
+      ignoreDuplicates: options?.ignoreDuplicates ?? true,
+    });
+    if (options?.select) query = query.select(options.select);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    end({ success: true, rowsAffected: data?.length ?? rows.length });
+    return (data as T[]) ?? [];
+  } catch (err) {
+    end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
+    throw err;
+  }
+}
+
+/**
  * UPDATE una fila por ID (equivalente a update_table_by_pk)
  */
 export async function updateRow<T = AnyObj>(

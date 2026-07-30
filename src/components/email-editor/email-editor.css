@@ -1,0 +1,819 @@
+/* ═══════════════════════════════════════════════════════════════
+   Email Editor — Estilos del editor visual estilo Outlook 365
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Contenedor principal ─── */
+.ee-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 600px;
+  background: var(--background, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ee-editor-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.ee-editor-canvas-area {
+  flex: 1;
+  overflow: auto;
+  background: #f8fafc;
+}
+
+/* ─── Ribbon (barra de herramientas) ─── */
+.ee-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: linear-gradient(to bottom, #ffffff, #f1f5f9);
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  min-height: 44px;
+}
+
+.ee-ribbon-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ee-ribbon-divider {
+  width: 1px;
+  height: 24px;
+  background: #e2e8f0;
+  margin: 0 4px;
+}
+
+.ee-ribbon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ee-ribbon-btn:hover:not(:disabled) {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+.ee-ribbon-btn:active:not(:disabled) {
+  background: #c7d2fe;
+}
+
+.ee-ribbon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ee-ribbon-btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.ee-ribbon-select {
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 11px;
+  color: #334155;
+  padding: 0 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+.ee-ribbon-select:hover {
+  border-color: #c7d2fe;
+}
+
+.ee-font-family-select {
+  width: 120px;
+}
+
+.ee-font-size-select {
+  width: 70px;
+}
+
+.ee-ribbon-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.ee-ribbon-zoom-btn:hover {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+}
+
+.ee-ribbon-zoom-value {
+  font-size: 11px;
+  color: #64748b;
+  min-width: 36px;
+  text-align: center;
+}
+
+/* ─── Canvas ─── */
+.ee-canvas-container {
+  min-height: 100%;
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.ee-canvas-paper {
+  width: 100%;
+  max-width: 600px;
+  min-height: 400px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 32px 40px;
+  transform-origin: top center;
+}
+
+/* ─── Bloques ─── */
+.ee-block-wrapper {
+  position: relative;
+  margin: 0 0 8px 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition: border-color 0.15s ease;
+  cursor: text;
+}
+
+.ee-block-wrapper:hover {
+  border-color: #e0e7ff;
+}
+
+.ee-block-selected {
+  border-color: #6366f1 !important;
+  background: rgba(99, 102, 241, 0.03);
+}
+
+.ee-block-locked {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ee-block-locked::after {
+  content: "🔒";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 10px;
+}
+
+/* ─── Tipos de bloque ─── */
+.ee-block-paragraph {
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+.ee-block-heading {
+  margin: 16px 0 8px 0;
+  font-weight: bold;
+}
+
+.ee-heading-1 { font-size: 28px; }
+.ee-heading-2 { font-size: 24px; }
+.ee-heading-3 { font-size: 20px; }
+.ee-heading-4 { font-size: 18px; }
+.ee-heading-5 { font-size: 16px; }
+.ee-heading-6 { font-size: 14px; }
+
+.ee-block-list {
+  margin: 0 0 12px 0;
+  padding-left: 24px;
+}
+
+.ee-block-list ul,
+.ee-block-list ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.ee-block-list li {
+  margin: 0 0 4px 0;
+}
+
+/* ─── Tabla ─── */
+.ee-block-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 12px 0;
+}
+
+.ee-block-table td,
+.ee-block-table th {
+  border: 1px solid #cccccc;
+  padding: 8px;
+  vertical-align: top;
+}
+
+.ee-table-header-row th {
+  background: #f1f5f9;
+  font-weight: bold;
+}
+
+.ee-table-cell {
+  min-height: 24px;
+}
+
+/* ─── Imagen ─── */
+.ee-block-image {
+  margin: 0 0 12px 0;
+}
+
+.ee-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.ee-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100px;
+  background: #f1f5f9;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+/* ─── Botón ─── */
+.ee-block-button {
+  margin: 16px 0;
+}
+
+.ee-button-preview {
+  display: inline-block;
+  padding: 12px 24px;
+  background: #0066cc;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* ─── Cita ─── */
+.ee-block-quote {
+  margin: 0 0 12px 0;
+  padding: 12px 16px;
+  border-left: 4px solid #cccccc;
+  background: #f9f9f9;
+  border-radius: 0 4px 4px 0;
+}
+
+/* ─── Divisor ─── */
+.ee-block-divider {
+  border: none;
+  border-top: 1px solid #cccccc;
+  margin: 16px 0;
+}
+
+/* ─── Espaciador ─── */
+.ee-block-spacer {
+  width: 100%;
+  height: 20px;
+}
+
+/* ─── Columnas ─── */
+.ee-block-columns {
+  display: flex;
+  gap: 16px;
+  margin: 0 0 12px 0;
+}
+
+.ee-column {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Contenedor ─── */
+.ee-block-container {
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin: 0 0 12px 0;
+}
+
+/* ─── Callout ─── */
+.ee-block-callout {
+  padding: 12px 16px;
+  background: #fef3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  margin: 0 0 12px 0;
+}
+
+/* ─── HTML block ─── */
+.ee-block-html {
+  margin: 0 0 12px 0;
+}
+
+/* ─── Firma ─── */
+.ee-block-signature {
+  margin: 16px 0 0 0;
+  padding: 16px 0;
+  border-top: 1px solid #eeeeee;
+}
+
+/* ─── Alineación ─── */
+.ee-align-left { text-align: left; }
+.ee-align-center { text-align: center; }
+.ee-align-right { text-align: right; }
+.ee-align-justify { text-align: justify; }
+
+/* ─── Texto inline editable ─── */
+.ee-inline-text {
+  outline: none;
+  min-height: 1.5em;
+  cursor: text;
+  word-wrap: break-word;
+}
+
+.ee-inline-text:empty::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  font-style: italic;
+  pointer-events: none;
+}
+
+/* ─── Variable chip — campo de combinación de correspondencia ─── */
+.ee-variable-chip {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: #0066cc;
+  border: none;
+  border-radius: 0;
+  font-size: inherit;
+  font-weight: 600;
+  font-family: inherit;
+  user-select: none;
+  cursor: default;
+}
+
+/* ─── Marcas inline ─── */
+.ee-mark-color { color: inherit; }
+.ee-mark-highlight { background-color: transparent; }
+.ee-mark-fontsize { font-size: inherit; }
+.ee-mark-fontfamily { font-family: inherit; }
+
+/* ─── Botón agregar bloque ─── */
+.ee-canvas-add-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 32px;
+  margin: 8px 0;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ee-canvas-add-block:hover {
+  background: #e0e7ff;
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.ee-canvas-add-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ─── Preview panel ─── */
+.ee-preview-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+}
+
+.ee-preview-header {
+  padding: 8px 16px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ee-preview-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.ee-preview-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  min-height: 500px;
+  background: #ffffff;
+}
+
+/* ─── Footer ─── */
+.ee-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #f1f5f9;
+  border-top: 1px solid #e2e8f0;
+}
+
+.ee-footer-btn {
+  padding: 6px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ee-footer-btn-secondary {
+  background: #ffffff;
+  color: #475569;
+}
+
+.ee-footer-btn-secondary:hover {
+  background: #f1f5f9;
+}
+
+.ee-footer-btn-primary {
+  background: #6366f1;
+  color: #ffffff;
+  border-color: #6366f1;
+}
+
+.ee-footer-btn-primary:hover {
+  background: #4f46e5;
+}
+
+/* ─── Color picker ─── */
+.ee-color-picker-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.ee-color-picker-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: transparent;
+}
+
+.ee-color-picker-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  margin-top: 4px;
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ee-color-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.ee-color-swatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s ease;
+}
+
+.ee-color-swatch:hover {
+  transform: scale(1.15);
+  border-color: #6366f1;
+}
+
+.ee-color-swatch-inner {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+}
+
+/* ─── Variables panel (izquierda) ─── */
+.ee-variables-panel {
+  width: 200px;
+  min-width: 200px;
+  border-right: 1px solid #e2e8f0;
+  background: #ffffff;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.ee-variables-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ee-variables-icon {
+  width: 14px;
+  height: 14px;
+  color: #6366f1;
+}
+
+.ee-variables-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.ee-variables-body {
+  padding: 4px 0;
+}
+
+.ee-variables-group {
+  margin-bottom: 2px;
+}
+
+.ee-variables-group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  text-align: left;
+}
+
+.ee-variables-group-header:hover {
+  background: #f1f5f9;
+}
+
+.ee-variables-chevron {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.15s ease;
+  color: #94a3b8;
+}
+
+.ee-variables-chevron-open {
+  transform: rotate(90deg);
+}
+
+.ee-variables-list {
+  padding: 2px 0;
+}
+
+.ee-variables-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 12px 6px 28px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease;
+}
+
+.ee-variables-item:hover {
+  background: #e0e7ff;
+}
+
+.ee-variables-item-key {
+  font-size: 10px;
+  font-family: monospace;
+  color: #3730a3;
+  font-weight: 500;
+}
+
+.ee-variables-item-label {
+  font-size: 10px;
+  color: #64748b;
+}
+
+/* ─── Inspector panel (derecha) ─── */
+.ee-inspector {
+  width: 240px;
+  min-width: 240px;
+  border-left: 1px solid #e2e8f0;
+  background: #ffffff;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.ee-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ee-inspector-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.ee-inspector-type {
+  font-size: 10px;
+  color: #6366f1;
+  background: #e0e7ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.ee-inspector-empty {
+  padding: 16px 12px;
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.ee-inspector-body {
+  padding: 8px 12px;
+}
+
+.ee-inspector-field {
+  margin-bottom: 12px;
+}
+
+.ee-inspector-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.ee-inspector-input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #334155;
+  background: #ffffff;
+  outline: none;
+}
+
+.ee-inspector-input:focus {
+  border-color: #6366f1;
+}
+
+.ee-inspector-select {
+  width: 100%;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #334155;
+  background: #ffffff;
+  cursor: pointer;
+  outline: none;
+}
+
+.ee-inspector-color {
+  width: 100%;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #ffffff;
+  padding: 2px;
+}
+
+/* ─── Table toolbar contextual ─── */
+.ee-table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: #fef3c7;
+  border-bottom: 1px solid #fde68a;
+  flex-wrap: wrap;
+}
+
+.ee-table-toolbar-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #92400e;
+  margin-right: 8px;
+}
+
+.ee-table-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ee-table-toolbar-btn:hover:not(:disabled) {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+}
+
+.ee-table-toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ee-table-toolbar-danger:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.ee-table-toolbar-icon {
+  width: 14px;
+  height: 14px;
+  color: #475569;
+}
+
+.ee-table-toolbar-plus {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  color: #16a34a;
+  background: #ffffff;
+  border-radius: 50%;
+}
+
+.ee-table-toolbar-minus {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  color: #dc2626;
+  background: #ffffff;
+  border-radius: 50%;
+}

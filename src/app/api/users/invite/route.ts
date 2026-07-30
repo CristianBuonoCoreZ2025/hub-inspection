@@ -4,34 +4,39 @@ import { logger } from "@/lib/logger";
 
 /**
  * POST /api/users/invite
- * Body: { email, fullName, role, company_id, clientIds? }
+ * Body: { firstName, middleName?, lastName, email, countryId, role, clientIds?, phone?, rut? }
  *
  * Invita un usuario a la plataforma:
- * 1. Crea el usuario en Supabase Auth (email_confirm=true)
- * 2. Hace upsert del perfil
- * 3. Envía email de invitación con link a /forgot-password
- *
- * El usuario recibe el email, va a /forgot-password, ingresa su email,
- * recibe el código OTP y setea su propia contraseña.
+ * 1. Valida unicidad de email y RUT
+ * 2. Calcula el cliente principal (más antiguo de los marcados)
+ * 3. Crea el usuario en Supabase Auth (email_confirm=true)
+ * 4. El trigger handle_new_user crea el perfil
+ * 5. El trigger sync_user_clients_on_profile_change crea el user_client principal
+ * 6. Se insertan los clientes adicionales (upsert)
+ * 7. Envía email de invitación con link a /forgot-password
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, fullName, role, company_id, clientIds } = body;
+    const { firstName, middleName, lastName, email, countryId, role, clientIds, phone, rut } = body;
 
-    if (!email || !fullName || !role) {
+    if (!email || !firstName || !lastName || !countryId || !role) {
       return NextResponse.json(
-        { error: "Faltan datos: email, fullName y role son obligatorios" },
+        { error: "Faltan datos: firstName, lastName, email, countryId y role son obligatorios" },
         { status: 400 }
       );
     }
 
     const result = await inviteUser({
       email: email.trim().toLowerCase(),
-      fullName: fullName.trim(),
+      firstName: firstName.trim(),
+      middleName: middleName?.trim() || "",
+      lastName: lastName.trim(),
+      countryId,
       role,
-      company_id: company_id || "",
       clientIds: clientIds || [],
+      phone: phone || "",
+      rut: rut || "",
     });
 
     return NextResponse.json(result);

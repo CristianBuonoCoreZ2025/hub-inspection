@@ -240,12 +240,25 @@ export const companySchema = z
 export type CompanyInput = z.infer<typeof companySchema>;
 
 export const inviteUserSchema = z.object({
+  firstName: z.string().min(1, "Primer nombre requerido"),
+  middleName: z.string().optional(),
+  lastName: z.string().min(1, "Apellido requerido"),
   email: z.string().email("Correo inválido"),
-  fullName: z.string().min(1, "Nombre requerido"),
+  countryId: z.string().min(1, "País requerido"),
   role: z.enum(["internal", "adjuster", "inspector", "assistant", "auditor", "dispatcher"]),
-  companyId: z.string().optional(),
-  clientIds: z.array(z.string()).optional(),
-});
+  clientIds: z.array(z.string()),
+  phone: z.string().optional(),
+  rut: z.string().optional(),
+})
+  // Cliente principal obligatorio si el rol requiere clientes
+  .refine((d) => {
+    const rolesWithClients = ["internal", "adjuster", "inspector", "assistant", "auditor", "dispatcher"];
+    if (rolesWithClients.includes(d.role)) return d.clientIds.length > 0;
+    return true;
+  }, {
+    message: "Debes seleccionar al menos un cliente para este rol",
+    path: ["clientIds"],
+  });
 
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 

@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { cleanMarkdown } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2, FileCheck, Search, ChevronDown, ShieldCheck, Check, FileText, Upload, ExternalLink, File, GripVertical, X, Zap } from "lucide-react";
@@ -1332,7 +1333,7 @@ export default function PolicyDetailPage() {
  {doc.ai_summary && (
  <div className="flex items-start gap-1 text-[10px] text-violet-600 dark:text-violet-400 mt-1 pl-5">
  <Zap className="h-3 w-3 shrink-0 mt-0.5" />
- <span className="italic line-clamp-3 wrap-break-word">{doc.ai_summary}</span>
+ <span className="italic line-clamp-3 wrap-break-word">{cleanMarkdown(doc.ai_summary)}</span>
  </div>
  )}
  </td>

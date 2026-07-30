@@ -6,15 +6,16 @@ import { deleteEvidence } from "@/services/inspections";
 import { toast } from "sonner";
 import {
   Upload, Trash2, ImageIcon, Video, FileText, ExternalLink,
-  MapPin, Clock, User, Camera, Lock, X, ZoomIn, Zap, Loader2,
+  MapPin, Clock, User, Camera, Lock, X, ZoomIn, Zap,
 } from "lucide-react";
 import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
+import { AiProcessingBadge } from "@/components/ai/ai-processing-badge";
+import { cleanMarkdown } from "@/lib/utils";
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 
 type UploadItem = {
   id: string;
@@ -135,7 +136,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   const [isDragging, setIsDragging] = useState(false);
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
-  const [aiSummaryModal, setAiSummaryModal] = useState<{ visible: boolean; title: string; summary: string }>({ visible: false, title: "", summary: "" });
+  // El popover de IA ahora vive dentro de cada card (no estado global)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -477,7 +478,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
               onDelete={deleteMutation.mutate}
               readOnly={readOnly}
               onImageClick={setZoomImage}
-              onShowSummary={(ev) => setAiSummaryModal({ visible: true, title: ev.description || "Evidencia", summary: ev.ai_summary! })}
               sessionId={sessionId}
             />
           )}
@@ -489,7 +489,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
               items={videos}
               onDelete={deleteMutation.mutate}
               readOnly={readOnly}
-              onShowSummary={(ev) => setAiSummaryModal({ visible: true, title: ev.description || "Evidencia", summary: ev.ai_summary! })}
               sessionId={sessionId}
             />
           )}
@@ -501,7 +500,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
               items={documents}
               onDelete={deleteMutation.mutate}
               readOnly={readOnly}
-              onShowSummary={(ev) => setAiSummaryModal({ visible: true, title: ev.description || "Evidencia", summary: ev.ai_summary! })}
               sessionId={sessionId}
             />
           )}
@@ -530,37 +528,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           />
         </div>
       )}
-
-      {/* ═══ MODAL: Ver análisis IA completo ═══ */}
-      <Dialog
-        open={aiSummaryModal.visible}
-        onOpenChange={(open) => setAiSummaryModal((p) => ({ ...p, visible: open }))}
-      >
-        <DialogContent className="modal-md-wide" showCloseButton={false}>
-          <div className="modal-header">
-            <DialogTitle className="modal-title flex items-center gap-2">
-              <Zap className="h-4 w-4 text-violet-500" />
-              Análisis IA
-            </DialogTitle>
-          </div>
-          <div className="modal-body modal-grid">
-            <div className="text-[11px] font-medium text-foreground">{aiSummaryModal.title}</div>
-            <div
-              className="ai-summary-scroll rounded-md bg-violet-50/50 p-3 text-[11px] leading-relaxed text-violet-900 dark:bg-violet-950/20 dark:text-violet-200 whitespace-pre-wrap"
-            >
-              {aiSummaryModal.summary}
-            </div>
-          </div>
-          <div className="modal-footer">
-            <Button
-              className="pg-btn-platinum"
-              onClick={() => setAiSummaryModal((p) => ({ ...p, visible: false }))}
-            >
-              Cerrar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -568,7 +535,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 // ─── Sección por tipo ────────────────────────────────────────────
 
 function EvidenceSection({
-  title, count, icon, items, onDelete, readOnly, onImageClick, onShowSummary, sessionId,
+  title, count, icon, items, onDelete, readOnly, onImageClick, sessionId,
 }: {
   title: string;
   count: number;
@@ -577,7 +544,6 @@ function EvidenceSection({
   onDelete: (id: string) => void;
   readOnly?: boolean;
   onImageClick?: (url: string) => void;
-  onShowSummary?: (evidence: Evidence) => void;
   sessionId: string;
 }) {
   return (
@@ -595,7 +561,6 @@ function EvidenceSection({
             onDelete={onDelete}
             readOnly={readOnly}
             onImageClick={onImageClick}
-            onShowSummary={onShowSummary}
             sessionId={sessionId}
           />
         ))}
@@ -606,12 +571,11 @@ function EvidenceSection({
 
 // ─── Card individual (miniatura) ─────────────────────────────────
 
-function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummary, sessionId }: {
+function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId }: {
   evidence: Evidence;
   onDelete: (id: string) => void;
   readOnly?: boolean;
   onImageClick?: (url: string) => void;
-  onShowSummary?: (evidence: Evidence) => void;
   sessionId: string;
 }) {
   const [showActions, setShowActions] = useState(false);
@@ -799,26 +763,42 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, onShowSummar
               <span className="font-medium">IA timeout — usa el botón Brain para reintentar</span>
             </div>
           ) : (
-            <div className="mt-0.5 flex items-center gap-1 text-[9px] text-amber-600 dark:text-amber-400 pt-1">
-              <Loader2 className="h-2.5 w-2.5 shrink-0 animate-spin" />
-              <span className="font-medium">Analizando con IA...</span>
-            </div>
+            <AiProcessingBadge status={evidence.ai_status} />
           )
         ) : evidence.ai_status === "error" ? (
           <div className="mt-0.5 flex items-center gap-1 text-[9px] text-red-500 dark:text-red-400 pt-1">
             <span className="font-medium">IA falló — usa el botón Brain para reintentar</span>
           </div>
         ) : evidence.ai_summary ? (
-          <div
-            className="mt-0.5 flex items-start gap-1 rounded bg-violet-50/50 p-1 dark:bg-violet-950/20 cursor-pointer hover:bg-violet-100/70 dark:hover:bg-violet-900/30 pt-1"
-            title={evidence.ai_summary}
-            onClick={() => onShowSummary?.(evidence)}
-          >
-            <Zap className="mt-0.5 h-2.5 w-2.5 shrink-0 text-violet-500" />
-            <p className="line-clamp-2 text-[9px] leading-relaxed text-violet-700 dark:text-violet-300">
-              {evidence.ai_summary}
-            </p>
-          </div>
+          <Popover>
+            <PopoverTrigger
+              render={
+                <button
+                  className="mt-0.5 flex w-full items-start gap-1 rounded bg-muted/50 p-1 text-left hover:bg-muted cursor-pointer"
+                  title="Ver informe completo"
+                >
+                  <Zap className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-500" />
+                  <p className="line-clamp-2 text-[9px] leading-relaxed text-muted-foreground">
+                    {cleanMarkdown(evidence.ai_summary)}
+                  </p>
+                </button>
+              }
+            />
+            <PopoverContent side="top" align="start" className="w-100 max-w-[90vw] p-0">
+              <div className="ai-popover-header">
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                <span className="ai-popover-code">{evidence.description || "Evidencia"}</span>
+              </div>
+              <div className="ai-popover-body">
+                <div className="ai-report-text">{cleanMarkdown(evidence.ai_summary)}</div>
+                {evidence.ai_model && (
+                  <div className="ai-report-meta">
+                    <span className="font-medium">Modelos:</span> {evidence.ai_model}
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         ) : null}
       </div>
     </div>

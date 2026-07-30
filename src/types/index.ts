@@ -100,6 +100,7 @@ export interface Profile {
   timezone: string | null;
   role: UserRole;
   is_active: boolean;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -645,6 +646,21 @@ export interface BusinessLine {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface AiPrompt {
+  id: string;
+  business_line_id: string | null;
+  prompt_type: "image" | "document";
+  name: string;
+  system_prompt: string;
+  user_prompt: string;
+  refinement_prompt: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  // Join opcional con business_lines
+  business_line?: { name: string } | null;
 }
 
 export interface InsuranceProduct {

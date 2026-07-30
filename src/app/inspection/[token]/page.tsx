@@ -1255,7 +1255,7 @@ function SignaturesTab({ session }: { session: LiveSession }) {
                   <span className="app-body font-medium">Asegurado</span>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={insuredSig.signature_url} alt="Firma asegurado" className="w-full h-[100px] object-contain bg-white rounded border border-slate-800" />
+                <img src={insuredSig.signature_url} alt="Firma asegurado" className="w-full h-25 object-contain bg-white rounded border border-slate-800" />
                 <p className="app-body text-slate-500 mt-1">{fmtDate(insuredSig.signed_at)}</p>
               </div>
             )}
@@ -1266,7 +1266,7 @@ function SignaturesTab({ session }: { session: LiveSession }) {
                   <span className="app-body font-medium">Ajustador</span>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={adjusterSig.signature_url} alt="Firma ajustador" className="w-full h-[100px] object-contain bg-white rounded border border-slate-800" />
+                <img src={adjusterSig.signature_url} alt="Firma ajustador" className="w-full h-25 object-contain bg-white rounded border border-slate-800" />
                 <p className="app-body text-slate-500 mt-1">{fmtDate(adjusterSig.signed_at)}</p>
               </div>
             )}

@@ -180,7 +180,7 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
  updateMutation.mutate({ id: item.id, data: { notes: e.target.value || null } });
  }
  }}
- className="app-input h-6 flex-1 min-w-[100px] text-[11px]"
+ className="app-input h-6 flex-1 min-w-25 text-[11px]"
  />
  <Button
  variant="ghost"

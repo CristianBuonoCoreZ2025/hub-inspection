@@ -88,7 +88,7 @@ export function SpaceClassificationMatrix({
               <tr>
                 <th className="sticky left-0 bg-card z-10">Espacio</th>
                 {classNames.map((cn) => (
-                  <th key={cn} className="text-center min-w-[80px]">{cn}</th>
+                  <th key={cn} className="text-center min-w-20">{cn}</th>
                 ))}
               </tr>
             </thead>

@@ -59,10 +59,10 @@ export async function DELETE(
       }
     }
 
-    // 3. Soft delete
+    // 3. Soft delete + cancelar IA si estaba procesando
     const { error: updateErr } = await supabase
       .from("claim_images")
-      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .update({ is_active: false, ai_status: "skipped", updated_at: new Date().toISOString() })
       .eq("id", id);
 
     if (updateErr) {

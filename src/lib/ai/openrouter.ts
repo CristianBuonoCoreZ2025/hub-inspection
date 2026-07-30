@@ -1,5 +1,6 @@
 import "server-only";
 import { logger } from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/server";
 
 // ═══════════════════════════════════════════════════════════════════
 // OpenRouter AI Service
@@ -7,6 +8,17 @@ import { logger } from "@/lib/logger";
 // Estrategia: FREE primero → PAID barato después.
 // Las API keys se rotan (comma-separated en env).
 // ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Callback para reportar progreso del análisis en tiempo real.
+ * Se llama antes/después de probar cada modelo.
+ * El caller (process-pending) lo usa para actualizar ai_progress en la BD.
+ */
+export type AiProgressCallback = (
+  phase: "vision" | "document" | "refinement",
+  model: string,
+  status: "trying" | "failed" | "ok"
+) => void;
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -28,6 +40,99 @@ function getPaidModels(envVar: string): string[] {
   return raw.split(",").map((m) => m.trim()).filter(Boolean);
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Prompts configurables desde la BD (tabla ai_prompts)
+// ═══════════════════════════════════════════════════════════════
+
+interface AiPromptRow {
+  system_prompt: string;
+  user_prompt: string;
+  refinement_prompt: string | null;
+  source?: string;
+}
+
+/**
+ * Snapshot del prompt usado en un análisis — se guarda en BD para auditoría.
+ * Si alguien edita el prompt después, los análisis antiguos conservan el original.
+ */
+export interface PromptSnapshot {
+  system_prompt: string;
+  user_prompt: string;
+  refinement_prompt: string | null;
+  source: string;
+}
+
+/**
+ * Obtiene el prompt configurado para una línea de negocio y tipo.
+ * Prioridad: prompt específico de la línea > prompt genérico (business_line_id IS NULL).
+ * Si no hay ninguno en la BD, retorna null (el caller usa los defaults hardcodeados).
+ */
+async function getPromptFromDb(
+  businessLineId: string | undefined,
+  promptType: "image" | "document"
+): Promise<AiPromptRow | null> {
+  try {
+    const supabase = createAdminClient();
+
+    // 1. Buscar prompt específico de la línea de negocio
+    if (businessLineId) {
+      const { data } = await supabase
+        .from("ai_prompts")
+        .select("system_prompt, user_prompt, refinement_prompt")
+        .eq("business_line_id", businessLineId)
+        .eq("prompt_type", promptType)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (data) return { ...(data as AiPromptRow), source: `line:${businessLineId}` };
+    }
+
+    // 2. Fallback: prompt genérico (business_line_id IS NULL)
+    const { data: generic } = await supabase
+      .from("ai_prompts")
+      .select("system_prompt, user_prompt, refinement_prompt")
+      .is("business_line_id", null)
+      .eq("prompt_type", promptType)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (generic) return { ...(generic as AiPromptRow), source: "generic" };
+
+    return null;
+  } catch (err) {
+    logger.warn("getPromptFromDb: error leyendo prompt de BD", {
+      component: "openrouter",
+      action: "prompt.db_read",
+      metadata: { error: err instanceof Error ? err.message : String(err), businessLineId, promptType },
+    });
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Fallbacks mínimos (solo si la BD no tiene prompts configurados)
+// Los prompts reales viven en la tabla ai_prompts y se gestionan
+// desde /dashboard/catalogos/gestiones/prompts
+// ═══════════════════════════════════════════════════════════════
+
+const FALLBACK_IMAGE_PROMPT: AiPromptRow = {
+  system_prompt:
+    "Eres un liquidador de seguros experto. Analiza la foto del siniestro " +
+    "y entrega un informe técnico con 4 secciones: DESCRIPCIÓN, DAÑOS, ORIGEN, CONCLUSIÓN. " +
+    "Sé técnico, objetivo y directo. Responde en español de Chile.",
+  user_prompt: "Analiza esta foto de siniestro y entrega el informe técnico para liquidar.",
+  refinement_prompt: null,
+  source: "fallback",
+};
+
+const FALLBACK_DOCUMENT_PROMPT: AiPromptRow = {
+  system_prompt:
+    "Eres un liquidador de seguros senior. Analiza el documento del siniestro " +
+    "y entrega un informe con 4 secciones: DOCUMENTO, DATOS CLAVE, HECHOS, CONCLUSIÓN. " +
+    "Sé técnico, objetivo y directo. Responde en español de Chile.",
+  user_prompt: "Analiza el siguiente documento y entrega el informe para el liquidador.",
+  refinement_prompt: null,
+  source: "fallback",
+};
+
 interface OpenRouterMessage {
   role: "system" | "user" | "assistant";
   content: string | Array<
@@ -42,6 +147,42 @@ interface OpenRouterResponse {
     finish_reason?: string;
   }>;
   error?: { message?: string; code?: string };
+}
+
+/**
+ * Limpia marcadores markdown del texto retornado por la IA.
+ * Los modelos a veces ignoran la instrucción "NO uses markdown" y siguen
+ * emitiendo **negritas**, *cursivas*, #encabezados, -bullets, etc.
+ * Esta función los elimina para que el texto se vea limpio en la UI.
+ */
+function cleanMarkdown(text: string): string {
+  return text
+    // Encabezados: "# Título", "## Título", "### Título" → "Título"
+    .replace(/^#{1,6}\s+/gm, "")
+    // Negrita/cursiva: **texto**, __texto__, *texto*, _texto_ → "texto"
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "$1")
+    .replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, "$1")
+    // Tachado: ~~texto~~ → "texto"
+    .replace(/~~(.+?)~~/g, "$1")
+    // Bullets: "- item" o "* item" al inicio de línea → "item"
+    .replace(/^[\s]*[-*]\s+/gm, "")
+    // Numeración: "1. item" → "item" (mantiene el número sin el punto)
+    .replace(/^(\d+)\.\s+/gm, "$1. ")
+    // Bloques de código: ```...``` → contenido sin los backticks
+    .replace(/```[\w]*\n?([\s\S]*?)```/g, "$1")
+    // Código inline: `código` → "código"
+    .replace(/`([^`]+)`/g, "$1")
+    // Citas: "> texto" → "texto"
+    .replace(/^>\s+/gm, "")
+    // Links: [texto](url) → "texto"
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    // Múltiples espacios seguidos → uno solo
+    .replace(/[ \t]{2,}/g, " ")
+    // Espacios al final de cada línea
+    .replace(/[ \t]+$/gm, "")
+    .trim();
 }
 
 /**
@@ -98,7 +239,7 @@ async function callOpenRouter(
     }
 
     const text = data.choices?.[0]?.message?.content?.trim();
-    return text || null;
+    return text ? cleanMarkdown(text) : null;
   } catch (err) {
     logger.warn("OpenRouter: excepción", {
       component: "openrouter",
@@ -118,7 +259,7 @@ async function callWithFallback(
   messages: OpenRouterMessage[],
   freeModelsEnv: string,
   paidModelsEnv: string,
-  options?: { maxTokens?: number; temperature?: number }
+  options?: { maxTokens?: number; temperature?: number; onProgress?: AiProgressCallback; phase?: "vision" | "document" | "refinement" }
 ): Promise<{ text: string; model: string } | null> {
   const keys = getApiKeys();
   if (keys.length === 0) {
@@ -146,14 +287,20 @@ async function callWithFallback(
     return null;
   }
 
+  const phase = options?.phase ?? "vision";
+  const onProgress = options?.onProgress;
   const failedModels: string[] = [];
   for (const model of chain) {
     // Rotar keys: usar la primera key para el primer modelo, etc.
     const keyIndex = chain.indexOf(model) % keys.length;
     const apiKey = keys[keyIndex];
 
+    // Reportar: probando este modelo
+    if (onProgress) onProgress(phase, model, "trying");
+
     const text = await callOpenRouter(model, messages, apiKey, options);
     if (text) {
+      if (onProgress) onProgress(phase, model, "ok");
       logger.info("OpenRouter: respuesta exitosa", {
         component: "openrouter",
         action: "call.fallback",
@@ -161,6 +308,7 @@ async function callWithFallback(
       });
       return { text, model };
     }
+    if (onProgress) onProgress(phase, model, "failed");
     failedModels.push(model);
   }
 
@@ -180,36 +328,44 @@ async function callWithFallback(
  * Genera una descripción breve de una imagen usando modelos de visión.
  * Estrategia: free primero (Qwen > Gemma > Nemotron > Kimi), luego paid (GPT-4o-mini > GPT-4o).
  *
+ * Los prompts se leen de la tabla ai_prompts según businessLineId.
+ * Si no hay prompt en la BD, usa FALLBACK_IMAGE_PROMPT.
+ *
  * @param buffer  Buffer de la imagen
  * @param mimeType  MIME type (image/jpeg, image/png, image/webp, etc.)
- * @returns Descripción breve (máx ~200 chars) o null si falla
+ * @param businessLineId  ID de la línea de negocio del siniestro (para seleccionar el prompt)
+ * @param onProgress  Callback para reportar progreso (modelo probando/falló/ok)
+ * @returns Descripción + modelo usado + snapshot del prompt (para auditoría)
  */
 export async function describeImage(
   buffer: Buffer,
-  mimeType: string
-): Promise<{ description: string; model: string } | null> {
+  mimeType: string,
+  businessLineId?: string,
+  onProgress?: AiProgressCallback
+): Promise<{ description: string; model: string; promptSnapshot: PromptSnapshot } | null> {
   // Convertir a base64 data URL
   const base64 = buffer.toString("base64");
   const dataUrl = `data:${mimeType};base64,${base64}`;
 
+  // ─── Leer prompt de la BD (específico de la línea > genérico > fallback mínimo) ───
+  const dbPrompt = (await getPromptFromDb(businessLineId, "image")) ?? FALLBACK_IMAGE_PROMPT;
+
+  const systemPrompt = dbPrompt.system_prompt;
+  const userPrompt = dbPrompt.user_prompt;
+  const refinementPrompt = dbPrompt.refinement_prompt;
+
+  // Snapshot del prompt para auditoría (guardar en BD junto al análisis)
+  const promptSnapshot: PromptSnapshot = {
+    system_prompt: systemPrompt,
+    user_prompt: userPrompt,
+    refinement_prompt: refinementPrompt,
+    source: dbPrompt.source ?? "fallback",
+  };
+
   const messages: OpenRouterMessage[] = [
     {
       role: "system",
-      content:
-        "Eres un inspector de seguros experto analizando fotos de siniestros. " +
-        "Describe la imagen de forma objetiva y detallada, útil para el liquidador. " +
-        "Estructura tu respuesta en los siguientes puntos (omite los que no apliquen):\n" +
-        "1. Qué se ve (tipo de espacio/objeto/vehículo, ubicación aparente).\n" +
-        "2. Estado visible y daños evidentes (abolladuras, grietas, humedad, rotos, etc.). " +
-        "Si no hay daños visibles, dilo explícitamente.\n" +
-        "3. Detalle relevante: matrícula visible, marca/modelo si se reconoce, " +
-        "ubicación GPS inferible, hora/fecha si aparece en metadata visual.\n" +
-        "4. Observaciones adicionales que aporten al análisis del siniestro.\n\n" +
-        "Reglas:\n" +
-        "- NO inventes información que no se vea en la imagen.\n" +
-        "- Si la imagen está borrosa o es de mala calidad, dilo.\n" +
-        "- Sé lo más detallado y completo posible.\n" +
-        "- Responde en español de Chile.",
+      content: systemPrompt,
     },
     {
       role: "user",
@@ -220,7 +376,7 @@ export async function describeImage(
         },
         {
           type: "text",
-          text: "Analiza esta foto de inspección de siniestro y extrae toda la información útil para el liquidador.",
+          text: userPrompt,
         },
       ],
     },
@@ -230,12 +386,45 @@ export async function describeImage(
     messages,
     "OPENROUTER_VISION_MODEL_FREE",
     "OPENROUTER_VISION_MODEL",
-    { maxTokens: 1000, temperature: 0.2 }
+    { maxTokens: 1000, temperature: 0.2, onProgress, phase: "vision" }
   );
 
   if (!result) return null;
 
-  return { description: result.text, model: result.model };
+  // ─── SEGUNDO PASO: razonamiento que limpia y formatea el texto crudo ───
+  // Si refinementPrompt es null (vacío en BD), saltar el refinamiento y usar texto crudo.
+  if (refinementPrompt === null) {
+    return { description: result.text, model: `vision:${result.model}`, promptSnapshot };
+  }
+
+  const refinementMessages: OpenRouterMessage[] = [
+    {
+      role: "system",
+      content: refinementPrompt,
+    },
+    {
+      role: "user",
+      content: `Texto crudo del modelo de visión:\n\n${result.text}\n\nEntrega el informe final limpio y profesional para el liquidador.`,
+    },
+  ];
+
+  const refined = await callWithFallback(
+    refinementMessages,
+    "OPENROUTER_DOCUMENT_MODEL_FREE",
+    "OPENROUTER_DOCUMENT_MODEL",
+    { maxTokens: 800, temperature: 0.3, onProgress, phase: "refinement" }
+  );
+
+  // Si el refinamiento falla, usar el texto crudo (mejor que nada)
+  if (refined) {
+    return {
+      description: refined.text,
+      model: `vision:${result.model} | razonamiento:${refined.model}`,
+      promptSnapshot,
+    };
+  }
+
+  return { description: result.text, model: `vision:${result.model}`, promptSnapshot };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -255,8 +444,10 @@ export async function describeImage(
  */
 export async function summarizeDocument(
   buffer: Buffer,
-  maxPages = 5
-): Promise<{ ok: true; summary: string; model: string; pageCount: number } | { ok: false; reason: string }> {
+  maxPages = 5,
+  businessLineId?: string,
+  onProgress?: AiProgressCallback
+): Promise<{ ok: true; summary: string; model: string; pageCount: number; promptSnapshot: PromptSnapshot } | { ok: false; reason: string }> {
   // Extraer texto del PDF usando unpdf (server-side, sin workers)
   let pdfText = "";
   let pageCount = 0;
@@ -288,8 +479,8 @@ export async function summarizeDocument(
       action: "summarize.document.scanned",
       metadata: { pageCount },
     });
-    const scanned = await summarizeScannedPdf(buffer, pageCount);
-    if (scanned) return { ok: true, summary: scanned.summary, model: scanned.model, pageCount };
+    const scanned = await summarizeScannedPdf(buffer, pageCount, businessLineId, onProgress);
+    if (scanned) return { ok: true, summary: scanned.summary, model: scanned.model, pageCount, promptSnapshot: scanned.promptSnapshot };
     return {
       ok: false,
       reason: `PDF escaneado sin texto extraíble (${pageCount} páginas). Los modelos de visión tampoco pudieron procesarlo.`,
@@ -299,27 +490,24 @@ export async function summarizeDocument(
   // Truncar texto a ~8000 chars para no exceder context window de modelos free
   const truncated = pdfText.length > 8000 ? pdfText.slice(0, 8000) + "\n[...texto truncado...]" : pdfText;
 
+  // Leer prompt de la BD (específico de la línea > genérico > fallback mínimo)
+  const dbPrompt = (await getPromptFromDb(businessLineId, "document")) ?? FALLBACK_DOCUMENT_PROMPT;
+
+  const promptSnapshot: PromptSnapshot = {
+    system_prompt: dbPrompt.system_prompt,
+    user_prompt: dbPrompt.user_prompt,
+    refinement_prompt: dbPrompt.refinement_prompt,
+    source: dbPrompt.source ?? "fallback",
+  };
+
   const messages: OpenRouterMessage[] = [
     {
       role: "system",
-      content:
-        "Eres un liquidador de seguros experto analizando documentos de siniestros. " +
-        "Lee cuidadosamente el documento y extrae INFORMACIÓN QUE APORTE al liquidador, " +
-        "no un resumen genérico. Estructura tu respuesta en los siguientes puntos (omite los que no apliquen):\n" +
-        "1. Tipo de documento + entidad emisora + fecha (si se ve).\n" +
-        "2. Datos clave: número de póliza/liquidación, monto asegurado, cobertura, deducible (si aplica).\n" +
-        "3. Hechos relevantes: qué ocurrió, partes involucradas, vehículos/bienes afectados.\n" +
-        "4. Acción sugerida o dato crítico para el siniestro.\n" +
-        "5. Cualquier otra información relevante que aparezca en el documento.\n\n" +
-        "Reglas:\n" +
-        "- Si NO encuentras un dato, NO lo inventes. Omítelo.\n" +
-        "- Usa números exactos cuando estén en el documento.\n" +
-        "- Sé lo más detallado y completo posible.\n" +
-        "- Responde en español de Chile.",
+      content: dbPrompt.system_prompt,
     },
     {
       role: "user",
-      content: `Analiza el siguiente documento (primeras ${maxPages} páginas de ${pageCount}) y extrae toda la información útil para un liquidador de seguros:\n\n${truncated}`,
+      content: `${dbPrompt.user_prompt}\n\n${truncated}`,
     },
   ];
 
@@ -327,24 +515,27 @@ export async function summarizeDocument(
     messages,
     "OPENROUTER_DOCUMENT_MODEL_FREE",
     "OPENROUTER_DOCUMENT_MODEL",
-    { maxTokens: 1500, temperature: 0.3 }
+    { maxTokens: 1500, temperature: 0.3, onProgress, phase: "document" }
   );
 
   if (!result) {
     return { ok: false, reason: "Texto extraído del PDF pero todos los modelos de IA fallaron (sin crédito, rate limit o error de OpenRouter)" };
   }
 
-  return { ok: true, summary: result.text, model: result.model, pageCount };
+  return { ok: true, summary: result.text, model: result.model, pageCount, promptSnapshot };
 }
 
 /**
  * Para PDFs escaneados (sin texto extraíble): renderiza la primera página a imagen
  * con unpdf (renderPageAsImage) y la envía a un modelo de visión.
+ * Usa el prompt de tipo "document" de la BD (es un documento, no una foto de siniestro).
  */
 async function summarizeScannedPdf(
   buffer: Buffer,
-  pageCount: number
-): Promise<{ summary: string; model: string } | null> {
+  pageCount: number,
+  businessLineId?: string,
+  onProgress?: AiProgressCallback
+): Promise<{ summary: string; model: string; promptSnapshot: PromptSnapshot } | null> {
   try {
     const { renderPageAsImage, getDocumentProxy } = await import("unpdf");
     const pdf = await getDocumentProxy(new Uint8Array(buffer));
@@ -372,28 +563,26 @@ async function summarizeScannedPdf(
       image_url: { url },
     }));
 
+    // Leer prompt de la BD (tipo "document" — es un documento escaneado)
+    const dbPrompt = (await getPromptFromDb(businessLineId, "document")) ?? FALLBACK_DOCUMENT_PROMPT;
+
+    const promptSnapshot: PromptSnapshot = {
+      system_prompt: dbPrompt.system_prompt,
+      user_prompt: dbPrompt.user_prompt,
+      refinement_prompt: dbPrompt.refinement_prompt,
+      source: dbPrompt.source ?? "fallback",
+    };
+
     const messages: OpenRouterMessage[] = [
       {
         role: "system",
-        content:
-          "Eres un liquidador de seguros experto analizando un documento escaneado. " +
-          "Extrae INFORMACIÓN QUE APORTE al liquidador, no un resumen genérico. " +
-          "Estructura tu respuesta en máximo 4 líneas:\n" +
-          "1. Tipo de documento + entidad emisora + fecha (si se lee).\n" +
-          "2. Datos clave: número de póliza/liquidación, monto, cobertura, deducible (si se lee).\n" +
-          "3. Hechos relevantes: qué ocurrió, partes involucradas, bienes afectados.\n" +
-          "4. Acción sugerida o dato crítico.\n\n" +
-          "Reglas:\n" +
-          "- Si NO se lee un dato, NO lo inventes. Omítelo.\n" +
-          "- Si la imagen es ilegible, dilo claramente.\n" +
-          "- Responde en español de Chile.\n" +
-          "- Máximo 4 líneas, separadas por ' | '.",
+        content: dbPrompt.system_prompt,
       },
       {
         role: "user",
         content: [
           ...imageContent,
-          { type: "text", text: `Analiza estas ${dataUrls.length} página(s) de un PDF escaneado y extrae toda la información útil para un liquidador de seguros.` },
+          { type: "text", text: `${dbPrompt.user_prompt}\n\nAnaliza estas ${dataUrls.length} página(s) de un PDF escaneado.` },
         ],
       },
     ];
@@ -402,11 +591,11 @@ async function summarizeScannedPdf(
       messages,
       "OPENROUTER_VISION_MODEL_FREE",
       "OPENROUTER_VISION_MODEL",
-      { maxTokens: 1500, temperature: 0.3 }
+      { maxTokens: 1500, temperature: 0.3, onProgress, phase: "document" }
     );
 
     if (!result) return null;
-    return { summary: result.text, model: result.model };
+    return { summary: result.text, model: result.model, promptSnapshot };
   } catch (err) {
     logger.warn("summarizeScannedPdf: falló el render/visión", {
       component: "openrouter",
@@ -422,7 +611,7 @@ async function summarizeScannedPdf(
 // ═══════════════════════════════════════════════════════════════════
 
 export type SummarizeResult =
-  | { ok: true; summary: string; model: string; pageCount?: number }
+  | { ok: true; summary: string; model: string; pageCount?: number; promptSnapshot: PromptSnapshot }
   | { ok: false; reason: string };
 
 /**
@@ -432,14 +621,20 @@ export type SummarizeResult =
  * - Texto/Office → extracción de texto + IA
  * - Otros → { ok: false, reason } con explicación
  *
+ * Los prompts se leen de la tabla ai_prompts según businessLineId.
+ *
  * @param buffer  Buffer del archivo
  * @param mimeType  MIME type
  * @param fileName  Nombre del archivo (para fallback de detección)
+ * @param businessLineId  ID de la línea de negocio (para seleccionar el prompt de IA)
+ * @param onProgress  Callback para reportar progreso en tiempo real
  */
 export async function summarizeFile(
   buffer: Buffer,
   mimeType: string,
-  fileName?: string
+  fileName?: string,
+  businessLineId?: string,
+  onProgress?: AiProgressCallback
 ): Promise<SummarizeResult> {
   // Normalizar mimeType: si es octet-stream, intentar adivinar desde el nombre
   let effectiveMime = mimeType;
@@ -449,15 +644,15 @@ export async function summarizeFile(
   }
 
   if (effectiveMime.startsWith("image/")) {
-    const result = await describeImage(buffer, effectiveMime);
+    const result = await describeImage(buffer, effectiveMime, businessLineId, onProgress);
     if (!result) return { ok: false, reason: "Todos los modelos de visión fallaron (sin crédito, rate limit o error de OpenRouter)" };
-    return { ok: true, summary: result.description, model: result.model };
+    return { ok: true, summary: result.description, model: result.model, promptSnapshot: result.promptSnapshot };
   }
 
   if (effectiveMime === "application/pdf") {
-    const result = await summarizeDocument(buffer, 5);
+    const result = await summarizeDocument(buffer, 5, businessLineId, onProgress);
     if (!result.ok) return { ok: false, reason: result.reason };
-    return { ok: true, summary: result.summary, model: result.model, pageCount: result.pageCount };
+    return { ok: true, summary: result.summary, model: result.model, pageCount: result.pageCount, promptSnapshot: result.promptSnapshot };
   }
 
   // Texto plano y similares: enviar directamente a IA
@@ -469,9 +664,9 @@ export async function summarizeFile(
   ) {
     const text = buffer.toString("utf-8");
     if (!text.trim()) return { ok: false, reason: "El archivo de texto está vacío" };
-    const result = await summarizeText(text, fileName || "archivo de texto");
+    const result = await summarizeText(text, businessLineId, onProgress);
     if (!result) return { ok: false, reason: "Todos los modelos fallaron al resumir el texto" };
-    return { ok: true, summary: result.summary, model: result.model };
+    return { ok: true, summary: result.summary, model: result.model, promptSnapshot: result.promptSnapshot };
   }
 
   // Word .docx
@@ -481,9 +676,9 @@ export async function summarizeFile(
   ) {
     const text = await extractDocxText(buffer);
     if (!text || !text.trim()) return { ok: false, reason: "No se pudo extraer texto del .docx (posiblemente es solo imágenes)" };
-    const result = await summarizeText(text, fileName || "documento Word");
+    const result = await summarizeText(text, businessLineId, onProgress);
     if (!result) return { ok: false, reason: "Texto extraído del .docx pero todos los modelos fallaron" };
-    return { ok: true, summary: result.summary, model: result.model };
+    return { ok: true, summary: result.summary, model: result.model, promptSnapshot: result.promptSnapshot };
   }
 
   // Tipos no soportados
@@ -542,31 +737,29 @@ async function extractDocxText(buffer: Buffer): Promise<string | null> {
  */
 async function summarizeText(
   text: string,
-  label: string
-): Promise<{ summary: string; model: string } | null> {
+  businessLineId?: string,
+  onProgress?: AiProgressCallback
+): Promise<{ summary: string; model: string; promptSnapshot: PromptSnapshot } | null> {
   const truncated = text.length > 8000 ? text.slice(0, 8000) + "\n[...texto truncado...]" : text;
+
+  // Leer prompt de la BD (específico de la línea > genérico > fallback mínimo)
+  const dbPrompt = (await getPromptFromDb(businessLineId, "document")) ?? FALLBACK_DOCUMENT_PROMPT;
+
+  const promptSnapshot: PromptSnapshot = {
+    system_prompt: dbPrompt.system_prompt,
+    user_prompt: dbPrompt.user_prompt,
+    refinement_prompt: dbPrompt.refinement_prompt,
+    source: dbPrompt.source ?? "fallback",
+  };
 
   const messages: OpenRouterMessage[] = [
     {
       role: "system",
-      content:
-        "Eres un liquidador de seguros experto analizando documentos de siniestros. " +
-        "Lee cuidadosamente el documento y extrae INFORMACIÓN QUE APORTE al liquidador, " +
-        "no un resumen genérico. Estructura tu respuesta en los siguientes puntos (omite los que no apliquen):\n" +
-        "1. Tipo de documento + entidad emisora + fecha (si se ve).\n" +
-        "2. Datos clave: número de póliza/liquidación, monto, cobertura, deducible (si aplica).\n" +
-        "3. Hechos relevantes: qué ocurrió, partes involucradas, bienes afectados.\n" +
-        "4. Acción sugerida o dato crítico.\n" +
-        "5. Cualquier otra información relevante que aparezca en el documento.\n\n" +
-        "Reglas:\n" +
-        "- Si NO encuentras un dato, NO lo inventes. Omítelo.\n" +
-        "- Usa números exactos cuando estén en el documento.\n" +
-        "- Sé lo más detallado y completo posible.\n" +
-        "- Responde en español de Chile.",
+      content: dbPrompt.system_prompt,
     },
     {
       role: "user",
-      content: `Analiza el siguiente documento (${label}) y extrae toda la información útil para un liquidador de seguros:\n\n${truncated}`,
+      content: `${dbPrompt.user_prompt}\n\n${truncated}`,
     },
   ];
 
@@ -574,10 +767,10 @@ async function summarizeText(
     messages,
     "OPENROUTER_DOCUMENT_MODEL_FREE",
     "OPENROUTER_DOCUMENT_MODEL",
-    { maxTokens: 1500, temperature: 0.3 }
+    { maxTokens: 1500, temperature: 0.3, onProgress, phase: "document" }
   );
 
   if (!result) return null;
 
-  return { summary: result.text, model: result.model };
+  return { summary: result.text, model: result.model, promptSnapshot };
 }

@@ -1,4 +1,4 @@
-import { fetchAll, insertRow, deleteRow, deleteWhere, insertMany } from "@/lib/supabase/db";
+import { fetchAll, insertRow, deleteRow, upsertMany } from "@/lib/supabase/db";
 import type { UserClient, Profile } from "@/types";
 
 const USER_CLIENT_SELECT = "id, user_id, company_id, created_at, company:companies!user_clients_company_id_fkey(id, name, slug)";
@@ -80,13 +80,27 @@ export async function removeUserClient(id: string): Promise<boolean> {
 }
 
 export async function setUserClients(userId: string, companyIds: string[]): Promise<void> {
-  // Delete existing
-  await deleteWhere("user_clients", { user_id: userId });
-
-  // Insert new
+  // Upsert (no borrar): el trigger sync_user_clients_on_profile_change
+  // mantiene el principal sincronizado. Si borramos y reinsertamos,
+  // peleamos con el trigger. Upsert con ON CONFLICT DO NOTHING es idempotente.
   if (companyIds.length === 0) return;
-  await insertMany(
+  await upsertMany(
     "user_clients",
     companyIds.map((companyId) => ({ user_id: userId, company_id: companyId })),
+    { onConflict: "user_id,company_id", ignoreDuplicates: true },
   );
+}
+
+/**
+ * Elimina los user_clients de un usuario que NO estén en keepIds.
+ * Sirve para quitar clientes adicionales al editar sin tocar el principal.
+ */
+export async function removeUserClientsNotInList(userId: string, keepIds: string[]): Promise<void> {
+  const supabase = (await import("@/lib/supabase/client")).getSupabaseClient();
+  const { error } = await supabase
+    .from("user_clients")
+    .delete()
+    .eq("user_id", userId)
+    .not("company_id", "in", keepIds.length > 0 ? `(${keepIds.map((id) => `"${id}"`).join(",")})` : `("")`);
+  if (error) throw new Error(error.message);
 }

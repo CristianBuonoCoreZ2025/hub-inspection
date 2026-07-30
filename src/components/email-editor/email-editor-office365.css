@@ -1,0 +1,1187 @@
+/* ═══════════════════════════════════════════════════════════════
+   Email Editor — Layout Office 365 / Word Online
+   ═══════════════════════════════════════════════════════════════
+
+   Todos los estilos están scoped bajo .ee-layout-office365.
+   No afectan al layout legacy.
+   Inspirado en Microsoft Outlook 365 y Word Online.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Variables CSS del tema Office 365 ─── */
+.ee-layout-office365 {
+  --office-bg: #f3f2f1;
+  --office-paper: #ffffff;
+  --office-ribbon-bg: #ffffff;
+  --office-ribbon-border: #e1dfdd;
+  --office-ribbon-hover: #f3f2f1;
+  --office-ribbon-active: #edebe9;
+  --office-ribbon-pressed: #e1dfdd;
+  --office-accent: #106ebe;
+  --office-accent-light: #deecf9;
+  --office-accent-hover: #005a9e;
+  --office-text: #323130;
+  --office-text-secondary: #605e5c;
+  --office-text-muted: #a19f9d;
+  --office-border: #edebe9;
+  --office-shadow: rgba(0, 0, 0, 0.14);
+  --office-shadow-hover: rgba(0, 0, 0, 0.22);
+  --office-transition: 150ms ease;
+  --office-font: "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --office-paper-width: 816px;
+  --office-paper-padding: 72px 80px;
+}
+
+/* ─── Contenedor principal ─── */
+.ee-layout-office365.ee-editor {
+  background: var(--office-bg);
+  border: none;
+  border-radius: 0;
+  font-family: var(--office-font);
+  color: var(--office-text);
+}
+
+/* ─── Ribbon — Simplified Outlook 365 (una sola fila) ─── */
+.ee-layout-office365 .ee-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background: var(--office-ribbon-bg);
+  border-bottom: 1px solid var(--office-ribbon-border);
+  flex-wrap: nowrap;
+  height: 40px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.ee-layout-office365 .ee-ribbon::-webkit-scrollbar {
+  height: 3px;
+}
+
+.ee-layout-office365 .ee-ribbon::-webkit-scrollbar-thumb {
+  background: var(--office-text-muted);
+  border-radius: 2px;
+}
+
+/* Grupos ocultos — el ribbon simplificado no usa grupos con label */
+.ee-layout-office365 .ee-ribbon-group {
+  display: contents;
+}
+
+.ee-layout-office365 .ee-ribbon-group::after {
+  content: none;
+}
+
+/* ─── Separadores verticales finos ─── */
+.ee-layout-office365 .ee-ribbon-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--office-ribbon-border);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* ─── Botones del ribbon — 28x28, una sola fila ─── */
+.ee-layout-office365 .ee-ribbon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--office-text);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--office-transition), border-color var(--office-transition), color var(--office-transition);
+}
+
+.ee-layout-office365 .ee-ribbon-btn:hover:not(:disabled) {
+  background: var(--office-ribbon-hover);
+  border-color: var(--office-ribbon-border);
+  color: var(--office-text);
+}
+
+.ee-layout-office365 .ee-ribbon-btn:active:not(:disabled) {
+  background: var(--office-ribbon-pressed);
+}
+
+.ee-layout-office365 .ee-ribbon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ─── Estado activo (toggle on) ─── */
+.ee-layout-office365 .ee-ribbon-btn.ee-btn-active {
+  background: var(--office-accent-light);
+  border-color: var(--office-accent);
+  color: var(--office-accent-hover);
+}
+
+.ee-layout-office365 .ee-ribbon-btn.ee-btn-active:hover {
+  background: #c7e0f4;
+  border-color: var(--office-accent);
+}
+
+.ee-layout-office365 .ee-ribbon-btn-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.5;
+}
+
+/* ─── Selects del ribbon — compactos, una fila ─── */
+.ee-layout-office365 .ee-ribbon-select {
+  height: 28px;
+  border: 1px solid var(--office-ribbon-border);
+  border-radius: 3px;
+  background: var(--office-ribbon-bg);
+  font-size: 12px;
+  font-family: var(--office-font);
+  color: var(--office-text);
+  padding: 0 6px;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+  transition: border-color var(--office-transition);
+}
+
+.ee-layout-office365 .ee-ribbon-select:hover {
+  border-color: var(--office-text-muted);
+  background: var(--office-ribbon-hover);
+}
+
+.ee-layout-office365 .ee-ribbon-select:focus {
+  border-color: var(--office-accent);
+}
+
+.ee-layout-office365 .ee-font-family-select {
+  width: 110px;
+}
+
+.ee-layout-office365 .ee-font-size-select {
+  width: 50px;
+}
+
+/* ─── Zoom dropdown ─── */
+.ee-layout-office365 .ee-ribbon-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--office-text);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background var(--office-transition);
+}
+
+.ee-layout-office365 .ee-ribbon-zoom-btn:hover {
+  background: var(--office-ribbon-hover);
+}
+
+.ee-layout-office365 .ee-ribbon-zoom-value {
+  font-size: 11px;
+  color: var(--office-text-secondary);
+  min-width: 40px;
+  text-align: center;
+  cursor: pointer;
+  padding: 4px 4px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  transition: background var(--office-transition);
+}
+
+.ee-layout-office365 .ee-ribbon-zoom-value:hover {
+  background: var(--office-ribbon-hover);
+}
+
+/* ─── Zoom menu dropdown ─── */
+.ee-layout-office365 .ee-zoom-dropdown-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ee-layout-office365 .ee-zoom-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  margin-top: 4px;
+  padding: 4px;
+  background: var(--office-ribbon-bg);
+  border: 1px solid var(--office-ribbon-border);
+  border-radius: 3px;
+  box-shadow: 0 2px 8px var(--office-shadow);
+  min-width: 80px;
+}
+
+.ee-layout-office365 .ee-zoom-menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--office-text);
+  font-size: 12px;
+  font-family: var(--office-font);
+  cursor: pointer;
+  text-align: center;
+  transition: background var(--office-transition);
+}
+
+.ee-layout-office365 .ee-zoom-menu-item:hover {
+  background: var(--office-ribbon-hover);
+}
+
+.ee-layout-office365 .ee-zoom-menu-item-active {
+  background: var(--office-accent-light);
+  color: var(--office-accent-hover);
+  font-weight: 600;
+}
+
+/* ─── Área del canvas — fondo gris como Word ─── */
+.ee-layout-office365 .ee-editor-canvas-area {
+  flex: 1;
+  overflow: auto;
+  background: var(--office-bg);
+  scrollbar-width: thin;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.ee-layout-office365 .ee-editor-canvas-area::-webkit-scrollbar {
+  width: 10px;
+}
+
+.ee-layout-office365 .ee-editor-canvas-area::-webkit-scrollbar-thumb {
+  background: #c8c6c4;
+  border-radius: 5px;
+}
+
+.ee-layout-office365 .ee-editor-canvas-area::-webkit-scrollbar-thumb:hover {
+  background: #a19f9d;
+}
+
+/* ─── Hoja A4 — papel blanco con sombra ─── */
+.ee-layout-office365 .ee-canvas-container {
+  min-height: 100%;
+  padding: 40px 24px 80px 24px;
+  display: flex;
+  justify-content: center;
+  background: var(--office-bg);
+}
+
+.ee-layout-office365 .ee-canvas-paper {
+  width: 100%;
+  max-width: var(--office-paper-width);
+  min-height: 1056px;
+  background: var(--office-paper);
+  border-radius: 2px;
+  box-shadow: 0 2px 6px var(--office-shadow), 0 0 1px rgba(0, 0, 0, 0.1);
+  padding: var(--office-paper-padding);
+  transform-origin: top center;
+  transition: box-shadow var(--office-transition);
+  font-family: var(--office-font);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--office-text);
+}
+
+.ee-layout-office365 .ee-canvas-paper:hover {
+  box-shadow: 0 4px 12px var(--office-shadow-hover), 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+/* ─── Eliminar completamente la apariencia de bloques ─── */
+.ee-layout-office365 .ee-block-wrapper {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  cursor: text;
+  transition: none;
+}
+
+/* Sin borde en hover — el usuario no debe sentir que hay bloques */
+.ee-layout-office365 .ee-block-wrapper:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* ─── Selección — sutil, solo cuando hay selección múltiple ─── */
+.ee-layout-office365 .ee-block-selected {
+  border: none !important;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Selección múltiple: fondo azul muy sutil para indicar rango */
+.ee-layout-office365 .ee-block-wrapper.ee-block-selected {
+  background: rgba(16, 110, 190, 0.04);
+  border-left: 2px solid var(--office-accent);
+  padding-left: 6px;
+  margin-left: -8px;
+}
+
+.ee-layout-office365 .ee-block-locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ee-layout-office365 .ee-block-locked::after {
+  display: none;
+}
+
+/* ─── Ocultar botón "+" de agregar bloque ─── */
+.ee-layout-office365 .ee-canvas-add-block {
+  display: none;
+}
+
+/* ─── Tipografía de bloques — estilo Word ─── */
+.ee-layout-office365 .ee-block-paragraph {
+  margin: 0 0 8px 0;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.ee-layout-office365 .ee-block-heading {
+  margin: 14px 0 6px 0;
+  font-weight: 600;
+  color: var(--office-text);
+  line-height: 1.3;
+}
+
+.ee-layout-office365 .ee-heading-1 { font-size: 26px; font-weight: 700; }
+.ee-layout-office365 .ee-heading-2 { font-size: 22px; font-weight: 600; }
+.ee-layout-office365 .ee-heading-3 { font-size: 18px; font-weight: 600; }
+.ee-layout-office365 .ee-heading-4 { font-size: 16px; font-weight: 600; }
+.ee-layout-office365 .ee-heading-5 { font-size: 14px; font-weight: 600; }
+.ee-layout-office365 .ee-heading-6 { font-size: 13px; font-weight: 600; }
+
+.ee-layout-office365 .ee-block-list {
+  margin: 0 0 8px 0;
+  padding-left: 28px;
+  line-height: 1.6;
+}
+
+.ee-layout-office365 .ee-block-list ul,
+.ee-layout-office365 .ee-block-list ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.ee-layout-office365 .ee-block-list li {
+  margin: 0 0 4px 0;
+}
+
+/* ─── Tabla — estilo Outlook ─── */
+.ee-layout-office365 .ee-block-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 12px 0;
+  font-size: 13px;
+}
+
+.ee-layout-office365 .ee-block-table td,
+.ee-layout-office365 .ee-block-table th {
+  border: 1px solid #d1d1d1;
+  padding: 6px 8px;
+  vertical-align: top;
+  transition: border-color var(--office-transition);
+}
+
+.ee-layout-office365 .ee-block-table td:hover,
+.ee-layout-office365 .ee-block-table th:hover {
+  border-color: var(--office-accent);
+}
+
+.ee-layout-office365 .ee-table-header-row th {
+  background: #f3f2f1;
+  font-weight: 600;
+  color: var(--office-text);
+}
+
+.ee-layout-office365 .ee-table-cell {
+  min-height: 24px;
+}
+
+/* ─── Imagen ─── */
+.ee-layout-office365 .ee-block-image {
+  margin: 0 0 12px 0;
+}
+
+.ee-layout-office365 .ee-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 2px;
+  transition: box-shadow var(--office-transition);
+}
+
+.ee-layout-office365 .ee-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 80px;
+  background: #faf9f8;
+  border: 1px solid #edebe9;
+  border-radius: 2px;
+  color: var(--office-text-muted);
+  font-size: 12px;
+}
+
+/* ─── Botón CTA ─── */
+.ee-layout-office365 .ee-block-button {
+  margin: 12px 0;
+}
+
+.ee-layout-office365 .ee-button-preview {
+  display: inline-block;
+  padding: 10px 24px;
+  background: var(--office-accent);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 2px;
+  text-decoration: none;
+  cursor: pointer;
+  font-family: var(--office-font);
+  transition: background var(--office-transition);
+}
+
+.ee-layout-office365 .ee-button-preview:hover {
+  background: var(--office-accent-hover);
+}
+
+/* ─── Cita ─── */
+.ee-layout-office365 .ee-block-quote {
+  margin: 0 0 12px 0;
+  padding: 8px 16px;
+  border-left: 3px solid var(--office-accent);
+  background: #faf9f8;
+  border-radius: 0;
+  color: var(--office-text-secondary);
+  font-style: italic;
+}
+
+/* ─── Divisor ─── */
+.ee-layout-office365 .ee-block-divider {
+  border: none;
+  border-top: 1px solid #d1d1d1;
+  margin: 12px 0;
+}
+
+/* ─── Espaciador ─── */
+.ee-layout-office365 .ee-block-spacer {
+  width: 100%;
+  height: 20px;
+}
+
+/* ─── Columnas ─── */
+.ee-layout-office365 .ee-block-columns {
+  display: flex;
+  gap: 16px;
+  margin: 0 0 12px 0;
+}
+
+.ee-layout-office365 .ee-column {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Contenedor ─── */
+.ee-layout-office365 .ee-block-container {
+  padding: 16px 20px;
+  background: #faf9f8;
+  border-radius: 2px;
+  margin: 0 0 12px 0;
+}
+
+/* ─── Callout ─── */
+.ee-layout-office365 .ee-block-callout {
+  padding: 10px 16px;
+  background: #fff4ce;
+  border: 1px solid #fde300;
+  border-left: 4px solid #fde300;
+  border-radius: 2px;
+  margin: 0 0 12px 0;
+  font-size: 13px;
+}
+
+/* ─── Firma ─── */
+.ee-layout-office365 .ee-block-signature {
+  margin: 16px 0 0 0;
+  padding: 12px 0;
+  border-top: 1px solid #edebe9;
+  color: var(--office-text-secondary);
+  font-size: 12px;
+}
+
+/* ─── Texto inline editable ─── */
+.ee-layout-office365 .ee-inline-text {
+  outline: none;
+  min-height: 1.6em;
+  cursor: text;
+  word-wrap: break-word;
+  font-family: var(--office-font);
+  transition: background var(--office-transition);
+}
+
+.ee-layout-office365 .ee-inline-text:empty::before {
+  content: attr(data-placeholder);
+  color: var(--office-text-muted);
+  font-style: italic;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.ee-layout-office365 .ee-inline-text:focus {
+  background: transparent;
+}
+
+/* ─── Variables — campos de combinación de correspondencia estilo Word ─── */
+/* «Cliente» integrado en el texto, sin chips ni botones */
+.ee-layout-office365 .ee-variable-chip {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: var(--office-accent);
+  border: none;
+  border-radius: 0;
+  font-size: inherit;
+  font-weight: 600;
+  font-family: var(--office-font);
+  user-select: none;
+  cursor: default;
+  transition: background var(--office-transition), color var(--office-transition);
+}
+
+/* Hover: sutil cambio de color */
+.ee-layout-office365 .ee-variable-chip:hover {
+  color: var(--office-accent-hover);
+  background: rgba(16, 110, 190, 0.06);
+}
+
+/* Selección: fondo azul claro, sin borde */
+.ee-layout-office365 .ee-variable-chip:focus,
+.ee-layout-office365 .ee-variable-chip:focus-within {
+  background: rgba(16, 110, 190, 0.12);
+  color: var(--office-accent-hover);
+  outline: none;
+}
+
+/* ─── Marcas inline ─── */
+.ee-layout-office365 .ee-mark-color { color: inherit; }
+.ee-layout-office365 .ee-mark-highlight { background-color: transparent; }
+.ee-layout-office365 .ee-mark-fontsize { font-size: inherit; }
+.ee-layout-office365 .ee-mark-fontfamily { font-family: inherit; }
+
+/* ─── Alineación ─── */
+.ee-layout-office365 .ee-align-left { text-align: left; }
+.ee-layout-office365 .ee-align-center { text-align: center; }
+.ee-layout-office365 .ee-align-right { text-align: right; }
+.ee-layout-office365 .ee-align-justify { text-align: justify; }
+
+/* ─── Preview panel ─── */
+.ee-layout-office365 .ee-preview-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  background: var(--office-bg);
+  overflow: hidden;
+}
+
+.ee-layout-office365 .ee-preview-header {
+  padding: 8px 16px;
+  background: var(--office-ribbon-bg);
+  border-bottom: 1px solid var(--office-ribbon-border);
+  flex-shrink: 0;
+}
+
+.ee-layout-office365 .ee-preview-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--office-text);
+  font-family: var(--office-font);
+}
+
+.ee-layout-office365 .ee-preview-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  min-height: 0;
+  background: var(--office-paper);
+}
+
+/* ─── Footer ─── */
+.ee-layout-office365 .ee-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--office-ribbon-bg);
+  border-top: 1px solid var(--office-ribbon-border);
+}
+
+.ee-layout-office365 .ee-footer-btn {
+  padding: 6px 20px;
+  border: 1px solid var(--office-ribbon-border);
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--office-font);
+  cursor: pointer;
+  transition: background var(--office-transition), border-color var(--office-transition);
+}
+
+.ee-layout-office365 .ee-footer-btn-secondary {
+  background: var(--office-ribbon-bg);
+  color: var(--office-text);
+}
+
+.ee-layout-office365 .ee-footer-btn-secondary:hover {
+  background: var(--office-ribbon-hover);
+  border-color: var(--office-text-muted);
+}
+
+.ee-layout-office365 .ee-footer-btn-primary {
+  background: var(--office-accent);
+  color: #ffffff;
+  border-color: var(--office-accent);
+}
+
+.ee-layout-office365 .ee-footer-btn-primary:hover {
+  background: var(--office-accent-hover);
+  border-color: var(--office-accent-hover);
+}
+
+/* ─── Color picker ─── */
+.ee-layout-office365 .ee-color-picker-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  margin-top: 4px;
+  padding: 8px;
+  background: var(--office-ribbon-bg);
+  border: 1px solid var(--office-ribbon-border);
+  border-radius: 3px;
+  box-shadow: 0 2px 8px var(--office-shadow);
+}
+
+.ee-layout-office365 .ee-color-swatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--office-border);
+  border-radius: 2px;
+  background: var(--office-ribbon-bg);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s ease, border-color var(--office-transition);
+}
+
+.ee-layout-office365 .ee-color-swatch:hover {
+  transform: scale(1.12);
+  border-color: var(--office-accent);
+}
+
+.ee-layout-office365 .ee-color-swatch-inner {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 1px;
+}
+
+/* ─── Panel de variables (izquierda) — oculto en office365 ─── */
+.ee-layout-office365 .ee-variables-panel {
+  display: none;
+}
+
+.ee-layout-office365 .ee-variables-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--office-ribbon-bg);
+  border-bottom: 1px solid var(--office-ribbon-border);
+  flex-shrink: 0;
+}
+
+.ee-layout-office365 .ee-variables-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--office-text);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Buscador */
+.ee-layout-office365 .ee-variables-search-wrap {
+  position: relative;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--office-border);
+  flex-shrink: 0;
+}
+
+.ee-layout-office365 .ee-variables-search-icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 13px;
+  height: 13px;
+  color: var(--office-text-muted);
+  pointer-events: none;
+}
+
+.ee-layout-office365 .ee-variables-search {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px 0 28px;
+  border: 1px solid var(--office-ribbon-border);
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: var(--office-font);
+  color: var(--office-text);
+  background: var(--office-ribbon-bg);
+  outline: none;
+  transition: border-color var(--office-transition);
+}
+
+.ee-layout-office365 .ee-variables-search:focus {
+  border-color: var(--office-accent);
+}
+
+.ee-layout-office365 .ee-variables-search::placeholder {
+  color: var(--office-text-muted);
+}
+
+.ee-layout-office365 .ee-variables-body {
+  padding: 4px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ee-layout-office365 .ee-variables-group {
+  margin-bottom: 0;
+}
+
+.ee-layout-office365 .ee-variables-group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--office-text);
+  text-align: left;
+  transition: background var(--office-transition);
+}
+
+.ee-layout-office365 .ee-variables-group-header:hover {
+  background: var(--office-ribbon-hover);
+}
+
+.ee-layout-office365 .ee-variables-chevron {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--office-transition);
+  color: var(--office-text-muted);
+  flex-shrink: 0;
+}
+
+.ee-layout-office365 .ee-variables-chevron-open {
+  transform: rotate(90deg);
+}
+
+.ee-layout-office365 .ee-variables-fav-icon {
+  width: 12px;
+  height: 12px;
+  color: #f5b400;
+  flex-shrink: 0;
+}
+
+.ee-layout-office365 .ee-variables-list {
+  padding: 0;
+}
+
+/* Item de variable — label + valor + favorito */
+.ee-layout-office365 .ee-variables-item {
+  display: flex;
+  align-items: center;
+  padding-left: 28px;
+  transition: background var(--office-transition);
+}
+
+.ee-layout-office365 .ee-variables-item:hover {
+  background: var(--office-accent-light);
+}
+
+.ee-layout-office365 .ee-variables-item-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px 4px 5px 0;
+  border: none;
+  background: transparent;
+  cursor: grab;
+  text-align: left;
+  font-family: var(--office-font);
+}
+
+.ee-layout-office365 .ee-variables-item-btn:active {
+  cursor: grabbing;
+}
+
+.ee-layout-office365 .ee-variables-item-label {
+  font-size: 11px;
+  color: var(--office-text);
+  font-weight: 500;
+}
+
+.ee-layout-office365 .ee-variables-item-value {
+  font-size: 10px;
+  color: var(--office-text-secondary);
+  font-style: italic;
+}
+
+/* Botón favorito */
+.ee-layout-office365 .ee-variables-item-fav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity var(--office-transition), background var(--office-transition);
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.ee-layout-office365 .ee-variables-item:hover .ee-variables-item-fav {
+  opacity: 0.5;
+}
+
+.ee-layout-office365 .ee-variables-item-fav:hover {
+  opacity: 1 !important;
+  background: var(--office-ribbon-hover);
+}
+
+.ee-layout-office365 .ee-variables-item-fav-active {
+  opacity: 1 !important;
+}
+
+.ee-layout-office365 .ee-variables-fav-star {
+  width: 13px;
+  height: 13px;
+  color: var(--office-text-muted);
+}
+
+.ee-layout-office365 .ee-variables-item-fav-active .ee-variables-fav-star {
+  color: #f5b400;
+  fill: #f5b400;
+}
+
+/* Estado vacío */
+.ee-layout-office365 .ee-variables-empty {
+  padding: 16px 12px;
+  font-size: 11px;
+  color: var(--office-text-muted);
+  text-align: center;
+}
+
+/* ─── Inspector panel (derecha) — oculto en office365 ─── */
+.ee-layout-office365 .ee-inspector {
+  display: none;
+}
+
+.ee-layout-office365 .ee-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--office-ribbon-bg);
+  border-bottom: 1px solid var(--office-ribbon-border);
+}
+
+.ee-layout-office365 .ee-inspector-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--office-text);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ee-layout-office365 .ee-inspector-type {
+  font-size: 10px;
+  color: var(--office-accent);
+  background: var(--office-accent-light);
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.ee-layout-office365 .ee-inspector-empty {
+  padding: 24px 16px;
+  font-size: 11px;
+  color: var(--office-text-muted);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.ee-layout-office365 .ee-inspector-body {
+  padding: 12px 14px;
+}
+
+.ee-layout-office365 .ee-inspector-field {
+  margin-bottom: 14px;
+}
+
+.ee-layout-office365 .ee-inspector-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--office-text-secondary);
+  margin-bottom: 4px;
+}
+
+.ee-layout-office365 .ee-inspector-input {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--office-ribbon-border);
+  border-radius: 2px;
+  font-size: 12px;
+  color: var(--office-text);
+  background: var(--office-ribbon-bg);
+  outline: none;
+  font-family: var(--office-font);
+  transition: border-color var(--office-transition);
+}
+
+.ee-layout-office365 .ee-inspector-input:focus {
+  border-color: var(--office-accent);
+  border-width: 2px;
+  padding: 0 7px;
+}
+
+.ee-layout-office365 .ee-inspector-select {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--office-ribbon-border);
+  border-radius: 2px;
+  font-size: 12px;
+  color: var(--office-text);
+  background: var(--office-ribbon-bg);
+  cursor: pointer;
+  outline: none;
+  font-family: var(--office-font);
+  transition: border-color var(--office-transition);
+}
+
+.ee-layout-office365 .ee-inspector-select:focus {
+  border-color: var(--office-accent);
+}
+
+.ee-layout-office365 .ee-inspector-color {
+  width: 100%;
+  height: 30px;
+  border: 1px solid var(--office-ribbon-border);
+  border-radius: 2px;
+  cursor: pointer;
+  background: var(--office-ribbon-bg);
+  padding: 2px;
+}
+
+/* ─── Table toolbar contextual ─── */
+.ee-layout-office365 .ee-table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--office-accent-light);
+  border-bottom: 1px solid #c7e0f4;
+  flex-wrap: wrap;
+}
+
+.ee-layout-office365 .ee-table-toolbar-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--office-accent-hover);
+  margin-right: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ee-layout-office365 .ee-table-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--office-transition);
+}
+
+.ee-layout-office365 .ee-table-toolbar-btn:hover:not(:disabled) {
+  background: rgba(16, 110, 190, 0.12);
+}
+
+.ee-layout-office365 .ee-table-toolbar-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ee-layout-office365 .ee-table-toolbar-danger:hover:not(:disabled) {
+  background: #fde7e9;
+}
+
+.ee-layout-office365 .ee-table-toolbar-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--office-text);
+}
+
+.ee-layout-office365 .ee-table-toolbar-plus {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  color: #107c10;
+  background: var(--office-ribbon-bg);
+  border-radius: 50%;
+}
+
+.ee-layout-office365 .ee-table-toolbar-minus {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  color: #d13438;
+  background: var(--office-ribbon-bg);
+  border-radius: 50%;
+}
+
+/* ─── Animaciones globales ─── */
+
+/* Fade-in suave para bloques al insertarse */
+@keyframes ee-office-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ee-layout-office365 .ee-block-wrapper {
+  animation: ee-office-fade-in 150ms ease;
+}
+
+/* Transición suave en todos los elementos interactivos */
+.ee-layout-office365 .ee-ribbon-btn,
+.ee-layout-office365 .ee-ribbon-select,
+.ee-layout-office365 .ee-footer-btn,
+.ee-layout-office365 .ee-variables-item,
+.ee-layout-office365 .ee-variables-group-header,
+.ee-layout-office365 .ee-inspector-input,
+.ee-layout-office365 .ee-inspector-select,
+.ee-layout-office365 .ee-color-swatch,
+.ee-layout-office365 .ee-table-toolbar-btn,
+.ee-layout-office365 .ee-variable-chip {
+  transition-duration: 150ms;
+}
+
+/* ─── Scrollbar global del editor ─── */
+.ee-layout-office365 .ee-variables-panel::-webkit-scrollbar,
+.ee-layout-office365 .ee-inspector::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ee-layout-office365 .ee-variables-panel::-webkit-scrollbar-thumb,
+.ee-layout-office365 .ee-inspector::-webkit-scrollbar-thumb {
+  background: #c8c6c4;
+  border-radius: 3px;
+}
+
+.ee-layout-office365 .ee-variables-panel::-webkit-scrollbar-thumb:hover,
+.ee-layout-office365 .ee-inspector::-webkit-scrollbar-thumb:hover {
+  background: #a19f9d;
+}
+
+/* ─── Menú overflow (···) — Simplified Outlook 365 ─── */
+.ee-layout-office365 .ee-overflow-wrapper {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* .ee-overflow-btn hereda estilos de .ee-ribbon-btn */
+
+.ee-layout-office365 .ee-overflow-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--office-paper);
+  border: 1px solid var(--office-ribbon-border);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px var(--office-shadow);
+  padding: 8px;
+  z-index: 1000;
+  min-width: 200px;
+  animation: ee-office-fade-in 100ms ease;
+}
+
+.ee-layout-office365 .ee-overflow-menu-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--office-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 4px 4px 6px 4px;
+}
+
+.ee-layout-office365 .ee-overflow-menu-row {
+  display: flex;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.ee-layout-office365 .ee-overflow-menu-sep {
+  height: 1px;
+  background: var(--office-ribbon-border);
+  margin: 6px 0;
+}

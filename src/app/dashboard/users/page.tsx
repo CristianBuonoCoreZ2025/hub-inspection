@@ -6,18 +6,17 @@ import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
-import { Checkbox } from "@/components/ui/checkbox";
 import { getUsers, updateUser, deactivateUser, addSecondaryRole, removeSecondaryRole } from "@/services/users";
 import { getCompanies } from "@/services/companies";
 import { getCountries } from "@/services/countries";
-import { setUserClients } from "@/services/user-clients";
+import { setUserClients, removeUserClientsNotInList } from "@/services/user-clients";
 import { inviteUserSchema, type InviteUserInput } from "@/lib/validations";
 import type { Company, Profile, UserClient, UserRole, SecondaryRole, UserSecondaryRole } from "@/types";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "sonner";
-import { Search, Pencil, UserX, Users } from "lucide-react";
+import { Search, Pencil, UserX, Users, Star, Trash2, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +75,8 @@ const secondaryRoleOptions: { value: SecondaryRole; label: string }[] = [
 // Roles que requieren asignar clientes (incluye internal para usuarios admin multi-company)
 const rolesWithClients: UserRole[] = ["internal", "adjuster", "inspector", "assistant", "auditor", "dispatcher"];
 
+type UserFilter = "active" | "inactive" | "deleted";
+
 export default function UsersPage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
@@ -87,9 +88,14 @@ export default function UsersPage() {
  const [secondaryRoles, setSecondaryRoles] = useState<UserSecondaryRole[]>([]);
  const [newSecRole, setNewSecRole] = useState<SecondaryRole | "">("");
  const [newSecCompany, setNewSecCompany] = useState<string>("");
+ const [userFilter, setUserFilter] = useState<UserFilter>("active");
+ const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+ const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+ const [originalEmail, setOriginalEmail] = useState("");
  const [editForm, setEditForm] = useState({
  fullName: "",
  firstName: "",
+ middleName: "",
  lastName: "",
  email: "",
  phone: "",
@@ -100,10 +106,11 @@ export default function UsersPage() {
 
  const form = useForm<InviteUserInput>({
  resolver: standardSchemaResolver(inviteUserSchema),
- defaultValues: { email: "", fullName: "", role: "adjuster", companyId: "", clientIds: [] },
+ defaultValues: { firstName: "", middleName: "", lastName: "", email: "", countryId: "", role: "adjuster", clientIds: [], phone: "", rut: "" } as InviteUserInput,
  });
 
  const watchedRole = useWatch({ control: form.control, name: "role" });
+ const watchedCountryId = useWatch({ control: form.control, name: "countryId" });
  const selectedRole = editingId ? editForm.role : (watchedRole || "adjuster");
 
  const { data: users, isLoading } = useQuery({
@@ -122,7 +129,7 @@ export default function UsersPage() {
  });
 
  const inviteMutation = useMutation({
- mutationFn: async (input: InviteUserInput & { company_id: string }) => {
+ mutationFn: async (input: InviteUserInput) => {
  const res = await fetch("/api/users/invite", {
  method: "POST",
  headers: { "Content-Type": "application/json" },
@@ -130,10 +137,6 @@ export default function UsersPage() {
  });
  const result = await res.json();
  if (!res.ok) throw new Error(result.error || "Error al invitar usuario");
- // After invite, set user_clients if clientIds provided
- if (input.clientIds && input.clientIds.length > 0 && result.user?.id) {
- await setUserClients(result.user.id, input.clientIds);
- }
  return result;
  },
  onSuccess: () => {
@@ -147,10 +150,27 @@ export default function UsersPage() {
  });
 
  const updateMutation = useMutation({
- mutationFn: async ({ id, userId, data, clientIds, secondaryRoleIds }: { id: string; userId: string; data: Partial<Profile>; clientIds: string[]; secondaryRoleIds: string[] }) => {
+ mutationFn: async ({ id, userId, data, clientIds, secondaryRoleIds, originalEmail }: { id: string; userId: string; data: Partial<Profile>; clientIds: string[]; secondaryRoleIds: string[]; originalEmail: string }) => {
+ // Si el email cambió, sincronizar en auth.users + profiles ANTES de actualizar el resto.
+ // Sin esto, profiles.email y auth.users.email quedan desincronizados y el usuario
+ // no puede entrar con el nuevo correo.
+ const newEmail = (data.email || "").trim().toLowerCase();
+ const oldEmail = originalEmail.trim().toLowerCase();
+ if (newEmail && oldEmail && newEmail !== oldEmail) {
+ const res = await fetch("/api/users/update-email", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({ profileId: id, newEmail }),
+ });
+ const result = await res.json();
+ if (!res.ok) throw new Error(result.error || "Error al actualizar el correo en Auth");
+ }
+ // Actualizar el resto de campos del profile (sin re-escribir email si ya se sincronizó arriba,
+ // pero no pasa nada si se vuelve a escribir el mismo valor).
  await updateUser(id, data);
  if (rolesWithClients.includes(data.role as UserRole)) {
  await setUserClients(userId, clientIds);
+ await removeUserClientsNotInList(userId, clientIds);
  }
  // Si el nuevo rol no requiere clientes, eliminar todos sus roles secundarios
  if (!rolesWithClients.includes(data.role as UserRole)) {
@@ -203,6 +223,44 @@ export default function UsersPage() {
  onError: (err: Error) => toast.error(err.message),
  });
 
+ const reactivateMutation = useMutation({
+ mutationFn: async (profileId: string) => {
+ const res = await fetch("/api/users/reactivate", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({ profileId }),
+ });
+ const result = await res.json();
+ if (!res.ok) throw new Error(result.error || "Error al reactivar");
+ return result;
+ },
+ onSuccess: () => {
+ toast.success("Usuario reactivado");
+ queryClient.invalidateQueries({ queryKey: ["users"] });
+ },
+ onError: (err: Error) => toast.error(err.message),
+ });
+
+ const deleteUserMutation = useMutation({
+ mutationFn: async (profileId: string) => {
+ const res = await fetch("/api/users/delete", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({ profileId }),
+ });
+ const result = await res.json();
+ if (!res.ok) throw new Error(result.error || "Error al eliminar");
+ return result;
+ },
+ onSuccess: () => {
+ toast.success("Usuario eliminado");
+ queryClient.invalidateQueries({ queryKey: ["users"] });
+ setDeleteConfirmId(null);
+ setDeleteConfirmEmail("");
+ },
+ onError: (err: Error) => toast.error(err.message),
+ });
+
  const onSubmit = (values: InviteUserInput) => {
  if (editingId) {
  updateMutation.mutate({
@@ -220,23 +278,12 @@ export default function UsersPage() {
  },
  clientIds: selectedClientIds,
  secondaryRoleIds: secondaryRoles.map((sr) => sr.id),
+ originalEmail,
  });
  } else {
- inviteMutation.mutate({ ...values, company_id: "", clientIds: selectedClientIds });
+ inviteMutation.mutate({ ...values, clientIds: selectedClientIds });
  }
  };
-
- const filtered = users?.filter((u) =>
- [u.full_name, u.email].join(" ").toLowerCase().includes(search.toLowerCase())
- );
-
- const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
- name: (u) => u.full_name,
- email: (u) => u.email,
- role: (u) => u.role,
- status: (u) => u.is_active,
- }, "name");
- const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
 
  const toggleClient = (companyId: string) => {
  setSelectedClientIds((prev) =>
@@ -249,16 +296,22 @@ export default function UsersPage() {
  const openEdit = (user: Profile & { user_clients: UserClient[]; secondary_roles?: UserSecondaryRole[] }) => {
  setEditingId(user.id);
  setEditingUserId(user.user_id);
+ setOriginalEmail(user.email || "");
  form.reset({
+ firstName: user.first_name || "",
+ middleName: "",
+ lastName: user.last_name || "",
  email: user.email || "",
- fullName: user.full_name || "",
+ countryId: user.country_id || "",
  role: user.role,
- companyId: user.company_id || "",
  clientIds: [],
- });
+ phone: user.phone || "",
+ rut: user.rut || "",
+ } as InviteUserInput);
  setEditForm({
  fullName: user.full_name || "",
  firstName: user.first_name || "",
+ middleName: "",
  lastName: user.last_name || "",
  email: user.email || "",
  phone: user.phone || "",
@@ -277,10 +330,12 @@ export default function UsersPage() {
  const openCreate = () => {
  setEditingId(null);
  setEditingUserId(null);
- form.reset({ email: "", fullName: "", role: "adjuster", companyId: "", clientIds: [] });
+ setOriginalEmail("");
+ form.reset({ firstName: "", middleName: "", lastName: "", email: "", countryId: "", role: "adjuster", clientIds: [], phone: "", rut: "" } as InviteUserInput);
  setEditForm({
  fullName: "",
  firstName: "",
+ middleName: "",
  lastName: "",
  email: "",
  phone: "",
@@ -314,6 +369,46 @@ export default function UsersPage() {
  const handleRemoveSecRole = (id: string) => {
  removeSecRoleMut.mutate(id);
  };
+
+ const handleDeleteClick = (user: Profile & { user_clients: UserClient[]; secondary_roles?: UserSecondaryRole[] }) => {
+ setDeleteConfirmId(user.id);
+ setDeleteConfirmEmail("");
+ };
+
+ const handleDeleteConfirm = () => {
+ if (!deleteConfirmId) return;
+ const target = users?.find((u) => u.id === deleteConfirmId);
+ if (!target) return;
+ if (deleteConfirmEmail.trim().toLowerCase() !== (target.email || "").trim().toLowerCase()) {
+ toast.error("El email no coincide. Escribe exactamente el email del usuario.");
+ return;
+ }
+ deleteUserMutation.mutate(deleteConfirmId);
+ };
+
+ // Filtrar por estado
+ const filteredByStatus = users?.filter((u) => {
+ if (userFilter === "active") return u.is_active && !u.deleted_at;
+ if (userFilter === "inactive") return !u.is_active && !u.deleted_at;
+ if (userFilter === "deleted") return !!u.deleted_at;
+ return true;
+ });
+
+ const filtered = filteredByStatus?.filter((u) =>
+ [u.full_name, u.email].join(" ").toLowerCase().includes(search.toLowerCase())
+ );
+
+ const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered || [], {
+ name: (u) => u.full_name || "",
+ email: (u) => u.email || "",
+ role: (u) => u.role,
+ status: (u) => (u.deleted_at ? "zzz" : u.is_active ? "active" : "inactive"),
+ });
+
+ const { paginatedData, page, totalPages, total, pageSize, setPage, setPageSize } = usePagination(sorted, 20);
+
+ // Cliente principal de un usuario (el que coincide con company_id)
+ const isPrimaryClient = (user: Profile, companyId: string) => user.company_id === companyId;
 
  return (
  <div className="app-page">
@@ -356,7 +451,7 @@ export default function UsersPage() {
  <div key="edit-mode" className="contents">
  {/* ── Modo edición: campos completos ── */}
  <div className="modal-field">
- <Label className="app-field-label">Nombre <span className="text-red-500">*</span></Label>
+ <Label className="app-field-label">Primer nombre <span className="text-red-500">*</span></Label>
  <Input
  className="app-input"
  value={editForm.firstName ?? ""}
@@ -365,21 +460,21 @@ export default function UsersPage() {
  />
  </div>
  <div className="modal-field">
- <Label className="app-field-label">Apellido</Label>
+ <Label className="app-field-label">Segundo nombre</Label>
+ <Input
+ className="app-input"
+ value={editForm.middleName ?? ""}
+ onChange={(e) => setEditForm({ ...editForm, middleName: e.target.value })}
+ placeholder="Carlos (opcional)"
+ />
+ </div>
+ <div className="modal-field">
+ <Label className="app-field-label">Apellido <span className="text-red-500">*</span></Label>
  <Input
  className="app-input"
  value={editForm.lastName ?? ""}
  onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
  placeholder="Pérez"
- />
- </div>
- <div className="modal-field modal-field-full">
- <Label className="app-field-label">Nombre completo <span className="text-red-500">*</span></Label>
- <Input
- className="app-input"
- value={editForm.fullName ?? ""}
- onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
- placeholder="Juan Pérez"
  />
  </div>
  <div className="modal-field">
@@ -428,19 +523,56 @@ export default function UsersPage() {
  </div>
  ) : (
  <div key="create-mode" className="contents">
- {/* ── Modo creación: campos mínimos ── */}
- <div className="modal-field modal-field-full">
- <Label className="app-field-label">Nombre completo <span className="text-red-500">*</span></Label>
- <Input {...form.register("fullName")} placeholder="Juan Pérez" className="app-input" />
- {form.formState.errors.fullName && (
- <p className="text-xs text-red-500">{form.formState.errors.fullName.message}</p>
+ {/* ── Modo creación: 3 nombres + email + país + teléfono + RUT ── */}
+ <div className="modal-field">
+ <Label className="app-field-label">Primer nombre <span className="text-red-500">*</span></Label>
+ <Input {...form.register("firstName")} placeholder="Juan" className="app-input" />
+ {form.formState.errors.firstName && (
+ <p className="text-xs text-red-500">{form.formState.errors.firstName.message}</p>
  )}
  </div>
- <div className="modal-field modal-field-full">
+ <div className="modal-field">
+ <Label className="app-field-label">Segundo nombre</Label>
+ <Input {...form.register("middleName")} placeholder="Carlos (opcional)" className="app-input" />
+ </div>
+ <div className="modal-field">
+ <Label className="app-field-label">Apellido <span className="text-red-500">*</span></Label>
+ <Input {...form.register("lastName")} placeholder="Pérez" className="app-input" />
+ {form.formState.errors.lastName && (
+ <p className="text-xs text-red-500">{form.formState.errors.lastName.message}</p>
+ )}
+ </div>
+ <div className="modal-field">
  <Label className="app-field-label">Email <span className="text-red-500">*</span></Label>
  <Input {...form.register("email")} type="email" placeholder="juan@empresa.cl" className="app-input" />
  {form.formState.errors.email && (
  <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
+ )}
+ </div>
+ <div className="modal-field">
+ <Label className="app-field-label">Teléfono</Label>
+ <Input {...form.register("phone")} placeholder="+56 9 1234 5678" className="app-input" />
+ </div>
+ <div className="modal-field">
+ <Label className="app-field-label">RUT</Label>
+ <Input {...form.register("rut")} placeholder="12.345.678-9" className="app-input" />
+ </div>
+ <div className="modal-field">
+ <Label className="app-field-label">País <span className="text-red-500">*</span></Label>
+ <Select
+ value={watchedCountryId || null}
+ onValueChange={(v) => form.setValue("countryId", v || "")}
+ items={countries?.map((c: { id: string; name: string }) => ({ value: c.id, label: c.name })) || []}
+ >
+ <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar país" /></SelectTrigger>
+ <SelectContent>
+ {countries?.map((c: { id: string; name: string }) => (
+ <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
+ {form.formState.errors.countryId && (
+ <p className="text-xs text-red-500">{form.formState.errors.countryId.message}</p>
  )}
  </div>
  </div>
@@ -453,7 +585,6 @@ export default function UsersPage() {
  const role = v as UserRole;
  if (editingId) {
  setEditForm({ ...editForm, role });
- // Al cambiar el perfil principal, limpiar todos los roles secundarios
  setSecondaryRoles([]);
  } else {
  form.setValue("role", role);
@@ -488,23 +619,27 @@ export default function UsersPage() {
  Clientes asignados
  <span className="text-red-500"> *</span>
  </Label>
- <div className="space-y-1 max-h-[200px] overflow-y-auto rounded-lg border border-border p-2">
- {companies?.map((c: Company) => (
- <label
+ <p className="text-[11px] text-muted-foreground mb-2">
+ Marca los clientes. El más antiguo queda como principal automáticamente.
+ </p>
+ <div className="user-client-toggle-grid">
+ {companies?.map((c: Company) => {
+ const selected = selectedClientIds.includes(c.id);
+ return (
+ <button
  key={c.id}
- className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-xs"
+ type="button"
+ onClick={() => toggleClient(c.id)}
+ className={selected ? "user-client-toggle-chip user-client-toggle-chip-on" : "user-client-toggle-chip user-client-toggle-chip-off"}
  >
- <Checkbox
- checked={selectedClientIds.includes(c.id)}
- onChange={() => toggleClient(c.id)}
- />
  {c.name}
- </label>
- ))}
+ </button>
+ );
+ })}
  </div>
  {selectedClientIds.length === 0 && (
  <p className="text-xs text-amber-600 mt-1">
- Debe seleccionar al menos un cliente
+ Debes seleccionar al menos un cliente para este rol
  </p>
  )}
  </div>
@@ -614,12 +749,80 @@ export default function UsersPage() {
  </DialogContent>
  </Dialog>
 
+ {/* ── MODAL Confirmar eliminación (doble confirmación) ── */}
+ <Dialog open={!!deleteConfirmId} onOpenChange={(o) => { if (!o) { setDeleteConfirmId(null); setDeleteConfirmEmail(""); } }} dismissible={false}>
+ <DialogContent className="modal-sm" showCloseButton={false}>
+ <div className="modal-header">
+ <DialogTitle className="modal-title flex items-center gap-2.5">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500 text-white shadow-sm">
+ <Trash2 className="h-4 w-4" />
+ </div>
+ Eliminar Usuario
+ </DialogTitle>
+ <DialogDescription className="modal-subtitle">
+ Esta acción no se puede deshacer. El usuario se marcará como eliminado.
+ </DialogDescription>
+ </div>
+ <div className="modal-body">
+ <p className="text-sm text-muted-foreground mb-3">
+ Para confirmar, escribe exactamente el email del usuario:
+ </p>
+ <p className="text-sm font-medium mb-2">
+ {users?.find((u) => u.id === deleteConfirmId)?.email}
+ </p>
+ <Input
+ value={deleteConfirmEmail}
+ onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+ placeholder="email del usuario"
+ className="app-input"
+ />
+ </div>
+ <div className="modal-footer">
+ <button type="button" className="pg-btn-platinum" onClick={() => { setDeleteConfirmId(null); setDeleteConfirmEmail(""); }}>
+ Cancelar
+ </button>
+ <button
+ type="button"
+ className="pg-btn-danger"
+ disabled={deleteUserMutation.isPending || !deleteConfirmEmail}
+ onClick={handleDeleteConfirm}
+ >
+ {deleteUserMutation.isPending ? "Eliminando..." : "Eliminar definitivamente"}
+ </button>
+ </div>
+ </DialogContent>
+ </Dialog>
+
  <div className="app-panel">
  <div className="app-grid-toolbar">
  <div className="app-grid-toolbar-left">
  <div className="app-grid-search-wrap">
  <Search />
  <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="liquid-search" />
+ </div>
+ {/* ── Filtro de estado ── */}
+ <div className="user-filter-tabs">
+ <button
+ type="button"
+ className={userFilter === "active" ? "user-filter-tab user-filter-tab-active" : "user-filter-tab"}
+ onClick={() => setUserFilter("active")}
+ >
+ Activos
+ </button>
+ <button
+ type="button"
+ className={userFilter === "inactive" ? "user-filter-tab user-filter-tab-active" : "user-filter-tab"}
+ onClick={() => setUserFilter("inactive")}
+ >
+ Desactivados
+ </button>
+ <button
+ type="button"
+ className={userFilter === "deleted" ? "user-filter-tab user-filter-tab-active" : "user-filter-tab"}
+ onClick={() => setUserFilter("deleted")}
+ >
+ Eliminados
+ </button>
  </div>
  </div>
  <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
@@ -633,7 +836,7 @@ export default function UsersPage() {
  <SortableTh sortKey="role" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Tipo</SortableTh>
  <th>Clientes</th>
  <SortableTh sortKey="status" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Estado</SortableTh>
- <th className="w-[80px]"></th>
+ <th className="w-30"></th>
  </tr>
  </thead>
  <tbody>
@@ -642,8 +845,10 @@ export default function UsersPage() {
  ) : filtered?.length === 0 ? (
  <tr><td colSpan={6} className="text-center text-muted-foreground py-4">No se encontraron usuarios.</td></tr>
  ) : (
- paginatedData.map((user) => (
- <tr key={user.id}>
+ paginatedData.map((user) => {
+ const isDeleted = !!user.deleted_at;
+ return (
+ <tr key={user.id} className={isDeleted ? "user-row-deleted" : !user.is_active ? "user-row-inactive" : ""}>
  <td className="font-medium">
  <div className="flex items-center gap-2">
  <Users className="h-4 w-4 text-muted-foreground" />
@@ -654,28 +859,60 @@ export default function UsersPage() {
  <td><StatusBadge tone={roleTones[user.role]} label={roleLabels[user.role]} /></td>
  <td className="text-muted-foreground">
  {user.user_clients && user.user_clients.length > 0
- ? user.user_clients.map((uc: UserClient) => uc.company?.name).filter(Boolean).join(", ")
+ ? user.user_clients.map((uc: UserClient) => (
+ <span key={uc.company_id} className="user-client-badge-wrap">
+ {isPrimaryClient(user, uc.company_id) && (
+ <Star className="user-client-primary-icon" />
+ )}
+ {uc.company?.name}
+ </span>
+ ))
  : !rolesWithClients.includes(user.role) ? "—" : "Sin asignar"}
  </td>
  <td>
+ {isDeleted ? (
+ <StatusBadge status="inactive" label="Eliminado" />
+ ) : (
  <StatusBadge status={user.is_active ? "active" : "inactive"} label={user.is_active ? "Activo" : "Inactivo"} />
+ )}
  </td>
  <td>
  <div className="app-row-actions">
+ {isDeleted ? (
+ canEdit("users") && (
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => reactivateMutation.mutate(user.id)} title="Reactivar">
+ <RotateCcw className="h-4 w-4" />
+ </Button>
+ )
+ ) : (
+ <>
  {canEdit("users") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => openEdit(user)}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => openEdit(user)} title="Editar">
  <Pencil className="h-4 w-4" />
  </Button>
  )}
  {canDelete("users") && user.is_active && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este usuario?")) deactivateMutation.mutate(user.id); }}>
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este usuario?")) deactivateMutation.mutate(user.id); }} title="Desactivar">
  <UserX className="h-4 w-4" />
  </Button>
+ )}
+ {canDelete("users") && !user.is_active && (
+ <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => handleDeleteClick(user)} title="Eliminar">
+ <Trash2 className="h-4 w-4" />
+ </Button>
+ )}
+ {canEdit("users") && !user.is_active && (
+ <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => reactivateMutation.mutate(user.id)} title="Reactivar">
+ <RotateCcw className="h-4 w-4" />
+ </Button>
+ )}
+ </>
  )}
  </div>
  </td>
  </tr>
- ))
+ );
+ })
  )}
  </tbody>
  </table>
