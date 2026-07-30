@@ -50,6 +50,11 @@
     margin: 0 2px;
   }
 
+  /* Empuja el grupo siguiente al extremo derecho de la toolbar (flex). */
+  .sketch-toolbar-spacer {
+    margin-left: auto !important;
+  }
+
   /* Botones de modo compactos (no son pg-btn-platinum porque son toggles
      de icono, no acciones primarias). Mantienen coherencia visual. */
   .sketch-mode-btn {
