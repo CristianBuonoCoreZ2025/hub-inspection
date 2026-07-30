@@ -29,7 +29,6 @@ import {
   CheckCircle2,
   XCircle,
   RefreshCw,
-  AlertCircle,
   ChevronDown,
   ClipboardCheck,
 } from "lucide-react";
