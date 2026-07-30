@@ -42,6 +42,7 @@ function isShapeMode(m: SketchMode): m is ShapeMode {
 
 export function SketchEditor({
   onSave,
+  onCancel,
   saving,
   initialImage,
   height,
@@ -458,6 +459,7 @@ export function SketchEditor({
         onRedo={handleRedo}
         onClear={handleClear}
         onSave={handleSave}
+        onCancel={onCancel}
         canUndo={canUndo}
         canRedo={canRedo}
         canClear={canClear}

@@ -15,7 +15,7 @@
 
 import { useState } from "react";
 import {
-  MousePointer2, Pencil, Tag, MessageSquare, Undo2, Redo2, Save,
+  MousePointer2, Pencil, Tag, MessageSquare, Undo2, Redo2, Save, X,
   Slash, Square, Circle, Hexagon, ChevronDown, Eraser,
 } from "lucide-react";
 import { ANNOTATION_COLORS } from "./entity-types";
@@ -42,6 +42,8 @@ interface SketchToolbarProps {
   onRedo: () => void;
   onClear: () => void;
   onSave: () => void;
+  /** Se llama al cancelar. Si se pasa, muestra botón Cancelar junto a Guardar. */
+  onCancel?: () => void;
   canUndo: boolean;
   canRedo: boolean;
   canClear: boolean;
@@ -74,6 +76,7 @@ export function SketchToolbar({
   onRedo,
   onClear,
   onSave,
+  onCancel,
   canUndo,
   canRedo,
   canClear,
@@ -192,8 +195,19 @@ export function SketchToolbar({
         </button>
       </div>
 
-      {/* Acción principal */}
+      {/* Acciones principales: Cancelar + Guardar juntos a la derecha */}
       <div className="sketch-toolbar-group sketch-toolbar-spacer">
+        {onCancel && (
+          <button
+            type="button"
+            className="sketch-mode-btn"
+            onClick={onCancel}
+            disabled={saving}
+          >
+            <X className="size-3.5" />
+            Cancelar
+          </button>
+        )}
         <button
           type="button"
           className="pg-btn-platinum"

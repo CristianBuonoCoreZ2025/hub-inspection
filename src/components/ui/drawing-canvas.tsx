@@ -22,6 +22,8 @@ import { SketchEditor } from "@/features/inspection-sketch/sketch-editor";
 
 interface DrawingCanvasProps {
   onSave: (dataUrl: string) => void;
+  /** Se llama al cancelar. Si se pasa, muestra botón Cancelar junto a Guardar. */
+  onCancel?: () => void;
   saving?: boolean;
   initialImage?: string;
   /** Aceptado por compatibilidad; el stage es responsivo al contenedor. */
@@ -32,6 +34,7 @@ interface DrawingCanvasProps {
 
 export function DrawingCanvas({
   onSave,
+  onCancel,
   saving,
   initialImage,
   height,
@@ -40,6 +43,7 @@ export function DrawingCanvas({
   return (
     <SketchEditor
       onSave={onSave}
+      onCancel={onCancel}
       saving={saving}
       initialImage={initialImage}
       height={height}

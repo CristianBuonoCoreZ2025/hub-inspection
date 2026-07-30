@@ -161,19 +161,9 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  return (
  <div className="app-stack">
  <div className="app-panel">
- <div className="app-grid-toolbar">
- <div className="app-grid-toolbar-left">
- <h3 className="app-section-title flex items-center gap-2">
- <PenTool className="h-4 w-4" />
- {drawEditingSketch ? "Editar Croquis" : "Dibujar Croquis"}
- </h3>
- </div>
- <Button variant="outline" size="sm" onClick={() => { setMode("view"); setDrawEditingSketch(null); }}>
- <X className="h-3.5 w-3.5 mr-1" /> Cancelar
- </Button>
- </div>
  <DrawingCanvas
  onSave={handleSaveDrawing}
+ onCancel={() => { setMode("view"); setDrawEditingSketch(null); }}
  saving={savingDrawing}
  initialImage={drawEditingSketch?.url}
  height={500}
