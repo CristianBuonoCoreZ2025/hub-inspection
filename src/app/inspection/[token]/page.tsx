@@ -1072,12 +1072,19 @@ function SketchesTab({ sketches, session }: { sketches: LiveSketch[]; session: L
           </button>
         </div>
         <Panel>
-          <DrawingCanvas
-            onSave={handleSave}
-            saving={saving}
-            initialImage={editingSketch?.url}
-            height={450}
-          />
+          {/* El editor de croquis usa variables CSS del tema (--card, --border,
+              --foreground...). El Magic Link renderiza con bg-slate-950 hardcodeado
+              sin la clase .dark global, así que envolvemos el editor en un scope
+              .dark local para que las variables del tema oscuro se resuelvan y la
+              toolbar/paleta hereden el mismo look que el resto de la página. */}
+          <div className="dark">
+            <DrawingCanvas
+              onSave={handleSave}
+              saving={saving}
+              initialImage={editingSketch?.url}
+              height={450}
+            />
+          </div>
         </Panel>
       </div>
     );
