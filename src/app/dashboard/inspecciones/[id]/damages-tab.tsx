@@ -1122,12 +1122,12 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <div className="app-row-actions">
  {!readOnly && (
  <>
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
+ <button type="button" className="btn-icon-sm" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
  <Pencil className="h-3.5 w-3.5" />
- </Button>
- <Button variant="ghost" size="icon" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
+ </button>
+ <button type="button" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
  <Trash2 className="h-3.5 w-3.5" />
- </Button>
+ </button>
  </>
  )}
  </div>
@@ -1200,12 +1200,12 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <div className="app-row-actions">
  {!readOnly && (
  <>
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
+ <button type="button" className="btn-icon-sm" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
  <Pencil className="h-3.5 w-3.5" />
- </Button>
- <Button variant="ghost" size="icon" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
+ </button>
+ <button type="button" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
  <Trash2 className="h-3.5 w-3.5" />
- </Button>
+ </button>
  </>
  )}
  </div>

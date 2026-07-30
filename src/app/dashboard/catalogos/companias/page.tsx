@@ -136,10 +136,10 @@ export default function CompaniasPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); setEditingId(c.id); setFormData({ country_id: c.country_id || "", name: c.name, rut: c.rut || "", address: c.address || "", line_of_business: c.line_of_business || "", code: c.code || "", type: c.type || "Generales" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); setEditingId(c.id); setFormData({ country_id: c.country_id || "", name: c.name, rut: c.rut || "", address: c.address || "", line_of_business: c.line_of_business || "", code: c.code || "", type: c.type || "Generales" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta compañia?")) deleteMutation.mutate(c.id); }}><Ban className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta compañia?")) deleteMutation.mutate(c.id); }}><Ban className="h-4 w-4" /></button>
  )}
  </div>
  </td>

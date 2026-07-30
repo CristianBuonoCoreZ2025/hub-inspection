@@ -277,9 +277,9 @@ export default function UbicacionesPage() {
  <h1 className="app-page-title shrink-0">Ubicaciones</h1>
  <span className="app-grid-sep">·</span>
  {level > 0 && (
- <Button variant="ghost" size="icon" className="btn-icon-sm shrink-0" onClick={() => handleBreadcrumb(level - 1)} title="Nivel anterior">
+ <button type="button" className="btn-icon-sm shrink-0" onClick={() => handleBreadcrumb(level - 1)} title="Nivel anterior">
  <ArrowLeft className="h-4 w-4" />
- </Button>
+ </button>
  )}
  <nav className="app-grid-breadcrumbs">
  {breadcrumbs.map((crumb, idx) => (
@@ -352,21 +352,21 @@ export default function UbicacionesPage() {
  <td>
  <div className="app-row-actions">
  {level < 3 && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(item); }} title={getNextLevelLabel() || undefined}>
+ <button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(item); }} title={getNextLevelLabel() || undefined}>
  <Eye className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {level > 0 && (
  <>
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); handleEdit(item); }} title="Editar">
+ <button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); handleEdit(item); }} title="Editar">
  <Pencil className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} title="Eliminar">
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} title="Eliminar">
  <Ban className="h-4 w-4" />
- </Button>
+ </button>
  )}
  </>
  )}

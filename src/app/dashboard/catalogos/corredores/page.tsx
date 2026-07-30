@@ -133,10 +133,10 @@ export default function CorredoresPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); setEditingId(b.id); setFormData({ country_id: b.country_id || "", name: b.name, rut: b.rut || "", address: b.address || "", contact: b.contact || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); setEditingId(b.id); setFormData({ country_id: b.country_id || "", name: b.name, rut: b.rut || "", address: b.address || "", contact: b.contact || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este corredor?")) deleteMutation.mutate(b.id); }}><Ban className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este corredor?")) deleteMutation.mutate(b.id); }}><Ban className="h-4 w-4" /></button>
  )}
  </div>
  </td>

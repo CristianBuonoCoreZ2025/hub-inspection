@@ -204,7 +204,7 @@ export default function ProductosBienPage() {
                         <span className={`app-status-dot ${item.is_active ? "app-status-on" : "app-status-off"}`} />
                       )}
                       {canEdit(SECTION) && (
-                        <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
+                        <button type="button" className="btn-icon-sm" onClick={() => {
                           setEditingId(item.id);
                           setFormData({
                             content_good_type_id: item.content_good_type_id,
@@ -214,7 +214,7 @@ export default function ProductosBienPage() {
                           setOpen(true);
                         }}>
                           <Pencil className="h-4 w-4" />
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </td>

@@ -206,7 +206,7 @@ export default function CaracteristicasPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
+ <button type="button" className="btn-icon-sm" onClick={() => {
  setEditingId(f.id);
  setFormData({
  name: f.name,
@@ -220,23 +220,20 @@ export default function CaracteristicasPage() {
  setOpen(true);
  }}>
  <Pencil className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {canEdit("catalogos") && f.screen_id && f.screen?.is_dynamic !== false && (
- <Button
- variant="ghost"
- size="icon"
- className="btn-icon-sm"
+ <button type="button" className="btn-icon-sm"
  onClick={() => router.push(`/dashboard/catalogos/pantallas/${f.screen_id}`)}
  title="Diseñar pantalla"
  >
  <LayoutTemplate className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {canDelete("catalogos") && !featureHasGestions(f.id) && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta característica?")) deleteMut.mutate(f.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta característica?")) deleteMut.mutate(f.id); }}>
  <Ban className="h-4 w-4" />
- </Button>
+ </button>
  )}
  </div>
  </td>

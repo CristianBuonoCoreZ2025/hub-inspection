@@ -601,20 +601,17 @@ export function TemparioManager() {
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="app-row-actions">
                           {canEdit(SECTION) && (
-                            <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => openEdit(t)} title="Editar">
+                            <button type="button" className="btn-icon-sm" onClick={() => openEdit(t)} title="Editar">
                               <Pencil className="h-4 w-4" />
-                            </Button>
+                            </button>
                           )}
                           {canDelete(SECTION) && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="btn-icon-sm btn-danger-hover"
+                            <button type="button" className="btn-icon-sm btn-danger-hover"
                               onClick={() => { if (confirm("Desactivar partida?")) deleteTaskMut.mutate(t.id); }}
                               title="Desactivar"
                             >
                               <Trash2 className="h-4 w-4" />
-                            </Button>
+                            </button>
                           )}
                         </div>
                       </td>
@@ -861,18 +858,15 @@ export function TemparioManager() {
                               <td className="text-muted-foreground text-[10px]">{p.source}</td>
                               <td>
                                 <div className="app-row-actions">
-                                  <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => editPrice(p)} title="Editar">
+                                  <button type="button" className="btn-icon-sm" onClick={() => editPrice(p)} title="Editar">
                                     <Pencil className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="btn-icon-sm btn-danger-hover"
+                                  </button>
+                                  <button type="button" className="btn-icon-sm btn-danger-hover"
                                     onClick={() => { if (confirm("Desactivar precio?")) deletePriceMut.mutate(p.id); }}
                                     title="Desactivar"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
+                                  </button>
                                 </div>
                               </td>
                             </tr>

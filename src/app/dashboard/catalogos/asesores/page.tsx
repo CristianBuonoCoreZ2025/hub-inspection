@@ -132,10 +132,10 @@ export default function AsesoresPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); setEditingId(a.id); setFormData({ country_id: a.country_id || "", name: a.name, email: a.email || "", phone: a.phone || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); setEditingId(a.id); setFormData({ country_id: a.country_id || "", name: a.name, email: a.email || "", phone: a.phone || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este asesor?")) deleteMutation.mutate(a.id); }}><Ban className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este asesor?")) deleteMutation.mutate(a.id); }}><Ban className="h-4 w-4" /></button>
  )}
  </div>
  </td>

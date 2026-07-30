@@ -145,10 +145,10 @@ export default function TiposDocumentosPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => { setEditingId(d.id); setFormData({ country_id: d.country_id || "", code: d.code || "", name: d.name, description: d.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm" onClick={() => { setEditingId(d.id); setFormData({ country_id: d.country_id || "", code: d.code || "", name: d.name, description: d.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este tipo de documento?")) deleteMutation.mutate(d.id); }}><Ban className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este tipo de documento?")) deleteMutation.mutate(d.id); }}><Ban className="h-4 w-4" /></button>
  )}
  </div>
  </td>

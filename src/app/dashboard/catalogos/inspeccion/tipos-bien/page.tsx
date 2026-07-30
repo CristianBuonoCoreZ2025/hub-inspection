@@ -200,7 +200,7 @@ export default function TiposBienPage() {
                   <td>
                     <div className="app-row-actions">
                       {canEdit(SECTION) && (
-                        <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
+                        <button type="button" className="btn-icon-sm" onClick={() => {
                           setEditingId(item.id);
                           setFormData({
                             name: item.name || "",
@@ -210,7 +210,7 @@ export default function TiposBienPage() {
                           setOpen(true);
                         }}>
                           <Pencil className="h-4 w-4" />
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </td>

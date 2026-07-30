@@ -143,16 +143,16 @@ export default function PolicyTypePage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
+ <button type="button" className="btn-icon-sm" onClick={() => {
  setEditingId(item.id);
  setFormData({ name: item.name || "", description: item.description || "" });
  setOpen(true);
- }}><Pencil className="h-4 w-4" /></Button>
+ }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
  <Ban className="h-4 w-4" />
- </Button>
+ </button>
  )}
  </div>
  </td>

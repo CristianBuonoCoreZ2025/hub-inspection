@@ -226,7 +226,7 @@ export default function PantallasPage() {
  <td>
  <div className="app-row-actions">
  {s.is_dynamic && !isInactive && canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
+ <button type="button" className="btn-icon-sm" onClick={() => {
  setEditingId(s.id);
  setFormData({
  code: s.code,
@@ -238,32 +238,32 @@ export default function PantallasPage() {
  setOpen(true);
  }}>
  <Pencil className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {s.is_dynamic && !isInactive && canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => router.push(`/dashboard/catalogos/pantallas/${s.id}`)} title="Diseñar pantalla">
+ <button type="button" className="btn-icon-sm" onClick={() => router.push(`/dashboard/catalogos/pantallas/${s.id}`)} title="Diseñar pantalla">
  <LayoutTemplate className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {isInactive && canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => reactivateMut.mutate(s.id)} title="Reactivar">
+ <button type="button" className="btn-icon-sm" onClick={() => reactivateMut.mutate(s.id)} title="Reactivar">
  <RotateCcw className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {!isInactive && s.is_dynamic && canDelete("catalogos") && inUse && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta pantalla? Está en uso por características.")) deactivateMut.mutate(s.id); }} title="Desactivar">
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta pantalla? Está en uso por características.")) deactivateMut.mutate(s.id); }} title="Desactivar">
  <Ban className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {!isInactive && s.is_dynamic && canDelete("catalogos") && !inUse && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Eliminar definitivamente esta pantalla? No está asociada a ninguna característica.")) deleteMut.mutate(s.id); }} title="Eliminar">
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Eliminar definitivamente esta pantalla? No está asociada a ninguna característica.")) deleteMut.mutate(s.id); }} title="Eliminar">
  <Trash2 className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {isInactive && s.is_dynamic && canDelete("catalogos") && !inUse && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Eliminar definitivamente esta pantalla? No está asociada a ninguna característica.")) deleteMut.mutate(s.id); }} title="Eliminar">
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Eliminar definitivamente esta pantalla? No está asociada a ninguna característica.")) deleteMut.mutate(s.id); }} title="Eliminar">
  <Trash2 className="h-4 w-4" />
- </Button>
+ </button>
  )}
  </div>
  </td>

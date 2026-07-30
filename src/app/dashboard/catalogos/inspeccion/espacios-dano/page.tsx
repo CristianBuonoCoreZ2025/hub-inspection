@@ -176,20 +176,20 @@ export default function DamageSpacesPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos_inspeccion") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
+ <button type="button" className="btn-icon-sm" onClick={() => {
  setEditingId(item.id);
  setFormData({ name: item.name, description: item.description || "" });
  setOpen(true);
  }}>
  <Pencil className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {canDelete("catalogos_inspeccion") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => {
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => {
  if (confirm(`¿Desactivar "${item.name}"?`)) deleteMutation.mutate(item.id);
  }}>
  <Ban className="h-4 w-4" />
- </Button>
+ </button>
  )}
  </div>
  </td>

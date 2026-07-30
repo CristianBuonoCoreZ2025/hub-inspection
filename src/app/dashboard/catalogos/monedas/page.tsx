@@ -160,30 +160,24 @@ function MonedasTab() {
  <td>
  <div className="app-row-actions">
  {/* Ver tipos de cambio */}
- <Button
- variant="ghost"
- size="icon"
- className="btn-icon-sm"
+ <button type="button" className="btn-icon-sm"
  onClick={() => router.push(`/dashboard/catalogos/tipos-cambio?currency=${c.code}`)}
  title={`Ver tipos de cambio de ${c.code}`}
  >
  <ArrowRightLeft className="h-4 w-4" />
- </Button>
+ </button>
  {/* Asociar países */}
- <Button
- variant="ghost"
- size="icon"
- className="btn-icon-sm"
+ <button type="button" className="btn-icon-sm"
  onClick={() => openPaises(c.code, c.name)}
  title={`Asociar países a ${c.code}`}
  >
  <Globe className="h-4 w-4" />
- </Button>
+ </button>
  {/* Editar */}
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => { setEditingId(c.id); setForm({ code: c.code, name: c.name, symbol: c.symbol || "", decimals: String(c.decimals) }); setOpen(true); }}>
+ <button type="button" className="btn-icon-sm" onClick={() => { setEditingId(c.id); setForm({ code: c.code, name: c.name, symbol: c.symbol || "", decimals: String(c.decimals) }); setOpen(true); }}>
  <Pencil className="h-4 w-4" />
- </Button>
+ </button>
  )}
  </div>
  </td>

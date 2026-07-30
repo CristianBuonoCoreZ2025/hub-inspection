@@ -164,9 +164,9 @@ export default function PromptsPage() {
                   <td>
                     <div className="app-row-actions">
                       {canEdit("catalogos") && (
-                        <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => openEdit(p)} title="Editar">
+                        <button type="button" className="btn-icon-sm" onClick={() => openEdit(p)} title="Editar">
                           <Pencil className="h-4 w-4" />
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </td>

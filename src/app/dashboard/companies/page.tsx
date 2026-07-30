@@ -427,7 +427,7 @@ export default function CompaniesPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("companies") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
+ <button type="button" className="btn-icon-sm" onClick={() => {
  setEditingId(company.id);
  form.reset({
  name: company.name, slug: company.slug, countryId: company.country_id || "",
@@ -435,12 +435,12 @@ export default function CompaniesPage() {
  logoUrl: company.logo_url || "", primaryColor: company.primary_color || "",
  });
  setOpen(true);
- }}><Pencil className="h-4 w-4" /></Button>
+ }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("companies") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta empresa?")) deleteMutation.mutate(company.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta empresa?")) deleteMutation.mutate(company.id); }}>
  <Ban className="h-4 w-4" />
- </Button>
+ </button>
  )}
  </div>
  </td>

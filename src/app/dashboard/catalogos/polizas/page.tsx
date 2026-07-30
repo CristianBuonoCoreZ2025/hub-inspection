@@ -280,12 +280,12 @@ export default function PolizasPage() {
  </td>
  <td>
  <div className="app-row-actions">
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/catalogos/polizas/${p.id}`); }} title="Ver">
+ <button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/catalogos/polizas/${p.id}`); }} title="Ver">
  <Eye className="h-4 w-4" />
- </Button>
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/catalogos/polizas/${p.id}`); }} title="Editar">
+ </button>
+ <button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/catalogos/polizas/${p.id}`); }} title="Editar">
  <Pencil className="h-4 w-4" />
- </Button>
+ </button>
  </div>
  </td>
  </tr>

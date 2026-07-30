@@ -608,14 +608,14 @@ function CoberturaRow({
  <td className="px-3 py-2">
  <div className="app-row-actions">
  {canEdit && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={onEdit}>
+ <button type="button" className="btn-icon-sm" onClick={onEdit}>
  <Pencil className="h-3.5 w-3.5" />
- </Button>
+ </button>
  )}
  {canDelete && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={onDelete}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={onDelete}>
  <Ban className="h-3.5 w-3.5" />
- </Button>
+ </button>
  )}
  </div>
  </td>

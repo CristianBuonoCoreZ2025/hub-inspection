@@ -1363,9 +1363,9 @@ export default function ClaimDetailPage() {
  <td>
  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
  {g.href && (
- <Button size="sm" className="btn-icon-sm" onClick={() => router.push(g.href!)}>
+ <button type="button" className="btn-icon-sm" onClick={() => router.push(g.href!)}>
  <Eye className="h-3 w-3" />
- </Button>
+ </button>
  )}
  {g.esAccion && g.screenType && g.screenType !== "inspeccion" && (
  <Button

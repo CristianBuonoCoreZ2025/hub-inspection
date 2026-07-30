@@ -158,16 +158,16 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  <td>
  <div className="app-row-actions">
  {canEdit(section) && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => {
+ <button type="button" className="btn-icon-sm" onClick={() => {
  setEditingId(item.id);
  setFormData({ name: item.name || "", code: item.code || "", requires_detail: item.requires_detail || false });
  setOpen(true);
- }}><Pencil className="h-4 w-4" /></Button>
+ }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete(section) && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
  <Trash2 className="h-4 w-4" />
- </Button>
+ </button>
  )}
  </div>
  </td>

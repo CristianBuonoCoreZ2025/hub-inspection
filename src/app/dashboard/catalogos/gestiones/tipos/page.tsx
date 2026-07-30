@@ -124,10 +124,10 @@ export default function TiposGestionPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => { setEditingId(t.id); setFormData({ code: t.code, name: t.name, description: t.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm" onClick={() => { setEditingId(t.id); setFormData({ code: t.code, name: t.name, description: t.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este tipo?")) deleteMutation.mutate(t.id); }}><Ban className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este tipo?")) deleteMutation.mutate(t.id); }}><Ban className="h-4 w-4" /></button>
  )}
  </div>
  </td>

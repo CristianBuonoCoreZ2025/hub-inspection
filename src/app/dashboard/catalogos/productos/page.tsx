@@ -137,10 +137,10 @@ export default function ProductosPage() {
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => { setEditingId(p.id); setFormData({ country_id: p.country_id || "", business_line_id: p.business_line_id, name: p.name, description: p.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm" onClick={() => { setEditingId(p.id); setFormData({ country_id: p.country_id || "", business_line_id: p.business_line_id, name: p.name, description: p.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este producto?")) deleteMutation.mutate(p.id); }}><Ban className="h-4 w-4" /></Button>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este producto?")) deleteMutation.mutate(p.id); }}><Ban className="h-4 w-4" /></button>
  )}
  </div>
  </td>

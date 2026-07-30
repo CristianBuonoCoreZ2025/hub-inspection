@@ -880,31 +880,31 @@ export default function UsersPage() {
  <div className="app-row-actions">
  {isDeleted ? (
  canEdit("users") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => reactivateMutation.mutate(user.id)} title="Reactivar">
+ <button type="button" className="btn-icon-sm" onClick={() => reactivateMutation.mutate(user.id)} title="Reactivar">
  <RotateCcw className="h-4 w-4" />
- </Button>
+ </button>
  )
  ) : (
  <>
  {canEdit("users") && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => openEdit(user)} title="Editar">
+ <button type="button" className="btn-icon-sm" onClick={() => openEdit(user)} title="Editar">
  <Pencil className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {canDelete("users") && user.is_active && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este usuario?")) deactivateMutation.mutate(user.id); }} title="Desactivar">
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este usuario?")) deactivateMutation.mutate(user.id); }} title="Desactivar">
  <UserX className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {canDelete("users") && !user.is_active && (
- <Button variant="ghost" size="icon" className="btn-icon-sm btn-danger-hover" onClick={() => handleDeleteClick(user)} title="Eliminar">
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => handleDeleteClick(user)} title="Eliminar">
  <Trash2 className="h-4 w-4" />
- </Button>
+ </button>
  )}
  {canEdit("users") && !user.is_active && (
- <Button variant="ghost" size="icon" className="btn-icon-sm" onClick={() => reactivateMutation.mutate(user.id)} title="Reactivar">
+ <button type="button" className="btn-icon-sm" onClick={() => reactivateMutation.mutate(user.id)} title="Reactivar">
  <RotateCcw className="h-4 w-4" />
- </Button>
+ </button>
  )}
  </>
  )}
