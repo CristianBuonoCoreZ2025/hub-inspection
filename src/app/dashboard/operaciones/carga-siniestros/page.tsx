@@ -1335,7 +1335,7 @@ export default function CargaSiniestrosPage() {
           />
           <label htmlFor="excel-upload" className="mt-4 inline-flex cursor-pointer">
             <span className="inline-flex items-center rounded-md border border-input bg-background px-3 py-2 text-[13px] font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
-              <Upload className="mr-2 h-3.5 w-3.5" /> Seleccionar archivo
+              <Upload className="mr-2 h-3.5 w-3.5" /> Seleccionar
             </span>
           </label>
           {file && <p className="mt-2 text-xs text-muted-foreground">{file.name}</p>}
