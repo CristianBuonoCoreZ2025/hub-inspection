@@ -264,7 +264,7 @@ export function SketchEditor({
         saving={!!saving}
       />
       <div className="sketch-body">
-        <SketchBlocksPalette onDropBlock={handleDropBlock} onSelectBlock={handleSelectBlock} />
+        <SketchBlocksPalette onSelectBlock={handleSelectBlock} />
         <SketchCanvasStage onReady={handleReady} fixedHeight={height} />
       </div>
     </div>

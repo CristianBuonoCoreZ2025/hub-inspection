@@ -31,8 +31,6 @@ const BLOCK_ICONS: Record<BlockId, typeof Sofa> = {
 };
 
 interface SketchBlocksPaletteProps {
-  /** Se llama cuando el usuario arrastra un bloque y lo suelta en el canvas. */
-  onDropBlock: (blockId: BlockId, x: number, y: number) => void;
   /** Se llama cuando el usuario elige un bloque desde el select móvil. */
   onSelectBlock: (blockId: BlockId) => void;
 }
@@ -59,7 +57,7 @@ function BlockItem({ block, draggable }: { block: BlockDefinition; draggable: bo
   );
 }
 
-export function SketchBlocksPalette({ onDropBlock, onSelectBlock }: SketchBlocksPaletteProps) {
+export function SketchBlocksPalette({ onSelectBlock }: SketchBlocksPaletteProps) {
   return (
     <>
       {/* Paleta lateral (desktop >=640px) */}
