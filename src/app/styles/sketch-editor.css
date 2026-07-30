@@ -222,19 +222,19 @@
 
   .sketch-stage {
     width: 100%;
-    height: 350px;
+    height: 370px;
   }
 
   @media (min-width: 640px) {
-    .sketch-stage { height: 430px; }
+    .sketch-stage { height: 450px; }
   }
 
   @media (min-width: 768px) {
-    .sketch-stage { height: 480px; }
+    .sketch-stage { height: 500px; }
   }
 
   @media (min-width: 1280px) {
-    .sketch-stage { height: 530px; }
+    .sketch-stage { height: 550px; }
   }
 
   /* Override de altura cuando el consumidor pasa `height` explicito.
