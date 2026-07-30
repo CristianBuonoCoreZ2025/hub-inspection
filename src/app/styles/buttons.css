@@ -426,7 +426,7 @@
    * Usar .btn-icon-sm .btn-danger-hover para eliminar (rojo glass al hover).
    * ═══════════════════════════════════════════════════════════════ */
   .btn-icon-sm {
-    @apply inline-flex items-center justify-center cursor-pointer transition-all p-0;
+    @apply inline-flex shrink-0 items-center justify-center cursor-pointer transition-all p-0 outline-none select-none whitespace-nowrap;
     width: 28px !important;
     height: 28px !important;
     border-radius: 8px !important;
@@ -440,6 +440,21 @@
     backdrop-filter: blur(8px) saturate(140%) !important;
     -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  }
+
+  /* SVGs dentro de btn-icon-sm: no capturan clicks, no se encogen */
+  .btn-icon-sm svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  .btn-icon-sm:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .btn-icon-sm:focus-visible {
+    outline: none;
   }
 
   .btn-icon-sm:hover {

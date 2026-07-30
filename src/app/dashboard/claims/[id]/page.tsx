@@ -1102,7 +1102,7 @@ export default function ClaimDetailPage() {
  active={showRejected}
  onClick={(v) => setShowRejected(v)}
  >
- Rechazadas/Deshab.
+ Rechazadas
  </ToggleChip>
  )}
  {canEdit("claims") && gestionSubTab === "lista" && (
