@@ -2697,7 +2697,7 @@
   .ai-card-controls {
     display: flex !important;
     flex-direction: column !important;
-    align-items: flex-end !important;
+    align-items: center !important;
     justify-content: flex-end !important;
     gap: 3px !important;
   }
