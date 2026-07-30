@@ -748,116 +748,99 @@ function DocumentTable({
                   <td className="text-muted-foreground text-[11px]">{fileSize}</td>
                   <td>
                     <div className="app-row-actions">
-                      {/* Control segmentado de IA */}
-                      <div className="ai-card-controls">
-                        {/* done → re-analizar + ver resultado */}
-                        {aiSummary && aiStatus === "done" && (
-                          <div className="ai-card-controls-group">
-                            <button
-                              onClick={() => handleReanalyze(doc)}
-                              className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
-                              title="Re-analizar con IA"
-                            >
-                              <RefreshCw className="h-3 w-3" />
-                              <span>Re-IA</span>
-                            </button>
-                            <Popover>
-                              <PopoverTrigger
-                                render={
-                                  <button className="ai-card-ctrl-btn ai-card-ctrl-log" title="Ver log del análisis">
-                                    <FileText className="h-3 w-3" />
-                                    <span>Ver</span>
-                                  </button>
-                                }
-                              />
-                              <PopoverContent side="top" align="start" className="ai-log-popover">
-                                <div className="ai-log-header">
-                                  <span className="ai-log-code">{code}</span>
-                                  {aiAnalyzedAt && (
-                                    <span className="ai-log-date">
-                                      {new Date(aiAnalyzedAt).toLocaleString("es-CL", {
-                                        day: "2-digit",
-                                        month: "2-digit",
-                                        year: "numeric",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </span>
-                                  )}
-                                  {aiSummary && <AiCopyButton text={cleanMarkdown(aiSummary)} />}
-                                </div>
-                                {aiModel && (
-                                  <div className="ai-log-models">
-                                    {aiModel.split("|").map((m, i) => {
-                                      const trimmed = m.trim();
-                                      const isVision = trimmed.startsWith("vision:");
-                                      const label = isVision ? "Visión" : "Razonamiento";
-                                      const modelName = trimmed.replace(/^(vision|razonamiento):/, "").trim();
-                                      return (
-                                        <div key={i} className="ai-log-model-row">
-                                          <span className="ai-log-model-tag">{label}</span>
-                                          <span className="ai-log-model-name">{modelName}</span>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                                <div className="ai-log-section ai-log-section-summary">
-                                  <div className="ai-log-summary">{cleanMarkdown(aiSummary)}</div>
-                                </div>
-                                {aiPromptSnapshot && (
-                                  <Popover>
-                                    <PopoverTrigger
-                                      render={
-                                        <button className="ai-log-prompt-trigger" title="Ver prompt enviado">
-                                          <ChevronDown className="h-2.5 w-2.5" />
-                                          <span>Prompt enviado</span>
-                                        </button>
-                                      }
-                                    />
-                                    <PopoverContent side="top" align="start" className="ai-prompt-tooltip">
-                                      <div className="ai-log-prompt">
-                                        {aiPromptSnapshot.system_prompt && (
-                                          <div className="ai-log-prompt-block">
-                                            <span className="ai-log-prompt-tag">system</span>
-                                            <pre className="ai-log-prompt-text">{aiPromptSnapshot.system_prompt}</pre>
-                                          </div>
-                                        )}
-                                        {aiPromptSnapshot.user_prompt && (
-                                          <div className="ai-log-prompt-block">
-                                            <span className="ai-log-prompt-tag">user</span>
-                                            <pre className="ai-log-prompt-text">{aiPromptSnapshot.user_prompt}</pre>
-                                          </div>
-                                        )}
-                                        {aiPromptSnapshot.refinement_prompt && (
-                                          <div className="ai-log-prompt-block">
-                                            <span className="ai-log-prompt-tag">refinement</span>
-                                            <pre className="ai-log-prompt-text">{aiPromptSnapshot.refinement_prompt}</pre>
-                                          </div>
-                                        )}
+                      {/* Re-IA — re-analizar con IA */}
+                      {(aiStatus === "done" || aiStatus === "error" || aiStatus === "skipped" || (!aiSummary && aiStatus !== "pending" && aiStatus !== "processing")) && (
+                        <button
+                          type="button"
+                          className="btn-icon-sm"
+                          onClick={() => handleReanalyze(doc)}
+                          title={aiSummary ? "Re-analizar con IA" : "Analizar con IA"}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {/* Ver log del análisis — popover */}
+                      {aiSummary && aiStatus === "done" && (
+                        <Popover>
+                          <PopoverTrigger
+                            render={
+                              <button type="button" className="btn-icon-sm" title="Ver log del análisis">
+                                <FileText className="h-3.5 w-3.5" />
+                              </button>
+                            }
+                          />
+                          <PopoverContent side="top" align="start" className="ai-log-popover">
+                            <div className="ai-log-header">
+                              <span className="ai-log-code">{code}</span>
+                              {aiAnalyzedAt && (
+                                <span className="ai-log-date">
+                                  {new Date(aiAnalyzedAt).toLocaleString("es-CL", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              )}
+                              {aiSummary && <AiCopyButton text={cleanMarkdown(aiSummary)} />}
+                            </div>
+                            {aiModel && (
+                              <div className="ai-log-models">
+                                {aiModel.split("|").map((m, i) => {
+                                  const trimmed = m.trim();
+                                  const isVision = trimmed.startsWith("vision:");
+                                  const label = isVision ? "Visión" : "Razonamiento";
+                                  const modelName = trimmed.replace(/^(vision|razonamiento):/, "").trim();
+                                  return (
+                                    <div key={i} className="ai-log-model-row">
+                                      <span className="ai-log-model-tag">{label}</span>
+                                      <span className="ai-log-model-name">{modelName}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            <div className="ai-log-section ai-log-section-summary">
+                              <div className="ai-log-summary">{cleanMarkdown(aiSummary)}</div>
+                            </div>
+                            {aiPromptSnapshot && (
+                              <Popover>
+                                <PopoverTrigger
+                                  render={
+                                    <button className="ai-log-prompt-trigger" title="Ver prompt enviado">
+                                      <ChevronDown className="h-2.5 w-2.5" />
+                                      <span>Prompt enviado</span>
+                                    </button>
+                                  }
+                                />
+                                <PopoverContent side="top" align="start" className="ai-prompt-tooltip">
+                                  <div className="ai-log-prompt">
+                                    {aiPromptSnapshot.system_prompt && (
+                                      <div className="ai-log-prompt-block">
+                                        <span className="ai-log-prompt-tag">system</span>
+                                        <pre className="ai-log-prompt-text">{aiPromptSnapshot.system_prompt}</pre>
                                       </div>
-                                    </PopoverContent>
-                                  </Popover>
-                                )}
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        )}
-
-                        {/* pending/skipped/error → analizar / re-analizar */}
-                        {(!aiSummary || aiStatus === "error" || aiStatus === "skipped") && aiStatus !== "pending" && aiStatus !== "processing" && (
-                          <div className="ai-card-controls-group">
-                            <button
-                              onClick={() => handleReanalyze(doc)}
-                              className={`ai-card-ctrl-btn ${aiStatus === "error" ? "ai-card-ctrl-error" : "ai-card-ctrl-reanalyze"}`}
-                              title={aiSummary ? "Re-analizar con IA" : "Analizar con IA"}
-                            >
-                              {aiStatus === "error" ? <AlertCircle className="h-3 w-3" /> : <RefreshCw className="h-3 w-3" />}
-                              <span>Re-IA</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                                    )}
+                                    {aiPromptSnapshot.user_prompt && (
+                                      <div className="ai-log-prompt-block">
+                                        <span className="ai-log-prompt-tag">user</span>
+                                        <pre className="ai-log-prompt-text">{aiPromptSnapshot.user_prompt}</pre>
+                                      </div>
+                                    )}
+                                    {aiPromptSnapshot.refinement_prompt && (
+                                      <div className="ai-log-prompt-block">
+                                        <span className="ai-log-prompt-tag">refinement</span>
+                                        <pre className="ai-log-prompt-text">{aiPromptSnapshot.refinement_prompt}</pre>
+                                      </div>
+                                    )}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                          </PopoverContent>
+                        </Popover>
+                      )}
                       {/* Abrir documento */}
                       <a
                         href={doc.url}

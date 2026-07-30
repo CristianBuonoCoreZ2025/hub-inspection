@@ -686,154 +686,115 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                     <td className="text-muted-foreground">{doc.tamano}</td>
                     <td>
                       <div className="app-row-actions">
-                        {/* Control segmentado de IA */}
-                        {((doc.origen === "siniestro" && doc.docId) || doc.origen === "inspeccion") && (
-                          <div className="ai-card-controls">
-                            {/* done → re-analizar + ver resultado */}
-                            {doc.aiSummary && doc.aiStatus === "done" && (
-                              <div className="ai-card-controls-group">
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      await fetch("/api/ai/reanalyze", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({
-                                          table: doc.origen === "inspeccion" ? "inspection_evidences" : "claim_documents",
-                                          id: doc.origen === "inspeccion" ? doc.id : doc.docId,
-                                          claimId,
-                                        }),
-                                      });
-                                      queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
-                                      queryClient.invalidateQueries({ queryKey: ["inspection-documents", claimId] });
-                                      toast.success("Re-análisis iniciado");
-                                    } catch {
-                                      toast.error("No se pudo iniciar el re-análisis");
-                                    }
-                                  }}
-                                  className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
-                                  title="Re-analizar con IA"
-                                >
-                                  <RefreshCw className="h-3 w-3" />
-                                  <span>Re-IA</span>
+                        {/* Re-IA — re-analizar con IA */}
+                        {((doc.origen === "siniestro" && doc.docId) || doc.origen === "inspeccion") && (doc.aiStatus === "done" || doc.aiStatus === "error" || doc.aiStatus === "skipped" || (!doc.aiSummary && doc.aiStatus !== "pending" && doc.aiStatus !== "processing")) && (
+                          <button
+                            type="button"
+                            className="btn-icon-sm"
+                            onClick={async () => {
+                              try {
+                                await fetch("/api/ai/reanalyze", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    table: doc.origen === "inspeccion" ? "inspection_evidences" : "claim_documents",
+                                    id: doc.origen === "inspeccion" ? doc.id : doc.docId,
+                                    claimId,
+                                  }),
+                                });
+                                queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
+                                queryClient.invalidateQueries({ queryKey: ["inspection-documents", claimId] });
+                                toast.success("Re-análisis iniciado");
+                              } catch {
+                                toast.error("No se pudo iniciar el re-análisis");
+                              }
+                            }}
+                            title={doc.aiSummary ? "Re-analizar con IA" : "Analizar con IA"}
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {/* Ver log del análisis — popover */}
+                        {((doc.origen === "siniestro" && doc.docId) || doc.origen === "inspeccion") && doc.aiSummary && doc.aiStatus === "done" && (
+                          <Popover>
+                            <PopoverTrigger
+                              render={
+                                <button type="button" className="btn-icon-sm" title="Ver log del análisis">
+                                  <FileText className="h-3.5 w-3.5" />
                                 </button>
+                              }
+                            />
+                            <PopoverContent side="top" align="start" className="ai-log-popover">
+                              <div className="ai-log-header">
+                                <span className="ai-log-code">{doc.codigo}</span>
+                                {doc.aiAnalyzedAt && (
+                                  <span className="ai-log-date">
+                                    {new Date(doc.aiAnalyzedAt).toLocaleString("es-CL", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </span>
+                                )}
+                                {doc.aiSummary && <AiCopyButton text={cleanMarkdown(doc.aiSummary)} />}
+                              </div>
+                              {doc.aiModel && (
+                                <div className="ai-log-models">
+                                  {doc.aiModel.split("|").map((m, i) => {
+                                    const trimmed = m.trim();
+                                    const isVision = trimmed.startsWith("vision:");
+                                    const label = isVision ? "Visión" : "Razonamiento";
+                                    const modelName = trimmed.replace(/^(vision|razonamiento):/, "").trim();
+                                    return (
+                                      <div key={i} className="ai-log-model-row">
+                                        <span className="ai-log-model-tag">{label}</span>
+                                        <span className="ai-log-model-name">{modelName}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              <div className="ai-log-section ai-log-section-summary">
+                                <div className="ai-log-summary">{cleanMarkdown(doc.aiSummary)}</div>
+                              </div>
+                              {doc.aiPromptSnapshot && (
                                 <Popover>
                                   <PopoverTrigger
                                     render={
-                                      <button className="ai-card-ctrl-btn ai-card-ctrl-log" title="Ver log del análisis">
-                                        <FileText className="h-3 w-3" />
-                                        <span>Ver</span>
+                                      <button className="ai-log-prompt-trigger" title="Ver prompt enviado">
+                                        <ChevronDown className="h-2.5 w-2.5" />
+                                        <span>Prompt enviado</span>
                                       </button>
                                     }
                                   />
-                                  <PopoverContent side="top" align="start" className="ai-log-popover">
-                                    {/* Header: código + fecha */}
-                                    <div className="ai-log-header">
-                                      <span className="ai-log-code">{doc.codigo}</span>
-                                      {doc.aiAnalyzedAt && (
-                                        <span className="ai-log-date">
-                                          {new Date(doc.aiAnalyzedAt).toLocaleString("es-CL", {
-                                            day: "2-digit",
-                                            month: "2-digit",
-                                            year: "numeric",
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                          })}
-                                        </span>
+                                  <PopoverContent side="top" align="start" className="ai-prompt-tooltip">
+                                    <div className="ai-log-prompt">
+                                      {doc.aiPromptSnapshot.system_prompt && (
+                                        <div className="ai-log-prompt-block">
+                                          <span className="ai-log-prompt-tag">system</span>
+                                          <pre className="ai-log-prompt-text">{doc.aiPromptSnapshot.system_prompt}</pre>
+                                        </div>
                                       )}
-                                      {doc.aiSummary && <AiCopyButton text={cleanMarkdown(doc.aiSummary)} />}
+                                      {doc.aiPromptSnapshot.user_prompt && (
+                                        <div className="ai-log-prompt-block">
+                                          <span className="ai-log-prompt-tag">user</span>
+                                          <pre className="ai-log-prompt-text">{doc.aiPromptSnapshot.user_prompt}</pre>
+                                        </div>
+                                      )}
+                                      {doc.aiPromptSnapshot.refinement_prompt && (
+                                        <div className="ai-log-prompt-block">
+                                          <span className="ai-log-prompt-tag">refinement</span>
+                                          <pre className="ai-log-prompt-text">{doc.aiPromptSnapshot.refinement_prompt}</pre>
+                                        </div>
+                                      )}
                                     </div>
-                                    {doc.aiModel && (
-                                      <div className="ai-log-models">
-                                        {doc.aiModel.split("|").map((m, i) => {
-                                          const trimmed = m.trim();
-                                          const isVision = trimmed.startsWith("vision:");
-                                          const label = isVision ? "Visión" : "Razonamiento";
-                                          const modelName = trimmed.replace(/^(vision|razonamiento):/, "").trim();
-                                          return (
-                                            <div key={i} className="ai-log-model-row">
-                                              <span className="ai-log-model-tag">{label}</span>
-                                              <span className="ai-log-model-name">{modelName}</span>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-                                    {/* Resumen */}
-                                    <div className="ai-log-section ai-log-section-summary">
-                                      <div className="ai-log-summary">{cleanMarkdown(doc.aiSummary)}</div>
-                                    </div>
-                                    {/* Prompt enviado */}
-                                    {doc.aiPromptSnapshot && (
-                                      <Popover>
-                                        <PopoverTrigger
-                                          render={
-                                            <button className="ai-log-prompt-trigger" title="Ver prompt enviado">
-                                              <ChevronDown className="h-2.5 w-2.5" />
-                                              <span>Prompt enviado</span>
-                                            </button>
-                                          }
-                                        />
-                                        <PopoverContent side="top" align="start" className="ai-prompt-tooltip">
-                                          <div className="ai-log-prompt">
-                                            {doc.aiPromptSnapshot.system_prompt && (
-                                              <div className="ai-log-prompt-block">
-                                                <span className="ai-log-prompt-tag">system</span>
-                                                <pre className="ai-log-prompt-text">{doc.aiPromptSnapshot.system_prompt}</pre>
-                                              </div>
-                                            )}
-                                            {doc.aiPromptSnapshot.user_prompt && (
-                                              <div className="ai-log-prompt-block">
-                                                <span className="ai-log-prompt-tag">user</span>
-                                                <pre className="ai-log-prompt-text">{doc.aiPromptSnapshot.user_prompt}</pre>
-                                              </div>
-                                            )}
-                                            {doc.aiPromptSnapshot.refinement_prompt && (
-                                              <div className="ai-log-prompt-block">
-                                                <span className="ai-log-prompt-tag">refinement</span>
-                                                <pre className="ai-log-prompt-text">{doc.aiPromptSnapshot.refinement_prompt}</pre>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </PopoverContent>
-                                      </Popover>
-                                    )}
                                   </PopoverContent>
                                 </Popover>
-                              </div>
-                            )}
-
-                            {/* pending/skipped/error → analizar / re-analizar */}
-                            {(!doc.aiSummary || doc.aiStatus === "error" || doc.aiStatus === "skipped") && (
-                              <div className="ai-card-controls-group">
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      await fetch("/api/ai/reanalyze", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({
-                                          table: doc.origen === "inspeccion" ? "inspection_evidences" : "claim_documents",
-                                          id: doc.origen === "inspeccion" ? doc.id : doc.docId,
-                                          claimId,
-                                        }),
-                                      });
-                                      queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
-                                      queryClient.invalidateQueries({ queryKey: ["inspection-documents", claimId] });
-                                      toast.success("Re-análisis iniciado");
-                                    } catch {
-                                      toast.error("No se pudo iniciar el re-análisis");
-                                    }
-                                  }}
-                                  className={`ai-card-ctrl-btn ${doc.aiStatus === "error" ? "ai-card-ctrl-error" : "ai-card-ctrl-reanalyze"}`}
-                                  title={doc.aiSummary ? "Re-analizar con IA" : "Analizar con IA"}
-                                >
-                                  {doc.aiStatus === "error" ? <AlertCircle className="h-3 w-3" /> : <RefreshCw className="h-3 w-3" />}
-                                  <span>Re-IA</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                              )}
+                            </PopoverContent>
+                          </Popover>
                         )}
                         {/* Ver documento */}
                         {doc.url && (
