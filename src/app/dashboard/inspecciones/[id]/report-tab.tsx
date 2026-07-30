@@ -488,15 +488,15 @@ export default function ReportTab({
         )}
         {isFinal && (
           <>
-            <Button variant="outline" onClick={handlePrint} className="pg-btn-platinum-icon">
+            <button type="button" onClick={handlePrint} className="pg-btn-platinum">
               <Printer className="mr-2 h-4 w-4" /> Imprimir
-            </Button>
-            <Button variant="outline" onClick={handleDownload} className="pg-btn-platinum-icon">
+            </button>
+            <button type="button" onClick={handleDownload} className="pg-btn-platinum">
               <Download className="mr-2 h-4 w-4" /> Descargar
-            </Button>
-            <Button variant="outline" onClick={handleDownloadZip} disabled={zipPending} className="pg-btn-platinum-icon">
+            </button>
+            <button type="button" onClick={handleDownloadZip} disabled={zipPending} className="pg-btn-platinum">
               <Archive className="mr-2 h-4 w-4" /> {zipPending ? "Comprimiendo..." : "ZIP"}
-            </Button>
+            </button>
             <div className="report-final-badge">
               <CheckCircle2 className="h-5 w-5" />
               <span className="report-final-badge-text app-body">Acta Definitiva</span>

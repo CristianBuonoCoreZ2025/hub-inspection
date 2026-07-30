@@ -1522,9 +1522,9 @@ export default function CargaSiniestrosPage() {
             <Button variant="ghost" onClick={() => setStep("preview")}>
               <ArrowRight className="mr-2 h-3.5 w-3.5 rotate-180" /> Volver
             </Button>
-            <Button onClick={goToMapping} className="pg-btn-platinum-icon">
+            <button type="button" onClick={goToMapping} className="pg-btn-platinum">
               Continuar <ArrowRight className="ml-2 h-3.5 w-3.5" />
-            </Button>
+            </button>
           </div>
         </div>
       )}
@@ -2311,9 +2311,9 @@ export default function CargaSiniestrosPage() {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={handleReset} className="pg-btn-platinum-icon">
+            <button type="button" onClick={handleReset} className="pg-btn-platinum">
               <Upload className="mr-2 h-3.5 w-3.5" /> Cargar
-            </Button>
+            </button>
           </div>
         </div>
       )}
