@@ -763,12 +763,12 @@ function DocumentTable({
                       {aiSummary && aiStatus === "done" && (
                         <Popover>
                           <PopoverTrigger
-                            render={
-                              <button type="button" className="btn-icon-sm" title="Ver log del análisis">
-                                <FileText className="h-3.5 w-3.5" />
-                              </button>
-                            }
-                          />
+                            type="button"
+                            className="btn-icon-sm"
+                            title="Ver log del análisis"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                          </PopoverTrigger>
                           <PopoverContent side="top" align="start" className="ai-log-popover">
                             <div className="ai-log-header">
                               <span className="ai-log-code">{code}</span>
@@ -807,13 +807,13 @@ function DocumentTable({
                             {aiPromptSnapshot && (
                               <Popover>
                                 <PopoverTrigger
-                                  render={
-                                    <button className="ai-log-prompt-trigger" title="Ver prompt enviado">
-                                      <ChevronDown className="h-2.5 w-2.5" />
-                                      <span>Prompt enviado</span>
-                                    </button>
-                                  }
-                                />
+                                  type="button"
+                                  className="ai-log-prompt-trigger"
+                                  title="Ver prompt enviado"
+                                >
+                                  <ChevronDown className="h-2.5 w-2.5" />
+                                  <span>Prompt enviado</span>
+                                </PopoverTrigger>
                                 <PopoverContent side="top" align="start" className="ai-prompt-tooltip">
                                   <div className="ai-log-prompt">
                                     {aiPromptSnapshot.system_prompt && (

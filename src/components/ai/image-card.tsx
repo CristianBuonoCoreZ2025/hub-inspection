@@ -202,13 +202,13 @@ export function ImageCard({
                 </button>
                 <Popover>
                   <PopoverTrigger
-                    render={
-                      <button className="ai-card-ctrl-btn ai-card-ctrl-log" title="Ver log del análisis">
-                        <FileText className="h-3 w-3" />
-                        <span>Ver</span>
-                      </button>
-                    }
-                  />
+                    type="button"
+                    className="ai-card-ctrl-btn ai-card-ctrl-log"
+                    title="Ver log del análisis"
+                  >
+                    <FileText className="h-3 w-3" />
+                    <span>Ver</span>
+                  </PopoverTrigger>
                   <PopoverContent side="top" align="start" className="ai-log-popover">
                     {/* Header: código + fecha */}
                     <div className="ai-log-header">
@@ -250,13 +250,13 @@ export function ImageCard({
                     {aiPromptSnapshot && (
                       <Popover>
                         <PopoverTrigger
-                          render={
-                            <button className="ai-log-prompt-trigger" title="Ver prompt enviado">
-                              <ChevronDown className="h-2.5 w-2.5" />
-                              <span>Prompt enviado</span>
-                            </button>
-                          }
-                        />
+                          type="button"
+                          className="ai-log-prompt-trigger"
+                          title="Ver prompt enviado"
+                        >
+                          <ChevronDown className="h-2.5 w-2.5" />
+                          <span>Prompt enviado</span>
+                        </PopoverTrigger>
                         <PopoverContent side="top" align="start" className="ai-prompt-tooltip">
                           <div className="ai-log-prompt">
                             {aiPromptSnapshot.system_prompt && (
