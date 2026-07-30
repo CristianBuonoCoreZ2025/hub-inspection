@@ -200,7 +200,7 @@ export function SketchToolbar({
         {onCancel && (
           <button
             type="button"
-            className="sketch-mode-btn"
+            className="pg-btn-platinum"
             onClick={onCancel}
             disabled={saving}
           >
