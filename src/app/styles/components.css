@@ -2702,11 +2702,15 @@
   }
 
   .ai-card-time-ago {
-    font-size: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 3px !important;
+    font-size: 9px !important;
     color: var(--muted-foreground) !important;
     font-variant-numeric: tabular-nums !important;
-    text-align: center !important;
     width: 100% !important;
+    line-height: 1 !important;
   }
 
   .ai-card-controls-row {

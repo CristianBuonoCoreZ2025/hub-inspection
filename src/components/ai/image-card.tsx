@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, RefreshCw, FileText, AlertCircle } from "lucide-react";
+import { ChevronDown, RefreshCw, FileText, AlertCircle, Clock } from "lucide-react";
 import {
   Popover,
   PopoverTrigger,
@@ -204,12 +204,15 @@ export function ImageCard({
 
           {/* Derecha: control segmentado de IA */}
           <div className="ai-card-controls">
+            {aiAnalyzedAt && (
+              <div className="ai-card-time-ago">
+                <Clock className="h-2.5 w-2.5" />
+                <span>{timeAgo(aiAnalyzedAt)}</span>
+              </div>
+            )}
             {/* done → re-analizar + ver resultado */}
             {aiSummary && aiStatus === "done" && (
               <div className="ai-card-controls-group">
-                {aiAnalyzedAt && (
-                  <div className="ai-card-time-ago">{timeAgo(aiAnalyzedAt)}</div>
-                )}
                 <div className="ai-card-controls-row">
                   <button
                     onClick={onReanalyze}
