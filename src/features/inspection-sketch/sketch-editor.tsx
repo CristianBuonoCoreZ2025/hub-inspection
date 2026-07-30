@@ -1,33 +1,41 @@
 "use client";
 
 /**
- * Editor de croquis vectorial — orquestador.
+ * Editor de croquis vectorial — orquestador (arquitectura definitiva).
  *
- * Une el stage (canvas Fabric), la toolbar (modos/color/grosor/acciones) y la
- * paleta de bloques (drag & drop). Maneja:
- *  - Modos: select, draw (mano alzada), line/rectangle/circle/triangle
- *    (drag-to-create), eraser (clic elimina objeto), text (clic coloca Textbox).
- *  - Undo/redo a nivel de objetos serializados como JSON string.
- *  - Carga de croquis previo como fondo bloqueado (compatibilidad hacia atrás).
- *  - Export a PNG base64 via sketch-export.ts (contrato del backend intacto).
+ * Une todas las piezas de la arquitectura definitiva:
+ *  - Stage (canvas Fabric) — sketch-canvas-stage.tsx
+ *  - Toolbar (7 acciones + más herramientas) — sketch-toolbar.tsx
+ *  - Biblioteca (favoritos + buscador + acordeones) — sketch-blocks-palette.tsx
+ *  - Panel de propiedades (doble clic) — sketch-properties-panel.tsx
+ *  - Renderizador de entidades — entity-renderer.ts
+ *  - Numeración automática — entity-numbering.ts
+ *  - Snap del motor — sketch-snap.ts
+ *  - Anotaciones (etiqueta/comentario) — sketch-annotations.ts
+ *  - Export PNG + JSON — sketch-export.ts + sketch-json-export.ts
  *
- * Los handlers de mouse leen el modo/color/grosor desde refs (no desde state)
- * para poder registrarse una sola vez en el canvas sin recrearse en cada
- * cambio de modo, evitando dependencias circulares con handleReady.
+ * Modos: select, draw, label, comment, line, rectangle, circle, polygon, eraser.
+ * Los handlers de mouse leen modo/color desde refs para registrarse una sola vez.
+ *
+ * Ver PLAN_CANVAS_MIGRATION.md para la arquitectura completa.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
 import { SketchCanvasStage } from "./sketch-canvas-stage";
 import { SketchToolbar } from "./sketch-toolbar";
-import { SketchBlocksPalette } from "./sketch-blocks-palette";
-import { createBlock } from "./sketch-block-factory";
-import { createShape, updateShape } from "./sketch-shape-drawing";
+import type { SketchMode } from "./sketch-toolbar";
+import { SketchLibrary } from "./sketch-blocks-palette";
+import { SketchPropertiesPanel } from "./sketch-properties-panel";
+import { createEntity, getEntityMeta, setEntityMeta } from "./entity-renderer";
+import { generateAutoName, renumberEntities } from "./entity-numbering";
+import { snapToWall, updateAttachedEntities, calculateAlignGuides, applyAlignGuides } from "./sketch-snap";
+import { createLabel, createComment } from "./sketch-annotations";
 import { exportSketchToPng } from "./sketch-export";
-import type { BlockId, SketchEditorProps, SketchMode } from "./sketch-types";
+import type { AnnotationColor, SketchEditorProps } from "./entity-types";
 
-type ShapeMode = Extract<SketchMode, "line" | "rectangle" | "circle" | "triangle">;
-const SHAPE_MODES: ShapeMode[] = ["line", "rectangle", "circle", "triangle"];
+type ShapeMode = Extract<SketchMode, "line" | "rectangle" | "circle">;
+const SHAPE_MODES: ShapeMode[] = ["line", "rectangle", "circle"];
 function isShapeMode(m: SketchMode): m is ShapeMode {
   return SHAPE_MODES.includes(m as ShapeMode);
 }
@@ -38,25 +46,25 @@ export function SketchEditor({
   initialImage,
   height,
   className,
+  bienType,
 }: SketchEditorProps) {
   const canvasRef = useRef<fabric.Canvas | null>(null);
+  const [canvasInstance, setCanvasInstance] = useState<fabric.Canvas | null>(null);
   const [mode, setMode] = useState<SketchMode>("select");
-  const [color, setColor] = useState("#000000");
-  const [lineWidth, setLineWidth] = useState(3);
+  const [annotationColor, setAnnotationColor] = useState<AnnotationColor>("yellow");
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [canClear, setCanClear] = useState(false);
+  const [selectedObj, setSelectedObj] = useState<fabric.Object | null>(null);
+  const [showProperties, setShowProperties] = useState(false);
 
-  // Refs espejo del estado para que los handlers de mouse (registrados una
-  // sola vez) lean siempre el valor actual sin recrearse.
+  // Refs espejo del estado para los handlers de mouse.
   const modeRef = useRef<SketchMode>(mode);
-  const colorRef = useRef<string>(color);
-  const lineWidthRef = useRef<number>(lineWidth);
+  const colorRef = useRef<AnnotationColor>(annotationColor);
   useEffect(() => { modeRef.current = mode; }, [mode]);
-  useEffect(() => { colorRef.current = color; }, [color]);
-  useEffect(() => { lineWidthRef.current = lineWidth; }, [lineWidth]);
+  useEffect(() => { colorRef.current = annotationColor; }, [annotationColor]);
 
-  // Stacks de undo/redo (JSON string del canvas).
+  // Stacks de undo/redo.
   const undoStackRef = useRef<string[]>([]);
   const redoStackRef = useRef<string[]>([]);
   const isApplyingHistoryRef = useRef(false);
@@ -93,7 +101,6 @@ export function SketchEditor({
     updateButtons();
   }, [updateButtons]);
 
-  /** Convierte un evento de Fabric a coordenadas del canvas. */
   const eventToCanvasPoint = useCallback((opt: { e: Event }) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -102,11 +109,9 @@ export function SketchEditor({
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }, []);
 
-  /** Cambiar modo: ajusta isDrawingMode y selection de Fabric. */
   const handleModeChange = useCallback((next: SketchMode) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    // Cancelar figura en curso si se cambia de modo a mitad de un trazo.
     if (tempShapeRef.current) {
       canvas.remove(tempShapeRef.current);
       tempShapeRef.current = null;
@@ -120,7 +125,51 @@ export function SketchEditor({
     canvas.hoverCursor = next === "select" ? "move" : "crosshair";
   }, []);
 
-  /** mouse:down — inicio de figura, borrador o texto según el modo activo. */
+  /** Crea una figura temporal vacía en el punto inicial. */
+  function createTempShape(m: ShapeMode, x: number, y: number): fabric.Object {
+    const color = "#1f2937";
+    switch (m) {
+      case "line":
+        return new fabric.Line([x, y, x, y], { stroke: color, strokeWidth: 3, strokeLineCap: "round" });
+      case "rectangle":
+        return new fabric.Rect({ left: x, top: y, width: 0, height: 0, fill: "transparent", stroke: color, strokeWidth: 2 });
+      case "circle":
+        return new fabric.Circle({ left: x, top: y, radius: 0, originX: "left", originY: "top", fill: "transparent", stroke: color, strokeWidth: 2 });
+    }
+  }
+
+  /** Actualiza la figura temporal según el punto actual. */
+  function updateTempShape(obj: fabric.Object, m: ShapeMode, start: { x: number; y: number }, current: { x: number; y: number }) {
+    switch (m) {
+      case "line": {
+        const line = obj as fabric.Line;
+        line.set({ x2: current.x, y2: current.y });
+        break;
+      }
+      case "rectangle": {
+        const rect = obj as fabric.Rect;
+        rect.set({
+          left: Math.min(start.x, current.x),
+          top: Math.min(start.y, current.y),
+          width: Math.abs(current.x - start.x),
+          height: Math.abs(current.y - start.y),
+        });
+        break;
+      }
+      case "circle": {
+        const circle = obj as fabric.Circle;
+        const dx = current.x - start.x;
+        const dy = current.y - start.y;
+        circle.set({
+          left: Math.min(start.x, current.x),
+          top: Math.min(start.y, current.y),
+          radius: Math.sqrt(dx * dx + dy * dy) / 2,
+        });
+        break;
+      }
+    }
+  }
+
   const handleCanvasMouseDown = useCallback((opt: { e: Event; target?: fabric.Object | null }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -128,24 +177,35 @@ export function SketchEditor({
 
     if (currentMode === "eraser") {
       const target = opt.target;
-      if (target) canvas.remove(target);
+      if (target) {
+        const meta = getEntityMeta(target);
+        canvas.remove(target);
+        // Renumerar si era una entidad numerada.
+        if (meta) renumberEntities(meta.catalogId, canvas, (obj, name) => {
+          setEntityMeta(obj, { name });
+          if (obj instanceof fabric.Group) {
+            const textObj = obj.getObjects().find((o) => o.type === "text" || o.type === "textbox");
+            if (textObj) {
+              textObj.set({ text: name });
+            }
+          }
+        });
+      }
       return;
     }
 
-    if (currentMode === "text") {
+    if (currentMode === "label" || currentMode === "comment") {
       const { x, y } = eventToCanvasPoint(opt);
-      const textbox = new fabric.Textbox("Texto", {
-        left: x,
-        top: y,
-        width: 120,
-        fontSize: 16,
-        fill: colorRef.current,
-        fontFamily: "sans-serif",
-      });
-      canvas.add(textbox);
-      canvas.setActiveObject(textbox);
-      canvas.renderAll();
-      // Volver a modo selección tras colocar el texto.
+      const text = window.prompt(currentMode === "label" ? "Texto de la etiqueta:" : "Texto del comentario:", "");
+      if (!text) return;
+      const obj = currentMode === "label"
+        ? createLabel(x, y, text, colorRef.current)
+        : createComment(x, y, text, colorRef.current);
+      if (obj) {
+        canvas.add(obj);
+        canvas.setActiveObject(obj);
+        canvas.renderAll();
+      }
       handleModeChange("select");
       return;
     }
@@ -153,13 +213,12 @@ export function SketchEditor({
     if (isShapeMode(currentMode)) {
       const { x, y } = eventToCanvasPoint(opt);
       shapeStartRef.current = { x, y };
-      const shape = createShape(currentMode, x, y, colorRef.current, lineWidthRef.current);
+      const shape = createTempShape(currentMode, x, y);
       tempShapeRef.current = shape;
       canvas.add(shape);
     }
   }, [eventToCanvasPoint, handleModeChange]);
 
-  /** mouse:move — actualiza la figura temporal mientras se arrastra. */
   const handleCanvasMouseMove = useCallback((opt: { e: Event }) => {
     if (!shapeStartRef.current || !tempShapeRef.current) return;
     const canvas = canvasRef.current;
@@ -167,20 +226,17 @@ export function SketchEditor({
     const currentMode = modeRef.current;
     if (!isShapeMode(currentMode)) return;
     const { x, y } = eventToCanvasPoint(opt);
-    updateShape(tempShapeRef.current, currentMode, shapeStartRef.current, { x, y });
+    updateTempShape(tempShapeRef.current, currentMode, shapeStartRef.current, { x, y });
     canvas.requestRenderAll();
   }, [eventToCanvasPoint]);
 
-  /** mouse:up — finaliza la figura temporal. */
   const handleCanvasMouseUp = useCallback(() => {
     const canvas = canvasRef.current;
     if (!tempShapeRef.current || !canvas) return;
     tempShapeRef.current.setCoords();
     const obj = tempShapeRef.current;
     const isLine = obj.type === "line";
-    const tooSmall = isLine
-      ? false
-      : (obj.width ?? 0) < 3 && (obj.height ?? 0) < 3;
+    const tooSmall = isLine ? false : (obj.width ?? 0) < 3 && (obj.height ?? 0) < 3;
     if (tooSmall) canvas.remove(obj);
     shapeStartRef.current = null;
     tempShapeRef.current = null;
@@ -188,16 +244,54 @@ export function SketchEditor({
     pushHistory();
   }, [pushHistory]);
 
-  /** Cuando el stage notifica que el canvas está listo. */
+  /** Doble clic: abrir panel de propiedades. */
+  const handleCanvasDoubleClick = useCallback((opt: { target?: fabric.Object | null }) => {
+    const target = opt.target;
+    if (!target) return;
+    const meta = getEntityMeta(target);
+    if (!meta) return;
+    setSelectedObj(target);
+    setShowProperties(true);
+  }, []);
+
+  /** Objeto modificado: aplicar snap si es puerta/ventana, guías si es cualquier objeto. */
+  const handleObjectModified = useCallback((opt: { target?: fabric.Object | null }) => {
+    const canvas = canvasRef.current;
+    const target = opt.target;
+    if (!canvas || !target) return;
+    const meta = getEntityMeta(target);
+
+    // Si es puerta o ventana, snap al muro más cercano.
+    if (meta?.catalogId === "puerta" || meta?.catalogId === "ventana") {
+      const result = snapToWall(canvas, target);
+      if (result.attachedTo) {
+        target.set({ left: result.left, top: result.top });
+        target.setCoords();
+        canvas.renderAll();
+      }
+    }
+
+    // Si es muro, reubicar puertas/ventanas asociadas.
+    if (meta?.catalogId === "muro") {
+      updateAttachedEntities(canvas, target);
+    }
+
+    // Guías de alineación para cualquier objeto.
+    const guides = calculateAlignGuides(canvas, target);
+    applyAlignGuides(target, guides);
+    canvas.renderAll();
+  }, []);
+
   const handleReady = useCallback((canvas: fabric.Canvas | null) => {
     canvasRef.current = canvas;
+    setCanvasInstance(canvas);
     if (!canvas) return;
 
     canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-    canvas.freeDrawingBrush.color = colorRef.current;
-    canvas.freeDrawingBrush.width = lineWidthRef.current;
+    canvas.freeDrawingBrush.color = "#1f2937";
+    canvas.freeDrawingBrush.width = 3;
 
-    // Cargar croquis previo como fondo bloqueado (compatibilidad hacia atrás).
+    // Cargar croquis previo como fondo bloqueado.
     if (initialImage) {
       fabric.Image.fromURL(initialImage, { crossOrigin: "anonymous" })
         .then((img) => {
@@ -213,31 +307,25 @@ export function SketchEditor({
       pushHistory();
     }
 
-    // Listeners de historial.
+    // Listeners de historial (object:modified también dispara pushHistory).
     canvas.on("object:added", pushHistory);
     canvas.on("object:removed", pushHistory);
-    canvas.on("object:modified", pushHistory);
     canvas.on("path:created", pushHistory);
 
-    // Listeners de dibujo de figuras / borrador / texto.
+    // object:modified: snap + guías + historial.
+    canvas.on("object:modified", (opt) => {
+      handleObjectModified(opt);
+      pushHistory();
+    });
+
+    // Listeners de interacción.
     canvas.on("mouse:down", handleCanvasMouseDown);
     canvas.on("mouse:move", handleCanvasMouseMove);
     canvas.on("mouse:up", handleCanvasMouseUp);
+    canvas.on("mouse:dblclick", handleCanvasDoubleClick);
 
     updateButtons();
-  }, [initialImage, pushHistory, handleCanvasMouseDown, handleCanvasMouseMove, handleCanvasMouseUp, updateButtons]);
-
-  const handleColorChange = useCallback((c: string) => {
-    setColor(c);
-    const canvas = canvasRef.current;
-    if (canvas?.freeDrawingBrush) canvas.freeDrawingBrush.color = c;
-  }, []);
-
-  const handleLineWidthChange = useCallback((w: number) => {
-    setLineWidth(w);
-    const canvas = canvasRef.current;
-    if (canvas?.freeDrawingBrush) canvas.freeDrawingBrush.width = w;
-  }, []);
+  }, [initialImage, pushHistory, handleCanvasMouseDown, handleCanvasMouseMove, handleCanvasMouseUp, handleCanvasDoubleClick, handleObjectModified, updateButtons]);
 
   const handleUndo = useCallback(() => {
     const canvas = canvasRef.current;
@@ -279,11 +367,13 @@ export function SketchEditor({
     return { x: clientX - rect.left, y: clientY - rect.top };
   }, []);
 
-  const handleDropBlock = useCallback((blockId: BlockId, x: number, y: number) => {
+  /** Drop de entidad desde la biblioteca (drag & drop). */
+  const handleDropEntity = useCallback((entityId: string, x: number, y: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const { x: cx, y: cy } = clientToCanvas(x, y);
-    const obj = createBlock(blockId, cx, cy);
+    const name = generateAutoName(entityId, canvas);
+    const obj = createEntity(entityId, cx, cy, name);
     if (obj) {
       canvas.add(obj);
       canvas.setActiveObject(obj);
@@ -291,12 +381,14 @@ export function SketchEditor({
     }
   }, [clientToCanvas]);
 
-  const handleSelectBlock = useCallback((blockId: BlockId) => {
+  /** Select de entidad desde el select móvil. */
+  const handleSelectEntity = useCallback((entityId: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const cx = canvas.getWidth() / 2 - 80;
     const cy = canvas.getHeight() / 2 - 60;
-    const obj = createBlock(blockId, cx, cy);
+    const name = generateAutoName(entityId, canvas);
+    const obj = createEntity(entityId, cx, cy, name);
     if (obj) {
       canvas.add(obj);
       canvas.setActiveObject(obj);
@@ -311,9 +403,14 @@ export function SketchEditor({
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    const blockId = e.dataTransfer.getData("text/sketch-block") as BlockId;
-    if (blockId) handleDropBlock(blockId, e.clientX, e.clientY);
-  }, [handleDropBlock]);
+    const entityId = e.dataTransfer.getData("text/sketch-entity");
+    if (entityId) handleDropEntity(entityId, e.clientX, e.clientY);
+  }, [handleDropEntity]);
+
+  const handleCloseProperties = useCallback(() => {
+    setShowProperties(false);
+    setSelectedObj(null);
+  }, []);
 
   return (
     <div
@@ -324,10 +421,8 @@ export function SketchEditor({
       <SketchToolbar
         mode={mode}
         onModeChange={handleModeChange}
-        color={color}
-        onColorChange={handleColorChange}
-        lineWidth={lineWidth}
-        onLineWidthChange={handleLineWidthChange}
+        annotationColor={annotationColor}
+        onAnnotationColorChange={setAnnotationColor}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onClear={handleClear}
@@ -338,8 +433,15 @@ export function SketchEditor({
         saving={!!saving}
       />
       <div className="sketch-body">
-        <SketchBlocksPalette onSelectBlock={handleSelectBlock} />
+        <SketchLibrary onSelectEntity={handleSelectEntity} bienType={bienType} />
         <SketchCanvasStage onReady={handleReady} fixedHeight={height} />
+        {showProperties && (
+          <SketchPropertiesPanel
+            obj={selectedObj}
+            canvas={canvasInstance}
+            onClose={handleCloseProperties}
+          />
+        )}
       </div>
     </div>
   );

@@ -13,44 +13,49 @@
 
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
-import type * as fabric from "fabric";
+import * as fabric from "fabric";
 import { getEntityMeta, setEntityMeta } from "./entity-renderer";
 import { getPropertyFields } from "./entity-properties";
 import { getTexturePattern, TEXTURE_OPTIONS } from "./sketch-textures";
 import { updateAnnotationText, updateAnnotationColor } from "./sketch-annotations";
 import { ANNOTATION_COLORS } from "./entity-types";
-import type { PropertyName, TextureId, AnnotationColor } from "./entity-types";
+import type { PropertyName, TextureId, AnnotationColor, EntityMetadata } from "./entity-types";
 
 interface SketchPropertiesPanelProps {
-  /** Objeto Fabric seleccionado (doble clic). */
   obj: fabric.Object | null;
-  /** Lienzo para repintar tras cambios. */
   canvas: fabric.Canvas | null;
-  /** Se llama al cerrar el panel. */
   onClose: () => void;
 }
 
-export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchPropertiesPanelProps) {
-  // Derivar metadata del objeto seleccionado (sin useEffect + setState).
-  const meta = useMemo(() => (obj ? getEntityMeta(obj) : null), [obj]);
+/** Calcula los valores iniciales desde la metadata. */
+function computeInitialValues(meta: EntityMetadata): Record<string, string> {
+  const initial: Record<string, string> = {};
+  for (const [key, val] of Object.entries(meta.properties)) {
+    initial[key] = val !== null ? String(val) : "";
+  }
+  if (meta.properties.name === undefined) {
+    initial.name = meta.name;
+  }
+  return initial;
+}
 
-  // Valores editables locales. Se inicializan desde meta cuando cambia obj.
+export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchPropertiesPanelProps) {
+  const meta = useMemo(() => (obj ? getEntityMeta(obj) : null), [obj]);
   const [values, setValues] = useState<Record<string, string>>({});
 
-  // Resetear valores cuando cambia el objeto (key por obj identity).
-  const objKey = obj?.__uid ?? "";
+  // Resetear valores cuando cambia el objeto. Usamos el cacheKey de Fabric
+  // como identidad del objeto (cambia cuando se selecciona otro objeto).
+  const objKey = useMemo(() => {
+    if (!obj) return "";
+    // Usar una propiedad estable del objeto como key.
+    return `${obj.left}-${obj.top}-${obj.width}-${obj.height}`;
+  }, [obj]);
+
   const [lastKey, setLastKey] = useState("");
   if (objKey !== lastKey) {
     setLastKey(objKey);
     if (meta) {
-      const initial: Record<string, string> = {};
-      for (const [key, val] of Object.entries(meta.properties)) {
-        initial[key] = val !== null ? String(val) : "";
-      }
-      if (meta.properties.name === undefined) {
-        initial.name = meta.name;
-      }
-      setValues(initial);
+      setValues(computeInitialValues(meta));
     } else {
       setValues({});
     }
@@ -58,27 +63,25 @@ export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchProperties
 
   if (!obj || !meta) return null;
 
+  // Capturar referencias no-null para los closures.
+  const targetObj = obj;
+  const targetMeta = meta;
+
   const fields = getPropertyFields(
-    // Reconstruir PropertyName[] desde las properties del catálogo via meta.
-    Object.keys(meta.properties) as PropertyName[]
+    Object.keys(targetMeta.properties) as PropertyName[]
   );
 
-  /** Actualiza una propiedad y repinta. */
   function handleChange(name: string, value: string) {
     setValues((prev) => ({ ...prev, [name]: value }));
 
-    // Actualizar metadata.
-    const updatedProps = { ...meta.properties, [name]: value || null };
-    setEntityMeta(obj, { properties: updatedProps });
+    const updatedProps = { ...targetMeta.properties, [name]: value || null };
+    setEntityMeta(targetObj, { properties: updatedProps });
 
-    // Casos especiales.
     if (name === "name") {
-      setEntityMeta(obj, { name: value });
-      // Actualizar el texto visible en el bloque (si es un Group con Text).
-      if (obj instanceof fabric.Group) {
-        const objects = obj.getObjects();
-        const textObj = objects.find((o) => o instanceof fabric.Text || o instanceof fabric.Textbox);
-        if (textObj instanceof fabric.Text || textObj instanceof fabric.Textbox) {
+      setEntityMeta(targetObj, { name: value });
+      if (targetObj instanceof fabric.Group) {
+        const textObj = targetObj.getObjects().find((o) => o.type === "text" || o.type === "textbox");
+        if (textObj) {
           textObj.set({ text: value });
         }
       }
@@ -86,30 +89,26 @@ export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchProperties
 
     if (name === "texture") {
       const textureId = value as TextureId;
-      setEntityMeta(obj, { texture: textureId });
-      // Aplicar textura al rectángculo del bloque.
-      if (obj instanceof fabric.Group) {
-        const rect = obj.getObjects()[0];
+      setEntityMeta(targetObj, { texture: textureId });
+      if (targetObj instanceof fabric.Group) {
+        const rect = targetObj.getObjects()[0];
         if (rect instanceof fabric.Rect) {
           const pattern = getTexturePattern(textureId);
           if (pattern) {
             rect.set({ fill: pattern });
-          } else {
-            // Sin textura: restaurar fill del catálogo.
-            rect.set({ fill: meta.properties.__originalFill ?? rect.fill });
           }
         }
       }
     }
 
-    if (name === "color" && meta.category === "annotations") {
+    if (name === "color" && targetMeta.category === "annotations") {
       const colorId = value as AnnotationColor;
-      updateAnnotationColor(obj, colorId);
+      updateAnnotationColor(targetObj, colorId);
     }
 
-    if (name === "text" && meta.category === "annotations") {
-      updateAnnotationText(obj, value);
-      setEntityMeta(obj, { name: value });
+    if (name === "text" && targetMeta.category === "annotations") {
+      updateAnnotationText(targetObj, value);
+      setEntityMeta(targetObj, { name: value });
     }
 
     canvas?.requestRenderAll();
