@@ -2696,20 +2696,28 @@
   /* ── Control segmentado de IA en cards de imágenes ── */
   .ai-card-controls {
     display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-end !important;
+    align-items: center !important;
     justify-content: flex-end !important;
-    gap: 2px !important;
+    gap: 4px !important;
   }
 
   .ai-card-time-ago {
     font-size: 8px !important;
     color: var(--muted-foreground) !important;
     font-variant-numeric: tabular-nums !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+
+  .ai-card-controls-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
   }
 
   .ai-card-controls-group {
     display: flex !important;
+    flex-direction: column !important;
     align-items: center !important;
     gap: 2px !important;
     padding: 2px !important;

@@ -204,21 +204,21 @@ export function ImageCard({
 
           {/* Derecha: control segmentado de IA */}
           <div className="ai-card-controls">
-            {/* Tiempo relativo del análisis */}
-            {aiAnalyzedAt && (
-              <div className="ai-card-time-ago">{timeAgo(aiAnalyzedAt)}</div>
-            )}
             {/* done → re-analizar + ver resultado */}
             {aiSummary && aiStatus === "done" && (
               <div className="ai-card-controls-group">
-                <button
-                  onClick={onReanalyze}
-                  className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
-                  title="Re-analizar con IA"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  <span>Re-IA</span>
-                </button>
+                {aiAnalyzedAt && (
+                  <div className="ai-card-time-ago">{timeAgo(aiAnalyzedAt)}</div>
+                )}
+                <div className="ai-card-controls-row">
+                  <button
+                    onClick={onReanalyze}
+                    className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
+                    title="Re-analizar con IA"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    <span>Re-IA</span>
+                  </button>
                 <Popover>
                   <PopoverTrigger
                     type="button"
@@ -302,6 +302,7 @@ export function ImageCard({
                     )}
                   </PopoverContent>
                 </Popover>
+                </div>
               </div>
             )}
 
