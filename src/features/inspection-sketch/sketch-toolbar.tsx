@@ -1,31 +1,43 @@
 "use client";
 
 /**
- * Barra de herramientas del editor de croquis.
+ * Barra superior del editor de croquis — arquitectura definitiva.
  *
- * Botones de modo (Seleccionar / Mano alzada / Línea / Rectángulo / Círculo /
- * Triángulo / Borrador / Texto) usan .sketch-mode-btn (toggles compactos
- * temáticos). La acción principal "Guardar" usa pg-btn-platinum (botón
- * primario del sistema, ver DESIGN_SYSTEM.md). Color y grosor usan
- * .app-input para respetar el sistema de formularios.
+ * Simplificada a 7 acciones principales + sección "Más herramientas"
+ * desplegable con figuras geométricas básicas (línea, rectángulo, círculo,
+ * polígono) para casos excepcionales.
  *
- * Cero inline styles (REGLA #2): toda la estilización vive en
- * sketch-editor.css. Iconos de lucide-react, sin emojis.
+ * Sin selector de color libre. Sin control de grosor visible. La paleta de
+ * 5 colores fijos se usa para anotaciones (rojo, azul, verde, amarillo, gris).
+ *
+ * Ver PLAN_CANVAS_MIGRATION.md § 9 (Barra superior).
  */
 
+import { useState } from "react";
 import {
-  MousePointer2, Pencil, Slash, Square, Circle, Triangle,
-  Eraser, Type, Undo2, Redo2, Save,
+  MousePointer2, Pencil, Tag, MessageSquare, Undo2, Redo2, Save,
+  Slash, Square, Circle, Hexagon, ChevronDown, Eraser,
 } from "lucide-react";
-import type { SketchMode } from "./sketch-types";
+import { ANNOTATION_COLORS } from "./entity-types";
+import type { AnnotationColor } from "./entity-types";
+
+/** Modo de interacción activo en el editor. */
+export type SketchMode =
+  | "select"
+  | "draw"
+  | "label"
+  | "comment"
+  | "line"
+  | "rectangle"
+  | "circle"
+  | "polygon"
+  | "eraser";
 
 interface SketchToolbarProps {
   mode: SketchMode;
   onModeChange: (mode: SketchMode) => void;
-  color: string;
-  onColorChange: (color: string) => void;
-  lineWidth: number;
-  onLineWidthChange: (width: number) => void;
+  annotationColor: AnnotationColor;
+  onAnnotationColorChange: (color: AnnotationColor) => void;
   onUndo: () => void;
   onRedo: () => void;
   onClear: () => void;
@@ -36,30 +48,28 @@ interface SketchToolbarProps {
   saving: boolean;
 }
 
-const COLORS = [
-  "#000000", "#ef4444", "#3b82f6", "#22c55e",
-  "#f59e0b", "#8b5cf6", "#ec4899", "#6b7280",
-];
-
-/** Definición de cada botón de modo (icono + label + title). */
-const MODE_BUTTONS: { mode: SketchMode; icon: typeof Pencil; title: string }[] = [
+/** Botones principales de la barra (7 acciones). */
+const MAIN_BUTTONS: { mode: SketchMode; icon: typeof Pencil; title: string }[] = [
   { mode: "select", icon: MousePointer2, title: "Seleccionar y mover" },
   { mode: "draw", icon: Pencil, title: "Dibujar a mano alzada" },
+  { mode: "label", icon: Tag, title: "Etiqueta" },
+  { mode: "comment", icon: MessageSquare, title: "Comentario" },
+];
+
+/** Botones de "Más herramientas" (figuras geométricas, ocultas por defecto). */
+const MORE_BUTTONS: { mode: SketchMode; icon: typeof Pencil; title: string }[] = [
   { mode: "line", icon: Slash, title: "Línea recta" },
   { mode: "rectangle", icon: Square, title: "Rectángulo" },
   { mode: "circle", icon: Circle, title: "Círculo" },
-  { mode: "triangle", icon: Triangle, title: "Triángulo" },
+  { mode: "polygon", icon: Hexagon, title: "Polígono" },
   { mode: "eraser", icon: Eraser, title: "Borrar objeto" },
-  { mode: "text", icon: Type, title: "Texto" },
 ];
 
 export function SketchToolbar({
   mode,
   onModeChange,
-  color,
-  onColorChange,
-  lineWidth,
-  onLineWidthChange,
+  annotationColor,
+  onAnnotationColorChange,
   onUndo,
   onRedo,
   onClear,
@@ -69,11 +79,13 @@ export function SketchToolbar({
   canClear,
   saving,
 }: SketchToolbarProps) {
+  const [showMore, setShowMore] = useState(false);
+
   return (
     <div className="sketch-toolbar">
-      {/* Herramientas de interacción / dibujo */}
+      {/* Herramientas principales */}
       <div className="sketch-toolbar-group">
-        {MODE_BUTTONS.map(({ mode: m, icon: Icon, title }) => (
+        {MAIN_BUTTONS.map(({ mode: m, icon: Icon, title }) => (
           <button
             key={m}
             type="button"
@@ -90,49 +102,58 @@ export function SketchToolbar({
 
       <div className="sketch-toolbar-divider" />
 
-      {/* Colores */}
+      {/* Paleta de 5 colores fijos (para anotaciones) */}
       <div className="sketch-toolbar-group">
-        {COLORS.map((c) => (
+        {ANNOTATION_COLORS.map((c) => (
           <button
-            key={c}
+            key={c.id}
             type="button"
-            className={`sketch-mode-btn ${color === c ? "is-active" : ""}`}
-            onClick={() => onColorChange(c)}
-            title={c}
-            aria-label={`Color ${c}`}
+            className={`sketch-mode-btn ${annotationColor === c.id ? "is-active" : ""}`}
+            onClick={() => onAnnotationColorChange(c.id)}
+            title={c.label}
+            aria-label={`Color ${c.label}`}
+            aria-pressed={annotationColor === c.id}
           >
             <span
               className="sketch-block-swatch"
-              // Excepción REGLA #2: color dinámico del catálogo.
-              style={{ backgroundColor: c }}
+              // Excepción REGLA #2: color dinámico de la paleta de anotaciones.
+              style={{ backgroundColor: c.hex }}
             />
           </button>
         ))}
-        <input
-          type="color"
-          className="sketch-color-input"
-          value={color}
-          onChange={(e) => onColorChange(e.target.value)}
-          title="Color personalizado"
-          aria-label="Color personalizado"
-        />
       </div>
 
       <div className="sketch-toolbar-divider" />
 
-      {/* Grosor */}
+      {/* Más herramientas (desplegable) */}
       <div className="sketch-toolbar-group">
-        <span className="sketch-range-label">Grosor</span>
-        <input
-          type="range"
-          min={1}
-          max={12}
-          value={lineWidth}
-          onChange={(e) => onLineWidthChange(Number(e.target.value))}
-          className="sketch-range-input"
-          aria-label="Grosor de línea"
-        />
-        <span className="sketch-range-label">{lineWidth}</span>
+        <button
+          type="button"
+          className={`sketch-mode-btn ${showMore ? "is-active" : ""}`}
+          onClick={() => setShowMore(!showMore)}
+          title="Más herramientas"
+          aria-label="Más herramientas"
+          aria-expanded={showMore}
+        >
+          <ChevronDown className={`size-3.5 transition-transform ${showMore ? "rotate-180" : ""}`} />
+        </button>
+        {showMore && (
+          <div className="sketch-more-tools">
+            {MORE_BUTTONS.map(({ mode: m, icon: Icon, title }) => (
+              <button
+                key={m}
+                type="button"
+                className={`sketch-mode-btn ${mode === m ? "is-active" : ""}`}
+                onClick={() => { onModeChange(m); setShowMore(false); }}
+                title={title}
+                aria-label={title}
+                aria-pressed={mode === m}
+              >
+                <Icon className="size-3.5" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="sketch-toolbar-divider" />
