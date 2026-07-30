@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,9 +22,6 @@ import {
   ZoomIn,
   CheckCircle2,
   XCircle,
-  Ban,
-  FileText,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,14 +29,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
-import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
-import { AiProgressOverlay } from "@/components/ai/ai-progress-overlay";
-import { cleanMarkdown } from "@/lib/utils";
+import { ImageCard } from "@/components/ai/image-card";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { usePagination } from "@/hooks/use-pagination";
@@ -58,11 +48,13 @@ type UnifiedImage = {
   descripcion: string | null;
   url: string;
   fileSize: number | null;
+  mimeType: string | null;
   aiSummary: string | null;
   aiModel: string | null;
   aiStatus: string | null;
   aiProgress: string | null;
   aiPromptSnapshot: { system_prompt: string; user_prompt: string; refinement_prompt: string | null; source: string } | null;
+  aiAnalyzedAt: string | null;
   canDelete: boolean;
   canAnalyze: boolean;
   table: "claim_images" | "inspection_evidences" | null;
@@ -117,13 +109,12 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
     queryKey: ["claim-images", claimId],
     queryFn: () => getClaimImages(claimId),
     // Polling cada 5s mientras hay imágenes siendo procesadas.
-    // Timeout: deja de pollar después de 2 min si el after() falló.
+    // Nota: para re-análisis, created_at es la fecha original de subida,
+    // no la del re-análisis. Por eso no usamos created_at como base del
+    // timeout — solo verificamos que haya items pending/processing.
     refetchInterval: (query) => {
       const imgs = query.state.data;
       if (!imgs || !imgs.some((i) => i.ai_status === "pending" || i.ai_status === "processing")) return false;
-      const oldest = imgs.filter((i) => i.ai_status === "pending" || i.ai_status === "processing")
-        .reduce((min, i) => Math.min(min, new Date(i.created_at).getTime()), Date.now());
-      if (Date.now() - oldest > 300_000) return false;
       // 2s mientras hay processing (para actualizar el termómetro), 5s si solo hay pending
       const hasProcessing = imgs.some((i) => i.ai_status === "processing");
       return hasProcessing ? 2000 : 5000;
@@ -137,9 +128,6 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
     refetchInterval: (query) => {
       const photos = query.state.data;
       if (!photos || !photos.some((p) => p.ai_status === "pending" || p.ai_status === "processing")) return false;
-      const oldest = photos.filter((p) => p.ai_status === "pending" || p.ai_status === "processing")
-        .reduce((min, p) => Math.min(min, new Date(p.created_at).getTime()), Date.now());
-      if (Date.now() - oldest > 300_000) return false;
       return 5000;
     },
   });
@@ -162,11 +150,13 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         descripcion: img.original_filename,
         url: img.url,
         fileSize: img.file_size,
+        mimeType: img.mime_type,
         aiSummary: img.ai_summary,
         aiModel: img.ai_model,
         aiStatus: img.ai_status,
         aiProgress: img.ai_progress,
         aiPromptSnapshot: img.ai_prompt_snapshot,
+        aiAnalyzedAt: img.ai_analyzed_at,
         canDelete: canDeleteImages,
         canAnalyze: true,
         table: "claim_images",
@@ -188,11 +178,13 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         descripcion: photo.description,
         url: photo.url,
         fileSize: photo.metadata?.fileSize || null,
+        mimeType: photo.metadata?.mimeType || null,
         aiSummary: photo.ai_summary,
         aiModel: photo.ai_model,
         aiStatus: photo.ai_status,
         aiProgress: photo.ai_progress,
         aiPromptSnapshot: photo.ai_prompt_snapshot,
+        aiAnalyzedAt: photo.ai_analyzed_at,
         canDelete: false,
         canAnalyze: true,
         table: "inspection_evidences",
@@ -214,11 +206,13 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
         descripcion: sketch.label,
         url: sketch.sketch_url,
         fileSize: null,
+        mimeType: null,
         aiSummary: null,
         aiModel: null,
         aiStatus: null,
         aiProgress: null,
         aiPromptSnapshot: null,
+        aiAnalyzedAt: null,
         canDelete: false,
         canAnalyze: false,
         table: null,
@@ -417,11 +411,13 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
             </h3>
             {canCreateImages && (
               <Button
+                variant="ghost"
+                size="icon"
+                className="btn-icon-sm"
+                title="Subir imágenes"
                 onClick={() => setUploadModal((p) => ({ ...p, visible: true, items: [], isDragging: false }))}
-                className="pg-btn-platinum-icon"
               >
-                <Upload className="mr-2 h-4 w-4" />
-                Subir
+                <Upload className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
@@ -442,7 +438,6 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
                   onZoom={() => setZoomImage(img.url)}
                   onDelete={() => deleteMut.mutate(img.id)}
                   claimId={claimId}
-                  formatFileSize={formatFileSize}
                   OrigenBadge={OrigenBadge}
                   queryClient={queryClient}
                 />
@@ -450,7 +445,7 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
             </div>
 
             {/* Paginación abajo */}
-            <div className="mt-3">
+            <div className="pagination-footer">
               <Pagination
                 page={page}
                 totalPages={totalPages}
@@ -685,7 +680,6 @@ function UnifiedImageCard({
   onZoom,
   onDelete,
   claimId,
-  formatFileSize,
   OrigenBadge,
   queryClient,
 }: {
@@ -693,237 +687,88 @@ function UnifiedImageCard({
   onZoom: () => void;
   onDelete: () => void;
   claimId: string;
-  formatFileSize: (bytes?: number | null) => string;
   OrigenBadge: React.ComponentType<{ origen: UnifiedImage["origen"] }>;
   queryClient: ReturnType<typeof useQueryClient>;
 }) {
   const isPending = image.aiStatus === "pending" || image.aiStatus === "processing";
 
+  const handleReanalyze = async () => {
+    try {
+      await fetch("/api/ai/reanalyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: image.table, id: image.id, claimId }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["claim-images", claimId] });
+      queryClient.invalidateQueries({ queryKey: ["inspection-photos-by-claim", claimId] });
+      toast.success("Re-análisis iniciado");
+    } catch {
+      toast.error("No se pudo iniciar el re-análisis");
+    }
+  };
+
+  const hoverActions = (
+    <>
+      <button
+        onClick={onZoom}
+        className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
+        title="Ampliar"
+      >
+        <ZoomIn className="h-3.5 w-3.5" />
+      </button>
+      <a
+        href={image.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
+        title="Abrir"
+      >
+        <ExternalLink className="h-3.5 w-3.5" />
+      </a>
+      {image.canDelete && (
+        <button
+          onClick={() => {
+            if (isPending) {
+              if (confirm("La IA está procesando esta imagen. ¿Eliminar de todos modos? Se cancelará el análisis.")) {
+                onDelete();
+              }
+            } else {
+              if (confirm("¿Eliminar esta imagen?")) onDelete();
+            }
+          }}
+          className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-red-500/80"
+          title="Eliminar"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </>
+  );
+
   return (
-    <div className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
-      {/* Imagen */}
-      <div className="relative aspect-square overflow-hidden bg-muted/30">
-        {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
-        <img
-          src={image.url}
-          alt={image.descripcion || image.codigo}
-          className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
-          loading="lazy"
-        />
-        {/* Acciones sobre la imagen (hover) */}
-        <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            onClick={onZoom}
-            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
-            title="Ampliar"
-          >
-            <ZoomIn className="h-3.5 w-3.5" />
-          </button>
-          <a
-            href={image.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
-            title="Abrir"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-          {image.canDelete && (
-            <button
-              onClick={() => {
-                if (isPending) {
-                  if (confirm("La IA está procesando esta imagen. ¿Eliminar de todos modos? Se cancelará el análisis.")) {
-                    onDelete();
-                  }
-                } else {
-                  if (confirm("¿Eliminar esta imagen?")) onDelete();
-                }
-              }}
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-red-500/80"
-              title="Eliminar"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-        {/* Badge de origen sobre la imagen */}
-        <div className="absolute left-1.5 top-1.5">
-          <OrigenBadge origen={image.origen} />
-        </div>
-        {/* Overlay termómetro de progreso IA */}
-        {isPending && (
-          <AiProgressOverlay
-            aiStatus={image.aiStatus}
-            aiProgress={image.aiProgress}
-            table={image.table || "claim_images"}
-            recordId={image.id}
-            onCancel={() => {
-              // Invalidar cache para que se refresque el estado
-              queryClient.invalidateQueries({ queryKey: ["claim-images", claimId] });
-              queryClient.invalidateQueries({ queryKey: ["inspection-photos-by-claim", claimId] });
-            }}
-          />
-        )}
-      </div>
-
-      {/* Info debajo de la imagen */}
-      <div className="flex flex-1 flex-col gap-1 p-2">
-        {/* Código + tamaño */}
-        <div className="flex items-center justify-between gap-1">
-          <span className="font-mono text-[10px] font-medium text-foreground truncate">
-            {image.codigo}
-          </span>
-          <span className="shrink-0 text-[9px] text-muted-foreground">
-            {formatFileSize(image.fileSize)}
-          </span>
-        </div>
-
-        {/* Descripción / filename */}
-        {image.descripcion && (
-          <div className="truncate text-[9px] text-muted-foreground" title={image.descripcion}>
-            {image.descripcion}
-          </div>
-        )}
-
-        {/* ─── Acciones IA según estado ─── */}
-        {/* pending → botón "Omitir" (sacar de la cola) */}
-        {image.aiStatus === "pending" && (
-          <div className="mt-auto pt-1">
-            <button
-              onClick={async () => {
-                try {
-                  await fetch("/api/ai/cancel", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ table: image.table || "claim_images", id: image.id }),
-                  });
-                  queryClient.invalidateQueries({ queryKey: ["claim-images", claimId] });
-                  queryClient.invalidateQueries({ queryKey: ["inspection-photos-by-claim", claimId] });
-                  toast.success("Análisis omitido");
-                } catch {
-                  toast.error("No se pudo omitir");
-                }
-              }}
-              className="ai-card-skip-btn"
-              title="Omitir análisis IA"
-            >
-              <Ban className="h-3 w-3" />
-              <span>Omitir IA</span>
-            </button>
-          </div>
-        )}
-
-        {/* done → "Rehacer" + "Log" */}
-        {image.aiSummary && image.aiStatus === "done" && image.table && (
-          <div className="mt-auto flex items-center gap-1 pt-1">
-            {/* Rehacer análisis */}
-            <AiAnalysisButton
-              table={image.table}
-              id={image.id}
-              fileName={image.fileName}
-              hasSummary={true}
-              queryKey={
-                image.origen === "siniestro"
-                  ? ["claim-images", claimId]
-                  : ["inspection-photos-by-claim", claimId]
-              }
-            />
-            {/* Log: popover con resumen + prompt colapsable */}
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <button
-                    className="ai-card-log-btn"
-                    title="Ver log del análisis"
-                  >
-                    <FileText className="h-3 w-3" />
-                  </button>
-                }
-              />
-              <PopoverContent side="top" align="start" className="ai-log-popover">
-                {/* Header: código + modelos separados */}
-                <div className="ai-log-header">
-                  <span className="ai-log-code">{image.codigo}</span>
-                </div>
-                {image.aiModel && (
-                  <div className="ai-log-models">
-                    {image.aiModel.split("|").map((m, i) => {
-                      const trimmed = m.trim();
-                      const isVision = trimmed.startsWith("vision:");
-                      const label = isVision ? "Visión" : "Razonamiento";
-                      const modelName = trimmed.replace(/^(vision|razonamiento):/, "").trim();
-                      return (
-                        <div key={i} className="ai-log-model-row">
-                          <span className="ai-log-model-tag">{label}</span>
-                          <span className="ai-log-model-name">{modelName}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {/* Resumen — lo principal, primero y grande */}
-                <div className="ai-log-section ai-log-section-summary">
-                  <div className="ai-log-summary">{cleanMarkdown(image.aiSummary)}</div>
-                </div>
-                {/* Tooltip: ver prompt enviado */}
-                {image.aiPromptSnapshot && (
-                  <Popover>
-                    <PopoverTrigger
-                      render={
-                        <button className="ai-log-prompt-trigger" title="Ver prompt enviado">
-                          <ChevronDown className="h-2.5 w-2.5" />
-                          <span>Prompt enviado</span>
-                        </button>
-                      }
-                    />
-                    <PopoverContent side="top" align="start" className="ai-prompt-tooltip">
-                      <div className="ai-log-prompt">
-                        {image.aiPromptSnapshot.system_prompt && (
-                          <div className="ai-log-prompt-block">
-                            <span className="ai-log-prompt-tag">system</span>
-                            <pre className="ai-log-prompt-text">{image.aiPromptSnapshot.system_prompt}</pre>
-                          </div>
-                        )}
-                        {image.aiPromptSnapshot.user_prompt && (
-                          <div className="ai-log-prompt-block">
-                            <span className="ai-log-prompt-tag">user</span>
-                            <pre className="ai-log-prompt-text">{image.aiPromptSnapshot.user_prompt}</pre>
-                          </div>
-                        )}
-                        {image.aiPromptSnapshot.refinement_prompt && (
-                          <div className="ai-log-prompt-block">
-                            <span className="ai-log-prompt-tag">refinement</span>
-                            <pre className="ai-log-prompt-text">{image.aiPromptSnapshot.refinement_prompt}</pre>
-                          </div>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
-
-        {/* error → "Rehacer" solamente */}
-        {image.aiStatus === "error" && image.table && (
-          <div className="mt-auto pt-1">
-            <AiAnalysisButton
-              table={image.table}
-              id={image.id}
-              fileName={image.fileName}
-              hasSummary={false}
-              queryKey={
-                image.origen === "siniestro"
-                  ? ["claim-images", claimId]
-                  : ["inspection-photos-by-claim", claimId]
-              }
-            />
-          </div>
-        )}
-
-        {/* skipped → nada. Sin icono IA, sin botones. */}
-      </div>
-    </div>
+    <ImageCard
+      imageUrl={image.url}
+      imageAlt={image.descripcion || image.codigo}
+      onImageClick={onZoom}
+      badge={<OrigenBadge origen={image.origen} />}
+      hoverActions={hoverActions}
+      aiStatus={image.aiStatus}
+      aiProgress={image.aiProgress}
+      aiTable={image.table || "claim_images"}
+      aiRecordId={image.id}
+      onCancelAi={() => {
+        queryClient.invalidateQueries({ queryKey: ["claim-images", claimId] });
+        queryClient.invalidateQueries({ queryKey: ["inspection-photos-by-claim", claimId] });
+      }}
+      code={image.codigo}
+      fileSize={image.fileSize}
+      mimeType={image.mimeType}
+      fileName={image.fileName}
+      aiSummary={image.aiSummary}
+      aiModel={image.aiModel}
+      aiPromptSnapshot={image.aiPromptSnapshot}
+      aiAnalyzedAt={image.aiAnalyzedAt}
+      onReanalyze={handleReanalyze}
+    />
   );
 }

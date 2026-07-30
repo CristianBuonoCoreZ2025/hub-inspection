@@ -906,7 +906,7 @@ function ClaimsPageContent() {
  </div>
  <div className="app-grid-header-right">
  <Button
- className="pg-btn-platinum-icon"
+ className="pg-btn-platinum"
  onClick={() => {
  const rows = filtered || [];
  const csv = [

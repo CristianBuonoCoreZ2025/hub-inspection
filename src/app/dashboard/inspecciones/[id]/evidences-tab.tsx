@@ -6,16 +6,27 @@ import { deleteEvidence } from "@/services/inspections";
 import { toast } from "sonner";
 import {
   Upload, Trash2, ImageIcon, Video, FileText, ExternalLink,
-  MapPin, Clock, User, Camera, Lock, X, ZoomIn, Zap,
+  MapPin, Clock, Camera, Lock, X, ZoomIn,
+  CheckCircle2, XCircle, Loader2,
+  RefreshCw, AlertCircle, ChevronDown,
 } from "lucide-react";
-import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
-import { AiProcessingBadge } from "@/components/ai/ai-processing-badge";
+import { ImageCard } from "@/components/ai/image-card";
+import { AiCopyButton } from "@/components/ai/ai-copy-button";
 import { cleanMarkdown } from "@/lib/utils";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+
+type UploadStatus = "queued" | "uploading" | "processing" | "done" | "error";
 
 type UploadItem = {
   id: string;
@@ -25,28 +36,16 @@ type UploadItem = {
   loaded: number;
   speed: number; // KB/s
   elapsed: number; // ms
-  status: "uploading" | "processing" | "done" | "error";
+  status: UploadStatus;
   errorMsg?: string;
   xhr?: XMLHttpRequest;
 };
-
-type UploadStatus = "uploading" | "processing" | "done" | "error";
 
 function formatFileSize(bytes: number | null | undefined): string {
   if (!bytes) return "-";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function statusLabel(status: UploadStatus): string {
-  switch (status) {
-    case "uploading": return "Subiendo...";
-    case "processing": return "Procesando...";
-    case "done": return "Listo";
-    case "error": return "Error";
-    default: return "Subiendo...";
-  }
 }
 
 // ─── Tipos ───────────────────────────────────────────────────────
@@ -80,6 +79,8 @@ interface Evidence {
   ai_summary: string | null;
   ai_model: string | null;
   ai_status: string | null;
+  ai_analyzed_at: string | null;
+  ai_prompt_snapshot: { system_prompt?: string; user_prompt?: string; refinement_prompt?: string } | null;
   source: string | null;
   uploader: EvidenceUploader | null;
 }
@@ -110,30 +111,11 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-/** Formatea bytes a texto legible. */
-function formatSize(bytes: number | undefined): string {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/** Iniciales del nombre para el avatar. */
-function getInitials(name: string | null, email: string | null): string {
-  if (name) {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return parts[0].substring(0, 2).toUpperCase();
-  }
-  if (email) return email.substring(0, 2).toUpperCase();
-  return "??";
-}
-
 // ─── Componente principal ────────────────────────────────────────
 
 export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: string; sessionStatus?: string }) {
   const queryClient = useQueryClient();
-  const [isDragging, setIsDragging] = useState(false);
+  const [uploadModal, setUploadModal] = useState<{ visible: boolean; isDragging: boolean }>({ visible: false, isDragging: false });
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   // El popover de IA ahora vive dentro de cada card (no estado global)
@@ -141,27 +123,19 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
-  const uploadModalOpen = uploadQueue.length > 0;
 
   const { data: evidences, isLoading } = useQuery({
     queryKey: ["evidences", sessionId],
     queryFn: () => fetchEvidences(sessionId),
     // Polling cada 5s mientras hay evidencias siendo procesadas por IA.
-    // Timeout: deja de pollar después de 2 minutos (24 polls × 5s) para no
-    // quedar pegado infinitamente si el after() de Next.js falla.
+    // Timeout: deja de pollar después de 5 minutos para no quedar pegado
+    // infinitamente si el after() de Next.js falla.
+    // Nota: para re-análisis, created_at es la fecha original de subida,
+    // no la del re-análisis. Por eso no usamos created_at como base del
+    // timeout — solo verificamos que haya items pending/processing.
     refetchInterval: (query) => {
       const evs = query.state.data;
       if (!evs || !evs.some((e) => e.ai_status === "pending" || e.ai_status === "processing")) return false;
-      // Calcular cuánto tiempo llevan las pending/processing
-      const oldestPending = evs
-        .filter((e) => e.ai_status === "pending" || e.ai_status === "processing")
-        .reduce((oldest, e) => {
-          const t = new Date(e.created_at).getTime();
-          return t < oldest ? t : oldest;
-        }, Date.now());
-      const elapsedMs = Date.now() - oldestPending;
-      // Después de 5 minutos, dejar de pollar (el usuario puede reintentar manualmente)
-      if (elapsedMs > 300_000) return false;
       return 5000;
     },
   });
@@ -284,7 +258,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(false);
+    setUploadModal((p) => ({ ...p, isDragging: false }));
     Array.from(e.dataTransfer.files).forEach(handleFile);
   };
 
@@ -302,6 +276,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
       }
     });
     setUploadQueue([]);
+    setUploadModal({ visible: false, isDragging: false });
   };
 
   // Cerrar modal automáticamente 1.5s después de que todas las subidas terminen
@@ -344,120 +319,208 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
         </div>
       )}
 
-      {/* ─── Drop zone compacto (oculto si readOnly) ─── */}
+      {/* ─── Toolbar con botón subir (estándar, mismo que siniestros) ─── */}
       {!readOnly && (
-      <div
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        className={`relative flex items-center gap-3 rounded-2xl border border-dashed px-4 py-3 transition-all glass-heavy ${
-          isDragging
-            ? "border-blue-400/60 bg-blue-500/10"
-            : "border-border bg-card/40 hover:border-border/80"
-        }`}
-      >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Upload className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium text-foreground">
-            Arrastra archivos o{" "}
-            <label htmlFor="evidence-upload" className="cursor-pointer text-primary underline underline-offset-2 hover:text-primary/80">
-              selecciónalos
-            </label>
-          </p>
-          <p className="text-[11px] text-muted-foreground">JPG · PNG · MP4 · PDF — se optimizan automáticamente</p>
-        </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/*,video/*,.pdf"
-          onChange={handleInput}
-          className="hidden"
-          id="evidence-upload"
-        />
-        {/* Botón tomar foto — solo mobile */}
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleInput}
-          className="hidden"
-          id="evidence-camera"
-        />
-        <label
-          htmlFor="evidence-camera"
-          className="sm:hidden flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-[12px] font-medium text-primary touch-manipulation"
-        >
-          <Camera className="h-4 w-4" />
-          Tomar foto
-        </label>
-        {uploadQueue.length > 0 && (
-          <button
-            type="button"
-            onClick={() => {}}
-            className="text-[11px] text-primary underline underline-offset-2 hover:text-primary/80"
-          >
-            Subiendo {uploadQueue.filter((it) => it.status === "uploading").length}...
-          </button>
-        )}
-      </div>
-      )}
-
-      {/* ═══ MODAL: Progreso de subida ═══ */}
-      {uploadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold">Subiendo evidencias</h3>
-              <button
-                type="button"
-                onClick={closeUploadModal}
-                className="text-[11px] text-muted-foreground hover:text-foreground"
+        <div className="app-panel app-panel-toolbar-only">
+          <div className="app-grid-toolbar">
+            <div className="app-grid-toolbar-left">
+              <h3 className="app-section-title">
+                <Camera className="h-4 w-4" />
+                Evidencias
+                {evidences && evidences.length > 0 && (
+                  <span className="text-[11px] text-muted-foreground">({evidences.length})</span>
+                )}
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="btn-icon-sm"
+                title="Subir evidencias"
+                onClick={() => setUploadModal({ visible: true, isDragging: false })}
               >
-                Cerrar
-              </button>
-            </div>
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-              {uploadQueue.map((it) => {
-                const progress = it.fileSize > 0 ? Math.round((it.loaded / it.fileSize) * 100) : 0;
-                return (
-                  <div key={it.id} className="rounded-xl border border-border bg-muted/30 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-medium truncate flex-1" title={it.fileName}>
-                        {it.fileName}
-                      </span>
-                      <span
-                        className={`text-[11px] shrink-0 ${
-                          it.status === "error" ? "text-rose-600" : it.status === "done" ? "text-emerald-600" : "text-muted-foreground"
-                        }`}
-                      >
-                        {statusLabel(it.status)}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {formatFileSize(it.loaded)} / {formatFileSize(it.fileSize)} · {it.speed.toFixed(0)} KB/s · {Math.round(it.elapsed / 1000)}s
-                    </p>
-                    {it.errorMsg && (
-                      <p className="text-[10px] text-rose-600 mt-1">{it.errorMsg}</p>
-                    )}
-                    {it.status !== "done" && it.status !== "error" && (
-                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full bg-primary transition-all duration-200"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                <Upload className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ═══ MODAL: Subir evidencias (drag&drop + cola, mismo estándar que siniestros) ═══ */}
+      <Dialog
+        open={uploadModal.visible}
+        onOpenChange={(open) => {
+          if (!open && uploadQueue.some((i) => i.status === "uploading")) return;
+          if (!open) closeUploadModal();
+        }}
+        dismissible={false}
+      >
+        <DialogContent className="modal-md" showCloseButton={false}>
+          <div className="modal-header">
+            <DialogTitle className="modal-title">
+              {uploadQueue.length > 0 && uploadQueue.every((it) => it.status === "done" || it.status === "error")
+                ? `Subidas completadas (${uploadQueue.filter((i) => i.status === "done").length}/${uploadQueue.length})`
+                : uploadQueue.length > 0
+                ? `Subiendo evidencias (${uploadQueue.filter((i) => i.status === "done").length}/${uploadQueue.length})`
+                : "Subir evidencias"}
+            </DialogTitle>
+          </div>
+
+          <div className="modal-body space-y-3">
+            {/* ─── Fase idle: drag&drop ─── */}
+            {uploadQueue.length === 0 && (
+              <>
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setUploadModal((p) => ({ ...p, isDragging: true }));
+                  }}
+                  onDragLeave={() => setUploadModal((p) => ({ ...p, isDragging: false }))}
+                  onDrop={handleDrop}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+                    uploadModal.isDragging
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/30"
+                  }`}
+                >
+                  <Upload className={`h-8 w-8 ${uploadModal.isDragging ? "text-primary" : "text-muted-foreground"}`} />
+                  <div className="text-[11px] font-medium text-foreground">
+                    Arrastra los archivos aquí
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    o haz clic para seleccionar (múltiples)
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    multiple
+                    accept="image/*,video/*,.pdf"
+                    onChange={handleInput}
+                  />
+                  {/* Botón tomar foto — solo mobile */}
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleInput}
+                    className="hidden"
+                    id="evidence-camera"
+                  />
+                  <div className="flex gap-2 mt-1">
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="pg-btn-platinum"
+                    >
+                      Seleccionar
+                    </Button>
+                    <label
+                      htmlFor="evidence-camera"
+                      className="sm:hidden flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-[12px] font-medium text-primary touch-manipulation cursor-pointer"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Tomar foto
+                    </label>
+                  </div>
+                </div>
+
+                <div className="text-[10px] text-muted-foreground text-center">
+                  JPG, PNG, MP4, PDF · múltiples archivos
+                </div>
+              </>
+            )}
+
+            {/* ─── Cola de subida / Resultados ─── */}
+            {uploadQueue.length > 0 && (
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                {uploadQueue.map((it, idx) => {
+                  const progress = it.fileSize > 0 ? Math.round((it.loaded / it.fileSize) * 100) : 0;
+                  return (
+                    <div key={it.id} className="upload-result-row">
+                      <div className="flex items-center gap-2.5">
+                        <div className="upload-result-icon">
+                          {it.status === "done" ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          ) : it.status === "error" ? (
+                            <XCircle className="h-4 w-4 text-rose-500" />
+                          ) : it.status === "uploading" ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          ) : it.status === "processing" ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+                          ) : (
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-muted-foreground shrink-0">#{idx + 1}</span>
+                            <span className="truncate text-[11px] font-medium text-foreground">
+                              {it.fileName}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <span>{formatFileSize(it.fileSize)}</span>
+                            {it.errorMsg && (
+                              <>
+                                <span>·</span>
+                                <span className="text-rose-500">{it.errorMsg}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          {it.status === "uploading" && (
+                            <span className="text-sm font-bold tabular-nums text-primary">{progress}%</span>
+                          )}
+                          {it.status === "processing" && (
+                            <span className="text-[10px] text-amber-600">guardando...</span>
+                          )}
+                          {it.status === "queued" && (
+                            <span className="text-[10px] text-muted-foreground">en cola</span>
+                          )}
+                        </div>
+                      </div>
+                      {it.status === "uploading" && (
+                        <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-primary transition-all duration-200 ease-out rounded-full"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="modal-footer">
+            {uploadQueue.length === 0 && (
+              <Button
+                className="pg-btn-platinum"
+                onClick={() => setUploadModal({ visible: false, isDragging: false })}
+              >
+                Cancelar
+              </Button>
+            )}
+            {uploadQueue.length > 0 && uploadQueue.every((it) => it.status === "done" || it.status === "error") && (
+              <Button
+                className="pg-btn-platinum"
+                onClick={closeUploadModal}
+              >
+                Cerrar
+              </Button>
+            )}
+            {uploadQueue.length > 0 && uploadQueue.some((it) => it.status === "uploading" || it.status === "processing" || it.status === "queued") && (
+              <div className="text-[10px] text-muted-foreground">
+                Subiendo... no cierres esta ventana
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Contenido ─── */}
       {isLoading ? (
@@ -468,12 +531,12 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           No hay evidencias aún
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {photos.length > 0 && (
             <EvidenceSection
               title="Fotos"
               count={photos.length}
-              icon={<ImageIcon className="h-3.5 w-3.5" />}
+              icon={<ImageIcon className="h-4 w-4" />}
               items={photos}
               onDelete={deleteMutation.mutate}
               readOnly={readOnly}
@@ -485,7 +548,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
             <EvidenceSection
               title="Videos"
               count={videos.length}
-              icon={<Video className="h-3.5 w-3.5" />}
+              icon={<Video className="h-4 w-4" />}
               items={videos}
               onDelete={deleteMutation.mutate}
               readOnly={readOnly}
@@ -493,10 +556,10 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
             />
           )}
           {documents.length > 0 && (
-            <EvidenceSection
+            <DocumentTable
               title="Documentos"
               count={documents.length}
-              icon={<FileText className="h-3.5 w-3.5" />}
+              icon={<FileText className="h-4 w-4" />}
               items={documents}
               onDelete={deleteMutation.mutate}
               readOnly={readOnly}
@@ -546,15 +609,29 @@ function EvidenceSection({
   onImageClick?: (url: string) => void;
   sessionId: string;
 }) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const start = (currentPage - 1) * pageSize;
+  const paginatedItems = items.slice(start, start + pageSize);
+
   return (
     <div className="app-panel">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="text-muted-foreground">{icon}</span>
-        <h3 className="text-[11px] font-semibold text-foreground">{title}</h3>
-        <span className="text-[11px] text-muted-foreground">({count})</span>
+      <div className="app-grid-toolbar">
+        <div className="app-grid-toolbar-left">
+          <h3 className="app-section-title">
+            {icon}
+            {title}
+            <span className="text-[11px] text-muted-foreground">({count})</span>
+          </h3>
+        </div>
+        {count > 0 && (
+          <Pagination variant="controls" page={currentPage} totalPages={totalPages} total={count} pageSize={pageSize} onPageChange={setPage} />
+        )}
       </div>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
-        {items.map((ev) => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        {paginatedItems.map((ev) => (
           <EvidenceCard
             key={ev.id}
             evidence={ev}
@@ -565,6 +642,266 @@ function EvidenceSection({
           />
         ))}
       </div>
+      {count > 0 && (
+        <div className="pagination-footer">
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            total={count}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tabla de documentos (igual que claim-documents) ────────────
+
+function DocumentTable({
+  title, count, icon, items, onDelete, readOnly, sessionId,
+}: {
+  title: string;
+  count: number;
+  icon: React.ReactNode;
+  items: Evidence[];
+  onDelete: (id: string) => void;
+  readOnly?: boolean;
+  sessionId: string;
+}) {
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const start = (currentPage - 1) * pageSize;
+  const paginatedItems = items.slice(start, start + pageSize);
+
+  const handleReanalyze = async (evidence: Evidence) => {
+    try {
+      await fetch("/api/ai/reanalyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "inspection_evidences", id: evidence.id, sessionId }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
+      toast.success("Re-análisis iniciado");
+    } catch {
+      toast.error("No se pudo iniciar el re-análisis");
+    }
+  };
+
+  return (
+    <div className="app-panel">
+      <div className="app-grid-toolbar">
+        <div className="app-grid-toolbar-left">
+          <h3 className="app-section-title">
+            {icon}
+            {title}
+            <span className="text-[11px] text-muted-foreground">({count})</span>
+          </h3>
+        </div>
+        {count > 0 && (
+          <Pagination variant="controls" page={currentPage} totalPages={totalPages} total={count} pageSize={pageSize} onPageChange={setPage} />
+        )}
+      </div>
+
+      <div className="app-data-table-wrap">
+        <table className="app-data-table">
+          <thead>
+            <tr>
+              <th className="w-[min(45vw,420px)]">Nombre</th>
+              <th className="w-15">Ext.</th>
+              <th className="w-20">Tamaño</th>
+              <th className="w-20"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedItems.map((doc) => {
+              const meta = doc.metadata;
+              const code = doc.description || "Sin código";
+              const ext = (meta?.originalName || "").split(".").pop()?.toUpperCase() || doc.type.toUpperCase();
+              const fileSize = meta?.fileSize ? formatFileSize(meta.fileSize) : "—";
+              const aiStatus = doc.ai_status;
+              const aiSummary = doc.ai_summary;
+              const aiModel = doc.ai_model;
+              const aiAnalyzedAt = doc.ai_analyzed_at;
+              const aiPromptSnapshot = doc.ai_prompt_snapshot;
+
+              return (
+                <tr key={doc.id}>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span className="truncate text-[11px] font-medium text-foreground">{code}</span>
+                    </div>
+                    {(aiStatus === "pending" || aiStatus === "processing") && (
+                      <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>{aiStatus === "pending" ? "En cola" : "Procesando..."}</span>
+                      </div>
+                    )}
+                  </td>
+                  <td className="text-muted-foreground uppercase text-[11px]">{ext}</td>
+                  <td className="text-muted-foreground text-[11px]">{fileSize}</td>
+                  <td>
+                    <div className="app-row-actions">
+                      {/* Control segmentado de IA */}
+                      <div className="ai-card-controls">
+                        {/* done → re-analizar + ver resultado */}
+                        {aiSummary && aiStatus === "done" && (
+                          <div className="ai-card-controls-group">
+                            <button
+                              onClick={() => handleReanalyze(doc)}
+                              className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
+                              title="Re-analizar con IA"
+                            >
+                              <RefreshCw className="h-3 w-3" />
+                              <span>Re-IA</span>
+                            </button>
+                            <Popover>
+                              <PopoverTrigger
+                                render={
+                                  <button className="ai-card-ctrl-btn ai-card-ctrl-log" title="Ver log del análisis">
+                                    <FileText className="h-3 w-3" />
+                                    <span>Ver</span>
+                                  </button>
+                                }
+                              />
+                              <PopoverContent side="top" align="start" className="ai-log-popover">
+                                <div className="ai-log-header">
+                                  <span className="ai-log-code">{code}</span>
+                                  {aiAnalyzedAt && (
+                                    <span className="ai-log-date">
+                                      {new Date(aiAnalyzedAt).toLocaleString("es-CL", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </span>
+                                  )}
+                                  {aiSummary && <AiCopyButton text={cleanMarkdown(aiSummary)} />}
+                                </div>
+                                {aiModel && (
+                                  <div className="ai-log-models">
+                                    {aiModel.split("|").map((m, i) => {
+                                      const trimmed = m.trim();
+                                      const isVision = trimmed.startsWith("vision:");
+                                      const label = isVision ? "Visión" : "Razonamiento";
+                                      const modelName = trimmed.replace(/^(vision|razonamiento):/, "").trim();
+                                      return (
+                                        <div key={i} className="ai-log-model-row">
+                                          <span className="ai-log-model-tag">{label}</span>
+                                          <span className="ai-log-model-name">{modelName}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                <div className="ai-log-section ai-log-section-summary">
+                                  <div className="ai-log-summary">{cleanMarkdown(aiSummary)}</div>
+                                </div>
+                                {aiPromptSnapshot && (
+                                  <Popover>
+                                    <PopoverTrigger
+                                      render={
+                                        <button className="ai-log-prompt-trigger" title="Ver prompt enviado">
+                                          <ChevronDown className="h-2.5 w-2.5" />
+                                          <span>Prompt enviado</span>
+                                        </button>
+                                      }
+                                    />
+                                    <PopoverContent side="top" align="start" className="ai-prompt-tooltip">
+                                      <div className="ai-log-prompt">
+                                        {aiPromptSnapshot.system_prompt && (
+                                          <div className="ai-log-prompt-block">
+                                            <span className="ai-log-prompt-tag">system</span>
+                                            <pre className="ai-log-prompt-text">{aiPromptSnapshot.system_prompt}</pre>
+                                          </div>
+                                        )}
+                                        {aiPromptSnapshot.user_prompt && (
+                                          <div className="ai-log-prompt-block">
+                                            <span className="ai-log-prompt-tag">user</span>
+                                            <pre className="ai-log-prompt-text">{aiPromptSnapshot.user_prompt}</pre>
+                                          </div>
+                                        )}
+                                        {aiPromptSnapshot.refinement_prompt && (
+                                          <div className="ai-log-prompt-block">
+                                            <span className="ai-log-prompt-tag">refinement</span>
+                                            <pre className="ai-log-prompt-text">{aiPromptSnapshot.refinement_prompt}</pre>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        )}
+
+                        {/* pending/skipped/error → analizar / re-analizar */}
+                        {(!aiSummary || aiStatus === "error" || aiStatus === "skipped") && aiStatus !== "pending" && aiStatus !== "processing" && (
+                          <div className="ai-card-controls-group">
+                            <button
+                              onClick={() => handleReanalyze(doc)}
+                              className={`ai-card-ctrl-btn ${aiStatus === "error" ? "ai-card-ctrl-error" : "ai-card-ctrl-reanalyze"}`}
+                              title={aiSummary ? "Re-analizar con IA" : "Analizar con IA"}
+                            >
+                              {aiStatus === "error" ? <AlertCircle className="h-3 w-3" /> : <RefreshCw className="h-3 w-3" />}
+                              <span>Re-IA</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {/* Abrir documento */}
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"
+                        title="Abrir documento"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                      {/* Eliminar */}
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="btn-icon-sm btn-danger-hover"
+                          onClick={() => {
+                            if (confirm("¿Eliminar esta evidencia?")) onDelete(doc.id);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {count > 0 && (
+        <div className="pagination-footer">
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            total={count}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -578,8 +915,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId }:
   onImageClick?: (url: string) => void;
   sessionId: string;
 }) {
-  const [showActions, setShowActions] = useState(false);
-  const [isAiStuck, setIsAiStuck] = useState(false);
+  const queryClient = useQueryClient();
   const isDoc = evidence.type === "pdf" || evidence.type === "document";
   const isVideo = evidence.type === "video";
   const isPhoto = evidence.type === "photo";
@@ -587,221 +923,130 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId }:
   const meta = evidence.metadata;
   const uploaderName = evidence.uploader?.full_name || evidence.uploader?.email || null;
   const dateStr = formatDate(evidence.captured_at || evidence.created_at);
-  const sizeStr = formatSize(meta?.fileSize);
-  // La geo de la foto viene exclusivamente del EXIF GPS (lat/lng = exif_lat/exif_lng).
-  // No se usa la ubicación del dispositivo para evidencias.
   const hasGps = evidence.exif_lat != null && evidence.exif_lng != null;
 
-  // IA atascada: si está pending/processing por más de 5 min, mostrar mensaje de retry
-  useEffect(() => {
-    if (evidence.ai_status !== "pending" && evidence.ai_status !== "processing") return;
-    const elapsedMs = Date.now() - new Date(evidence.created_at).getTime();
-    const remaining = Math.max(0, 300_000 - elapsedMs);
-    const timer = setTimeout(() => setIsAiStuck(true), remaining);
-    return () => clearTimeout(timer);
-  }, [evidence.ai_status, evidence.created_at]);
+  const handleReanalyze = async () => {
+    try {
+      await fetch("/api/ai/reanalyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "inspection_evidences", id: evidence.id, sessionId }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
+      toast.success("Re-análisis iniciado");
+    } catch {
+      toast.error("No se pudo iniciar el re-análisis");
+    }
+  };
+
+  // Thumbnail content: video o doc tienen render propio
+  const thumbnailContent = isVideo ? (
+    <video
+      src={evidence.url}
+      className="h-full w-full object-cover"
+      controls
+      preload="metadata"
+    />
+  ) : isDoc ? (
+    <DocThumbnail url={evidence.url} type={evidence.type} />
+  ) : undefined;
+
+  // Badge de tipo
+  const badge = (
+    <div className="rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+      {evidence.type === "photo" ? "JPG" : evidence.type === "video" ? "MP4" : evidence.type === "pdf" ? "PDF" : "DOC"}
+    </div>
+  );
+
+  // Acciones hover
+  const hoverActions = !readOnly ? (
+    <>
+      {isDoc && (
+        <a
+          href={evidence.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
+          title="Abrir"
+        >
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      )}
+      <button
+        onClick={() => { if (confirm("¿Eliminar esta evidencia?")) onDelete(evidence.id); }}
+        className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-red-500/80"
+        title="Eliminar"
+      >
+        <Trash2 className="h-3 w-3" />
+      </button>
+    </>
+  ) : isDoc ? (
+    <a
+      href={evidence.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
+      title="Abrir"
+    >
+      <ExternalLink className="h-3 w-3" />
+    </a>
+  ) : isPhoto ? (
+    <button
+      onClick={() => onImageClick?.(evidence.url)}
+      className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
+      title="Ampliar"
+    >
+      <ZoomIn className="h-3 w-3" />
+    </button>
+  ) : undefined;
+
+  // Fila extra: fecha + uploader + GPS
+  const extraInfo = (
+    <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
+      <span className="flex items-center gap-0.5">
+        <Clock className="h-2.5 w-2.5" />
+        {dateStr}
+      </span>
+      {uploaderName && (
+        <>
+          <span className="opacity-30">·</span>
+          <span className="truncate" title={uploaderName}>{uploaderName}</span>
+        </>
+      )}
+      {hasGps && (
+        <span
+          className="flex items-center gap-0.5 text-blue-600 dark:text-blue-400 ml-auto"
+          title={`GPS (EXIF): ${evidence.exif_lat?.toFixed(6)}, ${evidence.exif_lng?.toFixed(6)}`}
+        >
+          <MapPin className="h-2.5 w-2.5" />
+        </span>
+      )}
+    </div>
+  );
 
   return (
-    <div
-      className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/30 glass-medium"
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
-    >
-      {/* ─── Thumbnail (cuadrado, pequeño) ─── */}
-      <div className="relative aspect-square w-full overflow-hidden bg-muted/30">
-        {isPhoto && (
-          <button
-            type="button"
-            onClick={() => onImageClick?.(evidence.url)}
-            className="block h-full w-full cursor-zoom-in"
-            title="Click para ampliar"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 with dynamic URL */}
-            <img
-              src={evidence.url}
-              alt={evidence.description || ""}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
-          </button>
-        )}
-        {isVideo && (
-          <video
-            src={evidence.url}
-            className="h-full w-full object-cover"
-            controls
-            preload="metadata"
-          />
-        )}
-        {isDoc && (
-          <DocThumbnail url={evidence.url} type={evidence.type} />
-        )}
-
-        {/* Badge de tipo (esquina superior izquierda) */}
-        <div className="absolute left-1 top-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
-          {evidence.type === "photo" ? "JPG" : evidence.type === "video" ? "MP4" : evidence.type === "pdf" ? "PDF" : "DOC"}
-        </div>
-
-        {/* Acciones hover (esquina superior derecha) */}
-        {showActions && !readOnly && (
-          <div className="absolute right-1 top-1 flex gap-1">
-            {isDoc && (
-              <a
-                href={evidence.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
-                title="Abrir"
-              >
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-            <AiAnalysisButton
-              table="inspection_evidences"
-              id={evidence.id}
-              fileName={evidence.description || evidence.type}
-              hasSummary={!!evidence.ai_summary}
-              queryKey={["evidences", sessionId]}
-            />
-            <button
-              onClick={() => { if (confirm("¿Eliminar esta evidencia?")) onDelete(evidence.id); }}
-              className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-red-500/80"
-              title="Eliminar"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </div>
-        )}
-        {/* En readOnly, documentos siguen abribles pero sin eliminar */}
-        {showActions && readOnly && isDoc && (
-          <div className="absolute right-1 top-1 flex gap-1">
-            <a
-              href={evidence.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
-              title="Abrir"
-            >
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </div>
-        )}
-        {/* En readOnly, fotos muestran icono de zoom */}
-        {showActions && readOnly && isPhoto && (
-          <div className="absolute right-1 top-1 flex gap-1">
-            <button
-              onClick={() => onImageClick?.(evidence.url)}
-              className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
-              title="Ampliar"
-            >
-              <ZoomIn className="h-3 w-3" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ─── Info debajo del thumbnail ─── */}
-      <div className="space-y-1 p-1.5">
-        {/* Código del archivo */}
-        <p className="truncate text-[10px] font-semibold text-foreground" title={evidence.description || ""}>
-          {evidence.description || "Sin código"}
-        </p>
-
-        {/* Fecha + tamaño */}
-        <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
-          <span className="flex items-center gap-0.5">
-            <Clock className="h-2.5 w-2.5" />
-            {dateStr}
-          </span>
-          {sizeStr && (
-            <>
-              <span className="opacity-30">·</span>
-              <span>{sizeStr}</span>
-            </>
-          )}
-        </div>
-
-        {/* Quién subió + ubicación */}
-        <div className="flex items-center justify-between gap-1">
-          {uploaderName ? (
-            <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
-              <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[7px] font-bold text-primary">
-                {getInitials(evidence.uploader?.full_name ?? null, evidence.uploader?.email ?? null)}
-              </div>
-              <span className="truncate" title={uploaderName}>{uploaderName}</span>
-            </div>
-          ) : (
-            <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
-              <User className="h-2.5 w-2.5" />
-              Anónimo
-            </span>
-          )}
-          {/* Indicador de GPS de la foto (EXIF) */}
-          <div className="flex items-center gap-1">
-            {hasGps ? (
-              <span
-                className="flex items-center gap-0.5 text-[9px] text-blue-600 dark:text-blue-400"
-                title={`GPS de la foto (EXIF): ${evidence.exif_lat?.toFixed(6)}, ${evidence.exif_lng?.toFixed(6)}`}
-              >
-                <MapPin className="h-2.5 w-2.5" />
-              </span>
-            ) : (
-              <span
-                className="flex items-center gap-0.5 text-[9px] text-muted-foreground/50"
-                title="La foto no contiene información GPS en sus metadatos EXIF"
-              >
-                <MapPin className="h-2.5 w-2.5" />
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Resumen IA */}
-        {evidence.ai_status === "pending" || evidence.ai_status === "processing" ? (
-          isAiStuck ? (
-            <div className="mt-0.5 flex items-center gap-1 text-[9px] text-red-500 dark:text-red-400 pt-1">
-              <span className="font-medium">IA timeout — usa el botón Brain para reintentar</span>
-            </div>
-          ) : (
-            <AiProcessingBadge status={evidence.ai_status} />
-          )
-        ) : evidence.ai_status === "error" ? (
-          <div className="mt-0.5 flex items-center gap-1 text-[9px] text-red-500 dark:text-red-400 pt-1">
-            <span className="font-medium">IA falló — usa el botón Brain para reintentar</span>
-          </div>
-        ) : evidence.ai_summary ? (
-          <Popover>
-            <PopoverTrigger
-              render={
-                <button
-                  className="mt-0.5 flex w-full items-start gap-1 rounded bg-muted/50 p-1 text-left hover:bg-muted cursor-pointer"
-                  title="Ver informe completo"
-                >
-                  <Zap className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-500" />
-                  <p className="line-clamp-2 text-[9px] leading-relaxed text-muted-foreground">
-                    {cleanMarkdown(evidence.ai_summary)}
-                  </p>
-                </button>
-              }
-            />
-            <PopoverContent side="top" align="start" className="w-100 max-w-[90vw] p-0">
-              <div className="ai-popover-header">
-                <Zap className="h-3.5 w-3.5 text-amber-500" />
-                <span className="ai-popover-code">{evidence.description || "Evidencia"}</span>
-              </div>
-              <div className="ai-popover-body">
-                <div className="ai-report-text">{cleanMarkdown(evidence.ai_summary)}</div>
-                {evidence.ai_model && (
-                  <div className="ai-report-meta">
-                    <span className="font-medium">Modelos:</span> {evidence.ai_model}
-                  </div>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-        ) : null}
-      </div>
-    </div>
+    <ImageCard
+      imageUrl={evidence.url}
+      imageAlt={evidence.description || ""}
+      onImageClick={() => onImageClick?.(evidence.url)}
+      badge={badge}
+      hoverActions={hoverActions}
+      aiStatus={evidence.ai_status}
+      aiProgress={null}
+      aiTable="inspection_evidences"
+      aiRecordId={evidence.id}
+      onCancelAi={() => queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] })}
+      code={evidence.description || "Sin código"}
+      fileSize={meta?.fileSize || null}
+      mimeType={meta?.mimeType || null}
+      fileName={meta?.originalName}
+      aiSummary={evidence.ai_summary}
+      aiModel={evidence.ai_model}
+      aiPromptSnapshot={null}
+      onReanalyze={handleReanalyze}
+      extraInfo={extraInfo}
+      thumbnailContent={thumbnailContent}
+    />
   );
 }
 

@@ -454,7 +454,7 @@ export default function ReportTab({
           <Button
             onClick={() => generateMutation.mutate()}
             disabled={generateMutation.isPending}
-            className="pg-btn-platinum-icon"
+            className="pg-btn-platinum"
           >
             {report ? <RefreshCw className="mr-2 h-4 w-4" /> : <FileText className="mr-2 h-4 w-4" />}
             {generateMutation.isPending ? "Generando..." : report ? "Regenerar" : "Generar"}
@@ -477,7 +477,7 @@ export default function ReportTab({
               finalizeMutation.mutate();
             }}
             disabled={finalizeMutation.isPending}
-            className="pg-btn-platinum-icon"
+            className="pg-btn-platinum"
           >
             {finalizeMutation.isPending ? "Finalizando..." : (
               <>

@@ -2115,15 +2115,39 @@
     @apply font-medium text-foreground;
   }
 
-  /* ── Toolbar integrado en el panel (buscador + controles) ──
-     -mt-3 sm:-mt-4 contrarresta el padding-top del app-panel (p-3 sm:p-4)
-     para que el buscador quede pegado al borde superior del panel. */
+  /* ── Toolbar integrado en el panel (título + controles) ──
+     Sin margen negativo: respeta el padding del app-panel y su
+     border-radius de 16px (igual que la paginación inferior). */
   .app-grid-toolbar {
-    @apply flex flex-wrap items-center justify-between gap-2 px-1 -mt-3 sm:-mt-4 pt-2 pb-2;
+    @apply flex flex-wrap items-center justify-between gap-2 -mt-3 sm:-mt-4 px-3 py-2;
+  }
+
+  .pagination-footer {
+    @apply py-2;
   }
 
   .app-grid-toolbar-left {
     @apply flex items-center gap-2;
+    height: 100%;
+  }
+
+  .app-grid-toolbar-left .app-section-title {
+    margin: 0 !important;
+    line-height: 1 !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px !important;
+  }
+
+  .app-grid-toolbar-left .btn-icon-sm {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .app-grid-toolbar-left .btn-icon-sm svg {
+    width: 12px !important;
+    height: 12px !important;
   }
 
   /* Buscador con icono — ancho fijo 180px, shrink-0 */
@@ -2669,46 +2693,109 @@
     100% { transform: translateX(350%); }
   }
 
-  /* ── Botones de acciones IA en cards de imágenes ── */
-  .ai-card-skip-btn {
+  /* ── Control segmentado de IA en cards de imágenes ── */
+  .ai-card-controls {
     display: flex !important;
     align-items: center !important;
-    gap: 3px !important;
-    padding: 3px 6px !important;
-    border-radius: 5px !important;
-    border: 1px solid rgba(148, 163, 184, 0.3) !important;
-    background: rgba(148, 163, 184, 0.1) !important;
+    justify-content: flex-end !important;
+    gap: 4px !important;
+  }
+
+  .ai-card-controls-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+    padding: 2px !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(148, 163, 184, 0.25) !important;
+    background: rgba(148, 163, 184, 0.08) !important;
+  }
+
+  .ai-card-ctrl-btn {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    border: none !important;
+    background: transparent !important;
     color: #94a3b8 !important;
     font-size: 9px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     cursor: pointer !important;
     transition: all 0.15s !important;
-    width: 100% !important;
-    justify-content: center !important;
+    white-space: nowrap !important;
   }
-  .ai-card-skip-btn:hover {
+
+  .ai-card-ctrl-reanalyze:hover {
+    background: rgba(168, 85, 247, 0.15) !important;
+    color: #c084fc !important;
+  }
+
+  .ai-card-ctrl-log:hover {
+    background: rgba(99, 102, 241, 0.15) !important;
+    color: #818cf8 !important;
+  }
+
+  .ai-card-ctrl-error:hover {
     background: rgba(239, 68, 68, 0.15) !important;
-    border-color: rgba(239, 68, 68, 0.4) !important;
     color: #f87171 !important;
   }
-  .ai-card-log-btn {
+  .ai-copy-btn {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 26px !important;
-    height: 26px !important;
-    border-radius: 5px !important;
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 4px !important;
     border: 1px solid rgba(148, 163, 184, 0.3) !important;
-    background: rgba(148, 163, 184, 0.1) !important;
+    background: transparent !important;
     color: #94a3b8 !important;
     cursor: pointer !important;
     transition: all 0.15s !important;
     flex-shrink: 0 !important;
   }
-  .ai-card-log-btn:hover {
+  .ai-copy-btn:hover {
     background: rgba(99, 102, 241, 0.15) !important;
     border-color: rgba(99, 102, 241, 0.4) !important;
     color: #818cf8 !important;
+  }
+
+  /* ── Iconos compuestos de IA (robot + badge) ── */
+  .ai-bot-icon-wrap {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 0 !important;
+  }
+  .ai-bot-icon-main {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  .ai-bot-icon-badge {
+    position: absolute !important;
+    bottom: -2px !important;
+    right: -2px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50% !important;
+    border: 1px solid var(--card) !important;
+  }
+  .ai-bot-icon-badge-svg {
+    width: 7px !important;
+    height: 7px !important;
+  }
+  .ai-bot-icon-badge-refresh {
+    background: #a855f7 !important;
+    color: #fff !important;
+  }
+  .ai-bot-icon-badge-doc {
+    background: #6366f1 !important;
+    color: #fff !important;
   }
 
   /* ── Popover del log de IA ── */
@@ -2733,6 +2820,12 @@
     font-size: 10px !important;
     font-weight: 600 !important;
     color: var(--foreground) !important;
+  }
+  .ai-log-date {
+    margin-left: auto !important;
+    font-size: 9px !important;
+    color: var(--muted-foreground) !important;
+    font-variant-numeric: tabular-nums !important;
   }
   /* Modelos separados: visión + razonamiento, una línea cada uno */
   .ai-log-models {
@@ -3018,5 +3111,43 @@
 
   .grouped-contacts-item {
     /* Sin estilos visuales aquí — los define el consumidor via renderItem. */
+  }
+
+  /* Panel que solo contiene toolbar (sin grilla) — sin padding inferior */
+  .app-panel-toolbar-only {
+    padding-bottom: 0 !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+   * CHAT OVERLAY — Panel flotante de comunicación/videollamada
+   * No roba espacio del contenido: se posiciona encima (fixed).
+   * ═══════════════════════════════════════════════════════════════ */
+  .chat-overlay {
+    position: fixed !important;
+    top: 140px !important;
+    right: 24px !important;
+    z-index: 50 !important;
+    width: 340px !important;
+    max-width: calc(100vw - 48px) !important;
+    height: calc(100vh - 180px) !important;
+    max-height: 600px !important;
+  }
+
+  .chat-overlay-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 80%, transparent) 0%,
+      color-mix(in srgb, var(--card) 60%, transparent) 100%
+    ) !important;
+    backdrop-filter: blur(16px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+    padding: 16px !important;
+    overflow: hidden !important;
   }
 

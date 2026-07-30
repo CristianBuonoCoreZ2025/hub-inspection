@@ -1380,7 +1380,7 @@ export default function CargaSiniestrosPage() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button onClick={() => setStep("fixed")} className="pg-btn-platinum-icon">
+            <Button onClick={() => setStep("fixed")} className="pg-btn-platinum">
               Continuar <ArrowRight className="ml-2 h-3.5 w-3.5" />
             </Button>
           </div>
@@ -1900,7 +1900,7 @@ export default function CargaSiniestrosPage() {
             <Button
               onClick={() => setStep("homologation")}
               disabled={missingRequiredCount > 0}
-              className="pg-btn-platinum-icon"
+              className="pg-btn-platinum"
             >
               Continuar <ArrowRight className="ml-2 h-3.5 w-3.5" />
             </Button>
@@ -1933,7 +1933,7 @@ export default function CargaSiniestrosPage() {
               <Button
                 onClick={() => loadMutation.mutate(parsedRows)}
                 disabled={isUploading || validCount === 0 || totalUnmappedCount > 0}
-                className="pg-btn-platinum-icon"
+                className="pg-btn-platinum"
               >
                 {isUploading ? (
                   <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando</>
@@ -2138,7 +2138,7 @@ export default function CargaSiniestrosPage() {
                 <Button
                   onClick={() => confirmMutation.mutate()}
                   disabled={isConfirming || stagingRows.filter((r) => r.status === "valid").length === 0}
-                  className="pg-btn-platinum-icon"
+                  className="pg-btn-platinum"
                 >
                   {isConfirming ? (
                     <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Confirmando</>

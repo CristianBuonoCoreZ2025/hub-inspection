@@ -301,7 +301,7 @@ export default function CargaCatalogosPage() {
               <Button
                 onClick={() => loadMutation.mutate(parsedRows)}
                 disabled={isUploading || validCount === 0}
-                className="pg-btn-platinum-icon"
+                className="pg-btn-platinum"
               >
                 {isUploading ? (
                   <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando...</>

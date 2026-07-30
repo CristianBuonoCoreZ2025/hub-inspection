@@ -17,8 +17,9 @@ interface PaginationProps {
    * - "full" (default): texto "Mostrando X-Y" + selector de página + botones de paginación.
    * - "controls": solo los botones de paginación (para usar arriba de la tabla
    *   cuando los filtros/buscador están integrados en la misma fila).
+   * - "info": texto "Mostrando X-Y" + selector de página, sin botones de navegación.
    */
-  variant?: "full" | "controls";
+  variant?: "full" | "controls" | "info";
 }
 
 export function Pagination({ page, totalPages, total, pageSize, onPageChange, onPageSizeChange, variant = "full" }: PaginationProps) {
@@ -77,7 +78,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
             type="button"
             onClick={() => onPageChange(p)}
             className={cn(
-              "flex size-6 items-center justify-center rounded-md border text-[11px] font-medium transition-colors",
+              "flex size-6 items-center justify-center rounded-md border text-[10px] font-medium transition-colors",
               p === page
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -149,7 +150,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
               type="button"
               onClick={() => onPageChange(p)}
               className={cn(
-                "flex size-6 items-center justify-center rounded-md border text-[11px] font-medium transition-colors",
+                "flex size-6 items-center justify-center rounded-md border text-[10px] font-medium transition-colors",
                 p === page
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -180,21 +181,43 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
       </>
     );
     return (
-      <div className="inline-flex flex-col items-center gap-1 py-1.5 text-[11px] text-muted-foreground">
-        <div className="flex items-center gap-1">
-          {prevButtons}
-          {nextButtons}
-        </div>
-        <span className="w-full text-center text-[9px] text-muted-foreground/60 tabular-nums leading-none">
-          {total} registro{total !== 1 ? "s" : ""}
+      <div className="flex items-center gap-1 py-1.5 text-[10px] text-muted-foreground">
+        {prevButtons}
+        {nextButtons}
+      </div>
+    );
+  }
+
+  // Variante "info": texto + selector, sin botones de navegación
+  if (variant === "info") {
+    return (
+      <div className="flex items-center gap-3 px-3 py-2 text-[10px] text-muted-foreground">
+        <span>
+          Mostrando <span className="font-medium text-foreground">{start}-{end}</span> de{" "}
+          <span className="font-medium text-foreground">{total}</span> registro{total !== 1 ? "s" : ""}
         </span>
+        {onPageSizeChange && (
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => onPageSizeChange(Number(v))}
+          >
+            <SelectTrigger className="selector_pages" title="Registros por página">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="selector_pages">
+              {APP_CONFIG.pagination.pageSizeOptions.map((opt) => (
+                <SelectItem key={opt} value={String(opt)} className="selector_pages">{opt} / pág</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
     );
   }
 
   // Variante "full" (default): texto + selector + botones
   return (
-    <div className="flex items-center justify-between gap-2 px-3 py-2 text-[11px] text-muted-foreground">
+    <div className="pagination-footer flex items-center justify-between gap-2 px-3 text-[10px] text-muted-foreground">
       <div className="flex items-center gap-3">
         <span>
           Mostrando <span className="font-medium text-foreground">{start}-{end}</span> de{" "}
@@ -206,12 +229,12 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
             value={String(pageSize)}
             onValueChange={(v) => onPageSizeChange(Number(v))}
           >
-            <SelectTrigger className="h-6 rounded-md border border-border bg-background px-1 text-[11px] text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-1 focus:ring-primary" title="Registros por página">
+            <SelectTrigger className="selector_pages" title="Registros por página">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="selector_pages">
               {APP_CONFIG.pagination.pageSizeOptions.map((opt) => (
-                <SelectItem key={opt} value={String(opt)}>{opt} / pág</SelectItem>
+                <SelectItem key={opt} value={String(opt)} className="selector_pages">{opt} / pág</SelectItem>
               ))}
             </SelectContent>
           </Select>

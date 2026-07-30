@@ -329,6 +329,7 @@ export async function POST(request: NextRequest) {
               ai_summary: ai.summary,
               ai_model: ai.model,
               ai_prompt_snapshot: ai.promptSnapshot,
+              ai_analyzed_at: new Date().toISOString(),
             };
             if (cfg.hasAiStatus) doneUpdate.ai_status = "done";
             if (hasUpdatedAt) doneUpdate.updated_at = new Date().toISOString();

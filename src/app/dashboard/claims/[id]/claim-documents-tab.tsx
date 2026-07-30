@@ -28,7 +28,10 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  Zap,
+  RefreshCw,
+  AlertCircle,
+  ChevronDown,
+  ClipboardCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,8 +44,8 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
 import { AiProcessingBadge } from "@/components/ai/ai-processing-badge";
+import { AiCopyButton } from "@/components/ai/ai-copy-button";
 import { cleanMarkdown } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
 import { usePagination } from "@/hooks/use-pagination";
@@ -141,6 +144,63 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     queryKey: ["policy-coverages-direct", policyId],
     queryFn: () => getPolicyCoveragesByPolicyIdDirect(policyId!),
     enabled: !!policyId,
+  });
+
+  // 4. Evidencias de tipo documento de las inspecciones del siniestro
+  type InspectionDoc = {
+    id: string;
+    url: string;
+    type: string;
+    description: string | null;
+    metadata: { originalName?: string; fileSize?: number; mimeType?: string } | null;
+    ai_summary: string | null;
+    ai_model: string | null;
+    ai_status: string | null;
+    ai_analyzed_at: string | null;
+    ai_prompt_snapshot: { system_prompt?: string; user_prompt?: string; refinement_prompt?: string } | null;
+    created_at: string;
+    session_id: string;
+    inspectionNumber: string;
+  };
+  const { data: inspectionDocs } = useQuery<InspectionDoc[]>({
+    queryKey: ["inspection-documents", claimId],
+    queryFn: async () => {
+      const { getSupabaseClient } = await import("@/lib/supabase/client");
+      const supabase = getSupabaseClient();
+      // Buscar sesiones de inspección del siniestro
+      const { data: sessions, error: sErr } = await supabase
+        .from("inspection_sessions")
+        .select("id, inspection_number, claim_action_id")
+        .eq("claim_id", claimId)
+        .order("created_at", { ascending: false });
+      if (sErr) throw new Error(sErr.message);
+      if (!sessions || sessions.length === 0) return [];
+      const sessionIds = sessions.map((s: { id: string }) => s.id);
+      // Buscar evidencias de tipo documento (pdf/document) de esas sesiones
+      const { data: evidences, error: eErr } = await supabase
+        .from("inspection_evidences")
+        .select("id, url, type, description, metadata, ai_summary, ai_model, ai_status, ai_analyzed_at, ai_prompt_snapshot, created_at, session_id")
+        .in("session_id", sessionIds)
+        .in("type", ["pdf", "document"])
+        .order("created_at", { ascending: false });
+      if (eErr) throw new Error(eErr.message);
+      // Con R2 las URLs ya son públicas — no se presigna
+      const evs = (evidences || []) as Array<Record<string, unknown>>;
+      // Mapear session_id → inspection_number
+      const sessionMap = new Map(sessions.map((s: { id: string; inspection_number: string | null; claim_action_id: string | null }) => [s.id, s.inspection_number || s.claim_action_id || "Inspección"]));
+      return (evs as Array<Omit<InspectionDoc, "inspectionNumber">>).map((e) => ({
+        ...e,
+        inspectionNumber: String(sessionMap.get(e.session_id) || "Inspección"),
+      }));
+    },
+    enabled: !!claimId,
+    staleTime: 30 * 1000,
+    // Polling cada 3s mientras hay documentos siendo procesados por IA
+    refetchInterval: (query) => {
+      const docs = query.state.data;
+      if (docs && docs.some((d) => d.ai_status === "pending" || d.ai_status === "processing")) return 3000;
+      return false;
+    },
   });
 
   const coverageCatalogIds = useMemo(() => {
@@ -414,7 +474,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
   // ─── Unificar todos los documentos en una sola lista ───
   type UnifiedDoc = {
     id: string;
-    origen: "siniestro" | "poliza" | "cmf";
+    origen: "siniestro" | "poliza" | "cmf" | "inspeccion";
     codigo: string;
     nombre: string;
     subnombre?: string | null;
@@ -424,6 +484,8 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
     aiSummary?: string | null;
     aiModel?: string | null;
     aiStatus?: string | null;
+    aiAnalyzedAt?: string | null;
+    aiPromptSnapshot?: { system_prompt?: string; user_prompt?: string; refinement_prompt?: string } | null;
     docTypeCode?: string;
     canDelete?: boolean;
     docId?: string; // para delete (solo siniestro)
@@ -450,6 +512,8 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
         aiSummary: doc.ai_summary,
         aiModel: doc.ai_model,
         aiStatus: doc.ai_status,
+        aiAnalyzedAt: doc.ai_analyzed_at,
+        aiPromptSnapshot: doc.ai_prompt_snapshot as { system_prompt?: string; user_prompt?: string; refinement_prompt?: string } | null,
         docTypeCode: doc.document_type || undefined,
         canDelete: canDeleteDocs,
         docId: doc.id,
@@ -484,8 +548,30 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
       });
     }
 
+    // 4. Documentos de inspección (evidencias de tipo documento)
+    for (const doc of inspectionDocs || []) {
+      const meta = doc.metadata as { originalName?: string; fileSize?: number; mimeType?: string } | null;
+      docs.push({
+        id: doc.id,
+        origen: "inspeccion",
+        codigo: doc.description || "—",
+        nombre: doc.inspectionNumber,
+        subnombre: null,
+        ext: (meta?.originalName || "").split(".").pop()?.toUpperCase() || doc.type.toUpperCase(),
+        tamano: meta?.fileSize ? formatFileSize(meta.fileSize) : "—",
+        url: doc.url || "",
+        aiSummary: doc.ai_summary,
+        aiModel: doc.ai_model,
+        aiStatus: doc.ai_status,
+        aiAnalyzedAt: doc.ai_analyzed_at,
+        aiPromptSnapshot: doc.ai_prompt_snapshot as { system_prompt?: string; user_prompt?: string; refinement_prompt?: string } | null,
+        canDelete: false,
+        docId: undefined,
+      });
+    }
+
     return docs;
-  }, [claimDocs, policyDocs, onlineDocuments, docOptions, canDeleteDocs]);
+  }, [claimDocs, policyDocs, onlineDocuments, inspectionDocs, docOptions, canDeleteDocs]);
 
   // ─── Paginación ───
   const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } =
@@ -506,6 +592,14 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
         <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-300">
           <Shield className="h-3 w-3" />
           Póliza
+        </span>
+      );
+    }
+    if (origen === "inspeccion") {
+      return (
+        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-100 dark:bg-amber-900/50 dark:text-amber-300">
+          <ClipboardCheck className="h-3 w-3" />
+          Inspección
         </span>
       );
     }
@@ -532,11 +626,13 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
             </h3>
             {canCreateDocs && (
               <Button
+                variant="ghost"
+                size="icon"
+                className="btn-icon-sm"
+                title="Subir documentos"
                 onClick={() => setUploadModal((p) => ({ ...p, visible: true, status: "idle", fileName: "", fileSize: 0, loaded: 0, isDragging: false }))}
-                className="pg-btn-platinum-icon"
               >
-                <Upload className="mr-2 h-4 w-4" />
-                Subir
+                <Upload className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
@@ -583,34 +679,6 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                       </div>
                       {(doc.aiStatus === "pending" || doc.aiStatus === "processing") ? (
                         <AiProcessingBadge status={doc.aiStatus} />
-                      ) : doc.aiSummary ? (
-                        <Popover>
-                          <PopoverTrigger
-                            render={
-                              <button
-                                className="mt-1 flex w-full items-start gap-1 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground text-left"
-                                title="Ver informe completo"
-                              >
-                                <Zap className="h-3 w-3 shrink-0 mt-0.5 text-amber-500" />
-                                <span className="line-clamp-2 wrap-break-word">{cleanMarkdown(doc.aiSummary)}</span>
-                              </button>
-                            }
-                          />
-                          <PopoverContent side="top" align="start" className="w-100 max-w-[90vw] p-0">
-                            <div className="ai-popover-header">
-                              <Zap className="h-3.5 w-3.5 text-amber-500" />
-                              <span className="ai-popover-code">{doc.codigo}</span>
-                            </div>
-                            <div className="ai-popover-body">
-                              <div className="ai-report-text">{cleanMarkdown(doc.aiSummary)}</div>
-                              {doc.aiModel && (
-                                <div className="ai-report-meta">
-                                  <span className="font-medium">Modelos:</span> {doc.aiModel}
-                                </div>
-                              )}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
                       ) : null}
                     </td>
                     <td className="text-muted-foreground uppercase text-[11px]">
@@ -619,6 +687,156 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                     <td className="text-muted-foreground">{doc.tamano}</td>
                     <td>
                       <div className="app-row-actions">
+                        {/* Control segmentado de IA */}
+                        {((doc.origen === "siniestro" && doc.docId) || doc.origen === "inspeccion") && (
+                          <div className="ai-card-controls">
+                            {/* done → re-analizar + ver resultado */}
+                            {doc.aiSummary && doc.aiStatus === "done" && (
+                              <div className="ai-card-controls-group">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await fetch("/api/ai/reanalyze", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                          table: doc.origen === "inspeccion" ? "inspection_evidences" : "claim_documents",
+                                          id: doc.origen === "inspeccion" ? doc.id : doc.docId,
+                                          claimId,
+                                        }),
+                                      });
+                                      queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
+                                      queryClient.invalidateQueries({ queryKey: ["inspection-documents", claimId] });
+                                      toast.success("Re-análisis iniciado");
+                                    } catch {
+                                      toast.error("No se pudo iniciar el re-análisis");
+                                    }
+                                  }}
+                                  className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
+                                  title="Re-analizar con IA"
+                                >
+                                  <RefreshCw className="h-3 w-3" />
+                                  <span>Re-IA</span>
+                                </button>
+                                <Popover>
+                                  <PopoverTrigger
+                                    render={
+                                      <button className="ai-card-ctrl-btn ai-card-ctrl-log" title="Ver log del análisis">
+                                        <FileText className="h-3 w-3" />
+                                        <span>Ver</span>
+                                      </button>
+                                    }
+                                  />
+                                  <PopoverContent side="top" align="start" className="ai-log-popover">
+                                    {/* Header: código + fecha */}
+                                    <div className="ai-log-header">
+                                      <span className="ai-log-code">{doc.codigo}</span>
+                                      {doc.aiAnalyzedAt && (
+                                        <span className="ai-log-date">
+                                          {new Date(doc.aiAnalyzedAt).toLocaleString("es-CL", {
+                                            day: "2-digit",
+                                            month: "2-digit",
+                                            year: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })}
+                                        </span>
+                                      )}
+                                      {doc.aiSummary && <AiCopyButton text={cleanMarkdown(doc.aiSummary)} />}
+                                    </div>
+                                    {doc.aiModel && (
+                                      <div className="ai-log-models">
+                                        {doc.aiModel.split("|").map((m, i) => {
+                                          const trimmed = m.trim();
+                                          const isVision = trimmed.startsWith("vision:");
+                                          const label = isVision ? "Visión" : "Razonamiento";
+                                          const modelName = trimmed.replace(/^(vision|razonamiento):/, "").trim();
+                                          return (
+                                            <div key={i} className="ai-log-model-row">
+                                              <span className="ai-log-model-tag">{label}</span>
+                                              <span className="ai-log-model-name">{modelName}</span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                    {/* Resumen */}
+                                    <div className="ai-log-section ai-log-section-summary">
+                                      <div className="ai-log-summary">{cleanMarkdown(doc.aiSummary)}</div>
+                                    </div>
+                                    {/* Prompt enviado */}
+                                    {doc.aiPromptSnapshot && (
+                                      <Popover>
+                                        <PopoverTrigger
+                                          render={
+                                            <button className="ai-log-prompt-trigger" title="Ver prompt enviado">
+                                              <ChevronDown className="h-2.5 w-2.5" />
+                                              <span>Prompt enviado</span>
+                                            </button>
+                                          }
+                                        />
+                                        <PopoverContent side="top" align="start" className="ai-prompt-tooltip">
+                                          <div className="ai-log-prompt">
+                                            {doc.aiPromptSnapshot.system_prompt && (
+                                              <div className="ai-log-prompt-block">
+                                                <span className="ai-log-prompt-tag">system</span>
+                                                <pre className="ai-log-prompt-text">{doc.aiPromptSnapshot.system_prompt}</pre>
+                                              </div>
+                                            )}
+                                            {doc.aiPromptSnapshot.user_prompt && (
+                                              <div className="ai-log-prompt-block">
+                                                <span className="ai-log-prompt-tag">user</span>
+                                                <pre className="ai-log-prompt-text">{doc.aiPromptSnapshot.user_prompt}</pre>
+                                              </div>
+                                            )}
+                                            {doc.aiPromptSnapshot.refinement_prompt && (
+                                              <div className="ai-log-prompt-block">
+                                                <span className="ai-log-prompt-tag">refinement</span>
+                                                <pre className="ai-log-prompt-text">{doc.aiPromptSnapshot.refinement_prompt}</pre>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    )}
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+                            )}
+
+                            {/* pending/skipped/error → analizar / re-analizar */}
+                            {(!doc.aiSummary || doc.aiStatus === "error" || doc.aiStatus === "skipped") && (
+                              <div className="ai-card-controls-group">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await fetch("/api/ai/reanalyze", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                          table: doc.origen === "inspeccion" ? "inspection_evidences" : "claim_documents",
+                                          id: doc.origen === "inspeccion" ? doc.id : doc.docId,
+                                          claimId,
+                                        }),
+                                      });
+                                      queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
+                                      queryClient.invalidateQueries({ queryKey: ["inspection-documents", claimId] });
+                                      toast.success("Re-análisis iniciado");
+                                    } catch {
+                                      toast.error("No se pudo iniciar el re-análisis");
+                                    }
+                                  }}
+                                  className={`ai-card-ctrl-btn ${doc.aiStatus === "error" ? "ai-card-ctrl-error" : "ai-card-ctrl-reanalyze"}`}
+                                  title={doc.aiSummary ? "Re-analizar con IA" : "Analizar con IA"}
+                                >
+                                  {doc.aiStatus === "error" ? <AlertCircle className="h-3 w-3" /> : <RefreshCw className="h-3 w-3" />}
+                                  <span>Re-IA</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* Ver documento */}
                         {doc.url && (
                           <a
                             href={doc.url}
@@ -630,15 +848,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         )}
-                        {doc.origen === "siniestro" && doc.docId && (
-                          <AiAnalysisButton
-                            table="claim_documents"
-                            id={doc.docId}
-                            fileName={doc.subnombre || doc.nombre}
-                            hasSummary={!!doc.aiSummary}
-                            queryKey={["claim-documents", claimId]}
-                          />
-                        )}
+                        {/* Eliminar */}
                         {doc.canDelete && doc.docId && (
                           <Button
                             variant="ghost"

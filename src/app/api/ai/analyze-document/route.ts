@@ -203,6 +203,7 @@ export async function POST(request: NextRequest) {
     const updatesDone: Record<string, unknown> = {
       ai_summary: aiSummary,
       ai_model: aiModel,
+      ai_analyzed_at: new Date().toISOString(),
     };
     if (hasUpdatedAtCol) updatesDone.updated_at = new Date().toISOString();
     if (hasAiStatusCol) updatesDone.ai_status = "done";

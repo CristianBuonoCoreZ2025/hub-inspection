@@ -937,10 +937,10 @@ export default function InspectionDetailPage() {
 
  </div>
 
- {/* Panel lateral de Comunicación — solo para inspecciones remotas */}
+ {/* Panel overlay de Comunicación — flotante, no roba espacio */}
  {chatPanelOpen && session.inspection_type === "remote" && (
- <div className="w-85 shrink-0 hidden lg:flex flex-col">
- <div className="app-panel flex flex-col flex-1 sticky-panel-80">
+ <div className="chat-overlay">
+ <div className="chat-overlay-panel">
  <div className="flex items-center justify-between mb-3 pb-2 border-b">
  <h3 className="app-body font-semibold text-muted-foreground flex items-center gap-2">
  <MessageSquare className="h-4 w-4" />

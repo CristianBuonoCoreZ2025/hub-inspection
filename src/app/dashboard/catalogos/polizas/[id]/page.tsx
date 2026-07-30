@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -1297,7 +1297,7 @@ export default function PolicyDetailPage() {
  e.target.value = "";
  }}
  />
- <span className="pg-btn-platinum-icon inline-flex items-center gap-1.5">
+ <span className="pg-btn-platinum inline-flex items-center gap-1.5">
  <Upload className="h-3.5 w-3.5" />
  Subir
  </span>

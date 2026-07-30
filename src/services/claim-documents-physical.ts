@@ -19,12 +19,14 @@ export interface ClaimDocument {
   ai_summary: string | null;
   ai_model: string | null;
   ai_status: string | null;
+  ai_analyzed_at: string | null;
+  ai_prompt_snapshot: { system_prompt?: string; user_prompt?: string; refinement_prompt?: string } | null;
   created_at: string;
   updated_at: string;
 }
 
 const DOCUMENT_FIELDS =
-  "id, claim_id, doc_code, document_name, document_url, document_type, original_filename, mime_type, file_size, file_path, is_active, ai_summary, ai_model, ai_status, created_at, updated_at";
+  "id, claim_id, doc_code, document_name, document_url, document_type, original_filename, mime_type, file_size, file_path, is_active, ai_summary, ai_model, ai_status, ai_analyzed_at, ai_prompt_snapshot, created_at, updated_at";
 
 export async function getClaimDocuments(claimId: string): Promise<ClaimDocument[]> {
   return fetchAll<ClaimDocument>("claim_documents", {

@@ -168,7 +168,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  type="button"
  onClick={() => fileInputRef.current?.click()}
  disabled={uploading}
- className="pg-btn-platinum-icon"
+ className="pg-btn-platinum"
  >
  {uploading ? (
  <Loader2 className="h-3.5 w-3.5 animate-spin" />

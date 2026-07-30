@@ -402,6 +402,55 @@
   line-height: 1.4 !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+ * SELECTOR_PAGES — Selector de páginas en paginación
+ * Independiente de los combobox: más pequeño, sin redondeo excesivo,
+ * fuente 9px para coincidir con el texto de la paginación.
+ * ═══════════════════════════════════════════════════════════════ */
+.selector_pages[data-slot="select-trigger"] {
+  height: 22px !important;
+  font-size: 10px !important;
+  line-height: 1.3 !important;
+  border-radius: 8px !important;
+  padding: 0 20px 0 6px !important;
+  border: 1px solid var(--input) !important;
+  background: color-mix(in srgb, var(--card) 80%, transparent) !important;
+  color: var(--foreground) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  position: relative !important;
+  cursor: pointer !important;
+  transition: border-color 0.15s ease !important;
+}
+
+.selector_pages[data-slot="select-trigger"]:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--input) 60%, var(--foreground) 40%) !important;
+}
+
+.selector_pages[data-slot="select-trigger"]:focus-visible {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(0, 149, 218, 0.1) !important;
+  outline: none !important;
+}
+
+.selector_pages[data-slot="select-trigger"] [data-slot="select-value"] {
+  font-size: 10px !important;
+  line-height: 1.3 !important;
+  flex: 1 !important;
+  text-align: center !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.selector_pages[data-slot="select-trigger"] svg {
+  position: absolute !important;
+  right: 6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 8px !important;
+  height: 8px !important;
+}
+
 /* Dropdown (popup desplegado) — data-slot es "select-content" */
 [data-slot="select-content"],
 [data-slot="select-content"] [data-slot="select-item"],
@@ -420,4 +469,37 @@
 .dark [data-slot="select-content"] [data-slot="select-item"][data-selected] {
   background-color: rgba(59, 130, 246, 0.18) !important;
   color: #93c5fd !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * SELECTOR_PAGES — Dropdown (popup desplegado)
+ * Override de las reglas globales del select para que el popup
+ * del selector de páginas use 9px (igual que el trigger).
+ * Va DESPUÉS de las reglas globales para que !important funcione.
+ * ═══════════════════════════════════════════════════════════════ */
+.selector_pages[data-slot="select-content"],
+.selector_pages[data-slot="select-content"] [data-slot="select-item"],
+.selector_pages[data-slot="select-content"] [data-slot="select-item"] * {
+  font-size: 10px !important;
+  line-height: 1.3 !important;
+}
+
+.selector_pages[data-slot="select-content"] [data-slot="select-item"] {
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+
+.selector_pages[data-slot="select-content"] [data-slot="select-item"] [data-slot="select-item-text"] {
+  text-align: left !important;
+  justify-content: flex-start !important;
+  flex: 1 !important;
+}
+
+.selector_pages[data-slot="select-content"] [data-slot="select-item"] svg,
+.selector_pages[data-slot="select-content"] [data-slot="select-item"] [data-slot="select-item-indicator"],
+.selector_pages[data-slot="select-content"] [data-slot="select-item"] [data-slot="select-item-indicator"] span,
+.selector_pages[data-slot="select-content"] [data-slot="select-item"] [data-slot="select-item-indicator"] svg {
+  display: none !important;
 }

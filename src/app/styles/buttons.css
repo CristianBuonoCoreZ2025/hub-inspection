@@ -626,9 +626,8 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════
-   * LIQUID GLASS PLATINUM — Botones del sistema (4 tipos)
-   *   · pg-btn-platinum:       slate glass, sin icono, 125px
-   *   · pg-btn-platinum-icon:  slate glass, con icono, 125px
+   * LIQUID GLASS PLATINUM — Botones del sistema (3 tipos)
+   *   · pg-btn-platinum:       slate glass, 125px
    *   · pg-btn-common:         teal glass, sin icono, 125px
    *   · pg-btn-common-icon:    teal glass, con icono, 125px
    * Sin color sólido. Cristal translúcido. Bordes redondeados.
@@ -637,8 +636,7 @@
 
   .pg-btn-common,
   .pg-btn-common-icon,
-  .pg-btn-platinum,
-  .pg-btn-platinum-icon {
+  .pg-btn-platinum {
     @apply inline-flex items-center justify-center cursor-pointer;
     position: relative;
     width: 125px !important;
@@ -654,8 +652,7 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
-  .pg-btn-common-icon,
-  .pg-btn-platinum-icon {
+  .pg-btn-common-icon {
     @apply gap-1.5;
   }
 
@@ -679,15 +676,13 @@
 
   .pg-btn-common:hover,
   .pg-btn-common-icon:hover,
-  .pg-btn-platinum:hover,
-  .pg-btn-platinum-icon:hover {
+  .pg-btn-platinum:hover {
     transform: translateY(-1px);
   }
 
   .pg-btn-common:active,
   .pg-btn-common-icon:active,
-  .pg-btn-platinum:active,
-  .pg-btn-platinum-icon:active {
+  .pg-btn-platinum:active {
     transform: translateY(0);
   }
 
@@ -786,8 +781,7 @@
      · Default: gris/blanco neutro, glass sutil.
      · Hover: se ilumina con tinte celeste/lavanda y brillo de cristal.
   */
-  .pg-btn-platinum,
-  .pg-btn-platinum-icon {
+  .pg-btn-platinum {
     color: rgb(17, 24, 39) !important;
     border-radius: 12px !important;
     background: linear-gradient(
@@ -802,8 +796,7 @@
   }
 
   /* Reflejo superior del cristal */
-  .pg-btn-platinum::before,
-  .pg-btn-platinum-icon::before {
+  .pg-btn-platinum::before {
     content: "";
     position: absolute;
     top: 0;
@@ -820,8 +813,7 @@
   }
 
   /* Halo inferior sutil */
-  .pg-btn-platinum::after,
-  .pg-btn-platinum-icon::after {
+  .pg-btn-platinum::after {
     content: "";
     position: absolute;
     bottom: -70%;
@@ -837,8 +829,7 @@
     border-radius: 999px;
   }
 
-  .pg-btn-platinum:hover,
-  .pg-btn-platinum-icon:hover {
+  .pg-btn-platinum:hover {
     color: rgb(17, 24, 39) !important;
     background: linear-gradient(
       135deg,
@@ -851,8 +842,7 @@
       0 -1px 0 0.5px rgba(165, 180, 252, 0.35) inset !important;
   }
 
-  .pg-btn-platinum:hover::after,
-  .pg-btn-platinum-icon:hover::after {
+  .pg-btn-platinum:hover::after {
     background: radial-gradient(
       100% 50% at 50% 100%,
       rgba(165, 180, 252, 0.28) 0%,
@@ -860,8 +850,7 @@
     );
   }
 
-  .dark .pg-btn-platinum,
-  .dark .pg-btn-platinum-icon {
+  .dark .pg-btn-platinum {
     color: rgb(243, 244, 246) !important;
     background: linear-gradient(
       135deg,
@@ -874,8 +863,7 @@
       0 -1px 0 0.5px rgba(0, 0, 0, 0.2) inset !important;
   }
 
-  .dark .pg-btn-platinum::before,
-  .dark .pg-btn-platinum-icon::before {
+  .dark .pg-btn-platinum::before {
     background: linear-gradient(
       180deg,
       rgba(255, 255, 255, 0.12) 0%,
@@ -883,8 +871,7 @@
     );
   }
 
-  .dark .pg-btn-platinum::after,
-  .dark .pg-btn-platinum-icon::after {
+  .dark .pg-btn-platinum::after {
     background: radial-gradient(
       100% 50% at 50% 100%,
       rgba(255, 255, 255, 0.08) 0%,
@@ -892,8 +879,7 @@
     );
   }
 
-  .dark .pg-btn-platinum:hover,
-  .dark .pg-btn-platinum-icon:hover {
+  .dark .pg-btn-platinum:hover {
     background: linear-gradient(
       135deg,
       rgba(129, 140, 248, 0.14) 0%,
@@ -905,8 +891,7 @@
       0 -1px 0 0.5px rgba(99, 102, 241, 0.25) inset !important;
   }
 
-  .dark .pg-btn-platinum:hover::after,
-  .dark .pg-btn-platinum-icon:hover::after {
+  .dark .pg-btn-platinum:hover::after {
     background: radial-gradient(
       100% 50% at 50% 100%,
       rgba(129, 140, 248, 0.2) 0%,

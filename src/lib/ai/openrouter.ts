@@ -63,8 +63,11 @@ export interface PromptSnapshot {
 }
 
 /**
- * Obtiene el prompt configurado para una línea de negocio y tipo.
- * Prioridad: prompt específico de la línea > prompt genérico (business_line_id IS NULL).
+ * Obtiene el prompt configurado para un tipo (image/document).
+ * Los prompts son GENÉRICOS (business_line_id IS NULL) — el analizador
+ * es un inspector que documenta lo que ve, no un liquidador que concluye
+ * cobertura, así que no necesita contexto de línea de negocio.
+ * Si hay un prompt específico de línea activo (caso futuro), tiene prioridad.
  * Si no hay ninguno en la BD, retorna null (el caller usa los defaults hardcodeados).
  */
 async function getPromptFromDb(
@@ -386,7 +389,7 @@ export async function describeImage(
     messages,
     "OPENROUTER_VISION_MODEL_FREE",
     "OPENROUTER_VISION_MODEL",
-    { maxTokens: 1000, temperature: 0.2, onProgress, phase: "vision" }
+    { maxTokens: 2000, temperature: 0.2, onProgress, phase: "vision" }
   );
 
   if (!result) return null;
@@ -412,7 +415,7 @@ export async function describeImage(
     refinementMessages,
     "OPENROUTER_DOCUMENT_MODEL_FREE",
     "OPENROUTER_DOCUMENT_MODEL",
-    { maxTokens: 800, temperature: 0.3, onProgress, phase: "refinement" }
+    { maxTokens: 1500, temperature: 0.3, onProgress, phase: "refinement" }
   );
 
   // Si el refinamiento falla, usar el texto crudo (mejor que nada)
@@ -520,6 +523,41 @@ export async function summarizeDocument(
 
   if (!result) {
     return { ok: false, reason: "Texto extraído del PDF pero todos los modelos de IA fallaron (sin crédito, rate limit o error de OpenRouter)" };
+  }
+
+  // ─── SEGUNDO PASO: refinamiento que limpia y formatea el texto crudo ───
+  // Si refinementPrompt es null (vacío en BD), saltar el refinamiento y usar texto crudo.
+  if (dbPrompt.refinement_prompt === null) {
+    return { ok: true, summary: result.text, model: result.model, pageCount, promptSnapshot };
+  }
+
+  const refinementMessages: OpenRouterMessage[] = [
+    {
+      role: "system",
+      content: dbPrompt.refinement_prompt,
+    },
+    {
+      role: "user",
+      content: `Texto crudo del extractor de documentos:\n\n${result.text}\n\nEntrega el texto final limpio y coherente para el liquidador.`,
+    },
+  ];
+
+  const refined = await callWithFallback(
+    refinementMessages,
+    "OPENROUTER_DOCUMENT_MODEL_FREE",
+    "OPENROUTER_DOCUMENT_MODEL",
+    { maxTokens: 1200, temperature: 0.3, onProgress, phase: "refinement" }
+  );
+
+  // Si el refinamiento falla, usar el texto crudo (mejor que nada)
+  if (refined) {
+    return {
+      ok: true,
+      summary: refined.text,
+      model: `${result.model} | razonamiento:${refined.model}`,
+      pageCount,
+      promptSnapshot,
+    };
   }
 
   return { ok: true, summary: result.text, model: result.model, pageCount, promptSnapshot };
@@ -771,6 +809,37 @@ async function summarizeText(
   );
 
   if (!result) return null;
+
+  // ─── SEGUNDO PASO: refinamiento que limpia y formatea el texto crudo ───
+  if (dbPrompt.refinement_prompt === null) {
+    return { summary: result.text, model: result.model, promptSnapshot };
+  }
+
+  const refinementMessages: OpenRouterMessage[] = [
+    {
+      role: "system",
+      content: dbPrompt.refinement_prompt,
+    },
+    {
+      role: "user",
+      content: `Texto crudo del extractor de documentos:\n\n${result.text}\n\nEntrega el texto final limpio y coherente para el liquidador.`,
+    },
+  ];
+
+  const refined = await callWithFallback(
+    refinementMessages,
+    "OPENROUTER_DOCUMENT_MODEL_FREE",
+    "OPENROUTER_DOCUMENT_MODEL",
+    { maxTokens: 1200, temperature: 0.3, onProgress, phase: "refinement" }
+  );
+
+  if (refined) {
+    return {
+      summary: refined.text,
+      model: `${result.model} | razonamiento:${refined.model}`,
+      promptSnapshot,
+    };
+  }
 
   return { summary: result.text, model: result.model, promptSnapshot };
 }

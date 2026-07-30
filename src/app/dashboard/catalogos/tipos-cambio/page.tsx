@@ -370,7 +370,7 @@ function TiposCambioContent() {
  variant="outline"
  onClick={syncChile}
  disabled={syncState.active || !effectiveFilterCurrency}
- className="pg-btn-platinum-icon"
+ className="pg-btn-platinum"
  title={effectiveFilterCurrency
  ? `Descargar ${effectiveFilterCurrency} del período seleccionado desde mindicador.cl`
  : "Selecciona una moneda primero"}
@@ -384,7 +384,7 @@ function TiposCambioContent() {
  variant="outline"
  onClick={() => { setEditingId(null); setForm({ country_id: filterCountry, currency_code: effectiveFilterCurrency, rate_to_base: "", effective_date: new Date().toISOString().split("T")[0], source: "manual" }); setOpen(true); }}
  disabled={syncState.active}
- className="pg-btn-platinum-icon"
+ className="pg-btn-platinum"
  >
  <Plus className="mr-1.5 h-4 w-4" /> Nuevo
  </Button>
@@ -449,7 +449,7 @@ function TiposCambioContent() {
  setForm({ country_id: filterCountry, currency_code: effectiveFilterCurrency, rate_to_base: "", effective_date: defaultDate, source: "manual" });
  setOpen(true);
  }}
- className="pg-btn-platinum-icon mt-3"
+ className="pg-btn-platinum mt-3"
  >
  <Plus className="mr-1.5 h-4 w-4" /> Nuevo
  </Button>
@@ -698,7 +698,7 @@ function TiposCambioContent() {
  variant="outline"
  onClick={syncSingleDay}
  disabled={syncDayLoading}
- className="pg-btn-platinum-icon shrink-0"
+ className="pg-btn-platinum shrink-0"
  title="Descargar este valor desde mindicador.cl (Banco Central de Chile)"
  >
  <ArrowRightLeft className={`h-4 w-4 ${syncDayLoading ? "animate-spin" : ""}`} />
