@@ -863,23 +863,22 @@ function DocumentTable({
                         href={doc.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"
+                        className="btn-icon-sm"
                         title="Abrir documento"
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                       {/* Eliminar */}
                       {!readOnly && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <button
+                          type="button"
                           className="btn-icon-sm btn-danger-hover"
                           onClick={() => {
                             if (confirm("¿Eliminar esta evidencia?")) onDelete(doc.id);
                           }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </td>

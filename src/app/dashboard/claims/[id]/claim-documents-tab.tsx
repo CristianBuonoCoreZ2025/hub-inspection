@@ -841,7 +841,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                             href={doc.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"
+                            className="btn-icon-sm"
                             title="Ver documento"
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
