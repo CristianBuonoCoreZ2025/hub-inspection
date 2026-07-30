@@ -11,6 +11,7 @@ import { DrawingCanvas } from "@/components/ui/drawing-canvas";
 import { toast } from "sonner";
 import { Upload, Trash2, ImageIcon, Pencil, Check, X, PenTool, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string }) {
  const queryClient = useQueryClient();
@@ -20,6 +21,8 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  const [mode, setMode] = useState<"view" | "upload" | "draw">("view");
  const [drawEditingSketch, setDrawEditingSketch] = useState<{ id: string; url: string; label: string } | null>(null);
  const [savingDrawing, setSavingDrawing] = useState(false);
+ const [page, setPage] = useState(1);
+ const [pageSize, setPageSize] = useState(12);
  const fileInputRef = useRef<HTMLInputElement>(null);
  const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
@@ -146,20 +149,29 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  );
  }
 
+ // Paginación
+ const totalCount = sketches?.length || 0;
+ const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+ const currentPage = Math.min(page, totalPages);
+ const start = (currentPage - 1) * pageSize;
+ const paginatedSketches = (sketches || []).slice(start, start + pageSize);
+
  // Modo dibujo
  if (mode === "draw") {
  return (
  <div className="app-stack">
- <div className="flex items-center justify-between">
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
  <h3 className="app-section-title flex items-center gap-2">
  <PenTool className="h-4 w-4" />
  {drawEditingSketch ? "Editar Croquis" : "Dibujar Croquis"}
  </h3>
+ </div>
  <Button variant="outline" size="sm" onClick={() => { setMode("view"); setDrawEditingSketch(null); }}>
  <X className="h-3.5 w-3.5 mr-1" /> Cancelar
  </Button>
  </div>
- <div className="app-panel">
  <DrawingCanvas
  onSave={handleSaveDrawing}
  saving={savingDrawing}
@@ -181,24 +193,36 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  </div>
  )}
 
- {/* Botones de acción (ocultos si readOnly) */}
- {!readOnly && (
- <div className="flex flex-wrap gap-2">
- <Button
- type="button"
- onClick={() => setMode("draw")}
- className="pg-btn-platinum-icon"
- >
+ {/* Panel con toolbar + grilla (mismo estándar que evidencias) */}
+ <div className="app-panel">
+ <div className="app-grid-toolbar">
+ <div className="app-grid-toolbar-left">
+ <h3 className="app-section-title">
  <PenTool className="h-4 w-4" />
- Dibujar
+ Croquis
+ {sketches && sketches.length > 0 && (
+ <span className="text-[11px] text-muted-foreground">({sketches.length})</span>
+ )}
+ </h3>
+ {!readOnly && (
+ <>
+ <Button
+ variant="ghost"
+ size="icon"
+ className="btn-icon-sm"
+ title="Dibujar croquis"
+ onClick={() => setMode("draw")}
+ >
+ <PenTool className="h-3.5 w-3.5" />
  </Button>
  <Button
- type="button"
+ variant="ghost"
+ size="icon"
+ className="btn-icon-sm"
+ title="Subir croquis"
  onClick={() => fileInputRef.current?.click()}
- className="pg-btn-platinum-icon"
  >
- <Upload className="h-4 w-4" />
- Subir
+ <Upload className="h-3.5 w-3.5" />
  </Button>
  <input
  ref={fileInputRef}
@@ -208,16 +232,22 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  onChange={handleInput}
  multiple
  />
- </div>
+ </>
  )}
+ </div>
+ {sketches && sketches.length > 0 && (
+ <Pagination variant="controls" page={currentPage} totalPages={totalPages} total={totalCount} pageSize={pageSize} onPageChange={setPage} />
+ )}
+ </div>
 
- {uploading && <p className="app-body text-muted-foreground">Subiendo...</p>}
+ {uploading && <p className="app-body text-muted-foreground text-center py-2">Subiendo...</p>}
 
  {/* Grid */}
  {sketches && sketches.length > 0 ? (
- <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
- {sketches.map((sketch) => (
- <div key={sketch.id} className="app-panel space-y-3">
+ <>
+ <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+ {paginatedSketches.map((sketch) => (
+ <div key={sketch.id} className="app-panel space-y-2">
  <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
  {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 with dynamic URL */}
  <img
@@ -244,23 +274,23 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  <Button
  variant="ghost"
  size="icon"
- className="h-8 w-8"
+ className="btn-icon-sm"
  onClick={() => saveEdit(sketch.id)}
  >
- <Check className="h-4 w-4" />
+ <Check className="h-3.5 w-3.5" />
  </Button>
  <Button
  variant="ghost"
  size="icon"
- className="h-8 w-8"
+ className="btn-icon-sm"
  onClick={() => setEditingId(null)}
  >
- <X className="h-4 w-4" />
+ <X className="h-3.5 w-3.5" />
  </Button>
  </>
  ) : (
  <>
- <span className="flex-1 truncate app-body font-medium">
+ <span className="flex-1 truncate text-[10px] font-medium text-foreground">
  {sketch.label || "Sin título"}
  </span>
  {!readOnly && (
@@ -268,35 +298,36 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  <Button
  variant="ghost"
  size="icon"
- className="h-8 w-8"
+ className="btn-icon-sm"
  title="Dibujar / Editar"
  onClick={() => {
  setDrawEditingSketch({ id: sketch.id, url: sketch.sketch_url, label: sketch.label || "" });
  setMode("draw");
  }}
  >
- <PenTool className="h-4 w-4" />
+ <PenTool className="h-3.5 w-3.5" />
  </Button>
  <Button
  variant="ghost"
  size="icon"
- className="h-8 w-8"
+ className="btn-icon-sm"
  title="Renombrar"
  onClick={() => startEdit(sketch)}
  >
- <Pencil className="h-4 w-4" />
+ <Pencil className="h-3.5 w-3.5" />
  </Button>
  <Button
  variant="ghost"
  size="icon"
- className="h-8 w-8 text-rose-500"
+ className="btn-icon-sm"
+ title="Eliminar"
  onClick={() => {
  if (confirm("¿Eliminar este croquis?")) {
  deleteMutation.mutate(sketch.id);
  }
  }}
  >
- <Trash2 className="h-4 w-4" />
+ <Trash2 className="h-3.5 w-3.5" />
  </Button>
  </>
  )}
@@ -306,14 +337,27 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  </div>
  ))}
  </div>
+
+ <div className="pagination-footer">
+ <Pagination
+ page={currentPage}
+ totalPages={totalPages}
+ total={totalCount}
+ pageSize={pageSize}
+ onPageChange={setPage}
+ onPageSizeChange={setPageSize}
+ />
+ </div>
+ </>
  ) : (
- <div className="app-panel text-center py-8">
+ <div className="text-center py-8">
  <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground" />
  <p className="mt-2 app-body text-muted-foreground">
  No hay croquis aún. Dibuja o sube uno.
  </p>
  </div>
  )}
+ </div>
  </div>
  );
 }
