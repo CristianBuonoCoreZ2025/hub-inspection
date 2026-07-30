@@ -85,6 +85,21 @@ function fileExtension(url: string, fileName?: string): string {
   return match ? match[1].toUpperCase() : "—";
 }
 
+function timeAgo(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMin / 60);
+  const diffD = Math.floor(diffH / 24);
+  if (diffMin < 1) return "Ahora";
+  if (diffMin < 60) return `Hace ${diffMin} min`;
+  if (diffH < 24) return `Hace ${diffH}h`;
+  if (diffD < 7) return `Hace ${diffD}d`;
+  return d.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 function formatFileSize(bytes?: number | null): string {
   if (!bytes) return "—";
   if (bytes < 1024) return `${bytes} B`;
@@ -189,6 +204,10 @@ export function ImageCard({
 
           {/* Derecha: control segmentado de IA */}
           <div className="ai-card-controls">
+            {/* Tiempo relativo del análisis */}
+            {aiAnalyzedAt && (
+              <div className="ai-card-time-ago">{timeAgo(aiAnalyzedAt)}</div>
+            )}
             {/* done → re-analizar + ver resultado */}
             {aiSummary && aiStatus === "done" && (
               <div className="ai-card-controls-group">
