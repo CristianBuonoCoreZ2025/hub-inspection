@@ -8,7 +8,7 @@ import {
   Upload, Trash2, ImageIcon, Video, FileText, ExternalLink,
   MapPin, Clock, Camera, Lock, X, ZoomIn,
   CheckCircle2, XCircle, Loader2,
-  RefreshCw, AlertCircle, ChevronDown,
+  RefreshCw, ChevronDown,
 } from "lucide-react";
 import { ImageCard } from "@/components/ai/image-card";
 import { AiCopyButton } from "@/components/ai/ai-copy-button";
