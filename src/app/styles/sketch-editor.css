@@ -148,6 +148,10 @@
     margin-bottom: 2px;
   }
 
+  .sketch-palette-title--section {
+    margin-top: 6px;
+  }
+
   .sketch-block-item {
     display: flex;
     align-items: center;
