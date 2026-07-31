@@ -56,6 +56,8 @@
     "fflate": "^0.8.3",
     "graphql": "^16.14.2",
     "graphql-request": "^7.4.0",
+    "heic-convert": "^2.1.0",
+    "heic2any": "^0.0.4",
     "html2canvas-pro": "^2.2.4",
     "jose": "^6.2.3",
     "jspdf": "^4.2.1",

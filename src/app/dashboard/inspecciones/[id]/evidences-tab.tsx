@@ -13,6 +13,7 @@ import {
 import { ImageCard } from "@/components/ai/image-card";
 import { AiCopyButton } from "@/components/ai/ai-copy-button";
 import { cleanMarkdown } from "@/lib/utils";
+import { convertHeicToJpeg } from "@/lib/heic-convert";
 import {
   Popover,
   PopoverTrigger,
@@ -136,7 +137,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     refetchInterval: (query) => {
       const evs = query.state.data;
       if (!evs || !evs.some((e) => e.ai_status === "pending" || e.ai_status === "processing")) return false;
-      return 5000;
+      return 10000;
     },
   });
 
@@ -252,18 +253,30 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   }, [queryClient, sessionId]);
 
   const handleFile = useCallback(
-    (file: File) => uploadFile(file),
+    async (file: File) => {
+      try {
+        const f = await convertHeicToJpeg(file);
+        uploadFile(f);
+      } catch (err) {
+        toast.error(`No se pudo convertir ${file.name}: formato HEIC no soportado`);
+        console.error(err);
+      }
+    },
     [uploadFile],
   );
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setUploadModal((p) => ({ ...p, isDragging: false }));
-    Array.from(e.dataTransfer.files).forEach(handleFile);
+    for (const file of Array.from(e.dataTransfer.files)) {
+      await handleFile(file);
+    }
   };
 
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    Array.from(e.target.files || []).forEach(handleFile);
+  const handleInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    for (const file of Array.from(e.target.files || [])) {
+      await handleFile(file);
+    }
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (cameraInputRef.current) cameraInputRef.current.value = "";
   };

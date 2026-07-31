@@ -13,6 +13,7 @@ import {
 import { DrawingCanvas } from "@/components/ui/drawing-canvas";
 import { LiveVideoCall } from "@/components/inspection/live-video-call";
 import { useClaimsAppPresence } from "@/hooks/use-claims-app-presence";
+import { convertHeicToJpeg } from "@/lib/heic-convert";
 import { logConnectionEvent, type ConnectionLogEntry } from "@/services/connection-logs";
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
@@ -1153,7 +1154,8 @@ function EvidencesTab({
     try {
       let completed = 0;
       await Promise.all(
-        Array.from(files).map(async (file) => {
+        Array.from(files).map(async (rawFile) => {
+          const file = await convertHeicToJpeg(rawFile);
           const formData = new FormData();
           formData.append("file", file);
           const res = await fetch(`/api/inspection/live/${token}/evidence`, {
