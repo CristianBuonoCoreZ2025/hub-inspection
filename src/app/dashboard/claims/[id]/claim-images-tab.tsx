@@ -115,9 +115,9 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
     refetchInterval: (query) => {
       const imgs = query.state.data;
       if (!imgs || !imgs.some((i) => i.ai_status === "pending" || i.ai_status === "processing")) return false;
-      // 2s mientras hay processing (para actualizar el termómetro), 5s si solo hay pending
+      // 5s mientras hay processing, 10s si solo hay pending
       const hasProcessing = imgs.some((i) => i.ai_status === "processing");
-      return hasProcessing ? 2000 : 5000;
+      return hasProcessing ? 5000 : 10000;
     },
   });
 
@@ -128,7 +128,7 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
     refetchInterval: (query) => {
       const photos = query.state.data;
       if (!photos || !photos.some((p) => p.ai_status === "pending" || p.ai_status === "processing")) return false;
-      return 5000;
+      return 10000;
     },
   });
 
