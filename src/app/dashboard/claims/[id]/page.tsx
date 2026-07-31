@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { formatUserDateTime as formatDateTime, formatUserDate as formatDate } from "@/lib/timezone";
-import { getClaimById, getClaimParticipants, updateClaimStatus } from "@/services/claims";
+import { getClaimByIdLight, getClaimParticipants, updateClaimStatus } from "@/services/claims";
 import { canAccessInspectionSession } from "@/services/inspections";
 import { getClaimActions, getActionTemplatesByClaimStatus, createClaimAction, getClaimActionById, updateClaimAction, issueClaimAction, reviewClaimAction, approveClaimAction, rejectClaimAction } from "@/services/claim-actions";
 import { getActionHistory } from "@/services/claim-action-history";
@@ -258,7 +258,7 @@ export default function ClaimDetailPage() {
 
  const { data: rawClaim, isLoading } = useQuery({
  queryKey: ["claim", id],
- queryFn: () => getClaimById(id),
+ queryFn: () => getClaimByIdLight(id),
  });
 
  useEffect(() => {

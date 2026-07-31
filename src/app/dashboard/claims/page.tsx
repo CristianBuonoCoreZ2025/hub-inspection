@@ -7,7 +7,7 @@ import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
-import { getClaims, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
+import { getClaimsLight, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
 import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
 import type { GeocodeCandidate } from "@/lib/geo";
 import { getCompanies } from "@/services/companies";
@@ -258,7 +258,7 @@ function ClaimsPageContent() {
 
  const { data: rawClaims, isLoading, error } = useQuery({
  queryKey: ["claims"],
- queryFn: () => getClaims(),
+ queryFn: () => getClaimsLight(),
  });
 
  if (error) {
