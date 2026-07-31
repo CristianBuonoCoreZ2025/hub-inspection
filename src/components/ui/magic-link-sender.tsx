@@ -14,6 +14,7 @@ interface MagicLinkSenderProps {
   scheduledAt?: string | null;
   expiresAt?: string | null;
   magicLinkExtended?: boolean;
+  sessionStatus?: string | null;
   contactName?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
@@ -33,6 +34,7 @@ export function MagicLinkSender({
   scheduledAt,
   expiresAt,
   magicLinkExtended = false,
+  sessionStatus,
   contactName,
   contactEmail,
   contactPhone,
@@ -89,8 +91,11 @@ export function MagicLinkSender({
   // ¿El link está dentro de su ventana de validez (normal o extendida)?
   const isWithinValidity = expiryInfo.status === "valid" || expiryInfo.status === "extended";
 
-  // ¿Se puede renovar? Solo antes de expirar (cualquier estado excepto expired)
-  const canRenew = expiryInfo.status !== "expired";
+  // ¿Se puede renovar?
+  // - Antes de expirar (cualquier estado excepto expired)
+  // - Si está expirado pero la sesión está activa → se puede reactivar
+  const canReactivate = expiryInfo.status === "expired" && sessionStatus === "active";
+  const canRenew = expiryInfo.status !== "expired" || canReactivate;
 
   const refreshMutation = useMutation({
     mutationFn: () => refreshMagicLink(sessionId),
@@ -103,10 +108,11 @@ export function MagicLinkSender({
           "already-extended": "Ya fue extendido una vez",
           active: "Magic link activo",
           expired: "El magic link ya expiró",
+          reactivated: "Magic link reactivado por 3 horas",
         };
         const msg = messages[data.message] || data.message;
         if (data.message === "expired" || data.message === "already-extended") toast.info(msg);
-        else if (data.message === "new" || data.message === "extended") toast.success(msg);
+        else if (data.message === "new" || data.message === "extended" || data.message === "reactivated") toast.success(msg);
         else toast.info(msg);
       }
     },
@@ -217,7 +223,7 @@ export function MagicLinkSender({
         <Button size="sm" variant="outline" className="h-7 w-7 p-0 shrink-0" onClick={copyLink} title="Copiar link">
           <Copy className="h-3.5 w-3.5" />
         </Button>
-        {/* Renovar — solo antes de expirar */}
+        {/* Renovar / Reactivar — antes de expirar o si está expirado pero sesión activa */}
         {canRenew && (
           <Button
             size="sm"
@@ -225,7 +231,7 @@ export function MagicLinkSender({
             className="h-7 w-7 p-0 shrink-0"
             onClick={() => refreshMutation.mutate()}
             disabled={refreshMutation.isPending}
-            title="Renovar magic link"
+            title={canReactivate ? "Reactivar magic link (3 horas)" : "Renovar magic link"}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
           </Button>
@@ -248,8 +254,8 @@ export function MagicLinkSender({
           </Button>
         )}
         {/* Botones de envío — en la misma línea del link.
-            Siempre visibles mientras el link no esté expirado. */}
-        {expiryInfo.status !== "expired" && (
+            Visibles mientras el link no esté expirado, o si se puede reactivar. */}
+        {(expiryInfo.status !== "expired" || canReactivate) && (
           <>
             <div className="w-px h-5 bg-border mx-0.5 shrink-0" />
             {/* WhatsApp abrir app (wa.me) — icono WhatsApp real */}
