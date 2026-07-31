@@ -7,8 +7,11 @@ const LIGHT_CLAIM_SELECT =
 const DETAIL_CLAIM_SELECT =
   `${LIGHT_CLAIM_SELECT}, inspection_sessions:inspection_sessions(id, inspector_id, claim_action_id, status, inspection_number, inspection_type, scheduled_at, started_at, ended_at, lock_overridden_by, lock_overridden_at, created_at)`;
 
+const DYNAMIC_CLAIM_SELECT =
+  `${LIGHT_CLAIM_SELECT}, status:lookup_catalog!claims_status_id_fkey(id, category, code, name), assigned_adjuster:profiles!claims_assigned_adjuster_id_fkey(id, full_name, email), adjuster:profiles!claims_adjuster_id_fkey(id, full_name, email), broker:brokers!claims_broker_id_fkey(id, name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name), policy:policies!claims_policy_id_fkey(id, policy_number, policy_name, status, currency), currency:currencies!claims_currency_id_fkey(id, code, name, symbol, decimals), country:countries!claims_country_id_fkey(id, name), region:regions!claims_region_id_fkey(id, name), city:cities!claims_city_id_fkey(id, name), commune:communes!claims_commune_id_fkey(id, name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(id, name)`;
+
 const CLAIM_SELECT =
-  `${DETAIL_CLAIM_SELECT}, status:lookup_catalog!claims_status_id_fkey(id, category, code, name), assigned_adjuster:profiles!claims_assigned_adjuster_id_fkey(id, full_name, email), adjuster:profiles!claims_adjuster_id_fkey(id, full_name, email), inspector:profiles!claims_inspector_id_fkey(id, full_name, email), auditor:profiles!claims_auditor_id_fkey(id, full_name, email), dispatcher:profiles!claims_dispatcher_id_fkey(id, full_name, email), assistant:profiles!claims_assistant_id_fkey(id, full_name, email), broker:brokers!claims_broker_id_fkey(id, name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name), policy:policies!claims_policy_id_fkey(id, policy_number, policy_name, status, currency), currency:currencies!claims_currency_id_fkey(id, code, name, symbol, decimals), country:countries!claims_country_id_fkey(id, name), region:regions!claims_region_id_fkey(id, name), city:cities!claims_city_id_fkey(id, name), commune:communes!claims_commune_id_fkey(id, name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(id, name)`;
+  `${DYNAMIC_CLAIM_SELECT}, inspector:profiles!claims_inspector_id_fkey(id, full_name, email), auditor:profiles!claims_auditor_id_fkey(id, full_name, email), dispatcher:profiles!claims_dispatcher_id_fkey(id, full_name, email), assistant:profiles!claims_assistant_id_fkey(id, full_name, email)`;
 
 export async function getClaims(companyId?: string) {
   const eq: Record<string, unknown> = { disabled: false };
@@ -92,7 +95,7 @@ export async function getClaimsParticipants(claimIds: string[]) {
 }
 
 export async function getClaimById(id: string) {
-  return fetchById<Claim>("claims", id, CLAIM_SELECT);
+  return fetchById<Claim>("claims", id, DYNAMIC_CLAIM_SELECT);
 }
 
 export async function getClaimsLight(companyId?: string) {
