@@ -1,10 +1,10 @@
 ﻿"use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getSignatures } from "@/services/inspections";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { getSignatures, updateInspectionSession } from "@/services/inspections";
 import { toast } from "sonner";
-import { User, ShieldCheck, Lock } from "lucide-react";
+import { User, ShieldCheck, Lock, UserX, AlertTriangle } from "lucide-react";
 
 function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => Promise<void>; label: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -146,9 +146,37 @@ function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => Promi
   );
 }
 
-export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken, inspectionType }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string; inspectionType?: "onsite" | "remote" }) {
+export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken, inspectionType, signatureWaiverReason }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string; inspectionType?: "onsite" | "remote"; signatureWaiverReason?: string | null }) {
   const queryClient = useQueryClient();
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
+  const [showWaiverInput, setShowWaiverInput] = useState(false);
+  const [waiverReason, setWaiverReason] = useState("");
+
+  const waiverMutation = useMutation({
+    mutationFn: async (reason: string) => {
+      return updateInspectionSession(sessionId, { signature_waiver_reason: reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["signatures", sessionId] });
+      if (magicLinkToken) queryClient.invalidateQueries({ queryKey: ["magic-link-live", magicLinkToken] });
+      toast.success("Exención de firma registrada");
+      setShowWaiverInput(false);
+    },
+    onError: (err: Error) => toast.error(err.message || "Error al registrar exención"),
+  });
+
+  const handleWaiver = () => {
+    if (!waiverReason.trim()) {
+      toast.error("Ingrese el motivo de la exención");
+      return;
+    }
+    waiverMutation.mutate(waiverReason.trim());
+  };
+
+  const handleRemoveWaiver = () => {
+    waiverMutation.mutate("");
+  };
 
   const { data: signatures, isLoading } = useQuery({
     queryKey: ["signatures", sessionId],
@@ -232,9 +260,81 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
           {!readOnly && !insuredSig && inspectionType !== "remote" && (
             <SignatureCanvas label="Firma del Asegurado" onSave={(url) => handleSave("insured", url)} />
           )}
-          {!readOnly && !insuredSig && inspectionType === "remote" && (
-            <div className="app-panel text-muted-foreground app-body">
-              La firma del asegurado se realiza desde el enlace mágico.
+          {!readOnly && !insuredSig && inspectionType === "remote" && !signatureWaiverReason && (
+            <div className="app-panel space-y-3">
+              <p className="text-muted-foreground app-body">
+                La firma del asegurado se realiza desde el enlace mágico.
+              </p>
+              {/* Exención de firma */}
+              <div className="border-t pt-3">
+                {!showWaiverInput ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowWaiverInput(true)}
+                    className="flex items-center gap-2 text-amber-600 dark:text-amber-400 app-body font-medium hover:underline"
+                  >
+                    <UserX className="h-4 w-4" />
+                    Asegurado no puede firmar
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="app-body font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                      <AlertTriangle className="h-4 w-4" />
+                      Motivo de exención de firma
+                    </label>
+                    <textarea
+                      value={waiverReason}
+                      onChange={(e) => setWaiverReason(e.target.value)}
+                      placeholder="Ej: Asegurado no disponible, se niega a firmar, sin conexión..."
+                      className="w-full rounded-lg border border-border bg-background p-2 app-body resize-none"
+                      rows={2}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleWaiver}
+                        disabled={waiverMutation.isPending}
+                        className="pg-btn-platinum text-amber-700 dark:text-amber-300"
+                      >
+                        {waiverMutation.isPending ? "Guardando..." : "Confirmar exención"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowWaiverInput(false); setWaiverReason(""); }}
+                        className="pg-btn-platinum"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {/* Mostrar waiver existente */}
+          {signatureWaiverReason && (
+            <div className="app-panel border-amber-300/40">
+              <div className="flex items-start gap-3">
+                <UserX className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="app-body font-medium text-amber-700 dark:text-amber-300">
+                    Firma del asegurado eximida
+                  </p>
+                  <p className="app-body text-muted-foreground mt-1">
+                    {signatureWaiverReason}
+                  </p>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveWaiver}
+                      disabled={waiverMutation.isPending}
+                      className="app-body text-muted-foreground hover:text-foreground mt-2 underline"
+                    >
+                      {waiverMutation.isPending ? "Quitando..." : "Quitar exención"}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
           {!readOnly && !adjusterSig && (

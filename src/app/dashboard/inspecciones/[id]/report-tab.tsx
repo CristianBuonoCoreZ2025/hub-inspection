@@ -98,7 +98,10 @@ export default function ReportTab({
     queryFn: () => getReport(sessionId),
   });
 
-  const isFinal = report?.status === "final" || isCompleted;
+  // Forzar isFinal durante la generación del PDF para que el watermark
+  // "BORRADOR" no aparezca y el footer diga "definitivo"
+  const [forceFinalForPdf, setForceFinalForPdf] = useState(false);
+  const isFinal = report?.status === "final" || isCompleted || forceFinalForPdf;
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -201,16 +204,22 @@ export default function ReportTab({
 
   const finalizeMutation = useMutation({
     mutationFn: async () => {
-      // 1. Generar el PDF
+      // 1. Forzar isFinal=true para que el DOM oculte el watermark "BORRADOR"
+      //    y el footer diga "definitivo" ANTES de capturar el PDF
+      setForceFinalForPdf(true);
+      // Esperar a que React re-renderice con el nuevo estado
+      await new Promise((r) => setTimeout(r, 100));
+
+      // 2. Generar el PDF (ya sin watermark, footer dice "definitivo")
       const pdfBlob = await generatePdf();
       let reportUrl: string | null = null;
 
-      // 2. Subir el PDF a R2
+      // 3. Subir el PDF a R2
       if (pdfBlob) {
         reportUrl = await uploadPdf(pdfBlob);
       }
 
-      // 3. Marcar el reporte como final con la URL del PDF
+      // 4. Marcar el reporte como final con la URL del PDF
       if (report) {
         await updateReport(report.id, { status: "final", generated_at: new Date().toISOString(), report_url: reportUrl });
       } else {
@@ -223,12 +232,18 @@ export default function ReportTab({
           report_type: isCancellation ? "cancellation" : "completion",
         } as Omit<import("@/types").InspectionReport, "id">);
       }
-      // 4. Marcar la sesión como completed
+      // 5. Marcar la sesión como completed
       await updateInspectionSession(session.id, { status: "completed", ended_at: new Date().toISOString() });
-      // 5. Emitir el claim_action INS
+      // 6. Emitir el claim_action INS
       if (session.claim_action_id) {
         await issueClaimAction(session.claim_action_id, profile?.id);
       }
+    },
+    onMutate: () => {
+      setForceFinalForPdf(true);
+    },
+    onSettled: () => {
+      setForceFinalForPdf(false);
     },
     onSuccess: () => {
       toast.success("Acta finalizada y PDF generado");
@@ -242,6 +257,38 @@ export default function ReportTab({
       }
     },
     onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Regenerar PDF para actas ya finalizadas (pisar el report_url existente)
+  const regeneratePdfMutation = useMutation({
+    mutationFn: async () => {
+      // Forzar isFinal=true para que el DOM no tenga watermark
+      setForceFinalForPdf(true);
+      await new Promise((r) => setTimeout(r, 100));
+
+      // Generar el PDF
+      const pdfBlob = await generatePdf();
+      if (!pdfBlob) throw new Error("No se pudo generar el PDF");
+
+      // Subir el PDF a R2 (pisar el anterior)
+      const reportUrl = await uploadPdf(pdfBlob);
+
+      // Actualizar el reporte con la nueva URL
+      if (report) {
+        await updateReport(report.id, { status: "final", generated_at: new Date().toISOString(), report_url: reportUrl });
+      }
+    },
+    onMutate: () => {
+      setForceFinalForPdf(true);
+    },
+    onSettled: () => {
+      setForceFinalForPdf(false);
+    },
+    onSuccess: () => {
+      toast.success("PDF regenerado y actualizado");
+      queryClient.invalidateQueries({ queryKey: ["report", sessionId] });
+    },
+    onError: (err: Error) => toast.error(err.message || "Error al regenerar PDF"),
   });
 
   // Descargar PDF (para actas finales)
@@ -282,7 +329,9 @@ export default function ReportTab({
             .report-field-row { display: flex; margin-bottom: 2px; }
             .report-field-label { font-weight: 600; color: #444; min-width: 200px; font-size: 10px; text-transform: uppercase; }
             .report-field-value { flex: 1; font-size: 10px; color: #222; }
-            .report-statement { color: #222; white-space: pre-wrap; line-height: 1.6; margin-bottom: 12px; }
+            .report-statement { color: #222; line-height: 1.6; margin-bottom: 12px; }
+            .report-statement p { margin: 0 0 8px; }
+            .report-statement div { margin: 0 0 8px; }
             table.report-table { width: 100%; border-collapse: collapse; margin: 6px 0; }
             .report-table th.report-th, .report-table th.report-th-right { text-align: left; padding: 5px 6px; background: #f0f0f0; border: 1px solid #ccc; font-size: 9px; font-weight: 700; text-transform: uppercase; }
             .report-table th.report-th-right { text-align: right; }
@@ -345,6 +394,8 @@ export default function ReportTab({
   const videos = useMemo(() => evidences.filter(e => isVideo(e.type)), [evidences]);
   const docs = useMemo(() => evidences.filter(e => isDoc(e.type)), [evidences]);
   const otherEvidences = useMemo(() => evidences.filter(e => !isPhoto(e.type) && !isVideo(e.type) && !isDoc(e.type)), [evidences]);
+  // Evidencias no visuales para el resumen (excluye fotos, que van aparte)
+  const nonPhotoEvidences = useMemo(() => evidences.filter(e => !isPhoto(e.type)), [evidences]);
   // Solo una firma por rol (insured + adjuster = máximo 2)
   const uniqueSignatures = useMemo(() => signatures.filter((s, i, arr) => arr.findIndex(x => x.role === s.role) === i), [signatures]);
 
@@ -494,6 +545,19 @@ export default function ReportTab({
             <button type="button" onClick={handleDownload} className="pg-btn-platinum">
               <Download className="mr-2 h-4 w-4" /> Descargar
             </button>
+            <button
+              type="button"
+              onClick={() => regeneratePdfMutation.mutate()}
+              disabled={regeneratePdfMutation.isPending}
+              className="pg-btn-platinum"
+              title="Generar el PDF nuevamente y reemplazar el archivo guardado"
+            >
+              {regeneratePdfMutation.isPending ? (
+                <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Regenerando...</>
+              ) : (
+                <><RefreshCw className="mr-2 h-4 w-4" /> Regenerar PDF</>
+              )}
+            </button>
             <button type="button" onClick={handleDownloadZip} disabled={zipPending} className="pg-btn-platinum">
               <Archive className="mr-2 h-4 w-4" /> {zipPending ? "Comprimiendo..." : "ZIP"}
             </button>
@@ -582,9 +646,10 @@ export default function ReportTab({
               <div className="report-acta-title app-body">
                 Detalle de los Hechos
               </div>
-              <p className="report-statement app-body">
-                {session.insured_statement.statement}
-              </p>
+              <div
+                className="report-statement app-body"
+                dangerouslySetInnerHTML={{ __html: session.insured_statement.statement }}
+              />
             </>
           )}
 
@@ -773,17 +838,18 @@ export default function ReportTab({
               <div className="report-acta-title app-body">
                 Observaciones del Inspector
               </div>
-              <p className="report-statement app-body">
-                {session.inspector_observations}
-              </p>
+              <div
+                className="report-statement app-body"
+                dangerouslySetInnerHTML={{ __html: session.inspector_observations }}
+              />
             </>
           )}
 
-          {/* ═══ RESUMEN DE EVIDENCIAS ═══ */}
-          {evidences.length > 0 && (
+          {/* ═══ RESUMEN DE EVIDENCIAS (no visuales — las fotos van aparte) ═══ */}
+          {nonPhotoEvidences.length > 0 && (
             <>
               <div className="report-acta-title app-body">
-                Resumen de Evidencias ({evidences.length})
+                Resumen de Evidencias ({nonPhotoEvidences.length})
               </div>
               <table className="report-table">
                 <thead>
@@ -795,7 +861,7 @@ export default function ReportTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {evidences.map((ev, idx) => (
+                  {nonPhotoEvidences.map((ev, idx) => (
                     <tr key={ev.id}>
                       <td className="report-td app-body">{idx + 1}</td>
                       <td className="report-td app-body">{ev.type}</td>
@@ -945,7 +1011,7 @@ export default function ReportTab({
           )}
 
           {/* ═══ FIRMAS ═══ */}
-          {uniqueSignatures.length > 0 && (
+          {(uniqueSignatures.length > 0 || session.signature_waiver_reason) && (
             <>
               <div className="report-acta-title app-body">
                 Firmas
@@ -961,6 +1027,18 @@ export default function ReportTab({
                     <p className="report-sig-role app-body">{fmtDateTime(sig.signed_at)}</p>
                   </div>
                 ))}
+                {/* Si no hay firma del asegurado pero hay waiver, mostrar motivo */}
+                {session.signature_waiver_reason && !uniqueSignatures.some((s) => s.role === "insured") && (
+                  <div className="report-sig-box">
+                    <div className="report-sig-img" style={{ borderBottom: "1px solid #333", paddingBottom: "3px", margin: "0 auto", minHeight: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: "9px", color: "#999", fontStyle: "italic" }}>Sin firma</span>
+                    </div>
+                    <p className="report-sig-name app-body">Asegurado</p>
+                    <p className="report-sig-role app-body" style={{ fontStyle: "italic", color: "#c0392b" }}>
+                      No firmó: {session.signature_waiver_reason}
+                    </p>
+                  </div>
+                )}
               </div>
             </>
           )}

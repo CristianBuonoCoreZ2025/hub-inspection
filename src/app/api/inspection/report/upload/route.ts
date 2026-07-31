@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger";
  *
  * Sube el PDF a R2 con path: claims/{L}/actions/{code}/documents/{code}-DOC-NNNN.pdf
  * Actualiza inspection_reports.report_url con la URL pública.
+ * Registra el PDF en claim_documents para que aparezca en el siniestro.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -30,10 +31,18 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // Subir a R2 como DOC
-    const { url } = await uploadInspectionFile(sessionId, buffer, "application/pdf", "DOC", ".pdf");
+    const { url, fileCode } = await uploadInspectionFile(sessionId, buffer, "application/pdf", "DOC", ".pdf");
+
+    const supabase = createAdminClient();
+
+    // Obtener claim_id y datos de la sesión para vincular el documento al siniestro
+    const { data: session } = await supabase
+      .from("inspection_sessions")
+      .select("claim_id, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code)")
+      .eq("id", sessionId)
+      .maybeSingle();
 
     // Actualizar el report_url en inspection_reports
-    const supabase = createAdminClient();
     const { data: existing } = await supabase
       .from("inspection_reports")
       .select("id")
@@ -45,6 +54,24 @@ export async function POST(request: NextRequest) {
         .from("inspection_reports")
         .update({ report_url: url })
         .eq("id", existing.id);
+    }
+
+    // Registrar el PDF en claim_documents para que aparezca en el siniestro
+    if (session?.claim_id) {
+      const actionCode = (session.claim_action as { code?: string } | null)?.code || "INS";
+      await supabase
+        .from("claim_documents")
+        .insert({
+          claim_id: session.claim_id,
+          doc_code: fileCode,
+          document_name: `Acta de Inspección — ${actionCode}`,
+          document_url: url,
+          document_type: "application/pdf",
+          original_filename: `${fileCode}.pdf`,
+          mime_type: "application/pdf",
+          file_size: buffer.length,
+          is_active: true,
+        });
     }
 
     return NextResponse.json({ url });

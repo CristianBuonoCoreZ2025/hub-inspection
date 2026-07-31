@@ -908,7 +908,7 @@ export default function InspectionDetailPage() {
  {session.status === "scheduled" ? (
  <NotStartedNotice />
  ) : (
- <SignaturesTab sessionId={session.id} sessionStatus={session.status} magicLinkToken={session.magic_link_token || undefined} inspectionType={session.inspection_type} />
+ <SignaturesTab sessionId={session.id} sessionStatus={session.status} magicLinkToken={session.magic_link_token || undefined} inspectionType={session.inspection_type} signatureWaiverReason={session.signature_waiver_reason} />
  )}
  </div>
  )}

@@ -6,7 +6,7 @@ import type {
   InspectionDamage, InspectionEvidence, InspectionSignature,
 } from "@/types";
 
-const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, created_at, updated_at";
+const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, signature_waiver_reason, created_at, updated_at";
 
 // ═══════════════════════════════════════════════════════════════
 // SESSIONS
@@ -107,6 +107,7 @@ export interface SessionDetail extends Omit<InspectionSession, 'inspection_evide
   inspection_damages?: InspectionDamage[];
   inspection_signatures?: InspectionSignature[];
   damage_sketches?: DamageSketch[];
+  inspection_chat_messages?: { id: string; content: string; sender_name: string; sender_role: string; created_at: string }[];
   claim_action?: { id: string; code: string; action_status_id: string | null; action_data?: Record<string, unknown> | null; issuer_id: string | null; issued_on: string | null; issued_by: string | null } | null;
   claim?: SessionClaim;
 }
@@ -142,7 +143,7 @@ export async function getInspectionSessions(claimId?: string) {
  */
 export async function getActiveRemoteSessions() {
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
-    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name)), inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, type), inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id), inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role)`,
     eq: { status: "active", inspection_type: "remote" },
     order: { column: "started_at", ascending: false },
   });
@@ -190,6 +191,7 @@ export async function getInspectionSessionLive(token: string) {
       firefighters_company, other_insurances, other_insurance_company,
       active_tab, acta_step, inspector_observations,
       property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled,
+      signature_waiver_reason,
       action_template:action_template!inspection_sessions_action_template_id_fkey(code),
       claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code),
       inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, created_at),
@@ -255,7 +257,8 @@ export async function getInspectionSessionById(id: string) {
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
     inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at),
     inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
-    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at)
+    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at),
+    inspection_chat_messages:inspection_chat_messages!inspection_chat_messages_session_id_fkey(id, content, sender_name, sender_role, created_at)
   `);
   if (!session) return null;
 

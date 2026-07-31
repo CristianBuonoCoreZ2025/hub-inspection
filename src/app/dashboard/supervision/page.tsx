@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getActiveRemoteSessions } from "@/services/inspections";
 import { useAuth } from "@/hooks/use-auth";
-import { formatUserDateTime as formatDateTime } from "@/lib/timezone";
 import { SupervisorLiveView } from "@/components/inspection/supervisor-live-view";
 import {
   Eye,
@@ -15,7 +14,36 @@ import {
   MapPin,
   User,
   Clock,
+  Camera,
+  ShieldCheck,
+  PenTool,
+  FileText,
 } from "lucide-react";
+
+const TAB_LABELS: Record<string, string> = {
+  resumen: "Resumen",
+  acta: "Acta",
+  danos: "Daños",
+  evidencias: "Evidencias",
+  croquis: "Croquis",
+  firmas: "Firmas",
+};
+
+function ElapsedTime({ startedAt }: { startedAt: string | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  if (!startedAt) return <span>—</span>;
+  const sec = Math.floor((now - new Date(startedAt).getTime()) / 1000);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return <span>{h}h {m}m</span>;
+  if (m > 0) return <span>{m}m {s}s</span>;
+  return <span>{s}s</span>;
+}
 
 export default function SupervisionPage() {
   const { profile } = useAuth();
@@ -103,6 +131,11 @@ export default function SupervisionPage() {
           {sessions.map((session) => {
             const claim = session.claim;
             const insured = claim?.claims_participants?.find((p) => p.type === "insured");
+            const photoCount = (session.inspection_evidences || []).filter((e: { type: string }) => ["photo", "image", "jpg", "jpeg", "png"].includes((e.type || "").toLowerCase())).length;
+            const totalCount = (session.inspection_evidences || []).length;
+            const damageCount = (session.inspection_damages || []).length;
+            const sigCount = (session.inspection_signatures || []).length;
+            const hasWaiver = !!session.signature_waiver_reason;
             return (
               <button
                 key={session.id}
@@ -132,8 +165,13 @@ export default function SupervisionPage() {
                             · {claim.insurance_company.name}
                           </span>
                         )}
+                        {claim?.claim_cause?.name && (
+                          <span className="app-body text-muted-foreground truncate">
+                            · {claim.claim_cause.name}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-4 app-body text-muted-foreground text-sm">
+                      <div className="flex items-center gap-4 app-body text-muted-foreground text-sm flex-wrap">
                         {insured && (
                           <span className="flex items-center gap-1 truncate">
                             <User className="h-3 w-3 shrink-0" />
@@ -149,9 +187,37 @@ export default function SupervisionPage() {
                         {session.started_at && (
                           <span className="flex items-center gap-1 shrink-0">
                             <Clock className="h-3 w-3" />
-                            {formatDateTime(session.started_at)}
+                            <ElapsedTime startedAt={session.started_at} />
                           </span>
                         )}
+                        {session.active_tab && (
+                          <span className="flex items-center gap-1 shrink-0">
+                            <FileText className="h-3 w-3" />
+                            {TAB_LABELS[session.active_tab] || session.active_tab}
+                          </span>
+                        )}
+                      </div>
+                      {/* Contadores rápidos */}
+                      <div className="flex items-center gap-3 mt-1.5 app-body text-muted-foreground text-xs">
+                        <span className="flex items-center gap-1">
+                          <Camera className="h-3 w-3" />
+                          {photoCount} fotos
+                        </span>
+                        {totalCount > photoCount && (
+                          <span className="flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            {totalCount - photoCount} docs
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <ShieldCheck className="h-3 w-3" />
+                          {damageCount} daños
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <PenTool className="h-3 w-3" />
+                          {sigCount}/2 firmas
+                          {hasWaiver && " (eximido)"}
+                        </span>
                       </div>
                     </div>
                   </div>

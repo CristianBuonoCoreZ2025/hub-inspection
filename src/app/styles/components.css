@@ -2278,9 +2278,17 @@
   @apply text-rose-700 font-bold mb-1;
 }
 
-/* Texto de declaración / observaciones */
+/* Texto de declaración / observaciones (HTML rich text) */
 .report-statement {
-  @apply text-gray-800 whitespace-pre-wrap leading-relaxed mb-3;
+  @apply text-gray-800 leading-relaxed mb-3;
+}
+.report-statement p,
+.report-statement div {
+  margin: 0 0 8px;
+}
+.report-statement p:last-child,
+.report-statement div:last-child {
+  margin-bottom: 0;
 }
 
 /* Tablas del reporte (terceros, daños, evidencias, videos, etc.) */

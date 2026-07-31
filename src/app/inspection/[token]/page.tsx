@@ -75,6 +75,7 @@ interface LiveSession {
   geo_latitude: number | null; geo_longitude: number | null;
   geo_captured_at: string | null; geo_captured_by: string | null; geo_distance_meters: number | null;
   geo_status: string | null; geo_map_url: string | null; geo_recapture_enabled: boolean;
+  signature_waiver_reason: string | null;
   property_risk: Record<string, unknown> | null;
   property_materiality: Record<string, unknown> | null;
   security_measures: Record<string, unknown> | null;
@@ -262,8 +263,11 @@ export default function MagicLinkPage() {
   const isCancelled = session.status === "cancelled";
   const hasInsuredSignature = session.inspection_signatures?.some((s) => s.role === "insured");
   const hasAdjusterSignature = session.inspection_signatures?.some((s) => s.role === "adjuster");
-  // El link se cierra solo cuando está completado Y ambas firmas existen
-  const isFullyClosed = isCompleted && hasInsuredSignature && hasAdjusterSignature;
+  const hasWaiver = !!session.signature_waiver_reason;
+  // El link se cierra cuando está completado Y:
+  //   - ambas firmas existen, O
+  //   - el inspector eximió la firma del asegurado (waiver) y el ajustador firmó
+  const isFullyClosed = isCompleted && (hasAdjusterSignature || hasWaiver) && (hasInsuredSignature || hasWaiver);
 
   if (isNotYetActive) {
     return (
@@ -355,8 +359,8 @@ export default function MagicLinkPage() {
     { id: "firmas", label: "Firmas", icon: PenTool },
   ];
 
-  // Si está completado pero falta firmar, forzar tab de firmas
-  const effectiveTab = isCompleted && !hasInsuredSignature ? "firmas" : activeTab;
+  // Si está completado pero falta firmar (y no hay waiver), forzar tab de firmas
+  const effectiveTab = isCompleted && !hasInsuredSignature && !hasWaiver ? "firmas" : activeTab;
 
   // Label del step interno del acta (para el footer)
   const actaStepLabels: Record<string, string> = {
@@ -417,8 +421,8 @@ export default function MagicLinkPage() {
       <div className="max-w-5xl mx-auto px-4 flex flex-col lg:flex-row gap-4">
         {/* Contenido principal */}
         <main className="flex-1 min-w-0 py-6">
-        {/* Banner: inspección completada, falta firmar */}
-        {isCompleted && !hasInsuredSignature && (
+        {/* Banner: inspección completada, falta firmar (solo si no hay waiver) */}
+        {isCompleted && !hasInsuredSignature && !hasWaiver && (
           <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
             <p className="app-body text-amber-300 font-medium">
               La inspección ha finalizado. Por favor firme en la pestaña &ldquo;Firmas&rdquo; para confirmar.

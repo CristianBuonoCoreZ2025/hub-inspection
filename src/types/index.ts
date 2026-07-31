@@ -417,6 +417,7 @@ export interface InspectionSession {
   geo_status: string | null;
   geo_map_url: string | null;
   geo_recapture_enabled: boolean;
+  signature_waiver_reason: string | null;
   property_risk?: ActaPropertyRisk | null;
   property_materiality?: ActaPropertyMateriality | null;
   security_measures?: ActaSecurityMeasures | null;
