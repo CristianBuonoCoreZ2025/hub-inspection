@@ -35,21 +35,29 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_action_feature_screen_feature_screen
   WHERE is_active = true;
 
 -- ── 2. Migrar datos desde characteristic_screens ──
--- Mapear characteristic_id → action_feature_id via characteristic.action_feature_id
-INSERT INTO action_feature_screen (action_feature_id, screen_id, is_default, is_active, created_at)
-SELECT
-  ch.action_feature_id,
-  cs.screen_id,
-  COALESCE(cs.is_default, false),
-  COALESCE(cs.is_active, true),
-  COALESCE(cs.created_at, now())
-FROM characteristic_screens cs
-JOIN characteristic ch ON ch.id = cs.characteristic_id
-WHERE NOT EXISTS (
-  SELECT 1 FROM action_feature_screen afs
-  WHERE afs.action_feature_id = ch.action_feature_id
-    AND afs.screen_id = cs.screen_id
-);
+-- Solo si characteristic_screens existe en este schema (puede no estar en entornos limpios).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'characteristic_screens'
+  ) THEN
+    INSERT INTO action_feature_screen (action_feature_id, screen_id, is_default, is_active, created_at)
+    SELECT
+      ch.action_feature_id,
+      cs.screen_id,
+      COALESCE(cs.is_default, false),
+      COALESCE(cs.is_active, true),
+      COALESCE(cs.created_at, now())
+    FROM characteristic_screens cs
+    JOIN characteristic ch ON ch.id = cs.characteristic_id
+    WHERE NOT EXISTS (
+      SELECT 1 FROM action_feature_screen afs
+      WHERE afs.action_feature_id = ch.action_feature_id
+        AND afs.screen_id = cs.screen_id
+    );
+  END IF;
+END $$;
 
 -- ── 3. DROP de characteristic_screens y characteristic ──
 -- Autorización explícita del usuario (migración 262).

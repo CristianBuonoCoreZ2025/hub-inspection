@@ -194,8 +194,84 @@
     z-index: 1;
   }
 
+  /* ═══════════════════════════════════════════════════════════════
+   * PIEL ÚNICA DEL BODY DE EMAIL — REGLA (AGENTS.md § 0j)
+   *
+   * Toda superficie que muestre o edite el body de un email DEBE usar la
+   * clase `email-body-render`. No existe "piel del editor" y "piel del
+   * composer": existe UNA sola piel, la del email.
+   *
+   * Lo que se diseña = lo que se envía. WYSIWYG real.
+   *
+   * Estilos canónicos: ver docs/EMAIL_BODY_RENDER.md
+   * ═══════════════════════════════════════════════════════════════ */
+  .email-body-render {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+  .email-body-render .html-editor-wrap {
+    padding: 32px !important;
+  }
+  .email-body-render .html-editor-content {
+    font-size: 14px !important;
+    line-height: 1.7 !important;
+    color: #1e293b !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  }
+  .email-body-render .html-editor-content p {
+    margin: 0 0 12px 0 !important;
+  }
+  .email-body-render .html-editor-content h1 {
+    font-size: 22px !important;
+    color: #0f172a !important;
+    margin: 0 0 12px 0 !important;
+    font-weight: 600 !important;
+  }
+  .email-body-render .html-editor-content h2 {
+    font-size: 18px !important;
+    color: #1e293b !important;
+    margin: 0 0 12px 0 !important;
+    font-weight: 600 !important;
+  }
+  .email-body-render .html-editor-content h3 {
+    font-size: 15px !important;
+    color: #334155 !important;
+    margin: 0 0 12px 0 !important;
+    font-weight: 600 !important;
+  }
+  .email-body-render .html-editor-content ul,
+  .email-body-render .html-editor-content ol {
+    margin: 0 0 12px 0 !important;
+    padding-left: 20px !important;
+  }
+  .email-body-render .html-editor-content li {
+    margin-bottom: 6px !important;
+  }
+  .email-body-render .html-editor-content a {
+    color: #2563eb !important;
+    text-decoration: none !important;
+  }
+  .email-body-render .html-editor-content a:hover {
+    text-decoration: underline !important;
+  }
+  .email-body-render .html-editor-content strong {
+    font-weight: 600 !important;
+  }
+  .email-body-render .html-editor-content table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+  .email-body-render .html-editor-content th,
+  .email-body-render .html-editor-content td {
+    border: 1px solid #e5e7eb !important;
+    padding: 8px !important;
+  }
+
   /* ═══════════════ CANVAS WYSIWYG DEL COMPOSER ═══════════════ */
-  /* El composer muestra el email como va a salir: toolbar + header branding + body editable + footer */
+  /* El composer muestra el email como va a salir: toolbar + header branding + body editable + footer.
+     El body editable usa la clase email-body-render (piel única) — ver bloque de arriba. */
   .email-composer-canvas-scroll {
     background: #ffffff !important;
     padding: 0 !important;
@@ -210,7 +286,7 @@
     display: flex !important;
     flex-direction: column !important;
   }
-  .email-composer-canvas > .email-composer-editor-body {
+  .email-composer-canvas > .email-body-render {
     flex: 1 !important;
     display: flex !important;
     flex-direction: column !important;
@@ -245,71 +321,6 @@
     font-weight: 600 !important;
     color: #ffffff !important;
     letter-spacing: 0.2px !important;
-  }
-
-  /* El editor (Tiptap) dentro del canvas — sin borde, sin sombra, integrado en el email */
-  .email-composer-editor-body {
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-  }
-  .email-composer-editor-body .html-editor-wrap {
-    padding: 32px !important;
-  }
-  .email-composer-editor-body .html-editor-content {
-    font-size: 14px !important;
-    line-height: 1.7 !important;
-    color: #1e293b !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-  }
-  .email-composer-editor-body .html-editor-content p {
-    margin: 0 0 12px 0 !important;
-  }
-  .email-composer-editor-body .html-editor-content h1 {
-    font-size: 22px !important;
-    color: #0f172a !important;
-    margin: 0 0 12px 0 !important;
-    font-weight: 600 !important;
-  }
-  .email-composer-editor-body .html-editor-content h2 {
-    font-size: 18px !important;
-    color: #1e293b !important;
-    margin: 0 0 12px 0 !important;
-    font-weight: 600 !important;
-  }
-  .email-composer-editor-body .html-editor-content h3 {
-    font-size: 15px !important;
-    color: #334155 !important;
-    margin: 0 0 12px 0 !important;
-    font-weight: 600 !important;
-  }
-  .email-composer-editor-body .html-editor-content ul,
-  .email-composer-editor-body .html-editor-content ol {
-    margin: 0 0 12px 0 !important;
-    padding-left: 20px !important;
-  }
-  .email-composer-editor-body .html-editor-content li {
-    margin-bottom: 6px !important;
-  }
-  .email-composer-editor-body .html-editor-content a {
-    color: #2563eb !important;
-    text-decoration: none !important;
-  }
-  .email-composer-editor-body .html-editor-content a:hover {
-    text-decoration: underline !important;
-  }
-  .email-composer-editor-body .html-editor-content strong {
-    font-weight: 600 !important;
-  }
-  .email-composer-editor-body .html-editor-content table {
-    border-collapse: collapse !important;
-    width: 100% !important;
-  }
-  .email-composer-editor-body .html-editor-content th,
-  .email-composer-editor-body .html-editor-content td {
-    border: 1px solid #e5e7eb !important;
-    padding: 8px !important;
   }
 
   /* Footer del email */

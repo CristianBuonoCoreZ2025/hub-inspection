@@ -19,7 +19,7 @@ import {
 import { getNavMenuConfig, type NavMenuItem } from "@/services/nav-menu-config";
 
 export function useNavLinks(isMobile = false) {
-  const { permissions, profile } = useAuth();
+  const { permissions } = useAuth();
 
   // Cargar configuración del menú desde la BD.
   // Si es null o falla, se usa el orden hardcoded de nav-data.ts.
@@ -50,16 +50,12 @@ export function useNavLinks(isMobile = false) {
   // ── Filtrar por permisos ──
   const isLinkVisible = (link: NavLink): boolean => {
     if (isMobile && link.hideOnMobile) return false;
-    // Supervisión: solo visible para rol internal
-    if (link.section === "supervision") {
-      return profile?.role === "internal";
-    }
     const section = link.section;
     if (!section) {
       if (link.href.startsWith("/dashboard/catalogos/inspeccion")) return canView("catalogos_inspeccion");
-      if (link.href.startsWith("/dashboard/catalogos/gestiones")) return canView("gestiones");
-      if (link.href.startsWith("/dashboard/catalogos/pantallas")) return canView("gestiones");
-      if (link.href.startsWith("/dashboard/catalogos/workflows")) return canView("gestiones");
+      if (link.href.startsWith("/dashboard/catalogos/gestiones")) return canView("catalogos_gestiones");
+      if (link.href.startsWith("/dashboard/catalogos/pantallas")) return canView("catalogos_gestiones");
+      if (link.href.startsWith("/dashboard/catalogos/workflows")) return canView("catalogos_gestiones");
       if (link.href.startsWith("/dashboard/catalogos")) return canView("catalogos");
       if (link.href.startsWith("/dashboard/operaciones")) return canView("operaciones");
       return true;
@@ -79,11 +75,13 @@ export function useNavLinks(isMobile = false) {
 
   // Procesar un item de la config recursivamente
   // depth 0 = raíz, depth 1 = dentro de grupo (puede ser subgrupo o link)
-  const processLink = (key: string): NavLink | null => {
-    if (usedKeys.has(`link:${key}`)) return null;
-    usedKeys.add(`link:${key}`);
-    const link = linkByHref.get(key);
+  const processLink = (item: NavMenuItem): NavLink | null => {
+    if (usedKeys.has(`link:${item.key}`)) return null;
+    usedKeys.add(`link:${item.key}`);
+    const link = linkByHref.get(item.key);
     if (!link || !isLinkVisible(link)) return null;
+    const customLabel = item.label?.trim();
+    if (customLabel) return { ...link, label: customLabel };
     return link;
   };
 
@@ -103,7 +101,7 @@ export function useNavLinks(isMobile = false) {
     if (Array.isArray(item.children)) {
       for (const child of item.children) {
         if (child.type === "link") {
-          const link = processLink(child.key);
+          const link = processLink(child);
           if (!link) continue;
           if (depth === 0) {
             children.push({ kind: "link", link });
@@ -133,7 +131,7 @@ export function useNavLinks(isMobile = false) {
   if (menuConfig && Array.isArray(menuConfig.items) && menuConfig.items.length > 0) {
     for (const item of menuConfig.items) {
       if (item.type === "link") {
-        const link = processLink(item.key);
+        const link = processLink(item);
         if (link) visibleMainLinks.push(link);
       } else if (item.type === "group") {
         const group = processGroup(item, 0);

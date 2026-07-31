@@ -15,16 +15,43 @@
 -- No se modifican datos.
 -- ═════════════════════════════════════════════════════════════════
 
-CREATE OR REPLACE FUNCTION public.is_action_template_tenant_allowed(p_action_template_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE SECURITY DEFINER
-SET row_security TO 'off'
-AS $function$
-  SELECT EXISTS (
-    SELECT 1
-    FROM action_template at
-    WHERE at.id = p_action_template_id
-      AND (at.company_id IS NULL OR is_tenant_allowed(at.company_id))
+DO $$
+DECLARE
+  v_has_company_id boolean := EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'action_template' AND column_name = 'company_id'
   );
-$function$;
+BEGIN
+  IF v_has_company_id THEN
+    EXECUTE $func$
+      CREATE OR REPLACE FUNCTION public.is_action_template_tenant_allowed(p_action_template_id uuid)
+      RETURNS boolean
+      LANGUAGE sql
+      STABLE SECURITY DEFINER
+      SET row_security TO 'off'
+      AS $function$
+        SELECT EXISTS (
+          SELECT 1
+          FROM action_template at
+          WHERE at.id = p_action_template_id
+            AND (at.company_id IS NULL OR is_tenant_allowed(at.company_id))
+        );
+      $function$
+    $func$;
+  ELSE
+    EXECUTE $func$
+      CREATE OR REPLACE FUNCTION public.is_action_template_tenant_allowed(p_action_template_id uuid)
+      RETURNS boolean
+      LANGUAGE sql
+      STABLE SECURITY DEFINER
+      SET row_security TO 'off'
+      AS $function$
+        SELECT EXISTS (
+          SELECT 1
+          FROM action_template at
+          WHERE at.id = p_action_template_id
+        );
+      $function$
+    $func$;
+  END IF;
+END $$;

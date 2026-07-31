@@ -32,6 +32,7 @@ import { claimCreateMinimalSchema, type ClaimCreateMinimalInput } from "@/lib/va
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import { Search, Trash2, FileText, ClipboardCheck, Download, Check, Upload, ChevronDown, Shield, MapPin, CheckCircle2, AlertTriangle } from "lucide-react";
@@ -112,8 +113,25 @@ function ClaimsPageContent() {
  const queryClient = useQueryClient();
  const router = useRouter();
  const searchParams = useSearchParams();
- const { canCreate } = usePermissions();
+ const { canCreate, canView } = usePermissions();
+ const { profile, dataAccess } = useAuth();
  const { statusCode, statusLabel, codeToId } = useClaimStatuses();
+
+ const isUserAssignedToClaim = (claim: { assigned_adjuster_id: string | null; adjuster_id: string | null; inspector_id: string | null; auditor_id: string | null; dispatcher_id: string | null; assistant_id: string | null }): boolean => {
+   if (!profile?.id) return false;
+   if (dataAccess?.is_admin || dataAccess?.see_all_client_claims) return true;
+   const assigneeIds = [
+     claim.assigned_adjuster_id,
+     claim.adjuster_id,
+     claim.inspector_id,
+     claim.auditor_id,
+     claim.dispatcher_id,
+     claim.assistant_id,
+   ];
+   return assigneeIds.some((id) => id === profile.id);
+ };
+
+ const canOpenClaim = (claim: { assigned_adjuster_id: string | null; adjuster_id: string | null; inspector_id: string | null; auditor_id: string | null; dispatcher_id: string | null; assistant_id: string | null }): boolean => canView("claims") && isUserAssignedToClaim(claim);
  useRealtime("claims", [["claims"], ["claims-participants"]]);
  const [search, setSearch] = useState("");
  const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") || "");
@@ -2315,18 +2333,23 @@ function ClaimsPageContent() {
  const country = countriesCatalog?.find((c) => c.id === claim.country_id);
  const flagUrl = flagImgUrl(country?.code ?? null);
  const BlIcon = getClaimTypeIcon(claimType?.icon ?? null);
+ const openClaim = canOpenClaim(claim);
  return (
  <tr
  key={claim.id}
- className="row-clickable"
- onClick={() => router.push(`/dashboard/claims/${claim.id}?edit=1`)}
+ className={openClaim ? "row-clickable" : ""}
+ onClick={openClaim ? () => router.push(`/dashboard/claims/${claim.id}?edit=1`) : undefined}
  >
  <td className="font-mono font-semibold text-primary">
  <div className="flex items-center gap-2">
  <FileText className="h-4 w-4 text-muted-foreground" />
+ {openClaim ? (
  <Link href={`/dashboard/claims/${claim.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
  {claim.liquidation_number || "—"}
  </Link>
+ ) : (
+ <span className="text-foreground">{claim.liquidation_number || "—"}</span>
+ )}
  </div>
  </td>
  <td className="hidden sm:table-cell">{claim.client_reference || "—"}</td>

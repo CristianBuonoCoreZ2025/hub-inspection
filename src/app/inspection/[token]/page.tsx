@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  ClipboardCheck, Video, User, Calendar, WifiOff, Loader2,
+  ClipboardCheck, Video, User, Calendar, WifiOff, Loader2, RefreshCw,
   Camera, FileText, AlertTriangle, MessageSquare, Send,
   ShieldCheck, MapPin, PenTool, XCircle, CheckCircle,
   MonitorSmartphone,
@@ -13,6 +13,7 @@ import {
 import { DrawingCanvas } from "@/components/ui/drawing-canvas";
 import { LiveVideoCall } from "@/components/inspection/live-video-call";
 import { useClaimsAppPresence } from "@/hooks/use-claims-app-presence";
+import { logConnectionEvent, type ConnectionLogEntry } from "@/services/connection-logs";
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
 
@@ -88,6 +89,7 @@ interface LiveSession {
   inspection_chat_messages: LiveChatMessage[];
   inspection_signatures: LiveSignature[];
   damage_sketches: LiveSketch[];
+  inspection_reports: { report_url: string | null; status: string; generated_at: string | null }[] | null;
   claim: LiveClaim | null;
 }
 
@@ -163,7 +165,16 @@ export default function MagicLinkPage() {
   const [now, setNow] = useState(new Date());
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
   const [videoCallOpen, setVideoCallOpen] = useState(false);
+  const [videoCallKey, setVideoCallKey] = useState(0);
   const autoVideoOpenedRef = useRef(false);
+  // Ref para el ID del log de conexión del asegurado
+  const connectionLogIdRef = useRef<string | null>(null);
+  // Si los permisos de media llegan antes de que el log "connecting" se cree,
+  // se guardan aquí temporalmente y se aplican en cuanto exista el log.
+  const pendingMediaPermissionRef = useRef<{
+    camera: NonNullable<ConnectionLogEntry["cameraPermission"]>;
+    microphone: NonNullable<ConnectionLogEntry["microphonePermission"]>;
+  } | null>(null);
 
   // Identificador único por pestaña para el signaling WebRTC.
   // Se persiste en sessionStorage para que al recargar la misma pestaña
@@ -200,6 +211,78 @@ export default function MagicLinkPage() {
       setVideoCallOpen(true);
     }
   }, [session]);
+
+  // ── Log de conexión del asegurado ──
+  // Registra un evento "connecting" al cargar la sesión, y "disconnected" al desmontar.
+  useEffect(() => {
+    if (!session?.id) return;
+    // Solo registrar una vez por sesión
+    if (connectionLogIdRef.current) return;
+    let cancelled = false;
+    (async () => {
+      const id = await logConnectionEvent({
+        sessionId: session.id,
+        magicLinkToken: token,
+        role: "insured",
+        status: "connecting",
+      });
+      if (!cancelled && id) {
+        connectionLogIdRef.current = id;
+        // Si los permisos llegaron antes de crear el log, aplicarlos ahora
+        if (pendingMediaPermissionRef.current) {
+          const { camera, microphone } = pendingMediaPermissionRef.current;
+          await logConnectionEvent({
+            sessionId: session.id,
+            magicLinkToken: token,
+            role: "insured",
+            status: "success",
+            logId: id,
+            cameraPermission: camera,
+            microphonePermission: microphone,
+          });
+          pendingMediaPermissionRef.current = null;
+        }
+      }
+    })();
+    // Al desmontar, marcar como desconectado
+    return () => {
+      cancelled = true;
+      const logId = connectionLogIdRef.current;
+      if (logId) {
+        logConnectionEvent({
+          sessionId: session.id,
+          magicLinkToken: token,
+          role: "insured",
+          status: "disconnected",
+          logId,
+          disconnectReason: "page_unload",
+        });
+      }
+    };
+  }, [session?.id, token]);
+
+  // ── Desconexión robusta al cerrar la pestaña ──
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const logId = connectionLogIdRef.current;
+      if (logId && session?.id) {
+        const payload = {
+          sessionId: session.id,
+          magicLinkToken: token,
+          role: "insured",
+          status: "disconnected",
+          logId,
+          disconnectReason: "page_close",
+        };
+        navigator.sendBeacon(
+          "/api/inspection/connection-log",
+          new Blob([JSON.stringify(payload)], { type: "application/json" })
+        );
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [session?.id, token]);
 
   // Detectar si la aplicación Claims está abierta en otra pestaña del mismo navegador
   const { active: claimsAppActive, loading: claimsAppLoading } = useClaimsAppPresence();
@@ -357,6 +440,7 @@ export default function MagicLinkPage() {
     { id: "evidencias", label: "Evidencias", icon: Camera },
     { id: "croquis", label: "Croquis", icon: MapPin },
     { id: "firmas", label: "Firmas", icon: PenTool },
+    { id: "informe", label: "Informe", icon: FileText },
   ];
 
   // Si está completado pero falta firmar (y no hay waiver), forzar tab de firmas
@@ -442,34 +526,119 @@ export default function MagicLinkPage() {
         )}
         {effectiveTab === "croquis" && <SketchesTab sketches={session.damage_sketches} session={session} />}
         {effectiveTab === "firmas" && <SignaturesTab session={session} />}
+        {effectiveTab === "informe" && (
+          <div className="app-panel px-4 py-6">
+            <h3 className="app-section-title mb-4">Informe de inspección</h3>
+            {session.inspection_reports && session.inspection_reports.length > 0 ? (
+              <div className="space-y-3">
+                {session.inspection_reports.map((report, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-slate-800 bg-slate-900">
+                    <div>
+                      <p className="app-body font-medium">Informe final</p>
+                      <p className="app-body text-slate-500 text-xs">{report.generated_at ? new Date(report.generated_at).toLocaleDateString() : "—"}</p>
+                    </div>
+                    <a
+                      href={report.report_url || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 text-white text-sm hover:bg-sky-500 transition-colors"
+                    >
+                      Ver PDF
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="app-body text-slate-500">Aún no hay un informe final disponible.</p>
+            )}
+          </div>
+        )}
         </main>
 
         {/* Panel lateral de Comunicación */}
         {chatPanelOpen && (
-          <div className="w-full lg:w-75 lg:shrink-0 flex flex-col py-6">
+          <div className="w-full lg:w-105 lg:shrink-0 flex flex-col py-6">
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 flex flex-col flex-1 sticky top-20" style={{ maxHeight: "calc(100vh - 100px)" }}>
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
                 <span className="app-body font-semibold text-slate-400 flex items-center gap-1.5">
                   <MessageSquare className="h-3.5 w-3.5" />
                   Comunicación
                 </span>
-                <button
-                  onClick={() => setChatPanelOpen(false)}
-                  className="text-slate-500 hover:text-slate-300"
-                >
-                  <XCircle className="h-4 w-4" />
-                </button>
+                {videoCallOpen && (
+                  <button
+                    onClick={() => setVideoCallKey((k) => k + 1)}
+                    className="text-xs flex items-center gap-1 text-sky-400 hover:text-sky-300"
+                    title="Reconectar videollamada"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Reconectar
+                  </button>
+                )}
               </div>
 
               {videoCallOpen && session.status === "active" && session.inspection_type === "remote" && (
                 <div className="h-48 shrink-0 mb-3 rounded-lg overflow-hidden border border-slate-700">
                   <LiveVideoCall
+                    key={videoCallKey}
                     sessionId={session.id}
                     userId={clientUserId}
                     role="client"
                     compact
-                    onHangup={() => setVideoCallOpen(false)}
-                    onKicked={() => setVideoCallOpen(false)}
+                    onHangup={() => {
+                      setVideoCallOpen(false);
+                      // Marcar log como desconectado y limpiar para permitir re-conexión
+                      const logId = connectionLogIdRef.current;
+                      if (logId) {
+                        logConnectionEvent({
+                          sessionId: session.id,
+                          magicLinkToken: token,
+                          role: "insured",
+                          status: "disconnected",
+                          logId,
+                          disconnectReason: "hangup",
+                        });
+                        connectionLogIdRef.current = null;
+                        pendingMediaPermissionRef.current = null;
+                      }
+                    }}
+                    onKicked={(reason) => {
+                      setVideoCallOpen(false);
+                      // Marcar log como kicked
+                      const logId = connectionLogIdRef.current;
+                      if (logId) {
+                        logConnectionEvent({
+                          sessionId: session.id,
+                          magicLinkToken: token,
+                          role: "insured",
+                          status: "kicked",
+                          logId,
+                          disconnectReason: reason,
+                        });
+                        connectionLogIdRef.current = null;
+                        pendingMediaPermissionRef.current = null;
+                      }
+                    }}
+                    onMediaPermission={(result) => {
+                      const logId = connectionLogIdRef.current;
+                      if (logId) {
+                        // Actualizar log con permisos y marcar success
+                        logConnectionEvent({
+                          sessionId: session.id,
+                          magicLinkToken: token,
+                          role: "insured",
+                          status: "success",
+                          logId,
+                          cameraPermission: result.camera,
+                          microphonePermission: result.microphone,
+                        });
+                      } else {
+                        // Si el log aún no existe, guardar permisos para aplicarlos luego
+                        pendingMediaPermissionRef.current = {
+                          camera: result.camera,
+                          microphone: result.microphone,
+                        };
+                      }
+                    }}
                     onScreenshotSaved={() => refetch()}
                   />
                 </div>
@@ -1416,7 +1585,7 @@ function ChatPanel({ session }: { session: LiveSession }) {
           ) : (
             messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.sender_role?.trim().toLowerCase() === "client" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] rounded-lg px-3 py-2 app-body ${
+                <div className={`max-w-[95%] rounded-lg px-3 py-2 app-body ${
                   msg.sender_role?.trim().toLowerCase() === "client" ? "bg-sky-600 text-white" : "bg-slate-800 text-slate-200"
                 }`}>
                   <p className="app-body opacity-70 mb-0.5">{msg.sender_role?.trim().toLowerCase() === "client" ? "Cliente" : (msg.sender_name || "Inspector")}</p>

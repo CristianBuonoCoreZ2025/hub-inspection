@@ -25,6 +25,8 @@ WHERE id NOT IN (
   ORDER BY name, created_at ASC, id ASC
 );
 
--- 2. Agregar unique constraint en name
+-- 2. Agregar unique constraint en name (idempotente)
+ALTER TABLE content_good_brands
+  DROP CONSTRAINT IF EXISTS content_good_brands_name_key;
 ALTER TABLE content_good_brands
   ADD CONSTRAINT content_good_brands_name_key UNIQUE (name);

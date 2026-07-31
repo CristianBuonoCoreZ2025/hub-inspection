@@ -42,13 +42,17 @@ export const sectionLabels: Record<PermissionSection, string> = {
   claims: "Siniestros",
   inspecciones: "Inspecciones",
   agenda: "Agenda",
+  informes: "Informes",
+  supervision: "Supervisión",
   catalogos: "Catálogos",
+  catalogos_polizas: "Pólizas",
   catalogos_inspeccion: "Catálogos Inspección",
   operaciones: "Operaciones",
   administracion: "Administración",
   users: "Usuarios",
   companies: "Empresas",
   configuracion: "Configuración",
+  perfiles: "Perfiles",
 };
 
 export const sectionOrder: PermissionSection[] = [
@@ -56,12 +60,15 @@ export const sectionOrder: PermissionSection[] = [
   "claims",
   "inspecciones",
   "agenda",
+  "informes",
+  "supervision",
   "catalogos",
   "catalogos_inspeccion",
   "operaciones",
   "administracion",
   "users",
   "companies",
+  "perfiles",
   "configuracion",
 ];
 
@@ -86,13 +93,17 @@ export const sectionActions: Record<PermissionSection, PermissionAction[]> = {
   claims: ["view", "edit", "create", "delete"],
   inspecciones: ["view", "edit", "create", "delete"],
   agenda: ["view"],
+  informes: ["view"],
+  supervision: ["view"],
   catalogos: ["view", "edit", "create", "delete"],
+  catalogos_polizas: ["view", "edit", "create", "delete"],
   catalogos_inspeccion: ["view", "edit", "create", "delete"],
   operaciones: ["view", "edit", "create", "delete"],
   administracion: ["view", "edit", "create", "delete"],
   users: ["view", "edit", "create"],
   companies: ["view", "edit", "create", "delete"],
   configuracion: ["view", "edit"],
+  perfiles: ["view", "edit"],
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -172,6 +183,7 @@ export const sectionSubPages: Partial<Record<PermissionSection, SubPage[]>> = {
     { section: "catalogos_lineas_negocio", label: "Líneas de Negocio" },
     { section: "catalogos_productos", label: "Productos" },
     { section: "catalogos_tipos_polizas", label: "Tipos de Pólizas" },
+    { section: "catalogos_polizas", label: "Pólizas" },
     { section: "catalogos_parentescos", label: "Parentescos" },
     { section: "catalogos_tipos_documentos", label: "Tipos de Documentos" },
     { section: "catalogos_antiguedades", label: "Antigüedades" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -108,6 +108,11 @@ export default function UsersPage() {
  resolver: standardSchemaResolver(inviteUserSchema),
  defaultValues: { firstName: "", middleName: "", lastName: "", email: "", countryId: "", role: "adjuster", clientIds: [], phone: "", rut: "" } as InviteUserInput,
  });
+
+ // Sincronizar clientes seleccionados con el formulario para que la validación del botón Guardar/Invitar pase
+ useEffect(() => {
+   form.setValue("clientIds", selectedClientIds, { shouldValidate: true });
+ }, [selectedClientIds, form]);
 
  const watchedRole = useWatch({ control: form.control, name: "role" });
  const watchedCountryId = useWatch({ control: form.control, name: "countryId" });
@@ -321,6 +326,7 @@ export default function UsersPage() {
  });
  const existingClientIds = user.user_clients?.map((uc: { company_id: string }) => uc.company_id) || [];
  setSelectedClientIds(existingClientIds);
+ form.setValue("clientIds", existingClientIds, { shouldValidate: true });
  setSecondaryRoles(user.secondary_roles || []);
  setNewSecRole("");
  setNewSecCompany("");
@@ -509,7 +515,11 @@ export default function UsersPage() {
  <Label className="app-field-label">País</Label>
  <Select
  value={editForm.countryId || null}
- onValueChange={(v) => setEditForm({ ...editForm, countryId: v || "" })}
+ onValueChange={(v) => {
+                    const value = v || "";
+                    setEditForm({ ...editForm, countryId: value });
+                    form.setValue("countryId", value, { shouldValidate: true });
+                  }}
  items={countries?.map((c: { id: string; name: string }) => ({ value: c.id, label: c.name })) || []}
  >
  <SelectTrigger className="app-input"><SelectValue placeholder="Seleccionar país" /></SelectTrigger>
@@ -741,7 +751,10 @@ export default function UsersPage() {
  type="button"
  className="pg-btn-platinum"
  disabled={inviteMutation.isPending || updateMutation.isPending}
- onClick={form.handleSubmit(onSubmit)}
+ onClick={form.handleSubmit(onSubmit, (errors) => {
+   const firstError = Object.values(errors)[0]?.message as string | undefined;
+   toast.error(firstError || "Revisa los campos obligatorios");
+ })}
  >
  {inviteMutation.isPending || updateMutation.isPending ? "Guardando..." : editingId ? "Guardar" : "Invitar"}
  </button>

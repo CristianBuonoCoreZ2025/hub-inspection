@@ -8,7 +8,6 @@ import {
   Settings,
   Bell,
   Plug,
-  User,
   Shield,
   Save,
   MapPin,
@@ -24,59 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DiagnosticLogToggle from "./DiagnosticLogToggle";
 
-type ConfigTab = "general" | "notificaciones" | "integraciones" | "perfiles";
-
-const profiles = [
-  {
-    role: "Interno",
-    badge: "Administrador",
-    description:
-      "Usuarios internos del sistema. Pueden crear siniestros, gestionar empresas, invitar usuarios y ver toda la información de la plataforma.",
-    permissions: [
-      "Ver todos los siniestros",
-      "Crear y editar empresas",
-      "Invitar y gestionar usuarios",
-      "Generar informes",
-      "Configurar la plataforma",
-    ],
-  },
-  {
-    role: "Liquidador",
-    badge: "Asociado a clientes",
-    description:
-      "Liquidadores asociados a uno o más clientes. Ven todos los siniestros de sus clientes. Pueden intervenir solo en las gestiones de los siniestros donde son el liquidador asignado.",
-    permissions: [
-      "Ver siniestros de sus clientes",
-      "Ver inspecciones de sus clientes",
-      "Intervenir en gestiones donde es liquidador",
-      "Solo vista en inspecciones (no modificar)",
-    ],
-  },
-  {
-    role: "Inspector",
-    badge: "Asociado a clientes",
-    description:
-      "Inspectores asociados a uno o más clientes. Solo pueden ver los casos de sus clientes donde son el inspector asignado. Solo pueden completar la inspección donde están a cargo.",
-    permissions: [
-      "Ver siniestros donde es inspector",
-      "Completar inspección donde está a cargo",
-      "Subir evidencias y fotos",
-      "No puede modificar otros datos del siniestro",
-    ],
-  },
-  {
-    role: "Operativo (Cliente)",
-    badge: "Un solo cliente",
-    description:
-      "Usuarios operativos del cliente. Ven todos los casos de su empresa. Solo lectura, no pueden crear ni editar.",
-    permissions: [
-      "Ver siniestros de su empresa",
-      "Ver agenda de inspecciones",
-      "Descargar informes",
-      "No pueden crear ni editar",
-    ],
-  },
-];
+type ConfigTab = "general" | "notificaciones" | "integraciones";
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<ConfigTab>("general");
@@ -88,7 +35,6 @@ export default function SettingsPage() {
     { id: "general", label: "General", icon: Settings },
     { id: "notificaciones", label: "Notificaciones", icon: Bell },
     { id: "integraciones", label: "Integraciones", icon: Plug, internalOnly: true },
-    { id: "perfiles", label: "Perfiles", icon: User },
   ];
 
   const visibleTabs = tabs.filter((t) => !t.internalOnly || canConfigureIntegrations);
@@ -126,7 +72,6 @@ export default function SettingsPage() {
       {tab === "general" && <GeneralTab />}
       {tab === "notificaciones" && <NotificacionesTab />}
       {tab === "integraciones" && canConfigureIntegrations && <IntegracionesTab />}
-      {tab === "perfiles" && <PerfilesTab />}
     </div>
   );
 }
@@ -524,45 +469,4 @@ function IntegracionesTab() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════
-// Tab: Perfiles
-// ═══════════════════════════════════════════════════════════
-function PerfilesTab() {
-  return (
-    <section className="app-panel">
-      <h2 className="app-body font-semibold">Perfiles de usuario</h2>
-      <p className="mt-1 app-body text-muted-foreground">
-        Cuatro tipos de usuario definen el acceso y las capacidades dentro de Claims Hub.
-      </p>
-      <div className="mt-4 space-y-2">
-        {profiles.map((p) => (
-          <div
-            key={p.role}
-            className="rounded-xl border border-border bg-card p-4 shadow-(--shadow-card)"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="app-body font-semibold text-foreground">{p.role}</h3>
-              <span className="rounded-full bg-muted px-2 py-0.5 app-body font-medium text-muted-foreground">
-                {p.badge}
-              </span>
-            </div>
-            <p className="mt-1.5 app-body leading-relaxed text-muted-foreground">
-              {p.description}
-            </p>
-            <ul className="mt-2 space-y-1">
-              {p.permissions.map((perm) => (
-                <li
-                  key={perm}
-                  className="flex items-center gap-2 app-body text-muted-foreground"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  {perm}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
+

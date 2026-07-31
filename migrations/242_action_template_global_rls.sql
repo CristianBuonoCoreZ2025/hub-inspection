@@ -14,7 +14,15 @@
 -- No se modifican datos. Solo se actualiza la policy SELECT.
 -- ═══════════════════════════════════════════════════════════════
 
-DROP POLICY IF EXISTS "action_template_tenant_select" ON action_template;
-CREATE POLICY "action_template_tenant_select" ON action_template
-  FOR SELECT TO authenticated
-  USING (company_id IS NULL OR is_tenant_allowed(company_id));
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'action_template' AND column_name = 'company_id'
+  ) THEN
+    DROP POLICY IF EXISTS "action_template_tenant_select" ON action_template;
+    CREATE POLICY "action_template_tenant_select" ON action_template
+      FOR SELECT TO authenticated
+      USING (company_id IS NULL OR is_tenant_allowed(company_id));
+  END IF;
+END $$;

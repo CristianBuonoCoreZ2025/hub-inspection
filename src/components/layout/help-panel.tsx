@@ -20,6 +20,7 @@ import {
   BookOpen,
   Lightbulb,
   Sparkles,
+  Video,
 } from "lucide-react";
 import { HelpIcon } from "@/components/icons/topbar-icons";
 
@@ -211,17 +212,55 @@ const HELP_SECTIONS: HelpSection[] = [
       {
         question: "¿Cómo funciona el magic link?",
         answer:
-          "Cada inspección tiene un magic link (token único) que permite acceso público sin login. Ideal para que el inspector o el asegurado accedan desde móvil en campo. El link se puede compartir y muestra todos los datos en tiempo real (refresh cada 2s).",
+          "Cada inspección tiene un magic link (token único) que permite acceso público sin login. Ideal para que el asegurado acceda desde móvil en campo. El panel de chat permanece siempre visible para garantizar comunicación con el inspector, aunque la videollamada se cierre.",
       },
       {
         question: "¿Cómo funciona la videollamada?",
         answer:
-          "Las inspecciones remotas usan Jitsi Meet integrado. Desde la sesión de inspección, puedes iniciar una videollamada que se abre en una ventana. El inspector y el asegurado pueden ver y hablar en tiempo real mientras se completa el acta.",
+          "Las inspecciones remotas usan WebRTC con conexión peer-to-peer. El inspector inicia la videollamada desde el panel de comunicación y el asegurado la ve en su magic link. Si fallan los permisos de cámara o micrófono, el sistema intenta audio solo y, como último recurso, entra sin media local para mantener el chat y el signaling.",
       },
       {
         question: "¿Cómo se genera el PDF de inspección?",
         answer:
           "Desde el tab Reporte de la inspección, haz clic en 'Generar PDF'. El sistema usa html2canvas + jsPDF para crear el documento con todos los datos del acta, daños, evidencias y firmas. El PDF se sube a Cloudflare R2 y queda disponible para descarga.",
+      },
+    ],
+  },
+  {
+    id: "inspeccion-remota",
+    title: "Inspección Remota",
+    icon: Video,
+    category: "Core",
+    content: [
+      {
+        question: "¿Cómo se conecta el asegurado?",
+        answer:
+          "El asegurado accede por el magic link. El panel de chat nunca se cierra, así que siempre puede comunicarse. Si la videollamada se cae, hay un botón 'Reconectar' que desmonta y vuelve a montar la llamada WebRTC, generando una conexión limpia.",
+      },
+      {
+        question: "¿Qué hace el inspector si se corta la llamada?",
+        answer:
+          "El inspector puede colgar la videollamada con el botón 'Desconectar' sin cerrar el chat. Si el panel de comunicación está minimizado, lo vuelve a abrir con el botón flotante. El ancho del panel es de 420px tanto en dashboard como en magic link.",
+      },
+      {
+        question: "¿Qué son los logs de conexión?",
+        answer:
+          "El tab 'Conexiones' en la inspección del dashboard muestra el estado actual del asegurado y del inspector (Conectado, Conectando o Desconectado). El historial técnico queda oculto en un acordeón.",
+      },
+      {
+        question: "¿Puede entrar sin cámara o micrófono?",
+        answer:
+          "Sí. Si getUserMedia falla, el sistema intenta usar solo audio. Si tampoco funciona, entra sin media local, pero igual se conecta al canal de signaling para que ambos lados se vean conectados en el chat.",
+      },
+      {
+        question: "¿Qué pasa si otro programa usa la cámara?",
+        answer:
+          "El sistema detecta el error y muestra mensajes claros: 'La cámara o micrófono están en uso por otra aplicación. Cierre otras pestañas o programas y vuelva a intentar.' Si denegó el permiso, indica 'Habilite el acceso a cámara y micrófono en el navegador.'",
+      },
+      {
+        question: "¿Dónde ve el asegurado el informe final?",
+        answer:
+          "En el magic link hay un tab 'Informe'. Si el inspector generó el PDF, aparece con la fecha y un enlace para verlo. El servicio getInspectionSessionByToken trae inspection_reports con report_url, status y generated_at.",
       },
     ],
   },
@@ -543,6 +582,87 @@ const HELP_SECTIONS: HelpSection[] = [
           "El botón flotante abajo a la derecha también lo abre.",
           "Solo disponible en entorno de desarrollo.",
         ],
+      },
+    ],
+  },
+  {
+    id: "tooltips",
+    title: "Tooltips",
+    icon: HelpCircle,
+    category: "General",
+    content: [
+      {
+        question: "¿Qué son los tooltips?",
+        answer:
+          "Los tooltips son pequeños cuadros de ayuda que aparecen al pasar el cursor sobre un icono o botón. Reemplazan el tooltip nativo del navegador y usan el estilo glass del sistema para mostrar indicaciones sin interrumpir el flujo.",
+      },
+      {
+        question: "¿Cómo se usan?",
+        answer:
+          "Pasa el mouse (o mantén presionado en touch, según el dispositivo) sobre el elemento. Si el icono tiene un tooltip, aparecerá a los lados o abajo con una breve descripción.",
+      },
+      {
+        question: "¿Por qué no veo tooltips en móvil?",
+        answer:
+          "En dispositivos táctiles los tooltips suelen requerir una pulsación larga o aparecen en contextos donde no hay hover. Si un icono no muestra tooltip, la interfaz busca mantener la accesibilidad con labels, aria-label o textos cercanos.",
+      },
+    ],
+  },
+  {
+    id: "inspeccion-remota",
+    title: "Inspección Remota",
+    icon: Video,
+    category: "Core",
+    content: [
+      {
+        question: "¿Cómo se conecta el asegurado al magic link?",
+        answer:
+          "El asegurado recibe un enlace único (magic link) por correo. Al abrirlo, el chat aparece siempre abierto y la videollamada se inicia automáticamente si la inspección está activa.",
+        tips: [
+          "No es necesario descargar nada, funciona en el navegador.",
+          "Si la cámara está en uso por otra app, aparecerá un mensaje para cerrarla.",
+        ],
+      },
+      {
+        question: "¿Qué pasa si el asegurado no tiene cámara o micrófono?",
+        answer:
+          "El sistema intenta usar solo audio. Si tampoco es posible, la sesión se mantiene conectada a través del chat. El asegurado puede seguir comunicándose y firmar documentos.",
+      },
+      {
+        question: "¿Cómo reconecta el asegurado si se cae la videollamada?",
+        answer:
+          "En la cabecera del panel de comunicación del magic link hay un botón 'Reconectar'. Al tocarlo se reinicia la videollamada desde cero.",
+        steps: [
+          "Localizar el botón 'Reconectar' arriba del chat.",
+          "Hacer clic para desmontar y volver a montar el video.",
+          "Esperar a que el inspector acepte la nueva conexión.",
+        ],
+      },
+      {
+        question: "¿Cómo maneja el inspector la videollamada?",
+        answer:
+          "En el dashboard, el inspector tiene un panel flotante de comunicación con dos acciones: 'Desconectar' (colgar la videollamada) y 'X' (minimizar el panel). El inspector también puede reanudar la videollamada desde el botón flotante de cámara.",
+        steps: [
+          "Abrir la inspección remota.",
+          "Hacer clic en 'Conectar videollamada' si no está conectada.",
+          "Usar 'Desconectar' para colgar sin cerrar el chat.",
+          "Usar 'X' para minimizar y trabajar con pantalla completa.",
+        ],
+      },
+      {
+        question: "¿Dónde ve el asegurado el informe PDF?",
+        answer:
+          "El asegurado tiene un tab 'Informe' en el magic link. Cuando el inspector genera el PDF final, aparece el botón 'Ver PDF' para abrirlo.",
+      },
+      {
+        question: "¿Qué muestran los logs de conexión?",
+        answer:
+          "El tab 'Conexiones' del dashboard muestra el estado actual de asegurado e inspector: Conectado, Conectando o Desconectado. El historial detallado se oculta para no confundir al inspector.",
+      },
+      {
+        question: "¿Por qué a veces el video no conecta?",
+        answer:
+          "La videollamada WebRTC puede fallar por problemas de red o permisos de cámara en uso. Si no se puede establecer, el chat sigue disponible y se muestra 'No se pudo conectar el video. El chat sigue disponible.'",
       },
     ],
   },

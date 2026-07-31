@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getActiveRemoteSessions } from "@/services/inspections";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getActiveRemoteSessions, liftInspectionLock } from "@/services/inspections";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { SupervisorLiveView } from "@/components/inspection/supervisor-live-view";
 import {
   Eye,
   Video,
+  Unlock,
   Loader2,
   ArrowLeft,
   Radio,
@@ -19,6 +22,7 @@ import {
   PenTool,
   FileText,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const TAB_LABELS: Record<string, string> = {
   resumen: "Resumen",
@@ -46,8 +50,22 @@ function ElapsedTime({ startedAt }: { startedAt: string | null }) {
 }
 
 export default function SupervisionPage() {
-  const { profile } = useAuth();
+  const { profile, dataAccess } = useAuth();
+  const { can } = usePermissions();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const canViewSupervision = can("supervision", "view");
+  const canLift = dataAccess?.is_admin;
+
+  const liftMutation = useMutation({
+    mutationFn: (sessionId: string) => liftInspectionLock(sessionId, profile!.id),
+    onSuccess: () => {
+      toast.success("Bloqueo levantado");
+      queryClient.invalidateQueries({ queryKey: ["active-remote-sessions"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["active-remote-sessions"],
@@ -55,14 +73,14 @@ export default function SupervisionPage() {
     refetchInterval: selectedSessionId ? false : 5000,
   });
 
-  // Solo usuarios con rol internal pueden acceder
-  if (profile && profile.role !== "internal") {
+  // Solo usuarios con permiso de supervisión pueden acceder
+  if (profile && !canViewSupervision) {
     return (
       <div className="app-panel max-w-2xl mx-auto mt-20">
         <div className="p-8 text-center">
           <h2 className="app-section-title mb-2">Acceso restringido</h2>
           <p className="app-body text-muted-foreground">
-            Esta pantalla es exclusiva para usuarios con perfil interno.
+            No tienes permiso para acceder a la pantalla de supervisión.
           </p>
         </div>
       </div>
@@ -222,12 +240,41 @@ export default function SupervisionPage() {
                     </div>
                   </div>
 
-                  {/* Botón supervisar */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-500/10 text-emerald-600 app-body font-medium">
-                      <Eye className="h-4 w-4" />
-                      Supervisar
-                    </span>
+                  {/* Inspector + controles */}
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    {session.inspector?.full_name && (
+                      <span className="app-body text-xs text-muted-foreground">
+                        Inspector: {session.inspector.full_name}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2">
+                      {session.lock_overridden_by ? (
+                        <>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-[10px] font-medium">
+                            Bloqueo levantado
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/inspecciones/${session.id}`); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-500/10 text-emerald-600 app-body font-medium hover:bg-emerald-500/20 transition-colors"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Entrar
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); liftMutation.mutate(session.id); }}
+                          disabled={!canLift || (liftMutation.variables === session.id && liftMutation.isPending)}
+                          title={canLift ? "Levantar bloqueo" : "Solo un administrador puede levantar el bloqueo"}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/10 text-amber-600 app-body font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                        >
+                          <Unlock className="h-4 w-4" />
+                          Levantar bloqueo
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </button>

@@ -238,6 +238,12 @@ src/
 - **Archivo:** `src/components/ui/toggle-chip.tsx`
 - **Características:** Reemplaza checkboxes con chips visuales
 
+### Tooltip
+- **Archivo:** `src/components/ui/tooltip.tsx`
+- **Características:** Glass, portal fijo, z-9999, basado en `@base-ui/react/tooltip`
+- **Regla:** Prohibido `title` como tooltip; usar `Tooltip`, `TooltipTrigger` y `TooltipContent`
+- **Docs:** [AGENTS.md §30](../AGENTS.md)
+
 ---
 
 ## Migraciones de Base de Datos

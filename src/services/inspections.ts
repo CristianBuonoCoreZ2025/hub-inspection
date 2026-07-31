@@ -6,7 +6,7 @@ import type {
   InspectionDamage, InspectionEvidence, InspectionSignature,
 } from "@/types";
 
-const SESSION_SELECT = "id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, signature_waiver_reason, created_at, updated_at";
+const SESSION_SELECT = "id, company_id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, signature_waiver_reason, lock_overridden_by, lock_overridden_at, created_at, updated_at";
 
 // ═══════════════════════════════════════════════════════════════
 // SESSIONS
@@ -25,6 +25,7 @@ export interface SessionClaim {
   liquidation_number?: string;
   company_id?: string;
   inspector_id?: string;
+  assigned_adjuster_id?: string;
   broker_executive?: string;
   adjuster_id?: string;
   auditor_id?: string;
@@ -48,7 +49,7 @@ export interface SessionClaim {
   destination_housing?: { name: string } | null;
 }
 
-export type SessionWithRelations = InspectionSession & { created_at: string; claim_action?: { code: string | null } | null; action_template?: { code: string | null } | null; claim?: SessionClaim };
+export type SessionWithRelations = InspectionSession & { created_at: string; claim_action?: { code: string | null } | null; action_template?: { code: string | null } | null; inspector?: { id: string; full_name: string | null; email: string | null } | null; claim?: SessionClaim; inspection_reports?: { report_url: string | null; status: string; generated_at: string }[] | null };
 
 interface LiveSession {
   id: string;
@@ -114,7 +115,7 @@ export interface SessionDetail extends Omit<InspectionSession, 'inspection_evide
 
 export async function getInspectionSessions(claimId?: string) {
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
-    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, inspector_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
     ...(claimId ? { eq: { claim_id: claimId } } : {}),
     order: { column: "created_at", ascending: false },
   });
@@ -137,13 +138,96 @@ export async function getInspectionSessions(claimId?: string) {
   return sessions;
 }
 
+export interface SessionForReassign {
+  id: string;
+  claim_id: string;
+  company_id: string;
+  inspector_id: string;
+  inspection_number: string;
+  status: string;
+  inspection_date: string | null;
+  inspection_time: string | null;
+  scheduled_at: string | null;
+  claim: {
+    claim_number?: string | null;
+    client_reference?: string | null;
+    liquidation_number?: string | null;
+    claim_address?: string | null;
+    company_id?: string | null;
+  } | null;
+  inspector: {
+    full_name?: string | null;
+    email?: string | null;
+  } | null;
+  claim_action?: { code: string | null } | null;
+}
+
+export async function getPendingInspectionSessionsForReassign() {
+  const sessions = await fetchAll<SessionForReassign>("inspection_sessions", {
+    select: "id, claim_id, company_id, inspector_id, inspection_number, status, inspection_date, inspection_time, scheduled_at, claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, liquidation_number, claim_address, company_id), inspector:profiles!inspection_sessions_inspector_id_fkey(full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code)",
+    eq: { status: "scheduled" },
+    order: { column: "inspection_date", ascending: true },
+  });
+
+  for (const s of sessions) {
+    if (s.claim_action?.code) {
+      (s as SessionForReassign & { inspection_number: string }).inspection_number = s.claim_action.code;
+    }
+  }
+
+  return sessions;
+}
+
+export async function reassignInspectionSession(
+  sessionId: string,
+  newInspectorId: string,
+  reason: string,
+  userId?: string,
+) {
+  const session = await fetchById<{ id: string; inspector_id: string | null; company_id: string | null }>(
+    "inspection_sessions",
+    sessionId,
+    "id, inspector_id, company_id",
+  );
+  if (!session) throw new Error("Inspección no encontrada");
+
+  const oldInspectorId = session.inspector_id;
+
+  await updateRow<Pick<InspectionSession, "id" | "inspector_id">>(
+    "inspection_sessions",
+    sessionId,
+    { inspector_id: newInspectorId },
+    "id, inspector_id",
+  );
+
+  try {
+    await insertRow(
+      "audit_logs",
+      {
+        table_name: "inspection_sessions",
+        record_id: sessionId,
+        action: "UPDATE",
+        old_data: { inspector_id: oldInspectorId },
+        new_data: { inspector_id: newInspectorId, reason },
+        performed_by: userId || null,
+        company_id: session.company_id || null,
+      },
+      "id",
+    );
+  } catch (e) {
+    console.error("No se pudo registrar auditoría de reasignación:", e);
+  }
+
+  return { id: sessionId, inspector_id: newInspectorId };
+}
+
 /**
  * Obtener sesiones de inspección remotas activas para supervisión.
  * Solo retorna sesiones con status 'active' e inspection_type 'remote'.
  */
 export async function getActiveRemoteSessions() {
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
-    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name)), inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, type), inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id), inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role)`,
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name)), inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, type), inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id), inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role)`,
     eq: { status: "active", inspection_type: "remote" },
     order: { column: "started_at", ascending: false },
   });
@@ -153,7 +237,7 @@ export async function getActiveRemoteSessions() {
 
 export async function getInspectionSessionByToken(token: string) {
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
-    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), inspection_reports:inspection_reports!inspection_reports_session_id_fkey(report_url, status, generated_at))`,
     eq: { magic_link_token: token },
     limit: 1,
   });
@@ -252,7 +336,7 @@ export async function getInspectionSessionById(id: string) {
     ${SESSION_SELECT}, created_at,
     claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, action_data, issuer_id, issued_on, issued_by),
     action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
-    claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, report_date, assignment_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, company_id, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
+    claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, report_date, assignment_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
     inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, metadata, created_at),
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
     inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at),
@@ -491,6 +575,35 @@ export async function updateInspectionSession(id: string, input: Partial<Inspect
     if (value !== undefined) set[key] = value;
   }
   return updateRow<InspectionSession>("inspection_sessions", id, set, SESSION_SELECT);
+}
+
+/**
+ * Levanta el bloqueo de una inspección activa para que un administrador
+ * o usuario internal pueda ingresar a cerrarla/finalizarla.
+ */
+export async function liftInspectionLock(sessionId: string, userId: string) {
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    lock_overridden_by: userId,
+    lock_overridden_at: new Date().toISOString(),
+  }, SESSION_SELECT);
+}
+
+/**
+ * Determina si el usuario puede acceder a una inspección teniendo en cuenta
+ * el bloqueo de sesiones activas: solo el inspector asignado puede entrar a
+ * una inspección en curso, salvo que un internal haya levantado el bloqueo.
+ */
+export function canAccessInspectionSession(
+  session: { status: string; inspector_id: string | null; lock_overridden_by: string | null },
+  profile: { id: string } | null | undefined,
+  dataAccess: { is_admin: boolean; see_all_client_claims: boolean } | null | undefined,
+): boolean {
+  if (!profile) return false;
+  if (session.status !== "active") {
+    return !!(dataAccess?.is_admin || dataAccess?.see_all_client_claims || session.inspector_id === profile.id);
+  }
+  if (session.inspector_id === profile.id) return true;
+  return !!session.lock_overridden_by;
 }
 
 /**

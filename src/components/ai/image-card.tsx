@@ -135,7 +135,7 @@ export function ImageCard({
   return (
     <div className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
       {/* Thumbnail */}
-      <div className="relative aspect-16/9 overflow-hidden bg-muted/30">
+      <div className="relative aspect-video overflow-hidden bg-muted/30">
         {thumbnailContent ?? (
           <button
             type="button"

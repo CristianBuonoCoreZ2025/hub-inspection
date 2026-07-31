@@ -38,11 +38,17 @@ const ACTION_TEMPLATE_SELECT =
 const CLAIM_ACTION_SELECT =
   `id, claim_id, action_type_id, action_features_id, action_template_id, line_business_id, name, description, code, action_data, action_status_id, created_by, created_on, issued_by, issued_on, issuer_id, issue_rejected_by, issue_rejected_on, issuer_rejection_comment, reviewed_by, reviewed_on, reviewer_id, review_rejected_by, review_rejected_on, reviewer_rejection_comment, approved_by, approved_on, approver_id, approve_rejected_by, approve_rejected_on, approver_rejection_comment, dispatched_by, dispatched_on, dispatcher_id, dispatch_rejected_by, dispatch_rejected_on, dispatcher_rejection_comment, expected_date, is_blocker, is_active, is_automatic, origin, updated_on, updated_by, screen_snapshot, screen_snapshot_at, action_feature:action_features!claim_actions_action_features_id_fkey(${ACTION_FEATURE_SELECT}), action_type:lookup_catalog!claim_actions_action_type_id_fkey(id, category, code, name), action_status:lookup_catalog!claim_actions_action_status_id_fkey(id, category, code, name), action_template:action_template(id, name, code, issuer_roles, reviewer_roles, approver_roles, days_to_issue, days_to_review, days_to_approve), issuer:profiles!claim_actions_issuer_id_fkey(id, full_name, email), reviewer:profiles!claim_actions_reviewer_id_fkey(id, full_name, email), approver:profiles!claim_actions_approver_id_fkey(id, full_name, email)`;
 
-/** Obtiene el nombre completo de un perfil por ID (para logging de historial) */
+/** Obtiene el nombre completo de un perfil por ID o por auth user_id (para logging de historial) */
 export async function getProfileName(userId: string): Promise<string | null> {
   try {
     const profile = await fetchById<{ full_name: string }>("profiles", userId, "full_name");
-    return profile?.full_name || null;
+    if (profile?.full_name) return profile.full_name;
+    const byUserId = await fetchAll<{ full_name: string }>("profiles", {
+      select: "full_name",
+      eq: { user_id: userId },
+      limit: 1,
+    });
+    return byUserId[0]?.full_name || null;
   } catch {
     return null;
   }

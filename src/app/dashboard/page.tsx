@@ -89,19 +89,23 @@ function getActivityIcon(log: AuditLog) {
 
 /**
  * Filtra los claims según el rol del usuario:
- * - global user (sin compañía): ve todo
- * - adjuster: claims donde es assigned_adjuster, adjuster, auditor o dispatcher
- * - inspector: claims donde es inspector
- * - assistant: claims donde es assistant
+ * - internal: ve todo
+ * - otros roles: solo claims donde participa en alguno de los roles asignados
  */
 function filterClaimsForUser(
   allClaims: Claim[],
   profile: { id: string; role: UserRole; company_id: string | null } | null | undefined
 ): Claim[] {
   if (!profile) return [];
-  // Los datos ya vienen filtrados por RLS según las compañías visibles para el usuario.
-  // No se aplica filtro adicional por rol para que todos vean el mismo dashboard global.
-  return allClaims;
+  if (profile.role === "internal") return allClaims;
+  return allClaims.filter((c) =>
+    c.assigned_adjuster_id === profile.id ||
+    c.adjuster_id === profile.id ||
+    c.inspector_id === profile.id ||
+    c.auditor_id === profile.id ||
+    c.dispatcher_id === profile.id ||
+    c.assistant_id === profile.id
+  );
 }
 
 export default function DashboardPage() {
@@ -111,7 +115,7 @@ export default function DashboardPage() {
   useRealtime("inspection_sessions", [["inspection-sessions"], ["inspection-sessions-all"]]);
   useRealtime("audit_logs", [["recent-activity"]]);
 
-  const isGlobalUser = true;
+  const isGlobalUser = profile?.role === "internal";
   const roleLabel = profile ? userTypeLabels[profile.role] : "";
 
   const { data: claims } = useQuery({
@@ -150,15 +154,10 @@ export default function DashboardPage() {
     [claims, profile]
   );
 
-  // Filtrar sesiones de inspección: solo las que pertenecen a los claims del usuario
-  const myClaimIds = useMemo(
-    () => new Set(myClaims.map((c) => c.id)),
-    [myClaims]
-  );
-
-  const mySessions = useMemo(() => {
-    return (sessions ?? []).filter((s: InspectionSession) => myClaimIds.has(s.claim_id));
-  }, [sessions, myClaimIds]);
+  // Las sesiones ya vienen filtradas por RLS (is_session_accessible).
+  // No se recortan por claims para que un inspector asignado a una inspección
+  // la vea aunque no tenga acceso al siniestro asociado.
+  const mySessions = useMemo(() => sessions ?? [], [sessions]);
 
   const stats = useMemo(() => {
     const allClaims = myClaims;

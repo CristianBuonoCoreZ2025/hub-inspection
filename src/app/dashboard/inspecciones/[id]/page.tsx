@@ -10,6 +10,7 @@ import {
  updateInspectionSession,
  rescheduleInspectionViaCIN,
  cancelInspectionViaCIN,
+ canAccessInspectionSession,
 } from "@/services/inspections";
 import { updateClaimStatus } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
@@ -39,6 +40,7 @@ import {
  AlertTriangle,
  CheckCircle2,
  Loader2,
+ Wifi,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -71,7 +73,9 @@ import SignaturesTab from "./signatures-tab";
 import ReportTab from "./report-tab";
 import SketchesTab from "./sketches-tab";
 import ChatTab from "./chat-tab";
+import ConnectionLogsTab from "./connection-logs-tab";
 import { LiveVideoCall } from "@/components/inspection/live-video-call";
+import { logConnectionEvent } from "@/services/connection-logs";
 
 // Fix iconos de Leaflet en Next.js (CDN)
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -136,7 +140,7 @@ export default function InspectionDetailPage() {
  const queryClient = useQueryClient();
  const sessionId = params.id as string;
  const { canView } = usePermissions();
- const { profile } = useAuth();
+ const { profile, dataAccess } = useAuth();
  const [activeTab, setActiveTab] = useState("resumen");
  const [cancelModalOpen, setCancelModalOpen] = useState(false);
  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
@@ -149,6 +153,8 @@ export default function InspectionDetailPage() {
  const [videoCallOpen, setVideoCallOpen] = useState(false);
  const [mapViewOpen, setMapViewOpen] = useState(false);
  const autoVideoOpenedRef = useRef(false);
+ // Ref para el ID del log de conexión del inspector
+ const inspectorLogIdRef = useRef<string | null>(null);
 
  // Límites de fecha para reagendamiento: máximo days_to_issue del CIN (2 días)
  const { maxDate: rescheduleMaxDate } = useMemo(() => {
@@ -169,13 +175,18 @@ export default function InspectionDetailPage() {
  },
  });
 
+ const isAccessBlocked = useMemo(() => {
+   if (!session || !profile) return false;
+   return !canAccessInspectionSession(session, profile, dataAccess);
+ }, [session, profile, dataAccess]);
+
  useEffect(() => {
- if (session && session.inspection_type === "remote" && session.status === "active" && !autoVideoOpenedRef.current) {
+ if (session && session.inspection_type === "remote" && session.status === "active" && !autoVideoOpenedRef.current && !isAccessBlocked) {
  autoVideoOpenedRef.current = true;
  setChatPanelOpen(true);
  setVideoCallOpen(true);
  }
- }, [session]);
+ }, [session, isAccessBlocked]);
 
  const { data: users } = useQuery({
  queryKey: ["users"],
@@ -294,7 +305,7 @@ export default function InspectionDetailPage() {
  }
  }
  // Volver al siniestro (la INS fue rechazada, no hay nueva inspección)
- if (session?.claim_id) router.push(`/dashboard/claims/${session.claim_id}`);
+ if (session?.claim_id && canOpenClaim) router.push(`/dashboard/claims/${session.claim_id}`);
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -327,7 +338,7 @@ export default function InspectionDetailPage() {
  setRescheduleSelectedDatetime("");
  setRescheduleInspectorId("");
  // Volver al siniestro — el usuario debe completar la nueva CIN
- if (session?.claim_id) router.push(`/dashboard/claims/${session.claim_id}`);
+ if (session?.claim_id && canOpenClaim) router.push(`/dashboard/claims/${session.claim_id}`);
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -358,6 +369,25 @@ export default function InspectionDetailPage() {
  );
  }
 
+ if (isAccessBlocked) {
+ return (
+ <div className="app-page flex items-center justify-center">
+ <div className="app-panel max-w-xl w-full p-8 text-center">
+ <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
+ <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-300" />
+ </div>
+ <h2 className="app-section-title mb-2">Inspección en curso</h2>
+ <p className="app-body text-muted-foreground mb-4">
+ Esta inspección se encuentra activa y en realización. Solo el inspector asignado puede acceder mientras esté en curso.
+ </p>
+ <p className="app-body text-sm text-muted-foreground">
+ Si necesitas intervenir, contacta al supervisor para levantar el bloqueo.
+ </p>
+ </div>
+ </div>
+ );
+ }
+
  type ClaimData = {
  claim_number?: string | null;
  client_reference?: string | null;
@@ -371,6 +401,11 @@ export default function InspectionDetailPage() {
  liquidation_number?: string | null;
  broker_executive?: string | null;
  inspector_id?: string | null;
+ assigned_adjuster_id?: string | null;
+ adjuster_id?: string | null;
+ auditor_id?: string | null;
+ dispatcher_id?: string | null;
+ assistant_id?: string | null;
  country_id?: string | null;
  insurance_company?: { name: string } | null;
  broker?: { name: string } | null;
@@ -383,6 +418,20 @@ export default function InspectionDetailPage() {
  claims_participants?: Array<{ type: string; full_name: string | null; first_name: string | null; last_name: string | null; email: string | null; phone: string | null; cell_phone: string | null; rut?: string | null; address?: string | null; person_type?: string | null; country?: string | null; region?: string | null; city?: string | null; commune?: string | null }>;
 };
  const claim = session.claim as ClaimData | undefined;
+ const isUserAssignedToClaim = (() => {
+   if (!claim || !profile?.id) return false;
+   if (dataAccess?.is_admin || dataAccess?.see_all_client_claims) return true;
+   const assigneeIds = [
+     claim.assigned_adjuster_id,
+     claim.adjuster_id,
+     claim.inspector_id,
+     claim.auditor_id,
+     claim.dispatcher_id,
+     claim.assistant_id,
+   ];
+   return assigneeIds.some((id) => id === profile.id);
+ })();
+ const canOpenClaim = canView("claims") && isUserAssignedToClaim;
  const participants = claim?.claims_participants || [];
  const insuredParticipant = participants.find((p) => p.type === "insured");
  const contactParticipant = participants.find((p) => p.type === "contact");
@@ -413,6 +462,7 @@ export default function InspectionDetailPage() {
  { id: "croquis", label: "Croquis", icon: MapPin, section: "inspecciones_croquis" },
  { id: "firmas", label: "Firmas", icon: User, section: "inspecciones_firmas" },
  { id: "informe", label: "Informe", icon: FileText, section: "inspecciones_informe" },
+ { id: "conexiones", label: "Conexiones", icon: Wifi, section: "inspecciones_detalle" },
  ];
 
  const tabs = allTabs.filter(t => canView(t.section));
@@ -489,9 +539,13 @@ export default function InspectionDetailPage() {
  <span className="app-data-label">N° Interno</span>
  <p className="font-mono font-semibold text-primary truncate">
  {claim?.liquidation_number ? (
+ canOpenClaim ? (
  <Link href={`/dashboard/claims/${session.claim_id}`} className="hover:underline">
  {claim.liquidation_number as string}
  </Link>
+ ) : (
+ <span className="text-foreground">{claim.liquidation_number as string}</span>
+ )
  ) : (
  "—"
  )}
@@ -936,6 +990,13 @@ export default function InspectionDetailPage() {
  </div>
  )}
 
+ {/* ── TAB: CONEXIONES ── */}
+ {activeTab === "conexiones" && (
+ <div className="mt-4">
+ <ConnectionLogsTab sessionId={session.id} />
+ </div>
+ )}
+
  </div>
 
  {/* Panel overlay de Comunicación — flotante, no roba espacio */}
@@ -947,15 +1008,64 @@ export default function InspectionDetailPage() {
  <MessageSquare className="h-4 w-4" />
  Comunicación
  </h3>
+ <div className="flex items-center gap-1">
+ {videoCallOpen && session.status === "active" && (
+ <Button
+ variant="ghost"
+ size="sm"
+ className="h-7 text-xs text-rose-500 hover:text-rose-600"
+ onClick={() => {
+ setVideoCallOpen(false);
+ const logId = inspectorLogIdRef.current;
+ if (logId) {
+ logConnectionEvent({
+ sessionId: session.id,
+ role: "adjuster",
+ status: "disconnected",
+ logId,
+ disconnectReason: "hangup",
+ });
+ inspectorLogIdRef.current = null;
+ }
+ }}
+ >
+ Desconectar
+ </Button>
+ )}
  <Button
  variant="ghost"
  size="icon"
  className="btn-icon-sm"
  onClick={() => setChatPanelOpen(false)}
+ title="Minimizar chat"
  >
  <XCircle className="h-3.5 w-3.5" />
  </Button>
  </div>
+ </div>
+
+ {!videoCallOpen && session.status === "active" && profile?.id && (
+ <div className="shrink-0 mb-3 p-3 rounded-lg border border-border bg-muted/30 text-center">
+ <p className="app-body text-muted-foreground mb-2">Videollamada desconectada</p>
+ <Button
+ onClick={() => {
+ setVideoCallOpen(true);
+ // Crear log de conexión del inspector
+ logConnectionEvent({
+ sessionId: session.id,
+ role: "adjuster",
+ status: "connecting",
+ }).then((logId) => {
+ if (logId) inspectorLogIdRef.current = logId;
+ });
+ }}
+ className="gap-2"
+ >
+ <Video className="h-4 w-4" />
+ Conectar videollamada
+ </Button>
+ </div>
+ )}
 
  {videoCallOpen && session.status === "active" && profile?.id && (
  <div className="h-48 shrink-0 mb-3 rounded-lg overflow-hidden border border-border">
@@ -964,7 +1074,59 @@ export default function InspectionDetailPage() {
  userId={profile.id}
  role="inspector"
  compact
- onHangup={() => setVideoCallOpen(false)}
+ onHangup={() => {
+ setVideoCallOpen(false);
+ // Marcar log como desconectado
+ const logId = inspectorLogIdRef.current;
+ if (logId) {
+ logConnectionEvent({
+ sessionId: session.id,
+ role: "adjuster",
+ status: "disconnected",
+ logId,
+ disconnectReason: "hangup",
+ });
+ inspectorLogIdRef.current = null;
+ }
+ }}
+ onKicked={(reason) => {
+ setVideoCallOpen(false);
+ const logId = inspectorLogIdRef.current;
+ if (logId) {
+ logConnectionEvent({
+ sessionId: session.id,
+ role: "adjuster",
+ status: "kicked",
+ logId,
+ disconnectReason: reason,
+ });
+ inspectorLogIdRef.current = null;
+ }
+ }}
+ onMediaPermission={(result) => {
+ // Crear log de conexión del inspector con permisos
+ if (!inspectorLogIdRef.current) {
+ logConnectionEvent({
+ sessionId: session.id,
+ role: "adjuster",
+ status: "success",
+ cameraPermission: result.camera,
+ microphonePermission: result.microphone,
+ }).then((id) => {
+ if (id) inspectorLogIdRef.current = id;
+ });
+ } else {
+ // Actualizar permisos si ya existe el log
+ logConnectionEvent({
+ sessionId: session.id,
+ role: "adjuster",
+ status: "success",
+ logId: inspectorLogIdRef.current,
+ cameraPermission: result.camera,
+ microphonePermission: result.microphone,
+ });
+ }
+ }}
  onScreenshotSaved={() => {
  queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });

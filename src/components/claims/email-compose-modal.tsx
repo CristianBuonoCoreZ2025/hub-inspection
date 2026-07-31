@@ -14,7 +14,6 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HtmlEditor } from "@/components/ui/html-editor";
-import { GroupedContactsList } from "@/components/ui/grouped-contacts-list";
 import { getEmailTemplatesForAction } from "@/services/email-template-actions";
 import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
 import { getSupabaseClient } from "@/lib/supabase/db";
@@ -65,17 +64,57 @@ const GROUP_LABELS: Record<string, string> = {
 
 const GROUP_ORDER = ["participants", "team", "advisor", "global"];
 
+function ContactBookTabs({
+  target,
+  onChange,
+}: {
+  target: "to" | "cc";
+  onChange: (t: "to" | "cc") => void;
+}) {
+  return (
+    <div className="flex border-b border-border/50 shrink-0">
+      <button
+        type="button"
+        onClick={() => onChange("to")}
+        className={`flex-1 px-2 py-1.5 text-[10px] font-medium ${
+          target === "to"
+            ? "text-foreground border-b-2 border-primary bg-muted/30"
+            : "text-muted-foreground hover:bg-muted/20"
+        }`}
+      >
+        Para
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("cc")}
+        className={`flex-1 px-2 py-1.5 text-[10px] font-medium ${
+          target === "cc"
+            ? "text-foreground border-b-2 border-primary bg-muted/30"
+            : "text-muted-foreground hover:bg-muted/20"
+        }`}
+      >
+        CC
+      </button>
+    </div>
+  );
+}
+
 function ContactBookButton({
   contacts,
   onPick,
   label,
+  to,
+  cc,
 }: {
   contacts: EmailContact[];
-  onPick: (email: string) => void;
+  onPick: (email: string, target: "to" | "cc") => void;
   label: string;
+  to: string[];
+  cc: string[];
 }) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [target, setTarget] = useState<"to" | "cc">("to");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -88,7 +127,7 @@ function ContactBookButton({
     );
   }, [contacts, search]);
 
-  const groups = useMemo(() => {
+  const grouped = useMemo(() => {
     const map: Record<string, EmailContact[]> = {};
     for (const c of filtered) {
       const g = c.group;
@@ -97,56 +136,11 @@ function ContactBookButton({
     }
     return GROUP_ORDER
       .filter((g) => map[g])
-      .map((g) => ({ title: GROUP_LABELS[g] || g, items: map[g] }));
+      .map((g) => ({ key: g, title: GROUP_LABELS[g] || g, items: map[g] }));
   }, [filtered]);
 
-  const renderContact = (contact: EmailContact) => {
-    const initials = (contact.fullName || contact.email)
-      .split(" ")
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          onPick(contact.email);
-          setOpen(false);
-          setSearch("");
-        }}
-        className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent transition-colors"
-      >
-        <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0 email-icon-gradient">
-          {initials}
-        </div>
-        <div className="flex flex-col min-w-0 flex-1">
-          <span className="text-[11px] font-medium text-foreground truncate">
-            {contact.fullName || contact.email}
-          </span>
-          {contact.fullName && (
-            <span className="text-[10px] text-muted-foreground truncate font-mono">
-              {contact.email}
-            </span>
-          )}
-        </div>
-        <div className="flex gap-0.5 shrink-0">
-          {contact.roles.slice(0, 2).map((role) => (
-            <span
-              key={role}
-              className={`text-[8px] px-1 py-0.5 rounded font-medium ${
-                contact.isInternal
-                  ? "bg-primary/12 text-primary"
-                  : "bg-muted/40 text-muted-foreground"
-              }`}
-            >
-              {role}
-            </span>
-          ))}
-        </div>
-      </button>
-    );
-  };
+  const inField = (email: string, field: "to" | "cc") =>
+    field === "to" ? to.includes(email) : cc.includes(email);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -163,11 +157,22 @@ function ContactBookButton({
         }
       />
       <PopoverContent align="start" sideOffset={4} className="w-80 max-h-96 p-0 flex flex-col overflow-hidden">
-        {/* Header fijo */}
-        <div className="px-3 py-2 border-b border-border/50 shrink-0">
+        {/* Header */}
+        <div className="px-3 py-2 border-b border-border/50 shrink-0 flex items-center justify-between">
           <span className="text-[11px] font-semibold text-foreground">Libreta de contactos</span>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <X className="h-3 w-3" />
+          </button>
         </div>
-        {/* Buscador — estándar del sistema (app-grid-search-wrap + liquid-search) */}
+
+        {/* Tabs */}
+        <ContactBookTabs target={target} onChange={setTarget} />
+
+        {/* Buscador */}
         <div className="px-3 py-2 border-b border-border/50 shrink-0">
           <div className="app-grid-search-wrap">
             <Search />
@@ -179,25 +184,81 @@ function ContactBookButton({
             />
           </div>
         </div>
-        {/* Lista agrupada con headers sticky estilo iOS */}
-        <GroupedContactsList
-          groups={groups}
-          renderItem={renderContact}
-          getItemKey={(c) => c.email + (c.fullName || "")}
-          emptyState={
-            contacts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
-                <Users className="h-6 w-6 opacity-40" />
-                <p className="text-[11px]">No hay contactos disponibles</p>
+
+        {/* Lista */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {contacts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
+              <Users className="h-6 w-6 opacity-40" />
+              <p className="text-[11px]">No hay contactos disponibles</p>
+            </div>
+          ) : grouped.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
+              <Search className="h-5 w-5 opacity-40" />
+              <p className="text-[11px]">Sin resultados para &ldquo;{search}&rdquo;</p>
+            </div>
+          ) : (
+            grouped.map((group) => (
+              <div key={group.key}>
+                <div className="sticky top-0 z-10 px-3 py-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground bg-background/80 backdrop-blur-sm border-b border-border/20">
+                  {group.title}
+                </div>
+                {group.items.map((contact) => {
+                  const initials = (contact.fullName || contact.email)
+                    .split(" ")
+                    .map((w) => w[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase();
+                  const alreadyIn = inField(contact.email, target);
+                  const other = target === "to" ? cc : to;
+                  const inOther = other.includes(contact.email);
+                  return (
+                    <div
+                      key={contact.email}
+                      onDoubleClick={() => {
+                        if (alreadyIn) return;
+                        onPick(contact.email, target);
+                      }}
+                      className={`flex items-center gap-2 px-3 py-1.5 border-b border-border/15 transition-colors ${
+                        alreadyIn ? "bg-primary/5" : "hover:bg-accent/50 cursor-pointer"
+                      }`}
+                      title={alreadyIn ? undefined : "Doble clic para agregar"}
+                    >
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0 email-icon-gradient">
+                        {initials}
+                      </div>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-[11px] font-medium text-foreground truncate">
+                          {contact.fullName || contact.email}
+                        </span>
+                        {contact.fullName && (
+                          <span className="text-[10px] text-muted-foreground truncate font-mono">
+                            {contact.email}
+                          </span>
+                        )}
+                      </div>
+                      {alreadyIn && (
+                        <span className={`text-[8px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
+                          target === "to"
+                            ? "bg-primary/20 text-primary"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                        }`}>
+                          {target === "to" ? "En Para" : "En CC"}
+                        </span>
+                      )}
+                      {inOther && !alreadyIn && (
+                        <span className="text-[8px] px-1.5 py-0.5 rounded font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 shrink-0">
+                          {target === "to" ? "En CC" : "En Para"}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
-                <Search className="h-5 w-5 opacity-40" />
-                <p className="text-[11px]">Sin resultados para &ldquo;{search}&rdquo;</p>
-              </div>
-            )
-          }
-        />
+            ))
+          )}
+        </div>
       </PopoverContent>
     </Popover>
   );
@@ -212,8 +273,10 @@ export function EmailComposeModal({
 }: EmailComposeModalProps) {
   const [mode, setMode] = useState<"template" | "manual">("template");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
-  const [to, setTo] = useState<string>("");
-  const [cc, setCc] = useState<string>("");
+  const [to, setTo] = useState<string[]>([]);
+  const [cc, setCc] = useState<string[]>([]);
+  const [toDraft, setToDraft] = useState("");
+  const [ccDraft, setCcDraft] = useState("");
   const [subjectOverride, setSubjectOverride] = useState<string | null>(null);
   const [bodyOverride, setBodyOverride] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -395,16 +458,8 @@ export function EmailComposeModal({
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      // Separar destinatarios por coma O punto y coma (Outlook usa ;).
-      // Sin esto, si el usuario pega "a@x.com;b@y.com" se envía como un
-      // solo "email" inválido y Resend rechaza con validation_error 422.
-      const splitRecipients = (raw: string) =>
-        raw
-          .split(/[,;]\s*/)
-          .map((s) => s.trim())
-          .filter(Boolean);
-      const toArr = splitRecipients(to);
-      const ccArr = splitRecipients(cc);
+      const toArr = to;
+      const ccArr = cc;
 
       const payload: Record<string, unknown> = {
         claimActionId: action.id,
@@ -441,8 +496,8 @@ export function EmailComposeModal({
       toast.success("E-mail enviado");
       queryClient.invalidateQueries({ queryKey: ["email-logs-by-claim", action.claim_id] });
       queryClient.invalidateQueries({ queryKey: ["email-logs", action.id] });
-      setTo("");
-      setCc("");
+      setTo([]);
+      setCc([]);
       setSubjectOverride(null);
       setBodyOverride(null);
       onOpenChange(false);
@@ -451,53 +506,72 @@ export function EmailComposeModal({
   });
 
   const addRecipientToField = (email: string, field: "to" | "cc") => {
-    const setter = field === "to" ? setTo : setCc;
     const current = field === "to" ? to : cc;
-    const existing = current.split(",").map((s) => s.trim()).filter(Boolean);
-    if (existing.includes(email)) return;
-    setter([...existing, email].join(", "));
+    if (current.includes(email)) return;
+    // Si el contacto está en el otro campo, lo movemos (un email no puede estar en Para y CC).
+    if (field === "to" && cc.includes(email)) {
+      setCc(cc.filter((e) => e !== email));
+    } else if (field === "cc" && to.includes(email)) {
+      setTo(to.filter((e) => e !== email));
+    }
+    const setter = field === "to" ? setTo : setCc;
+    setter([...(field === "to" ? to : cc).filter((e) => e !== email), email]);
+    if (field === "to") setToDraft("");
+    else setCcDraft("");
     setAutocompleteQuery("");
     setActiveField(null);
   };
 
-  // ─── Autocomplete: filtrar contactos por lo que se está escribiendo ───
-  // Extrae el último fragmento después de la última coma
-  const getLastFragment = (text: string) => {
-    const parts = text.split(",");
-    return parts[parts.length - 1].trim();
+  const removeRecipientFromField = (email: string, field: "to" | "cc") => {
+    const setter = field === "to" ? setTo : setCc;
+    const current = field === "to" ? to : cc;
+    setter(current.filter((e) => e !== email));
+  };
+
+  const tryCommitDraft = (field: "to" | "cc") => {
+    const draft = field === "to" ? toDraft : ccDraft;
+    const email = draft.trim();
+    if (!email) return;
+    // Email simple validación
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      addRecipientToField(email, field);
+    }
   };
 
   const autocompleteSuggestions = useMemo(() => {
     if (!activeField || !contacts) return [];
     const query = autocompleteQuery.toLowerCase().trim();
     if (query.length < 1) return [];
+    const existing = activeField === "to" ? to : cc;
     return contacts
       .filter(
         (c) =>
-          c.email.toLowerCase().includes(query) ||
-          (c.fullName?.toLowerCase().includes(query) ?? false) ||
-          c.roles.some((r) => r.toLowerCase().includes(query))
+          !existing.includes(c.email) &&
+          (c.email.toLowerCase().includes(query) ||
+            (c.fullName?.toLowerCase().includes(query) ?? false) ||
+            c.roles.some((r) => r.toLowerCase().includes(query)))
       )
       .slice(0, 8);
-  }, [activeField, contacts, autocompleteQuery]);
+  }, [activeField, contacts, autocompleteQuery, to, cc]);
 
   const handleRecipientInput = (value: string, field: "to" | "cc") => {
-    const setter = field === "to" ? setTo : setCc;
-    setter(value);
+    if (field === "to") setToDraft(value);
+    else setCcDraft(value);
     setActiveField(field);
-    setAutocompleteQuery(getLastFragment(value));
+    setAutocompleteQuery(value.trim().toLowerCase());
   };
 
-  const handleRecipientBlur = () => {
+  const handleRecipientBlur = (field: "to" | "cc") => {
     // Delay para permitir click en sugerencia
     setTimeout(() => {
+      tryCommitDraft(field);
       setActiveField(null);
       setAutocompleteQuery("");
     }, 200);
   };
 
   const canSend =
-    to.trim().length > 0 &&
+    to.length > 0 &&
     effectiveSubject.trim().length > 0 &&
     effectiveBody.trim().length > 0 &&
     !sendMutation.isPending;
@@ -604,17 +678,54 @@ export function EmailComposeModal({
             <div className="flex items-center gap-2 py-0.5 relative">
               <ContactBookButton
                 contacts={contacts || []}
-                onPick={(email) => addRecipientToField(email, "to")}
+                to={to}
+                cc={cc}
+                onPick={(email, target) => addRecipientToField(email, target)}
                 label="Para"
               />
-              <input
-                value={to}
-                onChange={(e) => handleRecipientInput(e.target.value, "to")}
-                onFocus={() => setActiveField("to")}
-                onBlur={handleRecipientBlur}
-                placeholder="nombre o email…"
-                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
-              />
+              <div
+                className="flex-1 flex flex-wrap items-center gap-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
+                onClick={() => {
+                  document.getElementById("to-input")?.focus();
+                }}
+              >
+                {to.map((email) => (
+                  <span
+                    key={email}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium"
+                  >
+                    {email}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeRecipientFromField(email, "to");
+                      }}
+                      className="hover:text-rose-500"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  id="to-input"
+                  value={toDraft}
+                  onChange={(e) => handleRecipientInput(e.target.value, "to")}
+                  onFocus={() => setActiveField("to")}
+                  onBlur={() => handleRecipientBlur("to")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "Tab" || e.key === "," || e.key === ";") {
+                      e.preventDefault();
+                      tryCommitDraft("to");
+                    }
+                    if (e.key === "Backspace" && toDraft === "" && to.length > 0) {
+                      removeRecipientFromField(to[to.length - 1], "to");
+                    }
+                  }}
+                  placeholder={to.length === 0 ? "nombre o email…" : ""}
+                  className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-20"
+                />
+              </div>
               {/* Toggle Plantilla */}
               <div className="flex items-center gap-2 shrink-0">
                 {hasTemplates && !showTemplateModal && effectiveMode !== "template" && (
@@ -647,17 +758,54 @@ export function EmailComposeModal({
             <div className="flex items-center gap-2 py-0.5 relative">
               <ContactBookButton
                 contacts={contacts || []}
-                onPick={(email) => addRecipientToField(email, "cc")}
+                to={to}
+                cc={cc}
+                onPick={(email, target) => addRecipientToField(email, target)}
                 label="cc"
               />
-              <input
-                value={cc}
-                onChange={(e) => handleRecipientInput(e.target.value, "cc")}
-                onFocus={() => setActiveField("cc")}
-                onBlur={handleRecipientBlur}
-                placeholder="con copia…"
-                className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
-              />
+              <div
+                className="flex-1 flex flex-wrap items-center gap-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-0"
+                onClick={() => {
+                  document.getElementById("cc-input")?.focus();
+                }}
+              >
+                {cc.map((email) => (
+                  <span
+                    key={email}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/40 text-foreground text-[10px] font-medium"
+                  >
+                    {email}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeRecipientFromField(email, "cc");
+                      }}
+                      className="hover:text-rose-500"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  id="cc-input"
+                  value={ccDraft}
+                  onChange={(e) => handleRecipientInput(e.target.value, "cc")}
+                  onFocus={() => setActiveField("cc")}
+                  onBlur={() => handleRecipientBlur("cc")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "Tab" || e.key === "," || e.key === ";") {
+                      e.preventDefault();
+                      tryCommitDraft("cc");
+                    }
+                    if (e.key === "Backspace" && ccDraft === "" && cc.length > 0) {
+                      removeRecipientFromField(cc[cc.length - 1], "cc");
+                    }
+                  }}
+                  placeholder={cc.length === 0 ? "con copia…" : ""}
+                  className="flex-1 bg-transparent border-0 outline-none text-foreground text-[12px] min-w-20"
+                />
+              </div>
             </div>
           </div>
 
@@ -753,7 +901,7 @@ export function EmailComposeModal({
                     onChange={(html) => setBodyOverride(html)}
                     editorRef={htmlEditorRef}
                     placeholder="Escribe el cuerpo del correo…"
-                    className="email-composer-editor-body"
+                    className="email-body-render"
                     header={
                       effectiveMode === "template" && selectedTemplate ? (
                         <div

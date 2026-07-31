@@ -45,18 +45,41 @@ export interface UserTypePermission {
   updated_at: string;
 }
 
+export interface UserTypeDataAccess {
+  user_type: UserRole;
+  is_admin: boolean;
+  see_all_client_claims: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Page {
+  code: string;
+  label: string;
+  category: string;
+  actions: string[];
+  parent_code: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type PermissionSection =
   | "dashboard"
   | "claims"
   | "inspecciones"
   | "agenda"
+  | "informes"
+  | "supervision"
   | "catalogos"
+  | "catalogos_polizas"
   | "catalogos_inspeccion"
   | "operaciones"
   | "administracion"
   | "users"
   | "companies"
-  | "configuracion";
+  | "configuracion"
+  | "perfiles";
 
 export type { ClaimInput, CompanyInput, InviteUserInput } from "@/lib/validations";
 
@@ -180,12 +203,15 @@ export interface Claim {
   inspection_sessions?: Array<{
     id: string;
     claim_action_id: string | null;
+    inspector_id: string | null;
     status: string;
     inspection_number: string | null;
     inspection_type?: string | null;
     scheduled_at?: string | null;
     started_at?: string | null;
     ended_at?: string | null;
+    lock_overridden_by: string | null;
+    lock_overridden_at: string | null;
     created_at?: string;
   }>;
   disabled: boolean;
@@ -378,6 +404,7 @@ export interface ActaThirdParty {
 
 export interface InspectionSession {
   id: string;
+  company_id: string;
   claim_id: string;
   claim_action_id: string | null;
   action_template_id: string | null;
@@ -417,6 +444,8 @@ export interface InspectionSession {
   geo_status: string | null;
   geo_map_url: string | null;
   geo_recapture_enabled: boolean;
+  lock_overridden_by: string | null;
+  lock_overridden_at: string | null;
   signature_waiver_reason: string | null;
   property_risk?: ActaPropertyRisk | null;
   property_materiality?: ActaPropertyMateriality | null;

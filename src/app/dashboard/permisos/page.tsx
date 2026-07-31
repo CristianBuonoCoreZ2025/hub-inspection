@@ -1,26 +1,29 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useState, Fragment, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAllPermissions,
   updatePermission,
-  sectionLabels,
-  sectionOrder,
-  sectionActions,
-  sectionSubPages,
-  subSectionActions,
   userTypeLabels,
   type PermissionAction,
 } from "@/services/permissions";
+import { getPages } from "@/services/pages";
 import {
   getAllFieldPermissions,
   upsertFieldPermission,
 } from "@/services/field-permissions";
 import { getFieldsForSection } from "@/lib/field-catalog";
-import type { UserTypePermission, UserRole, PermissionSection } from "@/types";
+import type { UserTypePermission, UserRole } from "@/types";
 import { toast } from "sonner";
-import { Check, Lock, Unlock, ChevronRight, ChevronDown, Settings2 } from "lucide-react";
+import { Check, Lock, Unlock, ChevronRight, ChevronDown, Settings2, Users } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const userTypes: UserRole[] = ["internal", "adjuster", "inspector", "assistant", "auditor", "dispatcher"];
 
@@ -28,18 +31,47 @@ type ColumnKey = "can_view" | "can_edit" | "can_create" | "can_delete";
 
 export default function PermisosPage() {
   const queryClient = useQueryClient();
+  const [selectedUserType, setSelectedUserType] = useState<UserRole>("internal");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
-  const { data: permissions, isLoading } = useQuery({
+  const { data: permissions, isLoading: isLoadingPermissions } = useQuery({
     queryKey: ["permissions"],
     queryFn: getAllPermissions,
   });
+
+  const isLoading = isLoadingPermissions;
 
   const { data: fieldPermissions } = useQuery({
     queryKey: ["field-permissions"],
     queryFn: getAllFieldPermissions,
   });
+
+  const { data: pages } = useQuery({
+    queryKey: ["pages"],
+    queryFn: getPages,
+  });
+
+  const { sectionOrder, sectionLabels, sectionActions, sectionSubPages } = useMemo(() => {
+    const labels: Record<string, string> = {};
+    const actions: Record<string, PermissionAction[]> = {};
+    const sub: Partial<Record<string, { section: string; label: string }[]>> = {};
+    const order: string[] = [];
+
+    for (const p of pages || []) {
+      labels[p.code] = p.label;
+      actions[p.code] = p.actions as PermissionAction[];
+      if (!p.parent_code) {
+        order.push(p.code);
+      } else {
+        const arr = sub[p.parent_code] || [];
+        arr.push({ section: p.code, label: p.label });
+        sub[p.parent_code] = arr;
+      }
+    }
+
+    return { sectionOrder: order, sectionLabels: labels, sectionActions: actions, sectionSubPages: sub };
+  }, [pages]);
 
   const fieldPermMutation = useMutation({
     mutationFn: ({
@@ -96,38 +128,13 @@ export default function PermisosPage() {
     }
   };
 
-  // Obtener acciones disponibles para una sección (maneja sub-secciones)
-  const getSectionActions = (section: string): PermissionAction[] => {
-    // 1. Si es una sub-sección con acciones definidas, usar esas
-    if (section in subSectionActions) {
-      return subSectionActions[section];
-    }
-    // 2. Si es una sección principal conocida
-    if (section in sectionActions) {
-      return sectionActions[section as PermissionSection];
-    }
-    // 3. Si es sub-sección sin acciones definidas, heredar del padre
-    if (section.startsWith("catalogos_inspeccion_")) {
-      return sectionActions.catalogos_inspeccion;
-    }
-    if (section.startsWith("catalogos_")) {
-      return sectionActions.catalogos;
-    }
-    if (section.startsWith("operaciones_")) {
-      return sectionActions.operaciones;
-    }
-    if (section.startsWith("claims_")) {
-      return sectionActions.claims;
-    }
-    if (section.startsWith("inspecciones_")) {
-      return sectionActions.inspecciones;
-    }
-    // Por defecto, todas
-    return ["view", "edit", "create", "delete"];
-  };
+  // Obtener acciones disponibles para una página
+  const getSectionActions = useCallback((section: string): PermissionAction[] => {
+    return sectionActions[section] || [];
+  }, [sectionActions]);
 
-  // Verificar si una sección tiene sub-páginas
-  const hasSubPages = (section: PermissionSection): boolean => {
+  // Verificar si una página tiene sub-páginas
+  const hasSubPages = (section: string): boolean => {
     return !!sectionSubPages[section] && sectionSubPages[section]!.length > 0;
   };
 
@@ -209,153 +216,171 @@ export default function PermisosPage() {
         <h1 className="app-page-title shrink-0">Permisos</h1>
       </div>
 
-      <div className="space-y-2">
-        {userTypes.map((userType) => {
-          const typePerms = permissions?.filter(p => p.user_type === userType) || [];
-
-          return (
-            <div
-              key={userType}
-              className="rounded-xl border border-border bg-card p-4 shadow-(--shadow-card)"
-            >
-              {/* Header del tipo de usuario */}
-              <div className="flex items-center justify-between mb-3">
+      <div className="app-panel p-4 mb-4">
+        <label className="app-data-label mb-2 block">Perfil a configurar</label>
+        <Select value={selectedUserType} onValueChange={(v) => setSelectedUserType(v as UserRole)}>
+          <SelectTrigger className="app-input h-8 w-full sm:w-72">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="Seleccionar perfil" />
+            </div>
+          </SelectTrigger>
+          <SelectContent side="bottom" sideOffset={0}>
+            {userTypes.map((userType) => (
+              <SelectItem key={userType} value={userType}>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-[14px] font-semibold text-foreground">{userTypeLabels[userType]}</h3>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    {userType}
-                  </span>
+                  <span>{userTypeLabels[userType]}</span>
+                  <span className="text-muted-foreground">({userType})</span>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      for (const p of typePerms) {
-                        const actions = getSectionActions(p.section);
-                        const input: Partial<UserTypePermission> = {};
-                        if (actions.includes("view")) input.can_view = true;
-                        if (actions.includes("edit")) input.can_edit = true;
-                        if (actions.includes("create")) input.can_create = true;
-                        if (actions.includes("delete")) input.can_delete = true;
-                        updateMutation.mutate({ id: p.id, input });
-                      }
-                    }}
-                    className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-500/20 transition-colors"
-                  >
-                    <Unlock className="h-3 w-3" />
-                    Todo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      for (const p of typePerms) {
-                        const actions = getSectionActions(p.section);
-                        const input: Partial<UserTypePermission> = {};
-                        if (actions.includes("view")) input.can_view = false;
-                        if (actions.includes("edit")) input.can_edit = false;
-                        if (actions.includes("create")) input.can_create = false;
-                        if (actions.includes("delete")) input.can_delete = false;
-                        updateMutation.mutate({ id: p.id, input });
-                      }
-                    }}
-                    className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted/70 transition-colors"
-                  >
-                    <Lock className="h-3 w-3" />
-                    Ninguno
-                  </button>
-                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {(() => {
+        const userType = selectedUserType;
+        const typePerms = permissions?.filter(p => p.user_type === userType) || [];
+
+        return (
+          <div className="rounded-xl border border-border bg-card p-4 shadow-(--shadow-card)">
+            {/* Header del tipo de usuario */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-[14px] font-semibold text-foreground">{userTypeLabels[userType]}</h3>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {userType}
+                </span>
               </div>
-
-              {/* Tabla de permisos */}
-              <div className="app-data-table-wrap">
-                <table className="app-data-table">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-2 font-medium text-muted-foreground">Sección</th>
-                      {allColumns.map((col) => {
-                        const actionKey = col.key.replace("can_", "") as PermissionAction;
-                        // Solo mostrar columna si al menos una sección la tiene
-                        const hasAny = sectionOrder.some(s => getSectionActions(s).includes(actionKey));
-                        if (!hasAny) return null;
-                        const allChecked = typePerms.length > 0 && typePerms.every(p => {
-                          const actions = getSectionActions(p.section);
-                          if (!actions.includes(actionKey)) return true;
-                          return p[col.key];
-                        });
-                        return (
-                          <th key={col.key} className="text-center py-2 px-2 font-medium text-muted-foreground w-[70px]">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleColumn(userType, col.key, !allChecked)}
-                              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                            >
-                              {allChecked && <Check className="h-3 w-3 text-emerald-500" />}
-                              {col.label}
-                            </button>
-                          </th>
-                        );
-                      })}
-                      <th className="text-center py-2 px-2 font-medium text-muted-foreground w-15">Todo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sectionOrder.map((section: PermissionSection) => {
-                      const perm = permissionsByType[userType][section];
-                      if (!perm) return null;
-                      const actions = getSectionActions(section);
-                      const allTrue = actions.every(a => perm[`can_${a}` as ColumnKey]);
-                      const canExpand = hasSubPages(section);
-                      const isExpanded = expandedSections.has(`${userType}-${section}`);
-
-                      return (
-                        <SectionRow
-                          key={section}
-                          perm={perm}
-                          section={section}
-                          label={sectionLabels[section]}
-                          actions={actions}
-                          allTrue={allTrue}
-                          canExpand={canExpand}
-                          isExpanded={isExpanded}
-                          onToggleExpand={() => toggleExpand(`${userType}-${section}`)}
-                          onToggle={(col) => handleToggle(perm, col)}
-                          onToggleRow={(val) => handleToggleRow(perm, section, val)}
-                          allColumns={allColumns}
-                        >
-                          {/* Sub-páginas */}
-                          {canExpand && isExpanded && sectionSubPages[section] && (
-                            <SubPagesList
-                              subPages={sectionSubPages[section]!}
-                              userType={userType}
-                              permissionsByType={permissionsByType}
-                              getSectionActions={getSectionActions}
-                              onToggle={(subPerm, col) => handleToggle(subPerm, col)}
-                              onToggleRow={(subPerm, subSection, val) => handleToggleRow(subPerm, subSection, val)}
-                              allColumns={allColumns}
-                              expandedFields={expandedFields}
-                              onToggleFieldExpand={toggleFieldExpand}
-                              hasFieldPermissions={hasFieldPermissions}
-                              getFieldCanEdit={getFieldCanEdit}
-                              onFieldToggle={(sectionName, fieldName, canEdit) =>
-                                fieldPermMutation.mutate({
-                                  userType,
-                                  section: sectionName,
-                                  fieldName,
-                                  canEdit,
-                                })
-                              }
-                            />
-                          )}
-                        </SectionRow>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    for (const p of typePerms) {
+                      const actions = getSectionActions(p.section);
+                      const input: Partial<UserTypePermission> = {};
+                      if (actions.includes("view")) input.can_view = true;
+                      if (actions.includes("edit")) input.can_edit = true;
+                      if (actions.includes("create")) input.can_create = true;
+                      if (actions.includes("delete")) input.can_delete = true;
+                      updateMutation.mutate({ id: p.id, input });
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-600 hover:bg-emerald-500/20 transition-colors"
+                >
+                  <Unlock className="h-3 w-3" />
+                  Todo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    for (const p of typePerms) {
+                      const actions = getSectionActions(p.section);
+                      const input: Partial<UserTypePermission> = {};
+                      if (actions.includes("view")) input.can_view = false;
+                      if (actions.includes("edit")) input.can_edit = false;
+                      if (actions.includes("create")) input.can_create = false;
+                      if (actions.includes("delete")) input.can_delete = false;
+                      updateMutation.mutate({ id: p.id, input });
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted/70 transition-colors"
+                >
+                  <Lock className="h-3 w-3" />
+                  Ninguno
+                </button>
               </div>
             </div>
-          );
-        })}
-      </div>
+
+            {/* Tabla de permisos */}
+            <div className="app-data-table-wrap">
+              <table className="app-data-table">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 px-2 font-medium text-muted-foreground">Sección</th>
+                    {allColumns.map((col) => {
+                      const actionKey = col.key.replace("can_", "") as PermissionAction;
+                      // Solo mostrar columna si al menos una sección la tiene
+                      const hasAny = sectionOrder.some(s => getSectionActions(s).includes(actionKey));
+                      if (!hasAny) return null;
+                      const allChecked = typePerms.length > 0 && typePerms.every(p => {
+                        const actions = getSectionActions(p.section);
+                        if (!actions.includes(actionKey)) return true;
+                        return p[col.key];
+                      });
+                      return (
+                        <th key={col.key} className="text-center py-2 px-2 font-medium text-muted-foreground w-[70px]">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleColumn(userType, col.key, !allChecked)}
+                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                          >
+                            {allChecked && <Check className="h-3 w-3 text-emerald-500" />}
+                            {col.label}
+                          </button>
+                        </th>
+                      );
+                    })}
+                    <th className="text-center py-2 px-2 font-medium text-muted-foreground w-15">Todo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sectionOrder.map((section: string) => {
+                    const perm = permissionsByType[userType][section];
+                    if (!perm) return null;
+                    const actions = getSectionActions(section);
+                    const allTrue = actions.every(a => perm[`can_${a}` as ColumnKey]);
+                    const canExpand = hasSubPages(section);
+                    const isExpanded = expandedSections.has(`${userType}-${section}`);
+
+                    return (
+                      <SectionRow
+                        key={section}
+                        perm={perm}
+                        section={section}
+                        label={sectionLabels[section]}
+                        actions={actions}
+                        allTrue={allTrue}
+                        canExpand={canExpand}
+                        isExpanded={isExpanded}
+                        onToggleExpand={() => toggleExpand(`${userType}-${section}`)}
+                        onToggle={(col) => handleToggle(perm, col)}
+                        onToggleRow={(val) => handleToggleRow(perm, section, val)}
+                        allColumns={allColumns}
+                      >
+                        {/* Sub-páginas */}
+                        {canExpand && isExpanded && sectionSubPages[section] && (
+                          <SubPagesList
+                            subPages={sectionSubPages[section]!}
+                            userType={userType}
+                            permissionsByType={permissionsByType}
+                            getSectionActions={getSectionActions}
+                            onToggle={(subPerm, col) => handleToggle(subPerm, col)}
+                            onToggleRow={(subPerm, subSection, val) => handleToggleRow(subPerm, subSection, val)}
+                            allColumns={allColumns}
+                            expandedFields={expandedFields}
+                            onToggleFieldExpand={toggleFieldExpand}
+                            hasFieldPermissions={hasFieldPermissions}
+                            getFieldCanEdit={getFieldCanEdit}
+                            onFieldToggle={(sectionName, fieldName, canEdit) =>
+                              fieldPermMutation.mutate({
+                                userType,
+                                section: sectionName,
+                                fieldName,
+                                canEdit,
+                              })
+                            }
+                          />
+                        )}
+                      </SectionRow>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="mt-4 rounded-lg bg-muted/50 p-3 text-[11px] text-muted-foreground">
         <p className="font-medium text-foreground mb-1">Notas:</p>

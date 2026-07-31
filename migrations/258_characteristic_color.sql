@@ -9,11 +9,18 @@
 -- ═══════════════════════════════════════════════════════════════════
 
 -- Agregar columna color (nullable, formato hex como #0095DA)
-ALTER TABLE characteristic
-  ADD COLUMN IF NOT EXISTS color text DEFAULT NULL;
-
--- Comentario para documentación
-COMMENT ON COLUMN characteristic.color IS 'Color hex (ej: #0095DA) para identificar visualmente la característica en la grilla del siniestro';
+-- La tabla characteristic fue eliminada en la migración 262; esta migración
+-- es idempotente y no hace nada si la tabla no existe.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'characteristic'
+  ) THEN
+    EXECUTE 'ALTER TABLE characteristic ADD COLUMN IF NOT EXISTS color text DEFAULT NULL';
+    EXECUTE 'COMMENT ON COLUMN characteristic.color IS ''Color hex (ej: #0095DA) para identificar visualmente la característica en la grilla del siniestro''';
+  END IF;
+END $$;
 
 -- RLS ya existe en characteristic, no necesita cambios adicionales
 -- (la columna hereda las políticas existentes)

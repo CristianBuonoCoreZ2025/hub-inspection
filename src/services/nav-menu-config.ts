@@ -16,7 +16,7 @@ import { fetchAll } from "@/lib/supabase/db";
  * - type "group": grupo con submenu, key = section (ej: "catalogos")
  *   children = lista de items anidados
  * - label (opcional): nombre custom que sobreescribe el default de nav-data.ts.
- *   Solo se usa para grupos (los links mantienen su label original).
+ *   Aplica a grupos y a links.
  */
 export interface NavMenuItem {
   type: "link" | "group";

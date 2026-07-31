@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { formatUserDateTime as formatDateTime, formatUserDate as formatDate } from "@/lib/timezone";
 import { getClaimById, getClaimParticipants, updateClaimStatus } from "@/services/claims";
+import { canAccessInspectionSession } from "@/services/inspections";
 import { getClaimActions, getActionTemplatesByClaimStatus, createClaimAction, getClaimActionById, updateClaimAction, issueClaimAction, reviewClaimAction, approveClaimAction, rejectClaimAction } from "@/services/claim-actions";
 import { getActionHistory } from "@/services/claim-action-history";
 import { getGestionScreensForClaimAction } from "@/services/gestion-screens";
@@ -14,7 +15,7 @@ import { getCompanies } from "@/services/companies";
 import { CorreoIcon } from "@/components/icons/topbar-icons";
 import { getCountries } from "@/services/countries";
 import { getClaimCauses, getClaimTypes, getInsuranceCompanies, getBusinessLines, getInsuranceProducts, getBrokers, getAdvisors, getHousingDestinations, getPropertyClassifications, getDamageClassifications, getLookupCatalog, getCurrencies, getEvents, getCountryById, getRegionById, getCityById, getCommuneById } from "@/services/catalogs";
-import type { ClaimsParticipant, ActionTemplate } from "@/types";
+import type { ClaimsParticipant, ActionTemplate, Claim } from "@/types";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/hooks/use-auth";
@@ -163,6 +164,21 @@ export default function ClaimDetailPage() {
  const id = params.id as string;
  const queryClient = useQueryClient();
  const { canEdit, canView } = usePermissions();
+ const { profile, dataAccess, isLoading: isAuthLoading } = useAuth();
+
+ const isUserAssignedToClaim = useCallback((c: Claim | undefined): boolean => {
+   if (!c || !profile?.id) return false;
+   if (dataAccess?.is_admin || dataAccess?.see_all_client_claims) return true;
+   const assigneeIds = [
+     c.assigned_adjuster_id,
+     c.adjuster_id,
+     c.inspector_id,
+     c.auditor_id,
+     c.dispatcher_id,
+     c.assistant_id,
+   ];
+   return assigneeIds.some((id) => id === profile.id);
+ }, [profile, dataAccess]);
 
  // Mutación para reenviar un correo fallido desde la lista de emails
  const resendEmailMutation = useMutation({
@@ -244,6 +260,13 @@ export default function ClaimDetailPage() {
  queryKey: ["claim", id],
  queryFn: () => getClaimById(id),
  });
+
+ useEffect(() => {
+   if (!isLoading && !isAuthLoading && rawClaim && !isUserAssignedToClaim(rawClaim)) {
+     toast.error("No tienes acceso a este siniestro");
+     router.replace("/dashboard");
+   }
+ }, [isLoading, isAuthLoading, rawClaim, isUserAssignedToClaim, router]);
 
  const { data: participants } = useQuery({
  queryKey: ["claim-participants", id],
@@ -466,7 +489,6 @@ export default function ClaimDetailPage() {
  }, [updateGestionDataMutation]);
 
  // Mutaciones para avanzar el workflow
- const { profile } = useAuth();
 
  const issueMut = useMutation({
  mutationFn: () => issueClaimAction(
@@ -1158,13 +1180,15 @@ export default function ClaimDetailPage() {
  }}
  />
  ) : (() => {
- // Mapa de claim_action_id → inspection_session_id y estado para enlazar gestiones de inspección
+ // Mapa de claim_action_id → datos de inspección para enlazar gestiones de inspección
  const inspectionByActionId = new Map<string, string>();
  const inspectionStatusByActionId = new Map<string, string>();
+ const inspectionCanAccessByActionId = new Map<string, boolean>();
  for (const s of (claim.inspection_sessions || [])) {
  if (s.claim_action_id) {
  inspectionByActionId.set(s.claim_action_id, s.id);
  inspectionStatusByActionId.set(s.claim_action_id, s.status);
+ inspectionCanAccessByActionId.set(s.claim_action_id, canAccessInspectionSession(s, profile, dataAccess));
  }
  }
 
@@ -1203,8 +1227,9 @@ export default function ClaimDetailPage() {
  approvedOn: a.approved_on,
  approvedBy: a.approver?.full_name || null,
  approvedByEmail: a.approver?.email || null,
- // Si es una gestión de inspección, enlazar al detalle de inspección
- href: inspectionByActionId.has(a.id) ? `/dashboard/inspecciones/${inspectionByActionId.get(a.id)}` : null,
+ // Si es una gestión de inspección, enlazar al detalle de inspección si se puede acceder
+ href: (inspectionByActionId.has(a.id) && inspectionCanAccessByActionId.get(a.id)) ? `/dashboard/inspecciones/${inspectionByActionId.get(a.id)}` : null,
+ bloqueada: (inspectionByActionId.has(a.id) && inspectionStatusByActionId.get(a.id) === "active" && !inspectionCanAccessByActionId.get(a.id)),
  esAccion: true,
  screenType: a.action_feature?.has_specific_screen ? (a.action_feature?.screen?.code || "generica") : null,
  esAutomatica: a.is_automatic,
@@ -1327,6 +1352,11 @@ export default function ClaimDetailPage() {
  <td className="font-medium app-body">
  <div className="flex items-center gap-2">
  {g.nombre}
+ {g.bloqueada && (
+ <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+ Inspección activa y en curso
+ </span>
+ )}
  {g.href && inspectionStatusByActionId.get(g.id) === "cancelled" && (
  <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
  Cancelada

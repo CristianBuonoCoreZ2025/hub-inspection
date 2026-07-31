@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS content_good_type_brands (
 );
 
 ALTER TABLE content_good_type_brands ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "content_good_type_brands_select" ON content_good_type_brands;
+DROP POLICY IF EXISTS "content_good_type_brands_all" ON content_good_type_brands;
 CREATE POLICY "content_good_type_brands_select" ON content_good_type_brands FOR SELECT USING (true);
 CREATE POLICY "content_good_type_brands_all" ON content_good_type_brands FOR ALL USING (true) WITH CHECK (true);
 

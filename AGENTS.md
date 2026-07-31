@@ -1759,7 +1759,41 @@ Selección en sidebar: UiStyleDevSelect recarga la página al cambiar.
 
 ---
 
-## 11. Estados del Siniestro (Claim Status) — Flujo Definitivo
+## 11. Checklist de Deploy — Páginas y Permisos
+
+### Contexto
+A partir de la migración `pages` el sistema usa una tabla de recursos (`pages`) como fuente de verdad para permisos. Cada página nueva debe existir en `pages` con un `code` único, y `user_type_permissions` controla qué perfiles acceden.
+
+### Archivo de producción
+- `scripts/apply-pages-production.sql`
+
+### Pasos obligatorios ANTES del deploy
+
+1. **Backup de `user_type_permissions` en producción** (opcional pero recomendado).
+2. **Abrir Hasura / Nhost SQL Editor**.
+3. **Ejecutar `scripts/apply-pages-production.sql`**.
+4. **Verificar**:
+   ```sql
+   SELECT COUNT(*) FROM pages;
+   SELECT COUNT(*) FROM user_type_permissions WHERE user_type = 'internal';
+   SELECT section FROM user_type_permissions WHERE user_type = 'internal' AND can_view = true;
+   ```
+5. **Track `pages` en Hasura** si el frontend la consume por GraphQL (aunque hoy se lee por PostgREST, rastrear no afecta).
+6. **Recién ahí deployar el frontend**.
+
+### No se borra nada
+- El script es idempotente (`ON CONFLICT DO NOTHING` / `WHERE NOT EXISTS`).
+- No elimina filas de `user_type_permissions` existentes.
+- Los permisos que los perfiles ya tenían se conservan.
+- Las páginas nuevas quedan deshabilitadas para todos excepto `internal`.
+
+### Después del deploy
+- Revisar `/dashboard/permisos` y ajustar por perfil lo que sea necesario.
+- Asignar `section: <code-de-pages>` en `nav-data.ts` para cada link que se quiera controlar individualmente.
+
+---
+
+## 12. Estados del Siniestro (Claim Status) — Flujo Definitivo
 
 > Los estados del siniestro son **lineales y no reversibles** (excepto reapertura especial).
 > Una vez que un caso avanza al siguiente estado, no puede volver al anterior por flujo normal.
@@ -4083,5 +4117,162 @@ Solo puede reasignar quien cumple **ambas** condiciones:
 Si no tiene el rol, no ve el combo ni el botón de reasignar.
 
 Útil tras cambiar configuración de workflows o re-sincronizar claims migrados.
+
+## 0j. Regla de Piel Única del Body de Email — WYSIWYG Real
+
+### El problema que originó esta regla
+
+Se perdieron **3 días** diseñando un editor de email desde cero porque el
+`EmailTemplateEditor` (donde se diseña la plantilla) y el `EmailComposeModal`
+(donde se redacta/envía el correo) usaban el **mismo `HtmlEditor` (Tiptap)** y
+el **mismo HTML**, pero **CSS distinto** para vestir el body. Resultado: lo que
+el usuario diseñaba en el editor de plantillas **no se veía igual** al abrirlo
+en el composer. Los títulos cambiaban de tamaño, las negrillas perdían peso,
+los márgenes variaban, la fuente cambiaba. El usuario creía que el render
+rompía su plantilla, cuando en realidad era solo que dos pieles distintas
+vestían el mismo contenido.
+
+### La regla (OBLIGATORIA)
+
+**Toda superficie que muestre o edite el body de un email DEBE usar la misma
+clase CSS de render: `email-body-render`.**
+
+No existe "piel del editor" y "piel del composer". Existe **una sola piel**:
+la del email. Lo que se diseña es lo que se envía. WYSIWYG real.
+
+### Aplica a
+
+- `EmailTemplateEditor` (diseño de plantilla)
+- `EmailComposeModal` (redacción/envío)
+- `EmailPreviewModal` (vista previa)
+- Cualquier futuro componente que muestre o edite un body de email
+
+### Prohibido
+
+- **NUNCA** definir estilos del body de email inline en JSX.
+- **NUNCA** crear clases CSS paralelas que vistan el body de email con valores
+  distintos a los canónicos (tabla de abajo).
+- **NUNCA** usar la clase `html-editor-content` sola (sin `email-body-render`
+  como ancestro) para mostrar un body de email — hereda estilos del app que no
+  corresponden al email.
+- **NUNCA** duplicar los estilos canónicos en otro archivo CSS. Viven una sola
+  vez, en `src/app/styles/modals.css`, bajo la sección "Piel única del body
+  de email".
+
+### Estilos canónicos del body de email (referencia única)
+
+Estos valores son los que usa el `wrapHtmlEmail` al enviar, y los que debe usar
+cualquier editor/visor de body de email:
+
+| Elemento | Valor canónico |
+|----------|---------------|
+| Fuente | `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif` |
+| Tamaño base | `14px` |
+| Line-height | `1.7` |
+| Color de texto | `#1e293b` (siempre oscuro — los emails tienen fondo blanco) |
+| Padding del wrap | `32px` |
+| h1 | `22px`, weight `600`, color `#0f172a`, margin `0 0 12px 0` |
+| h2 | `18px`, weight `600`, color `#1e293b`, margin `0 0 12px 0` |
+| h3 | `15px`, weight `600`, color `#334155`, margin `0 0 12px 0` |
+| p | margin `0 0 12px 0` |
+| strong | weight `600` (no `700`) |
+| a | color `#2563eb`, sin subrayado, subrayado solo en hover |
+| ul, ol | margin `0 0 12px 0`, padding-left `20px` |
+| li | margin-bottom `6px` |
+| table | border-collapse `collapse`, width `100%` |
+| th, td | border `1px solid #e5e7eb`, padding `8px` |
+
+### Motivo
+
+- **WYSIWYG real:** lo que ves al diseñar = lo que recibe el destinatario.
+- **Cero sorpresas:** si se ve bien en el editor, se ve bien en el envío.
+- **Mantenibilidad:** cambiar un estilo del email en 1 lugar, no en 3.
+- **Auditabilidad:** los estilos del email viven en un solo bloque CSS,
+  comentado como "Piel única del body de email — REGLA".
+
+### Documentación completa
+
+Ver [`docs/EMAIL_BODY_RENDER.md`](docs/EMAIL_BODY_RENDER.md) para el detalle
+técnico, el pipeline de render y la lección aprendida.
+
+---
+
+## 31. Inspección Remota — Videollamada, Chat y Logs de Conexión
+
+### Contexto
+Durante el desarrollo de la inspección remota se resolvieron varios problemas de UX, conectividad y debugging que afectaban tanto al inspector (dashboard) como al asegurado (magic link).
+
+### Soluciones aplicadas
+
+1. **Magic Link — chat siempre visible**
+   - El panel de chat del asegurado nunca se cierra (`src/app/inspection/[token]/page.tsx`).
+   - Esto garantiza que siempre tenga comunicación con el inspector.
+
+2. **Reconexión del asegurado**
+   - En la cabecera del panel de comunicación del magic link hay un botón **"Reconectar"**.
+   - Al tocarlo se desmonta y vuelve a montar `LiveVideoCall` (`videoCallKey`) generando una conexión WebRTC limpia.
+
+3. **Dashboard — colgar y minimizar por separado**
+   - El inspector tiene un botón **"Desconectar"** para colgar la videollamada sin cerrar el chat.
+   - La X minimiza el panel completo; se puede reabrir con el botón flotante.
+
+4. **Ancho del chat**
+   - Panel flotante del dashboard: `420px` (`src/app/styles/components.css`).
+   - Panel lateral del magic link: `lg:w-105` (equivalente a `420px`).
+
+5. **Logs de conexión simplificados**
+   - El tab "Conexiones" del dashboard muestra el **estado actual** de asegurado e inspector (Conectado / Conectando / Desconectado).
+   - El historial técnico queda oculto en un acordeón.
+
+6. **WebRTC sin cámara/micrófono**
+   - Si `getUserMedia` falla, `LiveVideoCall` intenta audio solo y, si tampoco funciona, entra sin media local.
+   - Se une al canal de signaling para que ambos lados se vean conectados en el chat, aunque no haya video.
+   - Errores `InvalidStateError` / `InvalidAccessError` de ICE u oferta son ignorados amigablemente; se muestra "No se pudo conectar el video. El chat sigue disponible.".
+
+7. **Mensajes de permisos claros**
+   - Si la cámara está en uso por otra app, se dice explícitamente: "Cierre otras pestañas o programas y vuelva a intentar.".
+   - Si denegó permiso: "Habilite el acceso a cámara y micrófono en el navegador.".
+
+8. **Informe PDF en el magic link**
+   - El asegurado tiene un tab **"Informe"** que muestra el PDF final si el inspector lo generó.
+   - `getInspectionSessionByToken` trae `inspection_reports` con `report_url`, `status` y `generated_at`.
+
+### Archivos clave
+- `src/app/inspection/[token]/page.tsx`
+- `src/app/dashboard/inspecciones/[id]/page.tsx`
+- `src/app/dashboard/inspecciones/[id]/connection-logs-tab.tsx`
+- `src/components/inspection/live-video-call.tsx`
+- `src/services/inspections.ts`
+- `src/app/styles/components.css`
+
+---
+
+## 30. Tooltips — Componente Estándar
+
+### Problema
+El tooltip nativo del navegador (`title`) es visualmente pobre, inconsistente entre navegadores y no encaja con el diseño Liquid Glass de la aplicación.
+
+### Solución Definitiva
+- **PROHIBIDO** usar el atributo nativo `title` para tooltips en la UI.
+- **OBLIGATORIO** usar el componente `Tooltip` de `src/components/ui/tooltip.tsx`.
+- El componente está construido sobre `@base-ui/react/tooltip` con estilo glass, portal fijo y z-9999.
+- Uso mínimo recomendado:
+
+```tsx
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+
+<Tooltip>
+  <TooltipTrigger className="w-full">
+    <Input ... />
+  </TooltipTrigger>
+  <TooltipContent>Texto del tooltip</TooltipContent>
+</Tooltip>
+```
+
+### Regla
+```
+NUNCA usar el atributo HTML title como tooltip.
+SIEMPRE usar Tooltip, TooltipTrigger y TooltipContent desde src/components/ui/tooltip.tsx.
+```
 
 

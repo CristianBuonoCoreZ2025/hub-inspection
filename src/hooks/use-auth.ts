@@ -5,7 +5,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
-import type { UserRole, UserTypePermission } from "@/types";
+import type { UserRole, UserTypePermission, UserTypeDataAccess } from "@/types";
 import { setUserTimeZone } from "@/lib/timezone";
 
 interface UserProfile {
@@ -125,6 +125,22 @@ export function useAuth() {
     enabled: !!profile?.role,
   });
 
+  // Obtener acceso a datos del tipo de usuario (admin / ver todo por cliente)
+  const { data: dataAccess } = useQuery<UserTypeDataAccess | null>({
+    queryKey: ["auth-data-access", profile?.role],
+    queryFn: async () => {
+      if (!profile?.role) return null;
+      const { data, error } = await supabase
+        .from("user_type_data_access")
+        .select("user_type, is_admin, see_all_client_claims, created_at, updated_at")
+        .eq("user_type", profile.role)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return (data as UserTypeDataAccess) ?? null;
+    },
+    enabled: !!profile?.role,
+  });
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -133,9 +149,10 @@ export function useAuth() {
     } finally {
       queryClient.invalidateQueries({ queryKey: ["auth-user"] });
       queryClient.invalidateQueries({ queryKey: ["auth-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["auth-data-access"] });
       window.location.href = "/login";
     }
   };
 
-  return { user, profile, permissions, isLoading, signOut };
+  return { user, profile, permissions, dataAccess, isLoading, signOut };
 }

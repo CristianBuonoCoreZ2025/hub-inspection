@@ -491,7 +491,7 @@ export function EmailTemplateEditor({ templateId }: Props) {
                 disabled={readOnly}
                 editorRef={htmlEditorRef}
                 placeholder="Escribe el cuerpo del e-mail..."
-                className="min-h-40"
+                className="email-body-render min-h-40"
               />
             ) : (
               <Textarea

@@ -35,6 +35,7 @@ interface LiveVideoCallProps {
   onRecordingSaved?: (evidence: { id: string; url: string; description: string }) => void;
   onKicked?: (reason: string) => void;
   onPeersUpdate?: (peers: ConnectedPeer[]) => void;
+  onMediaPermission?: (result: { camera: "granted" | "denied" | "error"; microphone: "granted" | "denied" | "error" }) => void;
 }
 
 interface SavedEvidence {
@@ -81,6 +82,7 @@ export function LiveVideoCall({
   onRecordingSaved,
   onKicked,
   onPeersUpdate,
+  onMediaPermission,
 }: LiveVideoCallProps) {
   const localVideoRef = React.useRef<HTMLVideoElement>(null);
   const remoteVideoRef = React.useRef<HTMLVideoElement>(null);
@@ -92,6 +94,8 @@ export function LiveVideoCall({
   const makingOfferRef = React.useRef<boolean>(false);
   const ignoreOfferRef = React.useRef<boolean>(false);
   const hangupSentRef = React.useRef<boolean>(false);
+  // Buffer de ICE candidates que llegan antes de la remote description
+  const iceCandidateBufferRef = React.useRef<RTCIceCandidateInit[]>([]);
   // El inspector trackea al cliente que ya está conectado para rechazar a un segundo
   const connectedClientRef = React.useRef<string | null>(null);
   // Peers ya rechazados (para no notificar al inspector más de una vez por el mismo peer)
@@ -120,24 +124,76 @@ export function LiveVideoCall({
     onPeersUpdateRef.current = onPeersUpdate;
   }, [onPeersUpdate]);
 
+  // Ordenamos siempre audio primero, video después, para mantener m-lines consistentes
+  const getOrderedLocalTracks = () => {
+    const s = localStreamRef.current;
+    return s ? [...s.getAudioTracks(), ...s.getVideoTracks()] : [];
+  };
+
   // ── Inicializar media local ──
   const initLocalMedia = React.useCallback(async () => {
+    // Preferimos video + audio. Si falla, intentamos audio solo. Si falla, entramos sin media.
+    let stream: MediaStream;
+    let cameraPerm: "granted" | "denied" | "error" = "error";
+    let microphonePerm: "granted" | "denied" | "error" = "error";
+    let userMessage: string | null = null;
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
         audio: { echoCancellation: true, noiseSuppression: true },
       });
-      localStreamRef.current = stream;
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-      return stream;
+      cameraPerm = "granted";
+      microphonePerm = "granted";
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "No se pudo acceder a la cámara/micrófono";
-      setError(`Permiso de cámara/micrófono denegado: ${msg}`);
-      throw err;
+      const domErr = err instanceof DOMException ? err : null;
+      const raw = err instanceof Error ? err.message : "";
+
+      if (domErr?.name === "NotAllowedError" || domErr?.name === "SecurityError") {
+        userMessage = "Permiso denegado. Habilite el acceso a cámara y micrófono en el navegador.";
+        cameraPerm = "denied";
+        microphonePerm = "denied";
+      } else if (domErr?.name === "NotFoundError") {
+        userMessage = "No se encontró cámara o micrófono en este dispositivo.";
+      } else if (domErr?.name === "NotReadableError" || raw.toLowerCase().includes("could not start")) {
+        userMessage = "La cámara o el micrófono están en uso por otra aplicación. Cierre otras pestañas o programas y vuelva a intentar.";
+      } else if (raw.toLowerCase().includes("permission")) {
+        userMessage = "No se otorgó permiso para usar cámara/micrófono.";
+        cameraPerm = "denied";
+        microphonePerm = "denied";
+      } else {
+        userMessage = raw || "No se pudo acceder a la cámara/micrófono.";
+      }
+
+      // Fallback a audio solo
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true },
+        });
+        microphonePerm = "granted";
+        if (cameraPerm !== "denied") cameraPerm = "error";
+      } catch {
+        // Entrar sin media local para que el peer se conecte igual
+        stream = new MediaStream();
+      }
     }
-  }, []);
+
+    localStreamRef.current = stream;
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = stream;
+    }
+
+    onMediaPermission?.({
+      camera: cameraPerm,
+      microphone: microphonePerm,
+    });
+
+    if (userMessage && stream.getTracks().length === 0) {
+      setError(userMessage);
+    }
+
+    return stream;
+  }, [onMediaPermission]);
 
   // ── Crear peer connection ──
   const createPeerConnection = React.useCallback(() => {
@@ -261,10 +317,10 @@ export function LiveVideoCall({
           }
           // El inspector (impolite) inicia la oferta cuando el cliente se une
           if (role === "inspector" && localStreamRef.current) {
-            // Forzar renegotiación agregando tracks si no están
+            // Forzar renegotiación agregando tracks si no están (audio → video)
             const senders = pc.getSenders();
             if (senders.length === 0) {
-              localStreamRef.current.getTracks().forEach((track) => {
+              getOrderedLocalTracks().forEach((track) => {
                 pc.addTrack(track, localStreamRef.current!);
               });
             }
@@ -299,12 +355,31 @@ export function LiveVideoCall({
           ignoreOfferRef.current = !politeRef.current && offerCollision;
           if (ignoreOfferRef.current) return;
 
-          await pc.setRemoteDescription(msg.sdp);
-          // Asegurar que nuestros tracks estén agregados
+          try {
+            await pc.setRemoteDescription(msg.sdp);
+          } catch (err) {
+            if (err instanceof DOMException && err.name === "InvalidAccessError") {
+              // La oferta tiene m-lines en orden incompatible; no podemos aceptarla
+              setError("No se pudo conectar el video. El chat sigue disponible.");
+              return;
+            }
+            throw err;
+          }
+          // Aplicar ICE candidates que llegaron antes de la oferta
+          const buffered = iceCandidateBufferRef.current;
+          iceCandidateBufferRef.current = [];
+          for (const c of buffered) {
+            try {
+              await pc.addIceCandidate(c);
+            } catch {
+              // Algunos ICE del buffer ya no aplican tras la negociación; se ignoran
+            }
+          }
+          // Asegurar que nuestros tracks estén agregados en orden audio → video
           if (localStreamRef.current) {
             const senders = pc.getSenders();
             if (senders.length === 0) {
-              localStreamRef.current.getTracks().forEach((track) => {
+              getOrderedLocalTracks().forEach((track) => {
                 pc.addTrack(track, localStreamRef.current!);
               });
             }
@@ -312,16 +387,46 @@ export function LiveVideoCall({
           await pc.setLocalDescription();
           channelRef.current?.send({ type: "answer", from: userId, role, sdp: pc.localDescription! });
         } else if (msg.type === "answer") {
-          await pc.setRemoteDescription(msg.sdp);
+          try {
+            await pc.setRemoteDescription(msg.sdp);
+          } catch (err) {
+            if (err instanceof DOMException && err.name === "InvalidAccessError") {
+              setError("No se pudo conectar el video. El chat sigue disponible.");
+              return;
+            }
+            throw err;
+          }
+          // Aplicar ICE candidates que llegaron antes de la answer
+          const buffered = iceCandidateBufferRef.current;
+          iceCandidateBufferRef.current = [];
+          for (const c of buffered) {
+            try {
+              await pc.addIceCandidate(c);
+            } catch {
+              // Algunos ICE del buffer ya no aplican tras la negociación; se ignoran
+            }
+          }
         } else if (msg.type === "ice") {
           // Ignorar ICE candidates de un cliente que no es el conectado (inspector)
           if (role === "inspector" && msg.role === "client" && connectedClientRef.current && connectedClientRef.current !== msg.from) {
             return;
           }
+
+          if (!pc.remoteDescription) {
+            // Llegó ICE antes de la oferta/answer remota; lo almacenamos
+            iceCandidateBufferRef.current.push(msg.candidate);
+            return;
+          }
+
           try {
             await pc.addIceCandidate(msg.candidate);
           } catch (err) {
-            if (!ignoreOfferRef.current) throw err;
+            const domErr = err instanceof DOMException ? err : null;
+            const canIgnore =
+              domErr?.name === "InvalidStateError" ||
+              domErr?.name === "OperationError" ||
+              (err instanceof Error && err.message?.toLowerCase().includes("remote description"));
+            if (!canIgnore && !ignoreOfferRef.current) throw err;
           }
         } else if (msg.type === "hangup") {
           // Inspector: si cuelga el cliente conectado, liberar el slot
@@ -360,31 +465,33 @@ export function LiveVideoCall({
     let cancelled = false;
 
     (async () => {
-      try {
-        setState("connecting");
-        const stream = await initLocalMedia();
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
+      setState("connecting");
+      const stream = await initLocalMedia();
+      if (cancelled) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      // Si no hay cámara/micrófono, igual nos unimos al canal de signaling
+      // para que ambos lados se vean conectados en el chat/peers, pero no
+      // creamos una conexión WebRTC que falle por SDP sin media.
+      if (stream.getTracks().length > 0) {
         const pc = createPeerConnection();
-        // Agregar tracks locales al peer connection
-        stream.getTracks().forEach((track) => {
+        // Agregar tracks locales al peer connection en orden audio → video
+        [...stream.getAudioTracks(), ...stream.getVideoTracks()].forEach((track) => {
           pc.addTrack(track, stream);
         });
-
-        // Unirse al canal de signaling
-        const channel = joinSignalingChannel(sessionId, userId, role);
-        channelRef.current = channel;
-        channel.onMessage(handleSignalingMessage);
-        // Suscribirse a presence para trackear peers conectados
-        channel.onPresence((newPeers) => {
-          setPeers(newPeers);
-          onPeersUpdateRef.current?.(newPeers);
-        });
-      } catch {
-        if (!cancelled) setState("failed");
       }
+
+      // Unirse al canal de signaling
+      const channel = joinSignalingChannel(sessionId, userId, role);
+      channelRef.current = channel;
+      channel.onMessage(handleSignalingMessage);
+      // Suscribirse a presence para trackear peers conectados
+      channel.onPresence((newPeers) => {
+        setPeers(newPeers);
+        onPeersUpdateRef.current?.(newPeers);
+      });
     })();
 
     return () => {

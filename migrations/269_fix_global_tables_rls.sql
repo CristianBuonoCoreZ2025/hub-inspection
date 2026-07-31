@@ -19,60 +19,78 @@
 -- son visibles/editables para usuarios autenticados con permiso.
 -- ═══════════════════════════════════════════════════════════════
 
--- ── 1. action_template: DELETE e INSERT (UPDATE y SELECT ya OK) ──
+-- Estas correcciones solo aplican si las tablas todavía tienen company_id.
+-- En entornos limpios la columna nunca existió y 270 crea las policies simples.
+DO $$
+DECLARE
+  v_action_template_has_company boolean := EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'action_template' AND column_name = 'company_id'
+  );
+  v_doc_req_has_company boolean := EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'document_requirements' AND column_name = 'company_id'
+  );
+  v_doc_tmpl_has_company boolean := EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'document_templates' AND column_name = 'company_id'
+  );
+BEGIN
+  IF v_action_template_has_company THEN
+    DROP POLICY IF EXISTS action_template_tenant_delete ON action_template;
+    CREATE POLICY action_template_tenant_delete ON action_template
+      FOR DELETE
+      USING ((company_id IS NULL) OR is_tenant_allowed(company_id));
 
-DROP POLICY IF EXISTS action_template_tenant_delete ON action_template;
-CREATE POLICY action_template_tenant_delete ON action_template
-  FOR DELETE
-  USING ((company_id IS NULL) OR is_tenant_allowed(company_id));
+    DROP POLICY IF EXISTS action_template_tenant_insert ON action_template;
+    CREATE POLICY action_template_tenant_insert ON action_template
+      FOR INSERT
+      WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
+  END IF;
 
-DROP POLICY IF EXISTS action_template_tenant_insert ON action_template;
-CREATE POLICY action_template_tenant_insert ON action_template
-  FOR INSERT
-  WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
+  IF v_doc_req_has_company THEN
+    DROP POLICY IF EXISTS document_requirements_tenant_select ON document_requirements;
+    CREATE POLICY document_requirements_tenant_select ON document_requirements
+      FOR SELECT
+      USING ((company_id IS NULL) OR is_tenant_allowed(company_id));
 
--- ── 2. document_requirements: SELECT, INSERT, UPDATE, DELETE ──
+    DROP POLICY IF EXISTS document_requirements_tenant_insert ON document_requirements;
+    CREATE POLICY document_requirements_tenant_insert ON document_requirements
+      FOR INSERT
+      WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
 
-DROP POLICY IF EXISTS document_requirements_tenant_select ON document_requirements;
-CREATE POLICY document_requirements_tenant_select ON document_requirements
-  FOR SELECT
-  USING ((company_id IS NULL) OR is_tenant_allowed(company_id));
+    DROP POLICY IF EXISTS document_requirements_tenant_update ON document_requirements;
+    CREATE POLICY document_requirements_tenant_update ON document_requirements
+      FOR UPDATE
+      USING ((company_id IS NULL) OR is_tenant_allowed(company_id))
+      WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
 
-DROP POLICY IF EXISTS document_requirements_tenant_insert ON document_requirements;
-CREATE POLICY document_requirements_tenant_insert ON document_requirements
-  FOR INSERT
-  WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
+    DROP POLICY IF EXISTS document_requirements_tenant_delete ON document_requirements;
+    CREATE POLICY document_requirements_tenant_delete ON document_requirements
+      FOR DELETE
+      USING ((company_id IS NULL) OR is_tenant_allowed(company_id));
+  END IF;
 
-DROP POLICY IF EXISTS document_requirements_tenant_update ON document_requirements;
-CREATE POLICY document_requirements_tenant_update ON document_requirements
-  FOR UPDATE
-  USING ((company_id IS NULL) OR is_tenant_allowed(company_id))
-  WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
+  IF v_doc_tmpl_has_company THEN
+    DROP POLICY IF EXISTS document_templates_tenant_select ON document_templates;
+    CREATE POLICY document_templates_tenant_select ON document_templates
+      FOR SELECT
+      USING ((company_id IS NULL) OR is_tenant_allowed(company_id));
 
-DROP POLICY IF EXISTS document_requirements_tenant_delete ON document_requirements;
-CREATE POLICY document_requirements_tenant_delete ON document_requirements
-  FOR DELETE
-  USING ((company_id IS NULL) OR is_tenant_allowed(company_id));
+    DROP POLICY IF EXISTS document_templates_tenant_insert ON document_templates;
+    CREATE POLICY document_templates_tenant_insert ON document_templates
+      FOR INSERT
+      WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
 
--- ── 3. document_templates: SELECT, INSERT, UPDATE, DELETE ──
+    DROP POLICY IF EXISTS document_templates_tenant_update ON document_templates;
+    CREATE POLICY document_templates_tenant_update ON document_templates
+      FOR UPDATE
+      USING ((company_id IS NULL) OR is_tenant_allowed(company_id))
+      WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
 
-DROP POLICY IF EXISTS document_templates_tenant_select ON document_templates;
-CREATE POLICY document_templates_tenant_select ON document_templates
-  FOR SELECT
-  USING ((company_id IS NULL) OR is_tenant_allowed(company_id));
-
-DROP POLICY IF EXISTS document_templates_tenant_insert ON document_templates;
-CREATE POLICY document_templates_tenant_insert ON document_templates
-  FOR INSERT
-  WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
-
-DROP POLICY IF EXISTS document_templates_tenant_update ON document_templates;
-CREATE POLICY document_templates_tenant_update ON document_templates
-  FOR UPDATE
-  USING ((company_id IS NULL) OR is_tenant_allowed(company_id))
-  WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
-
-DROP POLICY IF EXISTS document_templates_tenant_delete ON document_templates;
-CREATE POLICY document_templates_tenant_delete ON document_templates
-  FOR DELETE
-  USING ((company_id IS NULL) OR is_tenant_allowed(company_id));
+    DROP POLICY IF EXISTS document_templates_tenant_delete ON document_templates;
+    CREATE POLICY document_templates_tenant_delete ON document_templates
+      FOR DELETE
+      USING ((company_id IS NULL) OR is_tenant_allowed(company_id));
+  END IF;
+END $$;

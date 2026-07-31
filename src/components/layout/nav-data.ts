@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   Calendar,
   Users,
+  User,
   Building2,
   Settings,
   Shield,
@@ -94,7 +95,6 @@ export interface VisibleNavGroup {
 // ── Links principales ──
 export const mainLinks: NavLink[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "dashboard", hideOnMobile: true },
-  { href: "/dashboard/catalogos/polizas", label: "Pólizas", icon: FileCheck, section: "claims", hideOnMobile: true },
   { href: "/dashboard/claims", label: "Siniestros", icon: FileText, section: "claims" },
   { href: "/dashboard/inspecciones", label: "Inspecciones", icon: ClipboardCheck, section: "inspecciones" },
   { href: "/dashboard/agenda", label: "Agenda", icon: Calendar, section: "agenda" },
@@ -114,6 +114,7 @@ export const catalogLinks: NavLink[] = [
   { href: "/dashboard/catalogos/lineas-negocio", label: "Líneas de Negocio", icon: Tag },
   { href: "/dashboard/catalogos/productos", label: "Ramos/Productos", icon: Box },
   { href: "/dashboard/catalogos/tipos-polizas", label: "Tipos Pólizas", icon: Shield },
+  { href: "/dashboard/catalogos/polizas", label: "Pólizas", icon: FileCheck, section: "catalogos_polizas" },
   { href: "/dashboard/catalogos/coberturas", label: "Coberturas", icon: ShieldCheck },
   { href: "/dashboard/catalogos/parentescos", label: "Parentescos", icon: Heart },
   { href: "/dashboard/catalogos/tipos-documentos", label: "Tipos Documentos", icon: FileText },
@@ -165,12 +166,14 @@ export const operationLinks: NavLink[] = [
   { href: "/dashboard/operaciones/gestiones", label: "Gestiones", icon: Ban },
   { href: "/dashboard/operaciones/inhabilitar", label: "Inhabilitar", icon: Ban },
   { href: "/dashboard/operaciones/reabrir", label: "Reabrir", icon: LockOpen },
+  { href: "/dashboard/operaciones/reasignar-inspecciones", label: "Reasignar Inspecciones", icon: Users },
 ];
 
 // ── Administración ──
 export const adminLinks: NavLink[] = [
   { href: "/dashboard/users", label: "Usuarios", icon: Users, section: "users" },
   { href: "/dashboard/companies", label: "Empresas", icon: Building2, section: "companies" },
+  { href: "/dashboard/perfiles", label: "Perfiles", icon: User, section: "perfiles" },
   { href: "/dashboard/permisos", label: "Permisos", icon: Shield, section: "configuracion" },
   { href: "/dashboard/admin/menu", label: "Menú Lateral", icon: MenuIcon, section: "configuracion" },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings, section: "configuracion" },
@@ -194,7 +197,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     title: "Configuración de Gestiones",
-    section: "gestiones",
+    section: "catalogos_gestiones",
     icon: ListChecks,
     links: gestionCatalogLinks,
     hideOnMobile: true,

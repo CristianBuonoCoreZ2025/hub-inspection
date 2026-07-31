@@ -10,9 +10,16 @@
 -- en la server action, no la RLS.
 -- ═══════════════════════════════════════════════════════════════
 
-DROP POLICY IF EXISTS action_template_tenant_update ON action_template;
-
-CREATE POLICY action_template_tenant_update ON action_template
-  FOR UPDATE
-  USING ((company_id IS NULL) OR is_tenant_allowed(company_id))
-  WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'action_template' AND column_name = 'company_id'
+  ) THEN
+    DROP POLICY IF EXISTS action_template_tenant_update ON action_template;
+    CREATE POLICY action_template_tenant_update ON action_template
+      FOR UPDATE
+      USING ((company_id IS NULL) OR is_tenant_allowed(company_id))
+      WITH CHECK ((company_id IS NULL) OR is_tenant_allowed(company_id));
+  END IF;
+END $$;

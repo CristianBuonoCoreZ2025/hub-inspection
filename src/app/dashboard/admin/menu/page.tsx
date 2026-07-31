@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -140,7 +141,7 @@ function configToFlat(config: NavMenuItem[] | null | undefined): FlatItem[] {
       }
     } else {
       // Links pueden estar a cualquier depth (0, 1, 2)
-      flat.push(makeFlatItem("link", item.key, avail.label, avail.icon, depth));
+      flat.push(makeFlatItem("link", item.key, avail.label, avail.icon, depth, item.label));
     }
   }
   for (const item of config) {
@@ -200,14 +201,17 @@ function flatToConfig(flat: FlatItem[]): NavMenuItem[] {
           const subChildren: NavMenuItem[] = [];
           i++;
           while (i < flat.length && flat[i].depth > child.depth) {
-            subChildren.push({ type: "link", key: flat[i].key });
+            const subChild = flat[i];
+            const subChildLabel = subChild.customLabel && subChild.customLabel !== subChild.defaultLabel ? subChild.customLabel : undefined;
+            subChildren.push({ type: "link", key: subChild.key, label: subChildLabel });
             i++;
           }
           // Guardar customLabel del subgrupo si es diferente al default
           const subLabel = child.customLabel && child.customLabel !== child.defaultLabel ? child.customLabel : undefined;
           children.push({ type: "group", key: child.key, label: subLabel, children: subChildren });
         } else {
-          children.push({ type: "link", key: child.key });
+          const childLabel = child.customLabel && child.customLabel !== child.defaultLabel ? child.customLabel : undefined;
+          children.push({ type: "link", key: child.key, label: childLabel });
           i++;
         }
       }
@@ -215,7 +219,8 @@ function flatToConfig(flat: FlatItem[]): NavMenuItem[] {
       const label = row.customLabel && row.customLabel !== row.defaultLabel ? row.customLabel : undefined;
       items.push({ type: "group", key: row.key, label, children });
     } else {
-      items.push({ type: "link", key: row.key });
+      const linkLabel = row.customLabel && row.customLabel !== row.defaultLabel ? row.customLabel : undefined;
+      items.push({ type: "link", key: row.key, label: linkLabel });
       i++;
     }
   }
@@ -388,16 +393,20 @@ function SortableMenuNode({
           Los listeners de dnd-kit van SOLO aquí, no en el div padre,
           para que los botones (lápiz, remove, expand) reciban clicks normales. */}
       {!editing && (
-        <button
-          type="button"
-          {...listeners}
-          {...attributes}
-          className="flex items-center shrink-0 cursor-grab active:cursor-grabbing touch-none"
-          title="Arrastrar para reordenar"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="h-3 w-3 text-muted-foreground/30 group-hover:text-foreground transition-colors" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              type="button"
+              {...listeners}
+              {...attributes}
+              className="flex items-center shrink-0 cursor-grab active:cursor-grabbing touch-none"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GripVertical className="h-3 w-3 text-muted-foreground/30 group-hover:text-foreground transition-colors" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Arrastrar para reordenar</TooltipContent>
+        </Tooltip>
       )}
 
       {/* Icon badge */}
@@ -459,60 +468,76 @@ function SortableMenuNode({
         </span>
       )}
 
-      {/* Edit button (solo grupos, oculto en edición) */}
-      {isGroup && !editing && (
-        <button
-          type="button"
-          className="ml-0.5 flex h-4 w-4 items-center justify-center rounded
-            bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/30
-            text-muted-foreground hover:text-violet-400 transition-all active:scale-90 shrink-0"
-          title="Renombrar grupo"
-          onClick={startEdit}
-        >
-          <Pencil className="h-2.5 w-2.5" />
-        </button>
+      {/* Edit button (grupos y links, oculto en edición) */}
+      {!editing && (
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              type="button"
+              className="ml-0.5 flex h-4 w-4 items-center justify-center rounded
+                bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/30
+                text-muted-foreground hover:text-violet-400 transition-all active:scale-90 shrink-0"
+              onClick={startEdit}
+            >
+              <Pencil className="h-2.5 w-2.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{isGroup ? "Renombrar grupo" : "Renombrar pantalla"}</TooltipContent>
+        </Tooltip>
       )}
 
       {/* Confirm button (solo en edición) */}
       {editing && (
-        <button
-          type="button"
-          className="ml-0.5 flex h-4 w-4 items-center justify-center rounded
-            bg-emerald-500/20 border border-emerald-500/30
-            text-emerald-400 transition-all active:scale-90 shrink-0"
-          title="Confirmar"
-          onClick={(e) => { e.stopPropagation(); commitEdit(); }}
-        >
-          <Check className="h-2.5 w-2.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              type="button"
+              className="ml-0.5 flex h-4 w-4 items-center justify-center rounded
+                bg-emerald-500/20 border border-emerald-500/30
+                text-emerald-400 transition-all active:scale-90 shrink-0"
+              onClick={(e) => { e.stopPropagation(); commitEdit(); }}
+            >
+              <Check className="h-2.5 w-2.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Confirmar</TooltipContent>
+        </Tooltip>
       )}
 
       {/* Cancel button (solo en edición) */}
       {editing && (
-        <button
-          type="button"
-          className="flex h-4 w-4 items-center justify-center rounded
-            bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/30
-            text-muted-foreground hover:text-rose-400 transition-all active:scale-90 shrink-0"
-          title="Cancelar"
-          onClick={cancelEdit}
-        >
-          <X className="h-2.5 w-2.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              type="button"
+              className="flex h-4 w-4 items-center justify-center rounded
+                bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/30
+                text-muted-foreground hover:text-rose-400 transition-all active:scale-90 shrink-0"
+              onClick={cancelEdit}
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Cancelar</TooltipContent>
+        </Tooltip>
       )}
 
       {/* Remove button (oculto en edición) */}
       {!editing && (
-        <button
-          type="button"
-          className="ml-0.5 flex h-4 w-4 items-center justify-center rounded
-            bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/30
-            text-muted-foreground hover:text-rose-400 transition-all active:scale-90 shrink-0"
-          title="Quitar del menú"
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        >
-          <X className="h-2.5 w-2.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              type="button"
+              className="ml-0.5 flex h-4 w-4 items-center justify-center rounded
+                bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/30
+                text-muted-foreground hover:text-rose-400 transition-all active:scale-90 shrink-0"
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Quitar del menú</TooltipContent>
+        </Tooltip>
       )}
 
       {/* Drop indicator — línea violeta que muestra dónde va a caer el item */}

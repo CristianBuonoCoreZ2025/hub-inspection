@@ -35,9 +35,13 @@ function extractHost(url: string): string {
 console.log(`🔍 Intentando conectar a: ${extractHost(DATABASE_URL)}\n`);
 
 async function runMigrations() {
+  const isLocalhost = ["127.0.0.1", "localhost"].includes(
+    new URL(DATABASE_URL!).hostname
+  );
+
   const client = new Client({
     connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: isLocalhost ? false : { rejectUnauthorized: false },
     connectionTimeoutMillis: 15000,
   });
 
@@ -111,9 +115,34 @@ async function runMigrations() {
     console.log(`   Legacy actualizando checksum: ${legacy.length}`);
     console.log(`   Pendientes o modificadas: ${pending.length}\n`);
 
+    // Preprocesa una migración para hacer idempotentes las sentencias que
+    // no lo son por defecto (CREATE POLICY, ADD CONSTRAINT), evitando fallas
+    // cuando el schema local ya las tiene aplicadas.
+    function makeIdempotent(migrationSql: string): string {
+      // CREATE POLICY <name> ON <table>  -> DROP POLICY IF EXISTS ...
+      let sql = migrationSql.replace(
+        /CREATE POLICY\s+(?:"([^"]+)"|([^\s(]+))\s+ON\s+(\S+)/g,
+        (match, quotedName, unquotedName, table) => {
+          const name = quotedName ? `"${quotedName}"` : unquotedName;
+          return `DROP POLICY IF EXISTS ${name} ON ${table};\n${match}`;
+        }
+      );
+
+      // ALTER TABLE <table> ADD CONSTRAINT <name> -> DROP CONSTRAINT IF EXISTS ...
+      sql = sql.replace(
+        /ALTER TABLE\s+(\S+)\s+ADD CONSTRAINT\s+([^\s(]+)/g,
+        (match, table, name) => {
+          return `ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${name};\n${match}`;
+        }
+      );
+
+      return sql;
+    }
+
     for (const file of pending) {
       const filePath = join(migrationsDir, file);
-      const sql = readFileSync(filePath, "utf-8");
+      const rawSql = readFileSync(filePath, "utf-8");
+      const sql = makeIdempotent(rawSql);
       const checksum = fileChecksum(filePath);
 
       console.log(`⏳ Ejecutando: ${file} ...`);

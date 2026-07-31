@@ -53,6 +53,17 @@ function fmtMoney(amount?: number | null, currency?: string | null): string {
   }
 }
 
+// Acorta el código de inspección quitando el prefijo de liquidación.
+// "L-000000141-HINS-001" -> "HINS-001"
+function shortInspectionNumber(code: string | null | undefined): string {
+  if (!code) return "—";
+  const parts = code.split("-");
+  if (parts.length >= 3) {
+    return parts.slice(2).join("-");
+  }
+  return code;
+}
+
 export default function ReportTab({
   session,
   profile,
@@ -600,9 +611,10 @@ export default function ReportTab({
             </div>
             <div className="report-header-info">
               <h1 className="report-acta-h1 app-body">ACTA DE INSPECCIÓN</h1>
-              <p>Correlativo: {claimLiquidationNumber || "—"}</p>
+              <p>Liquidación: {session.claim?.client_reference || "—"}</p>
               <p>Siniestro: {claimNumber || "—"}</p>
-              <p>Inspección: {session.inspection_number || "—"}</p>
+              <p>Correlativo: {shortInspectionNumber(session.inspection_number)}</p>
+              <p>Número interno: {claimLiquidationNumber || "—"}</p>
             </div>
           </div>
 

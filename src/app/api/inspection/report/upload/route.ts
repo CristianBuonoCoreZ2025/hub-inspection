@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // Subir a R2 como DOC
-    const { url, fileCode } = await uploadInspectionFile(sessionId, buffer, "application/pdf", "DOC", ".pdf");
+    const { url, key, fileCode } = await uploadInspectionFile(sessionId, buffer, "application/pdf", "DOC", ".pdf");
 
     const supabase = createAdminClient();
 
@@ -59,11 +59,13 @@ export async function POST(request: NextRequest) {
     // Registrar el PDF en claim_documents para que aparezca en el siniestro
     if (session?.claim_id) {
       const actionCode = (session.claim_action as { code?: string } | null)?.code || "INS";
-      await supabase
+      const { error: docError } = await supabase
         .from("claim_documents")
         .insert({
           claim_id: session.claim_id,
           doc_code: fileCode,
+          file_path: key,
+          file_url: url,
           document_name: `Acta de Inspección — ${actionCode}`,
           document_url: url,
           document_type: "application/pdf",
@@ -71,7 +73,19 @@ export async function POST(request: NextRequest) {
           mime_type: "application/pdf",
           file_size: buffer.length,
           is_active: true,
+          ai_status: "pending",
+          ai_summary: null,
+          ai_model: null,
         });
+
+      if (docError) {
+        logger.error("No se pudo registrar el PDF en claim_documents", new Error(docError.message), {
+          component: "inspection-report-upload",
+          action: "insert.claim_document",
+          metadata: { sessionId, claimId: session.claim_id, fileCode },
+        });
+        throw new Error(docError.message);
+      }
     }
 
     return NextResponse.json({ url });
