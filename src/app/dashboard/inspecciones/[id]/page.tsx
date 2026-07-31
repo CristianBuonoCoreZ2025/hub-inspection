@@ -41,6 +41,8 @@ import {
  CheckCircle2,
  Loader2,
  Wifi,
+ ChevronRight,
+ ChevronLeft,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -171,7 +173,7 @@ export default function InspectionDetailPage() {
  retry: false,
  refetchInterval: (query) => {
  const s = query.state.data as InspectionSession | undefined;
- return s?.inspection_type === "remote" && s?.status === "active" ? 2000 : false;
+ return s?.inspection_type === "remote" && s?.status === "active" ? 10000 : false;
  },
  });
 
@@ -1015,6 +1017,7 @@ export default function InspectionDetailPage() {
  size="sm"
  className="h-7 text-xs text-rose-500 hover:text-rose-600"
  onClick={() => {
+ if (window.confirm("¿Finalizar la videollamada? Esto también desconectará al asegurado.")) {
  setVideoCallOpen(false);
  const logId = inspectorLogIdRef.current;
  if (logId) {
@@ -1027,20 +1030,13 @@ export default function InspectionDetailPage() {
  });
  inspectorLogIdRef.current = null;
  }
+ }
  }}
  >
  Desconectar
  </Button>
  )}
- <Button
- variant="ghost"
- size="icon"
- className="btn-icon-sm"
- onClick={() => setChatPanelOpen(false)}
- title="Minimizar chat"
- >
- <XCircle className="h-3.5 w-3.5" />
- </Button>
+
  </div>
  </div>
 
@@ -1147,6 +1143,16 @@ export default function InspectionDetailPage() {
  <ChatTab sessionId={session.id} compact />
  </div>
  </div>
+
+ {/* Handle lateral para colapsar el chat */}
+ <button
+ type="button"
+ onClick={() => setChatPanelOpen(false)}
+ className="absolute right-0 top-0 h-full w-4 z-10 flex items-center justify-center bg-primary/80 text-primary-foreground hover:bg-primary transition-colors rounded-r-2xl"
+ title="Colapsar chat"
+ >
+ <ChevronRight className="h-5 w-5" />
+ </button>
  </div>
  )}
 
@@ -1164,14 +1170,14 @@ export default function InspectionDetailPage() {
  </button>
  )}
 
- {/* Botón flotante para reabrir chat — solo para inspecciones remotas */}
+ {/* Barra lateral colapsada para reabrir chat — solo para inspecciones remotas */}
  {!chatPanelOpen && session.inspection_type === "remote" && (
  <button
  onClick={() => setChatPanelOpen(true)}
- className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-105 transition-transform"
+ className="fixed top-20 right-0 z-40 flex h-[calc(100vh-180px)] w-4 items-center justify-center rounded-l-lg bg-primary/80 text-primary-foreground shadow-lg hover:bg-primary transition-colors"
  title="Abrir chat"
  >
- <MessageSquare className="h-5 w-5" />
+ <ChevronLeft className="h-5 w-5" />
  </button>
  )}
  </div>

@@ -201,7 +201,7 @@ export default function MagicLinkPage() {
   const { data: session, isLoading, isError, refetch } = useQuery({
     queryKey: ["magic-link-live", token],
     queryFn: () => fetchLiveSession(token),
-    refetchInterval: 2000,
+    refetchInterval: 10000,
   });
 
   useEffect(() => {
