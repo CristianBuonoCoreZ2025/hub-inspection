@@ -9,7 +9,7 @@ import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import {
-  getInspectionSessions,
+  getInspectionSessionsLight,
   updateInspectionSession,
   canAccessInspectionSession,
   type SessionClaim,
@@ -74,7 +74,7 @@ function InspectionsPageContent() {
 
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
     queryKey: ["inspection-sessions"],
-    queryFn: () => getInspectionSessions(),
+    queryFn: () => getInspectionSessionsLight(),
   });
 
   const { data: users } = useQuery({

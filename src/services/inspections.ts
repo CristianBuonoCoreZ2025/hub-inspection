@@ -138,6 +138,29 @@ export async function getInspectionSessions(claimId?: string) {
   return sessions;
 }
 
+export async function getInspectionSessionsLight(claimId?: string) {
+  const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
+    select: `${SESSION_SELECT}, created_at, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`,
+    ...(claimId ? { eq: { claim_id: claimId } } : {}),
+    order: { column: "created_at", ascending: false },
+  });
+
+  for (const s of sessions) {
+    if (s.claim?.claims_participants) {
+      s.claim.claims_participants = s.claim.claims_participants.filter((p: { type: string }) => p.type === "insured").slice(0, 1);
+    }
+  }
+
+  for (const s of sessions) {
+    const ca = s as InspectionSession & { claim_action?: { code: string | null } | null; inspection_number: string };
+    if (ca.claim_action?.code) {
+      ca.inspection_number = ca.claim_action.code;
+    }
+  }
+
+  return sessions;
+}
+
 export interface SessionForReassign {
   id: string;
   claim_id: string;
