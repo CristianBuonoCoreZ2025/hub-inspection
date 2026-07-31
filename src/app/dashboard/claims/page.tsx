@@ -501,6 +501,18 @@ function ClaimsPageContent() {
  queryFn: () => getInsuranceCompanies(),
  });
 
+ const insuranceCompanyOptions = useMemo(() => {
+ const activeIds = new Set<string>();
+ claims?.forEach((c) => {
+   if (c.insurance_company_id) activeIds.add(c.insurance_company_id);
+ });
+ const list = Array.from(activeIds).map((id) => {
+   const company = insuranceCompaniesCatalog?.find((c) => c.id === id);
+   return { value: id, label: company?.name || id };
+ });
+ return list.sort((a, b) => a.label.localeCompare(b.label));
+ }, [claims, insuranceCompaniesCatalog]);
+
  const { data: businessLinesCatalog } = useQuery({
  queryKey: ["business-lines"],
  queryFn: () => getBusinessLines(),
@@ -2322,14 +2334,14 @@ const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize }
  multiple
  value={insuranceCompanyFilter}
  onValueChange={(v: string[]) => setInsuranceCompanyFilter(v ?? [])}
- items={(insuranceCompaniesCatalog || []).map((c) => ({ value: c.id, label: c.name }))}
+ items={insuranceCompanyOptions}
 >
  <SelectTrigger className="app-input app-filter-narrow">
  <SelectValue placeholder="Compañía de seguro" />
  </SelectTrigger>
  <SelectContent>
- {(insuranceCompaniesCatalog || []).map((c) => (
- <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+ {insuranceCompanyOptions.map((c) => (
+ <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
  ))}
  </SelectContent>
  </Select>
