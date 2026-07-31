@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
+import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaims, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
 import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
 import type { GeocodeCandidate } from "@/lib/geo";
@@ -70,6 +72,17 @@ function getParticipant(claim: { claims_participants?: Participant[] }, type: st
  return claim.claims_participants?.find((p) => p.type === type);
 }
 
+type ListClaim = {
+ liquidation_number?: string | null;
+ client_reference?: string | null;
+ claim_number?: string | null;
+ claims_participants?: Participant[];
+ status_id?: string | null;
+ claim_date?: string | null;
+ report_date?: string | null;
+ created_at?: string | null;
+};
+
 function FieldError({ message }: { message?: string }) {
  if (!message) return null;
  return <p className="app-body text-red-500 leading-tight">{message}</p>;
@@ -134,7 +147,12 @@ function ClaimsPageContent() {
  const canOpenClaim = (claim: { assigned_adjuster_id: string | null; adjuster_id: string | null; inspector_id: string | null; auditor_id: string | null; dispatcher_id: string | null; assistant_id: string | null }): boolean => canView("claims") && isUserAssignedToClaim(claim);
  useRealtime("claims", [["claims"], ["claims-participants"]]);
  const [search, setSearch] = useState("");
- const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") || "");
+ const [statusFilter, setStatusFilter] = useState<string[]>(() => {
+   const s = searchParams.get("status");
+   return s ? s.split(",").filter(Boolean) : [];
+ });
+ const [insuranceCompanyFilter, setInsuranceCompanyFilter] = useState<string[]>([]);
+ const [liquidationFilter, setLiquidationFilter] = useState("");
  const [dateFrom, setDateFrom] = useState("");
  const [dateTo, setDateTo] = useState("");
  const [open, setOpen] = useState(false);
@@ -892,12 +910,32 @@ function ClaimsPageContent() {
 
  const filtered = claims?.filter((c) => {
  const textMatch = [c.claim_number, c.client_reference, c.liquidation_number, getParticipant(c, 'insured')?.full_name, getParticipant(c, 'insured')?.address].join(" ").toLowerCase().includes(search.toLowerCase());
- const statusMatch = !statusFilter || statusCode(c.status_id) === statusFilter;
+ const statusMatch = statusFilter.length === 0 || statusFilter.includes(statusCode(c.status_id) ?? "");
+const insuranceMatch = insuranceCompanyFilter.length === 0 || insuranceCompanyFilter.includes(c.insurance_company_id ?? "");
+const liqDigits = liquidationFilter.replace(/\D/g, "");
+const liquidationMatch = liqDigits === "" || (c.liquidation_number || "").replace(/\D/g, "").includes(liqDigits);
  const dateMatch = (!dateFrom || (c.claim_date && c.claim_date >= dateFrom)) && (!dateTo || (c.claim_date && c.claim_date <= dateTo));
- return textMatch && statusMatch && dateMatch;
+ return textMatch && statusMatch && insuranceMatch && liquidationMatch && dateMatch;
  });
 
- const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(filtered);
+ const accessors = useMemo<Record<string, (c: ListClaim) => unknown>>(
+() => ({
+liquidation_number: (c) => c.liquidation_number || "",
+client_reference: (c) => c.client_reference || "",
+claim_number: (c) => c.claim_number || "",
+insured: (c) => getParticipant(c, 'insured')?.full_name || "",
+address: (c) => getParticipant(c, 'insured')?.address || "",
+status: (c) => statusLabel(c.status_id) || "",
+claim_date: (c) => (c.claim_date ? new Date(c.claim_date).getTime() : 0),
+report_date: (c) => (c.report_date ? new Date(c.report_date).getTime() : 0),
+created_at: (c) => (c.created_at ? new Date(c.created_at).getTime() : 0),
+}),
+[statusLabel]
+);
+
+const { sorted: sortedClaims, sortKey, sortDir, toggleSort } = useTableSort(filtered, accessors, null);
+
+const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sortedClaims);
 
  // eslint-disable-next-line react-hooks/incompatible-library -- React Compiler no puede memoizar useForm().watch() de react-hook-form; suscripción reactiva intencional a los campos de ubicación.
  const [claimAddressW, claimCityW, claimLatitudeW, claimLongitudeW, claimCommuneW, claimRegionW, claimCountryW] = form.watch([
@@ -2265,16 +2303,43 @@ function ClaimsPageContent() {
  className="liquid-search"
  />
  </div>
- <Select value={statusFilter || "__all"} onValueChange={(v) => setStatusFilter(v === "__all" || v === null ? "" : v)} items={statusOptions}>
+ <Select
+ multiple
+ value={statusFilter}
+ onValueChange={(v: string[]) => setStatusFilter(v ?? [])}
+ items={statusOptions.filter((s) => s.value !== "__all")}
+>
  <SelectTrigger className="app-input app-filter-narrow">
  <SelectValue placeholder="Todos los estados" />
  </SelectTrigger>
  <SelectContent>
- {statusOptions.map((s) => (
+ {statusOptions.filter((s) => s.value !== "__all").map((s) => (
  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
  ))}
  </SelectContent>
  </Select>
+ <Select
+ multiple
+ value={insuranceCompanyFilter}
+ onValueChange={(v: string[]) => setInsuranceCompanyFilter(v ?? [])}
+ items={(insuranceCompaniesCatalog || []).map((c) => ({ value: c.id, label: c.name }))}
+>
+ <SelectTrigger className="app-input app-filter-narrow">
+ <SelectValue placeholder="Compañía de seguro" />
+ </SelectTrigger>
+ <SelectContent>
+ {(insuranceCompaniesCatalog || []).map((c) => (
+ <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
+ <Input
+ type="text"
+ placeholder="N° Liquidación"
+ value={liquidationFilter}
+ onChange={(e) => setLiquidationFilter(e.target.value.replace(/\D/g, ""))}
+ className="app-input app-filter-narrow"
+ />
  <DatePicker
  value={dateFrom}
  onChange={(value) => {
@@ -2295,9 +2360,9 @@ function ClaimsPageContent() {
  className="max-w-[110px]"
  minDate={dateFrom || undefined}
  />
- {(statusFilter || dateFrom || dateTo) && (
+ {(statusFilter.length > 0 || insuranceCompanyFilter.length > 0 || liquidationFilter || dateFrom || dateTo) && (
  <button
- onClick={() => { setStatusFilter(""); setDateFrom(""); setDateTo(""); }}
+ onClick={() => { setStatusFilter([]); setInsuranceCompanyFilter([]); setLiquidationFilter(""); setDateFrom(""); setDateTo(""); }}
  className="app-body text-muted-foreground hover:text-foreground px-2"
  >
  Limpiar
@@ -2310,15 +2375,15 @@ function ClaimsPageContent() {
  <table className="app-data-table">
  <thead>
  <tr>
- <th className="w-[130px]">N° Liquidación</th>
- <th className="w-[130px] hidden sm:table-cell">N° Ref Cliente</th>
- <th className="w-[130px] hidden lg:table-cell">N° Siniestro Cía</th>
- <th className="min-w-[200px]">Asegurado</th>
- <th className="min-w-[250px] hidden lg:table-cell">Dirección</th>
- <th className="w-[110px]">Estado</th>
- <th className="w-[100px] hidden lg:table-cell">Siniestro</th>
- <th className="w-[100px] hidden lg:table-cell">Denuncio</th>
- <th className="w-[100px] hidden lg:table-cell">Creación</th>
+ <SortableTh sortKey="liquidation_number" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[130px]">N° Liquidación</SortableTh>
+ <SortableTh sortKey="client_reference" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[130px] hidden sm:table-cell">N° Ref Cliente</SortableTh>
+ <SortableTh sortKey="claim_number" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[130px] hidden lg:table-cell">N° Siniestro Cía</SortableTh>
+ <SortableTh sortKey="insured" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="min-w-[200px]">Asegurado</SortableTh>
+ <SortableTh sortKey="address" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="min-w-[250px] hidden lg:table-cell">Dirección</SortableTh>
+ <SortableTh sortKey="status" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[110px]">Estado</SortableTh>
+ <SortableTh sortKey="claim_date" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[100px] hidden lg:table-cell">Siniestro</SortableTh>
+ <SortableTh sortKey="report_date" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[100px] hidden lg:table-cell">Denuncio</SortableTh>
+ <SortableTh sortKey="created_at" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[100px] hidden lg:table-cell">Creación</SortableTh>
  <th className="w-[70px] text-center hidden lg:table-cell">Tipo/País</th>
  </tr>
  </thead>
