@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
@@ -64,16 +64,12 @@ export default function InspectionsPage() {
 function InspectionsPageContent() {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { canEdit, canView } = usePermissions();
   const { profile, dataAccess } = useAuth();
   useRealtime("inspection_sessions", [["inspection-sessions"], ["inspection-sessions-all"]]);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>(() => {
-    const s = searchParams.get("status");
-    return s && ["all", "scheduled", "active", "completed", "cancelled"].includes(s) ? s : "all";
-  });
-  const [inspectorFilter, setInspectorFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [inspectorFilter, setInspectorFilter] = useState<string[]>([]);
   const [internalNumberFilter, setInternalNumberFilter] = useState("");
 
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
@@ -131,7 +127,7 @@ function InspectionsPageContent() {
       const user = users?.find((u) => u.id === id);
       return { value: id, label: user?.full_name || user?.email || id };
     });
-    return [{ value: "all", label: "Todos los inspectores" }, ...activeInspectors];
+    return activeInspectors;
   }, [sessions, users]);
 
   const accessors = useMemo(
@@ -167,8 +163,10 @@ function InspectionsPageContent() {
           sessionStatusLabels[s.status]?.toLowerCase().includes(search.toLowerCase()) ||
           s.claim?.liquidation_number?.toLowerCase().includes(search.toLowerCase()) ||
           s.inspection_number?.toLowerCase().includes(search.toLowerCase())
-        const matchesStatus = statusFilter === "all" || s.status === statusFilter;
-        const matchesInspector = inspectorFilter === "all" || (s.inspector_id || s.claim?.inspector_id || "") === inspectorFilter;
+        const matchesStatus = statusFilter.length === 0 || statusFilter.includes(s.status);
+        const matchesInspector =
+          inspectorFilter.length === 0 ||
+          inspectorFilter.includes(s.inspector_id || s.claim?.inspector_id || "");
         const filterDigits = internalNumberFilter.replace(/\D/g, "");
         const matchesInternal =
           filterDigits === "" ||
@@ -222,19 +220,33 @@ function InspectionsPageContent() {
               </TooltipTrigger>
               <TooltipContent>Solo la parte numérica</TooltipContent>
             </Tooltip>
-            <Select value={statusFilter || "all"} onValueChange={(v) => setStatusFilter(v ?? "all")} items={[{ value: "all", label: "Todos los estados" }, { value: "scheduled", label: "Agendada" }, { value: "active", label: "En progreso" }, { value: "completed", label: "Completada" }, { value: "cancelled", label: "Cancelada" }]}>
+            <Select
+              multiple
+              value={statusFilter}
+              onValueChange={(v: string[]) => setStatusFilter(v ?? [])}
+              items={[
+                { value: "scheduled", label: "Agendada" },
+                { value: "active", label: "En progreso" },
+                { value: "completed", label: "Completada" },
+                { value: "cancelled", label: "Cancelada" },
+              ]}
+            >
               <SelectTrigger className="app-input app-filter-narrow">
                 <SelectValue placeholder="Todos los estados" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los estados</SelectItem>
                 <SelectItem value="scheduled">Agendada</SelectItem>
                 <SelectItem value="active">En progreso</SelectItem>
                 <SelectItem value="completed">Completada</SelectItem>
                 <SelectItem value="cancelled">Cancelada</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={inspectorFilter} onValueChange={(v) => setInspectorFilter(v ?? "all")} items={inspectorOptions}>
+            <Select
+              multiple
+              value={inspectorFilter}
+              onValueChange={(v: string[]) => setInspectorFilter(v ?? [])}
+              items={inspectorOptions}
+            >
               <SelectTrigger className="app-input app-filter-narrow">
                 <SelectValue placeholder="Todos los inspectores" />
               </SelectTrigger>
