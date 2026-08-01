@@ -167,14 +167,30 @@ export async function POST(request: NextRequest) {
     //    se resuelvan correctamente, sin que falte ninguno.
     const docData = await buildDocumentDataForClaim(actionRow.claim_id, supabase);
 
-    // Cargar la última sesión de inspección (para magic link y validez)
-    const { data: sessions } = await supabase
+    // Cargar la sesión de inspección vinculada a esta gestión específica.
+    // Si no existe (gestión sin sesión), buscar la última del siniestro como fallback.
+    let sessionQuery = supabase
       .from("inspection_sessions")
       .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
-      .eq("claim_id", claim.id as string)
+      .eq("claim_id", claim.id as string);
+    if (claimActionId) {
+      sessionQuery = sessionQuery.eq("claim_action_id", claimActionId);
+    }
+    const { data: sessions } = await sessionQuery
       .order("created_at", { ascending: false })
       .limit(1);
-    const lastSession = sessions?.[0] ?? null;
+    let lastSession = sessions?.[0] ?? null;
+
+    // Fallback: si la gestión no tiene sesión vinculada, buscar la última del siniestro
+    if (!lastSession) {
+      const { data: fallbackSessions } = await supabase
+        .from("inspection_sessions")
+        .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
+        .eq("claim_id", claim.id as string)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      lastSession = fallbackSessions?.[0] ?? null;
+    }
 
     // Construir URL pública del magic link.
     // NEXT_PUBLIC_APP_URL puede no estar seteada en dev/local, así que usamos
