@@ -38,13 +38,29 @@ export async function POST(request: NextRequest) {
 
     // 2. Crear o actualizar registro en damage_sketches
     if (sketchId) {
-      // Editar croquis existente
-      const { data: sketch, error: updateError } = await supabase
+      // Editar croquis existente (intentamos con sketch_data; si la columna aun no existe, sin ella)
+      let { data: sketch, error: updateError } = await supabase
         .from("damage_sketches")
         .update({ sketch_url: sketchUrl, sketch_data: sketchJson || null, label: label || "Croquis" })
         .eq("id", sketchId)
         .select("id, sketch_url, sketch_data, label, created_at")
         .single();
+
+      if (updateError && updateError.message.includes("sketch_data")) {
+        logger.warn("Sketch API: sketch_data aun no existe, guardando solo PNG", {
+          component: "inspection-sketch-route",
+          action: "update.sketch.fallback",
+          metadata: { sketchId, message: updateError.message },
+        });
+        const retry = await supabase
+          .from("damage_sketches")
+          .update({ sketch_url: sketchUrl, label: label || "Croquis" })
+          .eq("id", sketchId)
+          .select("id, sketch_url, sketch_data, label, created_at")
+          .single();
+        sketch = retry.data;
+        updateError = retry.error;
+      }
 
       if (updateError) {
         logger.error("Sketch API: update falló", new Error(updateError.message), {
@@ -56,8 +72,8 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ sketch });
     } else {
-      // Crear nuevo croquis
-      const { data: sketch, error: insertError } = await supabase
+      // Crear nuevo croquis (intentamos con sketch_data; si la columna aun no existe, sin ella)
+      let { data: sketch, error: insertError } = await supabase
         .from("damage_sketches")
         .insert({
           session_id: sessionId,
@@ -67,6 +83,25 @@ export async function POST(request: NextRequest) {
         })
         .select("id, sketch_url, sketch_data, label, created_at")
         .single();
+
+      if (insertError && insertError.message.includes("sketch_data")) {
+        logger.warn("Sketch API: sketch_data aun no existe, guardando solo PNG", {
+          component: "inspection-sketch-route",
+          action: "insert.sketch.fallback",
+          metadata: { sessionId, message: insertError.message },
+        });
+        const retry = await supabase
+          .from("damage_sketches")
+          .insert({
+            session_id: sessionId,
+            sketch_url: sketchUrl,
+            label: label || "Croquis",
+          })
+          .select("id, sketch_url, sketch_data, label, created_at")
+          .single();
+        sketch = retry.data;
+        insertError = retry.error;
+      }
 
       if (insertError) {
         logger.error("Sketch API: insert falló", new Error(insertError.message), {
