@@ -2209,17 +2209,19 @@
 
 /* Contenedor scroll del preview tipo PDF */
 .report-pdf-viewer {
-  @apply rounded-lg p-4 overflow-y-auto;
+  @apply rounded-lg p-4 overflow-auto;
   max-height: calc(100vh - 200px);
   background-color: #e5e7eb;
 }
 
-/* Página A4-like del reporte */
+/* Página Letter (carta) del reporte */
 .report-pdf-page {
   @apply shadow-lg mx-auto relative;
   font-family: var(--font-dm-sans), system-ui, sans-serif;
-  max-width: 800px;
-  padding: 30px 40px;
+  width: 8.5in;
+  max-width: 8.5in;
+  min-height: 11in;
+  padding: 0.5in;
   background-color: #ffffff;
   color: #1a1a1a;
 }

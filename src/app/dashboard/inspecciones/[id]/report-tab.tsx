@@ -200,11 +200,11 @@ export default function ReportTab({
         if (originalSrcs[i]) img.src = originalSrcs[i];
       });
 
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
+      const imgWidth = 216; // Letter width in mm
+      const pageHeight = 279; // Letter height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      const pdf = new jsPDF("p", "mm", "a4");
+      const pdf = new jsPDF("p", "mm", "letter");
       let heightLeft = imgHeight;
       let position = 0;
 
