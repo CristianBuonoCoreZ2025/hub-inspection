@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { getSignatures, updateInspectionSession } from "@/services/inspections";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { User, ShieldCheck, Lock, UserX, AlertTriangle } from "lucide-react";
 
@@ -182,6 +183,33 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
     queryKey: ["signatures", sessionId],
     queryFn: () => getSignatures(sessionId),
   });
+
+  // Realtime: cuando el asegurado firma, recargar inmediatamente
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`signatures-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "inspection_signatures",
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ["signatures", sessionId] });
+          queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+          const role = (payload.new as { role?: string } | null)?.role;
+          if (role === "insured") toast.success("El asegurado ha firmado");
+          if (role === "adjuster") toast.success("El ajustador ha firmado");
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId, queryClient]);
 
   const handleSave = async (role: "insured" | "adjuster", dataUrl: string) => {
     const blob = await fetch(dataUrl).then((r) => r.blob());
