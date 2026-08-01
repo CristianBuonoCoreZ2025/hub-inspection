@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
- getInspectionSessionByIdLight,
+ getInspectionSessionById,
  updateInspectionSession,
  rescheduleInspectionViaCIN,
  cancelInspectionViaCIN,
@@ -169,7 +169,7 @@ export default function InspectionDetailPage() {
 
  const { data: session, isLoading, isError, error } = useQuery({
  queryKey: ["inspection-session", sessionId],
- queryFn: () => getInspectionSessionByIdLight(sessionId),
+ queryFn: () => getInspectionSessionById(sessionId),
  retry: false,
  refetchInterval: (query) => {
  const s = query.state.data as InspectionSession | undefined;
