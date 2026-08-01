@@ -407,7 +407,7 @@ export function SketchEditor({
     if (!canvas) return;
     const dataUrl = exportSketchToPng(canvas);
     if (!dataUrl) return;
-    const sketchData = canvas.toJSON() as Record<string, unknown>;
+    const sketchData = canvas.toObject(["data"]) as Record<string, unknown>;
     onSave({ dataUrl, sketchData });
   }, [onSave]);
 

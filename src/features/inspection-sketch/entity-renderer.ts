@@ -17,12 +17,16 @@
 
 import * as fabric from "fabric";
 import catalogData from "./catalog.json";
+import { getDefaultProperties } from "./entity-properties";
 import type {
   Catalog,
   EntityDefinition,
   EntityMetadata,
   EntityRenderer,
 } from "./entity-types";
+
+/** Objeto Fabric con campo `data` libre para metadata de entidad (serializable). */
+type FabricObjectWithData = fabric.Object & { data?: Record<string, unknown> };
 
 /** Catálogo cargado desde JSON (tipado en runtime). */
 const catalog = catalogData as Catalog;
@@ -55,7 +59,7 @@ export function searchEntities(query: string): EntityDefinition[] {
 }
 
 /** Configuración común de controles para todos los objetos. */
-function applyCommonControls(obj: fabric.Object, def: EntityDefinition, meta: EntityMetadata) {
+function applyCommonControls(obj: fabric.Object, meta: EntityMetadata) {
   obj.set({
     cornerStyle: "circle",
     cornerColor: "#0095DA",
@@ -69,7 +73,7 @@ function applyCommonControls(obj: fabric.Object, def: EntityDefinition, meta: En
     originY: "top",
   });
   // Adjuntar metadata al objeto para serialización y exportación.
-  (obj as fabric.Object & { entityMeta?: EntityMetadata }).entityMeta = meta;
+  (obj as FabricObjectWithData).data = { ...(obj as FabricObjectWithData).data, entityMeta: meta };
 }
 
 /** Crea un bloque de espacio (rectángculo con nombre dentro). */
@@ -334,12 +338,12 @@ export function createEntity(
     renderer: def.renderer,
     scaleMode: def.scaleMode,
     texture: def.texture,
-    properties: {},
+    properties: getDefaultProperties(def.properties, name),
     annotationColor: def.category === "annotations" ? "yellow" : undefined,
   };
 
   const obj = renderByType(def.renderer, def, x, y, name);
-  applyCommonControls(obj, def, meta);
+  applyCommonControls(obj, meta);
 
   // Para objetos con escalamiento proporcional, bloquear el ratio.
   if (def.scaleMode === "proportional") {
@@ -351,7 +355,7 @@ export function createEntity(
 
 /** Recupera la metadata de entidad desde un objeto Fabric. */
 export function getEntityMeta(obj: fabric.Object): EntityMetadata | null {
-  const meta = (obj as fabric.Object & { entityMeta?: EntityMetadata }).entityMeta;
+  const meta = (obj as FabricObjectWithData).data?.entityMeta as EntityMetadata | undefined;
   return meta ?? null;
 }
 
@@ -360,5 +364,69 @@ export function setEntityMeta(obj: fabric.Object, meta: Partial<EntityMetadata>)
   const current = getEntityMeta(obj);
   if (!current) return;
   const updated = { ...current, ...meta };
-  (obj as fabric.Object & { entityMeta?: EntityMetadata }).entityMeta = updated;
+  (obj as FabricObjectWithData).data = { ...(obj as FabricObjectWithData).data, entityMeta: updated };
+}
+
+/** Tipos de figura trazadas libremente en el canvas. */
+export type ShapeMode = "line" | "rectangle" | "circle";
+
+/** Convierte una figura temporal en una entidad con metadata editable. */
+export function finalizeTempShape(obj: fabric.Object, mode: ShapeMode): fabric.Object {
+  if (mode === "line") {
+    const line = obj as fabric.Line;
+    const dx = (line.x2 ?? 0) - (line.x1 ?? 0);
+    const dy = (line.y2 ?? 0) - (line.y1 ?? 0);
+    const meta: EntityMetadata = {
+      catalogId: "custom-line",
+      category: "structure",
+      name: "Muro",
+      defaultLabel: "M",
+      renderer: "line",
+      scaleMode: "free",
+      texture: "none",
+      properties: { name: "Muro", length: Math.round(Math.sqrt(dx * dx + dy * dy)) },
+    };
+    applyCommonControls(obj, meta);
+    return obj;
+  }
+
+  if (mode === "rectangle" || mode === "circle") {
+    const isCircle = mode === "circle";
+    const shape = obj as fabric.Rect | fabric.Circle;
+    const originalLeft = shape.left ?? 0;
+    const originalTop = shape.top ?? 0;
+    const w = isCircle ? (shape as fabric.Circle).radius * 2 || 0 : (shape as fabric.Rect).width || 0;
+    const h = isCircle ? (shape as fabric.Circle).radius * 2 || 0 : (shape as fabric.Rect).height || 0;
+    const name = isCircle ? "Círculo" : "Espacio";
+
+    const label = new fabric.Text(name, {
+      fontSize: 14,
+      fontFamily: "sans-serif",
+      fill: "#1f2937",
+      originX: "center",
+      originY: "center",
+      left: w / 2,
+      top: h / 2,
+      selectable: false,
+      evented: false,
+    });
+
+    shape.set({ left: 0, top: 0 });
+    const group = new fabric.Group([shape, label], { left: originalLeft, top: originalTop });
+
+    const meta: EntityMetadata = {
+      catalogId: `custom-${mode}`,
+      category: "spaces",
+      name,
+      defaultLabel: isCircle ? "C" : "ESP",
+      renderer: "block",
+      scaleMode: "free",
+      texture: "none",
+      properties: { name, width: w, height: h },
+    };
+    applyCommonControls(group, meta);
+    return group;
+  }
+
+  return obj;
 }
