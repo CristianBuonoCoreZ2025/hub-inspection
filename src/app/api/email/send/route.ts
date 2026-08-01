@@ -230,14 +230,14 @@ export async function POST(request: NextRequest) {
       claim_id: claim.id,
       action_id: actionRow.id,
       action_data: actionRow.action_data,
-      // Magic link de la última inspección
+      // Magic link de la sesión vinculada a esta gestión
       magic_link: magicLinkUrl,
       magic_link_valid_from: fmtDateTime(windowStart),
       magic_link_valid_until: fmtDateTime(lastSession?.magic_link_expires_at),
       last_inspection_scheduled_at: fmtDateTime(lastSession?.scheduled_at),
-      // <coord_inspection_date> = fecha de la última inspección agendada (formateada)
-      coord_inspection_date: fmtDateTime(lastSession?.scheduled_at),
-      coord_inspection_datetime: fmtDateTime(lastSession?.scheduled_at),
+      // <coord_inspection_date> = fecha coordinada en esta gestión específica
+      coord_inspection_date: fmtDateTime((actionRow.action_data as Record<string, unknown> | null)?.coord_fecha as string | null | undefined),
+      coord_inspection_datetime: fmtDateTime((actionRow.action_data as Record<string, unknown> | null)?.coord_fecha as string | null | undefined),
       // Header color: prioridad de la plantilla, fallback al color de la empresa
       company_header_color: template?.header_color ?? "#0095DA",
     };
