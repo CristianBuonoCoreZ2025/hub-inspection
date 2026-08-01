@@ -68,9 +68,10 @@ export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchProperties
   const targetObj = obj;
   const targetMeta = meta;
 
-  const fields = getPropertyFields(
+  const allFields = getPropertyFields(
     Object.keys(targetMeta.properties) as PropertyName[]
   );
+  const fields = allFields.filter((f) => !(targetMeta.category === "spaces" && f.name === "length"));
 
   function handleChange(name: string, value: string) {
     setValues((prev) => ({ ...prev, [name]: value }));
@@ -153,12 +154,13 @@ export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchProperties
     }
 
     if (shape instanceof fabric.Rect) {
-      const w = numericProps.width;
-      const h = numericProps.height;
-      if (w != null) shape.set({ width: w * PIXELS_PER_METER });
-      if (h != null) shape.set({ height: h * PIXELS_PER_METER });
       if (textObj) {
-        textObj.set({ left: shape.width / 2, top: shape.height / 2 });
+        textObj.set({
+          left: (shape.left ?? 0) + (shape.width ?? 0) / 2,
+          top: (shape.top ?? 0) + (shape.height ?? 0) / 2,
+          originX: "center",
+          originY: "center",
+        });
       }
     }
 
