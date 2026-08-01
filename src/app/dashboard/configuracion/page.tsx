@@ -15,7 +15,6 @@ import {
   Loader2,
 } from "lucide-react";
 
-import { invalidateSystemSettingCache } from "@/services/settings";
 import { usePermissions } from "@/hooks/use-permissions";
 
 import { Button } from "@/components/ui/button";
@@ -113,7 +112,6 @@ function GeneralTab() {
       return res.json();
     },
     onSuccess: () => {
-      invalidateSystemSettingCache("geo_threshold_meters");
       queryClient.invalidateQueries({ queryKey: ["geo-threshold"] });
       toast.success("Umbral de geolocalización actualizado");
     },
@@ -326,7 +324,6 @@ function MapProvidersSection() {
       return res.json();
     },
     onSuccess: () => {
-      invalidateSystemSettingCache("map_providers");
       queryClient.invalidateQueries({ queryKey: ["map-providers"] });
       toast.success("Proveedores de mapas actualizados");
     },
