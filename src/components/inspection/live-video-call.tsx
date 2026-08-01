@@ -28,6 +28,7 @@ interface LiveVideoCallProps {
   userId: string;
   role: SignalingRole;
   compact?: boolean;
+  minimized?: boolean;
   onHangup: () => void;
   onScreenshotSaved?: (evidence?: { id: string; url: string; description: string }) => void;
   onPeerJoined?: () => void;
@@ -95,6 +96,7 @@ export function LiveVideoCall({
   userId,
   role,
   compact: compactProp = false,
+  minimized: minimizedProp = false,
   onHangup,
   onScreenshotSaved,
   onPeerJoined,
@@ -739,7 +741,8 @@ export function LiveVideoCall({
 
   const [expanded, setExpanded] = React.useState(false);
   const [showPeersPanel, setShowPeersPanel] = React.useState(false);
-  const compact = compactProp && !expanded;
+  const compact = (compactProp || minimizedProp) && !expanded;
+  const minimized = minimizedProp;
 
   // Peers cliente conectados (solo relevantes para el inspector)
   const clientPeers = peers.filter((p) => p.role === "client");
@@ -789,8 +792,10 @@ export function LiveVideoCall({
 
   return (
     <div className={cn("flex flex-col bg-black/95", compact ? "relative h-full rounded-lg overflow-hidden" : "fixed inset-0 z-50")}>
-      {/* Header */}
-      <div className={cn("flex items-center justify-between bg-black/40 border-b border-white/10", compact ? "px-3 py-2" : "px-4 py-3")}>
+      {!minimized && (
+        <>
+          {/* Header */}
+          <div className={cn("flex items-center justify-between bg-black/40 border-b border-white/10", compact ? "px-3 py-2" : "px-4 py-3")}>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             {state === "connected" ? (
@@ -884,6 +889,8 @@ export function LiveVideoCall({
           </span>
         </div>
       </div>
+        </>
+      )}
 
       {/* Cuerpo: video remoto + local en PiP */}
       <div className="flex-1 relative bg-black flex items-center justify-center">
@@ -894,7 +901,7 @@ export function LiveVideoCall({
           playsInline
           className="w-full h-full object-contain"
         />
-        {!peerJoined && state !== "failed" && state !== "rejected" && (
+        {!minimized && !peerJoined && state !== "failed" && state !== "rejected" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50">
             <Video className="h-12 w-12 mb-3 opacity-50" />
             <p className="app-body">
@@ -902,14 +909,14 @@ export function LiveVideoCall({
             </p>
           </div>
         )}
-        {state === "failed" && (
+        {!minimized && state === "failed" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70">
             <AlertTriangle className="h-12 w-12 mb-3 text-rose-500" />
             <p className="app-body font-medium">No se pudo establecer la conexión</p>
             <p className="app-body text-white/50 mt-1">{error}</p>
           </div>
         )}
-        {state === "rejected" && (
+        {!minimized && state === "rejected" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 px-6 text-center">
             <AlertTriangle className="h-12 w-12 mb-3 text-amber-500" />
             <p className="app-body font-medium text-amber-400">Videollamada no disponible</p>
@@ -921,7 +928,7 @@ export function LiveVideoCall({
             </p>
           </div>
         )}
-        {state === "disconnected" && (
+        {!minimized && state === "disconnected" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 px-6 text-center">
             <WifiOff className="h-12 w-12 mb-3 text-amber-500" />
             <p className="app-body font-medium">El inspector desconectó la videollamada</p>
@@ -933,7 +940,7 @@ export function LiveVideoCall({
 
         {/* Video local (PiP) — oculto cuando la sesión fue rechazada */}
         {state !== "rejected" && (
-        <div className={cn("absolute overflow-hidden bg-black", compact ? "bottom-2 right-2 w-20 h-14 rounded border border-white/20" : "bottom-4 right-4 w-32 sm:w-48 h-24 sm:h-36 rounded-lg border-2 border-white/20 shadow-2xl")}>
+        <div className={cn("absolute overflow-hidden bg-black", minimized ? "bottom-1 right-1 w-8 h-6 rounded border border-white/20" : compact ? "bottom-2 right-2 w-20 h-14 rounded border border-white/20" : "bottom-4 right-4 w-32 sm:w-48 h-24 sm:h-36 rounded-lg border-2 border-white/20 shadow-2xl")}>
           <video
             ref={localVideoRef}
             autoPlay
@@ -946,14 +953,16 @@ export function LiveVideoCall({
               <VideoOff className="h-6 w-6 text-white/60" />
             </div>
           )}
-          <div className="absolute bottom-1 left-1 app-body text-white/80 bg-black/60 rounded px-1 py-0.5">
-            Tú
-          </div>
+          {!minimized && (
+            <div className="absolute bottom-1 left-1 app-body text-white/80 bg-black/60 rounded px-1 py-0.5">
+              Tú
+            </div>
+          )}
         </div>
         )}
 
         {/* Botón fullscreen */}
-        {peerJoined && (
+        {!minimized && peerJoined && (
           <button
             type="button"
             onClick={goFullscreen}
@@ -966,7 +975,7 @@ export function LiveVideoCall({
       </div>
 
       {/* Notificación de screenshot */}
-      {lastScreenshot && (
+      {!minimized && lastScreenshot && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-emerald-600/90 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-pulse">
           <CheckCircle2 className="h-4 w-4" />
           <span className="app-body font-medium">Foto capturada: {lastScreenshot.description}</span>
@@ -974,15 +983,17 @@ export function LiveVideoCall({
       )}
 
       {/* Error */}
-      {error && (
+      {!minimized && error && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-rose-600/90 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 max-w-md">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span className="app-body">{error}</span>
         </div>
       )}
 
-      {/* Controles inferiores */}
-      <div className={cn("flex items-center justify-center bg-black/40 border-t border-white/10", compact ? "gap-2 px-2 py-2" : "gap-3 px-4 py-4")}>
+      {!minimized && (
+        <>
+          {/* Controles inferiores */}
+          <div className={cn("flex items-center justify-center bg-black/40 border-t border-white/10", compact ? "gap-2 px-2 py-2" : "gap-3 px-4 py-4")}>
         {state !== "rejected" && (
         <>
         <button
@@ -1048,6 +1059,8 @@ export function LiveVideoCall({
           <PhoneOff className={ctrlIcon} />
         </button>
       </div>
+        </>
+      )}
 
       {/* Hint de captura */}
       {!compact && peerJoined && role === "inspector" && (

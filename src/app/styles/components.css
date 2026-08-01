@@ -3185,3 +3185,17 @@
     overflow: hidden !important;
   }
 
+  /* Ventanita minimizada de videollamada */
+  .chat-overlay.chat-overlay-minimized {
+    top: 80px !important;
+    right: 24px !important;
+    width: 100px !important;
+    height: 70px !important;
+    z-index: 50 !important;
+  }
+
+  .chat-overlay.chat-overlay-minimized .chat-overlay-panel {
+    padding: 2px !important;
+    border-radius: 8px !important;
+  }
+

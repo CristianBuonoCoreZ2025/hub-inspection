@@ -1029,8 +1029,9 @@ export default function InspectionDetailPage() {
 
  {/* Panel overlay de Comunicación — flotante, no roba espacio */}
  {session.inspection_type === "remote" && (
- <div className={cn("chat-overlay", !chatPanelOpen && "hidden")}>
+ <div className={cn("chat-overlay", !chatPanelOpen && "chat-overlay-minimized")}>
  <div className="chat-overlay-panel">
+ {chatPanelOpen && (
  <div className="flex items-center justify-between mb-3 pb-2 border-b">
  <h3 className="app-body font-semibold text-muted-foreground flex items-center gap-2">
  <MessageSquare className="h-4 w-4" />
@@ -1065,8 +1066,9 @@ export default function InspectionDetailPage() {
 
  </div>
  </div>
+ )}
 
- {!videoCallOpen && session.status === "active" && profile?.id && (
+ {chatPanelOpen && !videoCallOpen && session.status === "active" && profile?.id && (
  <div className="shrink-0 mb-3 p-3 rounded-lg border border-border bg-muted/30 text-center">
  <p className="app-body text-muted-foreground mb-2">Videollamada desconectada</p>
  <Button
@@ -1090,12 +1092,13 @@ export default function InspectionDetailPage() {
  )}
 
  {videoCallOpen && session.status === "active" && profile?.id && (
- <div className="h-48 shrink-0 mb-3 rounded-lg overflow-hidden border border-border">
+ <div className={cn("rounded-lg overflow-hidden border border-border", chatPanelOpen ? "h-48 shrink-0 mb-3" : "flex-1 min-h-0")}>
  <LiveVideoCall
  sessionId={session.id}
  userId={profile.id}
  role="inspector"
  compact
+ minimized={!chatPanelOpen}
  onHangup={() => {
  setVideoCallOpen(false);
  // Marcar log como desconectado
