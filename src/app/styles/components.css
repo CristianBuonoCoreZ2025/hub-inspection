@@ -3188,7 +3188,10 @@
   }
 
   .chat-overlay.chat-overlay-minimized .chat-overlay-panel {
-    padding: 2px !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
     border-radius: 8px !important;
+    overflow: hidden !important;
   }
 
