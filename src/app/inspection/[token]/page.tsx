@@ -1393,7 +1393,7 @@ function SketchesTab({ sketches, session }: { sketches: LiveSketch[]; session: L
               <div className="flex items-center justify-between p-2">
                 <p className="app-body text-slate-400 truncate">{sk.label}</p>
                 <button
-                  onClick={() => { setEditingSketch({ id: sk.id, url: sk.sketch_url, label: sk.label || "" }); setMode("draw"); }}
+                  onClick={() => { setEditingSketch({ id: sk.id, url: `/api/inspection/sketch/${sk.id}/image`, label: sk.label || "" }); setMode("draw"); }}
                   className="app-body text-sky-400 hover:text-sky-300 flex items-center gap-1"
                 >
                   <PenTool className="h-3 w-3" /> Editar

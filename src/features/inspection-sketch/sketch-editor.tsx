@@ -27,11 +27,14 @@ import { SketchToolbar } from "./sketch-toolbar";
 import type { SketchMode } from "./sketch-toolbar";
 import { SketchLibrary } from "./sketch-blocks-palette";
 import { SketchPropertiesPanel } from "./sketch-properties-panel";
-import { createEntity, getEntityMeta, setEntityMeta } from "./entity-renderer";
+import { createEntity, getEntityMeta, setEntityMeta, finalizeTempShape } from "./entity-renderer";
 import { generateAutoName, renumberEntities } from "./entity-numbering";
 import { snapToWall, updateAttachedEntities, calculateAlignGuides, applyAlignGuides } from "./sketch-snap";
 import { createLabel, createComment } from "./sketch-annotations";
 import { exportSketchToPng } from "./sketch-export";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { AnnotationColor, SketchEditorProps } from "./entity-types";
 
 type ShapeMode = Extract<SketchMode, "line" | "rectangle" | "circle">;
@@ -58,6 +61,8 @@ export function SketchEditor({
   const [canClear, setCanClear] = useState(false);
   const [selectedObj, setSelectedObj] = useState<fabric.Object | null>(null);
   const [showProperties, setShowProperties] = useState(false);
+  const [pendingAnnotation, setPendingAnnotation] = useState<{ x: number; y: number; mode: "label" | "comment" } | null>(null);
+  const [pendingText, setPendingText] = useState("");
 
   // Refs espejo del estado para los handlers de mouse.
   const modeRef = useRef<SketchMode>(mode);
@@ -199,17 +204,8 @@ export function SketchEditor({
 
     if (currentMode === "label" || currentMode === "comment") {
       const { x, y } = eventToCanvasPoint(opt);
-      const text = window.prompt(currentMode === "label" ? "Texto de la etiqueta:" : "Texto del comentario:", "");
-      if (!text) return;
-      const obj = currentMode === "label"
-        ? createLabel(x, y, text, colorRef.current)
-        : createComment(x, y, text, colorRef.current);
-      if (obj) {
-        canvas.add(obj);
-        canvas.setActiveObject(obj);
-        canvas.renderAll();
-      }
-      handleModeChange("select");
+      setPendingAnnotation({ x, y, mode: currentMode });
+      setPendingText("");
       return;
     }
 
@@ -220,7 +216,7 @@ export function SketchEditor({
       tempShapeRef.current = shape;
       canvas.add(shape);
     }
-  }, [eventToCanvasPoint, handleModeChange]);
+  }, [eventToCanvasPoint]);
 
   const handleCanvasMouseMove = useCallback((opt: { e: Event }) => {
     if (!shapeStartRef.current || !tempShapeRef.current) return;
@@ -238,9 +234,19 @@ export function SketchEditor({
     if (!tempShapeRef.current || !canvas) return;
     tempShapeRef.current.setCoords();
     const obj = tempShapeRef.current;
+    const currentMode = modeRef.current;
     const isLine = obj.type === "line";
     const tooSmall = isLine ? false : (obj.width ?? 0) < 3 && (obj.height ?? 0) < 3;
-    if (tooSmall) canvas.remove(obj);
+    if (tooSmall) {
+      canvas.remove(obj);
+    } else if (isShapeMode(currentMode)) {
+      const finalObj = finalizeTempShape(obj, currentMode);
+      if (finalObj !== obj) {
+        canvas.remove(obj);
+        canvas.add(finalObj);
+      }
+      canvas.setActiveObject(finalObj);
+    }
     shapeStartRef.current = null;
     tempShapeRef.current = null;
     canvas.renderAll();
@@ -296,7 +302,9 @@ export function SketchEditor({
 
     // Cargar croquis previo como fondo bloqueado.
     if (initialImage) {
-      fabric.Image.fromURL(initialImage, { crossOrigin: "anonymous" })
+      const isCrossOrigin = new URL(initialImage, window.location.href).origin !== window.location.origin;
+      const options = isCrossOrigin ? { crossOrigin: "anonymous" as const } : undefined;
+      fabric.Image.fromURL(initialImage, options)
         .then((img) => {
           img.set({ selectable: false, evented: false, hoverCursor: "default" });
           const scale = canvas.getWidth() / (img.width || canvas.getWidth());
@@ -439,6 +447,33 @@ export function SketchEditor({
     if (entityId) handleDropEntity(entityId, e.clientX, e.clientY);
   }, [handleDropEntity]);
 
+  const handleConfirmAnnotation = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !pendingAnnotation || !pendingText.trim()) {
+      setPendingAnnotation(null);
+      setPendingText("");
+      return;
+    }
+    const { x, y, mode } = pendingAnnotation;
+    const obj = mode === "label"
+      ? createLabel(x, y, pendingText.trim(), colorRef.current)
+      : createComment(x, y, pendingText.trim(), colorRef.current);
+    if (obj) {
+      canvas.add(obj);
+      canvas.setActiveObject(obj);
+      canvas.renderAll();
+    }
+    setPendingAnnotation(null);
+    setPendingText("");
+    handleModeChange("select");
+  }, [pendingAnnotation, pendingText, handleModeChange]);
+
+  const handleCloseAnnotation = useCallback(() => {
+    setPendingAnnotation(null);
+    setPendingText("");
+    handleModeChange("select");
+  }, [handleModeChange]);
+
   const handleCloseProperties = useCallback(() => {
     setShowProperties(false);
     setSelectedObj(null);
@@ -476,6 +511,37 @@ export function SketchEditor({
           />
         )}
       </div>
+
+      <Dialog open={!!pendingAnnotation} dismissible={false} onOpenChange={(open: boolean) => { if (!open) handleCloseAnnotation(); }}>
+        <DialogContent showCloseButton={false} className="gap-4 p-4 sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {pendingAnnotation?.mode === "label" ? "Texto de la etiqueta" : "Texto del comentario"}
+            </DialogTitle>
+          </DialogHeader>
+          <Input
+            value={pendingText}
+            onChange={(e) => setPendingText(e.target.value)}
+            placeholder="Escribe aquí..."
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && pendingText.trim()) {
+                handleConfirmAnnotation();
+              } else if (e.key === "Escape") {
+                handleCloseAnnotation();
+              }
+            }}
+          />
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={handleCloseAnnotation}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleConfirmAnnotation} disabled={!pendingText.trim()}>
+              Aceptar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -291,7 +291,7 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  className="btn-icon-sm"
  title="Dibujar / Editar"
  onClick={() => {
- setDrawEditingSketch({ id: sketch.id, url: sketch.sketch_url, label: sketch.label || "" });
+ setDrawEditingSketch({ id: sketch.id, url: `/api/inspection/sketch/${sketch.id}/image`, label: sketch.label || "" });
  setMode("draw");
  }}
  >
