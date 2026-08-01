@@ -64,6 +64,8 @@ export function SketchEditor({
   const [showProperties, setShowProperties] = useState(false);
   const [pendingAnnotation, setPendingAnnotation] = useState<{ x: number; y: number; mode: "label" | "comment" } | null>(null);
   const [pendingText, setPendingText] = useState("");
+  const [loadState, setLoadState] = useState<"idle" | "loading" | "error" | "ready">("idle");
+  const [loadMessage, setLoadMessage] = useState<string>("");
 
   // Refs espejo del estado para los handlers de mouse.
   const modeRef = useRef<SketchMode>(mode);
@@ -301,30 +303,55 @@ export function SketchEditor({
     canvas.freeDrawingBrush.color = "#1f2937";
     canvas.freeDrawingBrush.width = 3;
 
+    const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> => {
+      return Promise.race([
+        promise,
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms)),
+      ]).catch(() => {
+        console.warn(`[SketchEditor] Carga excedió ${ms}ms, se continúa con canvas vacío.`);
+        return fallback;
+      });
+    };
+
+    const finishLoad = (success: boolean, message?: string) => {
+      setLoadState(success ? "ready" : "error");
+      setLoadMessage(message || "");
+      canvas.renderAll();
+      pushHistory();
+      updateButtons();
+    };
+
+    setLoadState("loading");
+
     // Cargar croquis previo: si hay JSON editable lo usamos, si no, imagen fija.
-    if (initialSketchData) {
-      canvas
-        .loadFromJSON(initialSketchData)
-        .then(() => {
-          canvas.renderAll();
-          pushHistory();
-        })
-        .catch(() => pushHistory());
+    if (initialSketchData && typeof initialSketchData === "object" && Object.keys(initialSketchData).length > 0) {
+      withTimeout(canvas.loadFromJSON(initialSketchData as unknown as string), 10000, undefined)
+        .then(() => finishLoad(true))
+        .catch((err) => {
+          console.error("[SketchEditor] Error cargando sketch_data:", err);
+          finishLoad(false, "No se pudo cargar el croquis editable. Intenta recargar.");
+        });
     } else if (initialImage) {
       const isCrossOrigin = new URL(initialImage, window.location.href).origin !== window.location.origin;
       const options = isCrossOrigin ? { crossOrigin: "anonymous" as const } : undefined;
-      fabric.Image.fromURL(initialImage, options)
+      withTimeout(fabric.Image.fromURL(initialImage, options), 10000, undefined)
         .then((img) => {
+          if (!img) {
+            finishLoad(false, "La imagen del croquis no pudo cargarse.");
+            return;
+          }
           img.set({ selectable: false, evented: false, hoverCursor: "default" });
           const scale = canvas.getWidth() / (img.width || canvas.getWidth());
           img.scale(Math.min(scale, 1));
           canvas.backgroundImage = img;
-          canvas.renderAll();
-          pushHistory();
+          finishLoad(true);
         })
-        .catch(() => pushHistory());
+        .catch((err) => {
+          console.error("[SketchEditor] Error cargando imagen:", err);
+          finishLoad(false, "No se pudo cargar la imagen del croquis.");
+        });
     } else {
-      pushHistory();
+      finishLoad(true);
     }
 
     // Listeners de historial (object:modified también dispara pushHistory).
@@ -513,7 +540,22 @@ export function SketchEditor({
       />
       <div className="sketch-body">
         <SketchLibrary onSelectEntity={handleSelectEntity} bienType={bienType} />
-        <SketchCanvasStage onReady={handleReady} fixedHeight={height} />
+        <div className="relative flex-1">
+          <SketchCanvasStage onReady={handleReady} fixedHeight={height} />
+          {loadState === "loading" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+              <p className="app-body text-muted-foreground">Cargando croquis...</p>
+            </div>
+          )}
+          {loadState === "error" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 z-10 gap-3 p-4 text-center">
+              <p className="app-body text-rose-600 dark:text-rose-400">{loadMessage || "No se pudo cargar el croquis."}</p>
+              <p className="app-body text-muted-foreground text-sm">
+                Puedes seguir dibujando desde cero o intentar recargar la página.
+              </p>
+            </div>
+          )}
+        </div>
         {showProperties && (
           <SketchPropertiesPanel
             obj={selectedObj}

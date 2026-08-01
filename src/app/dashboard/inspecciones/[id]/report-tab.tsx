@@ -116,7 +116,7 @@ export default function ReportTab({
     },
   });
 
-  const { data: report, isLoading } = useQuery({
+  const { data: report, isLoading, isError, error: reportError } = useQuery({
     queryKey: ["report", sessionId],
     queryFn: () => getReport(sessionId),
   });
@@ -626,9 +626,25 @@ export default function ReportTab({
       {/* Preview del acta — vista tipo PDF con scroll */}
       {isLoading ? (
         <div className="report-loading app-panel app-body">Cargando...</div>
+      ) : isError ? (
+        <div className="report-loading app-panel app-body text-rose-600 dark:text-rose-400">
+          Error al cargar el acta: {reportError?.message || "No se pudo obtener el acta."}
+        </div>
       ) : (
         <div className="report-pdf-viewer">
           <div className="report-pdf-page" ref={printRef}>
+
+          {/* Aviso de datos faltantes */}
+          {!isCancellation && signatures.length === 0 && (
+            <div className="rounded-lg border border-amber-300/40 bg-amber-500/10 p-3 mb-4 text-amber-700 dark:text-amber-300 app-body text-sm">
+              <strong>Faltan firmas:</strong> el asegurado y/o el ajustador aún no firman. El acta no se puede finalizar sin firmas.
+            </div>
+          )}
+          {!isCancellation && damages.length === 0 && (
+            <div className="rounded-lg border border-amber-300/40 bg-amber-500/10 p-3 mb-4 text-amber-700 dark:text-amber-300 app-body text-sm">
+              <strong>Faltan daños:</strong> no se han registrado daños en esta inspección. Revisa la pestaña de daños.
+            </div>
+          )}
 
           {/* Marca de agua BORRADOR */}
           {!isFinal && (

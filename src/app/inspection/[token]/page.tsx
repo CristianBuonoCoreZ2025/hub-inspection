@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   ClipboardCheck, Video, User, Calendar, WifiOff, Loader2, RefreshCw,
   Camera, FileText, AlertTriangle, MessageSquare, Send,
@@ -1430,12 +1431,17 @@ function SignaturesTab({ session }: { session: LiveSession }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Error al guardar firma");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Error al guardar firma");
+      }
       return res.json();
     },
     onSuccess: () => {
+      toast.success("Firma guardada");
       queryClient.invalidateQueries({ queryKey: ["magic-link-live", session.magic_link_token] });
     },
+    onError: (err: Error) => toast.error(err.message || "Error al guardar firma"),
   });
 
   // Canvas resize
