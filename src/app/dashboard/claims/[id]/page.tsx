@@ -1878,6 +1878,7 @@ export default function ClaimDetailPage() {
  {/* ═══ MODAL: Enviar E-mail desde gestión ═══ */}
  {emailComposeAction && (
  <EmailComposeModal
+ key={emailComposeAction.id}
  open={!!emailComposeAction}
  onOpenChange={(v) => { if (!v) setEmailComposeAction(null); }}
  claim={(claim ?? null) as unknown as Record<string, unknown> | null}
