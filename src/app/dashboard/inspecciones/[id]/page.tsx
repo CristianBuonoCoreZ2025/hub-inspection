@@ -44,6 +44,7 @@ import {
  Loader2,
  Wifi,
  ChevronRight,
+ ChevronLeft,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -1031,12 +1032,7 @@ export default function InspectionDetailPage() {
 
  {/* Panel overlay de Comunicación — flotante, no roba espacio */}
  {session.inspection_type === "remote" && (
- <div
- className={cn("chat-overlay", !chatPanelOpen && "chat-overlay-minimized cursor-pointer")}
- onClick={() => { if (!chatPanelOpen) setChatPanelOpen(true); }}
- role={chatPanelOpen ? undefined : "button"}
- tabIndex={chatPanelOpen ? -1 : 0}
- >
+ <div className={cn("chat-overlay", !chatPanelOpen && "chat-overlay-minimized")}>
  <div className="chat-overlay-panel">
  {chatPanelOpen && (
  <div className="flex items-center justify-between mb-3 pb-2 border-b">
@@ -1188,7 +1184,7 @@ export default function InspectionDetailPage() {
  {chatPanelOpen && (
  <button
  type="button"
- onClick={(e) => { e.stopPropagation(); setChatPanelOpen(false); }}
+ onClick={() => setChatPanelOpen(false)}
  className="absolute right-0 top-0 h-full w-4 z-10 flex items-center justify-center bg-primary/80 text-primary-foreground hover:bg-primary transition-colors rounded-r-2xl"
  title="Colapsar chat"
  >
@@ -1209,6 +1205,17 @@ export default function InspectionDetailPage() {
  title="Reanudar videollamada"
  >
  <Video className="h-5 w-5" />
+ </button>
+ )}
+
+ {/* Barra lateral colapsada para reabrir chat — solo para inspecciones remotas */}
+ {!chatPanelOpen && session.inspection_type === "remote" && (
+ <button
+ onClick={() => setChatPanelOpen(true)}
+ className="fixed top-20 right-0 z-40 flex h-[calc(100vh-180px)] w-4 items-center justify-center rounded-l-lg bg-primary/80 text-primary-foreground shadow-lg hover:bg-primary transition-colors"
+ title="Abrir chat"
+ >
+ <ChevronLeft className="h-5 w-5" />
  </button>
  )}
 

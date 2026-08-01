@@ -899,7 +899,7 @@ export function LiveVideoCall({
           ref={remoteVideoRef}
           autoPlay
           playsInline
-          className="w-full h-full object-contain"
+          className={cn("w-full h-full", minimized ? "object-cover" : "object-contain")}
         />
         {!minimized && !peerJoined && state !== "failed" && state !== "rejected" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50">
@@ -938,8 +938,8 @@ export function LiveVideoCall({
           </div>
         )}
 
-        {/* Video local (PiP) — oculto cuando la sesión fue rechazada */}
-        {state !== "rejected" && (
+        {/* Video local (PiP) — oculto cuando la sesión fue rechazada o minimizado */}
+        {!minimized && state !== "rejected" && (
         <div className={cn("absolute overflow-hidden bg-black", minimized ? "bottom-1 right-1 w-8 h-6 rounded border border-white/20" : compact ? "bottom-2 right-2 w-20 h-14 rounded border border-white/20" : "bottom-4 right-4 w-32 sm:w-48 h-24 sm:h-36 rounded-lg border-2 border-white/20 shadow-2xl")}>
           <video
             ref={localVideoRef}
