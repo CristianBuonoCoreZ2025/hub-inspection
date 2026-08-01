@@ -12,8 +12,9 @@
  */
 
 import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { X, Save } from "lucide-react";
 import * as fabric from "fabric";
+import { Button } from "@/components/ui/button";
 import { getEntityMeta, setEntityMeta } from "./entity-renderer";
 import { getPropertyFields } from "./entity-properties";
 import { getTexturePattern, TEXTURE_OPTIONS } from "./sketch-textures";
@@ -119,6 +120,78 @@ export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchProperties
     canvas?.requestRenderAll();
   }
 
+  const PIXELS_PER_METER = 40;
+
+  function handleSave() {
+    const numericProps: Record<string, number | null> = {};
+    for (const key of ["width", "height", "length"]) {
+      const v = values[key];
+      if (v === "" || v == null) {
+        numericProps[key] = null;
+      } else {
+        const n = Number(v);
+        numericProps[key] = Number.isNaN(n) || n <= 0 ? null : n;
+      }
+    }
+
+    const name = values.name || targetMeta.name;
+    setEntityMeta(targetObj, {
+      name,
+      properties: { ...targetMeta.properties, ...numericProps },
+    });
+
+    let shape: fabric.Object | undefined;
+    let textObj: fabric.Text | undefined;
+    if (targetObj instanceof fabric.Group) {
+      const children = targetObj.getObjects();
+      shape = children.find(
+        (o) => o instanceof fabric.Rect || o instanceof fabric.Circle || o instanceof fabric.Ellipse
+      );
+      textObj = children.find((o) => o instanceof fabric.Text) as fabric.Text | undefined;
+    } else {
+      shape = targetObj;
+    }
+
+    if (shape instanceof fabric.Rect) {
+      const w = numericProps.width;
+      const h = numericProps.height;
+      if (w != null) shape.set({ width: w * PIXELS_PER_METER });
+      if (h != null) shape.set({ height: h * PIXELS_PER_METER });
+      if (textObj) {
+        textObj.set({ left: shape.width / 2, top: shape.height / 2 });
+      }
+    }
+
+    if (shape instanceof fabric.Circle) {
+      const r = numericProps.width ?? numericProps.length;
+      if (r != null) shape.set({ radius: r * PIXELS_PER_METER });
+    }
+
+    if (shape instanceof fabric.Line) {
+      const len = numericProps.length ?? numericProps.width;
+      if (len != null) {
+        const x1 = shape.x1 ?? 0;
+        const y1 = shape.y1 ?? 0;
+        const x2 = x1 + len * PIXELS_PER_METER;
+        shape.set({ x2, y2: y1 });
+      }
+    }
+
+    if (textObj) {
+      const dimText = [numericProps.width, numericProps.height].filter((v): v is number => v != null).join("x");
+      const newText = dimText ? `${name}\n${dimText}` : name;
+      textObj.set({ text: newText });
+    }
+
+    if (targetObj instanceof fabric.Group) {
+      targetObj.triggerLayout();
+    }
+
+    targetObj.setCoords();
+    canvas?.requestRenderAll();
+    onClose();
+  }
+
   return (
     <div className="sketch-properties-panel">
       <div className="sketch-properties-header">
@@ -199,6 +272,13 @@ export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchProperties
             )}
           </div>
         ))}
+      </div>
+
+      <div className="sketch-properties-footer mt-3">
+        <Button onClick={handleSave} className="w-full gap-2" type="button" size="sm">
+          <Save className="size-4" />
+          Guardar
+        </Button>
       </div>
     </div>
   );

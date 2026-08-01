@@ -42,7 +42,7 @@ const WALL_TYPE_OPTIONS: { value: WallType; label: string }[] = [
 const FIELD_DEFS: Record<PropertyName, PropertyField> = {
   name: { name: "name", label: "Nombre", inputType: "text" },
   width: { name: "width", label: "Ancho", inputType: "number", optional: true },
-  height: { name: "height", label: "Alto", inputType: "number", optional: true },
+  height: { name: "height", label: "Largo", inputType: "number", optional: true },
   length: { name: "length", label: "Longitud", inputType: "number", optional: true },
   wallType: { name: "wallType", label: "Tipo", inputType: "select", options: WALL_TYPE_OPTIONS },
   destination: { name: "destination", label: "Destino", inputType: "text", optional: true },
