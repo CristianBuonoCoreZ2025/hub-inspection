@@ -1,4 +1,4 @@
-import { fetchAll } from "@/lib/supabase/db";
+import { createAdminClient } from "@/lib/supabase/server";
 
 const CACHE_MS = 60_000; // cachear 1 minuto en memoria
 const cache: Record<string, { value: string; expires: number }> = {};
@@ -6,6 +6,7 @@ const cache: Record<string, { value: string; expires: number }> = {};
 /**
  * Obtiene un setting del sistema por key.
  * Usa cache en memoria para no golpear Supabase en cada request.
+ * Lee con service role para evitar problemas de RLS en API routes.
  */
 export async function getSystemSetting(key: string): Promise<string | null> {
   const now = Date.now();
@@ -14,13 +15,15 @@ export async function getSystemSetting(key: string): Promise<string | null> {
     return cached.value;
   }
 
-  const rows = await fetchAll<{ value: string }>("system_settings", {
-    select: "value",
-    eq: { key, is_active: true },
-    limit: 1,
-  });
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("system_settings")
+    .select("value")
+    .eq("key", key)
+    .eq("is_active", true)
+    .maybeSingle();
 
-  const value = rows[0]?.value ?? null;
+  const value = error ? null : (data?.value ?? null);
   if (value !== null) {
     cache[key] = { value, expires: now + CACHE_MS };
   }
