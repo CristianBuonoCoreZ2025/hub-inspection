@@ -4538,8 +4538,8 @@ function CoordScheduler({
  const setSelectedDate = sharedSetDate ?? setLocalDate;
 
  // Duración según tipo de inspección
- const slotMinutes = inspectionType === "remote" ? 30 : 180; // 30 min remota, 3h presencial
- const slotLabel = inspectionType === "remote" ? "30 min" : "3 hrs";
+ const slotMinutes = inspectionType === "remote" ? 60 : 180; // 1h remota, 3h presencial
+ const slotLabel = inspectionType === "remote" ? "1h" : "3 hrs";
 
  // Rangos horarios
  const DAY_START = 6, DAY_END = 22, NORMAL_START = 9, NORMAL_END = 19;
@@ -4858,7 +4858,7 @@ function CoordScheduler({
  {/* Barra inferior: tipo + leyenda + horario personalizado */}
  <div className="flex flex-wrap items-center gap-2 mt-0.5 pt-1 border-t border-border/30 app-body text-muted-foreground">
  <span className="font-medium text-foreground/80">
- {inspectionType === "remote" ? "Remota · 30 min" : "Presencial · 3 hrs"}
+ {inspectionType === "remote" ? "Remota · 1h" : "Presencial · 3 hrs"}
  </span>
  <div className="flex flex-wrap items-center gap-2 ml-auto">
  <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded bg-emerald-500/40" /> 09-19</span>

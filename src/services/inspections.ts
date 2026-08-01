@@ -743,11 +743,11 @@ export async function rescheduleInspectionViaCIN(params: {
     const dateEnd = nextDay.toISOString().slice(0, 10);
     const busy = await getInspectorSchedule(newOptions.inspectorId, dateStart, dateEnd);
     const newStart = scheduledDate.getTime();
-    const newDuration = newOptions.inspectionType === "onsite" ? 120 : 30;
+    const newDuration = newOptions.inspectionType === "onsite" ? 180 : 60;
     const newEnd = newStart + newDuration * 60 * 1000;
     const overlap = busy.find((s) => {
       const sStart = new Date(s.scheduled_at).getTime();
-      const sDuration = s.inspection_type === "onsite" ? 120 : 30;
+      const sDuration = s.inspection_type === "onsite" ? 180 : 60;
       const sEnd = sStart + sDuration * 60 * 1000;
       return sStart < newEnd && sEnd > newStart;
     });

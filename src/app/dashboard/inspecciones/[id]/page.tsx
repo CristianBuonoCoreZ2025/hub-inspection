@@ -1355,7 +1355,7 @@ export default function InspectionDetailPage() {
  <SelectTrigger className="app-input"><SelectValue /></SelectTrigger>
  <SelectContent>
  <SelectItem value="onsite">Presencial (3h)</SelectItem>
- <SelectItem value="remote">Remota (30min)</SelectItem>
+ <SelectItem value="remote">Remota (1h)</SelectItem>
  </SelectContent>
  </Select>
  </div>
