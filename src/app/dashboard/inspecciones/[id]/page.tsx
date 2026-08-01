@@ -1176,9 +1176,11 @@ export default function InspectionDetailPage() {
  </div>
  )}
 
+ {chatPanelOpen && (
  <div className="flex-1 overflow-hidden min-h-0">
  <ChatTab sessionId={session.id} compact />
  </div>
+ )}
  </div>
 
  {chatPanelOpen && (
