@@ -187,7 +187,7 @@ export default function InspectionDetailPage() {
  queryFn: () => getInspectionSessionById(sessionId),
  enabled: activeTab === "informe",
  retry: false,
- refetchInterval: 10000,
+ staleTime: 5 * 60 * 1000,
  });
 
  const isAccessBlocked = useMemo(() => {

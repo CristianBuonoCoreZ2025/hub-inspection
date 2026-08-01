@@ -260,6 +260,8 @@ function ClaimsPageContent() {
  const { data: rawClaims, isLoading, error } = useQuery({
  queryKey: ["claims"],
  queryFn: () => getClaimsLight(),
+ staleTime: 60_000,
+ gcTime: 5 * 60_000,
  });
 
  if (error) {
@@ -271,6 +273,8 @@ function ClaimsPageContent() {
  queryKey: ["claims-participants", claimIds],
  queryFn: () => getClaimsParticipants(claimIds),
  enabled: claimIds.length > 0,
+ staleTime: 60_000,
+ gcTime: 5 * 60_000,
  });
 
  const claims = rawClaims?.map((claim) => ({

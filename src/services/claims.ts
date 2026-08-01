@@ -98,7 +98,7 @@ export async function getClaimById(id: string) {
   return fetchById<Claim>("claims", id, DYNAMIC_CLAIM_SELECT);
 }
 
-export async function getClaimsLight(companyId?: string) {
+export async function getClaimsLight(companyId?: string, limit = 500) {
   const eq: Record<string, unknown> = { disabled: false };
   if (companyId) eq.company_id = companyId;
 
@@ -106,6 +106,7 @@ export async function getClaimsLight(companyId?: string) {
     select: LIGHT_CLAIM_SELECT,
     eq,
     order: { column: "created_at", ascending: false },
+    limit,
   });
 }
 

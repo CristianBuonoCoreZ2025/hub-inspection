@@ -307,7 +307,7 @@ export async function getInspectionSessionLive(token: string) {
       inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, observations, severity, dependency, sector, materiality_type, unit, quantity, damage_type, product, brand_model, purchase_date, estimated_amount, created_at),
       inspection_chat_messages:inspection_chat_messages!inspection_chat_messages_session_id_fkey(id, content, sender_name, sender_role, created_at),
       inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
-      damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, sketch_data, label, created_at),
+      damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at),
       claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, claim_address, policy_number, claim_date, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))
     `,
     eq: { magic_link_token: token },
@@ -364,7 +364,7 @@ export async function getInspectionSessionById(id: string) {
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
     inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at),
     inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
-    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, sketch_data, label, created_at)
+    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at)
   `);
   if (!session) return null;
 
