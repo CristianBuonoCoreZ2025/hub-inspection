@@ -23,6 +23,7 @@ interface MagicLinkSenderProps {
 function fmt(d: string | null | undefined) {
   if (!d) return "—";
   return new Date(d).toLocaleString("es-CL", {
+    timeZone: "America/Santiago",
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: false,
   });

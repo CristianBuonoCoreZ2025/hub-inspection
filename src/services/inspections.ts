@@ -754,7 +754,7 @@ export async function rescheduleInspectionViaCIN(params: {
     if (overlap) {
       throw new Error(
         `El inspector ya tiene una inspección agendada que se solapa con ese horario ` +
-        `(existente: ${new Date(overlap.scheduled_at).toLocaleString("es-CL")}). ` +
+        `(existente: ${new Date(overlap.scheduled_at).toLocaleString("es-CL", { timeZone: "America/Santiago" })}). ` +
         `Elija otro horario o cancele primero la inspección en curso.`
       );
     }

@@ -20,12 +20,12 @@ const SEVERITY_LABELS: Record<string, string> = {
 
 function fmtDateTime(s?: string | null): string {
   if (!s) return "—";
-  return new Date(s).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  return new Date(s).toLocaleString("es-CL", { timeZone: "America/Santiago", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function fmtDate(s?: string | null): string {
   if (!s) return "—";
-  return new Date(s).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return new Date(s).toLocaleDateString("es-CL", { timeZone: "America/Santiago", day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function fmtQuantity(d: { quantity: number | null; unit: string | null; length: number | null; width: number | null; height: number | null }): string {

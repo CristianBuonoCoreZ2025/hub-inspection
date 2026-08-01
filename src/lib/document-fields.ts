@@ -129,7 +129,7 @@ const fmtDate = (v: unknown): string => {
   if (!v || typeof v !== "string") return "";
   const d = new Date(v);
   if (isNaN(d.getTime())) return String(v);
-  return d.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("es-CL", { timeZone: "America/Santiago", day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
 const fmtDateTime = (v: unknown): string => {
@@ -137,6 +137,7 @@ const fmtDateTime = (v: unknown): string => {
   const d = new Date(v);
   if (isNaN(d.getTime())) return String(v);
   return d.toLocaleString("es-CL", {
+    timeZone: "America/Santiago",
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: false,
   });
