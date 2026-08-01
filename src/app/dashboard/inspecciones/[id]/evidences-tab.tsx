@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteEvidence } from "@/services/inspections";
+import { deleteEvidence, updateEvidenceInclude } from "@/services/inspections";
 import { toast } from "sonner";
 import {
   Upload, Trash2, ImageIcon, Video, FileText, ExternalLink,
@@ -72,6 +72,7 @@ interface Evidence {
   captured_at: string | null;
   created_at: string;
   metadata: EvidenceMetadata | null;
+  include_in_report: boolean;
   captured_by: string | null;
   lat: number | null;
   lng: number | null;
@@ -555,6 +556,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
               readOnly={readOnly}
               onImageClick={setZoomImage}
               sessionId={sessionId}
+              isPhotoSection
             />
           )}
           {videos.length > 0 && (
@@ -611,7 +613,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 // ─── Sección por tipo ────────────────────────────────────────────
 
 function EvidenceSection({
-  title, count, icon, items, onDelete, readOnly, onImageClick, sessionId,
+  title, count, icon, items, onDelete, readOnly, onImageClick, sessionId, isPhotoSection,
 }: {
   title: string;
   count: number;
@@ -621,7 +623,10 @@ function EvidenceSection({
   readOnly?: boolean;
   onImageClick?: (url: string) => void;
   sessionId: string;
+  isPhotoSection?: boolean;
 }) {
+  const MAX_REPORT = 20;
+  const selectedCount = isPhotoSection ? items.filter((e) => e.include_in_report).length : 0;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
@@ -637,6 +642,11 @@ function EvidenceSection({
             {icon}
             {title}
             <span className="text-[11px] text-muted-foreground">({count})</span>
+            {isPhotoSection && (
+              <span className="ml-2 text-[11px] text-muted-foreground">
+                {selectedCount} en informe
+              </span>
+            )}
           </h3>
         </div>
         {count > 0 && (
@@ -652,6 +662,8 @@ function EvidenceSection({
             readOnly={readOnly}
             onImageClick={onImageClick}
             sessionId={sessionId}
+            selectedCount={isPhotoSection ? selectedCount : undefined}
+            maxReport={isPhotoSection ? MAX_REPORT : undefined}
           />
         ))}
       </div>
@@ -903,17 +915,25 @@ function DocumentTable({
 
 // ─── Card individual (miniatura) ─────────────────────────────────
 
-function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId }: {
+function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, selectedCount, maxReport }: {
   evidence: Evidence;
   onDelete: (id: string) => void;
   readOnly?: boolean;
   onImageClick?: (url: string) => void;
   sessionId: string;
+  selectedCount?: number;
+  maxReport?: number;
 }) {
   const queryClient = useQueryClient();
   const isDoc = evidence.type === "pdf" || evidence.type === "document";
   const isVideo = evidence.type === "video";
   const isPhoto = evidence.type === "photo";
+
+  const includeMutation = useMutation({
+    mutationFn: ({ id, include }: { id: string; include: boolean }) => updateEvidenceInclude(id, include),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] }),
+    onError: () => toast.error("No se pudo actualizar selección"),
+  });
 
   const meta = evidence.metadata;
   const uploaderName = evidence.uploader?.full_name || evidence.uploader?.email || null;
@@ -1042,6 +1062,14 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId }:
       onReanalyze={handleReanalyze}
       extraInfo={extraInfo}
       thumbnailContent={thumbnailContent}
+      includeInReport={isPhoto ? evidence.include_in_report : undefined}
+      onIncludeToggle={isPhoto ? (include) => {
+        if (include && selectedCount !== undefined && maxReport !== undefined && selectedCount >= maxReport && !evidence.include_in_report) {
+          toast.error(`Máximo ${maxReport} fotos en el informe`);
+          return;
+        }
+        includeMutation.mutate({ id: evidence.id, include });
+      } : undefined}
     />
   );
 }

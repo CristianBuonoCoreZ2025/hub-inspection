@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, RefreshCw, FileText, AlertCircle, Clock } from "lucide-react";
+import { ChevronDown, RefreshCw, FileText, AlertCircle, Clock, Check, X } from "lucide-react";
 import {
   Popover,
   PopoverTrigger,
@@ -77,6 +77,10 @@ interface ImageCardProps {
 
   // Niños dentro del thumbnail (video, doc thumbnail, etc.)
   thumbnailContent?: React.ReactNode;
+
+  // Selección para informe
+  includeInReport?: boolean;
+  onIncludeToggle?: (value: boolean) => void;
 }
 
 function fileExtension(url: string, fileName?: string): string {
@@ -129,6 +133,8 @@ export function ImageCard({
   onReanalyze,
   extraInfo,
   thumbnailContent,
+  includeInReport,
+  onIncludeToggle,
 }: ImageCardProps) {
   const isPending = aiStatus === "pending" || aiStatus === "processing";
 
@@ -204,6 +210,26 @@ export function ImageCard({
 
           {/* Derecha: control segmentado de IA */}
           <div className="ai-card-controls">
+            {onIncludeToggle && (
+              <div className="mb-0.5 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => onIncludeToggle(!(includeInReport ?? true))}
+                  className={`inline-flex h-5 items-center gap-1 rounded-md border px-2 text-[10px] font-medium transition-all select-none ${
+                    includeInReport ?? true
+                      ? "border-blue-500/50 bg-blue-500/10 text-blue-600"
+                      : "border-border bg-transparent text-muted-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  {includeInReport ?? true ? (
+                    <Check className="h-3 w-3 text-green-600" />
+                  ) : (
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  )}
+                  Reporte
+                </button>
+              </div>
+            )}
             {aiAnalyzedAt && (
               <div className="ai-card-time-ago">
                 <Clock className="h-2.5 w-2.5" />

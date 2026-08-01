@@ -13,6 +13,7 @@ allowBuilds:
   canvas: set this to true or false
   core-js: set this to true or false
   esbuild: true
+  puppeteer: set this to true or false
   sharp: true
   tesseract.js: true
   unrs-resolver: true

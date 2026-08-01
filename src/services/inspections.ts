@@ -1287,7 +1287,7 @@ export async function deleteChecklistItem(id: string) {
 //  EVIDENCES
 // ═══════════════════════════════════════════════════════════════
 
-const EVIDENCE_SELECT = `id, session_id, type, url, description, category, damage_id, created_at`;
+const EVIDENCE_SELECT = `id, session_id, type, url, description, category, damage_id, include_in_report, created_at`;
 
 export async function getEvidences(sessionId: string) {
   return fetchAll<import("@/types").InspectionEvidence>("inspection_evidences", {
@@ -1298,6 +1298,19 @@ export async function getEvidences(sessionId: string) {
 
 export async function createEvidence(input: Omit<import("@/types").InspectionEvidence, "id" | "created_at">) {
   return insertRow<import("@/types").InspectionEvidence>("inspection_evidences", input, EVIDENCE_SELECT);
+}
+
+export async function updateEvidenceInclude(id: string, includeInReport: boolean) {
+  const res = await fetch(`/api/inspection/evidences/${id}/include`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ include_in_report: includeInReport }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Error al actualizar evidencia");
+  }
+  return res.json();
 }
 
 export async function deleteEvidence(id: string) {

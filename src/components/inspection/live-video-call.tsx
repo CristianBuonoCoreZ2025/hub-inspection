@@ -910,6 +910,15 @@ export function LiveVideoCall({
             </p>
           </div>
         )}
+        {state === "disconnected" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 px-6 text-center">
+            <WifiOff className="h-12 w-12 mb-3 text-amber-500" />
+            <p className="app-body font-medium">El inspector desconectó la videollamada</p>
+            <p className="app-body text-white/50 mt-1">
+              Esperando a que el inspector vuelva a conectar.
+            </p>
+          </div>
+        )}
 
         {/* Video local (PiP) — oculto cuando la sesión fue rechazada */}
         {state !== "rejected" && (

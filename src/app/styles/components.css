@@ -3167,6 +3167,7 @@
   }
 
   .chat-overlay-panel {
+    position: relative !important;
     display: flex !important;
     flex-direction: column !important;
     height: 100% !important;

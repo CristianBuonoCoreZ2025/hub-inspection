@@ -601,6 +601,7 @@ export interface InspectionEvidence {
   damage_id: string | null;
   source: EvidenceSource | null;
   metadata: { originalName?: string; fileCode?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number; source?: string; lat?: number; lng?: number; capturedBy?: string } | null;
+  include_in_report: boolean;
   created_at: string;
 }
 

@@ -2,6 +2,7 @@
 
 import { useRef, useCallback, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import { getReport, createReport, updateReport } from "@/services/inspections";
 import { updateInspectionSession } from "@/services/inspections";
 import { issueClaimAction } from "@/services/claim-actions";
@@ -99,6 +100,8 @@ export default function ReportTab({
 }) {
   const queryClient = useQueryClient();
   const printRef = useRef<HTMLDivElement>(null);
+  const { dataAccess } = useAuth();
+  const canRegenerate = dataAccess?.is_admin ?? false;
   const sessionId = session.id;
   const sessionStatus = session.status;
   const isCancellation = sessionStatus === "cancelled";
@@ -146,15 +149,20 @@ export default function ReportTab({
 
     // Convertir todas las imágenes a data URLs para evitar problemas de CORS
     // html2canvas no puede capturar imágenes de R2 si no tiene CORS configurado
+    // Se hace secuencial y con timeout por imagen para no saturar el navegador
     const images = content.querySelectorAll("img");
     const originalSrcs: string[] = [];
-    await Promise.all(Array.from(images).map(async (img) => {
+    for (const img of Array.from(images)) {
       try {
-        const res = await fetch(img.src);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(img.src, { signal: controller.signal });
+        clearTimeout(timeout);
         const blob = await res.blob();
-        const reader = new FileReader();
-        const dataUrl = await new Promise<string>((resolve) => {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
           reader.readAsDataURL(blob);
         });
         originalSrcs.push(img.src);
@@ -162,14 +170,15 @@ export default function ReportTab({
       } catch {
         // Si falla, dejar la imagen original
       }
-    }));
+    }
 
     const canvas = await html2canvas(content, {
-      scale: 2,
+      scale: 1,
       useCORS: false,
       allowTaint: false,
       backgroundColor: "#ffffff",
       logging: false,
+      imageTimeout: 0,
     });
 
     // Restaurar los src originales
@@ -401,7 +410,7 @@ export default function ReportTab({
   const isPhoto = (t: string) => ["photo", "image", "jpg", "jpeg", "png"].includes(t.toLowerCase());
   const isVideo = (t: string) => ["video", "mp4", "mov"].includes(t.toLowerCase());
   const isDoc = (t: string) => ["document", "pdf", "doc", "docx", "file"].includes(t.toLowerCase());
-  const photos = useMemo(() => evidences.filter(e => isPhoto(e.type)), [evidences]);
+  const photos = useMemo(() => evidences.filter(e => isPhoto(e.type) && e.include_in_report !== false).slice(0, 20), [evidences]);
   const videos = useMemo(() => evidences.filter(e => isVideo(e.type)), [evidences]);
   const docs = useMemo(() => evidences.filter(e => isDoc(e.type)), [evidences]);
   const otherEvidences = useMemo(() => evidences.filter(e => !isPhoto(e.type) && !isVideo(e.type) && !isDoc(e.type)), [evidences]);
@@ -556,19 +565,21 @@ export default function ReportTab({
             <button type="button" onClick={handleDownload} className="pg-btn-platinum">
               <Download className="mr-2 h-4 w-4" /> Descargar
             </button>
-            <button
-              type="button"
-              onClick={() => regeneratePdfMutation.mutate()}
-              disabled={regeneratePdfMutation.isPending}
-              className="pg-btn-platinum"
-              title="Generar el PDF nuevamente y reemplazar el archivo guardado"
-            >
+            {canRegenerate && (
+              <button
+                type="button"
+                onClick={() => regeneratePdfMutation.mutate()}
+                disabled={regeneratePdfMutation.isPending}
+                className="pg-btn-platinum"
+                title="Generar el PDF nuevamente y reemplazar el archivo guardado"
+              >
               {regeneratePdfMutation.isPending ? (
                 <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Regenerando...</>
               ) : (
                 <><RefreshCw className="mr-2 h-4 w-4" /> Regenerar PDF</>
               )}
-            </button>
+              </button>
+            )}
             <button type="button" onClick={handleDownloadZip} disabled={zipPending} className="pg-btn-platinum">
               <Archive className="mr-2 h-4 w-4" /> {zipPending ? "Comprimiendo..." : "ZIP"}
             </button>
