@@ -159,11 +159,12 @@ export const ANNOTATION_COLORS: { id: AnnotationColor; hex: string; label: strin
 
 /** Props del editor de croquis (contrato estable, sin cambios). */
 export interface SketchEditorProps {
-  onSave: (dataUrl: string) => void;
+  onSave: (data: { dataUrl: string; sketchData: Record<string, unknown> }) => void;
   /** Se llama al cancelar. Si se pasa, muestra botón Cancelar junto a Guardar. */
   onCancel?: () => void;
   saving?: boolean;
   initialImage?: string;
+  initialSketchData?: Record<string, unknown> | null;
   height?: number;
   className?: string;
   /** Tipo de bien para reordenar la biblioteca (opcional). */

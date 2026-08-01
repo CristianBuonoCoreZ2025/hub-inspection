@@ -569,6 +569,7 @@ export interface DamageSketch {
   id: string;
   session_id: string;
   sketch_url: string;
+  sketch_data: Record<string, unknown> | null;
   label: string | null;
   created_at: string;
 }

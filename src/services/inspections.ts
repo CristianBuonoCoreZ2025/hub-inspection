@@ -89,7 +89,7 @@ interface LiveSession {
   inspection_damages?: { id: string; category: string; subcategory: string; description: string; observations: string; severity: string; dependency: string; sector: string; materiality_type: string; unit: string; quantity: string; damage_type: string; product: string; brand_model: string; purchase_date: string; estimated_amount: string; created_at: string }[];
   inspection_chat_messages?: { id: string; content: string; sender_name: string; sender_role: string; created_at: string }[];
   inspection_signatures?: { id: string; role: string; signature_url: string; signed_at: string }[];
-  damage_sketches?: { id: string; sketch_url: string; label: string; created_at: string }[];
+  damage_sketches?: { id: string; sketch_url: string; sketch_data: Record<string, unknown> | null; label: string; created_at: string }[];
   claim?: SessionClaim;
   inspection_number?: string;
   geo_latitude: number | null;
@@ -307,7 +307,7 @@ export async function getInspectionSessionLive(token: string) {
       inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, observations, severity, dependency, sector, materiality_type, unit, quantity, damage_type, product, brand_model, purchase_date, estimated_amount, created_at),
       inspection_chat_messages:inspection_chat_messages!inspection_chat_messages_session_id_fkey(id, content, sender_name, sender_role, created_at),
       inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
-      damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at),
+      damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, sketch_data, label, created_at),
       claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, claim_address, policy_number, claim_date, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))
     `,
     eq: { magic_link_token: token },
@@ -364,7 +364,7 @@ export async function getInspectionSessionById(id: string) {
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
     inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at),
     inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
-    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at)
+    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, sketch_data, label, created_at)
   `);
   if (!session) return null;
 
@@ -1189,7 +1189,7 @@ export async function deleteThirdParty(id: string) {
 // DAMAGE SKETCHES
 // ═══════════════════════════════════════════════════════════════
 
-const SKETCH_SELECT = `id, session_id, sketch_url, label, created_at`;
+const SKETCH_SELECT = `id, session_id, sketch_url, sketch_data, label, created_at`;
 
 export async function getDamageSketches(sessionId: string) {
   return fetchAll<DamageSketch>("damage_sketches", {
@@ -1202,10 +1202,11 @@ export async function createDamageSketch(input: Omit<DamageSketch, "id" | "creat
   return insertRow<DamageSketch>("damage_sketches", input, SKETCH_SELECT);
 }
 
-export async function updateDamageSketch(id: string, input: Partial<Pick<DamageSketch, "label" | "sketch_url">>) {
+export async function updateDamageSketch(id: string, input: Partial<Pick<DamageSketch, "label" | "sketch_url" | "sketch_data">>) {
   const set: Record<string, unknown> = {};
   if (input.label !== undefined) set.label = input.label;
   if (input.sketch_url !== undefined) set.sketch_url = input.sketch_url;
+  if (input.sketch_data !== undefined) set.sketch_data = input.sketch_data;
   return updateRow<DamageSketch>("damage_sketches", id, set, SKETCH_SELECT);
 }
 

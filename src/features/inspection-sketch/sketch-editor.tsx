@@ -48,6 +48,7 @@ export function SketchEditor({
   onCancel,
   saving,
   initialImage,
+  initialSketchData,
   height,
   className,
   bienType,
@@ -300,8 +301,16 @@ export function SketchEditor({
     canvas.freeDrawingBrush.color = "#1f2937";
     canvas.freeDrawingBrush.width = 3;
 
-    // Cargar croquis previo como fondo bloqueado.
-    if (initialImage) {
+    // Cargar croquis previo: si hay JSON editable lo usamos, si no, imagen fija.
+    if (initialSketchData) {
+      canvas
+        .loadFromJSON(initialSketchData)
+        .then(() => {
+          canvas.renderAll();
+          pushHistory();
+        })
+        .catch(() => pushHistory());
+    } else if (initialImage) {
       const isCrossOrigin = new URL(initialImage, window.location.href).origin !== window.location.origin;
       const options = isCrossOrigin ? { crossOrigin: "anonymous" as const } : undefined;
       fabric.Image.fromURL(initialImage, options)
@@ -336,7 +345,7 @@ export function SketchEditor({
     canvas.on("mouse:dblclick", handleCanvasDoubleClick);
 
     updateButtons();
-  }, [initialImage, pushHistory, handleCanvasMouseDown, handleCanvasMouseMove, handleCanvasMouseUp, handleCanvasDoubleClick, handleObjectModified, updateButtons]);
+  }, [initialImage, initialSketchData, pushHistory, handleCanvasMouseDown, handleCanvasMouseMove, handleCanvasMouseUp, handleCanvasDoubleClick, handleObjectModified, updateButtons]);
 
   // Listener de teclado: Delete/Backspace elimina el objeto seleccionado.
   // En modo draw no interfere con el dibujo. No intercepta inputs.
@@ -397,7 +406,9 @@ export function SketchEditor({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dataUrl = exportSketchToPng(canvas);
-    if (dataUrl) onSave(dataUrl);
+    if (!dataUrl) return;
+    const sketchData = canvas.toJSON() as Record<string, unknown>;
+    onSave({ dataUrl, sketchData });
   }, [onSave]);
 
   const clientToCanvas = useCallback((clientX: number, clientY: number) => {

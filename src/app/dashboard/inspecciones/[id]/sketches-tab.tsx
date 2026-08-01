@@ -21,7 +21,7 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  const [editingId, setEditingId] = useState<string | null>(null);
  const [editingLabel, setEditingLabel] = useState("");
  const [mode, setMode] = useState<"view" | "upload" | "draw">("view");
- const [drawEditingSketch, setDrawEditingSketch] = useState<{ id: string; url: string; label: string } | null>(null);
+ const [drawEditingSketch, setDrawEditingSketch] = useState<{ id: string; url: string; sketchData: Record<string, unknown> | null; label: string } | null>(null);
  const [savingDrawing, setSavingDrawing] = useState(false);
  const [page, setPage] = useState(1);
  const [pageSize, setPageSize] = useState(12);
@@ -60,7 +60,7 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  });
 
  const sketchMutation = useMutation({
- mutationFn: async (data: { sessionId: string; sketchDataUrl: string; label: string; sketchId?: string }) => {
+ mutationFn: async (data: { sessionId: string; sketchDataUrl: string; sketchJson: Record<string, unknown> | null; label: string; sketchId?: string }) => {
  const res = await fetch("/api/inspection/sketch", {
  method: "POST",
  headers: { "Content-Type": "application/json" },
@@ -130,12 +130,13 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  }
  }
 
- function handleSaveDrawing(dataUrl: string) {
+ function handleSaveDrawing(dataUrl: string, sketchData: Record<string, unknown>) {
  setSavingDrawing(true);
  sketchMutation.mutate(
  {
  sessionId,
  sketchDataUrl: dataUrl,
+ sketchJson: sketchData,
  label: drawEditingSketch?.label || "Croquis dibujado",
  sketchId: drawEditingSketch?.id,
  },
@@ -168,6 +169,7 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  onCancel={() => { setMode("view"); setDrawEditingSketch(null); }}
  saving={savingDrawing}
  initialImage={drawEditingSketch?.url}
+ initialSketchData={drawEditingSketch?.sketchData}
  height={500}
  />
  </div>
@@ -294,7 +296,7 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  className="btn-icon-sm"
  title="Dibujar / Editar"
  onClick={() => {
- setDrawEditingSketch({ id: sketch.id, url: `/api/inspection/sketch/${sketch.id}/image`, label: sketch.label || "" });
+ setDrawEditingSketch({ id: sketch.id, url: `/api/inspection/sketch/${sketch.id}/image`, sketchData: sketch.sketch_data, label: sketch.label || "" });
  setMode("draw");
  }}
  >

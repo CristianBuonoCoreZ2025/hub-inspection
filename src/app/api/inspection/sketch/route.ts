@@ -16,7 +16,7 @@ import { logger } from "@/lib/logger";
  */
 export async function POST(request: NextRequest) {
   try {
-    const { sessionId, sketchDataUrl, label, sketchId } = await request.json();
+    const { sessionId, sketchDataUrl, sketchJson, label, sketchId } = await request.json();
     if (!sessionId || !sketchDataUrl) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
     }
@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
       // Editar croquis existente
       const { data: sketch, error: updateError } = await supabase
         .from("damage_sketches")
-        .update({ sketch_url: sketchUrl, label: label || "Croquis" })
+        .update({ sketch_url: sketchUrl, sketch_data: sketchJson || null, label: label || "Croquis" })
         .eq("id", sketchId)
-        .select("id, sketch_url, label, created_at")
+        .select("id, sketch_url, sketch_data, label, created_at")
         .single();
 
       if (updateError) {
@@ -62,9 +62,10 @@ export async function POST(request: NextRequest) {
         .insert({
           session_id: sessionId,
           sketch_url: sketchUrl,
+          sketch_data: sketchJson || null,
           label: label || "Croquis",
         })
-        .select("id, sketch_url, label, created_at")
+        .select("id, sketch_url, sketch_data, label, created_at")
         .single();
 
       if (insertError) {
