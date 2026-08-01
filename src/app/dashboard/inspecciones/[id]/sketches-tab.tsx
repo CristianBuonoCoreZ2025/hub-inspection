@@ -12,9 +12,11 @@ import { toast } from "sonner";
 import { Upload, Trash2, ImageIcon, Pencil, Check, X, PenTool, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
+import { useConfirm } from "@/hooks/use-confirm";
 
 export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string }) {
  const queryClient = useQueryClient();
+ const [ConfirmDialog, confirmDelete] = useConfirm();
  const [uploading, setUploading] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
  const [editingLabel, setEditingLabel] = useState("");
@@ -175,6 +177,7 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
 
  return (
  <div className="app-stack">
+ <ConfirmDialog />
  {/* Banner de solo lectura */}
  {readOnly && (
  <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 app-body text-amber-700 dark:text-amber-300">
@@ -311,10 +314,14 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  size="icon"
  className="btn-icon-sm"
  title="Eliminar"
- onClick={() => {
- if (confirm("¿Eliminar este croquis?")) {
- deleteMutation.mutate(sketch.id);
- }
+ onClick={async () => {
+ const ok = await confirmDelete({
+   title: "Eliminar croquis",
+   description: "¿Eliminar este croquis? Esta acción no se puede deshacer.",
+   destructive: true,
+   confirmLabel: "Eliminar",
+ });
+ if (ok) deleteMutation.mutate(sketch.id);
  }}
  >
  <Trash2 className="h-3.5 w-3.5" />

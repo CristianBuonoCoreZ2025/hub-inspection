@@ -9,6 +9,7 @@ import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
 import { toast } from "sonner";
 import { Trash2, Pencil, Building2, Package, Lock, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/hooks/use-confirm";
 import {
  Select,
  SelectContent,
@@ -156,6 +157,7 @@ function damageToForm(d: InspectionDamage): DamageForm {
 
 export default function DamagesTab({ sessionId, propertyClassification, countryId, sessionStatus }: { sessionId: string; propertyClassification?: string | null; countryId?: string | null; sessionStatus?: string }) {
  const queryClient = useQueryClient();
+ const [ConfirmDialog, confirmDelete] = useConfirm();
  const [editing, setEditing] = useState<string | null>(null);
  const [form, setForm] = useState<DamageForm>(emptyForm(sessionId, "building"));
  const [newType, setNewType] = useState<DamageType>("building");
@@ -494,6 +496,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
  return (
  <div className="app-stack">
+ <ConfirmDialog />
  {/* Banner de solo lectura */}
  {readOnly && (
  <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 app-body text-amber-700 dark:text-amber-300">
@@ -1125,7 +1128,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <button type="button" className="btn-icon-sm" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
  <Pencil className="h-3.5 w-3.5" />
  </button>
- <button type="button" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
+ <button type="button" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={async () => { const ok = await confirmDelete({ title: "Eliminar daño", description: "¿Eliminar este daño? Esta acción no se puede deshacer.", destructive: true, confirmLabel: "Eliminar" }); if (ok) deleteMutation.mutate(d.id); }}>
  <Trash2 className="h-3.5 w-3.5" />
  </button>
  </>
@@ -1203,7 +1206,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <button type="button" className="btn-icon-sm" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
  <Pencil className="h-3.5 w-3.5" />
  </button>
- <button type="button" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={() => { if (confirm("¿Eliminar este daño?")) deleteMutation.mutate(d.id); }}>
+ <button type="button" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={async () => { const ok = await confirmDelete({ title: "Eliminar daño", description: "¿Eliminar este daño? Esta acción no se puede deshacer.", destructive: true, confirmLabel: "Eliminar" }); if (ok) deleteMutation.mutate(d.id); }}>
  <Trash2 className="h-3.5 w-3.5" />
  </button>
  </>

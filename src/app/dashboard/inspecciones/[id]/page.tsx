@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/hooks/use-confirm";
 import { Badge } from "@/components/ui/badge";
 import { MagicLinkSender } from "@/components/ui/magic-link-sender";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
@@ -141,6 +142,7 @@ export default function InspectionDetailPage() {
  const params = useParams();
  const router = useRouter();
  const queryClient = useQueryClient();
+ const [ConfirmDialog, confirmAction] = useConfirm();
  const sessionId = params.id as string;
  const { canView } = usePermissions();
  const { profile, dataAccess } = useAuth();
@@ -493,6 +495,7 @@ export default function InspectionDetailPage() {
 
  return (
  <div className="app-page">
+ <ConfirmDialog />
  {/* Header */}
  <div className="flex items-center justify-between gap-3 pb-2">
  <div className="flex items-center gap-2.5 min-w-0">
@@ -1047,8 +1050,14 @@ export default function InspectionDetailPage() {
  variant="ghost"
  size="sm"
  className="h-7 text-xs text-rose-500 hover:text-rose-600"
- onClick={() => {
- if (window.confirm("¿Finalizar la videollamada? Esto también desconectará al asegurado.")) {
+ onClick={async () => {
+ const ok = await confirmAction({
+ title: "Finalizar videollamada",
+ description: "¿Finalizar la videollamada? Esto también desconectará al asegurado.",
+ destructive: true,
+ confirmLabel: "Desconectar",
+ });
+ if (!ok) return;
  setVideoCallOpen(false);
  const logId = inspectorLogIdRef.current;
  if (logId) {
@@ -1060,7 +1069,6 @@ export default function InspectionDetailPage() {
  disconnectReason: "hangup",
  });
  inspectorLogIdRef.current = null;
- }
  }
  }}
  >

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
+import { useConfirm } from "@/hooks/use-confirm";
 
 type UploadStatus = "queued" | "uploading" | "processing" | "done" | "error";
 
@@ -692,6 +693,7 @@ function DocumentTable({
   sessionId: string;
 }) {
   const queryClient = useQueryClient();
+  const [ConfirmDialog, confirmDelete] = useConfirm();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
@@ -715,6 +717,7 @@ function DocumentTable({
 
   return (
     <div className="app-panel">
+      <ConfirmDialog />
       <div className="app-grid-toolbar">
         <div className="app-grid-toolbar-left">
           <h3 className="app-section-title">
@@ -876,8 +879,14 @@ function DocumentTable({
                         <button
                           type="button"
                           className="btn-icon-sm btn-danger-hover"
-                          onClick={() => {
-                            if (confirm("¿Eliminar esta evidencia?")) onDelete(doc.id);
+                          onClick={async () => {
+                            const ok = await confirmDelete({
+                              title: "Eliminar evidencia",
+                              description: "¿Eliminar esta evidencia? Esta acción no se puede deshacer.",
+                              destructive: true,
+                              confirmLabel: "Eliminar",
+                            });
+                            if (ok) onDelete(doc.id);
                           }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -920,6 +929,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
   maxReport?: number;
 }) {
   const queryClient = useQueryClient();
+  const [ConfirmDialog, confirmDelete] = useConfirm();
   const isDoc = evidence.type === "pdf" || evidence.type === "document";
   const isVideo = evidence.type === "video";
   const isPhoto = evidence.type === "photo";
@@ -983,7 +993,15 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
         </a>
       )}
       <button
-        onClick={() => { if (confirm("¿Eliminar esta evidencia?")) onDelete(evidence.id); }}
+        onClick={async () => {
+          const ok = await confirmDelete({
+            title: "Eliminar evidencia",
+            description: "¿Eliminar esta evidencia? Esta acción no se puede deshacer.",
+            destructive: true,
+            confirmLabel: "Eliminar",
+          });
+          if (ok) onDelete(evidence.id);
+        }}
         className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-red-500/80"
         title="Eliminar"
       >
@@ -1035,9 +1053,11 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
   );
 
   return (
-    <ImageCard
-      imageUrl={evidence.url}
-      imageAlt={evidence.description || ""}
+    <>
+      <ConfirmDialog />
+      <ImageCard
+        imageUrl={evidence.url}
+        imageAlt={evidence.description || ""}
       onImageClick={() => onImageClick?.(evidence.url)}
       badge={badge}
       hoverActions={hoverActions}
@@ -1066,6 +1086,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
         includeMutation.mutate({ id: evidence.id, include });
       } : undefined}
     />
+    </>
   );
 }
 
