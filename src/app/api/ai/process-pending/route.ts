@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { summarizeFile } from "@/lib/ai/openrouter";
@@ -69,9 +70,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createAdminClient();
+    after(async () => {
+      try {
+        const supabase = createAdminClient();
 
-    // Obtener la línea de negocio del siniestro para contextualizar el prompt de IA
+        // Obtener la línea de negocio del siniestro para contextualizar el prompt de IA
     let businessLine: string | undefined;
     let businessLineId: string | undefined;
     let claimIdForBL: string | null = null;
@@ -393,15 +396,22 @@ export async function POST(request: NextRequest) {
     const totalSuccess = allResults.reduce((sum, r) => sum + r.success, 0);
     const totalFail = allResults.reduce((sum, r) => sum + r.fail, 0);
 
-    return NextResponse.json({
-      ok: true,
-      processed: totalProcessed,
-      success: totalSuccess,
-      fail: totalFail,
-      tables: allResults,
+    logger.info("process-pending: procesamiento completado", {
+      component: "ai-process-pending",
+      action: "background.complete",
+      metadata: { processed: totalProcessed, success: totalSuccess, fail: totalFail, tables: allResults },
     });
   } catch (err) {
-    logger.error("process-pending: error general", err as Error, {
+    logger.error("process-pending: error en background", err as Error, {
+      component: "ai-process-pending",
+      action: "background.error",
+    });
+  }
+});
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    logger.error("process-pending: error en request", err as Error, {
       component: "ai-process-pending",
       action: "route",
     });

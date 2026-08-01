@@ -293,27 +293,12 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     setUploadModal({ visible: false, isDragging: false });
   };
 
-  // Cerrar modal automáticamente 1.5s después de que todas las subidas terminen
-  // y disparar el procesamiento de IA en background (endpoint dedicado, no after())
+  // Cerrar modal automáticamente 1.5s después de que todas las subidas terminen.
+  // El procesamiento de IA y optimización se ejecutan al cerrar la inspección.
   useEffect(() => {
     if (uploadQueue.length === 0) return;
     const allDone = uploadQueue.every((it) => it.status === "done" || it.status === "error");
     if (!allDone) return;
-
-    // Disparar /api/ai/process-pending para que analice las evidencias
-    // recién subidas (ai_status='pending') una por una, secuencialmente.
-    // No esperamos la respuesta — es fire-and-forget. El polling del
-    // useQuery refrescará las evidencias cuando el ai_status cambie.
-    const hadSuccessfulUploads = uploadQueue.some((it) => it.status === "done");
-    if (hadSuccessfulUploads) {
-      fetch("/api/ai/process-pending", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId }),
-      }).catch(() => {
-        // Silenciar — el usuario puede reintentar con el botón Brain
-      });
-    }
 
     const id = setTimeout(() => setUploadQueue([]), 1500);
     return () => clearTimeout(id);

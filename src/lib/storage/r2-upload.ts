@@ -1,5 +1,5 @@
 import "server-only";
-import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { r2Client, r2Bucket, r2PublicUrl } from "./r2-client";
 import { logger } from "@/lib/logger";
 
@@ -45,6 +45,35 @@ export async function uploadToR2(
  *
  * @param key — path completo en R2 (ej: "claims/L-000000141/actions/.../file.png")
  */
+export async function downloadFromR2(key: string): Promise<Buffer> {
+  if (!r2Bucket) {
+    throw new Error("R2 no configurado. Faltan variables de entorno: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL");
+  }
+
+  const command = new GetObjectCommand({
+    Bucket: r2Bucket,
+    Key: key,
+  });
+
+  const response = await r2Client.send(command);
+  const stream = response.Body as NodeJS.ReadableStream | undefined;
+  if (!stream) throw new Error(`No se pudo descargar ${key} de R2`);
+
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string | Uint8Array));
+  }
+  const buffer = Buffer.concat(chunks);
+
+  logger.info("Archivo descargado de R2", {
+    component: "r2-download",
+    action: "r2.download",
+    metadata: { key, size: buffer.length },
+  });
+
+  return buffer;
+}
+
 export async function deleteFromR2(key: string): Promise<void> {
   if (!r2Bucket) {
     throw new Error("R2 no configurado. Faltan variables de entorno: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL");

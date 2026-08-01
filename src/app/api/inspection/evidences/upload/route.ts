@@ -1,13 +1,10 @@
-import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createServerClient } from "@/lib/supabase/server";
 import {
   uploadInspectionFileRaw,
-  reuploadInspectionFileOptimized,
   type InspectionFileType,
 } from "@/lib/storage/inspection-upload";
 import { extractGpsFromExif } from "@/lib/storage/exif";
-import { summarizePdf } from "@/lib/storage/pdf-summary";
 import { logger } from "@/lib/logger";
 
 /**
@@ -85,7 +82,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // ── PASO 1: Subir original a R2 (sin optimizar — rápido) ──
-    const { url, seq, fileCode, ctx } = await uploadInspectionFileRaw(
+    const { url, fileCode } = await uploadInspectionFileRaw(
       sessionId,
       buffer,
       mimeType,
@@ -200,86 +197,9 @@ export async function POST(request: NextRequest) {
     });
 
     // ── PASO 5: Devolver éxito al cliente ──
+    // La optimización (redimensionamiento) y el resumen de PDF se ejecutan al
+    // cerrar la inspección, no en cada subida, para no retrasar el flujo.
     const response = NextResponse.json({ evidence });
-
-    // ── PASO 6: Optimización en background (after) ──
-    // La optimización con sharp es rápida (~1-2s) y local, after() la maneja bien.
-    // La IA NO va aquí — after() en Vercel serverless no es confiable para tareas
-    // largas (30-60s de IA). La IA se dispara desde el frontend vía
-    // /api/ai/process-pending después de que todas las subidas terminan.
-    after(async () => {
-      const evidenceId = evidence.id;
-      // Las grabaciones de sesión no se optimizan ni analizan con IA
-      if (sourceValue === "live_video") return;
-      try {
-        // ── Optimización: re-subir versión optimizada ──
-        try {
-          const optimized = await reuploadInspectionFileOptimized(
-            ctx,
-            seq,
-            buffer,
-            mimeType,
-            fileType,
-            ext || ".bin"
-          );
-
-          // Actualizar url + metadata.fileSize con el tamaño optimizado real
-          // NOTA: inspection_evidences no tiene columna updated_at (solo created_at).
-          await supabase
-            .from("inspection_evidences")
-            .update({
-              url: optimized.url,
-              metadata: { ...metadata, fileSize: optimized.optimizedSize, originalFileSize: file.size },
-            })
-            .eq("id", evidenceId);
-
-          logger.info("Evidencia optimizada y actualizada en BD", {
-            component: "inspection-evidences-upload",
-            action: "optimize.success",
-            metadata: { evidenceId, newKey: optimized.key },
-          });
-        } catch (optErr) {
-          logger.warn("Optimización de evidencia falló (no crítico)", {
-            component: "inspection-evidences-upload",
-            action: "optimize.error",
-            metadata: {
-              error: optErr instanceof Error ? optErr.message : String(optErr),
-            },
-          });
-        }
-
-        // ── PDF: extraer texto del contenido (primeras 10 páginas) ──
-        if (dbType === "pdf") {
-          try {
-            const pdfSummary = await summarizePdf(buffer, 10);
-            if (pdfSummary) {
-              await supabase
-                .from("inspection_evidences")
-                .update({
-                  metadata: { ...metadata, pdfSummary: pdfSummary.summary, pdfPageCount: pdfSummary.pageCount },
-                })
-                .eq("id", evidenceId);
-            }
-          } catch (pdfErr) {
-            logger.warn("PDF summary falló (no crítico)", {
-              component: "inspection-evidences-upload",
-              action: "pdf.summary.error",
-              metadata: { error: pdfErr instanceof Error ? pdfErr.message : String(pdfErr) },
-            });
-          }
-        }
-        // NOTA: La IA NO se ejecuta aquí. El frontend dispara
-        // /api/ai/process-pending después de que todas las subidas terminan.
-        // Ese endpoint procesa las evidencias pending una por una, secuencialmente,
-        // con maxDuration=300 (5 min) — suficiente para varias imágenes.
-      } catch (bgErr) {
-        logger.error("Background processing de evidencia falló", bgErr as Error, {
-          component: "inspection-evidences-upload",
-          action: "background.error",
-          metadata: { evidenceId },
-        });
-      }
-    });
 
     return response;
   } catch (err) {

@@ -142,70 +142,81 @@ export default function ReportTab({
 
   // Generar PDF del acta usando html2canvas + jsPDF
   const generatePdf = useCallback(async (): Promise<Blob | null> => {
-    const content = printRef.current;
-    if (!content) return null;
-    const { jsPDF } = await import("jspdf");
-    const html2canvas = (await import("html2canvas-pro")).default;
+    try {
+      const content = printRef.current;
+      if (!content) return null;
+      const { jsPDF } = await import("jspdf");
+      const html2canvas = (await import("html2canvas-pro")).default;
 
-    // Convertir todas las imágenes a data URLs para evitar problemas de CORS
-    // html2canvas no puede capturar imágenes de R2 si no tiene CORS configurado
-    // Se hace secuencial y con timeout por imagen para no saturar el navegador
-    const images = content.querySelectorAll("img");
-    const originalSrcs: string[] = [];
-    for (const img of Array.from(images)) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000);
-        const res = await fetch(img.src, { signal: controller.signal });
-        clearTimeout(timeout);
-        const blob = await res.blob();
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        originalSrcs.push(img.src);
-        img.src = dataUrl;
-      } catch {
-        // Si falla, dejar la imagen original
+      // Convertir todas las imágenes a data URLs para evitar problemas de CORS
+      // html2canvas no puede capturar imágenes de R2 si no tiene CORS configurado
+      // Se hace secuencial y con timeout por imagen para no saturar el navegador
+      const images = content.querySelectorAll("img");
+      const originalSrcs: string[] = [];
+      for (const img of Array.from(images)) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 8000);
+          const res = await fetch(img.src, { signal: controller.signal });
+          clearTimeout(timeout);
+          const blob = await res.blob();
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          originalSrcs.push(img.src);
+          img.src = dataUrl;
+        } catch (err) {
+          console.error("[report-pdf] Error convirtiendo imagen:", img.src, (err as Error).message);
+        }
       }
-    }
 
-    const canvas = await html2canvas(content, {
-      scale: 1,
-      useCORS: false,
-      allowTaint: false,
-      backgroundColor: "#ffffff",
-      logging: false,
-      imageTimeout: 0,
-    });
+      console.log("[report-pdf] Imágenes convertidas:", originalSrcs.length, "de", images.length);
 
-    // Restaurar los src originales
-    Array.from(images).forEach((img, i) => {
-      if (originalSrcs[i]) img.src = originalSrcs[i];
-    });
+      const canvas = await html2canvas(content, {
+        scale: 1,
+        useCORS: false,
+        allowTaint: false,
+        backgroundColor: "#ffffff",
+        logging: true,
+        imageTimeout: 0,
+      });
 
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 297; // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      console.log("[report-pdf] Canvas:", canvas.width, "x", canvas.height);
 
-    const pdf = new jsPDF("p", "mm", "a4");
-    let heightLeft = imgHeight;
-    let position = 0;
+      // Restaurar los src originales
+      Array.from(images).forEach((img, i) => {
+        if (originalSrcs[i]) img.src = originalSrcs[i];
+      });
 
-    const imgData = canvas.toDataURL("image/jpeg", 0.95);
-    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    while (heightLeft > 0) {
-      position -= pageHeight;
-      pdf.addPage();
+      const pdf = new jsPDF("p", "mm", "a4");
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
       pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-    }
 
-    return pdf.output("blob");
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      console.log("[report-pdf] PDF generado, páginas:", Math.ceil(imgHeight / pageHeight));
+
+      return pdf.output("blob");
+    } catch (err) {
+      console.error("[report-pdf] Error generando PDF:", (err as Error).message, (err as Error).stack);
+      throw err;
+    }
   }, []);
 
   // Subir PDF a R2
@@ -267,6 +278,18 @@ export default function ReportTab({
     },
     onSuccess: () => {
       toast.success("Acta finalizada y PDF generado");
+      // Al cerrar la inspección se optimizan imágenes, resumen PDFs y se ejecuta IA
+      // en background (after()). No bloquean la UI del inspector ni del cliente.
+      fetch("/api/inspection/evidences/process-assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      }).catch(() => {});
+      fetch("/api/ai/process-pending", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ["report", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
@@ -1034,37 +1057,46 @@ export default function ReportTab({
           )}
 
           {/* ═══ FIRMAS ═══ */}
-          {(uniqueSignatures.length > 0 || session.signature_waiver_reason) && (
-            <>
-              <div className="report-acta-title app-body">
-                Firmas
-              </div>
-              <div className="report-sig-grid">
-                {uniqueSignatures.map((sig) => (
-                  <div key={sig.id} className="report-sig-box">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sig.signature_url} alt={`Firma ${sig.role}`} className="report-sig-img" />
-                    <p className="report-sig-name app-body">
-                      {sig.role === "insured" ? "Asegurado" : "Inspector"}
-                    </p>
-                    <p className="report-sig-role app-body">{fmtDateTime(sig.signed_at)}</p>
+          <>
+            <div className="report-acta-title app-body">
+              Firmas
+            </div>
+            <div className="report-sig-grid">
+              {[
+                { role: "insured" as const, label: "Asegurado" },
+                { role: "adjuster" as const, label: "Inspector" },
+              ].map(({ role, label }) => {
+                const sig = uniqueSignatures.find((s) => s.role === role);
+                const isWaiver = role === "insured" && session.signature_waiver_reason && !sig;
+                return (
+                  <div key={role} className="report-sig-box">
+                    {sig ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={sig.signature_url} alt={`Firma ${label}`} className="report-sig-img" />
+                        <p className="report-sig-name app-body">{label}</p>
+                        <p className="report-sig-role app-body">{fmtDateTime(sig.signed_at)}</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="report-sig-img h-16 flex items-center justify-center">
+                          <span className="text-xs text-gray-500 italic">Sin firma</span>
+                        </div>
+                        <p className="report-sig-name app-body">{label}</p>
+                        {isWaiver ? (
+                          <p className="report-sig-role app-body italic text-red-700">
+                            No firmó: {session.signature_waiver_reason}
+                          </p>
+                        ) : (
+                          <p className="report-sig-role app-body">Pendiente</p>
+                        )}
+                      </>
+                    )}
                   </div>
-                ))}
-                {/* Si no hay firma del asegurado pero hay waiver, mostrar motivo */}
-                {session.signature_waiver_reason && !uniqueSignatures.some((s) => s.role === "insured") && (
-                  <div className="report-sig-box">
-                    <div className="report-sig-img" style={{ borderBottom: "1px solid #333", paddingBottom: "3px", margin: "0 auto", minHeight: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: "9px", color: "#999", fontStyle: "italic" }}>Sin firma</span>
-                    </div>
-                    <p className="report-sig-name app-body">Asegurado</p>
-                    <p className="report-sig-role app-body" style={{ fontStyle: "italic", color: "#c0392b" }}>
-                      No firmó: {session.signature_waiver_reason}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
+                );
+              })}
+            </div>
+          </>
 
           {/* ═══ FOOTER ═══ */}
           <div className="report-footer app-body">

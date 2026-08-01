@@ -4241,6 +4241,38 @@ Durante el desarrollo de la inspección remota se resolvieron varios problemas d
 - `src/app/inspection/[token]/page.tsx`
 - `src/app/dashboard/inspecciones/[id]/page.tsx`
 - `src/app/dashboard/inspecciones/[id]/connection-logs-tab.tsx`
+
+---
+
+## 32. Flujo de Evidencias y Firma en el Informe
+
+### Contexto
+Durante la inspección se observó que:
+1. El redimensionamiento, compresión y análisis con IA de cada evidencia se ejecutaban en el momento de la subida, ralentizando el flujo.
+2. El informe ocultaba la sección de firmas cuando no existían firmas digitales, lo que dificulta imprimir y enviar el acta para firma manual.
+
+### Decisiones aplicadas
+
+1. **Procesamiento de evidencias aplazado al cierre**
+   - La subida de una evidencia (`/api/inspection/evidences/upload`) solo guarda el archivo original, extrae EXIF e inserta el registro con `ai_status = "pending"`.
+   - La optimización de imágenes (`sharp`) y el resumen de PDFs se ejecutan cuando la inspección pasa a `completed`.
+   - El endpoint `/api/inspection/evidences/process-assets` descarga, redimensiona/comprime y re-sube las imágenes; para PDFs extrae el resumen del contenido.
+   - Tanto el endpoint de optimización como `/api/ai/process-pending` usan `after()` de Next.js: responden inmediatamente y ejecutan el trabajo en un buffer en background, sin afectar la UI del inspector, el cliente ni el resto del sistema.
+   - El dashboard ya no llama a `/api/ai/process-pending` inmediatamente después de subir una evidencia; lo hace al finalizar la inspección desde `report-tab.tsx` con `fetch` fire-and-forget.
+
+2. **Sección de firmas siempre visible en el informe**
+   - El `ReportTab` (`src/app/dashboard/inspecciones/[id]/report-tab.tsx`) siempre muestra dos casillas: **Asegurado** e **Inspector**.
+   - Si la firma existe, se muestra la imagen y la fecha.
+   - Si no existe, se muestra un recuadro "Sin firma" y el estado **Pendiente**.
+   - Si hay un motivo de exención de firma, se muestra para el rol Asegurado.
+   - Esto permite imprimir el acta y enviarla al asegurado para que firme manualmente.
+
+### Archivos clave
+- `src/app/api/inspection/evidences/upload/route.ts`
+- `src/app/api/inspection/evidences/process-assets/route.ts`
+- `src/app/dashboard/inspecciones/[id]/report-tab.tsx`
+- `src/app/dashboard/inspecciones/[id]/evidences-tab.tsx`
+- `src/lib/storage/r2-upload.ts`
 - `src/components/inspection/live-video-call.tsx`
 - `src/services/inspections.ts`
 - `src/app/styles/components.css`
@@ -4293,5 +4325,282 @@ Fecha: sesión actual.
 3. **PDF y CORS**: `report-tab.tsx` `generatePdf` convierte imágenes secuencialmente con 8s timeout y `scale: 1` (baja calidad). Con muchas imágenes puede ser lento. Evaluar usar proxy/progress o subir `scale`.
 4. **Croquis sin `include_in_report`**: hoy el filtro es solo para fotos. Si se quiere elegir qué croquis van al informe, agregar `include_in_report` a `damage_sketches`, API y UI.
 5. **Optimización `inspecciones/[id]/page.tsx`**: se volvió a `getInspectionSessionById` completo para arreglar `ReportTab`. Mañana se puede volver a una versión liviana y que `ReportTab` cargue el session completo solo cuando esté activo.
+
+---
+
+## Plan de mejoras del flujo de inspección
+
+Fecha: sesión actual. Resumen del análisis del módulo y del mercado.
+
+### Diagnóstico rápido
+
+Hoy el producto cubre: videollamada WebRTC, chat, subida de evidencias, croquis vectoriales, firmas, acta digital y magic link. En comparación con herramientas de inspección remota del mercado (SightCall, Blitzz, Livegenic, Loveland Invision, etc.) nos faltan tres pilares clave:
+
+1. **Experiencia móvil sin fricción**: el asegurado abre el magic link desde el celular; si la UI no es mobile-first, abandona.
+2. **Guiado en tiempo real**: el inspector debería poder indicar al asegurado dónde apuntar la cámara, no solo ver.
+3. **Asincronía y tolerancia a fallos**: offline, reintentos, cola de subida y captura guiada sin conexión.
+
+### Propuestas concretas — ordenadas por impacto
+
+#### 1. Mobile-first para el magic link (alto impacto)
+
+- Rediseñar `src/app/inspection/[token]/page.tsx` para que el flujo en celular tenga un solo paso visible a la vez: videollamada, chat, evidencias, firma. No mostrar todas las pestañas simultáneamente.
+- Usar botones grandes (mínimo 44×44dp), texto legible, controles en la parte inferior para el pulgar.
+- En móvil, la cámara debe ocupar toda la pantalla; el inspector la ve en la pantalla del inspector, y el asegurado ve instrucciones superpuestas en grande.
+- Detectar `mediaDevices` y pedir permisos de cámara antes de entrar a la sala, con mensajes claros y sin `window.alert`.
+
+#### 2. Guiado del asegurado (alto impacto)
+
+- **Flechas/señales en el video**: el inspector puede tocar el frame remoto para enviar una coordenada `x,y` al celular y este renderiza una flecha en la pantalla del asegurado indicando dónde apuntar.
+- **Modo "foto obligada"**: inspector puede pedir al asegurado que saque una foto de una zona; la app del asegurado muestra el contorno y solo libera el botón cuando la cámara está alineada (usando el giroscopio o contorno visual).
+- **Checklist guiado paso a paso**: en lugar de un acta de 6 pasos, el inspector envía al asegurado tareas breves ("mostrá la cocina", "filmá el techo") y cada una se completa antes de avanzar.
+
+#### 3. Captura de evidencias mejorada (alto impacto)
+
+- Sustituir el botón de cámara del navegador por un control propio: grabación de video corto, foto, voz y subtítulo en una sola pantalla.
+- Permitir que el asegurado suba evidencias de forma asíncrona: si la conexión falla, quedan en cola local y se sincronizan cuando vuelva.
+- Previsualización antes de subir y opción de borrar/repetir.
+- Evidencias con metadatos anti-fraude: EXIF, GPS, timestamp del servidor, hash del archivo.
+
+#### 4. Colaboración en tiempo real (medio impacto)
+
+- Mover el chat y el acta de polling a Supabase Realtime.
+- Sincronizar el croquis entre inspector y asegurado: cuando el inspector dibuja, el asegurado lo ve superpuesto en su pantalla y viceversa.
+- Notificaciones push en el celular cuando el inspector inicia la sala o envía un mensaje.
+
+#### 5. Grabación de videollamada y evidencia audiovisual (medio impacto)
+
+- Grabar la videollamada completa y guardarla como evidencia (`source: "live_video"`).
+- Permitir al asegurado grabar un video corto por su cuenta si no puede conectarse en vivo.
+- Notas de voz en el chat para cuando escribir es incómodo.
+
+#### 6. Flujo simplificado del acta (medio impacto)
+
+- Convertir el acta de 6 pasos en un flujo conversacional o un asistente paso a paso.
+- Autocompletar con lo que ya se sabe del claim y de la inspección (domicilio, daños, fotos).
+- Validar campos en el momento y no al final.
+
+#### 7. Sketch y anotaciones colaborativas (medio impacto)
+
+- Sincronización en vivo del croquis.
+- Flechas, medidas y textos por capas.
+- Plantillas por tipo de bien (casa, departamento, galpón) para arrancar más rápido.
+
+#### 8. Robustez y offline (bajo impacto inmediato, alto a largo plazo)
+
+- Service worker para cachear la página del magic link.
+- Cola de subida offline con IndexedDB.
+- Reconexión automática de videollamada y chat.
+- Indicadores claros de calidad de conexión.
+
+#### 9. IA y análisis automático (bajo impacto inmediato, alto a largo plazo)
+
+- Clasificación automática de daños en fotos (techo, pared, electrodoméstico).
+- Estimación preliminar de costos.
+- Detección de fotos duplicadas, borrosas o sin luz.
+- Resumen del acta en lenguaje natural.
+
+#### 10. Accesibilidad y multi-idioma (básico)
+
+- Etiquetas ARIA, navegación por teclado y contraste.
+- Posibilidad de cambiar el idioma (portugués para el mercado regional).
+
+### Métricas para medir éxito
+
+- Tiempo promedio de inspección remota (objetivo: <15 min).
+- Tasa de asegurados que completan sin llamar al call center (objetivo: >80%).
+- Tiempo de subida de evidencias (objetivo: <3s por foto).
+- Tasa de caída de videollamada (objetivo: <5%).
+
+### Próximos pasos recomendados (en orden)
+
+1. Hacer el magic link mobile-first.
+2. Agregar flecha/guiado de cámara en vivo.
+3. Pasar chat y acta a Supabase Realtime.
+4. Implementar grabación de video y notas de voz.
+5. Mejorar el acta con autocompletado y flujo paso a paso.
+
+---
+
+## Estrategia de migración a Inspección 2.0 (coexistencia sin romper lo actual)
+
+Situación: ya hay inspecciones en producción usando el flujo actual (`/inspection/[token]`, dashboard `inspecciones/[id]`). El objetivo es tener un flujo mobile-first más rápido sin matar lo operativo.
+
+### Principio rector
+**Cero destrucción de datos. Cero migraciones forzosas. Cero downtime.**
+Se agrega una nueva UI v2 que opera sobre las **mismas tablas**. No se borra ni modifica el flujo legacy hasta que el v2 esté probado y aprobado.
+
+### Convención de rutas
+
+- Cliente magic link legacy: `/inspection/[token]` (se mantiene).
+- Cliente magic link v2: `/inspection/v2/[token]` (nuevo, mobile-first).
+- Inspector legacy: `/dashboard/inspecciones/[id]` (se mantiene).
+- Inspector v2: `/dashboard/inspecciones/[id]/v2` o `/dashboard/inspecciones/v2/[id]` (nuevo panel de control).
+
+### Convención de datos
+
+- No se alteran tablas existentes salvo una migración no destructiva: `ALTER TABLE inspection_sessions ADD COLUMN flow_version TEXT DEFAULT NULL;`.
+- `flow_version = 'legacy'` o `NULL` → usa `/inspection/[token]`.
+- `flow_version = 'v2'` → usa `/inspection/v2/[token]`.
+- Si no hay columna, se puede inferir por `metadata` JSON (`metadata->>'flow_version'`).
+- El campo es opcional; las inspecciones actuales siguen con legacy por defecto.
+
+### Estructura de carpetas propuesta
+
+```
+src/app/inspection/[token]/page.tsx                 # legacy (no tocar)
+src/app/inspection/v2/[token]/page.tsx              # nuevo magic link mobile-first
+src/app/dashboard/inspecciones/[id]/page.tsx         # legacy (no tocar)
+src/app/dashboard/inspecciones/[id]/v2/page.tsx       # nuevo inspector v2 (opt-in)
+src/features/inspection-v2/
+  - mobile-client/      # UI del asegurado
+  - inspector-panel/    # UI del inspector (guiado, checklist, croquis v2)
+  - live-guide/         # flechas, instrucciones superpuestas, audio
+  - shared/             # reutiliza hooks y helpers del v1
+```
+
+### Reutilización del backend existente
+
+- `src/app/api/inspection/live/[token]/route.ts` ya devuelve la sesión. v2 puede usarlo igual.
+- `src/app/api/inspection/evidences/upload/route.ts` y `/api/inspection/live/[token]/evidence` siguen funcionando. v2 sube con `source` distinto (`mobile_v2`, `live_video_v2`) para trackear adopción.
+- `live-video-call.tsx` se reutiliza como componente base, pero v2 lo envuelve con una UI mobile-first.
+- `src/lib/webrtc/signaling.ts` es agnóstico a la UI.
+
+### Plan de fases
+
+**Fase 0 — Preparación (esta semana)**
+1. Crear carpetas y rutas v2 vacías (placeholders).
+2. Agregar `flow_version` opcional en `inspection_sessions` (migración no destructiva).
+3. En `magic-link-sender.tsx` agregar switch "Enviar link v2" para sesiones nuevas.
+
+**Fase 1 — Magic link v2 móvil (1-2 semanas)**
+1. Pantalla de apertura: botón grande "Iniciar inspección" + permisos de cámara.
+2. Una sola acción visible por paso: cámara, chat, firma, evidencia.
+3. Subida de evidencias con previsualización y reintento.
+4. Firmar al final, sin pestañas.
+
+**Fase 2 — Inspector v2 (1-2 semanas)**
+1. Panel de control del inspector con checklist paso a paso.
+2. Botón para guiar al asegurado: "Pedir foto de X".
+3. Flechas en vivo sobre el video del asegurado.
+4. Ver evidencias en tiempo real.
+
+**Fase 3 — Colaboración realtime (2-3 semanas)**
+1. Chat y acta con Supabase Realtime.
+2. Croquis compartido en vivo.
+3. Grabación de videollamada.
+
+**Fase 4 — Consolida y mide**
+1. Métricas comparativas: legacy vs v2 (tiempo, completitud, satisfacción).
+2. A/B: 50% de sesiones nuevas mandan v2.
+3. Cuando v2 supere a legacy por más de 20%, redirigir `/inspection/[token]` → `/inspection/v2/[token]`.
+
+### Criterios para declarar éxito del v2
+
+- Tasa de asegurados que completan sin ayuda del call center ≥ 80% (legacy baseline medir).
+- Tiempo promedio de inspección remota ≤ 15 min.
+- 0 errores fatales en videollamada en 20 sesiones reales consecutivas.
+
+### Notas de seguridad
+
+- No se borra `src/app/inspection/[token]/page.tsx` ni sus rutas API.
+- Las migraciones SQL nuevas son aditivas (`ALTER TABLE ... ADD COLUMN` con `DEFAULT`).
+- Se pueden revertir a legacy cambiando `flow_version` a `legacy`.
+
+---
+
+## Propuesta concreta de flujos v2
+
+### Flujo del asegurado (magic link v2)
+
+Objetivo: abrir el link, seguir instrucciones grandes y terminar sin confusión.
+
+#### Pantalla 1 — Bienvenida y permisos
+- Título: "Inspección de [dirección/dominio del siniestro]".
+- Botón grande verde: "Iniciar inspección".
+- Antes de entrar se piden cámara, micrófono y ubicación con mensajes amigables.
+- Si no acepta cámara, se ofrece "Subir fotos más tarde" (modo asíncrono).
+
+#### Pantalla 2 — Sala de espera / conexión
+- Mensaje: "Esperando al inspector".
+- Chat minimizado; el asegurado puede escribir si necesita.
+- Opción "Mi cámara está lista" para test previo.
+
+#### Pantalla 3 — Videollamada (modo guiado)
+- Pantalla completa con la cámara del asegurado.
+- Tarjeta superior con la instrucción actual: "Mostrá la cocina".
+- Botón flotante grande: "Tomar foto".
+- Botón "Ver chat" pequeño en esquina.
+- Superposiciones del inspector: flecha o círculo que le indica dónde apuntar.
+- Si el inspector pide una foto, el botón cambia a "Sacar foto de [zona]".
+- Tras cada foto: preview con "Usar" o "Volver a sacar".
+
+#### Pantalla 4 — Firma
+- Solo aparece cuando el inspector la solicita.
+- Lienzo de firma con "Borrar" y "Confirmar".
+- Texto corto: "Firmo que la información y las imágenes son reales".
+
+#### Pantalla 5 — Cierre
+- "Inspección finalizada. Gracias."
+- Resumen: cantidad de fotos, firma recibida, próximos pasos.
+
+### Flujo del inspector (panel v2)
+
+Objetivo: controlar la inspección sin perder tiempo navegando pestañas.
+
+#### Layout de tres columnas
+- **Izquierda (checklist)**: pasos de inspección predefinidos por tipo de bien.
+  - Ej: Fachada → Salón → Cocina → Baños → Dormitorios → Techos.
+  - Cada paso: icono, nombre, estado (`pendiente`, `en curso`, `completado`).
+  - Botón "Enviar tarea al asegurado": dispara la instrucción en su pantalla.
+  - Doble clic para editar o agregar notas.
+- **Centro (videollamada)**:
+  - Video del asegurado grande.
+  - Controles: "Pedir foto", "Grabar", "Flecha" (modo guiado), "Chat", "Colgar".
+  - Modo guiado: inspector toca el video y una flecha se envía al asegurado.
+  - "Siguiente tarea" avanza el checklist automáticamente al completar.
+- **Derecha (evidencias + chat)**:
+  - Thumbnails de fotos recién llegadas.
+  - Click para ampliar, rotar, descartar o marcar "incluir en informe".
+  - Chat rápido con mensajes predefinidos ("Apuntá más arriba", "Acercate un poco").
+  - Notas de voz del inspector al chat.
+
+#### Acciones principales del inspector
+1. **Iniciar**: sesión pasa a `active`, se abre videollamada.
+2. **Enviar tarea**: el asegurado ve una instrucción grande en su pantalla.
+3. **Tomar foto remota**: solicita captura; preview llega, inspector aprueba o pide repetir.
+4. **Anotar daño**: selecciona una foto y crea un daño vinculado en una sola pantalla.
+5. **Generar informe**: cuando todas las tareas están completas, un botón genera PDF con fotos y checklist.
+
+### Qué se puede poner en el flujo actual (legacy) ahora
+
+Mejoras de bajo riesgo que no requieren rediseño:
+
+- **Permisos de cámara**: mensajes claros en `live-video-call.tsx` para móvil (`chrome://settings/camera`, etc.).
+- **Indicador de progreso de subida**: en `src/app/api/inspection/live/[token]/evidence/route.ts` y UI del cliente, devolver `UploadProgress` o mostrar spinner hasta la respuesta.
+- **Reintentos automáticos**: si falla la subida de evidencia, intentar 2 veces más antes de mostrar error.
+- **Chat más rápido**: bajar `refetchInterval` a 1s o migrar a Supabase Realtime sin cambiar layout.
+- **Mejoras móviles leves**: agregar `sm:` y `lg:` breakpoints faltantes en `src/app/inspection/[token]/page.tsx`.
+- **Mejoras del croquis**: renombre, dimensiones y diálogo (ya hechas).
+- **Diálogo de etiquetas**: reemplazar `window.prompt` (ya hecho).
+- **Screenshot del video remoto**: corregir invalidación de query keys (ya hecho).
+- **Magic link sender**: mostrar historial de envíos, contador visual de expiración, botón "reenviar".
+
+### Qué justifica un v2 (rediseño)
+
+- **Experiencia móvil de una sola acción por pantalla**: requiere cambiar la arquitectura de pestañas del magic link.
+- **Guía con flechas en el video**: necesita un canal de signaling adicional y renderizado de overlays en el cliente.
+- **Checklist conductor de la inspección**: implica un nuevo componente de tareas y sincronización en tiempo real.
+- **Panel del inspector tipo misión de control**: requiere reorganizar todo el dashboard.
+- **Modo asíncrono "subir fotos más tarde"**: cambia el estado de la sesión y la lógica de expiración.
+- **Croquis colaborativo en vivo**: es más limpio implementarlo en v2 con arquitectura realtime.
+- **Offline y cola de subida**: requiere IndexedDB + service worker, más fácil de estructurar en un módulo nuevo.
+
+### Recomendación de ataque
+
+1. **Esta semana (legacy)**: meter los quick wins de permisos, progreso, reintentos y magic link sender. Son mejoras inmediatas y de bajo riesgo.
+2. **Semana 2-3 (v2 scaffold)**: crear `src/app/inspection/v2/[token]` y `src/features/inspection-v2` con solo la pantalla de bienvenida + videollamada mobile-first.
+3. **Semana 4-5 (v2 funcional)**: checklist del inspector y tareas guiadas del asegurado.
+4. **Semana 6+ (v2 pulido)**: realtime, grabación, offline y feedback de 20 inspecciones reales.
 
 
