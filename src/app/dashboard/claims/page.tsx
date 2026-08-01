@@ -41,6 +41,7 @@ import { Search, Trash2, FileText, ClipboardCheck, Download, Check, Upload, Chev
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { getClaimTypeIcon } from "@/lib/claim-type-icons";
+import * as XLSX from "xlsx";
 
 function flagImgUrl(code: string | null): string | null {
  if (!code || code.length !== 2) return null;
@@ -977,18 +978,48 @@ const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize }
  className="pg-btn-platinum"
  onClick={() => {
  const rows = filtered || [];
- const csv = [
- ["N° Liquidación","N° Ref Cliente","N° Siniestro Cía","Asegurado","Dirección","Ciudad","Estado","Fecha"].join(","),
- ...rows.map((c) => [
- c.liquidation_number || "", c.client_reference || "", c.claim_number || "", getParticipant(c, 'insured')?.full_name || "",
- `"${getParticipant(c, 'insured')?.address || ""}"`, getParticipant(c, 'insured')?.city || "", statusCode(c.status_id) || "", c.claim_date || ""
- ].join(",")),
- ].join("\\n");
- const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
- const link = document.createElement("a");
- link.href = URL.createObjectURL(blob);
- link.download = `siniestros_${new Date().toISOString().slice(0,10)}.csv`;
- link.click();
+ const headers = [
+ "N° Liquidación",
+ "N° Ref Cliente",
+ "N° Siniestro Cía",
+ "Asegurado",
+ "Dirección",
+ "Ciudad",
+ "Estado",
+ "Siniestro",
+ "Denuncio",
+ "Creación",
+ "Tipo de Siniestro",
+ "País",
+ ];
+ const data = [
+ headers,
+ ...rows.map((c) => {
+ const claimType = claimTypes?.find((ct) => ct.id === c.claim_type_id);
+ const country = countriesCatalog?.find((co) => co.id === c.country_id);
+ const insured = getParticipant(c, "insured");
+ return [
+ c.liquidation_number || "",
+ c.client_reference || "",
+ c.claim_number || "",
+ insured?.full_name || "",
+ insured?.address || "",
+ insured?.city || "",
+ statusLabel(c.status_id) || "",
+ c.claim_date ? new Date(c.claim_date).toLocaleDateString("es-CL") : "",
+ c.report_date ? new Date(c.report_date).toLocaleDateString("es-CL") : "",
+ c.created_at ? new Date(c.created_at).toLocaleDateString("es-CL") : "",
+ claimType?.name || "",
+ country?.name || "",
+ ];
+ }),
+ ];
+ const worksheet = XLSX.utils.aoa_to_sheet(data);
+ // Anchos de columna aproximados para legibilidad
+ worksheet["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 18) }));
+ const workbook = XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(workbook, worksheet, "Siniestros");
+ XLSX.writeFile(workbook, `siniestros_${new Date().toISOString().slice(0, 10)}.xlsx`);
  }}
  >
  <Download className="h-3.5 w-3.5" /> Exportar
