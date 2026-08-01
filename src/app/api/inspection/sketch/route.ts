@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         .from("damage_sketches")
         .update({ sketch_url: sketchUrl, sketch_data: sketchJson || null, label: label || "Croquis" })
         .eq("id", sketchId)
-        .select("id, sketch_url, sketch_data, label, created_at")
+        .select("id, sketch_url, label, created_at")
         .single();
 
       if (updateError && updateError.message.includes("sketch_data")) {
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
           .from("damage_sketches")
           .update({ sketch_url: sketchUrl, label: label || "Croquis" })
           .eq("id", sketchId)
-          .select("id, sketch_url, sketch_data, label, created_at")
+          .select("id, sketch_url, label, created_at")
           .single();
         sketch = retry.data;
         updateError = retry.error;
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
           sketch_data: sketchJson || null,
           label: label || "Croquis",
         })
-        .select("id, sketch_url, sketch_data, label, created_at")
+        .select("id, sketch_url, label, created_at")
         .single();
 
       if (insertError && insertError.message.includes("sketch_data")) {
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
             sketch_url: sketchUrl,
             label: label || "Croquis",
           })
-          .select("id, sketch_url, sketch_data, label, created_at")
+          .select("id, sketch_url, label, created_at")
           .single();
         sketch = retry.data;
         insertError = retry.error;
