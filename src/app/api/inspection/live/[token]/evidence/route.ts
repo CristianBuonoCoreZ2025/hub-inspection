@@ -86,6 +86,7 @@ export async function POST(
         lng: null,
         exif_lat: null,
         exif_lng: null,
+        include_in_report: false,
         ai_status: "deferred",
       })
       .select("id, url, type, description, created_at, source")

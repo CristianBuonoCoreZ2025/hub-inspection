@@ -50,6 +50,18 @@ export interface MapProvidersConfig {
 }
 
 /**
+ * Obtiene el máximo de fotos que se incluyen en un informe de inspección.
+ * Valor por defecto: 18. Rango permitido: 0 a 24.
+ */
+export async function getReportMaxPhotos(): Promise<number> {
+  const raw = await getSystemSetting("report_max_photos");
+  if (!raw) return 18;
+  const parsed = Number(raw);
+  if (Number.isNaN(parsed) || parsed < 0 || parsed > 24) return 18;
+  return parsed;
+}
+
+/**
  * Obtiene la configuración de proveedores de mapas.
  * Por defecto: OpenStreetMap.
  */

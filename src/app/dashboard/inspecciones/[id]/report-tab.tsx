@@ -107,6 +107,15 @@ export default function ReportTab({
   const isCancellation = sessionStatus === "cancelled";
   const isCompleted = sessionStatus === "completed";
 
+  const { data: reportMaxPhotos } = useQuery({
+    queryKey: ["report-max-photos"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/report-max-photos");
+      const data = (await res.json()) as { value?: number };
+      return typeof data.value === "number" ? data.value : 18;
+    },
+  });
+
   const { data: report, isLoading } = useQuery({
     queryKey: ["report", sessionId],
     queryFn: () => getReport(sessionId),
@@ -433,7 +442,7 @@ export default function ReportTab({
   const isPhoto = (t: string) => ["photo", "image", "jpg", "jpeg", "png"].includes(t.toLowerCase());
   const isVideo = (t: string) => ["video", "mp4", "mov"].includes(t.toLowerCase());
   const isDoc = (t: string) => ["document", "pdf", "doc", "docx", "file"].includes(t.toLowerCase());
-  const photos = useMemo(() => evidences.filter(e => isPhoto(e.type) && e.include_in_report !== false).slice(0, 20), [evidences]);
+  const photos = useMemo(() => evidences.filter(e => isPhoto(e.type) && e.include_in_report !== false).slice(0, reportMaxPhotos ?? 18), [evidences, reportMaxPhotos]);
   const videos = useMemo(() => evidences.filter(e => isVideo(e.type)), [evidences]);
   const docs = useMemo(() => evidences.filter(e => isDoc(e.type)), [evidences]);
   const otherEvidences = useMemo(() => evidences.filter(e => !isPhoto(e.type) && !isVideo(e.type) && !isDoc(e.type)), [evidences]);

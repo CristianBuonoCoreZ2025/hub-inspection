@@ -142,6 +142,15 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     },
   });
 
+  const { data: reportMaxPhotos } = useQuery({
+    queryKey: ["report-max-photos"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/report-max-photos");
+      const data = (await res.json()) as { value?: number };
+      return typeof data.value === "number" ? data.value : 18;
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: deleteEvidence,
     onSuccess: () => {
@@ -542,6 +551,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
               onImageClick={setZoomImage}
               sessionId={sessionId}
               isPhotoSection
+              maxReport={reportMaxPhotos ?? 18}
             />
           )}
           {videos.length > 0 && (
@@ -598,7 +608,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 // ─── Sección por tipo ────────────────────────────────────────────
 
 function EvidenceSection({
-  title, count, icon, items, onDelete, readOnly, onImageClick, sessionId, isPhotoSection,
+  title, count, icon, items, onDelete, readOnly, onImageClick, sessionId, isPhotoSection, maxReport = 18,
 }: {
   title: string;
   count: number;
@@ -609,8 +619,8 @@ function EvidenceSection({
   onImageClick?: (url: string) => void;
   sessionId: string;
   isPhotoSection?: boolean;
+  maxReport?: number;
 }) {
-  const MAX_REPORT = 20;
   const selectedCount = isPhotoSection ? items.filter((e) => e.include_in_report).length : 0;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
@@ -648,7 +658,7 @@ function EvidenceSection({
             onImageClick={onImageClick}
             sessionId={sessionId}
             selectedCount={isPhotoSection ? selectedCount : undefined}
-            maxReport={isPhotoSection ? MAX_REPORT : undefined}
+            maxReport={isPhotoSection ? maxReport : undefined}
           />
         ))}
       </div>

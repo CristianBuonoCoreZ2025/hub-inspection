@@ -11,6 +11,7 @@ import {
   Shield,
   Save,
   MapPin,
+  Image as ImageIcon,
   Loader2,
 } from "lucide-react";
 
@@ -175,6 +176,8 @@ function GeneralTab() {
 
       <MapProvidersSection />
 
+      <ReportMaxPhotosSection />
+
       <section className="app-panel">
         <h2 className="app-body font-semibold">Información de la cuenta</h2>
         <p className="mt-1 app-body text-muted-foreground">
@@ -193,6 +196,83 @@ function GeneralTab() {
         </div>
       </section>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Sección: Máximo de fotos por informe
+// ═══════════════════════════════════════════════════════════
+function ReportMaxPhotosSection() {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["report-max-photos"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/report-max-photos");
+      const data = (await res.json()) as { value?: number };
+      return typeof data.value === "number" ? data.value : 18;
+    },
+  });
+
+  const update = useMutation({
+    mutationFn: async (newValue: number) => {
+      const res = await fetch("/api/settings/report-max-photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: newValue }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Error al guardar");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["report-max-photos"] });
+      toast.success("Máximo de fotos por informe actualizado");
+    },
+    onError: (err: Error) => toast.error(err.message || "Error al guardar"),
+  });
+
+  const value = data != null ? String(data) : "18";
+
+  return (
+    <section className="app-panel">
+      <div className="flex items-center gap-2 mb-1">
+        <ImageIcon className="size-4 text-primary" />
+        <h2 className="app-body font-semibold">Máximo de fotos por informe</h2>
+      </div>
+      <p className="app-body text-muted-foreground">
+        Cantidad máxima de fotografías que se incluyen automáticamente en un informe de inspección.
+      </p>
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <Label className="app-body text-muted-foreground">Fotografías</Label>
+          <Select
+            value={value}
+            onValueChange={(v) => {
+              if (v == null) return;
+              const parsed = Number(v);
+              if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 24) {
+                update.mutate(parsed);
+              }
+            }}
+            disabled={isLoading || update.isPending}
+          >
+            <SelectTrigger className="app-input w-full sm:w-40">
+              <SelectValue placeholder="Selecciona" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 25 }, (_, i) => i).map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </section>
   );
 }
 

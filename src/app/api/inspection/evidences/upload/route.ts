@@ -173,6 +173,7 @@ export async function POST(request: NextRequest) {
         lng: photoLng,
         exif_lat: exifGps?.lat ?? null,
         exif_lng: exifGps?.lng ?? null,
+        include_in_report: false,
         ai_status: sourceValue === "live_video" ? "skipped" : "deferred",
       })
       .select("id, url, type, description, category, damage_id, created_at, lat, lng, exif_lat, exif_lng, ai_summary, ai_model, ai_status, source")
