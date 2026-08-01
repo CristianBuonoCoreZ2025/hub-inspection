@@ -104,7 +104,7 @@ export async function POST(
     const instanceSeq = parts[3];
 
     // 5. Construir los datos del siniestro y renderizar
-    const docData = await buildDocumentDataForClaim(action.claim_id);
+    const docData = await buildDocumentDataForClaim(action.claim_id, undefined, actionId);
     const templateData = buildTemplateData(docData, template.placeholder_mapping);
     const templateBuffer = await fetchTemplateBuffer(template.file_url);
     const rendered = await renderDocument(templateBuffer, templateData, fileType);

@@ -137,11 +137,14 @@ function toUser(u: { id: string; full_name: string; email: string | null } | nul
  */
 export async function buildDocumentDataForClaim(
   claimId: string,
-  supabase?: SupabaseClient
+  supabase?: SupabaseClient,
+  claimActionId?: string
 ): Promise<DocumentData> {
   // Si se pasa un cliente (ej: createServerClient en API routes), usarlo directo
   // para que las queries respeten RLS con el contexto de auth del usuario.
   // Si no, usar los helpers de db.ts (browser client).
+  // Si se pasa claimActionId, filtrar sesiones por claim_action_id para traer
+  // la sesión vinculada a esa gestión específica. Si no, traer la última del siniestro.
   const [rawClaim, participants, rawActions, rawSessions] = supabase
     ? await Promise.all([
         supabase.from("claims").select(CLAIM_SELECT).eq("id", claimId).maybeSingle().then((r) => r.data as Record<string, unknown> | null),
@@ -154,11 +157,26 @@ export async function buildDocumentDataForClaim(
           .eq("claim_id", claimId).eq("is_active", true)
           .order("issued_on", { ascending: false })
           .then((r) => (r.data ?? []) as unknown as RawAction[]),
-        supabase.from("inspection_sessions")
-          .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
-          .eq("claim_id", claimId)
-          .order("created_at", { ascending: false }).limit(1)
-          .then((r) => (r.data ?? []) as RawInspectionSession[]),
+        (claimActionId
+          ? supabase.from("inspection_sessions")
+              .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
+              .eq("claim_id", claimId).eq("claim_action_id", claimActionId)
+              .order("created_at", { ascending: false }).limit(1)
+              .then(async (r) => {
+                // Fallback: si la gestión no tiene sesión vinculada, buscar la última del siniestro
+                if (r.data && r.data.length > 0) return r.data as unknown as RawInspectionSession[];
+                const fallback = await supabase.from("inspection_sessions")
+                  .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
+                  .eq("claim_id", claimId)
+                  .order("created_at", { ascending: false }).limit(1);
+                return (fallback.data ?? []) as unknown as RawInspectionSession[];
+              })
+          : supabase.from("inspection_sessions")
+              .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
+              .eq("claim_id", claimId)
+              .order("created_at", { ascending: false }).limit(1)
+              .then((r) => (r.data ?? []) as unknown as RawInspectionSession[])
+        ).then((sessions) => sessions as RawInspectionSession[]),
       ])
     : await Promise.all([
         fetchById<Record<string, unknown>>("claims", claimId, CLAIM_SELECT),
@@ -173,7 +191,9 @@ export async function buildDocumentDataForClaim(
         }),
         fetchAll<RawInspectionSession>("inspection_sessions", {
           select: "id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status",
-          eq: { claim_id: claimId },
+          eq: claimActionId
+            ? { claim_id: claimId, claim_action_id: claimActionId }
+            : { claim_id: claimId },
           order: { column: "created_at", ascending: false },
           limit: 1,
         }),
@@ -201,10 +221,24 @@ export async function buildDocumentDataForClaim(
   // Construir mapa de gestiones: code → última gestión emitida de ese código
   // rawActions viene ordenado por issued_on DESC, así que la primera de cada code es la más reciente
   const actions: Record<string, ActionSummary> = {};
+  // Si se pasa claimActionId, esa gestión tiene prioridad absoluta: su code se mapea a ella
+  // en lugar de a la "más reciente" del siniestro. Esto garantiza que los placeholders
+  // de la plantilla (coord_fecha, reserve_amount, etc.) traigan los datos de ESTA gestión,
+  // no de otra.
+  const priorityAction = claimActionId
+    ? rawActions.find((ra) => ra.id === claimActionId)
+    : null;
+  if (priorityAction?.action_template?.code) {
+    actions[priorityAction.action_template.code] = {
+      code: priorityAction.action_template.code,
+      issued_on: priorityAction.issued_on ?? "",
+      action_data: priorityAction.action_data ?? null,
+    };
+  }
   for (const ra of rawActions) {
     const code = ra.action_template?.code;
     if (!code) continue;
-    // Solo nos quedamos con la primera (más reciente) de cada code
+    // Si ya está en el mapa (por priorityAction o por una iteración previa), no sobrescribir
     if (actions[code]) continue;
     // Solo gestiones emitidas (con issued_on) cuentan como "última gestión"
     if (!ra.issued_on) continue;

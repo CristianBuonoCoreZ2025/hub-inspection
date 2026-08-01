@@ -45,32 +45,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Construir datos completos del siniestro (mismo sistema que el envío real)
-    const docData = await buildDocumentDataForClaim(actionRow.claim_id, supabase);
+    const docData = await buildDocumentDataForClaim(actionRow.claim_id, supabase, claimActionId);
 
-    // 3. Cargar sesión de inspección vinculada a esta gestión específica.
-    // Si no existe (gestión sin sesión), buscar la última del siniestro como fallback.
-    let sessionQuery = supabase
-      .from("inspection_sessions")
-      .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at")
-      .eq("claim_id", actionRow.claim_id);
-    if (claimActionId) {
-      sessionQuery = sessionQuery.eq("claim_action_id", claimActionId);
-    }
-    const { data: sessions } = await sessionQuery
-      .order("created_at", { ascending: false })
-      .limit(1);
-    let lastSession = sessions?.[0] ?? null;
-
-    // Fallback: si la gestión no tiene sesión vinculada, buscar la última del siniestro
-    if (!lastSession) {
-      const { data: fallbackSessions } = await supabase
-        .from("inspection_sessions")
-        .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at")
-        .eq("claim_id", actionRow.claim_id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      lastSession = fallbackSessions?.[0] ?? null;
-    }
+    // 3. La sesión de inspección vinculada a esta gestión ya viene en docData.last_inspection_session
+    const lastSession = docData.last_inspection_session;
 
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
