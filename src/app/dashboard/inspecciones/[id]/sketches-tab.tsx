@@ -319,7 +319,7 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  onClick={async () => {
  const ok = await confirmDelete({
    title: "Eliminar croquis",
-   description: "¿Eliminar este croquis? Esta acción no se puede deshacer.",
+   description: "¿Estás seguro? Esta acción no se puede deshacer.",
    destructive: true,
    confirmLabel: "Eliminar",
  });
