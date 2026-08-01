@@ -43,7 +43,6 @@ export async function GET(
         inspection_damages:inspection_damages!inspection_damages_session_id_fkey ( id, category, subcategory, description, observations, severity,
           dependency, sector, materiality_type, unit, quantity, length, width, height, damage_type,
           product, brand_model, purchase_date, estimated_amount, currency, created_at ),
-        inspection_chat_messages:inspection_chat_messages!inspection_chat_messages_session_id_fkey ( id, content, sender_name, sender_role, created_at ),
         inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey ( id, role, signature_url, signed_at ),
         damage_sketches:damage_sketches!damage_sketches_session_id_fkey ( id, sketch_url, label, created_at ),
         claim:claims!inspection_sessions_claim_id_fkey (

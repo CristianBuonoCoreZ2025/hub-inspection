@@ -29,7 +29,7 @@ interface LiveVideoCallProps {
   role: SignalingRole;
   compact?: boolean;
   onHangup: () => void;
-  onScreenshotSaved?: (evidence: { id: string; url: string; description: string }) => void;
+  onScreenshotSaved?: (evidence?: { id: string; url: string; description: string }) => void;
   onPeerJoined?: () => void;
   onPeerRejected?: () => void;
   onRecordingSaved?: (evidence: { id: string; url: string; description: string }) => void;
@@ -68,6 +68,26 @@ function captureVideoThumb(video: HTMLVideoElement | null, w: number, h: number)
   } catch {
     return "";
   }
+}
+
+/** Devuelve un mensaje útil según el error de getUserMedia y el dispositivo. */
+function getMediaErrorMessage(err: unknown): string {
+  const domErr = err instanceof DOMException ? err : null;
+  const raw = err instanceof Error ? err.message : "";
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+
+  if (domErr?.name === "NotAllowedError" || domErr?.name === "SecurityError" || raw.toLowerCase().includes("permission")) {
+    if (isIOS) return "Permiso denegado. En iPhone: Ajustes > Safari > Cámara/Micrófono > Permitir.";
+    if (isAndroid) return "Permiso denegado. En Android: Configuración del navegador > Permisos > Cámara y micrófono > Permitir.";
+    return "Permiso denegado. Habilite cámara y micrófono en la barra de direcciones o configuración del navegador.";
+  }
+  if (domErr?.name === "NotFoundError") return "No se encontró cámara o micrófono. Conecte uno o use subir fotos.";
+  if (domErr?.name === "NotReadableError" || raw.toLowerCase().includes("could not start")) {
+    return "La cámara o el micrófono están en uso por otra app. Cierre otras pestañas/programas y vuelva a intentar.";
+  }
+  return raw || "No se pudo acceder a la cámara/micrófono.";
 }
 
 export function LiveVideoCall({
@@ -149,20 +169,11 @@ export function LiveVideoCall({
       const domErr = err instanceof DOMException ? err : null;
       const raw = err instanceof Error ? err.message : "";
 
-      if (domErr?.name === "NotAllowedError" || domErr?.name === "SecurityError") {
-        userMessage = "Permiso denegado. Habilite el acceso a cámara y micrófono en el navegador.";
+      userMessage = getMediaErrorMessage(err);
+
+      if (domErr?.name === "NotAllowedError" || domErr?.name === "SecurityError" || raw.toLowerCase().includes("permission")) {
         cameraPerm = "denied";
         microphonePerm = "denied";
-      } else if (domErr?.name === "NotFoundError") {
-        userMessage = "No se encontró cámara o micrófono en este dispositivo.";
-      } else if (domErr?.name === "NotReadableError" || raw.toLowerCase().includes("could not start")) {
-        userMessage = "La cámara o el micrófono están en uso por otra aplicación. Cierre otras pestañas o programas y vuelva a intentar.";
-      } else if (raw.toLowerCase().includes("permission")) {
-        userMessage = "No se otorgó permiso para usar cámara/micrófono.";
-        cameraPerm = "denied";
-        microphonePerm = "denied";
-      } else {
-        userMessage = raw || "No se pudo acceder a la cámara/micrófono.";
       }
 
       // Fallback a audio solo
@@ -450,14 +461,14 @@ export function LiveVideoCall({
             remoteVideoRef.current.srcObject = null;
           }
         } else if (msg.type === "screenshot") {
-          // El otro par capturó una foto — podemos mostrar notificación
-          // (no es necesario hacer nada, las evidencias se cargan por separado)
+          // El otro par capturó una foto — refrescar para mostrarla en tiempo real
+          if (msg.from !== userId) onScreenshotSaved?.();
         }
       } catch (err) {
         console.error("[LiveVideoCall] Error procesando signaling:", msg.type, err);
       }
     },
-    [role, userId, onPeerJoined, onPeerRejected, onKicked],
+    [role, userId, onPeerJoined, onPeerRejected, onKicked, onScreenshotSaved],
   );
 
   // ── Inicializar todo al montar ──

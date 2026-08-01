@@ -15,6 +15,7 @@ import { LiveVideoCall } from "@/components/inspection/live-video-call";
 import { useClaimsAppPresence } from "@/hooks/use-claims-app-presence";
 import { convertHeicToJpeg } from "@/lib/heic-convert";
 import { logConnectionEvent, type ConnectionLogEntry } from "@/services/connection-logs";
+import { getChatMessages } from "@/services/chat";
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
 
@@ -1144,42 +1145,71 @@ function EvidencesTab({
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadCount, setUploadCount] = useState(0);
+  const [progress, setProgress] = useState({ completed: 0, total: 0, failed: 0 });
+  const [failedFiles, setFailedFiles] = useState<File[]>([]);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [lastSuccess, setLastSuccess] = useState<string | null>(null);
   const isReadOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0 || isReadOnly) return;
+  const uploadFiles = async (files: File[]) => {
+    if (files.length === 0 || isReadOnly) return;
     setUploading(true);
-    setUploadCount(files.length);
-    try {
-      let completed = 0;
-      await Promise.all(
-        Array.from(files).map(async (rawFile) => {
-          const file = await convertHeicToJpeg(rawFile);
-          const formData = new FormData();
-          formData.append("file", file);
-          const res = await fetch(`/api/inspection/live/${token}/evidence`, {
-            method: "POST",
-            body: formData,
-          });
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error(body.error || "Error al subir archivo");
+    setLastError(null);
+    setLastSuccess(null);
+    setProgress({ completed: 0, total: files.length, failed: 0 });
+    const failed: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const rawFile = files[i];
+      try {
+        const file = await convertHeicToJpeg(rawFile);
+        let lastErr: Error | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const res = await fetch(`/api/inspection/live/${token}/evidence`, {
+              method: "POST",
+              body: formData,
+            });
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}));
+              throw new Error(body.error || `Error ${res.status}`);
+            }
+            break;
+          } catch (err) {
+            lastErr = err instanceof Error ? err : new Error(String(err));
+            if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
           }
-          completed += 1;
-          setUploadCount((n) => n - 1 + completed); // rough feedback
-        }),
-      );
-      queryClient.invalidateQueries({ queryKey: ["magic-link-live", token] });
-      queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : "Error al subir evidencia");
-    } finally {
-      setUploading(false);
-      setUploadCount(0);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+        if (lastErr) throw lastErr;
+        setProgress((p) => ({ ...p, completed: p.completed + 1 }));
+      } catch {
+        failed.push(rawFile);
+        setProgress((p) => ({ ...p, failed: p.failed + 1 }));
+      }
     }
+    setFailedFiles(failed);
+    if (failed.length === 0) {
+      setLastSuccess(`${files.length} archivo(s) subido(s) correctamente`);
+    } else {
+      setLastError(`No se pudieron subir ${failed.length} archivo(s): ${failed.map((f) => f.name).join(", ")}`);
+    }
+    setUploading(false);
+    queryClient.invalidateQueries({ queryKey: ["magic-link-live", token] });
+    queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files || files.length === 0 || isReadOnly) return;
+    uploadFiles(Array.from(files));
+  };
+
+  const handleRetry = () => {
+    if (failedFiles.length === 0) return;
+    const toRetry = failedFiles;
+    setFailedFiles([]);
+    uploadFiles(toRetry);
   };
 
   return (
@@ -1200,9 +1230,33 @@ function EvidencesTab({
             className="flex items-center gap-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white px-3 py-2 app-body"
           >
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-            {uploading ? `Subiendo ${uploadCount} archivo(s)...` : "Subir foto / video / PDF"}
+            {uploading
+              ? `Subiendo ${progress.completed + progress.failed + 1} de ${progress.total}...`
+              : "Subir foto / video / PDF"}
           </button>
-          <p className="app-body text-slate-500 mt-1">
+          {failedFiles.length > 0 && !uploading && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="mt-2 flex items-center gap-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 app-body w-full"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Reintentar {failedFiles.length} archivo(s) fallido(s)
+            </button>
+          )}
+          {lastError && (
+            <p className="app-body text-rose-600 mt-2 flex items-center gap-1">
+              <XCircle className="h-4 w-4 shrink-0" />
+              {lastError}
+            </p>
+          )}
+          {lastSuccess && !lastError && (
+            <p className="app-body text-emerald-600 mt-2 flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 shrink-0" />
+              {lastSuccess}
+            </p>
+          )}
+          <p className="app-body text-slate-500 mt-2">
             La evidencia se sube inmediatamente. El análisis con IA lo hará el inspector después.
           </p>
         </div>
@@ -1551,7 +1605,21 @@ function ChatPanel({ session }: { session: LiveSession }) {
   const queryClient = useQueryClient();
   const [message, setMessage] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const messages = session.inspection_chat_messages || [];
+  const { data: chatMessages } = useQuery({
+    queryKey: ["magic-link-chat", session.id],
+    queryFn: async () => {
+      const msgs = await getChatMessages(session.id);
+      return msgs.map((m) => ({
+        id: m.id,
+        content: m.content,
+        sender_name: m.sender_name,
+        sender_role: m.sender_role,
+        created_at: m.created_at,
+      })) as LiveChatMessage[];
+    },
+    refetchInterval: 3000,
+  });
+  const messages = chatMessages ?? [];
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1572,7 +1640,7 @@ function ChatPanel({ session }: { session: LiveSession }) {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["magic-link-live", session.magic_link_token] });
+      queryClient.invalidateQueries({ queryKey: ["magic-link-chat", session.id] });
       setMessage("");
     },
   });

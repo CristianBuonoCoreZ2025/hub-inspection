@@ -1124,13 +1124,13 @@ export default function InspectionDetailPage() {
  }
  }}
  onScreenshotSaved={() => {
- queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
+ queryClient.invalidateQueries({ queryKey: ["evidences", session.id] });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
  }}
  onPeerJoined={() => toast.success("El asegurado se ha conectado a la videollamada")}
  onPeerRejected={() => toast.warning("Otra persona intentó conectarse a la videollamada y fue rechazada. Ya hay un asegurado en sesión.")}
  onRecordingSaved={() => {
- queryClient.invalidateQueries({ queryKey: ["inspection-evidences", session.id] });
+ queryClient.invalidateQueries({ queryKey: ["evidences", session.id] });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
  if (session.magic_link_token) queryClient.invalidateQueries({ queryKey: ["magic-link-live", session.magic_link_token] });
  toast.success("Grabación de sesión guardada como evidencia");
