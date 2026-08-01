@@ -3101,9 +3101,6 @@
   /* SIN isolation en las secciones — deliberado.
      Si añadimos isolation aquí, los items de la sección 2 se pintan
      encima del header sticky de la sección 1. */
-  .grouped-contacts-section {
-    /* Sin estilos. */
-  }
 
   .grouped-contacts-header {
     position: sticky;
@@ -3140,10 +3137,6 @@
        del stacking context del contenedor scroll. */
     position: relative;
     z-index: 0;
-  }
-
-  .grouped-contacts-item {
-    /* Sin estilos visuales aquí — los define el consumidor via renderItem. */
   }
 
   /* Panel que solo contiene toolbar (sin grilla) — sin padding inferior */
