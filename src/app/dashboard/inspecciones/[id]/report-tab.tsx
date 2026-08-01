@@ -1076,29 +1076,19 @@ export default function ReportTab({
                 { role: "adjuster" as const, label: "Inspector" },
               ].map(({ role, label }) => {
                 const sig = uniqueSignatures.find((s) => s.role === role);
-                const isWaiver = role === "insured" && session.signature_waiver_reason && !sig;
                 return (
                   <div key={role} className="report-sig-box">
                     {sig ? (
                       <>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={sig.signature_url} alt={`Firma ${label}`} className="report-sig-img" />
+                        <img src={sig.signature_url} alt={`Firma ${label}`} className="report-sig-img h-16 object-contain" />
                         <p className="report-sig-name app-body">{label}</p>
                         <p className="report-sig-role app-body">{fmtDateTime(sig.signed_at)}</p>
                       </>
                     ) : (
                       <>
-                        <div className="report-sig-img h-16 flex items-center justify-center">
-                          <span className="text-xs text-gray-500 italic">Sin firma</span>
-                        </div>
+                        <div className="report-sig-img h-16" />
                         <p className="report-sig-name app-body">{label}</p>
-                        {isWaiver ? (
-                          <p className="report-sig-role app-body italic text-red-700">
-                            No firmó: {session.signature_waiver_reason}
-                          </p>
-                        ) : (
-                          <p className="report-sig-role app-body">Pendiente</p>
-                        )}
                       </>
                     )}
                   </div>
