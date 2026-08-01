@@ -4275,4 +4275,23 @@ NUNCA usar el atributo HTML title como tooltip.
 SIEMPRE usar Tooltip, TooltipTrigger y TooltipContent desde src/components/ui/tooltip.tsx.
 ```
 
+---
+
+## Registro de pendientes — Módulo de Inspecciones
+
+Fecha: sesión actual.
+
+### Pendientes inmediatos
+
+- Commitear `src/app/dashboard/inspecciones/[id]/report-tab.tsx` cuando esté listo (contiene `include_in_report`, `canRegenerate` y logs de debug del PDF).
+- Aplicar migración `migrations/327_include_in_report.sql` a la base de datos (`pnpm db:push`) si aún no se ejecutó.
+
+### Pendientes del módulo para finalizar
+
+1. **Magic Link sin `readOnly`**: en `/inspection/[token]/page.tsx` el asegurado puede seguir dibujando croquis aunque la sesión esté `completed`/`cancelled`. En `sketches-tab.tsx` del dashboard sí hay `readOnly`; falta en magic link.
+2. **RLS de `damage_sketches`**: no hay `ALTER TABLE damage_sketches ENABLE ROW LEVEL SECURITY` ni policies en migraciones. Agregar policy con `is_session_tenant_allowed(session_id)`.
+3. **PDF y CORS**: `report-tab.tsx` `generatePdf` convierte imágenes secuencialmente con 8s timeout y `scale: 1` (baja calidad). Con muchas imágenes puede ser lento. Evaluar usar proxy/progress o subir `scale`.
+4. **Croquis sin `include_in_report`**: hoy el filtro es solo para fotos. Si se quiere elegir qué croquis van al informe, agregar `include_in_report` a `damage_sketches`, API y UI.
+5. **Optimización `inspecciones/[id]/page.tsx`**: se volvió a `getInspectionSessionById` completo para arreglar `ReportTab`. Mañana se puede volver a una versión liviana y que `ReportTab` cargue el session completo solo cuando esté activo.
+
 
