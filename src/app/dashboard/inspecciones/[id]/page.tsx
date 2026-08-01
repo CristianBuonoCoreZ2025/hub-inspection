@@ -18,6 +18,7 @@ import { getLookupCatalog } from "@/services/catalogs";
 import { getUsers, getUsersByRoleForCompany } from "@/services/users";
 import { usePermissions } from "@/hooks/use-permissions";
 import { formatUserDateTime as formatDateTime } from "@/lib/timezone";
+import { cn } from "@/lib/utils";
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
 import { useAuth } from "@/hooks/use-auth";
@@ -1027,8 +1028,8 @@ export default function InspectionDetailPage() {
  </div>
 
  {/* Panel overlay de Comunicación — flotante, no roba espacio */}
- {chatPanelOpen && session.inspection_type === "remote" && (
- <div className="chat-overlay">
+ {session.inspection_type === "remote" && (
+ <div className={cn("chat-overlay", !chatPanelOpen && "hidden")}>
  <div className="chat-overlay-panel">
  <div className="flex items-center justify-between mb-3 pb-2 border-b">
  <h3 className="app-body font-semibold text-muted-foreground flex items-center gap-2">
