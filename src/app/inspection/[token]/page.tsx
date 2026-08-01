@@ -15,7 +15,7 @@ import { LiveVideoCall } from "@/components/inspection/live-video-call";
 import { useClaimsAppPresence } from "@/hooks/use-claims-app-presence";
 import { convertHeicToJpeg } from "@/lib/heic-convert";
 import { logConnectionEvent, type ConnectionLogEntry } from "@/services/connection-logs";
-import { getChatMessages } from "@/services/chat";
+
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
 
@@ -523,7 +523,6 @@ export default function MagicLinkPage() {
             sessionId={session.id}
             token={token}
             sessionStatus={session.status}
-            evidences={session.inspection_evidences}
           />
         )}
         {effectiveTab === "croquis" && <SketchesTab sketches={session.damage_sketches} session={session} />}
@@ -1135,14 +1134,23 @@ function EvidencesTab({
   sessionId,
   token,
   sessionStatus,
-  evidences,
 }: {
   sessionId: string;
   token: string;
   sessionStatus: string;
-  evidences: LiveEvidence[];
 }) {
   const queryClient = useQueryClient();
+  const { data: fetchedEvidences } = useQuery({
+    queryKey: ["inspection-evidences", sessionId],
+    queryFn: async () => {
+      const res = await fetch(`/api/inspection/evidences/session/${sessionId}`);
+      if (!res.ok) throw new Error("Error al cargar evidencias");
+      const data = (await res.json()) as { evidences: LiveEvidence[] };
+      return data.evidences;
+    },
+    refetchInterval: 10000,
+  });
+  const evidences = fetchedEvidences ?? [];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ completed: 0, total: 0, failed: 0 });
@@ -1606,16 +1614,12 @@ function ChatPanel({ session }: { session: LiveSession }) {
   const [message, setMessage] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const { data: chatMessages } = useQuery({
-    queryKey: ["magic-link-chat", session.id],
+    queryKey: ["magic-link-chat", session.id, session.magic_link_token],
     queryFn: async () => {
-      const msgs = await getChatMessages(session.id);
-      return msgs.map((m) => ({
-        id: m.id,
-        content: m.content,
-        sender_name: m.sender_name,
-        sender_role: m.sender_role,
-        created_at: m.created_at,
-      })) as LiveChatMessage[];
+      const res = await fetch(`/api/inspection/chat?sessionId=${session.id}&token=${session.magic_link_token}`);
+      if (!res.ok) throw new Error("Error al cargar chat");
+      const data = (await res.json()) as { messages: LiveChatMessage[] };
+      return data.messages;
     },
     refetchInterval: 3000,
   });
@@ -1640,7 +1644,7 @@ function ChatPanel({ session }: { session: LiveSession }) {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["magic-link-chat", session.id] });
+      queryClient.invalidateQueries({ queryKey: ["magic-link-chat", session.id, session.magic_link_token] });
       setMessage("");
     },
   });

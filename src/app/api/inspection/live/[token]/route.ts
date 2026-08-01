@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { presignEvidenceUrls, presignSignatureUrls, presignSketchUrls } from "@/lib/supabase/storage-presigned";
+import { presignSignatureUrls, presignSketchUrls } from "@/lib/supabase/storage-presigned";
 import { logger } from "@/lib/logger";
 
 /**
@@ -37,7 +37,6 @@ export async function GET(
         insured_statement, third_parties,
         action_template:action_template!inspection_sessions_action_template_id_fkey ( code ),
         claim_action:claim_actions!inspection_sessions_claim_action_id_fkey ( code ),
-        inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey ( id, url, type, description, category, created_at ),
         inspection_notes:inspection_notes!inspection_notes_session_id_fkey ( id, content, created_at ),
         inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey ( id, area, item, status, notes, created_at ),
         inspection_damages:inspection_damages!inspection_damages_session_id_fkey ( id, category, subcategory, description, observations, severity,
@@ -86,7 +85,6 @@ export async function GET(
     const counts = {
       id: session.id,
       status: session.status,
-      evidences: session.inspection_evidences?.length ?? -1,
       notes: session.inspection_notes?.length ?? -1,
       checklists: session.inspection_checklists?.length ?? -1,
       damages: session.inspection_damages?.length ?? -1,
@@ -102,9 +100,6 @@ export async function GET(
     }
 
     // Convertir URLs a signed URLs
-    if (session.inspection_evidences?.length) {
-      await presignEvidenceUrls(session.inspection_evidences);
-    }
     if (session.inspection_signatures?.length) {
       await presignSignatureUrls(session.inspection_signatures);
     }

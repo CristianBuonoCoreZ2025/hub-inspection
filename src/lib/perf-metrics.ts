@@ -78,6 +78,8 @@ const FLUSH_BATCH_SIZE = 50;        // máximo 50 por flush
 // Suscriptores (panel flotante) para re-render en vivo
 type Listener = () => void;
 const listeners = new Set<Listener>();
+const isProduction = process.env.NODE_ENV === "production";
+const SLOW_THRESHOLD_MS = 500;
 
 // ──────────────────────────────────────────────────────────────────
 // API pública
@@ -143,19 +145,24 @@ function record(entry: MetricEntry) {
   recentEntries.unshift(entry);
   if (recentEntries.length > MAX_RECENT) recentEntries.pop();
 
-  // 3. Encolar para persistencia en BD
-  pendingLogs.push({
-    tableName: entry.tableName,
-    operation: entry.operation,
-    durationMs: entry.durationMs,
-    success: entry.success,
-    errorMessage: entry.errorMessage,
-    rowsAffected: entry.rowsAffected,
-    route: entry.route,
-    timestamp: new Date(entry.timestamp).toISOString(),
-  });
+  // 3. Encolar para persistencia en BD:
+  //    - En dev/staging: todas
+  //    - En producción: solo errores o queries lentas (>= 500ms)
+  const shouldPersist = !isProduction || !entry.success || entry.durationMs >= SLOW_THRESHOLD_MS;
+  if (shouldPersist) {
+    pendingLogs.push({
+      tableName: entry.tableName,
+      operation: entry.operation,
+      durationMs: entry.durationMs,
+      success: entry.success,
+      errorMessage: entry.errorMessage,
+      rowsAffected: entry.rowsAffected,
+      route: entry.route,
+      timestamp: new Date(entry.timestamp).toISOString(),
+    });
+    scheduleFlush();
+  }
 
-  scheduleFlush();
   notifyListeners();
 }
 

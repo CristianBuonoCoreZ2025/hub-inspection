@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
  getInspectionSessionById,
+ getInspectionSessionByIdLight,
  updateInspectionSession,
  rescheduleInspectionViaCIN,
  cancelInspectionViaCIN,
@@ -144,6 +145,7 @@ export default function InspectionDetailPage() {
  const { canView } = usePermissions();
  const { profile, dataAccess } = useAuth();
  const [activeTab, setActiveTab] = useState("resumen");
+ const tabSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
  const [cancelModalOpen, setCancelModalOpen] = useState(false);
  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
  const [cancelReasonId, setCancelReasonId] = useState<string>("");
@@ -169,12 +171,20 @@ export default function InspectionDetailPage() {
 
  const { data: session, isLoading, isError, error } = useQuery({
  queryKey: ["inspection-session", sessionId],
- queryFn: () => getInspectionSessionById(sessionId),
+ queryFn: () => getInspectionSessionByIdLight(sessionId),
  retry: false,
  refetchInterval: (query) => {
  const s = query.state.data as InspectionSession | undefined;
  return s?.inspection_type === "remote" && s?.status === "active" ? 10000 : false;
  },
+ });
+
+ const { data: fullSession, isLoading: isFullLoading } = useQuery({
+ queryKey: ["inspection-session-full", sessionId],
+ queryFn: () => getInspectionSessionById(sessionId),
+ enabled: activeTab === "informe",
+ retry: false,
+ refetchInterval: 10000,
  });
 
  const isAccessBlocked = useMemo(() => {
@@ -255,6 +265,18 @@ export default function InspectionDetailPage() {
  },
  onError: (err: Error) => toast.error(err.message),
  });
+
+ function handleTabClick(tabId: string) {
+   setActiveTab(tabId);
+   if (tabSyncTimerRef.current) {
+     clearTimeout(tabSyncTimerRef.current);
+   }
+   tabSyncTimerRef.current = setTimeout(() => {
+     if (session) {
+       syncTabMutation.mutate({ id: session.id, tab: tabId });
+     }
+   }, 1500);
+ }
 
  // Sincronizar el tab activo con el cliente (piloto automático)
  const syncTabMutation = useMutation({
@@ -509,10 +531,7 @@ export default function InspectionDetailPage() {
  return (
  <button
  key={t.id}
- onClick={() => {
- setActiveTab(t.id);
- syncTabMutation.mutate({ id: session.id, tab: t.id });
- }}
+ onClick={() => handleTabClick(t.id)}
  className={`flex items-center gap-2 px-4 py-2.5 app-body font-medium border-b-2 transition-colors whitespace-nowrap ${
  isActive
  ? "border-primary text-primary"
@@ -972,8 +991,13 @@ export default function InspectionDetailPage() {
  {/* ── TAB: INFORME ── */}
  {activeTab === "informe" && (
  <div className="mt-4">
+ {isFullLoading ? (
+ <div className="flex items-center justify-center py-12 app-body text-muted-foreground">
+ Cargando informe...
+ </div>
+ ) : fullSession ? (
  <ReportTab
- session={session}
+ session={fullSession}
  profile={profile}
  claimNumber={claim?.claim_number ?? undefined}
  claimLiquidationNumber={claim?.liquidation_number ?? undefined}
@@ -985,10 +1009,11 @@ export default function InspectionDetailPage() {
  claimCause={claim?.claim_cause?.name ?? undefined}
  claimDate={claim?.claim_date ?? undefined}
  commune={claim?.commune?.name ?? undefined}
- cancellationReason={allCancellationReasons?.find(r => r.id === session.cancellation_reason_id)?.name || null}
- cancellationNotes={session.cancellation_notes}
- cancelledAt={session.cancelled_at}
+ cancellationReason={allCancellationReasons?.find(r => r.id === fullSession.cancellation_reason_id)?.name || null}
+ cancellationNotes={fullSession.cancellation_notes}
+ cancelledAt={fullSession.cancelled_at}
  />
+ ) : null}
  </div>
  )}
 
