@@ -197,22 +197,16 @@ export async function buildDocumentDataForClaim(
   // Si no encontramos el INS hija, el claimActionId quizás es una INS creada sin
   // el prefijo INS (migración antigua) o la sesión está vinculada directamente.
   // Fallback: buscar sesión con claim_action_id = claimActionId.
+  // Importante: NO caer a la última sesión del siniestro. Si no hay sesión para
+  // ESTA gestión, last_inspection_session queda en null. Así magic_link y fecha
+  // de sesión no se confunden con otra coordinación.
   const rawSessions = supabase
     ? await supabase.from("inspection_sessions")
         .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
         .eq("claim_id", claimId)
         .eq("claim_action_id", targetSessionActionId ?? claimActionId ?? "")
         .order("created_at", { ascending: false }).limit(1)
-        .then(async (r) => {
-          const rows = (r.data ?? []) as unknown as RawInspectionSession[];
-          if (rows.length > 0) return rows;
-          // Fallback: última sesión del siniestro
-          const fallback = await supabase.from("inspection_sessions")
-            .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
-            .eq("claim_id", claimId)
-            .order("created_at", { ascending: false }).limit(1);
-          return (fallback.data ?? []) as unknown as RawInspectionSession[];
-        })
+        .then((r) => (r.data ?? []) as unknown as RawInspectionSession[])
     : await fetchAll<RawInspectionSession>("inspection_sessions", {
         select: "id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status",
         eq: {
@@ -221,14 +215,6 @@ export async function buildDocumentDataForClaim(
         },
         order: { column: "created_at", ascending: false },
         limit: 1,
-      }).then(async (rows) => {
-        if (rows.length > 0) return rows;
-        return fetchAll<RawInspectionSession>("inspection_sessions", {
-          select: "id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status",
-          eq: { claim_id: claimId },
-          order: { column: "created_at", ascending: false },
-          limit: 1,
-        });
       });
 
   // Map the raw claim data — Supabase returns nested relations with their actual column names

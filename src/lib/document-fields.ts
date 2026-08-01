@@ -143,6 +143,35 @@ const fmtDateTime = (v: unknown): string => {
   });
 };
 
+/**
+ * Busca un valor en action_data por ID canónico o por prefijo con sufijo.
+ * El editor de pantallas genera IDs con sufijos (ej: coord_fecha_1), mientras
+ * que los triggers/campos heredados usan el prefijo sin sufijo (coord_fecha).
+ * Esta función replica la lógica del UI para leer el mismo valor.
+ */
+function findCoordField(
+  actionData: Record<string, unknown>,
+  canonicalId: string,
+  prefixes: string[]
+): unknown {
+  // 1. ID canónico exacto
+  if (actionData[canonicalId] !== undefined && actionData[canonicalId] !== null && actionData[canonicalId] !== "") {
+    return actionData[canonicalId];
+  }
+  // 2. Cualquier key que empiece con alguno de los prefijos
+  //    (excluyendo campos de re-coordinación que terminan en _recoord)
+  for (const key of Object.keys(actionData)) {
+    if (key.includes("recoord")) continue;
+    for (const prefix of prefixes) {
+      if (key.startsWith(prefix)) {
+        const v = actionData[key];
+        if (v !== undefined && v !== null && v !== "") return v;
+      }
+    }
+  }
+  return undefined;
+}
+
 const fmtMoney = (v: unknown): string => {
   if (v === null || v === undefined || v === "") return "";
   const n = Number(v);
@@ -307,7 +336,7 @@ export const DOCUMENT_FIELDS: DocumentField[] = [
   { key: "last_coverage_date", label: "Fecha Última Cobertura (COB)", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.COB?.issued_on) },
   { key: "last_nsa_date", label: "Fecha Última Solicitud Antecedentes", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.NSA?.issued_on) },
   { key: "last_rta_date", label: "Fecha Última Recepción Antecedentes", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.RTA?.issued_on) },
-  { key: "last_coord_inspection_date", label: "Fecha Última Coordinación Inspección", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.COI?.issued_on) },
+  { key: "last_coord_inspection_date", label: "Fecha Última Coordinación Inspección", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.CIN?.issued_on) },
   { key: "last_inspection_date", label: "Fecha Última Inspección", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.INS?.issued_on) },
   { key: "last_assignment_notice_date", label: "Fecha Último Aviso Asignación", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.AAS?.issued_on) },
   { key: "last_liquidation_report_date", label: "Fecha Último Informe Liquidación", group: "Gestiones: Fechas", resolve: (d) => fmtDate(d.actions?.IFL?.issued_on) },
@@ -418,34 +447,38 @@ export const DOCUMENT_FIELDS: DocumentField[] = [
     return String(snapshot.length);
   }},
 
-  // ─── Gestiones: Coordinación de Inspección (COI) ───
+  // ─── Gestiones: Coordinación de Inspección (CIN) ───
   { key: "coord_inspection_date", label: "Fecha Coordinada Inspección", group: "Gestiones: Coordinación", resolve: (d) => {
-    const coi = d.actions?.COI;
-    if (!coi?.action_data) return "";
-    return fmtDate(coi.action_data.coord_fecha as unknown);
+    const cin = d.actions?.CIN;
+    if (!cin?.action_data) return "";
+    const fecha = findCoordField(cin.action_data, "coord_fecha", ["coord_fecha"]);
+    if (typeof fecha !== "string") return "";
+    return fmtDate(fecha);
   }},
   { key: "coord_inspection_contact", label: "Contacto Coordinación", group: "Gestiones: Coordinación", resolve: (d) => {
-    const coi = d.actions?.COI;
-    if (!coi?.action_data) return "";
-    return String(coi.action_data.coord_contacto ?? "");
+    const cin = d.actions?.CIN;
+    if (!cin?.action_data) return "";
+    const v = findCoordField(cin.action_data, "coord_contacto", ["coord_cont", "coord_contacto"]);
+    return v == null ? "" : String(v);
   }},
   { key: "coord_inspection_location", label: "Ubicación Coordinación", group: "Gestiones: Coordinación", resolve: (d) => {
-    const coi = d.actions?.COI;
-    if (!coi?.action_data) return "";
-    return String(coi.action_data.coord_ubicacion ?? "");
+    const cin = d.actions?.CIN;
+    if (!cin?.action_data) return "";
+    const v = findCoordField(cin.action_data, "coord_ubicacion", ["coord_ubic", "coord_ubicacion"]);
+    return v == null ? "" : String(v);
   }},
   { key: "coord_inspection_type", label: "Tipo Inspección Coordinada", group: "Gestiones: Coordinación", resolve: (d) => {
-    const coi = d.actions?.COI;
-    if (!coi?.action_data) return "";
-    const t = String(coi.action_data.coord_inspection_type ?? "");
+    const cin = d.actions?.CIN;
+    if (!cin?.action_data) return "";
+    const t = String(findCoordField(cin.action_data, "coord_inspection_type", ["coord_inspection_type", "coord_type"]) ?? "");
     return t === "remote" ? "Remota" : t === "in_person" ? "Presencial" : t;
   }},
   // Fecha Y hora de la última coordinación (formato completo dd-mm-aaaa HH:mm)
   { key: "coord_inspection_datetime", label: "Fecha y Hora Coordinada", group: "Gestiones: Coordinación", resolve: (d) => {
-    const coi = d.actions?.COI;
-    if (!coi?.action_data) return "";
-    const fecha = coi.action_data.coord_fecha as unknown;
-    if (!fecha) return "";
+    const cin = d.actions?.CIN;
+    if (!cin?.action_data) return "";
+    const fecha = findCoordField(cin.action_data, "coord_fecha", ["coord_fecha"]);
+    if (typeof fecha !== "string" || !fecha) return "";
     return fmtDateTime(fecha);
   }},
 
@@ -473,8 +506,12 @@ export const DOCUMENT_FIELDS: DocumentField[] = [
   }},
   { key: "last_inspection_scheduled_at", label: "Fecha Programada Inspección", group: "Inspección: Magic Link", resolve: (d) => {
     const s = d.last_inspection_session;
-    if (!s?.scheduled_at) return "";
-    return fmtDateTime(s.scheduled_at);
+    if (s?.scheduled_at) return fmtDateTime(s.scheduled_at);
+    // Fallback: si no hay sesión todavía, mostrar la fecha coordinada del CIN.
+    // Esto permite enviar el correo de coordinación aunque la sesión aún no se haya creado.
+    const cin = d.actions?.CIN;
+    const fecha = cin?.action_data ? findCoordField(cin.action_data, "coord_fecha", ["coord_fecha"]) : undefined;
+    return typeof fecha === "string" && fecha ? fmtDateTime(fecha) : "";
   }},
 
   // ─── Gestiones: Aviso de Asignación (AAS) ───

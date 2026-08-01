@@ -95,9 +95,6 @@ export async function POST(request: NextRequest) {
       magic_link_valid_from: fmtDateTime(windowStart),
       magic_link_valid_until: fmtDateTime(lastSession?.magic_link_expires_at),
       last_inspection_scheduled_at: fmtDateTime(lastSession?.scheduled_at),
-      // <coord_inspection_date> = fecha/hora de la sesión agendada (igual que ve el usuario en UI)
-      coord_inspection_date: fmtDateTime(lastSession?.scheduled_at),
-      coord_inspection_datetime: fmtDateTime(lastSession?.scheduled_at),
     };
 
     // Aplanar action_data
