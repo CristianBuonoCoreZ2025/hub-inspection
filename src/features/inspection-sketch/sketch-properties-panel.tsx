@@ -74,7 +74,12 @@ export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchProperties
   function handleChange(name: string, value: string) {
     setValues((prev) => ({ ...prev, [name]: value }));
 
-    const updatedProps = { ...targetMeta.properties, [name]: value || null };
+    let updatedValue: string | number | null = value || null;
+    if (["width", "height", "length"].includes(name)) {
+      const n = Number(value);
+      updatedValue = value === "" || Number.isNaN(n) ? null : n;
+    }
+    const updatedProps = { ...targetMeta.properties, [name]: updatedValue };
     setEntityMeta(targetObj, { properties: updatedProps });
 
     if (name === "name") {

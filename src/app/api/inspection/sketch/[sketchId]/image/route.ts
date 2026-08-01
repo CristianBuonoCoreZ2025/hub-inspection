@@ -4,7 +4,7 @@ import { downloadFromR2 } from "@/lib/storage/r2-upload";
 import { r2PublicUrl } from "@/lib/storage/r2-client";
 
 /**
- * GET /api/inspection/sketch/[id]/image
+ * GET /api/inspection/sketch/[sketchId]/image
  *
  * Proxy de imagen de croquis.
  * Descarga el archivo desde R2 server-side y lo sirve como same-origin,
@@ -34,19 +34,19 @@ function mimeFromUrl(url: string): string {
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ sketchId: string }> }
 ) {
   try {
-    const { id } = await params;
-    if (!id) {
-      return NextResponse.json({ error: "Falta id" }, { status: 400 });
+    const { sketchId } = await params;
+    if (!sketchId) {
+      return NextResponse.json({ error: "Falta sketchId" }, { status: 400 });
     }
 
     const admin = createAdminClient();
     const { data: sketch, error } = await admin
       .from("damage_sketches")
       .select("sketch_url")
-      .eq("id", id)
+      .eq("id", sketchId)
       .maybeSingle();
 
     if (error || !sketch?.sketch_url) {
