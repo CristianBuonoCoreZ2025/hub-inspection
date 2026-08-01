@@ -23,7 +23,7 @@ import { logger } from "@/lib/logger";
  * Flujo (rápido — responde al cliente en ~1s, igual que claim_images):
  *  1. Sube el archivo original a R2 (sin optimizar)
  *  2. Extrae GPS de EXIF (síncrono, rápido — clave para anti-fraude)
- *  3. Inserta el registro en inspection_evidences con ai_status='pending'
+ *  3. Inserta el registro en inspection_evidences con ai_status='deferred'
  *  4. Devuelve éxito al cliente
  *
  * Flujo paralelo (background, después de responder):
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     const photoLat = exifGps?.lat ?? null;
     const photoLng = exifGps?.lng ?? null;
 
-    // ── PASO 4: Insertar registro con ai_status='pending' ──
+    // ── PASO 4: Insertar registro con ai_status='deferred' ──
     const supabase = createAdminClient();
     const validSources = ["upload", "screenshot_inspector", "screenshot_client", "live_video", "geo_map"];
     const sourceValue = source && typeof source === "string" && validSources.includes(source) ? source : "upload";
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
         lng: photoLng,
         exif_lat: exifGps?.lat ?? null,
         exif_lng: exifGps?.lng ?? null,
-        ai_status: sourceValue === "live_video" ? "skipped" : "pending",
+        ai_status: sourceValue === "live_video" ? "skipped" : "deferred",
       })
       .select("id, url, type, description, category, damage_id, created_at, lat, lng, exif_lat, exif_lng, ai_summary, ai_model, ai_status, source")
       .single();

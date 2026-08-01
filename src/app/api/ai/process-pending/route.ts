@@ -201,7 +201,13 @@ export async function POST(request: NextRequest) {
 
       // Filtro de "pending"
       if (cfg.hasAiStatus) {
-        query = query.eq("ai_status", "pending");
+        if (cfg.table === "inspection_evidences") {
+          // Las evidencias de inspección se marcan como "deferred" al subir
+          // y se analizan al cerrar la sesión. Re-análisis manual usa "pending".
+          query = query.in("ai_status", ["pending", "deferred"]);
+        } else {
+          query = query.eq("ai_status", "pending");
+        }
       } else {
         // policy_documents: no tiene ai_status, usar ai_summary IS NULL
         query = query.is("ai_summary", null);

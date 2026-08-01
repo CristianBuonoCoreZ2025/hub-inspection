@@ -9,8 +9,8 @@ import { logger } from "@/lib/logger";
  * API pública para que el asegurado suba evidencias desde el Magic Link.
  * - Valida el magic_link_token
  * - Sube el archivo original a R2 (sin optimizar, sin esperar IA)
- * - Inserta el registro en inspection_evidences con ai_status='pending'
- *   para que el análisis con IA se corra después desde la aplicación matriz
+ * - Inserta el registro en inspection_evidences con ai_status='deferred'
+ *   para que el análisis con IA se corra al cerrar la inspección
  */
 export async function POST(
   request: NextRequest,
@@ -80,12 +80,13 @@ export async function POST(
           originalName: file.name,
           mimeType,
           fileSize: buffer.length,
+          fileCode,
         },
         lat: null,
         lng: null,
         exif_lat: null,
         exif_lng: null,
-        ai_status: "pending",
+        ai_status: "deferred",
       })
       .select("id, url, type, description, created_at, source")
       .single();

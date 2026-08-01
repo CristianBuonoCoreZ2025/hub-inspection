@@ -4254,7 +4254,8 @@ Durante la inspección se observó que:
 ### Decisiones aplicadas
 
 1. **Procesamiento de evidencias aplazado al cierre**
-   - La subida de una evidencia (`/api/inspection/evidences/upload`) solo guarda el archivo original, extrae EXIF e inserta el registro con `ai_status = "pending"`.
+   - La subida de una evidencia (dashboard y magic link) solo guarda el archivo original, extrae EXIF e inserta el registro con `ai_status = "deferred"`.
+   - `deferred` indica que el archivo queda en espera sin mostrarse "en cola" en la UI y sin ejecutar IA hasta el cierre.
    - La optimización de imágenes (`sharp`) y el resumen de PDFs se ejecutan cuando la inspección pasa a `completed`.
    - El endpoint `/api/inspection/evidences/process-assets` descarga, redimensiona/comprime y re-sube las imágenes; para PDFs extrae el resumen del contenido.
    - Tanto el endpoint de optimización como `/api/ai/process-pending` usan `after()` de Next.js: responden inmediatamente y ejecutan el trabajo en un buffer en background, sin afectar la UI del inspector, el cliente ni el resto del sistema.
