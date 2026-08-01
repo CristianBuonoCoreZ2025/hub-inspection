@@ -6,6 +6,7 @@ import {
 } from "@/lib/storage/inspection-upload";
 import { extractGpsFromExif } from "@/lib/storage/exif";
 import { logger } from "@/lib/logger";
+import { getReportMaxPhotos } from "@/services/settings";
 
 /**
  * API route para subir una evidencia de inspección a Cloudflare R2.
@@ -155,6 +156,28 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     const sessionClaimId = sessionRow?.claim_id || null;
 
+    // ── PASO 3.5: Determinar si la foto nueva entra en el reporte automáticamente ──
+    // Solo las fotos subidas marcan include_in_report hasta el máximo configurado.
+    const reportMaxPhotos = await getReportMaxPhotos();
+    let includeInReport = false;
+    if (dbType === "photo") {
+      const { count: currentInReport, error: countError } = await supabase
+        .from("inspection_evidences")
+        .select("id", { count: "exact", head: true })
+        .eq("session_id", sessionId)
+        .eq("include_in_report", true)
+        .in("type", ["photo", "image"]);
+      if (countError) {
+        logger.warn("Evidence upload: error contando fotos del reporte", {
+          component: "inspection-evidences-upload",
+          action: "count.report-photos",
+          metadata: { sessionId, error: countError.message },
+        });
+      }
+      const current = currentInReport ?? 0;
+      includeInReport = current < reportMaxPhotos;
+    }
+
     const { data: evidence, error } = await supabase
       .from("inspection_evidences")
       .insert({
@@ -173,7 +196,7 @@ export async function POST(request: NextRequest) {
         lng: photoLng,
         exif_lat: exifGps?.lat ?? null,
         exif_lng: exifGps?.lng ?? null,
-        include_in_report: false,
+        include_in_report: includeInReport,
         ai_status: sourceValue === "live_video" ? "skipped" : "deferred",
       })
       .select("id, url, type, description, category, damage_id, created_at, lat, lng, exif_lat, exif_lng, ai_summary, ai_model, ai_status, source")
