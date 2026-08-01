@@ -155,10 +155,12 @@ export default function SupervisionPage() {
             const sigCount = (session.inspection_signatures || []).length;
             const hasWaiver = !!session.signature_waiver_reason;
             return (
-              <button
+              <div
                 key={session.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedSessionId(session.id)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedSessionId(session.id); }}
                 className="app-panel text-left hover:ring-2 hover:ring-emerald-500/40 transition-all cursor-pointer"
               >
                 <div className="p-4 flex items-center justify-between gap-4">
@@ -277,7 +279,7 @@ export default function SupervisionPage() {
                     </div>
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
