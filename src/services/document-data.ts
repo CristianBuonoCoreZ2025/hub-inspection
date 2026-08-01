@@ -143,9 +143,7 @@ export async function buildDocumentDataForClaim(
   // Si se pasa un cliente (ej: createServerClient en API routes), usarlo directo
   // para que las queries respeten RLS con el contexto de auth del usuario.
   // Si no, usar los helpers de db.ts (browser client).
-  // Si se pasa claimActionId, filtrar sesiones por claim_action_id para traer
-  // la sesión vinculada a esa gestión específica. Si no, traer la última del siniestro.
-  const [rawClaim, participants, rawActions, rawSessions] = supabase
+  const [rawClaim, participants, rawActions] = supabase
     ? await Promise.all([
         supabase.from("claims").select(CLAIM_SELECT).eq("id", claimId).maybeSingle().then((r) => r.data as Record<string, unknown> | null),
         supabase.from("claims_participants")
@@ -157,26 +155,6 @@ export async function buildDocumentDataForClaim(
           .eq("claim_id", claimId).eq("is_active", true)
           .order("issued_on", { ascending: false })
           .then((r) => (r.data ?? []) as unknown as RawAction[]),
-        (claimActionId
-          ? supabase.from("inspection_sessions")
-              .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
-              .eq("claim_id", claimId).eq("claim_action_id", claimActionId)
-              .order("created_at", { ascending: false }).limit(1)
-              .then(async (r) => {
-                // Fallback: si la gestión no tiene sesión vinculada, buscar la última del siniestro
-                if (r.data && r.data.length > 0) return r.data as unknown as RawInspectionSession[];
-                const fallback = await supabase.from("inspection_sessions")
-                  .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
-                  .eq("claim_id", claimId)
-                  .order("created_at", { ascending: false }).limit(1);
-                return (fallback.data ?? []) as unknown as RawInspectionSession[];
-              })
-          : supabase.from("inspection_sessions")
-              .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
-              .eq("claim_id", claimId)
-              .order("created_at", { ascending: false }).limit(1)
-              .then((r) => (r.data ?? []) as unknown as RawInspectionSession[])
-        ).then((sessions) => sessions as RawInspectionSession[]),
       ])
     : await Promise.all([
         fetchById<Record<string, unknown>>("claims", claimId, CLAIM_SELECT),
@@ -189,19 +167,69 @@ export async function buildDocumentDataForClaim(
           eq: { claim_id: claimId, is_active: true },
           order: { column: "issued_on", ascending: false },
         }),
-        fetchAll<RawInspectionSession>("inspection_sessions", {
-          select: "id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status",
-          eq: claimActionId
-            ? { claim_id: claimId, claim_action_id: claimActionId }
-            : { claim_id: claimId },
-          order: { column: "created_at", ascending: false },
-          limit: 1,
-        }),
       ]);
 
   if (!rawClaim) {
     throw new Error("Siniestro no encontrado");
   }
+
+  // Determinar el ID del claim_action al que está vinculada la sesión de inspección
+  // que corresponde a esta gestión.
+  //   - Si claimActionId es una gestión INS: la sesión vive en la misma acción (claim_action_id = claimActionId).
+  //   - Si claimActionId es un CIN/COI: la sesión vive en la acción hija INS cuyo
+  //     action_data.parent_action_id = claimActionId.
+  //   - Si no se pasa claimActionId: se usa la última sesión del siniestro.
+  let targetSessionActionId: string | null = null;
+  if (claimActionId) {
+    const direct = rawActions.find((ra) => ra.id === claimActionId);
+    if (direct?.action_template?.code?.startsWith("INS")) {
+      targetSessionActionId = claimActionId;
+    } else {
+      const childIns = rawActions.find(
+        (ra) =>
+          ra.action_template?.code?.startsWith("INS") &&
+          (ra.action_data as Record<string, unknown> | null)?.parent_action_id === claimActionId
+      );
+      if (childIns) targetSessionActionId = childIns.id;
+    }
+  }
+
+  // Si no encontramos el INS hija, el claimActionId quizás es una INS creada sin
+  // el prefijo INS (migración antigua) o la sesión está vinculada directamente.
+  // Fallback: buscar sesión con claim_action_id = claimActionId.
+  const rawSessions = supabase
+    ? await supabase.from("inspection_sessions")
+        .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
+        .eq("claim_id", claimId)
+        .eq("claim_action_id", targetSessionActionId ?? claimActionId ?? "")
+        .order("created_at", { ascending: false }).limit(1)
+        .then(async (r) => {
+          const rows = (r.data ?? []) as unknown as RawInspectionSession[];
+          if (rows.length > 0) return rows;
+          // Fallback: última sesión del siniestro
+          const fallback = await supabase.from("inspection_sessions")
+            .select("id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status")
+            .eq("claim_id", claimId)
+            .order("created_at", { ascending: false }).limit(1);
+          return (fallback.data ?? []) as unknown as RawInspectionSession[];
+        })
+    : await fetchAll<RawInspectionSession>("inspection_sessions", {
+        select: "id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status",
+        eq: {
+          claim_id: claimId,
+          claim_action_id: targetSessionActionId ?? claimActionId ?? "",
+        },
+        order: { column: "created_at", ascending: false },
+        limit: 1,
+      }).then(async (rows) => {
+        if (rows.length > 0) return rows;
+        return fetchAll<RawInspectionSession>("inspection_sessions", {
+          select: "id, magic_link_token, magic_link_expires_at, scheduled_at, created_at, inspection_type, status",
+          eq: { claim_id: claimId },
+          order: { column: "created_at", ascending: false },
+          limit: 1,
+        });
+      });
 
   // Map the raw claim data — Supabase returns nested relations with their actual column names
   // The aliases (adjuster, inspector, etc.) need to be remapped from adjuster_user, inspector_user, etc.
