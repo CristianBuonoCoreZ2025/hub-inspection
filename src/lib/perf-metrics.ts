@@ -149,7 +149,8 @@ function record(entry: MetricEntry) {
   //    - En dev/staging: todas
   //    - En producción: solo errores o queries lentas (>= 500ms)
   const shouldPersist = !isProduction || !entry.success || entry.durationMs >= SLOW_THRESHOLD_MS;
-  if (shouldPersist) {
+  // En producción no persistimos en BD para evitar overhead; solo en dev/staging.
+  if (shouldPersist && !isProduction) {
     pendingLogs.push({
       tableName: entry.tableName,
       operation: entry.operation,
