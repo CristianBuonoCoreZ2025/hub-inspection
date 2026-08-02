@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pagination } from "@/components/ui/pagination";
@@ -205,6 +205,38 @@ function ClaimsPageContent() {
    setPage(1);
  }, [statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search]);
 
+ const filtersLoaded = useRef(false);
+
+ // Restaurar filtros desde localStorage si la URL esta limpia
+ useEffect(() => {
+   if (searchParams.toString()) {
+     filtersLoaded.current = true;
+     return;
+   }
+   const saved = localStorage.getItem("claims-filters");
+   if (!saved) {
+     filtersLoaded.current = true;
+     return;
+   }
+   try {
+     const filters = JSON.parse(saved);
+     if (filters.q) setSearch(filters.q);
+     if (filters.page) setPage(filters.page);
+     if (filters.pageSize) setPageSize(filters.pageSize);
+     if (filters.sort) setSortKey(filters.sort);
+     if (filters.dir) setSortDir(filters.dir);
+     if (Array.isArray(filters.status)) setStatusFilter(filters.status);
+     if (Array.isArray(filters.insurance)) setInsuranceCompanyFilter(filters.insurance);
+     if (filters.liquidation) setLiquidationFilter(filters.liquidation);
+     if (filters.dateFrom) setDateFrom(filters.dateFrom);
+     if (filters.dateTo) setDateTo(filters.dateTo);
+   } catch {
+     // ignore
+   } finally {
+     filtersLoaded.current = true;
+   }
+ }, [searchParams]);
+
  // Sincronizar filtros y paginacion con la URL y localStorage
  useEffect(() => {
    const params = new URLSearchParams(searchParams.toString());
@@ -220,6 +252,7 @@ function ClaimsPageContent() {
    const newUrl = `${window.location.pathname}?${params.toString()}`;
    window.history.replaceState({}, "", newUrl);
 
+   if (!filtersLoaded.current) return;
    const filters = {
      q: search,
      page,
@@ -234,28 +267,6 @@ function ClaimsPageContent() {
    };
    localStorage.setItem("claims-filters", JSON.stringify(filters));
  }, [search, page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, searchParams]);
-
- // Restaurar filtros desde localStorage si la URL esta limpia
- useEffect(() => {
-   if (searchParams.toString()) return;
-   const saved = localStorage.getItem("claims-filters");
-   if (!saved) return;
-   try {
-     const filters = JSON.parse(saved);
-     if (filters.q) setSearch(filters.q);
-     if (filters.page) setPage(filters.page);
-     if (filters.pageSize) setPageSize(filters.pageSize);
-     if (filters.sort) setSortKey(filters.sort);
-     if (filters.dir) setSortDir(filters.dir);
-     if (Array.isArray(filters.status)) setStatusFilter(filters.status);
-     if (Array.isArray(filters.insurance)) setInsuranceCompanyFilter(filters.insurance);
-     if (filters.liquidation) setLiquidationFilter(filters.liquidation);
-     if (filters.dateFrom) setDateFrom(filters.dateFrom);
-     if (filters.dateTo) setDateTo(filters.dateTo);
-   } catch {
-     // ignore
-   }
- }, [searchParams]);
 
  type DocumentRow = { id: string; name: string; type: string; file: File };
 
