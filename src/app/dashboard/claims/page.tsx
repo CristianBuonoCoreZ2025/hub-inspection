@@ -205,7 +205,7 @@ function ClaimsPageContent() {
    setPage(1);
  }, [statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search]);
 
- // Sincronizar filtros y paginacion con la URL
+ // Sincronizar filtros y paginacion con la URL y localStorage
  useEffect(() => {
    const params = new URLSearchParams(searchParams.toString());
    if (search) params.set("q", search); else params.delete("q");
@@ -219,7 +219,43 @@ function ClaimsPageContent() {
    if (dateTo) params.set("dateTo", dateTo); else params.delete("dateTo");
    const newUrl = `${window.location.pathname}?${params.toString()}`;
    window.history.replaceState({}, "", newUrl);
+
+   const filters = {
+     q: search,
+     page,
+     pageSize,
+     sort: sortKey,
+     dir: sortDir,
+     status: statusFilter,
+     insurance: insuranceCompanyFilter,
+     liquidation: liquidationFilter,
+     dateFrom,
+     dateTo,
+   };
+   localStorage.setItem("claims-filters", JSON.stringify(filters));
  }, [search, page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, searchParams]);
+
+ // Restaurar filtros desde localStorage si la URL esta limpia
+ useEffect(() => {
+   if (searchParams.toString()) return;
+   const saved = localStorage.getItem("claims-filters");
+   if (!saved) return;
+   try {
+     const filters = JSON.parse(saved);
+     if (filters.q) setSearch(filters.q);
+     if (filters.page) setPage(filters.page);
+     if (filters.pageSize) setPageSize(filters.pageSize);
+     if (filters.sort) setSortKey(filters.sort);
+     if (filters.dir) setSortDir(filters.dir);
+     if (Array.isArray(filters.status)) setStatusFilter(filters.status);
+     if (Array.isArray(filters.insurance)) setInsuranceCompanyFilter(filters.insurance);
+     if (filters.liquidation) setLiquidationFilter(filters.liquidation);
+     if (filters.dateFrom) setDateFrom(filters.dateFrom);
+     if (filters.dateTo) setDateTo(filters.dateTo);
+   } catch {
+     // ignore
+   }
+ }, [searchParams]);
 
  type DocumentRow = { id: string; name: string; type: string; file: File };
 
