@@ -1,4 +1,5 @@
 import { fetchAll, fetchById, insertRow, updateRow, deleteRow, deleteWhere } from "@/lib/supabase/db";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Claim, ClaimInput, ClaimsParticipant } from "@/types";
 
 const LIGHT_CLAIM_SELECT =
@@ -98,7 +99,12 @@ export async function getClaimById(id: string) {
   return fetchById<Claim>("claims", id, DYNAMIC_CLAIM_SELECT);
 }
 
-export async function getClaimsLight(companyId?: string, limit = 500) {
+export async function getClaimsLight(companyId?: string, options?: { page?: number; pageSize?: number }) {
+  const pageSize = Math.max(1, Math.min(options?.pageSize ?? 50, 100));
+  const page = Math.max(1, options?.page ?? 1);
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   const eq: Record<string, unknown> = { disabled: false };
   if (companyId) eq.company_id = companyId;
 
@@ -106,8 +112,21 @@ export async function getClaimsLight(companyId?: string, limit = 500) {
     select: LIGHT_CLAIM_SELECT,
     eq,
     order: { column: "created_at", ascending: false },
-    limit,
+    limit: pageSize,
+    range: { from, to },
   });
+}
+
+export async function getClaimsCount(companyId?: string) {
+  const supabase = getSupabaseClient();
+  const eq: Record<string, unknown> = { disabled: false };
+  if (companyId) eq.company_id = companyId;
+  const { count, error } = await supabase
+    .from("claims")
+    .select("id", { count: "exact", head: true })
+    .match(eq);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 export async function getClaimByIdLight(id: string) {

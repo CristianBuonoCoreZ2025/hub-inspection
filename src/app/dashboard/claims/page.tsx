@@ -3,11 +3,10 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
-import { getClaimsLight, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
+import { getClaimsLight, getClaimsCount, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
 import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
 import type { GeocodeCandidate } from "@/lib/geo";
 import { getCompanies } from "@/services/companies";
@@ -148,6 +147,9 @@ function ClaimsPageContent() {
  const canOpenClaim = (claim: { assigned_adjuster_id: string | null; adjuster_id: string | null; inspector_id: string | null; auditor_id: string | null; dispatcher_id: string | null; assistant_id: string | null }): boolean => canView("claims") && isUserAssignedToClaim(claim);
  useRealtime("claims", [["claims"], ["claims-participants"]]);
  const [search, setSearch] = useState("");
+ const [page, setPage] = useState(1);
+ const [pageSize, setPageSize] = useState(50);
+ const handlePageSizeChange = (size: number) => { setPageSize(size); setPage(1); };
  const [statusFilter, setStatusFilter] = useState<string[]>(() => {
    const s = searchParams.get("status");
    return s ? s.split(",").filter(Boolean) : [];
@@ -258,8 +260,15 @@ function ClaimsPageContent() {
  });
 
  const { data: rawClaims, isLoading, error } = useQuery({
- queryKey: ["claims"],
- queryFn: () => getClaimsLight(),
+ queryKey: ["claims", page, pageSize],
+ queryFn: () => getClaimsLight(undefined, { page, pageSize }),
+ staleTime: 60_000,
+ gcTime: 5 * 60_000,
+ });
+
+ const { data: claimsCount } = useQuery({
+ queryKey: ["claims-count"],
+ queryFn: () => getClaimsCount(),
  staleTime: 60_000,
  gcTime: 5 * 60_000,
  });
@@ -952,7 +961,9 @@ created_at: (c) => (c.created_at ? new Date(c.created_at).getTime() : 0),
 
 const { sorted: sortedClaims, sortKey, sortDir, toggleSort } = useTableSort(filtered, accessors, null);
 
-const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sortedClaims);
+const total = claimsCount ?? 0;
+const totalPages = Math.max(1, Math.ceil(total / pageSize));
+const paginatedData = sortedClaims;
 
  // eslint-disable-next-line react-hooks/incompatible-library -- React Compiler no puede memoizar useForm().watch() de react-hook-form; suscripción reactiva intencional a los campos de ubicación.
  const [claimAddressW, claimCityW, claimLatitudeW, claimLongitudeW, claimCommuneW, claimRegionW, claimCountryW] = form.watch([
@@ -2416,7 +2427,7 @@ const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize }
  </button>
  )}
  </div>
- <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+ <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSizeChange} />
  </div>
  <div className="app-data-table-wrap">
  <table className="app-data-table">
@@ -2497,7 +2508,7 @@ const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize }
  </tbody>
  </table>
  </div>
- <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+ <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSizeChange} />
  <div className="text-center app-body text-muted-foreground/70 -mt-1 pb-0.5">
  {total} siniestro{total !== 1 ? "s" : ""}
  </div>
