@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaimsLight, getClaimsCount, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
@@ -147,7 +146,19 @@ function ClaimsPageContent() {
  const canOpenClaim = (claim: { assigned_adjuster_id: string | null; adjuster_id: string | null; inspector_id: string | null; auditor_id: string | null; dispatcher_id: string | null; assistant_id: string | null }): boolean => canView("claims") && isUserAssignedToClaim(claim);
  useRealtime("claims", [["claims"], ["claims-participants"]]);
 
+ const [sortKey, setSortKey] = useState<string | null>(null);
+ const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+ const toggleSort = (key: string) => {
+   if (sortKey === key) {
+     setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+   } else {
+     setSortKey(key);
+     setSortDir("asc");
+   }
+ };
+
  const [search, setSearch] = useState(searchParams.get("q") ?? "");
+
  const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
  const [pageSize, setPageSize] = useState(Number(searchParams.get("pageSize")) || 50);
  const handlePageSizeChange = (size: number) => { setPageSize(size); setPage(1); };
@@ -284,7 +295,7 @@ function ClaimsPageContent() {
  });
 
  const { data: rawClaims, isLoading, error } = useQuery({
- queryKey: ["claims", page, pageSize, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo],
+ queryKey: ["claims", page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo],
  queryFn: () => getClaimsLight(undefined, {
    page,
    pageSize,
@@ -293,6 +304,8 @@ function ClaimsPageContent() {
    liquidation: liquidationFilter || undefined,
    dateFrom: dateFrom || undefined,
    dateTo: dateTo || undefined,
+   sortKey,
+   sortDir,
  }),
  staleTime: 60_000,
  gcTime: 5 * 60_000,
@@ -992,11 +1005,32 @@ created_at: (c) => (c.created_at ? new Date(c.created_at).getTime() : 0),
 [statusLabel]
 );
 
-const { sorted: sortedClaims, sortKey, sortDir, toggleSort } = useTableSort(filtered, accessors, null);
+const sortedClaims = useMemo(() => {
+  if (!sortKey || !filtered) return filtered;
+  const accessor = accessors[sortKey];
+  if (!accessor) return filtered;
+  const sorted = [...filtered].sort((a, b) => {
+    const va = accessor(a);
+    const vb = accessor(b);
+    if (typeof va === "number" && typeof vb === "number") {
+      return sortDir === "asc" ? va - vb : vb - va;
+    }
+    const sa = String(va ?? "").toLowerCase();
+    const sb = String(vb ?? "").toLowerCase();
+    const cmp = sa < sb ? -1 : sa > sb ? 1 : 0;
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+  return sorted;
+}, [filtered, sortKey, sortDir, accessors]);
+
+// Resetear a pagina 1 cuando cambian filtros u orden
+useEffect(() => {
+  setPage(1);
+}, [statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search, sortKey, sortDir]);
 
 const total = claimsCount ?? 0;
 const totalPages = Math.max(1, Math.ceil(total / pageSize));
-const paginatedData = sortedClaims;
+const paginatedData = sortedClaims ?? [];
 
  // eslint-disable-next-line react-hooks/incompatible-library -- React Compiler no puede memoizar useForm().watch() de react-hook-form; suscripción reactiva intencional a los campos de ubicación.
  const [claimAddressW, claimCityW, claimLatitudeW, claimLongitudeW, claimCommuneW, claimRegionW, claimCountryW] = form.watch([

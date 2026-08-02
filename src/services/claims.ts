@@ -109,6 +109,8 @@ export async function getClaimsLight(
     liquidation?: string;
     dateFrom?: string;
     dateTo?: string;
+    sortKey?: string | null;
+    sortDir?: "asc" | "desc";
   }
 ) {
   const pageSize = Math.max(1, Math.min(options?.pageSize ?? 50, 100));
@@ -133,10 +135,23 @@ export async function getClaimsLight(
   if (options?.dateFrom) filters.gte = { ...filters.gte, claim_date: options.dateFrom };
   if (options?.dateTo) filters.lte = { ...filters.lte, claim_date: options.dateTo };
 
+  const columnMap: Record<string, string> = {
+    liquidation_number: "liquidation_number",
+    client_reference: "client_reference",
+    claim_number: "claim_number",
+    claim_date: "claim_date",
+    report_date: "report_date",
+    created_at: "created_at",
+    status: "status_id",
+  };
+
+  const orderColumn = (options?.sortKey && columnMap[options.sortKey]) ? columnMap[options.sortKey] : "created_at";
+  const ascending = (options?.sortDir === "asc");
+
   return fetchAll<Claim>("claims", {
     select: LIGHT_CLAIM_SELECT,
     ...filters,
-    order: { column: "created_at", ascending: false },
+    order: { column: orderColumn, ascending },
     limit: pageSize,
     range: { from, to },
   });
