@@ -2,7 +2,7 @@ import { fetchAll, fetchById, insertRow, updateRow, deleteRow, deleteWhere } fro
 import type { Claim, ClaimInput, ClaimsParticipant } from "@/types";
 
 const LIGHT_CLAIM_SELECT =
-  "id, claim_number, client_reference, liquidation_number, insurance_company_id, status_id, claim_date, report_date, created_at, claim_type_id, country_id, company_id, assigned_adjuster_id, adjuster_id, inspector_id, auditor_id, dispatcher_id, assistant_id, disabled";
+  "id, claim_number, policy_number, policy_id, claim_date, status_id, report_date, assignment_date, client_reference, company_report_number, liquidation_number, is_special_claim, summary, event_id, internal_number, notes, company_id, assigned_adjuster_id, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, claim_cause_id, claim_type_id, business_line_id, insurance_product_id, country_id, region_id, city_id, commune_id, construction_type_id, destination_housing_id, damage_classification_id, habitability_id, type_id, currency_id, service_type_id, billing_type_id, claim_address, claim_latitude, claim_longitude, owner_same_as_insured, policy_item, policy_start_date, policy_end_date, policy_amount, policy_premium, recovery_type_legal, recovery_type_material, recovery_comments, broker_executive, created_at, updated_at, updated_by, disabled, disabled_reason, disabled_at, disabled_by, reopened_at, reopened_by, reopened_reason";
 
 const DETAIL_CLAIM_SELECT =
   `${LIGHT_CLAIM_SELECT}, inspection_sessions:inspection_sessions(id, inspector_id, claim_action_id, status, inspection_number, inspection_type, scheduled_at, started_at, ended_at, lock_overridden_by, lock_overridden_at, created_at)`;
