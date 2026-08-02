@@ -189,6 +189,11 @@ function ClaimsPageContent() {
  };
  } | null>(null);
 
+ // Resetear a pagina 1 cuando cambian filtros server-side
+ useEffect(() => {
+   setPage(1);
+ }, [statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search]);
+
  // Sincronizar filtros y paginacion con la URL
  useEffect(() => {
    const params = new URLSearchParams(searchParams.toString());
@@ -279,15 +284,29 @@ function ClaimsPageContent() {
  });
 
  const { data: rawClaims, isLoading, error } = useQuery({
- queryKey: ["claims", page, pageSize],
- queryFn: () => getClaimsLight(undefined, { page, pageSize }),
+ queryKey: ["claims", page, pageSize, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo],
+ queryFn: () => getClaimsLight(undefined, {
+   page,
+   pageSize,
+   statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
+   insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
+   liquidation: liquidationFilter || undefined,
+   dateFrom: dateFrom || undefined,
+   dateTo: dateTo || undefined,
+ }),
  staleTime: 60_000,
  gcTime: 5 * 60_000,
  });
 
  const { data: claimsCount } = useQuery({
- queryKey: ["claims-count"],
- queryFn: () => getClaimsCount(),
+ queryKey: ["claims-count", statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo],
+ queryFn: () => getClaimsCount(undefined, {
+   statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
+   insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
+   liquidation: liquidationFilter || undefined,
+   dateFrom: dateFrom || undefined,
+   dateTo: dateTo || undefined,
+ }),
  staleTime: 60_000,
  gcTime: 5 * 60_000,
  });
@@ -955,12 +974,7 @@ function ClaimsPageContent() {
 
  const filtered = claims?.filter((c) => {
  const textMatch = [c.claim_number, c.client_reference, c.liquidation_number, getParticipant(c, 'insured')?.full_name, getParticipant(c, 'insured')?.address].join(" ").toLowerCase().includes(search.toLowerCase());
- const statusMatch = statusFilter.length === 0 || statusFilter.includes(statusCode(c.status_id) ?? "");
-const insuranceMatch = insuranceCompanyFilter.length === 0 || insuranceCompanyFilter.includes(c.insurance_company_id ?? "");
-const liqDigits = liquidationFilter.replace(/\D/g, "");
-const liquidationMatch = liqDigits === "" || (c.liquidation_number || "").replace(/\D/g, "").includes(liqDigits);
- const dateMatch = (!dateFrom || (c.claim_date && c.claim_date >= dateFrom)) && (!dateTo || (c.claim_date && c.claim_date <= dateTo));
- return textMatch && statusMatch && insuranceMatch && liquidationMatch && dateMatch;
+ return textMatch;
  });
 
  const accessors = useMemo<Record<string, (c: ListClaim) => unknown>>(

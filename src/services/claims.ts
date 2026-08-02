@@ -99,7 +99,18 @@ export async function getClaimById(id: string) {
   return fetchById<Claim>("claims", id, DYNAMIC_CLAIM_SELECT);
 }
 
-export async function getClaimsLight(companyId?: string, options?: { page?: number; pageSize?: number }) {
+export async function getClaimsLight(
+  companyId?: string,
+  options?: {
+    page?: number;
+    pageSize?: number;
+    statusIds?: string[];
+    insuranceCompanyIds?: string[];
+    liquidation?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }
+) {
   const pageSize = Math.max(1, Math.min(options?.pageSize ?? 50, 100));
   const page = Math.max(1, options?.page ?? 1);
   const from = (page - 1) * pageSize;
@@ -108,23 +119,52 @@ export async function getClaimsLight(companyId?: string, options?: { page?: numb
   const eq: Record<string, unknown> = { disabled: false };
   if (companyId) eq.company_id = companyId;
 
+  const filters: {
+    eq?: Record<string, unknown>;
+    in?: Record<string, unknown[]>;
+    ilike?: Record<string, string>;
+    gte?: Record<string, unknown>;
+    lte?: Record<string, unknown>;
+  } = { eq };
+
+  if (options?.statusIds?.length) filters.in = { ...filters.in, status_id: options.statusIds };
+  if (options?.insuranceCompanyIds?.length) filters.in = { ...filters.in, insurance_company_id: options.insuranceCompanyIds };
+  if (options?.liquidation) filters.ilike = { ...filters.ilike, liquidation_number: `%${options.liquidation}%` };
+  if (options?.dateFrom) filters.gte = { ...filters.gte, claim_date: options.dateFrom };
+  if (options?.dateTo) filters.lte = { ...filters.lte, claim_date: options.dateTo };
+
   return fetchAll<Claim>("claims", {
     select: LIGHT_CLAIM_SELECT,
-    eq,
+    ...filters,
     order: { column: "created_at", ascending: false },
     limit: pageSize,
     range: { from, to },
   });
 }
 
-export async function getClaimsCount(companyId?: string) {
+export async function getClaimsCount(
+  companyId?: string,
+  options?: {
+    statusIds?: string[];
+    insuranceCompanyIds?: string[];
+    liquidation?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }
+) {
   const supabase = getSupabaseClient();
   const eq: Record<string, unknown> = { disabled: false };
   if (companyId) eq.company_id = companyId;
-  const { count, error } = await supabase
-    .from("claims")
-    .select("id", { count: "exact", head: true })
-    .match(eq);
+
+  let query = supabase.from("claims").select("id", { count: "exact", head: true }).match(eq);
+
+  if (options?.statusIds?.length) query = query.in("status_id", options.statusIds);
+  if (options?.insuranceCompanyIds?.length) query = query.in("insurance_company_id", options.insuranceCompanyIds);
+  if (options?.liquidation) query = query.ilike("liquidation_number", `%${options.liquidation}%`);
+  if (options?.dateFrom) query = query.gte("claim_date", options.dateFrom);
+  if (options?.dateTo) query = query.lte("claim_date", options.dateTo);
+
+  const { count, error } = await query;
   if (error) throw new Error(error.message);
   return count ?? 0;
 }
