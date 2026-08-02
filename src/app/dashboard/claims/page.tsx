@@ -146,18 +146,22 @@ function ClaimsPageContent() {
 
  const canOpenClaim = (claim: { assigned_adjuster_id: string | null; adjuster_id: string | null; inspector_id: string | null; auditor_id: string | null; dispatcher_id: string | null; assistant_id: string | null }): boolean => canView("claims") && isUserAssignedToClaim(claim);
  useRealtime("claims", [["claims"], ["claims-participants"]]);
- const [search, setSearch] = useState("");
- const [page, setPage] = useState(1);
- const [pageSize, setPageSize] = useState(50);
+
+ const [search, setSearch] = useState(searchParams.get("q") ?? "");
+ const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
+ const [pageSize, setPageSize] = useState(Number(searchParams.get("pageSize")) || 50);
  const handlePageSizeChange = (size: number) => { setPageSize(size); setPage(1); };
  const [statusFilter, setStatusFilter] = useState<string[]>(() => {
    const s = searchParams.get("status");
    return s ? s.split(",").filter(Boolean) : [];
  });
- const [insuranceCompanyFilter, setInsuranceCompanyFilter] = useState<string[]>([]);
- const [liquidationFilter, setLiquidationFilter] = useState("");
- const [dateFrom, setDateFrom] = useState("");
- const [dateTo, setDateTo] = useState("");
+ const [insuranceCompanyFilter, setInsuranceCompanyFilter] = useState<string[]>(() => {
+   const s = searchParams.get("insurance");
+   return s ? s.split(",").filter(Boolean) : [];
+ });
+ const [liquidationFilter, setLiquidationFilter] = useState(searchParams.get("liquidation") ?? "");
+ const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") ?? "");
+ const [dateTo, setDateTo] = useState(searchParams.get("dateTo") ?? "");
  const [open, setOpen] = useState(false);
  const [step, setStep] = useState(1);
  const [documents, setDocuments] = useState<{ id: string; name: string; type: string; file: File }[]>([]);
@@ -184,6 +188,21 @@ function ClaimsPageContent() {
  commune: string | null;
  };
  } | null>(null);
+
+ // Sincronizar filtros y paginacion con la URL
+ useEffect(() => {
+   const params = new URLSearchParams(searchParams.toString());
+   if (search) params.set("q", search); else params.delete("q");
+   if (page !== 1) params.set("page", String(page)); else params.delete("page");
+   if (pageSize !== 50) params.set("pageSize", String(pageSize)); else params.delete("pageSize");
+   if (statusFilter.length) params.set("status", statusFilter.join(",")); else params.delete("status");
+   if (insuranceCompanyFilter.length) params.set("insurance", insuranceCompanyFilter.join(",")); else params.delete("insurance");
+   if (liquidationFilter) params.set("liquidation", liquidationFilter); else params.delete("liquidation");
+   if (dateFrom) params.set("dateFrom", dateFrom); else params.delete("dateFrom");
+   if (dateTo) params.set("dateTo", dateTo); else params.delete("dateTo");
+   const newUrl = `${window.location.pathname}?${params.toString()}`;
+   window.history.replaceState({}, "", newUrl);
+ }, [search, page, pageSize, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, searchParams]);
 
  type DocumentRow = { id: string; name: string; type: string; file: File };
 
@@ -2420,7 +2439,7 @@ const paginatedData = sortedClaims;
  />
  {(statusFilter.length > 0 || insuranceCompanyFilter.length > 0 || liquidationFilter || dateFrom || dateTo) && (
  <button
- onClick={() => { setStatusFilter([]); setInsuranceCompanyFilter([]); setLiquidationFilter(""); setDateFrom(""); setDateTo(""); }}
+ onClick={() => { setSearch(""); setPage(1); setStatusFilter([]); setInsuranceCompanyFilter([]); setLiquidationFilter(""); setDateFrom(""); setDateTo(""); }}
  className="app-body text-muted-foreground hover:text-foreground px-2"
  >
  Limpiar
