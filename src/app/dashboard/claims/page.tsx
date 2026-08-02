@@ -146,8 +146,8 @@ function ClaimsPageContent() {
  const canOpenClaim = (claim: { assigned_adjuster_id: string | null; adjuster_id: string | null; inspector_id: string | null; auditor_id: string | null; dispatcher_id: string | null; assistant_id: string | null }): boolean => canView("claims") && isUserAssignedToClaim(claim);
  useRealtime("claims", [["claims"], ["claims-participants"]]);
 
- const [sortKey, setSortKey] = useState<string | null>(null);
- const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+ const [sortKey, setSortKey] = useState<string | null>(searchParams.get("sort") ?? null);
+ const [sortDir, setSortDir] = useState<"asc" | "desc">(searchParams.get("dir") === "asc" ? "asc" : "desc");
  const toggleSort = (key: string) => {
    if (sortKey === key) {
      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -211,6 +211,7 @@ function ClaimsPageContent() {
    if (search) params.set("q", search); else params.delete("q");
    if (page !== 1) params.set("page", String(page)); else params.delete("page");
    if (pageSize !== 50) params.set("pageSize", String(pageSize)); else params.delete("pageSize");
+   if (sortKey) { params.set("sort", sortKey); params.set("dir", sortDir); } else { params.delete("sort"); params.delete("dir"); }
    if (statusFilter.length) params.set("status", statusFilter.join(",")); else params.delete("status");
    if (insuranceCompanyFilter.length) params.set("insurance", insuranceCompanyFilter.join(",")); else params.delete("insurance");
    if (liquidationFilter) params.set("liquidation", liquidationFilter); else params.delete("liquidation");
@@ -218,7 +219,7 @@ function ClaimsPageContent() {
    if (dateTo) params.set("dateTo", dateTo); else params.delete("dateTo");
    const newUrl = `${window.location.pathname}?${params.toString()}`;
    window.history.replaceState({}, "", newUrl);
- }, [search, page, pageSize, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, searchParams]);
+ }, [search, page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, searchParams]);
 
  type DocumentRow = { id: string; name: string; type: string; file: File };
 
