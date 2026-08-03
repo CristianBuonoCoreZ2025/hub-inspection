@@ -711,10 +711,11 @@ export async function createClaimParticipant(input: {
   region?: string | null;
   city?: string | null;
   commune?: string | null;
+  person_type?: string | null;
   notes?: string | null;
   linked_to_insured?: boolean;
 }) {
-  return insertRow<{ id: string }>("claims_participants", input, "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, notes, linked_to_insured");
+  return insertRow<{ id: string }>("claims_participants", input, "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, person_type, notes, linked_to_insured");
 }
 
 export async function updateClaimParticipant(id: string, input: Partial<{
@@ -730,13 +731,14 @@ export async function updateClaimParticipant(id: string, input: Partial<{
   region: string | null;
   city: string | null;
   commune: string | null;
+  person_type: string | null;
   linked_to_insured: boolean;
 }>) {
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  return updateRow<{ id: string }>("claims_participants", id, set, "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune");
+  return updateRow<{ id: string }>("claims_participants", id, set, "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, person_type");
 }
 
 // ═══════════════════════════════════════════════════════════════

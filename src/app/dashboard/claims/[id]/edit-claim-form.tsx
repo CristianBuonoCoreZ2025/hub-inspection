@@ -492,6 +492,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  region: values.insuredRegion || null,
  city: values.insuredCity || null,
  commune: values.insuredCommune || null,
+ person_type: insuredIsLegal ? "legal" : "natural",
  };
  if (insured) {
  await updateClaimParticipant(insured.id, insuredData);
@@ -515,6 +516,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  region: values.contractorRegion || null,
  city: values.contractorCity || null,
  commune: values.contractorCommune || null,
+ person_type: contractorIsLegal ? "legal" : "natural",
  linked_to_insured: contractorLinked,
  };
  if (contractor) {
@@ -544,6 +546,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  region: values.beneficiaryRegion || null,
  city: values.beneficiaryCity || null,
  commune: values.beneficiaryCommune || null,
+ person_type: beneficiaryIsLegal ? "legal" : "natural",
  linked_to_insured: beneficiaryLinked,
  };
  if (beneficiary) {
@@ -567,6 +570,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  email: values.contactEmail || null,
  phone: values.contactPhones || null,
  cell_phone: null,
+ person_type: contactIsLegal ? "legal" : "natural",
  linked_to_insured: contactLinked,
  };
  if (contact) {
