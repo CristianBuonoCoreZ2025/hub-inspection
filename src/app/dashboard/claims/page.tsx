@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaims, getClaimsCount, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
+import type { Claim } from "@/types";
 import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
 import type { GeocodeCandidate } from "@/lib/geo";
 import { getCompanies } from "@/services/companies";
@@ -1124,8 +1125,28 @@ const paginatedData = sortedClaims ?? [];
  <div className="app-grid-header-right">
  <Button
  className="pg-btn-platinum"
- onClick={() => {
- const rows = filtered || [];
+ onClick={async () => {
+ const allRaw: Claim[] = [];
+ const pageSize = 100;
+ let page = 1;
+ while (true) {
+   const batch = await getClaims(undefined, {
+     page,
+     pageSize,
+     statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
+     insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
+     liquidation: liquidationFilter || undefined,
+     dateFrom: dateFrom || undefined,
+     dateTo: dateTo || undefined,
+     q: search || undefined,
+   });
+   if (batch.length === 0) break;
+   allRaw.push(...batch);
+   if (batch.length < pageSize) break;
+   page++;
+ }
+ const allParticipants = allRaw.length ? await getClaimsParticipants(allRaw.map((c) => c.id)) : [];
+ const rows = allRaw.map((claim) => ({ ...claim, claims_participants: allParticipants.filter((p) => p.claim_id === claim.id) }));
  const headers = [
  "N° Liquidación",
  "N° Ref Cliente",
