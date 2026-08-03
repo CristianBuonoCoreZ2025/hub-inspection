@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pagination } from "@/components/ui/pagination";
@@ -65,7 +65,7 @@ import { FormSelect } from "@/components/ui/form-select";
 import { cn } from "@/lib/utils";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 
-type Participant = { type: string; full_name?: string | null; first_name?: string | null; last_name?: string | null; rut?: string | null; email?: string | null; phone?: string | null; cell_phone?: string | null; address?: string | null; country?: string | null; region?: string | null; city?: string | null; commune?: string | null };
+type Participant = { type: string; person_type?: "natural" | "legal" | null; full_name?: string | null; first_name?: string | null; last_name?: string | null; rut?: string | null; email?: string | null; phone?: string | null; cell_phone?: string | null; address?: string | null; country?: string | null; region?: string | null; city?: string | null; commune?: string | null };
 
 function getParticipant(claim: { claims_participants?: Participant[] }, type: string) {
  return claim.claims_participants?.find((p) => p.type === type);
@@ -125,6 +125,7 @@ function ClaimsPageContent() {
  const queryClient = useQueryClient();
  const router = useRouter();
  const searchParams = useSearchParams();
+ const searchParamsStr = searchParams?.toString() ?? "";
  const { canCreate, canView } = usePermissions();
  const { profile, dataAccess } = useAuth();
  const { statusCode, statusLabel, codeToId } = useClaimStatuses();
@@ -146,8 +147,29 @@ function ClaimsPageContent() {
  const canOpenClaim = (claim: { assigned_adjuster_id: string | null; adjuster_id: string | null; inspector_id: string | null; auditor_id: string | null; dispatcher_id: string | null; assistant_id: string | null }): boolean => canView("claims") && isUserAssignedToClaim(claim);
  useRealtime("claims", [["claims"], ["claims-participants"]]);
 
- const [sortKey, setSortKey] = useState<string | null>(searchParams.get("sort") ?? null);
- const [sortDir, setSortDir] = useState<"asc" | "desc">(searchParams.get("dir") === "asc" ? "asc" : "desc");
+ function loadSavedFilter<T>(key: string, defaultValue: T): T {
+   if (typeof window === "undefined") return defaultValue;
+   if (searchParamsStr) return defaultValue;
+   const saved = localStorage.getItem("claims-filters");
+   if (!saved) return defaultValue;
+   try {
+     const filters = JSON.parse(saved);
+     return key in filters ? (filters[key] as T) : defaultValue;
+   } catch {
+     return defaultValue;
+   }
+ }
+
+ const [sortKey, setSortKey] = useState<string | null>(() => {
+   const s = searchParams?.get("sort");
+   if (s !== null && s !== undefined) return s || null;
+   return loadSavedFilter<string | null>("sort", null);
+ });
+ const [sortDir, setSortDir] = useState<"asc" | "desc">(() => {
+   const d = searchParams?.get("dir");
+   if (d === "asc" || d === "desc") return d;
+   return loadSavedFilter<"asc" | "desc">("dir", "desc");
+ });
  const toggleSort = (key: string) => {
    if (sortKey === key) {
      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -157,22 +179,50 @@ function ClaimsPageContent() {
    }
  };
 
- const [search, setSearch] = useState(searchParams.get("q") ?? "");
+ const [search, setSearch] = useState(() => {
+   const q = searchParams?.get("q");
+   if (q !== null && q !== undefined) return q;
+   return loadSavedFilter<string>("q", "");
+ });
 
- const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
- const [pageSize, setPageSize] = useState(Number(searchParams.get("pageSize")) || 50);
+ const [page, setPage] = useState(() => {
+   const p = searchParams?.get("page");
+   if (p !== null && p !== undefined) return Number(p) || 1;
+   return loadSavedFilter<number>("page", 1);
+ });
+ const [pageSize, setPageSize] = useState(() => {
+   const s = searchParams?.get("pageSize");
+   if (s !== null && s !== undefined) return Number(s) || 50;
+   return loadSavedFilter<number>("pageSize", 50);
+ });
  const handlePageSizeChange = (size: number) => { setPageSize(size); setPage(1); };
  const [statusFilter, setStatusFilter] = useState<string[]>(() => {
-   const s = searchParams.get("status");
-   return s ? s.split(",").filter(Boolean) : [];
+   const s = searchParams?.get("status");
+   if (s !== null && s !== undefined) return s.split(",").filter(Boolean);
+   const saved = loadSavedFilter<string[] | null>("status", null);
+   return Array.isArray(saved) ? saved : [];
  });
  const [insuranceCompanyFilter, setInsuranceCompanyFilter] = useState<string[]>(() => {
-   const s = searchParams.get("insurance");
-   return s ? s.split(",").filter(Boolean) : [];
+   const s = searchParams?.get("insurance");
+   if (s !== null && s !== undefined) return s.split(",").filter(Boolean);
+   const saved = loadSavedFilter<string[] | null>("insurance", null);
+   return Array.isArray(saved) ? saved : [];
  });
- const [liquidationFilter, setLiquidationFilter] = useState(searchParams.get("liquidation") ?? "");
- const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") ?? "");
- const [dateTo, setDateTo] = useState(searchParams.get("dateTo") ?? "");
+ const [liquidationFilter, setLiquidationFilter] = useState(() => {
+   const s = searchParams?.get("liquidation");
+   if (s !== null && s !== undefined) return s;
+   return loadSavedFilter<string>("liquidation", "");
+ });
+ const [dateFrom, setDateFrom] = useState(() => {
+   const s = searchParams?.get("dateFrom");
+   if (s !== null && s !== undefined) return s;
+   return loadSavedFilter<string>("dateFrom", "");
+ });
+ const [dateTo, setDateTo] = useState(() => {
+   const s = searchParams?.get("dateTo");
+   if (s !== null && s !== undefined) return s;
+   return loadSavedFilter<string>("dateTo", "");
+ });
  const [open, setOpen] = useState(false);
  const [step, setStep] = useState(1);
  const [documents, setDocuments] = useState<{ id: string; name: string; type: string; file: File }[]>([]);
@@ -186,6 +236,8 @@ function ClaimsPageContent() {
  const [participantSuggestion, setParticipantSuggestion] = useState<{
  section: "insured" | "contractor" | "beneficiary";
  data: {
+ person_type: "natural" | "legal";
+ full_name: string | null;
  first_name: string | null;
  last_name: string | null;
  rut: string | null;
@@ -205,41 +257,9 @@ function ClaimsPageContent() {
    setPage(1);
  }, [statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search]);
 
- const filtersLoaded = useRef(false);
-
- // Restaurar filtros desde localStorage si la URL esta limpia
- useEffect(() => {
-   if (searchParams.toString()) {
-     filtersLoaded.current = true;
-     return;
-   }
-   const saved = localStorage.getItem("claims-filters");
-   if (!saved) {
-     filtersLoaded.current = true;
-     return;
-   }
-   try {
-     const filters = JSON.parse(saved);
-     if (filters.q) setSearch(filters.q);
-     if (filters.page) setPage(filters.page);
-     if (filters.pageSize) setPageSize(filters.pageSize);
-     if (filters.sort) setSortKey(filters.sort);
-     if (filters.dir) setSortDir(filters.dir);
-     if (Array.isArray(filters.status)) setStatusFilter(filters.status);
-     if (Array.isArray(filters.insurance)) setInsuranceCompanyFilter(filters.insurance);
-     if (filters.liquidation) setLiquidationFilter(filters.liquidation);
-     if (filters.dateFrom) setDateFrom(filters.dateFrom);
-     if (filters.dateTo) setDateTo(filters.dateTo);
-   } catch {
-     // ignore
-   } finally {
-     filtersLoaded.current = true;
-   }
- }, [searchParams]);
-
  // Sincronizar filtros y paginacion con la URL y localStorage
  useEffect(() => {
-   const params = new URLSearchParams(searchParams.toString());
+   const params = new URLSearchParams(searchParamsStr);
    if (search) params.set("q", search); else params.delete("q");
    if (page !== 1) params.set("page", String(page)); else params.delete("page");
    if (pageSize !== 50) params.set("pageSize", String(pageSize)); else params.delete("pageSize");
@@ -252,7 +272,6 @@ function ClaimsPageContent() {
    const newUrl = `${window.location.pathname}?${params.toString()}`;
    window.history.replaceState({}, "", newUrl);
 
-   if (!filtersLoaded.current) return;
    const filters = {
      q: search,
      page,
@@ -266,7 +285,7 @@ function ClaimsPageContent() {
      dateTo,
    };
    localStorage.setItem("claims-filters", JSON.stringify(filters));
- }, [search, page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, searchParams]);
+ }, [search, page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, searchParamsStr]);
 
  type DocumentRow = { id: string; name: string; type: string; file: File };
 
@@ -343,7 +362,7 @@ function ClaimsPageContent() {
  });
 
  const { data: rawClaims, isLoading, error } = useQuery({
- queryKey: ["claims", page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo],
+ queryKey: ["claims", page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search],
  queryFn: () => getClaimsLight(undefined, {
    page,
    pageSize,
@@ -354,19 +373,21 @@ function ClaimsPageContent() {
    dateTo: dateTo || undefined,
    sortKey,
    sortDir,
+   q: search || undefined,
  }),
  staleTime: 60_000,
  gcTime: 5 * 60_000,
  });
 
  const { data: claimsCount } = useQuery({
- queryKey: ["claims-count", statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo],
+ queryKey: ["claims-count", statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search],
  queryFn: () => getClaimsCount(undefined, {
    statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
    insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
    liquidation: liquidationFilter || undefined,
    dateFrom: dateFrom || undefined,
    dateTo: dateTo || undefined,
+   q: search || undefined,
  }),
  staleTime: 60_000,
  gcTime: 5 * 60_000,
@@ -512,8 +533,8 @@ function ClaimsPageContent() {
  if (!participantSuggestion) return;
  const d = participantSuggestion.data;
  if (section === "insured") {
- form.setValue("insuredName", d.first_name || "");
- form.setValue("lastName", d.last_name || "");
+ form.setValue("insuredName", d.person_type === "legal" ? (d.full_name || "") : (d.first_name || ""));
+ form.setValue("lastName", d.person_type === "legal" ? "" : (d.last_name || ""));
  form.setValue("insuredEmail", d.email || "");
  form.setValue("cellPhone", d.cell_phone || "");
  form.setValue("insuredPhone", d.phone || "");
@@ -523,8 +544,8 @@ function ClaimsPageContent() {
  form.setValue("insuredCity", d.city || "");
  form.setValue("insuredCommune", d.commune || "");
  } else if (section === "contractor") {
- form.setValue("contractorName", d.first_name || "");
- form.setValue("contractorLastName", d.last_name || "");
+ form.setValue("contractorName", d.person_type === "legal" ? (d.full_name || "") : (d.first_name || ""));
+ form.setValue("contractorLastName", d.person_type === "legal" ? "" : (d.last_name || ""));
  form.setValue("contractorEmail", d.email || "");
  form.setValue("contractorCellPhone", d.cell_phone || "");
  form.setValue("contractorPhone", d.phone || "");
@@ -534,8 +555,8 @@ function ClaimsPageContent() {
  form.setValue("contractorCity", d.city || "");
  form.setValue("contractorCommune", d.commune || "");
  } else if (section === "beneficiary") {
- form.setValue("beneficiaryName", d.first_name || "");
- form.setValue("beneficiaryLastName", d.last_name || "");
+ form.setValue("beneficiaryName", d.person_type === "legal" ? (d.full_name || "") : (d.first_name || ""));
+ form.setValue("beneficiaryLastName", d.person_type === "legal" ? "" : (d.last_name || ""));
  form.setValue("beneficiaryEmail", d.email || "");
  form.setValue("beneficiaryCellPhone", d.cell_phone || "");
  form.setValue("beneficiaryPhone", d.phone || "");
@@ -1033,10 +1054,7 @@ function ClaimsPageContent() {
  setDocuments((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
  };
 
- const filtered = claims?.filter((c) => {
- const textMatch = [c.claim_number, c.client_reference, c.liquidation_number, getParticipant(c, 'insured')?.full_name, getParticipant(c, 'insured')?.address].join(" ").toLowerCase().includes(search.toLowerCase());
- return textMatch;
- });
+ const filtered = claims;
 
  const accessors = useMemo<Record<string, (c: ListClaim) => unknown>>(
 () => ({
@@ -1600,7 +1618,7 @@ const paginatedData = sortedClaims ?? [];
  <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
  <div className="app-body text-sky-800">
  <span className="font-semibold">Persona encontrada:</span>{" "}
- {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
+ {participantSuggestion.data.person_type === "legal" ? (participantSuggestion.data.full_name || "") : `${participantSuggestion.data.first_name || ""} ${participantSuggestion.data.last_name || ""}`.trim()}
  {participantSuggestion.data.address && (
  <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
  )}
@@ -1763,7 +1781,7 @@ const paginatedData = sortedClaims ?? [];
  <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
  <div className="app-body text-sky-800">
  <span className="font-semibold">Persona encontrada:</span>{" "}
- {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
+ {participantSuggestion.data.person_type === "legal" ? (participantSuggestion.data.full_name || "") : `${participantSuggestion.data.first_name || ""} ${participantSuggestion.data.last_name || ""}`.trim()}
  {participantSuggestion.data.address && (
  <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
  )}
@@ -1923,7 +1941,7 @@ const paginatedData = sortedClaims ?? [];
  <div className="flex items-center justify-between gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2">
  <div className="app-body text-sky-800">
  <span className="font-semibold">Persona encontrada:</span>{" "}
- {participantSuggestion.data.first_name} {participantSuggestion.data.last_name}
+ {participantSuggestion.data.person_type === "legal" ? (participantSuggestion.data.full_name || "") : `${participantSuggestion.data.first_name || ""} ${participantSuggestion.data.last_name || ""}`.trim()}
  {participantSuggestion.data.address && (
  <span className="text-sky-600"> — {participantSuggestion.data.address}</span>
  )}

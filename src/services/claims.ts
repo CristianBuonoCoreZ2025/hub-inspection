@@ -45,7 +45,7 @@ export async function checkClaimNumberExists(claimNumber: string, insuranceCompa
 export async function findParticipantByRut(rut: string, country: string) {
   if (!rut || !country) return null;
   const rows = await fetchAll<ParticipantMatch>("claims_participants", {
-    select: "id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune",
+    select: "id, type, person_type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune",
     ilike: { rut, country },
     limit: 1,
     order: { column: "created_at", ascending: false },
@@ -56,6 +56,7 @@ export async function findParticipantByRut(rut: string, country: string) {
 export type ParticipantMatch = {
   id: string;
   type: string;
+  person_type: "natural" | "legal";
   full_name: string;
   first_name: string | null;
   last_name: string | null;
@@ -111,6 +112,7 @@ export async function getClaimsLight(
     dateTo?: string;
     sortKey?: string | null;
     sortDir?: "asc" | "desc";
+    q?: string;
   }
 ) {
   const pageSize = Math.max(1, Math.min(options?.pageSize ?? 50, 100));
@@ -118,22 +120,21 @@ export async function getClaimsLight(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  const eq: Record<string, unknown> = { disabled: false };
-  if (companyId) eq.company_id = companyId;
+  const supabase = getSupabaseClient();
 
-  const filters: {
-    eq?: Record<string, unknown>;
-    in?: Record<string, unknown[]>;
-    ilike?: Record<string, string>;
-    gte?: Record<string, unknown>;
-    lte?: Record<string, unknown>;
-  } = { eq };
+  let participantClaimIds: string[] = [];
+  const q = options?.q?.trim();
+  if (q) {
+    const pattern = `%${q}%`;
+    const { data: participants, error: pErr } = await supabase
+      .from("claims_participants")
+      .select("claim_id")
+      .or(`full_name.ilike.${pattern}, rut.ilike.${pattern}`);
 
-  if (options?.statusIds?.length) filters.in = { ...filters.in, status_id: options.statusIds };
-  if (options?.insuranceCompanyIds?.length) filters.in = { ...filters.in, insurance_company_id: options.insuranceCompanyIds };
-  if (options?.liquidation) filters.ilike = { ...filters.ilike, liquidation_number: `%${options.liquidation}%` };
-  if (options?.dateFrom) filters.gte = { ...filters.gte, claim_date: options.dateFrom };
-  if (options?.dateTo) filters.lte = { ...filters.lte, claim_date: options.dateTo };
+    if (pErr) throw new Error(pErr.message);
+    const typed = (participants || []) as { claim_id: string | null }[];
+    participantClaimIds = [...new Set(typed.map((p) => p.claim_id).filter((id): id is string => Boolean(id)))];
+  }
 
   const columnMap: Record<string, string> = {
     liquidation_number: "liquidation_number",
@@ -148,13 +149,29 @@ export async function getClaimsLight(
   const orderColumn = (options?.sortKey && columnMap[options.sortKey]) ? columnMap[options.sortKey] : "created_at";
   const ascending = (options?.sortDir === "asc");
 
-  return fetchAll<Claim>("claims", {
-    select: LIGHT_CLAIM_SELECT,
-    ...filters,
-    order: { column: orderColumn, ascending },
-    limit: pageSize,
-    range: { from, to },
-  });
+  let query = supabase
+    .from("claims")
+    .select(LIGHT_CLAIM_SELECT)
+    .eq("disabled", false)
+    .order(orderColumn, { ascending })
+    .range(from, to)
+    .limit(pageSize);
+
+  if (companyId) query = query.eq("company_id", companyId);
+  if (options?.statusIds?.length) query = query.in("status_id", options.statusIds);
+  if (options?.insuranceCompanyIds?.length) query = query.in("insurance_company_id", options.insuranceCompanyIds);
+  if (options?.liquidation) query = query.ilike("liquidation_number", `%${options.liquidation}%`);
+  if (options?.dateFrom) query = query.gte("claim_date", options.dateFrom);
+  if (options?.dateTo) query = query.lte("claim_date", options.dateTo);
+
+  if (q) {
+    query = query.or(`claim_number.ilike.%${q}%, client_reference.ilike.%${q}%, liquidation_number.ilike.%${q}%`);
+    if (participantClaimIds.length) query = query.in("id", participantClaimIds);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data as unknown as Claim[]) || [];
 }
 
 export async function getClaimsCount(
@@ -165,19 +182,41 @@ export async function getClaimsCount(
     liquidation?: string;
     dateFrom?: string;
     dateTo?: string;
+    q?: string;
   }
 ) {
   const supabase = getSupabaseClient();
-  const eq: Record<string, unknown> = { disabled: false };
-  if (companyId) eq.company_id = companyId;
 
-  let query = supabase.from("claims").select("id", { count: "exact", head: true }).match(eq);
+  let participantClaimIds: string[] = [];
+  const q = options?.q?.trim();
+  if (q) {
+    const pattern = `%${q}%`;
+    const { data: participants, error: pErr } = await supabase
+      .from("claims_participants")
+      .select("claim_id")
+      .or(`full_name.ilike.${pattern}, rut.ilike.${pattern}`);
 
+    if (pErr) throw new Error(pErr.message);
+    const typed = (participants || []) as { claim_id: string | null }[];
+    participantClaimIds = [...new Set(typed.map((p) => p.claim_id).filter((id): id is string => Boolean(id)))];
+  }
+
+  let query = supabase
+    .from("claims")
+    .select("id", { count: "exact", head: true })
+    .eq("disabled", false);
+
+  if (companyId) query = query.eq("company_id", companyId);
   if (options?.statusIds?.length) query = query.in("status_id", options.statusIds);
   if (options?.insuranceCompanyIds?.length) query = query.in("insurance_company_id", options.insuranceCompanyIds);
   if (options?.liquidation) query = query.ilike("liquidation_number", `%${options.liquidation}%`);
   if (options?.dateFrom) query = query.gte("claim_date", options.dateFrom);
   if (options?.dateTo) query = query.lte("claim_date", options.dateTo);
+
+  if (q) {
+    query = query.or(`claim_number.ilike.%${q}%, client_reference.ilike.%${q}%, liquidation_number.ilike.%${q}%`);
+    if (participantClaimIds.length) query = query.in("id", participantClaimIds);
+  }
 
   const { count, error } = await query;
   if (error) throw new Error(error.message);

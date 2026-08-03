@@ -9,7 +9,7 @@ export interface Person {
   country_id: string | null;
   tax_id: string;
   person_type: "natural" | "legal";
-  first_name: string;
+  first_name: string | null;
   last_name: string | null;
   business_name: string | null;
   created_at: string;
@@ -60,7 +60,7 @@ export async function upsertPerson(input: {
   country_id: string;
   tax_id: string;
   person_type: "natural" | "legal";
-  first_name: string;
+  first_name: string | null;
   last_name?: string | null;
   business_name?: string | null;
 }): Promise<Person> {
