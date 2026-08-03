@@ -5,24 +5,91 @@ import type { Claim, ClaimInput, ClaimsParticipant } from "@/types";
 const LIGHT_CLAIM_SELECT =
   "id, claim_number, policy_number, policy_id, claim_date, status_id, report_date, assignment_date, client_reference, company_report_number, liquidation_number, is_special_claim, summary, event_id, internal_number, notes, company_id, assigned_adjuster_id, inspector_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, claim_cause_id, claim_type_id, business_line_id, insurance_product_id, country_id, region_id, city_id, commune_id, construction_type_id, destination_housing_id, damage_classification_id, habitability_id, type_id, currency_id, service_type_id, billing_type_id, claim_address, claim_latitude, claim_longitude, owner_same_as_insured, policy_item, policy_start_date, policy_end_date, policy_amount, policy_premium, recovery_type_legal, recovery_type_material, recovery_comments, broker_executive, created_at, updated_at, updated_by, disabled, disabled_reason, disabled_at, disabled_by, reopened_at, reopened_by, reopened_reason";
 
-const DETAIL_CLAIM_SELECT =
-  `${LIGHT_CLAIM_SELECT}, inspection_sessions:inspection_sessions(id, inspector_id, claim_action_id, status, inspection_number, inspection_type, scheduled_at, started_at, ended_at, lock_overridden_by, lock_overridden_at, created_at)`;
-
 const DYNAMIC_CLAIM_SELECT =
   `${LIGHT_CLAIM_SELECT}, status:lookup_catalog!claims_status_id_fkey(id, category, code, name), assigned_adjuster:profiles!claims_assigned_adjuster_id_fkey(id, full_name, email), adjuster:profiles!claims_adjuster_id_fkey(id, full_name, email), broker:brokers!claims_broker_id_fkey(id, name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(id, name), policy:policies!claims_policy_id_fkey(id, policy_number, policy_name, status, currency), currency:currencies!claims_currency_id_fkey(id, code, name, symbol, decimals), country:countries!claims_country_id_fkey(id, name), region:regions!claims_region_id_fkey(id, name), city:cities!claims_city_id_fkey(id, name), commune:communes!claims_commune_id_fkey(id, name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(id, name)`;
 
 const CLAIM_SELECT =
   `${DYNAMIC_CLAIM_SELECT}, inspector:profiles!claims_inspector_id_fkey(id, full_name, email), auditor:profiles!claims_auditor_id_fkey(id, full_name, email), dispatcher:profiles!claims_dispatcher_id_fkey(id, full_name, email), assistant:profiles!claims_assistant_id_fkey(id, full_name, email)`;
 
-export async function getClaims(companyId?: string) {
-  const eq: Record<string, unknown> = { disabled: false };
-  if (companyId) eq.company_id = companyId;
+export async function getClaims(
+  companyId?: string,
+  options?: {
+    page?: number;
+    pageSize?: number;
+    statusIds?: string[];
+    insuranceCompanyIds?: string[];
+    liquidation?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    sortKey?: string | null;
+    sortDir?: "asc" | "desc";
+    q?: string;
+  }
+) {
+  const supabase = getSupabaseClient();
 
-  return fetchAll<Claim>("claims", {
-    select: CLAIM_SELECT,
-    eq,
-    order: { column: "created_at", ascending: false },
-  });
+  let participantClaimIds: string[] = [];
+  const q = options?.q?.trim();
+  if (q) {
+    const pattern = `%${q}%`;
+    const { data: participants, error: pErr } = await supabase
+      .from("claims_participants")
+      .select("claim_id")
+      .or(`full_name.ilike.${pattern}, rut.ilike.${pattern}`);
+
+    if (pErr) throw new Error(pErr.message);
+    const typed = (participants || []) as { claim_id: string | null }[];
+    participantClaimIds = [...new Set(typed.map((p) => p.claim_id).filter((id): id is string => Boolean(id)))];
+  }
+
+  const columnMap: Record<string, string> = {
+    liquidation_number: "liquidation_number",
+    client_reference: "client_reference",
+    claim_number: "claim_number",
+    claim_date: "claim_date",
+    report_date: "report_date",
+    created_at: "created_at",
+    status: "status_id",
+  };
+
+  const hasPagination = options?.page !== undefined || options?.pageSize !== undefined;
+  const effectivePageSize = hasPagination
+    ? Math.max(1, Math.min(options?.pageSize ?? 50, 100))
+    : undefined;
+  const effectivePage = hasPagination ? Math.max(1, options?.page ?? 1) : undefined;
+  const from = hasPagination && effectivePageSize && effectivePage
+    ? (effectivePage - 1) * effectivePageSize
+    : undefined;
+  const to = hasPagination && from !== undefined && effectivePageSize
+    ? from + effectivePageSize - 1
+    : undefined;
+
+  const orderColumn = (options?.sortKey && columnMap[options.sortKey]) ? columnMap[options.sortKey] : "created_at";
+  const ascending = (options?.sortDir === "asc");
+
+  let query = supabase
+    .from("claims")
+    .select(CLAIM_SELECT)
+    .eq("disabled", false)
+    .order(orderColumn, { ascending });
+
+  if (companyId) query = query.eq("company_id", companyId);
+  if (effectivePageSize !== undefined) query = query.limit(effectivePageSize);
+  if (from !== undefined && to !== undefined) query = query.range(from, to);
+  if (options?.statusIds?.length) query = query.in("status_id", options.statusIds);
+  if (options?.insuranceCompanyIds?.length) query = query.in("insurance_company_id", options.insuranceCompanyIds);
+  if (options?.liquidation) query = query.ilike("liquidation_number", `%${options.liquidation}%`);
+  if (options?.dateFrom) query = query.gte("claim_date", options.dateFrom);
+  if (options?.dateTo) query = query.lte("claim_date", options.dateTo);
+
+  if (q) {
+    query = query.or(`claim_number.ilike.%${q}%, client_reference.ilike.%${q}%, liquidation_number.ilike.%${q}%`);
+    if (participantClaimIds.length) query = query.in("id", participantClaimIds);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data as unknown as Claim[]) || [];
 }
 
 export async function checkClaimNumberExists(claimNumber: string, insuranceCompanyId: string, excludeClaimId?: string) {
@@ -100,79 +167,6 @@ export async function getClaimById(id: string) {
   return fetchById<Claim>("claims", id, DYNAMIC_CLAIM_SELECT);
 }
 
-export async function getClaimsLight(
-  companyId?: string,
-  options?: {
-    page?: number;
-    pageSize?: number;
-    statusIds?: string[];
-    insuranceCompanyIds?: string[];
-    liquidation?: string;
-    dateFrom?: string;
-    dateTo?: string;
-    sortKey?: string | null;
-    sortDir?: "asc" | "desc";
-    q?: string;
-  }
-) {
-  const pageSize = Math.max(1, Math.min(options?.pageSize ?? 50, 100));
-  const page = Math.max(1, options?.page ?? 1);
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-
-  const supabase = getSupabaseClient();
-
-  let participantClaimIds: string[] = [];
-  const q = options?.q?.trim();
-  if (q) {
-    const pattern = `%${q}%`;
-    const { data: participants, error: pErr } = await supabase
-      .from("claims_participants")
-      .select("claim_id")
-      .or(`full_name.ilike.${pattern}, rut.ilike.${pattern}`);
-
-    if (pErr) throw new Error(pErr.message);
-    const typed = (participants || []) as { claim_id: string | null }[];
-    participantClaimIds = [...new Set(typed.map((p) => p.claim_id).filter((id): id is string => Boolean(id)))];
-  }
-
-  const columnMap: Record<string, string> = {
-    liquidation_number: "liquidation_number",
-    client_reference: "client_reference",
-    claim_number: "claim_number",
-    claim_date: "claim_date",
-    report_date: "report_date",
-    created_at: "created_at",
-    status: "status_id",
-  };
-
-  const orderColumn = (options?.sortKey && columnMap[options.sortKey]) ? columnMap[options.sortKey] : "created_at";
-  const ascending = (options?.sortDir === "asc");
-
-  let query = supabase
-    .from("claims")
-    .select(LIGHT_CLAIM_SELECT)
-    .eq("disabled", false)
-    .order(orderColumn, { ascending })
-    .range(from, to)
-    .limit(pageSize);
-
-  if (companyId) query = query.eq("company_id", companyId);
-  if (options?.statusIds?.length) query = query.in("status_id", options.statusIds);
-  if (options?.insuranceCompanyIds?.length) query = query.in("insurance_company_id", options.insuranceCompanyIds);
-  if (options?.liquidation) query = query.ilike("liquidation_number", `%${options.liquidation}%`);
-  if (options?.dateFrom) query = query.gte("claim_date", options.dateFrom);
-  if (options?.dateTo) query = query.lte("claim_date", options.dateTo);
-
-  if (q) {
-    query = query.or(`claim_number.ilike.%${q}%, client_reference.ilike.%${q}%, liquidation_number.ilike.%${q}%`);
-    if (participantClaimIds.length) query = query.in("id", participantClaimIds);
-  }
-
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return (data as unknown as Claim[]) || [];
-}
 
 export async function getClaimsCount(
   companyId?: string,
@@ -223,9 +217,6 @@ export async function getClaimsCount(
   return count ?? 0;
 }
 
-export async function getClaimByIdLight(id: string) {
-  return fetchById<Claim>("claims", id, DETAIL_CLAIM_SELECT);
-}
 
 export async function disableClaim(id: string, reason: string, userId?: string) {
   return updateRow<{ id: string; disabled: boolean }>("claims", id, {

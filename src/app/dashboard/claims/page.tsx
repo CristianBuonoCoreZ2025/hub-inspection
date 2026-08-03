@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
-import { getClaimsLight, getClaimsCount, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
+import { getClaims, getClaimsCount, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
 import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
 import type { GeocodeCandidate } from "@/lib/geo";
 import { getCompanies } from "@/services/companies";
@@ -363,7 +363,7 @@ function ClaimsPageContent() {
 
  const { data: rawClaims, isLoading, error } = useQuery({
  queryKey: ["claims", page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search],
- queryFn: () => getClaimsLight(undefined, {
+ queryFn: () => getClaims(undefined, {
    page,
    pageSize,
    statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
