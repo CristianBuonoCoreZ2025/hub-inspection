@@ -68,7 +68,7 @@ function InspectionsPageContent() {
   const { profile, dataAccess } = useAuth();
   useRealtime("inspection_sessions", [["inspection-sessions"], ["inspection-sessions-all"]]);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>(["active", "scheduled"]);
   const [inspectorFilter, setInspectorFilter] = useState<string[]>([]);
   const [internalNumberFilter, setInternalNumberFilter] = useState("");
 
