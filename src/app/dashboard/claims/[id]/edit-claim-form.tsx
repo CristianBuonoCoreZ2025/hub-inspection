@@ -2183,7 +2183,7 @@ setValue("claimAddress", candidate.displayName || candidate.label);
  />
  </div>
  <div className="mt-3">
- <EditTextarea label="Comentarios" {...register("recoveryComments")} />
+ <EditTextarea label="Comentarios" {...register("recoveryComments")} rows={2} />
  </div>
  </div>
  </div>
