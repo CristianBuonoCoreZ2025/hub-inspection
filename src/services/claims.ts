@@ -24,6 +24,8 @@ export async function getClaims(
     statusIds?: string[];
     insuranceCompanyIds?: string[];
     liquidation?: string;
+    adjusterIds?: string[];
+    inspectorIds?: string[];
     dateFrom?: string;
     dateTo?: string;
     sortKey?: string | null;
@@ -33,18 +35,12 @@ export async function getClaims(
 ) {
   const supabase = getSupabaseClient();
 
-  let participantClaimIds: string[] = [];
+  let searchClaimIds: string[] = [];
   const q = options?.q?.trim();
   if (q) {
-    const pattern = `%${q}%`;
-    const { data: participants, error: pErr } = await supabase
-      .from("claims_participants")
-      .select("claim_id")
-      .or(`full_name.ilike.${pattern}, rut.ilike.${pattern}`);
-
-    if (pErr) throw new Error(pErr.message);
-    const typed = (participants || []) as { claim_id: string | null }[];
-    participantClaimIds = [...new Set(typed.map((p) => p.claim_id).filter((id): id is string => Boolean(id)))];
+    const { data: searchData, error: searchErr } = await supabase.rpc("search_claims_unaccent", { p_q: q });
+    if (searchErr) throw new Error(searchErr.message);
+    searchClaimIds = (searchData || []).map((r: { claim_id: string }) => r.claim_id);
   }
 
   const columnMap: Record<string, string> = {
@@ -84,12 +80,18 @@ export async function getClaims(
   if (options?.statusIds?.length) query = query.in("status_id", options.statusIds);
   if (options?.insuranceCompanyIds?.length) query = query.in("insurance_company_id", options.insuranceCompanyIds);
   if (options?.liquidation) query = query.ilike("liquidation_number", `%${options.liquidation}%`);
+  if (options?.adjusterIds?.length) query = query.in("adjuster_id", options.adjusterIds);
+  if (options?.inspectorIds?.length) query = query.in("inspector_id", options.inspectorIds);
   if (options?.dateFrom) query = query.gte("claim_date", options.dateFrom);
   if (options?.dateTo) query = query.lte("claim_date", options.dateTo);
 
   if (q) {
-    query = query.or(`claim_number.ilike.%${q}%, client_reference.ilike.%${q}%, liquidation_number.ilike.%${q}%`);
-    if (participantClaimIds.length) query = query.in("id", participantClaimIds);
+    if (searchClaimIds.length) {
+      query = query.in("id", searchClaimIds);
+    } else {
+      // No hubo coincidencias: forzar resultado vacío
+      query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+    }
   }
 
   const { data, error } = await query;
@@ -179,6 +181,8 @@ export async function getClaimsCount(
     statusIds?: string[];
     insuranceCompanyIds?: string[];
     liquidation?: string;
+    adjusterIds?: string[];
+    inspectorIds?: string[];
     dateFrom?: string;
     dateTo?: string;
     q?: string;
@@ -186,18 +190,12 @@ export async function getClaimsCount(
 ) {
   const supabase = getSupabaseClient();
 
-  let participantClaimIds: string[] = [];
+  let searchClaimIds: string[] = [];
   const q = options?.q?.trim();
   if (q) {
-    const pattern = `%${q}%`;
-    const { data: participants, error: pErr } = await supabase
-      .from("claims_participants")
-      .select("claim_id")
-      .or(`full_name.ilike.${pattern}, rut.ilike.${pattern}`);
-
-    if (pErr) throw new Error(pErr.message);
-    const typed = (participants || []) as { claim_id: string | null }[];
-    participantClaimIds = [...new Set(typed.map((p) => p.claim_id).filter((id): id is string => Boolean(id)))];
+    const { data: searchData, error: searchErr } = await supabase.rpc("search_claims_unaccent", { p_q: q });
+    if (searchErr) throw new Error(searchErr.message);
+    searchClaimIds = (searchData || []).map((r: { claim_id: string }) => r.claim_id);
   }
 
   let query = supabase
@@ -209,12 +207,18 @@ export async function getClaimsCount(
   if (options?.statusIds?.length) query = query.in("status_id", options.statusIds);
   if (options?.insuranceCompanyIds?.length) query = query.in("insurance_company_id", options.insuranceCompanyIds);
   if (options?.liquidation) query = query.ilike("liquidation_number", `%${options.liquidation}%`);
+  if (options?.adjusterIds?.length) query = query.in("adjuster_id", options.adjusterIds);
+  if (options?.inspectorIds?.length) query = query.in("inspector_id", options.inspectorIds);
   if (options?.dateFrom) query = query.gte("claim_date", options.dateFrom);
   if (options?.dateTo) query = query.lte("claim_date", options.dateTo);
 
   if (q) {
-    query = query.or(`claim_number.ilike.%${q}%, client_reference.ilike.%${q}%, liquidation_number.ilike.%${q}%`);
-    if (participantClaimIds.length) query = query.in("id", participantClaimIds);
+    if (searchClaimIds.length) {
+      query = query.in("id", searchClaimIds);
+    } else {
+      // No hubo coincidencias: forzar resultado vacío
+      query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+    }
   }
 
   const { count, error } = await query;

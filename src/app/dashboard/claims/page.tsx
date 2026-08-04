@@ -58,6 +58,11 @@ import {
  DialogTitle,
  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+ Tooltip,
+ TooltipContent,
+ TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SelectItem, Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -120,6 +125,84 @@ export default function ClaimsPage() {
  <ClaimsPageContent />
  </Suspense>
  );
+}
+
+function removeAccents(str: string) {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function Highlight({ text, term }: { text: string; term: string }) {
+  if (!term.trim()) return <>{text}</>;
+  const normalizedTerm = removeAccents(term).toLowerCase();
+  const normalizedText = removeAccents(text).toLowerCase();
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let i = normalizedText.indexOf(normalizedTerm);
+  while (i !== -1) {
+    if (i > lastIndex) nodes.push(<span key={lastIndex}>{text.slice(lastIndex, i)}</span>);
+    const matched = text.slice(i, i + normalizedTerm.length);
+    nodes.push(<mark key={i} className="bg-amber-200 rounded px-0.5">{matched}</mark>);
+    lastIndex = i + normalizedTerm.length;
+    i = normalizedText.indexOf(normalizedTerm, lastIndex);
+  }
+  if (lastIndex < text.length) nodes.push(<span key={lastIndex}>{text.slice(lastIndex)}</span>);
+  return <>{nodes}</>;
+}
+
+function getSearchMatchLabels(
+  claim: {
+    liquidation_number?: string | null;
+    claim_number?: string | null;
+    client_reference?: string | null;
+    company_report_number?: string | null;
+    claim_address?: string | null;
+    city?: { name?: string | null } | null;
+    commune?: { name?: string | null } | null;
+    claims_participants?: {
+      type: string;
+      full_name?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+      rut?: string | null;
+      address?: string | null;
+      city?: string | null;
+      commune?: string | null;
+    }[];
+  },
+  term: string
+): string[] {
+  if (!term.trim()) return [];
+  const q = removeAccents(term).toLowerCase();
+  const matches: string[] = [];
+  const check = (label: string, value: string | null | undefined) => {
+    if (value && removeAccents(value).toLowerCase().includes(q)) matches.push(label);
+  };
+  check("Nº Liquidación", claim.liquidation_number);
+  check("Nº Siniestro", claim.claim_number);
+  check("Ref. Cliente", claim.client_reference);
+  check("Nº Compañía", claim.company_report_number);
+  check("Dirección siniestro", claim.claim_address);
+  check("Ciudad siniestro", claim.city?.name);
+  check("Comuna siniestro", claim.commune?.name);
+
+  const participantLabels: Record<string, string> = {
+    insured: "Asegurado",
+    contractor: "Contratante",
+    beneficiary: "Beneficiario",
+    contact: "Contacto",
+    executive: "Ejecutivo",
+  };
+  for (const p of claim.claims_participants || []) {
+    const label = participantLabels[p.type] || p.type;
+    check(`Nombre ${label}`, p.full_name);
+    check(`Nombre ${label}`, p.first_name);
+    check(`Apellido ${label}`, p.last_name);
+    check(`RUT ${label}`, p.rut);
+    check(`Dirección ${label}`, p.address);
+    check(`Ciudad ${label}`, p.city);
+    check(`Comuna ${label}`, p.commune);
+  }
+  return [...new Set(matches)];
 }
 
 function ClaimsPageContent() {
@@ -209,10 +292,17 @@ function ClaimsPageContent() {
    const saved = loadSavedFilter<string[] | null>("insurance", null);
    return Array.isArray(saved) ? saved : [];
  });
- const [liquidationFilter, setLiquidationFilter] = useState(() => {
-   const s = searchParams?.get("liquidation");
-   if (s !== null && s !== undefined) return s;
-   return loadSavedFilter<string>("liquidation", "");
+ const [adjusterFilter, setAdjusterFilter] = useState<string[]>(() => {
+   const s = searchParams?.get("adjuster");
+   if (s !== null && s !== undefined) return s.split(",").filter(Boolean);
+   const saved = loadSavedFilter<string[] | null>("adjuster", null);
+   return Array.isArray(saved) ? saved : [];
+ });
+ const [inspectorFilter, setInspectorFilter] = useState<string[]>(() => {
+   const s = searchParams?.get("inspector");
+   if (s !== null && s !== undefined) return s.split(",").filter(Boolean);
+   const saved = loadSavedFilter<string[] | null>("inspector", null);
+   return Array.isArray(saved) ? saved : [];
  });
  const [dateFrom, setDateFrom] = useState(() => {
    const s = searchParams?.get("dateFrom");
@@ -256,7 +346,7 @@ function ClaimsPageContent() {
  // Resetear a pagina 1 cuando cambian filtros server-side
  useEffect(() => {
    setPage(1);
- }, [statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search]);
+ }, [statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, search]);
 
  // Sincronizar filtros y paginacion con la URL y localStorage
  useEffect(() => {
@@ -267,7 +357,8 @@ function ClaimsPageContent() {
    if (sortKey) { params.set("sort", sortKey); params.set("dir", sortDir); } else { params.delete("sort"); params.delete("dir"); }
    if (statusFilter.length) params.set("status", statusFilter.join(",")); else params.delete("status");
    if (insuranceCompanyFilter.length) params.set("insurance", insuranceCompanyFilter.join(",")); else params.delete("insurance");
-   if (liquidationFilter) params.set("liquidation", liquidationFilter); else params.delete("liquidation");
+   if (adjusterFilter.length) params.set("adjuster", adjusterFilter.join(",")); else params.delete("adjuster");
+   if (inspectorFilter.length) params.set("inspector", inspectorFilter.join(",")); else params.delete("inspector");
    if (dateFrom) params.set("dateFrom", dateFrom); else params.delete("dateFrom");
    if (dateTo) params.set("dateTo", dateTo); else params.delete("dateTo");
    const newUrl = `${window.location.pathname}?${params.toString()}`;
@@ -281,12 +372,13 @@ function ClaimsPageContent() {
      dir: sortDir,
      status: statusFilter,
      insurance: insuranceCompanyFilter,
-     liquidation: liquidationFilter,
+     adjuster: adjusterFilter,
+     inspector: inspectorFilter,
      dateFrom,
      dateTo,
    };
    localStorage.setItem("claims-filters", JSON.stringify(filters));
- }, [search, page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, searchParamsStr]);
+ }, [search, page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, searchParamsStr]);
 
  type DocumentRow = { id: string; name: string; type: string; file: File };
 
@@ -363,13 +455,14 @@ function ClaimsPageContent() {
  });
 
  const { data: rawClaims, isLoading, error } = useQuery({
- queryKey: ["claims", page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search],
+ queryKey: ["claims", page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, search],
  queryFn: () => getClaims(undefined, {
    page,
    pageSize,
    statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
    insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
-   liquidation: liquidationFilter || undefined,
+   adjusterIds: adjusterFilter.length ? adjusterFilter : undefined,
+   inspectorIds: inspectorFilter.length ? inspectorFilter : undefined,
    dateFrom: dateFrom || undefined,
    dateTo: dateTo || undefined,
    sortKey,
@@ -381,11 +474,12 @@ function ClaimsPageContent() {
  });
 
  const { data: claimsCount } = useQuery({
- queryKey: ["claims-count", statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search],
+ queryKey: ["claims-count", statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, search],
  queryFn: () => getClaimsCount(undefined, {
    statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
    insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
-   liquidation: liquidationFilter || undefined,
+   adjusterIds: adjusterFilter.length ? adjusterFilter : undefined,
+   inspectorIds: inspectorFilter.length ? inspectorFilter : undefined,
    dateFrom: dateFrom || undefined,
    dateTo: dateTo || undefined,
    q: search || undefined,
@@ -620,6 +714,32 @@ function ClaimsPageContent() {
  const auditorItems = toUserItems(auditorList);
  const dispatcherItems = toUserItems(dispatcherList);
  const assistantItems = toUserItems(assistantList);
+
+ const activeAdjusterIds = useMemo(() => {
+   const ids = new Set<string>();
+   claims?.forEach((c) => {
+     if (c.adjuster_id) ids.add(c.adjuster_id);
+     if (c.assigned_adjuster_id) ids.add(c.assigned_adjuster_id);
+   });
+   return ids;
+ }, [claims]);
+
+ const activeInspectorIds = useMemo(() => {
+   const ids = new Set<string>();
+   claims?.forEach((c) => {
+     if (c.inspector_id) ids.add(c.inspector_id);
+   });
+   return ids;
+ }, [claims]);
+
+ const adjusterOptions = useMemo(
+   () => toUserItems(adjusterList?.filter((u) => activeAdjusterIds.has(u.id))),
+   [adjusterList, activeAdjusterIds]
+ );
+ const inspectorOptions = useMemo(
+   () => toUserItems(inspectorList?.filter((u) => activeInspectorIds.has(u.id))),
+   [inspectorList, activeInspectorIds]
+ );
 
  const { data: claimCauses } = useQuery({
  queryKey: ["claim-causes"],
@@ -1093,7 +1213,7 @@ const sortedClaims = useMemo(() => {
 // Resetear a pagina 1 cuando cambian filtros u orden
 useEffect(() => {
   setPage(1);
-}, [statusFilter, insuranceCompanyFilter, liquidationFilter, dateFrom, dateTo, search, sortKey, sortDir]);
+}, [statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, search, sortKey, sortDir]);
 
 const total = claimsCount ?? 0;
 const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -1135,7 +1255,8 @@ const paginatedData = sortedClaims ?? [];
      pageSize,
      statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
      insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
-     liquidation: liquidationFilter || undefined,
+     adjusterIds: adjusterFilter.length ? adjusterFilter : undefined,
+     inspectorIds: inspectorFilter.length ? inspectorFilter : undefined,
      dateFrom: dateFrom || undefined,
      dateTo: dateTo || undefined,
      q: search || undefined,
@@ -2506,15 +2627,33 @@ const paginatedData = sortedClaims ?? [];
  {/* Toolbar integrado: buscador + filtros + controles de paginación */}
  <div className="app-grid-toolbar">
  <div className="app-grid-toolbar-left">
+ <Tooltip>
+ <TooltipTrigger delay={0} closeDelay={0}>
  <div className="app-grid-search-wrap">
  <Search />
  <Input
- placeholder="Buscar..."
+ placeholder="Buscar asegurado, dirección, siniestro, ref. cliente o liquidación..."
  value={search}
  onChange={(e) => setSearch(e.target.value)}
  className="liquid-search"
  />
  </div>
+ </TooltipTrigger>
+ <TooltipContent className="bg-white text-sky-600 text-xs border border-sky-100 shadow-md" side="bottom">
+ <div className="max-w-xs">
+ <p className="font-semibold mb-1">Busca en:</p>
+ <ul className="list-disc pl-3 space-y-0.5">
+ <li>Nº Liquidación</li>
+ <li>Nº Siniestro</li>
+ <li>Ref. Cliente</li>
+ <li>Nº Compañía</li>
+ <li>Dirección, ciudad y comuna del siniestro</li>
+ <li>Nombre, RUT, dirección, ciudad y comuna del asegurado</li>
+ <li>Nombre, dirección, ciudad y comuna del contratante y beneficiario</li>
+ </ul>
+ </div>
+ </TooltipContent>
+ </Tooltip>
  <Select
  multiple
  value={statusFilter}
@@ -2545,13 +2684,36 @@ const paginatedData = sortedClaims ?? [];
  ))}
  </SelectContent>
  </Select>
- <Input
- type="text"
- placeholder="N° Liquidación"
- value={liquidationFilter}
- onChange={(e) => setLiquidationFilter(e.target.value.replace(/\D/g, ""))}
- className="app-input app-filter-narrow"
- />
+ <Select
+ multiple
+ value={adjusterFilter}
+ onValueChange={(v: string[]) => setAdjusterFilter(v ?? [])}
+ items={adjusterOptions}
+>
+ <SelectTrigger className="app-input app-filter-narrow">
+ <SelectValue placeholder="Liquidador" />
+ </SelectTrigger>
+ <SelectContent>
+ {adjusterOptions.map((c) => (
+ <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
+ <Select
+ multiple
+ value={inspectorFilter}
+ onValueChange={(v: string[]) => setInspectorFilter(v ?? [])}
+ items={inspectorOptions}
+>
+ <SelectTrigger className="app-input app-filter-narrow">
+ <SelectValue placeholder="Inspector" />
+ </SelectTrigger>
+ <SelectContent>
+ {inspectorOptions.map((c) => (
+ <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
  <DatePicker
  value={dateFrom}
  onChange={(value) => {
@@ -2572,9 +2734,9 @@ const paginatedData = sortedClaims ?? [];
  className="max-w-[110px]"
  minDate={dateFrom || undefined}
  />
- {(statusFilter.length > 0 || insuranceCompanyFilter.length > 0 || liquidationFilter || dateFrom || dateTo) && (
+ {(statusFilter.length > 0 || insuranceCompanyFilter.length > 0 || adjusterFilter.length > 0 || inspectorFilter.length > 0 || dateFrom || dateTo) && (
  <button
- onClick={() => { setSearch(""); setPage(1); setStatusFilter([]); setInsuranceCompanyFilter([]); setLiquidationFilter(""); setDateFrom(""); setDateTo(""); }}
+ onClick={() => { setSearch(""); setPage(1); setStatusFilter([]); setInsuranceCompanyFilter([]); setAdjusterFilter([]); setInspectorFilter([]); setDateFrom(""); setDateTo(""); }}
  className="app-body text-muted-foreground hover:text-foreground px-2"
  >
  Limpiar
@@ -2611,6 +2773,7 @@ const paginatedData = sortedClaims ?? [];
  const flagUrl = flagImgUrl(country?.code ?? null);
  const BlIcon = getClaimTypeIcon(claimType?.icon ?? null);
  const openClaim = canOpenClaim(claim);
+ const matchLabels = getSearchMatchLabels(claim, search);
  return (
  <tr
  key={claim.id}
@@ -2619,20 +2782,36 @@ const paginatedData = sortedClaims ?? [];
  >
  <td className="font-mono font-semibold text-primary">
  <div className="flex items-center gap-2">
+ {search && matchLabels.length > 0 ? (
+ <Tooltip>
+ <TooltipTrigger delay={0} closeDelay={0}>
+ <Search className="h-4 w-4 text-primary" />
+ </TooltipTrigger>
+ <TooltipContent className="bg-white text-sky-600 text-xs border border-sky-100 shadow-md">
+ <div className="max-w-xs">
+ <p className="font-semibold mb-1">Coincidencias:</p>
+ <ul className="list-disc pl-3 space-y-0.5">
+ {matchLabels.map((l) => <li key={l}>{l}</li>)}
+ </ul>
+ </div>
+ </TooltipContent>
+ </Tooltip>
+ ) : (
  <FileText className="h-4 w-4 text-muted-foreground" />
+ )}
  {openClaim ? (
  <Link href={`/dashboard/claims/${claim.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
- {claim.liquidation_number || "—"}
+ <Highlight text={claim.liquidation_number || "—"} term={search} />
  </Link>
  ) : (
- <span className="text-foreground">{claim.liquidation_number || "—"}</span>
+ <span className="text-foreground"><Highlight text={claim.liquidation_number || "—"} term={search} /></span>
  )}
  </div>
  </td>
- <td className="hidden sm:table-cell">{claim.client_reference || "—"}</td>
- <td className="hidden lg:table-cell">{claim.claim_number || "—"}</td>
- <td>{getParticipant(claim, 'insured')?.full_name || "—"}</td>
- <td className="truncate hidden lg:table-cell">{getParticipant(claim, 'insured')?.address || "—"}, {getParticipant(claim, 'insured')?.city || "—"}</td>
+ <td className="hidden sm:table-cell"><Highlight text={claim.client_reference || "—"} term={search} /></td>
+ <td className="hidden lg:table-cell"><Highlight text={claim.claim_number || "—"} term={search} /></td>
+ <td><Highlight text={getParticipant(claim, 'insured')?.full_name || "—"} term={search} /></td>
+ <td className="truncate hidden lg:table-cell"><Highlight text={`${getParticipant(claim, 'insured')?.address || ""}${getParticipant(claim, 'insured')?.city ? `, ${getParticipant(claim, 'insured')?.city}` : ""}${getParticipant(claim, 'insured')?.commune ? `, ${getParticipant(claim, 'insured')?.commune}` : ""}` || "—"} term={search} /></td>
  <td><StatusBadge status={statusCode(claim.status_id) ?? ""} label={statusLabel(claim.status_id) || "—"} /></td>
  <td className="hidden lg:table-cell">{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
  <td className="hidden lg:table-cell">{claim.report_date ? new Date(claim.report_date).toLocaleDateString("es-CL") : "—"}</td>

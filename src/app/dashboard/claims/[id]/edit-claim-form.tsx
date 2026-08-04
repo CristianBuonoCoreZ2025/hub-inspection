@@ -2160,7 +2160,7 @@ setValue("claimAddress", candidate.displayName || candidate.label);
  />
  </div>
  <div className="mt-3">
- <EditTextarea label="Resumen del Incidente" {...register("summary")} />
+ <EditTextarea label="Resumen del Incidente" {...register("summary")} className="app-input min-h-13.5" />
  </div>
  </div>
 
@@ -2183,7 +2183,7 @@ setValue("claimAddress", candidate.displayName || candidate.label);
  />
  </div>
  <div className="mt-3">
- <EditTextarea label="Comentarios" {...register("recoveryComments")} rows={2} />
+ <EditTextarea label="Comentarios" {...register("recoveryComments")} className="app-input min-h-9" />
  </div>
  </div>
  </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { getClaims } from "@/services/claims";
 import { getInspectionSessions } from "@/services/inspections";
 import { getRecentAuditLogs } from "@/services/audit-logs";
@@ -22,15 +22,30 @@ import {
   Activity,
   ClipboardCheck,
   Building2,
-  Users,
   Shield,
   Zap,
   ChevronRight,
   UserCheck,
   Briefcase,
 } from "lucide-react";
+import {
+  Eye as PhEye,
+  Radio as PhRadio,
+  CalendarCheck as PhCalendarCheck,
+  CheckCircle as PhCheckCircle,
+  Warning as PhWarning,
+  Hourglass as PhHourglass,
+  FolderOpen as PhFolderOpen,
+} from "@phosphor-icons/react";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import type { Claim, InspectionSession, AuditLog, UserRole, Profile } from "@/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { DonutChart } from "@/components/dashboard/donut-chart";
 import { BarChartGlass } from "@/components/dashboard/bar-chart";
 import { AreaChartGlass } from "@/components/dashboard/area-chart";
@@ -64,6 +79,26 @@ function formatRelativeTime(dateStr: string): string {
   if (diffHr < 24) return `Hace ${diffHr} h`;
   if (diffDay < 7) return `Hace ${diffDay} día${diffDay > 1 ? "s" : ""}`;
   return date.toLocaleDateString("es-CL");
+}
+
+type KpiDetailRow = {
+  id: string;
+  liquidation: string;
+  address: string;
+  inspector: string;
+  status: string;
+  scheduled?: string | null;
+  started?: string | null;
+  ended?: string | null;
+  duration?: number;
+};
+
+function isToday(d: string) {
+  const date = new Date(d);
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  return date >= start && date <= end;
 }
 
 function getActivityText(log: AuditLog): string {
@@ -118,13 +153,13 @@ export default function DashboardPage() {
   const isGlobalUser = profile?.role === "internal";
   const roleLabel = profile ? userTypeLabels[profile.role] : "";
 
-  const { data: claims } = useQuery({
+  const { data: claims } = useQuery<Claim[]>({
     queryKey: ["claims"],
     queryFn: () => getClaims(),
     enabled: !!profile,
   });
 
-  const { data: sessions } = useQuery({
+  const { data: sessions } = useQuery<InspectionSession[]>({
     queryKey: ["inspection-sessions"],
     queryFn: () => getInspectionSessions(),
     enabled: !!profile,
@@ -157,11 +192,11 @@ export default function DashboardPage() {
   // Las sesiones ya vienen filtradas por RLS (is_session_accessible).
   // No se recortan por claims para que un inspector asignado a una inspección
   // la vea aunque no tenga acceso al siniestro asociado.
-  const mySessions = useMemo(() => sessions ?? [], [sessions]);
+  const sessionList = useMemo(() => sessions ?? [], [sessions]);
 
   const stats = useMemo(() => {
     const allClaims = myClaims;
-    const allSessions = mySessions;
+    const allSessions = sessionList;
 
     const closedClaims = allClaims.filter(
       (c: Claim) => statusCode(c.status_id) === "closed"
@@ -250,7 +285,91 @@ export default function DashboardPage() {
       { name: "Cancelada", value: cancelledSessions.length, color: "#ef4444" },
     ];
 
-    // Claims por mes (últimos 6 meses, para area chart)
+    // Metricas de inspecciones (foco del dashboard)
+    const nowTime = new Date();
+    const todayStart = new Date(nowTime.getFullYear(), nowTime.getMonth(), nowTime.getDate());
+    const todayEnd = new Date(nowTime.getFullYear(), nowTime.getMonth(), todayStart.getDate(), 23, 59, 59, 999);
+    const isToday = (d: string) => {
+      const date = new Date(d);
+      return date >= todayStart && date <= todayEnd;
+    };
+
+    const todaySessionIds = new Set<string>();
+    allSessions.forEach((s) => {
+      if (s.scheduled_at && isToday(s.scheduled_at)) todaySessionIds.add(s.id);
+      if (s.started_at && isToday(s.started_at)) todaySessionIds.add(s.id);
+      if (s.ended_at && isToday(s.ended_at)) todaySessionIds.add(s.id);
+    });
+    const inspectionsToday = todaySessionIds.size;
+
+    const scheduledToday = allSessions.filter(
+      (s) => s.status === "scheduled" && s.scheduled_at && isToday(s.scheduled_at)
+    ).length;
+    const completedToday = allSessions.filter(
+      (s) => s.status === "completed" && s.ended_at && isToday(s.ended_at)
+    ).length;
+    const overdueSessions = allSessions.filter(
+      (s) =>
+        (s.status === "scheduled" || s.status === "active") &&
+        s.scheduled_at &&
+        new Date(s.scheduled_at) < nowTime
+    ).length;
+
+    const completedTimes = allSessions
+      .filter((s) => s.status === "completed" && s.started_at && s.ended_at)
+      .map((s) =>
+        Math.max(0, (new Date(s.ended_at!).getTime() - new Date(s.started_at!).getTime()) / 60000)
+      );
+    const avgInspectionMinutes = completedTimes.length
+      ? completedTimes.reduce((a, b) => a + b, 0) / completedTimes.length
+      : 0;
+
+    // Ranking de inspectores
+    const inspectorMap: Record<string, { id: string; name: string; total: number; completed: number; active: number; avgMinutes: number }> = {};
+    const inspectorTimes: Record<string, number[]> = {};
+    allSessions.forEach((s) => {
+      const id = s.inspector_id;
+      if (!id) return;
+      const name = users?.find((u) => u.id === id)?.full_name || "Sin nombre";
+      if (!inspectorMap[id]) {
+        inspectorMap[id] = { id, name, total: 0, completed: 0, active: 0, avgMinutes: 0 };
+        inspectorTimes[id] = [];
+      }
+      inspectorMap[id].total++;
+      if (s.status === "completed") {
+        inspectorMap[id].completed++;
+        if (s.started_at && s.ended_at) {
+          const mins = Math.max(0, (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000);
+          inspectorTimes[id].push(mins);
+        }
+      }
+      if (s.status === "active") inspectorMap[id].active++;
+    });
+    Object.entries(inspectorTimes).forEach(([id, times]) => {
+      if (times.length) inspectorMap[id].avgMinutes = times.reduce((a, b) => a + b, 0) / times.length;
+    });
+    const topInspectors = Object.values(inspectorMap).sort((a, b) => b.completed - a.completed);
+
+    // Top compañias por inspecciones
+    const claimMap = new Map(allClaims.map((c) => [c.id, c]));
+    const companyMap: Record<string, { id: string; name: string; total: number }> = {};
+    allSessions.forEach((s) => {
+      const claim = claimMap.get(s.claim_id);
+      const id = claim?.insurance_company_id || "unknown";
+      const name = claim?.insurance_company?.name || "Sin compañía";
+      if (!companyMap[id]) companyMap[id] = { id, name, total: 0 };
+      companyMap[id].total++;
+    });
+    const topCompaniesByInspections = Object.values(companyMap).sort((a, b) => b.total - a.total);
+
+    // Metrics personales
+    const personalSessions = !isGlobalUser && profile
+      ? allSessions.filter((s) => s.inspector_id === profile.id)
+      : allSessions;
+    const myTotalSessions = personalSessions.length;
+    const myActiveSessions = personalSessions.filter((s) => s.status === "active").length;
+    const myScheduledSessions = personalSessions.filter((s) => s.status === "scheduled").length;
+    const myCompletedSessions = personalSessions.filter((s) => s.status === "completed").length;
     const now = new Date();
     const monthsData: Array<{ name: string; value: number; value2: number }> = [];
     for (let i = 5; i >= 0; i--) {
@@ -306,8 +425,20 @@ export default function DashboardPage() {
       totalCompanies: companies?.length ?? 0,
       totalUsers: users?.length ?? 0,
       activeUsers: users?.filter((u: Profile) => u.is_active)?.length ?? 0,
+      // Nuevas métricas de inspecciones
+      inspectionsToday,
+      scheduledToday,
+      completedToday,
+      overdueSessions,
+      avgInspectionMinutes,
+      topInspectors,
+      topCompaniesByInspections,
+      myTotalSessions,
+      myActiveSessions,
+      myScheduledSessions,
+      myCompletedSessions,
     };
-  }, [myClaims, mySessions, companies, users, statusCode]);
+  }, [myClaims, sessionList, companies, users, statusCode, isGlobalUser, profile]);
 
   const recentActivity =
     auditLogs?.map((log: AuditLog) => ({
@@ -317,90 +448,110 @@ export default function DashboardPage() {
       icon: getActivityIcon(log),
     })) ?? [];
 
-  // KPIs dinámicos según el rol
+  // KPIs globales: foco en inspecciones
   const kpis = isGlobalUser
     ? [
         {
-          label: "Siniestros Totales",
-          value: stats.totalClaims,
-          icon: FileText,
+          label: "Inspecciones Hoy",
+          value: stats.inspectionsToday,
+          icon: PhEye,
           color: "blue",
           trend: "neutral" as const,
-          trendValue: "Total",
+          trendValue: "Hoy",
+          detailKey: "today" as const,
+          detailTitle: "Inspecciones del día",
         },
         {
-          label: "Casos Abiertos",
-          value: stats.openClaims,
-          icon: AlertCircle,
+          label: "En Curso",
+          value: stats.activeSessions,
+          icon: PhRadio,
           color: "amber",
-          trend: stats.openClaims > 10 ? "up" as const : "neutral" as const,
-          trendValue: stats.openClaims > 10 ? "Alto volumen" : "Normal",
+          trend: stats.activeSessions > 5 ? "up" as const : "neutral" as const,
+          trendValue: stats.activeSessions > 5 ? "Alto" : "Normal",
+          detailKey: "active" as const,
+          detailTitle: "Inspecciones en curso",
         },
         {
-          label: "Casos Cerrados",
-          value: stats.closedClaims,
-          icon: CheckCircle,
-          color: "emerald",
-          trend: "up" as const,
-          trendValue: `${stats.closeRate.toFixed(0)}% cierre`,
-        },
-        {
-          label: "Inspecciones Activas",
-          value: stats.activeSessions + stats.scheduledSessions,
-          icon: ClipboardCheck,
+          label: "Agendadas Hoy",
+          value: stats.scheduledToday,
+          icon: PhCalendarCheck,
           color: "violet",
           trend: "neutral" as const,
-          trendValue: `${stats.scheduledSessions} agendadas`,
+          trendValue: "Pendientes",
+          detailKey: "scheduled-today" as const,
+          detailTitle: "Inspecciones agendadas para hoy",
         },
         {
-          label: "Empresas",
-          value: stats.totalCompanies,
-          icon: Building2,
+          label: "Completadas Hoy",
+          value: stats.completedToday,
+          icon: PhCheckCircle,
+          color: "emerald",
+          trend: stats.completedToday > 0 ? "up" as const : "neutral" as const,
+          trendValue: stats.completedToday > 0 ? "Progreso" : "Sin",
+          detailKey: "completed-today" as const,
+          detailTitle: "Inspecciones completadas hoy",
+        },
+        {
+          label: "Con Retraso",
+          value: stats.overdueSessions,
+          icon: PhWarning,
+          color: "pink",
+          trend: stats.overdueSessions > 0 ? "up" as const : "neutral" as const,
+          trendValue: stats.overdueSessions > 0 ? "Alerta" : "OK",
+          detailKey: "overdue" as const,
+          detailTitle: "Inspecciones con retraso",
+        },
+        {
+          label: "Tiempo Promedio",
+          value: `${stats.avgInspectionMinutes.toFixed(0)}m`,
+          icon: PhHourglass,
           color: "sky",
           trend: "neutral" as const,
-          trendValue: "Activas",
-        },
-        {
-          label: "Usuarios",
-          value: stats.totalUsers,
-          icon: Users,
-          color: "pink",
-          trend: "neutral" as const,
-          trendValue: `${stats.activeUsers} activos`,
+          trendValue: "Por inspección",
+          detailKey: "avg-time" as const,
+          detailTitle: "Tiempos de inspección",
         },
       ]
     : [
         {
-          label: "Mis Casos",
-          value: stats.totalClaims,
-          icon: Briefcase,
+          label: "Mis Inspecciones",
+          value: stats.myTotalSessions,
+          icon: PhFolderOpen,
           color: "blue",
           trend: "neutral" as const,
-          trendValue: "Asignados",
+          trendValue: "Asignadas",
+          detailKey: "my-total" as const,
+          detailTitle: "Mis inspecciones",
         },
         {
-          label: "Abiertos",
-          value: stats.openClaims,
-          icon: AlertCircle,
+          label: "En Curso",
+          value: stats.myActiveSessions,
+          icon: PhRadio,
           color: "amber",
-          trend: stats.openClaims > 10 ? "up" as const : "neutral" as const,
-          trendValue: stats.openClaims > 10 ? "Alto volumen" : "Normal",
+          trend: stats.myActiveSessions > 0 ? "up" as const : "neutral" as const,
+          trendValue: stats.myActiveSessions > 0 ? "Activa" : "Sin",
+          detailKey: "my-active" as const,
+          detailTitle: "Mis inspecciones en curso",
         },
         {
-          label: "Cerrados",
-          value: stats.closedClaims,
-          icon: CheckCircle,
-          color: "emerald",
-          trend: "up" as const,
-          trendValue: `${stats.closeRate.toFixed(0)}% cierre`,
-        },
-        {
-          label: "Inspecciones",
-          value: stats.activeSessions + stats.scheduledSessions,
-          icon: ClipboardCheck,
+          label: "Agendadas",
+          value: stats.myScheduledSessions,
+          icon: PhCalendarCheck,
           color: "violet",
           trend: "neutral" as const,
-          trendValue: `${stats.scheduledSessions} agendadas`,
+          trendValue: "Pendientes",
+          detailKey: "my-scheduled" as const,
+          detailTitle: "Mis inspecciones agendadas",
+        },
+        {
+          label: "Completadas",
+          value: stats.myCompletedSessions,
+          icon: PhCheckCircle,
+          color: "emerald",
+          trend: "up" as const,
+          trendValue: "Cerradas",
+          detailKey: "my-completed" as const,
+          detailTitle: "Mis inspecciones completadas",
         },
       ];
 
@@ -411,6 +562,104 @@ export default function DashboardPage() {
 
   // ¿Mostrar sección de sistema (top compañías + actividad)?
   const showSystemSection = isGlobalUser || profile?.role === "adjuster";
+
+  // Modal de detalle de KPI
+  const [kpiModal, setKpiModal] = useState<{ title: string; key: string } | null>(null);
+
+  const kpiDetailRows = useMemo<KpiDetailRow[]>(() => {
+    if (!kpiModal) return [];
+    const claimMap = new Map(myClaims.map((c) => [c.id, c]));
+    const getName = (id: string | null) =>
+      users?.find((u) => u.id === id)?.full_name || "Sin asignar";
+
+    const sessions = sessionList;
+
+    switch (kpiModal.key) {
+      case "today":
+      case "my-total":
+        return sessions
+          .filter((s) =>
+            (s.scheduled_at && isToday(s.scheduled_at)) ||
+            (s.started_at && isToday(s.started_at)) ||
+            (s.ended_at && isToday(s.ended_at))
+          )
+          .map((s) => ({
+            id: s.id,
+            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
+            address: claimMap.get(s.claim_id)?.claim_address || "—",
+            inspector: getName(s.inspector_id),
+            status: s.status,
+            scheduled: s.scheduled_at,
+          }));
+      case "active":
+      case "my-active":
+        return sessions
+          .filter((s) => s.status === "active")
+          .map((s) => ({
+            id: s.id,
+            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
+            address: claimMap.get(s.claim_id)?.claim_address || "—",
+            inspector: getName(s.inspector_id),
+            status: s.status,
+            started: s.started_at,
+          }));
+      case "scheduled-today":
+      case "my-scheduled":
+        return sessions
+          .filter((s) => s.status === "scheduled" && s.scheduled_at && isToday(s.scheduled_at))
+          .map((s) => ({
+            id: s.id,
+            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
+            address: claimMap.get(s.claim_id)?.claim_address || "—",
+            inspector: getName(s.inspector_id),
+            status: s.status,
+            scheduled: s.scheduled_at,
+          }));
+      case "completed-today":
+      case "my-completed":
+        return sessions
+          .filter((s) => s.status === "completed" && s.ended_at && isToday(s.ended_at))
+          .map((s) => ({
+            id: s.id,
+            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
+            address: claimMap.get(s.claim_id)?.claim_address || "—",
+            inspector: getName(s.inspector_id),
+            status: s.status,
+            ended: s.ended_at,
+            duration:
+              s.started_at && s.ended_at
+                ? Math.round((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000)
+                : 0,
+          }));
+      case "overdue":
+        return sessions
+          .filter((s) => (s.status === "scheduled" || s.status === "active") && s.scheduled_at && new Date(s.scheduled_at) < new Date())
+          .map((s) => ({
+            id: s.id,
+            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
+            address: claimMap.get(s.claim_id)?.claim_address || "—",
+            inspector: getName(s.inspector_id),
+            status: s.status,
+            scheduled: s.scheduled_at,
+          }));
+      case "avg-time":
+        return sessions
+          .filter((s) => s.status === "completed" && s.started_at && s.ended_at)
+          .map((s) => ({
+            id: s.id,
+            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
+            address: claimMap.get(s.claim_id)?.claim_address || "—",
+            inspector: getName(s.inspector_id),
+            status: s.status,
+            started: s.started_at,
+            ended: s.ended_at,
+            duration: Math.round((new Date(s.ended_at!).getTime() - new Date(s.started_at!).getTime()) / 60000),
+          }))
+          .sort((a, b) => b.duration - a.duration);
+      default:
+        return [];
+    }
+  }, [kpiModal, myClaims, sessionList, users]);
 
   return (
     <div className="space-y-4">
@@ -447,13 +696,27 @@ export default function DashboardPage() {
           return (
             <div
               key={kpi.label}
-              className={`kpi-card kpi-glow-${kpi.color}`}
+              className={`kpi-card kpi-glow-${kpi.color} cursor-pointer transition-transform hover:scale-[1.01]`}
+              onClick={() =>
+                setKpiModal({
+                  title: (kpi as { detailTitle: string }).detailTitle,
+                  key: (kpi as { detailKey: string }).detailKey,
+                })
+              }
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  setKpiModal({
+                    title: (kpi as { detailTitle: string }).detailTitle,
+                    key: (kpi as { detailKey: string }).detailKey,
+                  });
+                }
+              }}
             >
               <div className="flex items-start justify-between mb-3">
-                <div
-                  className={`kpi-icon kpi-icon-${kpi.color}`}
-                >
-                  <Icon className="h-4 w-4 text-white" />
+                <div className="w-10 h-10 rounded-2xl bg-linear-to-br from-white/30 to-white/10 backdrop-blur-md border border-white/30 shadow-lg flex items-center justify-center dark:from-white/10 dark:to-white/5">
+                  <Icon weight="fill" className="h-5 w-5 text-white/90" />
                 </div>
                 <div className={`kpi-trend kpi-trend-${kpi.trend}`}>
                   {kpi.trend === "up" && <TrendingUp className="h-3 w-3" />}
@@ -911,6 +1174,56 @@ export default function DashboardPage() {
           </div>
         </>
       )}
+      <Dialog open={!!kpiModal} onOpenChange={() => setKpiModal(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{kpiModal?.title}</DialogTitle>
+            <DialogDescription>
+              {kpiModal?.key === "avg-time"
+                ? "Detalle de inspecciones completadas, ordenadas de mayor a menor duración."
+                : "Haz clic en una fila para ir al siniestro o inspección asociada."}
+            </DialogDescription>
+          </DialogHeader>
+          {kpiDetailRows.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">Sin datos para mostrar</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground text-xs">
+                    <th className="py-2 pr-4">Liquidación</th>
+                    <th className="py-2 pr-4">Dirección</th>
+                    <th className="py-2 pr-4">Inspector</th>
+                    <th className="py-2 pr-4">Estado</th>
+                    {kpiModal?.key === "avg-time" && <th className="py-2 pr-4 text-right">Duración</th>}
+                    <th className="py-2 pr-4 text-right">Horario</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kpiDetailRows.map((row) => (
+                    <tr key={row.id} className="border-b last:border-0 hover:bg-muted/40">
+                      <td className="py-2 pr-4 font-mono">{row.liquidation}</td>
+                      <td className="py-2 pr-4 max-w-[220px] truncate" title={row.address}>{row.address}</td>
+                      <td className="py-2 pr-4">{row.inspector}</td>
+                      <td className="py-2 pr-4 capitalize">{row.status}</td>
+                      {kpiModal?.key === "avg-time" && <td className="py-2 pr-4 text-right font-mono">{row.duration}m</td>}
+                      <td className="py-2 pr-4 text-right text-xs text-muted-foreground">
+                        {row.scheduled
+                          ? new Date(row.scheduled).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
+                          : row.started
+                            ? new Date(row.started).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
+                            : row.ended
+                              ? new Date(row.ended).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
+                              : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

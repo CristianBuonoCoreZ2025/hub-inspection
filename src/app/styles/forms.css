@@ -163,6 +163,10 @@
     resize: none !important;
   }
 
+  .app-input.app-textarea-summary {
+    min-height: 54px !important;
+  }
+
   /* Selector de moneda en formularios de daños */
   .app-input.app-currency-select {
     width: 200px !important;
