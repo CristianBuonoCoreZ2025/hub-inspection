@@ -250,7 +250,7 @@ export async function reassignInspectionSession(
  */
 export async function getActiveRemoteSessions() {
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
-    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name)), inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, type), inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id), inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role)`,
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name)), inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, type), inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at), inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role)`,
     eq: { status: "active", inspection_type: "remote" },
     order: { column: "started_at", ascending: false },
   });
@@ -304,7 +304,7 @@ export async function getInspectionSessionLive(token: string) {
       inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, created_at),
       inspection_notes:inspection_notes!inspection_notes_session_id_fkey(id, content, created_at),
       inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status, notes, created_at),
-      inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, observations, severity, dependency, sector, materiality_type, unit, quantity, damage_type, product, brand_model, purchase_date, estimated_amount, created_at),
+      inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, observations, severity, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, damage_type, product, brand_model, purchase_date, estimated_amount, created_at),
       inspection_chat_messages:inspection_chat_messages!inspection_chat_messages_session_id_fkey(id, content, sender_name, sender_role, created_at),
       inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
       damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at),
@@ -362,7 +362,7 @@ export async function getInspectionSessionById(id: string) {
     claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, report_date, assignment_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
     inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, include_in_report, created_at),
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
-    inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at),
+    inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at),
     inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
     damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at)
   `);
@@ -1204,7 +1204,8 @@ export async function deleteDamageSketch(id: string) {
 
 const DAMAGE_SELECT = `
   id, session_id, category, subcategory, description, observations, severity,
-  dependency, sector, materiality_type, unit, quantity, length, width, height, damage_type,
+  dependency, sector, materiality_type, unit, quantity, length, width, height,
+  damage_length, damage_width, damage_height, damage_quantity, damage_type,
   product, brand_model, purchase_date, estimated_amount, currency,
   third_party_id, space_id, content_good_type_id, building_damage_category_id,
   created_at, updated_at

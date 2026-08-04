@@ -755,6 +755,10 @@ export interface InspectionDamage {
   length: number | null;
   width: number | null;
   height: number | null;
+  damage_length: number | null;
+  damage_width: number | null;
+  damage_height: number | null;
+  damage_quantity: number | null;
   damage_type: "building" | "content";
   product: string | null;
   brand_model: string | null;

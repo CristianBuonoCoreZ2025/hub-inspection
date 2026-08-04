@@ -28,15 +28,23 @@ function fmtDate(s?: string | null): string {
   return new Date(s).toLocaleDateString("es-CL", { timeZone: "America/Santiago", day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-function fmtQuantity(d: { quantity: number | null; unit: string | null; length: number | null; width: number | null; height: number | null }): string {
-  if (d.quantity == null || d.quantity === 0) return "—";
+function fmtSingleQuantity(quantity: number | null, length: number | null, width: number | null, height: number | null, unit: string | null): string {
+  if (quantity == null || quantity === 0) return "—";
   const dimension =
-    d.unit === "M2" && (d.length || d.width)
-      ? ` (${d.length || 0}x${d.width || 0})`
-      : d.unit === "M3" && (d.length || d.width || d.height)
-        ? ` (${d.length || 0}x${d.width || 0}x${d.height || 0})`
-        : "";
-  return `${d.quantity.toLocaleString("es-CL")} ${d.unit || ""}${dimension}`.trim();
+    unit === "M2" && (length || width)
+      ? ` (${length || 0}x${width || 0})`
+      : unit === "M3" && (length || width || height)
+      ? ` (${length || 0}x${width || 0}x${height || 0})`
+      : "";
+  return `${quantity.toLocaleString("es-CL")} ${unit || ""}${dimension}`.trim();
+}
+
+function fmtQuantity(d: { quantity: number | null; unit: string | null; length: number | null; width: number | null; height: number | null; damage_quantity?: number | null; damage_length?: number | null; damage_width?: number | null; damage_height?: number | null }): React.ReactNode {
+  return (
+    <span className="text-[10px] leading-tight">
+      Sup: {fmtSingleQuantity(d.quantity, d.length, d.width, d.height, d.unit)} / Daño: {fmtSingleQuantity(d.damage_quantity ?? null, d.damage_length ?? null, d.damage_width ?? null, d.damage_height ?? null, d.unit)}
+    </span>
+  );
 }
 
 function fmtMoney(amount?: number | null, currency?: string | null): string {
@@ -833,7 +841,7 @@ export default function ReportTab({
                     <th className="report-th app-body">Espacio</th>
                     <th className="report-th app-body">Categoría</th>
                     <th className="report-th app-body">Materialidad / Aclaración</th>
-                    <th className="report-th app-body">Cantidad</th>
+                    <th className="report-th app-body">Superficie / Daño</th>
                     <th className="report-th-right app-body">Monto</th>
                     <th className="report-th app-body">Clasificación</th>
                   </tr>

@@ -472,6 +472,206 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+ * Bloques de dimensiones Superficie / Daño
+ * ═══════════════════════════════════════════════════════════════ */
+
+.damage-dimension-pair {
+  display: grid !important;
+  grid-template-columns: 150px 1fr 1fr !important;
+  gap: 6px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+}
+
+@media (max-width: 1023px) {
+  .damage-dimension-pair {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.damage-dimension-unit {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
+  border-radius: 8px !important;
+  padding: 6px !important;
+  border: 1px solid transparent !important;
+  background: color-mix(in srgb, #dbeafe 35%, transparent) !important;
+  border-color: color-mix(in srgb, #93c5fd 45%, transparent) !important;
+}
+
+.dark .damage-dimension-unit {
+  background: color-mix(in srgb, #1e3a8a 18%, transparent) !important;
+  border-color: color-mix(in srgb, #3b82f6 35%, transparent) !important;
+}
+
+.damage-dimension-unit .damage-dimension-title {
+  color: #1e40af !important;
+}
+
+.dark .damage-dimension-unit .damage-dimension-title {
+  color: #93c5fd !important;
+}
+
+.damage-dimension-unit .app-field-label {
+  margin-bottom: 0 !important;
+}
+
+.damage-dimension-block-surface,
+.damage-dimension-block-damage {
+  border-radius: 8px !important;
+  padding: 6px !important;
+  border: 1px solid transparent !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.damage-dimension-block-surface {
+  background: color-mix(in srgb, #dcfce7 30%, transparent) !important;
+  border-color: color-mix(in srgb, #86efac 40%, transparent) !important;
+}
+
+.dark .damage-dimension-block-surface {
+  background: color-mix(in srgb, #14532d 16%, transparent) !important;
+  border-color: color-mix(in srgb, #22c55e 30%, transparent) !important;
+}
+
+.damage-dimension-block-damage {
+  background: color-mix(in srgb, #ffedd5 35%, transparent) !important;
+  border-color: color-mix(in srgb, #fdba74 45%, transparent) !important;
+}
+
+.dark .damage-dimension-block-damage {
+  background: color-mix(in srgb, #7c2d12 18%, transparent) !important;
+  border-color: color-mix(in srgb, #f97316 35%, transparent) !important;
+}
+
+.damage-dimension-block-damage .damage-dimension-title {
+  color: #9a3412 !important;
+}
+
+.dark .damage-dimension-block-damage .damage-dimension-title {
+  color: #fdba74 !important;
+}
+
+.damage-dimension-title {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 3px !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.03em !important;
+  margin-bottom: 4px !important;
+  line-height: 1.2 !important;
+  min-height: 18px !important;
+}
+
+.damage-dimension-title small {
+  font-size: 8px !important;
+  font-weight: 500 !important;
+  opacity: 0.75 !important;
+  text-transform: none !important;
+}
+
+.damage-dimension-title svg {
+  width: 12px !important;
+  height: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+.damage-dimension-block-surface .damage-dimension-title {
+  color: #166534 !important;
+}
+
+.dark .damage-dimension-block-surface .damage-dimension-title {
+  color: #86efac !important;
+}
+
+.damage-dimension-block-damage .damage-dimension-title {
+  color: #9a3412 !important;
+}
+
+.dark .damage-dimension-block-damage .damage-dimension-title {
+  color: #fdba74 !important;
+}
+
+.damage-dimension-row {
+  display: grid !important;
+  gap: 4px !important;
+  align-items: end !important;
+}
+
+.damage-dimension-row.cols-2 {
+  grid-template-columns: 1fr 1fr !important;
+}
+
+.damage-dimension-row.cols-3 {
+  grid-template-columns: 1fr 1fr 0.9fr !important;
+}
+
+.damage-dimension-row.cols-4 {
+  grid-template-columns: 1fr 1fr 1fr 0.9fr !important;
+}
+
+.damage-dimension-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1px !important;
+  min-width: 0 !important;
+}
+
+.damage-dimension-field label {
+  font-size: 8px !important;
+  font-weight: 600 !important;
+  color: var(--muted-foreground) !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.damage-dimension-field input {
+  height: 22px !important;
+  padding: 0 14px 0 4px !important;
+  border-radius: 5px !important;
+  border: 1px solid var(--input) !important;
+  background: color-mix(in srgb, var(--card) 80%, transparent) !important;
+  color: var(--foreground) !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.damage-dimension-field input:read-only {
+  background: color-mix(in srgb, var(--muted) 40%, transparent) !important;
+  opacity: 0.9 !important;
+}
+
+.damage-dimension-total {
+  position: relative !important;
+}
+
+.damage-dimension-suffix {
+  position: absolute !important;
+  right: 5px !important;
+  bottom: 4px !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+  color: var(--muted-foreground) !important;
+  pointer-events: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
  * SELECTOR_PAGES — Dropdown (popup desplegado)
  * Override de las reglas globales del select para que el popup
  * del selector de páginas use 9px (igual que el trigger).

@@ -649,6 +649,18 @@ function DamagesPanel({ damages }: { damages: InspectionDamage[] }) {
       </div>
     );
   }
+
+  const fmtQty = (quantity: number | null, length: number | null, width: number | null, height: number | null, unit: string | null) => {
+    if (quantity === null || quantity === undefined || quantity === 0) return "—";
+    const dim =
+      unit === "M2" && (length || width)
+        ? ` (${length || 0}x${width || 0})`
+        : unit === "M3" && (length || width || height)
+        ? ` (${length || 0}x${width || 0}x${height || 0})`
+        : "";
+    return `${quantity.toLocaleString("es-CL")} ${unit || ""}${dim}`;
+  };
+
   return (
     <div className="overflow-auto">
       <table className="w-full text-sm">
@@ -656,6 +668,7 @@ function DamagesPanel({ damages }: { damages: InspectionDamage[] }) {
           <tr className="border-b border-white/10">
             <th className="text-left py-2 px-3 app-body text-white/40 font-medium">Dependencia</th>
             <th className="text-left py-2 px-3 app-body text-white/40 font-medium">Descripción</th>
+            <th className="text-left py-2 px-3 app-body text-white/40 font-medium">Superficie / Daño</th>
             <th className="text-left py-2 px-3 app-body text-white/40 font-medium">Severidad</th>
             <th className="text-left py-2 px-3 app-body text-white/40 font-medium">Tipo</th>
             <th className="text-left py-2 px-3 app-body text-white/40 font-medium">Monto</th>
@@ -666,6 +679,9 @@ function DamagesPanel({ damages }: { damages: InspectionDamage[] }) {
             <tr key={d.id} className="border-b border-white/5">
               <td className="py-2 px-3 app-body text-white/70">{d.dependency || "—"}</td>
               <td className="py-2 px-3 app-body text-white/70">{d.description || "—"}</td>
+              <td className="py-2 px-3 app-body text-white/70 text-[10px] leading-tight">
+                Sup: {fmtQty(d.quantity, d.length, d.width, d.height, d.unit)} / Daño: {fmtQty(d.damage_quantity, d.damage_length, d.damage_width, d.damage_height, d.unit)}
+              </td>
               <td className="py-2 px-3 app-body text-white/70">{SEVERITY_LABELS[d.severity] || d.severity}</td>
               <td className="py-2 px-3 app-body text-white/70">{d.damage_type === "content" ? "Contenido" : "Inmueble"}</td>
               <td className="py-2 px-3 app-body text-white/70">

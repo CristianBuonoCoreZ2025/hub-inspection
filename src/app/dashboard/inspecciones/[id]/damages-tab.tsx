@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Trash2, Pencil, Building2, Package, Lock, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useAlert } from "@/hooks/use-alert";
 import {
  Select,
  SelectContent,
@@ -70,6 +71,10 @@ interface DamageForm {
  length: number | null;
  width: number | null;
  height: number | null;
+ damage_length: number | null;
+ damage_width: number | null;
+ damage_height: number | null;
+ damage_quantity: number;
  damage_type: DamageType;
  product: string;
  brand_model: string;
@@ -100,6 +105,10 @@ function emptyForm(sessionId: string, type: DamageType): DamageForm {
  length: null,
  width: null,
  height: null,
+ damage_length: null,
+ damage_width: null,
+ damage_height: null,
+ damage_quantity: 0,
  damage_type: type,
  product: "",
  brand_model: "",
@@ -118,6 +127,7 @@ function emptyForm(sessionId: string, type: DamageType): DamageForm {
 function computeQuantity(unit: string, length: number | null, width: number | null, height: number | null): number {
   if (unit === "M2") return (length || 0) * (width || 0);
   if (unit === "M3") return (length || 0) * (width || 0) * (height || 0);
+  if (unit === "MT") return length || 0;
   return 0;
 }
 
@@ -134,12 +144,19 @@ function damageToForm(d: InspectionDamage): DamageForm {
  materiality_type: d.materiality_type ?? "",
  unit: d.unit ?? "",
  quantity:
-   d.unit === "M2" || d.unit === "M3"
+   d.unit === "M2" || d.unit === "M3" || d.unit === "MT"
      ? computeQuantity(d.unit, d.length, d.width, d.height)
      : (d.quantity ?? 0),
  length: d.length ?? null,
  width: d.width ?? null,
  height: d.height ?? null,
+ damage_length: d.damage_length ?? null,
+ damage_width: d.damage_width ?? null,
+ damage_height: d.damage_height ?? null,
+ damage_quantity:
+   d.unit === "M2" || d.unit === "M3" || d.unit === "MT"
+     ? computeQuantity(d.unit, d.damage_length, d.damage_width, d.damage_height)
+     : (d.damage_quantity ?? 0),
  damage_type: d.damage_type === "content" ? "content" : "building",
  product: d.product ?? "",
  brand_model: d.brand_model ?? "",
@@ -158,6 +175,7 @@ function damageToForm(d: InspectionDamage): DamageForm {
 export default function DamagesTab({ sessionId, propertyClassification, countryId, sessionStatus }: { sessionId: string; propertyClassification?: string | null; countryId?: string | null; sessionStatus?: string }) {
  const queryClient = useQueryClient();
  const [ConfirmDialog, confirmDelete] = useConfirm();
+ const [AlertDialog, showAlert] = useAlert();
  const [editing, setEditing] = useState<string | null>(null);
  const [form, setForm] = useState<DamageForm>(emptyForm(sessionId, "building"));
  const [newType, setNewType] = useState<DamageType>("building");
@@ -225,37 +243,93 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
    return value ? (isNaN(n) ? 0 : Math.min(n, MAX_QUANTITY)) : 0;
  };
 
- const formatQuantity = (d: InspectionDamage) => {
-   if (d.quantity == null || d.quantity === 0) return "—";
+ const fmtDamageQty = (quantity: number | null, length: number | null, width: number | null, height: number | null, unit: string | null) => {
+   if (quantity == null || quantity === 0) return "—";
    const dimension =
-     d.unit === "M2" && (d.length || d.width)
-       ? ` (${d.length || 0}x${d.width || 0})`
-       : d.unit === "M3" && (d.length || d.width || d.height)
-       ? ` (${d.length || 0}x${d.width || 0}x${d.height || 0})`
+     unit === "M2" && (length || width)
+       ? ` (${length || 0}x${width || 0})`
+       : unit === "M3" && (length || width || height)
+       ? ` (${length || 0}x${width || 0}x${height || 0})`
        : "";
-   return `${d.quantity.toLocaleString("es-CL")} ${d.unit || ""}${dimension}`;
+   return `${quantity.toLocaleString("es-CL")} ${unit || ""}${dimension}`;
  };
 
- const handleDimensionChange = (field: "length" | "width" | "height", value: string) => {
+ const formatQuantity = (d: InspectionDamage) => {
+   return (
+     <div className="flex justify-end gap-1.5 text-[10px] leading-tight text-right">
+       <span className="opacity-80">Sup: {fmtDamageQty(d.quantity, d.length, d.width, d.height, d.unit)}</span>
+       <span className="text-slate-400">/</span>
+       <span className="opacity-80">Daño: {fmtDamageQty(d.damage_quantity, d.damage_length, d.damage_width, d.damage_height, d.unit)}</span>
+     </div>
+   );
+ };
+
+ const handleDimensionChange = (field: "length" | "width" | "height" | "damage_length" | "damage_width" | "damage_height", value: string) => {
    setForm((prev) => {
      const raw = value ? Number(value) : null;
+     const isDamage = field.startsWith("damage_");
+     const surfaceField = isDamage ? (field.replace("damage_", "") as "length" | "width" | "height") : field;
+     const surfaceValue = prev[surfaceField] as number | null;
+     const limit = prev.unit === "M2" || prev.unit === "M3" || prev.unit === "MT" ? (surfaceValue ?? 0) : null;
+
+     if (raw != null && !isNaN(raw)) {
+       if (isDamage && limit != null && raw > limit) {
+         const label = surfaceField === "length" ? "largo" : surfaceField === "width" ? "ancho" : "alto";
+         showAlert({ title: "Valor fuera de rango", description: `El ${label} del daño no puede ser mayor que el de la superficie`, type: "error" });
+         return prev;
+       }
+     }
+
      const clamped = raw == null || isNaN(raw) ? null : Math.min(raw, MAX_DIMENSION);
      const next = { ...prev, [field]: clamped } as DamageForm;
-     const quantity =
-       next.unit === "M2" || next.unit === "M3"
-         ? computeQuantity(next.unit, next.length, next.width, next.height)
-         : prev.quantity;
-     return { ...next, quantity };
+
+     if (next.unit === "M2" || next.unit === "M3" || next.unit === "MT") {
+       if (isDamage) {
+         next.damage_quantity = computeQuantity(next.unit, next.damage_length, next.damage_width, next.damage_height);
+       } else {
+         next.quantity = computeQuantity(next.unit, next.length, next.width, next.height);
+         if (clamped != null) {
+           const damageField = `damage_${surfaceField}` as "damage_length" | "damage_width" | "damage_height";
+           const damageValue = next[damageField] as number | null;
+           if (damageValue != null && damageValue > clamped) {
+             next[damageField] = clamped;
+           }
+           next.damage_quantity = computeQuantity(next.unit, next.damage_length, next.damage_width, next.damage_height);
+         }
+       }
+     }
+     return next;
    });
  };
 
  const handleUnitChange = (unit: string) => {
+   setForm((prev) => ({
+     ...prev,
+     unit,
+     quantity: unit === "M2" || unit === "M3" || unit === "MT" ? computeQuantity(unit, prev.length, prev.width, prev.height) : prev.quantity,
+     damage_quantity: unit === "M2" || unit === "M3" || unit === "MT" ? computeQuantity(unit, prev.damage_length, prev.damage_width, prev.damage_height) : prev.damage_quantity,
+   }));
+ };
+
+ const handleQuantityChange = (value: string) => {
    setForm((prev) => {
-     const quantity =
-       unit === "M2" || unit === "M3"
-         ? computeQuantity(unit, prev.length, prev.width, prev.height)
-         : prev.quantity;
-     return { ...prev, unit, quantity };
+     const quantity = parseQuantity(value);
+     const next = { ...prev, quantity };
+     if (next.damage_quantity > quantity) {
+       next.damage_quantity = quantity;
+     }
+     return next;
+   });
+ };
+
+ const handleDamageQuantityChange = (value: string) => {
+   setForm((prev) => {
+     const damage_quantity = parseQuantity(value);
+     if (damage_quantity > prev.quantity) {
+       showAlert({ title: "Valor fuera de rango", description: "La cantidad del daño no puede ser mayor que la de la superficie", type: "error" });
+       return prev;
+     }
+     return { ...prev, damage_quantity };
    });
  };
 
@@ -497,6 +571,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  return (
  <div className="app-stack">
  <ConfirmDialog />
+ <AlertDialog />
  {/* Banner de solo lectura */}
  {readOnly && (
  <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 app-body text-amber-700 dark:text-amber-300">
@@ -651,14 +726,19 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </SelectContent>
  </Select>
  </div>
- <div className="modal-field">
- <label className="app-field-label">Unidad</label>
+ <div className="modal-field-full col-span-full">
+ <div className="damage-dimension-pair">
+ <div className="damage-dimension-unit">
+ <div className="damage-dimension-title">
+ <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+ <span>UNIDAD GLOBAL</span>
+ </div>
  <Select
  value={form.unit}
  items={unitOptions.map((u) => ({ value: u, label: u }))}
  onValueChange={(v) => handleUnitChange(v || "")}
  >
- <SelectTrigger className="app-input w-full">
+ <SelectTrigger className="app-input w-full" aria-label="Unidad">
  <SelectValue placeholder="Seleccionar..." />
  </SelectTrigger>
  <SelectContent>
@@ -666,81 +746,151 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </SelectContent>
  </Select>
  </div>
+ <div className="damage-dimension-block-surface">
+ <div className="damage-dimension-title">
+ <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/></svg>
+ <span>SUPERFICIE TOTAL</span>
+ <small>(Elemento completo)</small>
+ </div>
  {form.unit === "M2" && (
- <>
- <div className="modal-field">
- <label className="app-field-label">Largo (m)</label>
- <input
- type="number"
- step="any"
- value={form.length ?? ""}
- onChange={(e) => handleDimensionChange("length", e.target.value)}
- placeholder="0"
- className="app-input w-full"
- />
+ <div className="damage-dimension-row cols-3">
+ <div className="damage-dimension-field">
+ <label>Largo (m)</label>
+ <input type="number" step="any" value={form.length ?? ""} onChange={(e) => handleDimensionChange("length", e.target.value)} placeholder="0" />
  </div>
- <div className="modal-field">
- <label className="app-field-label">Ancho (m)</label>
- <input
- type="number"
- step="any"
- value={form.width ?? ""}
- onChange={(e) => handleDimensionChange("width", e.target.value)}
- placeholder="0"
- className="app-input w-full"
- />
+ <div className="damage-dimension-field">
+ <label>Ancho (m)</label>
+ <input type="number" step="any" value={form.width ?? ""} onChange={(e) => handleDimensionChange("width", e.target.value)} placeholder="0" />
  </div>
- </>
+ <div className="damage-dimension-field damage-dimension-total">
+ <label>Cantidad</label>
+ <input type="number" value={form.quantity} readOnly />
+ <span className="damage-dimension-suffix">m²</span>
+ </div>
+ </div>
  )}
  {form.unit === "M3" && (
- <>
- <div className="modal-field">
- <label className="app-field-label">Largo (m)</label>
- <input
- type="number"
- step="any"
- value={form.length ?? ""}
- onChange={(e) => handleDimensionChange("length", e.target.value)}
- placeholder="0"
- className="app-input w-full"
- />
+ <div className="damage-dimension-row cols-4">
+ <div className="damage-dimension-field">
+ <label>Largo (m)</label>
+ <input type="number" step="any" value={form.length ?? ""} onChange={(e) => handleDimensionChange("length", e.target.value)} placeholder="0" />
  </div>
- <div className="modal-field">
- <label className="app-field-label">Ancho (m)</label>
- <input
- type="number"
- step="any"
- value={form.width ?? ""}
- onChange={(e) => handleDimensionChange("width", e.target.value)}
- placeholder="0"
- className="app-input w-full"
- />
+ <div className="damage-dimension-field">
+ <label>Ancho (m)</label>
+ <input type="number" step="any" value={form.width ?? ""} onChange={(e) => handleDimensionChange("width", e.target.value)} placeholder="0" />
  </div>
- <div className="modal-field">
- <label className="app-field-label">Alto (m)</label>
- <input
- type="number"
- step="any"
- value={form.height ?? ""}
- onChange={(e) => handleDimensionChange("height", e.target.value)}
- placeholder="0"
- className="app-input w-full"
- />
+ <div className="damage-dimension-field">
+ <label>Alto (m)</label>
+ <input type="number" step="any" value={form.height ?? ""} onChange={(e) => handleDimensionChange("height", e.target.value)} placeholder="0" />
  </div>
- </>
+ <div className="damage-dimension-field damage-dimension-total">
+ <label>Cantidad</label>
+ <input type="number" value={form.quantity} readOnly />
+ <span className="damage-dimension-suffix">m³</span>
+ </div>
+ </div>
  )}
- <div className="modal-field">
- <label className="app-field-label">
- {form.unit === "M2" || form.unit === "M3" ? "Cantidad (calculada)" : "Cantidad"}
- </label>
- <input
- type="number"
- value={form.quantity}
- onChange={(e) => setForm({ ...form, quantity: parseQuantity(e.target.value) })}
- placeholder="0"
- className="app-input w-full"
- readOnly={form.unit === "M2" || form.unit === "M3"}
- />
+ {form.unit === "MT" && (
+ <div className="damage-dimension-row cols-2">
+ <div className="damage-dimension-field">
+ <label>Largo (m)</label>
+ <input type="number" step="any" value={form.length ?? ""} onChange={(e) => handleDimensionChange("length", e.target.value)} placeholder="0" />
+ </div>
+ <div className="damage-dimension-field damage-dimension-total">
+ <label>Cantidad</label>
+ <input type="number" value={form.quantity} readOnly />
+ <span className="damage-dimension-suffix">m</span>
+ </div>
+ </div>
+ )}
+ {!["M2", "M3", "MT"].includes(form.unit) && form.unit && (
+ <div className="damage-dimension-row cols-2">
+ <div className="damage-dimension-field">
+ <label>Valor</label>
+ <input type="number" value={form.quantity} onChange={(e) => handleQuantityChange(e.target.value)} placeholder="0" />
+ <span className="damage-dimension-suffix">{form.unit}</span>
+ </div>
+ <div className="damage-dimension-field damage-dimension-total">
+ <label>Cantidad</label>
+ <input type="number" value={form.quantity} readOnly />
+ <span className="damage-dimension-suffix">{form.unit}</span>
+ </div>
+ </div>
+ )}
+ </div>
+ <div className="damage-dimension-block-damage">
+ <div className="damage-dimension-title">
+ <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l-9.5 5.5 9.5 5.5 9.5-5.5z"/><path d="M2.5 17.5l9.5 5.5 9.5-5.5"/><path d="M2.5 10l9.5 5.5 9.5-5.5"/></svg>
+ <span>DAÑO</span>
+ <small>(Área afectada)</small>
+ </div>
+ {form.unit === "M2" && (
+ <div className="damage-dimension-row cols-3">
+ <div className="damage-dimension-field">
+ <label>Largo (m)</label>
+ <input type="number" step="any" value={form.damage_length ?? ""} onChange={(e) => handleDimensionChange("damage_length", e.target.value)} placeholder="0" />
+ </div>
+ <div className="damage-dimension-field">
+ <label>Ancho (m)</label>
+ <input type="number" step="any" value={form.damage_width ?? ""} onChange={(e) => handleDimensionChange("damage_width", e.target.value)} placeholder="0" />
+ </div>
+ <div className="damage-dimension-field damage-dimension-total">
+ <label>Cantidad</label>
+ <input type="number" value={form.damage_quantity} readOnly />
+ <span className="damage-dimension-suffix">m²</span>
+ </div>
+ </div>
+ )}
+ {form.unit === "M3" && (
+ <div className="damage-dimension-row cols-4">
+ <div className="damage-dimension-field">
+ <label>Largo (m)</label>
+ <input type="number" step="any" value={form.damage_length ?? ""} onChange={(e) => handleDimensionChange("damage_length", e.target.value)} placeholder="0" />
+ </div>
+ <div className="damage-dimension-field">
+ <label>Ancho (m)</label>
+ <input type="number" step="any" value={form.damage_width ?? ""} onChange={(e) => handleDimensionChange("damage_width", e.target.value)} placeholder="0" />
+ </div>
+ <div className="damage-dimension-field">
+ <label>Alto (m)</label>
+ <input type="number" step="any" value={form.damage_height ?? ""} onChange={(e) => handleDimensionChange("damage_height", e.target.value)} placeholder="0" />
+ </div>
+ <div className="damage-dimension-field damage-dimension-total">
+ <label>Cantidad</label>
+ <input type="number" value={form.damage_quantity} readOnly />
+ <span className="damage-dimension-suffix">m³</span>
+ </div>
+ </div>
+ )}
+ {form.unit === "MT" && (
+ <div className="damage-dimension-row cols-2">
+ <div className="damage-dimension-field">
+ <label>Largo (m)</label>
+ <input type="number" step="any" value={form.damage_length ?? ""} onChange={(e) => handleDimensionChange("damage_length", e.target.value)} placeholder="0" />
+ </div>
+ <div className="damage-dimension-field damage-dimension-total">
+ <label>Cantidad</label>
+ <input type="number" value={form.damage_quantity} readOnly />
+ <span className="damage-dimension-suffix">m</span>
+ </div>
+ </div>
+ )}
+ {!["M2", "M3", "MT"].includes(form.unit) && form.unit && (
+ <div className="damage-dimension-row cols-2">
+ <div className="damage-dimension-field">
+ <label>Valor</label>
+ <input type="number" value={form.damage_quantity} onChange={(e) => handleDamageQuantityChange(e.target.value)} placeholder="0" />
+ <span className="damage-dimension-suffix">{form.unit}</span>
+ </div>
+ <div className="damage-dimension-field damage-dimension-total">
+ <label>Cantidad</label>
+ <input type="number" value={form.damage_quantity} readOnly />
+ <span className="damage-dimension-suffix">{form.unit}</span>
+ </div>
+ </div>
+ )}
+ </div>
+ </div>
  </div>
  <div className="modal-field col-span-1 col-start-1">
  <label className="app-field-label">Moneda</label>
@@ -1108,7 +1258,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <th>Espacio</th>
  <th>Categoría</th>
  <th>Materialidad / Aclaración</th>
- <th className="text-right">Cantidad</th>
+ <th className="text-right">Superficie / Daño</th>
  <th className="text-right">Monto</th>
  <th className="w-[80px]">Acciones</th>
  </tr>
@@ -1176,7 +1326,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <th>Producto</th>
  <th>Marca/Modelo</th>
  <th>Clasificación del Daño</th>
- <th className="text-right">Cantidad</th>
+ <th className="text-right">Superficie / Daño</th>
  <th className="text-right">Monto</th>
  <th className="w-[80px]">Acciones</th>
  </tr>

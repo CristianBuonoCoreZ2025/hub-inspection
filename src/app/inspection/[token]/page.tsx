@@ -34,6 +34,8 @@ interface LiveDamage {
   dependency: string | null; sector: string | null; materiality_type: string | null;
   unit: string | null; quantity: number | null;
   length: number | null; width: number | null; height: number | null;
+  damage_length: number | null; damage_width: number | null; damage_height: number | null;
+  damage_quantity: number | null;
   damage_type: string | null;
   product: string | null; brand_model: string | null; purchase_date: string | null;
   estimated_amount: number | null; currency: string | null;
@@ -1059,15 +1061,21 @@ function fmtDamageAmount(value: number | null, currency: string | null) {
   return `${currency || "CLP"} ${value.toLocaleString("es-CL")}`;
 }
 
-function damageQuantity(dmg: LiveDamage) {
-  if (dmg.quantity === null || dmg.quantity === undefined) return null;
+function fmtSingleDamageQty(quantity: number | null, length: number | null, width: number | null, height: number | null, unit: string | null) {
+  if (quantity === null || quantity === undefined || quantity === 0) return "—";
   const dim =
-    dmg.unit === "M2" && (dmg.length || dmg.width)
-      ? ` (${dmg.length || 0}x${dmg.width || 0})`
-      : dmg.unit === "M3" && (dmg.length || dmg.width || dmg.height)
-      ? ` (${dmg.length || 0}x${dmg.width || 0}x${dmg.height || 0})`
+    unit === "M2" && (length || width)
+      ? ` (${length || 0}x${width || 0})`
+      : unit === "M3" && (length || width || height)
+      ? ` (${length || 0}x${width || 0}x${height || 0})`
       : "";
-  return `${dmg.quantity.toLocaleString("es-CL")} ${dmg.unit || ""}${dim}`;
+  return `${quantity.toLocaleString("es-CL")} ${unit || ""}${dim}`;
+}
+
+function damageQuantity(dmg: LiveDamage) {
+  const surface = fmtSingleDamageQty(dmg.quantity, dmg.length, dmg.width, dmg.height, dmg.unit);
+  const damage = fmtSingleDamageQty(dmg.damage_quantity, dmg.damage_length, dmg.damage_width, dmg.damage_height, dmg.unit);
+  return `Sup: ${surface} / Daño: ${damage}`;
 }
 
 function DamagesTab({ damages }: { damages: LiveDamage[] }) {
