@@ -11,6 +11,11 @@ const DYNAMIC_CLAIM_SELECT =
 const CLAIM_SELECT =
   `${DYNAMIC_CLAIM_SELECT}, inspector:profiles!claims_inspector_id_fkey(id, full_name, email), auditor:profiles!claims_auditor_id_fkey(id, full_name, email), dispatcher:profiles!claims_dispatcher_id_fkey(id, full_name, email), assistant:profiles!claims_assistant_id_fkey(id, full_name, email)`;
 
+const CLAIM_WITH_INSPECTIONS_SELECT =
+  `${CLAIM_SELECT}, inspection_sessions:inspection_sessions!inspection_sessions_claim_id_fkey(id, claim_action_id, inspector_id, status, inspection_number, inspection_type, scheduled_at, started_at, ended_at, lock_overridden_by, lock_overridden_at)`;
+
+
+
 export async function getClaims(
   companyId?: string,
   options?: {
@@ -164,7 +169,7 @@ export async function getClaimsParticipants(claimIds: string[]) {
 }
 
 export async function getClaimById(id: string) {
-  return fetchById<Claim>("claims", id, DYNAMIC_CLAIM_SELECT);
+  return fetchById<Claim>("claims", id, CLAIM_WITH_INSPECTIONS_SELECT);
 }
 
 
