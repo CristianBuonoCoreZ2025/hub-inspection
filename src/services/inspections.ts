@@ -509,6 +509,7 @@ export async function createInspectionSession(claimId: string, options: {
     status: "scheduled",
     inspection_type: options.inspectionType,
     scheduled_at: options.scheduledAt,
+    inspector_id: options.inspectorId || null,
   };
   if (options.actionTemplateId) object.action_template_id = options.actionTemplateId;
   // Datos de contacto editables
