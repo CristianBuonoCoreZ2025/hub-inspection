@@ -11,14 +11,14 @@ import {
   ShieldCheck, MapPin, PenTool, XCircle, CheckCircle,
   MonitorSmartphone,
 } from "lucide-react";
-import { DrawingCanvas } from "@/components/ui/drawing-canvas";
-import { LiveVideoCall } from "@/components/inspection/live-video-call";
 import { useClaimsAppPresence } from "@/hooks/use-claims-app-presence";
 import { convertHeicToJpeg } from "@/lib/heic-convert";
 import { logConnectionEvent, type ConnectionLogEntry } from "@/services/connection-logs";
 
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
+const DrawingCanvas = dynamic(() => import("@/components/ui/drawing-canvas").then((m) => ({ default: m.DrawingCanvas })), { ssr: false });
+const LiveVideoCall = dynamic(() => import("@/components/inspection/live-video-call").then((m) => ({ default: m.LiveVideoCall })), { ssr: false });
 
 // ═══════════════════════════════════════════════════════════════
 // Tipos

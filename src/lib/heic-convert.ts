@@ -1,5 +1,3 @@
-import heic2any from "heic2any";
-
 const HEIC_EXTENSIONS = /\.(heic|heif)$/i;
 const HEIC_MIME = /^image\/(heic|heif)$/i;
 
@@ -9,6 +7,9 @@ export function isHeic(file: File): boolean {
 
 export async function convertHeicToJpeg(file: File): Promise<File> {
   if (!isHeic(file)) return file;
+  if (typeof window === "undefined") return file;
+
+  const { default: heic2any } = await import("heic2any");
 
   const converted = await heic2any({
     blob: file,
