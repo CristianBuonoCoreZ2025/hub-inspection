@@ -188,14 +188,22 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  const formatAmount = (value: number) =>
    new Intl.NumberFormat("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
 
- const formatMoney = (value: number, currency = "CLP") =>
-   new Intl.NumberFormat("es-CL", {
-     style: "currency",
-     currency,
-     currencyDisplay: "code",
-     minimumFractionDigits: 0,
-     maximumFractionDigits: 2,
-   }).format(value || 0);
+ const formatMoney = (value: number, currency = "CLP") => {
+   try {
+     return new Intl.NumberFormat("es-CL", {
+       style: "currency",
+       currency,
+       currencyDisplay: "code",
+       minimumFractionDigits: 0,
+       maximumFractionDigits: 2,
+     }).format(value || 0);
+   } catch {
+     return `${currency} ${new Intl.NumberFormat("es-CL", {
+       minimumFractionDigits: 0,
+       maximumFractionDigits: 2,
+     }).format(value || 0)}`;
+   }
+ };
 
  const MAX_ESTIMATED_AMOUNT = 999_999_999_999_999;
 

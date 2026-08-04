@@ -4604,4 +4604,60 @@ Mejoras de bajo riesgo que no requieren rediseño:
 3. **Semana 4-5 (v2 funcional)**: checklist del inspector y tareas guiadas del asegurado.
 4. **Semana 6+ (v2 pulido)**: realtime, grabación, offline y feedback de 20 inspecciones reales.
 
+---
+
+## 0h. Normalización de nombres y direcciones con `proper_case` y `proper_address`
+
+### Funciones
+
+El proyecto cuenta con dos funciones PostgreSQL para estandarizar texto:
+
+- `proper_case(input text)` (migración 324): formatea nombres y empresas a
+  `Proper Case` respetando preposiciones, artículos, conjunciones y sufijos legales.
+  Ejemplos:
+  - `MARISOL PAOLA ULLOA GUZMAN` → `Marisol Paola Ulloa Guzman`
+  - `EMPRESA Y ASOCIADOS SPA` → `Empresa y Asociados SpA`
+
+- `proper_address(input text)` (migración 334): aplica `proper_case` y luego
+  normaliza abreviaturas comunes en direcciones chilenas:
+  - `Av/` → `Av.`
+  - `Avda.` → `Av.`
+  - `Av. Avenida` → `Av.`
+  - `Pasaje` / `Pasaje.` → `Psje.`
+  - `Pje.` / `Pje ` → `Psje.`
+  - `Psje ` → `Psje.`
+
+### Aplicación a datos existentes
+
+Usar el script `scripts/apply-propercase.sql` conectado a PostgreSQL:
+
+```bash
+psql $DATABASE_URL -f scripts/apply-propercase.sql
+```
+
+O con el runner local (lee `.env.local` o `.env`):
+
+```bash
+pnpm exec tsx scripts/run-apply-propercase.ts
+```
+
+### Tablas y columnas que se estandarizan
+
+| Tabla | Columnas | Función |
+|-------|----------|---------|
+| `profiles` | `full_name` | `proper_case` |
+| `companies` | `name` | `proper_case` |
+| `claims` | `claim_address` | `proper_address` |
+| `claims_participants` | `full_name`, `first_name`, `last_name` | `proper_case` |
+| `claims_participants` | `address` | `proper_address` |
+| `persons` | `first_name`, `last_name` | `proper_case` |
+| `person_addresses` | `address` | `proper_address` |
+| `inspection_sessions` | `interviewed_name` | `proper_case` |
+
+### Recomendaciones de uso
+
+1. Siempre correr en `staging/dev` antes de producción.
+2. Antes de correr en producción, hacer un `pg_dump` parcial de las tablas involucradas.
+3. El script es **idempotente**: solo actualiza las filas cuyo valor original difiere del formateado.
+
 
