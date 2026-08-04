@@ -618,15 +618,16 @@ export async function liftInspectionLock(sessionId: string, userId: string) {
  * una inspección en curso, salvo que un internal haya levantado el bloqueo.
  */
 export function canAccessInspectionSession(
-  session: { status: string; inspector_id: string | null; lock_overridden_by: string | null },
+  session: { status: string; inspector_id: string | null; lock_overridden_by: string | null; claim?: { inspector_id?: string | null } | null },
   profile: { id: string } | null | undefined,
   dataAccess: { is_admin: boolean; see_all_client_claims: boolean } | null | undefined,
 ): boolean {
   if (!profile) return false;
+  const effectiveInspectorId = session.inspector_id ?? session.claim?.inspector_id ?? null;
   if (session.status !== "active") {
-    return !!(dataAccess?.is_admin || dataAccess?.see_all_client_claims || session.inspector_id === profile.id);
+    return !!(dataAccess?.is_admin || dataAccess?.see_all_client_claims || effectiveInspectorId === profile.id);
   }
-  if (session.inspector_id === profile.id) return true;
+  if (effectiveInspectorId === profile.id) return true;
   return !!session.lock_overridden_by;
 }
 
