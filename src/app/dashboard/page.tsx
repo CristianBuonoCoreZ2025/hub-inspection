@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { getClaims } from "@/services/claims";
 import { getInspectionSessions } from "@/services/inspections";
-import { getRecentAuditLogs } from "@/services/audit-logs";
 import { getCompanies } from "@/services/companies";
 import { getUsers } from "@/services/users";
 import { userTypeLabels } from "@/services/permissions";
@@ -12,44 +11,34 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
 import {
   FileText,
-  CheckCircle,
-  Clock,
   AlertCircle,
   Calendar,
   Timer,
-  TrendingUp,
-  TrendingDown,
   Activity,
   ClipboardCheck,
   Building2,
-  Shield,
   Zap,
-  ChevronRight,
   UserCheck,
   Briefcase,
+  Layers,
+  FilePen,
+  Navigation,
+  ScrollText,
+  MapPin,
 } from "lucide-react";
-import {
-  Eye as PhEye,
-  Radio as PhRadio,
-  CalendarCheck as PhCalendarCheck,
-  CheckCircle as PhCheckCircle,
-  Warning as PhWarning,
-  Hourglass as PhHourglass,
-  FolderOpen as PhFolderOpen,
-} from "@phosphor-icons/react";
+import { KpiTodayIcon, KpiActiveIcon, KpiScheduledIcon, KpiCompletedIcon, KpiOverdueIcon, KpiTimeIcon } from "@/components/dashboard/kpi-icons";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
-import type { Claim, InspectionSession, AuditLog, UserRole, Profile } from "@/types";
+import type { Claim, InspectionSession, UserRole, Profile } from "@/types";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { DonutChart } from "@/components/dashboard/donut-chart";
 import { BarChartGlass } from "@/components/dashboard/bar-chart";
-import { AreaChartGlass } from "@/components/dashboard/area-chart";
-import { GaugeChart } from "@/components/dashboard/gauge-chart";
+import { BarChartDual } from "@/components/dashboard/bar-chart-dual";
+import { BarChartQuad } from "@/components/dashboard/bar-chart-quad";
 
 const STATUS_COLORS: Record<string, string> = {
   created: "#3b82f6",
@@ -67,26 +56,16 @@ const STATUS_LABELS: Record<string, string> = {
   reopened: "Reabierto",
 };
 
-function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHr = Math.floor(diffMs / 3600000);
-  const diffDay = Math.floor(diffMs / 86400000);
-  if (diffMin < 1) return "Hace un momento";
-  if (diffMin < 60) return `Hace ${diffMin} min`;
-  if (diffHr < 24) return `Hace ${diffHr} h`;
-  if (diffDay < 7) return `Hace ${diffDay} día${diffDay > 1 ? "s" : ""}`;
-  return date.toLocaleDateString("es-CL");
-}
-
 type KpiDetailRow = {
   id: string;
+  inspectionCode: string;
   liquidation: string;
+  insured: string;
   address: string;
   inspector: string;
   status: string;
+  date: string;
+  time: string;
   scheduled?: string | null;
   started?: string | null;
   ended?: string | null;
@@ -99,27 +78,6 @@ function isToday(d: string) {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
   return date >= start && date <= end;
-}
-
-function getActivityText(log: AuditLog): string {
-  const actionLabels: Record<string, string> = {
-    INSERT: "creado",
-    UPDATE: "actualizado",
-    DELETE: "eliminado",
-  };
-  const tableLabels: Record<string, string> = {
-    claims: "siniestro",
-    inspection_sessions: "inspección",
-  };
-  const action = actionLabels[log.action] || log.action.toLowerCase();
-  const table = tableLabels[log.table_name] || log.table_name;
-  return `${table.charAt(0).toUpperCase() + table.slice(1)} ${action}`;
-}
-
-function getActivityIcon(log: AuditLog) {
-  if (log.table_name === "claims") return FileText;
-  if (log.table_name === "inspection_sessions") return ClipboardCheck;
-  return Activity;
 }
 
 /**
@@ -162,12 +120,6 @@ export default function DashboardPage() {
   const { data: sessions } = useQuery<InspectionSession[]>({
     queryKey: ["inspection-sessions"],
     queryFn: () => getInspectionSessions(),
-    enabled: !!profile,
-  });
-
-  const { data: auditLogs } = useQuery({
-    queryKey: ["recent-activity"],
-    queryFn: () => getRecentAuditLogs(undefined, 8),
     enabled: !!profile,
   });
 
@@ -266,16 +218,56 @@ export default function DashboardPage() {
       });
     });
 
-    // Claims por compañía (top 5, para barras horizontales)
-    const claimsByCompany: Record<string, number> = {};
+    // Claims por compañía (top 5, para barras horizontales con casos + inspecciones)
+    const claimsByCompany: Record<string, { claims: number; inspections: number }> = {};
     allClaims.forEach((c: Claim) => {
       const name = c.insurance_company?.name || "Sin compañía";
-      claimsByCompany[name] = (claimsByCompany[name] || 0) + 1;
+      if (!claimsByCompany[name]) claimsByCompany[name] = { claims: 0, inspections: 0 };
+      claimsByCompany[name].claims++;
+    });
+    const claimMapForCompany = new Map(allClaims.map((c) => [c.id, c]));
+    allSessions.forEach((s) => {
+      const claim = claimMapForCompany.get(s.claim_id);
+      const name = claim?.insurance_company?.name || "Sin compañía";
+      if (!claimsByCompany[name]) claimsByCompany[name] = { claims: 0, inspections: 0 };
+      claimsByCompany[name].inspections++;
     });
     const topCompanies = Object.entries(claimsByCompany)
+      .sort((a, b) => b[1].claims - a[1].claims)
+      .slice(0, 8)
+      .map(([name, v]) => ({ name, value: v.claims, inspections: v.inspections }));
+
+    // Claims por ramo / línea de negocio
+    const claimsByRamo: Record<string, number> = {};
+    allClaims.forEach((c: Claim) => {
+      const name = c.business_line?.name || c.claim_type?.name || "Sin ramo";
+      claimsByRamo[name] = (claimsByRamo[name] || 0) + 1;
+    });
+    const topRamos = Object.entries(claimsByRamo)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
+      .slice(0, 6)
       .map(([name, value]) => ({ name, value }));
+
+    // Top responsables (liquidador, despachador, revisor)
+    const buildTopUsers = (field: "assigned_adjuster_id" | "adjuster_id" | "dispatcher_id" | "auditor_id") => {
+      const map: Record<string, { id: string; name: string; count: number }> = {};
+      allClaims.forEach((c: Claim) => {
+        const id = c[field];
+        if (!id) return;
+        const name =
+          field === "assigned_adjuster_id" ? (c.assigned_adjuster?.full_name || users?.find((u) => u.id === id)?.full_name || "Sin nombre") :
+          field === "adjuster_id" ? (c.adjuster?.full_name || users?.find((u) => u.id === id)?.full_name || "Sin nombre") :
+          field === "dispatcher_id" ? (c.dispatcher?.full_name || users?.find((u) => u.id === id)?.full_name || "Sin nombre") :
+          field === "auditor_id" ? (c.auditor?.full_name || users?.find((u) => u.id === id)?.full_name || "Sin nombre") :
+          "Sin nombre";
+        if (!map[id]) map[id] = { id, name, count: 0 };
+        map[id].count++;
+      });
+      return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 5);
+    };
+    const topAdjusters = buildTopUsers("adjuster_id");
+    const topDispatchers = buildTopUsers("dispatcher_id");
+    const topAuditors = buildTopUsers("auditor_id");
 
     // Inspecciones por estado (para barras)
     const inspectionsByStatus = [
@@ -325,14 +317,14 @@ export default function DashboardPage() {
       : 0;
 
     // Ranking de inspectores
-    const inspectorMap: Record<string, { id: string; name: string; total: number; completed: number; active: number; avgMinutes: number }> = {};
+    const inspectorMap: Record<string, { id: string; name: string; total: number; completed: number; scheduled: number; active: number; avgMinutes: number }> = {};
     const inspectorTimes: Record<string, number[]> = {};
     allSessions.forEach((s) => {
       const id = s.inspector_id;
       if (!id) return;
       const name = users?.find((u) => u.id === id)?.full_name || "Sin nombre";
       if (!inspectorMap[id]) {
-        inspectorMap[id] = { id, name, total: 0, completed: 0, active: 0, avgMinutes: 0 };
+        inspectorMap[id] = { id, name, total: 0, completed: 0, scheduled: 0, active: 0, avgMinutes: 0 };
         inspectorTimes[id] = [];
       }
       inspectorMap[id].total++;
@@ -343,6 +335,7 @@ export default function DashboardPage() {
           inspectorTimes[id].push(mins);
         }
       }
+      if (s.status === "scheduled") inspectorMap[id].scheduled++;
       if (s.status === "active") inspectorMap[id].active++;
     });
     Object.entries(inspectorTimes).forEach(([id, times]) => {
@@ -403,6 +396,76 @@ export default function DashboardPage() {
       claimsByDay[d.getDay()].value++;
     });
 
+    // Inspecciones por día de la semana
+    const inspectionsByDay: Array<{ name: string; value: number }> = dayNames.map(d => ({ name: d, value: 0 }));
+    allSessions.forEach((s) => {
+      const d = s.scheduled_at || s.started_at || s.ended_at;
+      if (d) inspectionsByDay[new Date(d).getDay()].value++;
+    });
+
+    // Inspecciones por región (con 4 estados)
+    const inspByRegionMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
+    allSessions.forEach((s) => {
+      const claim = claimMapForCompany.get(s.claim_id);
+      const region = claim?.region?.name || "Sin región";
+      if (!inspByRegionMap[region]) inspByRegionMap[region] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      if (s.status === "scheduled") inspByRegionMap[region].agendadas++;
+      else if (s.status === "active") inspByRegionMap[region].enProceso++;
+      else if (s.status === "completed") inspByRegionMap[region].completadas++;
+      else if (s.status === "cancelled") inspByRegionMap[region].canceladas++;
+    });
+    const inspectionsByRegion = Object.entries(inspByRegionMap)
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => (b.agendadas + b.enProceso + b.completadas + b.canceladas) - (a.agendadas + a.enProceso + a.completadas + a.canceladas))
+      .slice(0, 8);
+
+    // Inspecciones por comuna (top 10, con 4 estados)
+    const inspByCommuneMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
+    allSessions.forEach((s) => {
+      const claim = claimMapForCompany.get(s.claim_id);
+      const commune = claim?.commune?.name || "Sin comuna";
+      if (!inspByCommuneMap[commune]) inspByCommuneMap[commune] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      if (s.status === "scheduled") inspByCommuneMap[commune].agendadas++;
+      else if (s.status === "active") inspByCommuneMap[commune].enProceso++;
+      else if (s.status === "completed") inspByCommuneMap[commune].completadas++;
+      else if (s.status === "cancelled") inspByCommuneMap[commune].canceladas++;
+    });
+    const inspectionsByCommune = Object.entries(inspByCommuneMap)
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => (b.agendadas + b.enProceso + b.completadas + b.canceladas) - (a.agendadas + a.enProceso + a.completadas + a.canceladas))
+      .slice(0, 10);
+
+    // Tiempo promedio por inspector (minutos)
+    const timeByInspectorMap: Record<string, number[]> = {};
+    allSessions.forEach((s) => {
+      if (s.status !== "completed" || !s.started_at || !s.ended_at) return;
+      const inspectorName = users?.find((u) => u.id === s.inspector_id)?.full_name || "Sin inspector";
+      const mins = Math.max(0, (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000);
+      if (!timeByInspectorMap[inspectorName]) timeByInspectorMap[inspectorName] = [];
+      timeByInspectorMap[inspectorName].push(mins);
+    });
+    const avgTimeByInspector = Object.entries(timeByInspectorMap)
+      .map(([name, times]) => ({ name, value: Math.round(times.reduce((a, b) => a + b, 0) / times.length) }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+
+    // Siniestros por región
+    const claimsByRegionMap: Record<string, number> = {};
+    allClaims.forEach((c: Claim) => {
+      const region = c.region?.name || "Sin región";
+      claimsByRegionMap[region] = (claimsByRegionMap[region] || 0) + 1;
+    });
+    const claimsByRegion = Object.entries(claimsByRegionMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+
+    // Inspecciones sin asignar (sin inspector)
+    const unassignedInspections = allSessions.filter((s) => !s.inspector_id).length;
+    const cancellationRate = allSessions.length > 0
+      ? (cancelledSessions.length / allSessions.length) * 100
+      : 0;
+
     return {
       totalClaims: allClaims.length,
       openClaims: openClaims.length,
@@ -419,9 +482,20 @@ export default function DashboardPage() {
       inspectionCompletionRate,
       claimsByStatus,
       topCompanies,
+      topRamos,
+      topAdjusters,
+      topDispatchers,
+      topAuditors,
       inspectionsByStatus,
       monthsData,
       claimsByDay,
+      inspectionsByDay,
+      inspectionsByRegion,
+      inspectionsByCommune,
+      avgTimeByInspector,
+      claimsByRegion,
+      unassignedInspections,
+      cancellationRate,
       totalCompanies: companies?.length ?? 0,
       totalUsers: users?.length ?? 0,
       activeUsers: users?.filter((u: Profile) => u.is_active)?.length ?? 0,
@@ -440,21 +514,13 @@ export default function DashboardPage() {
     };
   }, [myClaims, sessionList, companies, users, statusCode, isGlobalUser, profile]);
 
-  const recentActivity =
-    auditLogs?.map((log: AuditLog) => ({
-      id: log.id,
-      text: getActivityText(log),
-      time: formatRelativeTime(log.created_at),
-      icon: getActivityIcon(log),
-    })) ?? [];
-
   // KPIs globales: foco en inspecciones
   const kpis = isGlobalUser
     ? [
         {
           label: "Inspecciones Hoy",
           value: stats.inspectionsToday,
-          icon: PhEye,
+          icon: KpiTodayIcon,
           color: "blue",
           trend: "neutral" as const,
           trendValue: "Hoy",
@@ -464,7 +530,7 @@ export default function DashboardPage() {
         {
           label: "En Curso",
           value: stats.activeSessions,
-          icon: PhRadio,
+          icon: KpiActiveIcon,
           color: "amber",
           trend: stats.activeSessions > 5 ? "up" as const : "neutral" as const,
           trendValue: stats.activeSessions > 5 ? "Alto" : "Normal",
@@ -474,7 +540,7 @@ export default function DashboardPage() {
         {
           label: "Agendadas Hoy",
           value: stats.scheduledToday,
-          icon: PhCalendarCheck,
+          icon: KpiScheduledIcon,
           color: "violet",
           trend: "neutral" as const,
           trendValue: "Pendientes",
@@ -484,7 +550,7 @@ export default function DashboardPage() {
         {
           label: "Completadas Hoy",
           value: stats.completedToday,
-          icon: PhCheckCircle,
+          icon: KpiCompletedIcon,
           color: "emerald",
           trend: stats.completedToday > 0 ? "up" as const : "neutral" as const,
           trendValue: stats.completedToday > 0 ? "Progreso" : "Sin",
@@ -494,7 +560,7 @@ export default function DashboardPage() {
         {
           label: "Con Retraso",
           value: stats.overdueSessions,
-          icon: PhWarning,
+          icon: KpiOverdueIcon,
           color: "pink",
           trend: stats.overdueSessions > 0 ? "up" as const : "neutral" as const,
           trendValue: stats.overdueSessions > 0 ? "Alerta" : "OK",
@@ -504,7 +570,7 @@ export default function DashboardPage() {
         {
           label: "Tiempo Promedio",
           value: `${stats.avgInspectionMinutes.toFixed(0)}m`,
-          icon: PhHourglass,
+          icon: KpiTimeIcon,
           color: "sky",
           trend: "neutral" as const,
           trendValue: "Por inspección",
@@ -516,7 +582,7 @@ export default function DashboardPage() {
         {
           label: "Mis Inspecciones",
           value: stats.myTotalSessions,
-          icon: PhFolderOpen,
+          icon: KpiTodayIcon,
           color: "blue",
           trend: "neutral" as const,
           trendValue: "Asignadas",
@@ -526,7 +592,7 @@ export default function DashboardPage() {
         {
           label: "En Curso",
           value: stats.myActiveSessions,
-          icon: PhRadio,
+          icon: KpiActiveIcon,
           color: "amber",
           trend: stats.myActiveSessions > 0 ? "up" as const : "neutral" as const,
           trendValue: stats.myActiveSessions > 0 ? "Activa" : "Sin",
@@ -536,7 +602,7 @@ export default function DashboardPage() {
         {
           label: "Agendadas",
           value: stats.myScheduledSessions,
-          icon: PhCalendarCheck,
+          icon: KpiScheduledIcon,
           color: "violet",
           trend: "neutral" as const,
           trendValue: "Pendientes",
@@ -546,7 +612,7 @@ export default function DashboardPage() {
         {
           label: "Completadas",
           value: stats.myCompletedSessions,
-          icon: PhCheckCircle,
+          icon: KpiCompletedIcon,
           color: "emerald",
           trend: "up" as const,
           trendValue: "Cerradas",
@@ -574,6 +640,28 @@ export default function DashboardPage() {
 
     const sessions = sessionList;
 
+    const fmtDate = (d: string) => new Date(d).toLocaleDateString("es-CL");
+    const fmtTime = (d: string) =>
+      new Date(d).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+    const getBase = (s: (typeof sessions)[number]) => {
+      const claim = claimMap.get(s.claim_id);
+      const date = s.scheduled_at || s.started_at || s.ended_at;
+      const liq = claim?.liquidation_number || "—";
+      const shortLiq = liq.startsWith("L-") ? liq.slice(2) : liq;
+      const insured = claim?.claims_participants?.find((p) => p.type === "insured")?.full_name || "—";
+      return {
+        id: s.id,
+        inspectionCode: s.inspection_number || `I-${s.id.slice(0, 4)}`,
+        liquidation: shortLiq,
+        insured,
+        address: claim?.claim_address || "—",
+        inspector: getName(s.inspector_id),
+        status: s.status,
+        date: date ? fmtDate(date) : "—",
+        time: date ? fmtTime(date) : "—",
+      };
+    };
+
     switch (kpiModal.key) {
       case "today":
       case "my-total":
@@ -583,48 +671,23 @@ export default function DashboardPage() {
             (s.started_at && isToday(s.started_at)) ||
             (s.ended_at && isToday(s.ended_at))
           )
-          .map((s) => ({
-            id: s.id,
-            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
-            address: claimMap.get(s.claim_id)?.claim_address || "—",
-            inspector: getName(s.inspector_id),
-            status: s.status,
-            scheduled: s.scheduled_at,
-          }));
+          .map((s) => ({ ...getBase(s), scheduled: s.scheduled_at }));
       case "active":
       case "my-active":
         return sessions
           .filter((s) => s.status === "active")
-          .map((s) => ({
-            id: s.id,
-            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
-            address: claimMap.get(s.claim_id)?.claim_address || "—",
-            inspector: getName(s.inspector_id),
-            status: s.status,
-            started: s.started_at,
-          }));
+          .map((s) => ({ ...getBase(s), started: s.started_at }));
       case "scheduled-today":
       case "my-scheduled":
         return sessions
           .filter((s) => s.status === "scheduled" && s.scheduled_at && isToday(s.scheduled_at))
-          .map((s) => ({
-            id: s.id,
-            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
-            address: claimMap.get(s.claim_id)?.claim_address || "—",
-            inspector: getName(s.inspector_id),
-            status: s.status,
-            scheduled: s.scheduled_at,
-          }));
+          .map((s) => ({ ...getBase(s), scheduled: s.scheduled_at }));
       case "completed-today":
       case "my-completed":
         return sessions
           .filter((s) => s.status === "completed" && s.ended_at && isToday(s.ended_at))
           .map((s) => ({
-            id: s.id,
-            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
-            address: claimMap.get(s.claim_id)?.claim_address || "—",
-            inspector: getName(s.inspector_id),
-            status: s.status,
+            ...getBase(s),
             ended: s.ended_at,
             duration:
               s.started_at && s.ended_at
@@ -634,24 +697,12 @@ export default function DashboardPage() {
       case "overdue":
         return sessions
           .filter((s) => (s.status === "scheduled" || s.status === "active") && s.scheduled_at && new Date(s.scheduled_at) < new Date())
-          .map((s) => ({
-            id: s.id,
-            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
-            address: claimMap.get(s.claim_id)?.claim_address || "—",
-            inspector: getName(s.inspector_id),
-            status: s.status,
-            scheduled: s.scheduled_at,
-          }));
+          .map((s) => ({ ...getBase(s), scheduled: s.scheduled_at }));
       case "avg-time":
         return sessions
           .filter((s) => s.status === "completed" && s.started_at && s.ended_at)
           .map((s) => ({
-            id: s.id,
-            liquidation: claimMap.get(s.claim_id)?.liquidation_number || "—",
-            address: claimMap.get(s.claim_id)?.claim_address || "—",
-            inspector: getName(s.inspector_id),
-            status: s.status,
-            started: s.started_at,
+            ...getBase(s),
             ended: s.ended_at,
             duration: Math.round((new Date(s.ended_at!).getTime() - new Date(s.started_at!).getTime()) / 60000),
           }))
@@ -714,18 +765,13 @@ export default function DashboardPage() {
                 }
               }}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-2xl bg-linear-to-br from-white/30 to-white/10 backdrop-blur-md border border-white/30 shadow-lg flex items-center justify-center dark:from-white/10 dark:to-white/5">
-                  <Icon weight="fill" className="h-5 w-5 text-white/90" />
+              <div className="flex items-center justify-center gap-2">
+                <div className="-ml-2 shrink-0">
+                  <Icon />
                 </div>
-                <div className={`kpi-trend kpi-trend-${kpi.trend}`}>
-                  {kpi.trend === "up" && <TrendingUp className="h-3 w-3" />}
-                  {(kpi.trend as string) === "down" && <TrendingDown className="h-3 w-3" />}
-                  <span>{kpi.trendValue}</span>
-                </div>
+                <div className="kpi-value flex-1 text-center">{kpi.value}</div>
               </div>
-              <div className="kpi-value">{kpi.value}</div>
-              <div className="kpi-label mt-1">{kpi.label}</div>
+              <div className="text-center text-sm font-medium text-foreground/80 mt-2">{kpi.label}</div>
             </div>
           );
         })}
@@ -745,8 +791,184 @@ export default function DashboardPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════
+          SECCIÓN: INSPECCIONES
+          Top Inspectores + Por Estado + Por Región + Por Comuna + Por Día + Tiempo por Región + Tasa Cancelación
+          ═══════════════════════════════════════════════════════════════ */}
+      {stats.totalClaims > 0 && (
+        <>
+          <div className="dash-section-header">
+            <ClipboardCheck className="h-4.5 w-4.5" />
+            <span className="dash-section-title">Inspecciones</span>
+            <div className="dash-section-line" />
+            <span className="dash-section-count">{stats.totalSessions} sesiones</span>
+          </div>
+
+          {/* Row 1: Top Inspectores + Por Estado + Tasa Cancelación */}
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-4 glass-glow-violet">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <UserCheck className="h-4 w-4" />
+                  Top Inspectores
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                {stats.topInspectors.length > 0 ? (
+                  <BarChartQuad
+                    data={stats.topInspectors.slice(0, 8).map((i) => ({
+                      name: i.name,
+                      agendadas: i.scheduled,
+                      enProceso: i.active,
+                      completadas: i.completed,
+                      canceladas: Math.max(0, i.total - i.completed - i.scheduled - i.active),
+                    }))}
+                    horizontal
+                  />
+                ) : (
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
+                    Sin datos
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="glass-panel dash-col-4 glass-glow-amber">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Activity className="h-4 w-4" />
+                  Por Estado
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                <BarChartGlass
+                  data={stats.inspectionsByStatus}
+                  color="#8b5cf6"
+                />
+              </div>
+            </div>
+
+            <div className="glass-panel dash-col-4 glass-glow-rose">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <AlertCircle className="h-4 w-4" />
+                  Tasa de Cancelación
+                </div>
+              </div>
+              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
+                <span className="text-4xl font-bold tracking-tight text-rose-500">
+                  {stats.cancellationRate.toFixed(0)}%
+                </span>
+                <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                  {stats.cancelledSessions} canceladas de {stats.totalSessions}
+                </p>
+                <div className="mt-4 w-full grid grid-cols-2 gap-2">
+                  <div className="flex flex-col items-center rounded-lg bg-emerald-500/5 border border-emerald-500/10 py-2">
+                    <span className="text-lg font-bold text-emerald-500">{stats.completedSessions}</span>
+                    <span className="text-[10px] text-muted-foreground">Completadas</span>
+                  </div>
+                  <div className="flex flex-col items-center rounded-lg bg-amber-500/5 border border-amber-500/10 py-2">
+                    <span className="text-lg font-bold text-amber-500">{stats.activeSessions}</span>
+                    <span className="text-[10px] text-muted-foreground">En curso</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Por Región + Por Comuna */}
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-6 glass-glow-sky">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <MapPin className="h-4 w-4" />
+                  Inspecciones por Región
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                {stats.inspectionsByRegion.length > 0 ? (
+                  <BarChartQuad
+                    data={stats.inspectionsByRegion}
+                    horizontal
+                  />
+                ) : (
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
+                    Sin datos
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="glass-panel dash-col-6 glass-glow-emerald">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <MapPin className="h-4 w-4" />
+                  Inspecciones por Comuna
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                {stats.inspectionsByCommune.length > 0 ? (
+                  <BarChartQuad
+                    data={stats.inspectionsByCommune}
+                    horizontal
+                  />
+                ) : (
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
+                    Sin datos
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3: Por Día + Tiempo por Región */}
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-6 glass-glow-pink">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Calendar className="h-4 w-4" />
+                  Por Día de la Semana
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                <BarChartGlass
+                  data={stats.inspectionsByDay}
+                  color="#ec4899"
+                />
+              </div>
+            </div>
+
+            <div className="glass-panel dash-col-6 glass-glow-amber">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Timer className="h-4 w-4" />
+                  Tiempo Promedio por Inspector
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                {stats.avgTimeByInspector.length > 0 ? (
+                  <BarChartGlass
+                    data={stats.avgTimeByInspector.map((r) => ({
+                      name: r.name,
+                      value: r.value,
+                      label: `${Math.floor(r.value / 60)}h ${r.value % 60}m`,
+                    }))}
+                    color="#f59e0b"
+                    horizontal
+                  />
+                ) : (
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
+                    Sin datos
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
           SECCIÓN: SINIESTROS
-          Donut + Gauge cierre + Evolución mensual + Por día + Tiempo + En creación + En liquidación
+          Por Estado + Por Ramo + Por Región + Top Liquidadores + Top Despachadores + Top Revisores
           ═══════════════════════════════════════════════════════════════ */}
       {stats.totalClaims > 0 && (
         <>
@@ -757,7 +979,7 @@ export default function DashboardPage() {
             <span className="dash-section-count">{stats.totalClaims} casos</span>
           </div>
 
-          {/* Row 1: Donut (estado) + Gauge (tasa cierre) + Area (evolución) */}
+          {/* Row 1: Donut (estado) + Por Ramo */}
           <div className="dash-grid">
             <div className="glass-panel dash-col-4 glass-glow-blue">
               <div className="glass-panel-header">
@@ -777,29 +999,143 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-4 glass-glow-emerald">
+            <div className="glass-panel dash-col-8 glass-glow-sky">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
-                  <CheckCircle className="h-4 w-4" />
-                  Tasa de Cierre
+                  <Layers className="h-4 w-4" />
+                  Por Ramo
                 </div>
               </div>
-              <div className="glass-panel-body flex items-center justify-center pt-2">
-                <GaugeChart
-                  value={stats.closeRate}
-                  max={100}
-                  label="Siniestros cerrados"
-                  color="#10b981"
-                  size={210}
-                />
+              <div className="glass-panel-body">
+                {stats.topRamos.length > 0 ? (
+                  <BarChartGlass
+                    data={stats.topRamos}
+                    color="#0095DA"
+                    horizontal
+                  />
+                ) : (
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
+                    Sin datos
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Por Región */}
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-12 glass-glow-violet">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <MapPin className="h-4 w-4" />
+                  Siniestros por Región
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                {stats.claimsByRegion.length > 0 ? (
+                  <BarChartGlass
+                    data={stats.claimsByRegion}
+                    color="#8b5cf6"
+                    horizontal
+                  />
+                ) : (
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
+                    Sin datos
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3: Top Liquidadores + Top Despachadores + Top Revisores */}
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-4 glass-glow-violet">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <FilePen className="h-4 w-4" />
+                  Top Liquidadores
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                {stats.topAdjusters.length > 0 ? (
+                  <BarChartGlass
+                    data={stats.topAdjusters.map((a) => ({ name: a.name, value: a.count }))}
+                    color="#8b5cf6"
+                    horizontal
+                  />
+                ) : (
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
+                    Sin datos
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="glass-panel dash-col-4 glass-glow-sky">
+            <div className="glass-panel dash-col-4 glass-glow-amber">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
-                  <Activity className="h-4 w-4" />
-                  Evolución Mensual
+                  <Navigation className="h-4 w-4" />
+                  Top Despachadores
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                {stats.topDispatchers.length > 0 ? (
+                  <BarChartGlass
+                    data={stats.topDispatchers.map((d) => ({ name: d.name, value: d.count }))}
+                    color="#f59e0b"
+                    horizontal
+                  />
+                ) : (
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
+                    Sin datos
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="glass-panel dash-col-4 glass-glow-emerald">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <ScrollText className="h-4 w-4" />
+                  Top Revisores
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                {stats.topAuditors.length > 0 ? (
+                  <BarChartGlass
+                    data={stats.topAuditors.map((a) => ({ name: a.name, value: a.count }))}
+                    color="#10b981"
+                    horizontal
+                  />
+                ) : (
+                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
+                    Sin datos
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SECCIÓN: SISTEMA
+          Top Compañías (casos vs inspecciones) + Inspecciones sin asignar
+          ═══════════════════════════════════════════════════════════════ */}
+      {stats.totalClaims > 0 && showSystemSection && (
+        <>
+          <div className="dash-section-header">
+            <Building2 className="h-4.5 w-4.5" />
+            <span className="dash-section-title">{isGlobalUser ? "Sistema" : "Mis Compañías"}</span>
+            <div className="dash-section-line" />
+          </div>
+
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-8 glass-glow-sky">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Building2 className="h-4 w-4" />
+                  {isGlobalUser ? "Top Compañías" : "Mis Casos por Compañía"}
                 </div>
                 <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                   <span className="flex items-center gap-1.5">
@@ -813,232 +1149,16 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="glass-panel-body">
-                <AreaChartGlass
-                  data={stats.monthsData}
-                  
-                  label="Siniestros"
-                  label2="Inspecciones"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2: Bar (por día) + Tiempo Resolución + En Creación + En Liquidación */}
-          <div className="dash-grid">
-            <div className="glass-panel dash-col-3 glass-glow-pink">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Calendar className="h-4 w-4" />
-                  Por Día de la Semana
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                <BarChartGlass
-                  data={stats.claimsByDay}
-                  
-                  color="#ec4899"
-                />
-              </div>
-            </div>
-
-            <div className="glass-panel dash-col-3 glass-glow-amber">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Timer className="h-4 w-4" />
-                  Tiempo Resolución
-                </div>
-              </div>
-              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold tracking-tight">
-                    {stats.avgResolutionDays > 0 ? stats.avgResolutionDays.toFixed(1) : "—"}
-                  </span>
-                  {stats.avgResolutionDays > 0 && (
-                    <span className="text-sm text-muted-foreground font-medium">días</span>
-                  )}
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {isGlobalUser ? "Promedio de cierre" : "Promedio de cierre de tus casos"}
-                </p>
-                <div className="mt-3 w-full flex items-center gap-2">
-                  <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all progress-bar-amber"
-                      style={{
-                        width: `${Math.min(stats.avgResolutionDays * 10, 100)}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground font-medium">
-                    {stats.avgResolutionDays > 30 ? "Lento" : stats.avgResolutionDays > 14 ? "Normal" : "Rápido"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="glass-panel dash-col-3 glass-glow-blue">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Clock className="h-4 w-4" />
-                  En Creación
-                </div>
-              </div>
-              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
-                <span className="text-4xl font-bold tracking-tight">{stats.createdClaims}</span>
-                <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {isGlobalUser ? "Recién ingresados" : "Casos recién ingresados"}
-                </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20">
-                    <span className="text-[10px] font-semibold text-blue-500">
-                      {stats.totalClaims > 0 ? ((stats.createdClaims / stats.totalClaims) * 100).toFixed(0) : 0}%
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">del total</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="glass-panel dash-col-3 glass-glow-amber">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <AlertCircle className="h-4 w-4" />
-                  En Liquidación
-                </div>
-              </div>
-              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
-                <span className="text-4xl font-bold tracking-tight">{stats.adjustmentClaims}</span>
-                <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {isGlobalUser ? "En proceso de ajuste" : "Casos en proceso de ajuste"}
-                </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20">
-                    <span className="text-[10px] font-semibold text-amber-500">
-                      {stats.totalClaims > 0 ? ((stats.adjustmentClaims / stats.totalClaims) * 100).toFixed(0) : 0}%
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">del total</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════
-          SECCIÓN: INSPECCIONES
-          Gauge completitud + Bar por estado + Inspecciones OK
-          ═══════════════════════════════════════════════════════════════ */}
-      {stats.totalClaims > 0 && (
-        <>
-          <div className="dash-section-header">
-            <ClipboardCheck className="h-4.5 w-4.5" />
-            <span className="dash-section-title">Inspecciones</span>
-            <div className="dash-section-line" />
-            <span className="dash-section-count">{stats.totalSessions} sesiones</span>
-          </div>
-
-          <div className="dash-grid">
-            {/* Gauge: Completitud inspecciones */}
-            <div className="glass-panel dash-col-4 glass-glow-violet">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <ClipboardCheck className="h-4 w-4" />
-                  Tasa de Completitud
-                </div>
-              </div>
-              <div className="glass-panel-body flex items-center justify-center pt-2">
-                <GaugeChart
-                  value={stats.inspectionCompletionRate}
-                  max={100}
-                  label="Inspecciones completadas"
-                  color="#8b5cf6"
-                  size={210}
-                />
-              </div>
-            </div>
-
-            {/* Bar: Inspecciones por estado */}
-            <div className="glass-panel dash-col-4 glass-glow-amber">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Activity className="h-4 w-4" />
-                  Por Estado
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                <BarChartGlass
-                  data={stats.inspectionsByStatus}
-                  
-                  color="#8b5cf6"
-                />
-              </div>
-            </div>
-
-            {/* Inspecciones OK + desglose agendadas/activas */}
-            <div className="glass-panel dash-col-4 glass-glow-emerald">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <CheckCircle className="h-4 w-4" />
-                  Inspecciones OK
-                </div>
-              </div>
-              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
-                <span className="text-4xl font-bold tracking-tight">{stats.completedSessions}</span>
-                <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  Inspecciones completadas
-                </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
-                    <span className="text-[10px] font-semibold text-emerald-500">
-                      {stats.totalSessions > 0 ? ((stats.completedSessions / stats.totalSessions) * 100).toFixed(0) : 0}%
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">del total</span>
-                </div>
-                <div className="mt-4 w-full grid grid-cols-2 gap-2">
-                  <div className="flex flex-col items-center rounded-lg bg-blue-500/5 border border-blue-500/10 py-2">
-                    <span className="text-lg font-bold text-blue-500">{stats.scheduledSessions}</span>
-                    <span className="text-[10px] text-muted-foreground">Agendadas</span>
-                  </div>
-                  <div className="flex flex-col items-center rounded-lg bg-amber-500/5 border border-amber-500/10 py-2">
-                    <span className="text-lg font-bold text-amber-500">{stats.activeSessions}</span>
-                    <span className="text-[10px] text-muted-foreground">En curso</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════
-          SECCIÓN: SISTEMA / ACTIVIDAD (internal + adjuster)
-          Top compañías + Actividad reciente
-          ═══════════════════════════════════════════════════════════════ */}
-      {stats.totalClaims > 0 && showSystemSection && (
-        <>
-          <div className="dash-section-header">
-            <Building2 className="h-4.5 w-4.5" />
-            <span className="dash-section-title">{isGlobalUser ? "Sistema" : "Mis Compañías"}</span>
-            <div className="dash-section-line" />
-          </div>
-
-          <div className="dash-grid">
-            <div className="glass-panel dash-col-6 glass-glow-sky">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Building2 className="h-4 w-4" />
-                  {isGlobalUser ? "Top Compañías" : "Mis Casos por Compañía"}
-                </div>
-              </div>
-              <div className="glass-panel-body">
                 {stats.topCompanies.length > 0 ? (
-                  <BarChartGlass
-                    data={stats.topCompanies}
-                    
-                    color="#0095DA"
+                  <BarChartDual
+                    data={stats.topCompanies.map((c) => ({
+                      name: c.name,
+                      asignadas: c.value,
+                      completadas: c.inspections,
+                    }))}
                     horizontal
+                    color1="#0095DA"
+                    color2="#8b5cf6"
                   />
                 ) : (
                   <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
@@ -1048,174 +1168,83 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-6 glass-glow-indigo">
+            <div className="glass-panel dash-col-4 glass-glow-rose">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
-                  <Activity className="h-4 w-4" />
-                  Actividad Reciente
+                  <AlertCircle className="h-4 w-4" />
+                  Sin Asignar
                 </div>
               </div>
-              <div className="glass-panel-body scroll-box-sm">
-                {recentActivity.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-8 text-center">
-                    No hay actividad reciente.
-                  </p>
-                ) : (
-                  <div>
-                    {recentActivity.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <div key={item.id} className="activity-item">
-                          <div
-                            className="activity-icon activity-icon-gradient"
-                          >
-                            <Icon className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-medium truncate">{item.text}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">{item.time}</p>
-                          </div>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-1" />
-                        </div>
-                      );
-                    })}
+              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
+                <span className="text-4xl font-bold tracking-tight text-rose-500">
+                  {stats.unassignedInspections}
+                </span>
+                <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                  Inspecciones sin inspector asignado
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20">
+                    <span className="text-[10px] font-semibold text-rose-500">
+                      {stats.totalSessions > 0 ? ((stats.unassignedInspections / stats.totalSessions) * 100).toFixed(0) : 0}%
+                    </span>
                   </div>
-                )}
+                  <span className="text-[10px] text-muted-foreground">del total</span>
+                </div>
               </div>
             </div>
           </div>
         </>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════
-          SECCIÓN: RESUMEN (inspector / assistant)
-          Distribución por estado + Actividad reciente
-          ═══════════════════════════════════════════════════════════════ */}
-      {stats.totalClaims > 0 && !showSystemSection && (
-        <>
-          <div className="dash-section-header">
-            <Shield className="h-4.5 w-4.5" />
-            <span className="dash-section-title">Resumen</span>
-            <div className="dash-section-line" />
-          </div>
-
-          <div className="dash-grid">
-            <div className="glass-panel dash-col-6 glass-glow-indigo">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Shield className="h-4 w-4" />
-                  Distribución por Estado
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                {stats.claimsByStatus.length > 0 ? (
-                  <div className="space-y-4 pt-2">
-                    {stats.claimsByStatus.map((s) => {
-                      const pct = stats.totalClaims > 0 ? (s.value / stats.totalClaims) * 100 : 0;
-                      return (
-                        <div key={s.name}>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-sm font-medium">{s.name}</span>
-                            <span className="text-sm text-muted-foreground">{s.value} ({pct.toFixed(0)}%)</span>
-                          </div>
-                          <div className="h-2.5 rounded-full bg-muted/30 overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{ width: `${pct}%`, background: s.color }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="h-50 flex items-center justify-center text-sm text-muted-foreground">
-                    Sin datos
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="glass-panel dash-col-6 glass-glow-indigo">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Activity className="h-4 w-4" />
-                  Actividad Reciente
-                </div>
-              </div>
-              <div className="glass-panel-body scroll-box-sm">
-                {recentActivity.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-8 text-center">
-                    No hay actividad reciente.
-                  </p>
-                ) : (
-                  <div>
-                    {recentActivity.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <div key={item.id} className="activity-item">
-                          <div
-                            className="activity-icon activity-icon-gradient"
-                          >
-                            <Icon className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-medium truncate">{item.text}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">{item.time}</p>
-                          </div>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-1" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
       <Dialog open={!!kpiModal} onOpenChange={() => setKpiModal(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{kpiModal?.title}</DialogTitle>
-            <DialogDescription>
-              {kpiModal?.key === "avg-time"
-                ? "Detalle de inspecciones completadas, ordenadas de mayor a menor duración."
-                : "Haz clic en una fila para ir al siniestro o inspección asociada."}
-            </DialogDescription>
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-5 py-3 border-b bg-muted/50 shrink-0">
+            <DialogTitle className="text-base font-semibold">{kpiModal?.title}</DialogTitle>
           </DialogHeader>
           {kpiDetailRows.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">Sin datos para mostrar</div>
+            <div className="py-12 text-center text-sm text-muted-foreground">Sin datos para mostrar</div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="flex-1 overflow-auto">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground text-xs">
-                    <th className="py-2 pr-4">Liquidación</th>
-                    <th className="py-2 pr-4">Dirección</th>
-                    <th className="py-2 pr-4">Inspector</th>
-                    <th className="py-2 pr-4">Estado</th>
-                    {kpiModal?.key === "avg-time" && <th className="py-2 pr-4 text-right">Duración</th>}
-                    <th className="py-2 pr-4 text-right">Horario</th>
+                <thead className="bg-muted/80 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sticky top-0 z-10">
+                  <tr>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Inspección</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Liquidación</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Asegurado</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Dirección</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Inspector</th>
+                    {kpiModal?.key === "overdue" && <th className="px-3 py-2 text-left whitespace-nowrap">Estado</th>}
+                    {kpiModal?.key === "avg-time" && <th className="px-3 py-2 text-right whitespace-nowrap">Duración</th>}
+                    <th className="px-3 py-2 text-right whitespace-nowrap">Fecha</th>
+                    <th className="px-3 py-2 text-right whitespace-nowrap">Hora</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y">
                   {kpiDetailRows.map((row) => (
-                    <tr key={row.id} className="border-b last:border-0 hover:bg-muted/40">
-                      <td className="py-2 pr-4 font-mono">{row.liquidation}</td>
-                      <td className="py-2 pr-4 max-w-[220px] truncate" title={row.address}>{row.address}</td>
-                      <td className="py-2 pr-4">{row.inspector}</td>
-                      <td className="py-2 pr-4 capitalize">{row.status}</td>
-                      {kpiModal?.key === "avg-time" && <td className="py-2 pr-4 text-right font-mono">{row.duration}m</td>}
-                      <td className="py-2 pr-4 text-right text-xs text-muted-foreground">
-                        {row.scheduled
-                          ? new Date(row.scheduled).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
-                          : row.started
-                            ? new Date(row.started).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
-                            : row.ended
-                              ? new Date(row.ended).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
-                              : "—"}
-                      </td>
+                    <tr key={row.id} className="hover:bg-muted/40 transition-colors">
+                      <td className="px-3 py-2 font-mono whitespace-nowrap">{row.inspectionCode}</td>
+                      <td className="px-3 py-2 font-mono whitespace-nowrap">{row.liquidation}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{row.insured}</td>
+                      <td className="px-3 py-2 max-w-xs truncate" title={row.address}>{row.address}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{row.inspector}</td>
+                      {kpiModal?.key === "overdue" && (
+                        <td className="px-3 py-2 whitespace-nowrap capitalize">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            row.status === "active" ? "bg-amber-100 text-amber-700" :
+                            row.status === "scheduled" ? "bg-blue-100 text-blue-700" :
+                            "bg-gray-100 text-gray-700"
+                          }`}>
+                            {row.status === "active" ? "En curso" : row.status === "scheduled" ? "Agendada" : row.status}
+                          </span>
+                        </td>
+                      )}
+                      {kpiModal?.key === "avg-time" && (
+                        <td className="px-3 py-2 text-right font-mono whitespace-nowrap">
+                          {row.duration != null ? `${Math.floor(row.duration / 60)}h ${row.duration % 60}m` : "—"}
+                        </td>
+                      )}
+                      <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">{row.date}</td>
+                      <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">{row.time}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -1431,6 +1431,7 @@ function SignaturesTab({ session }: { session: LiveSession }) {
 
   const insuredSig = session.inspection_signatures?.find((s) => s.role === "insured");
   const adjusterSig = session.inspection_signatures?.find((s) => s.role === "adjuster");
+  const canSign = session.status !== "completed" && session.status !== "cancelled";
 
   const signMutation = useMutation({
     mutationFn: async (data: { sessionId: string; role: string; signatureDataUrl: string }) => {
@@ -1578,8 +1579,13 @@ function SignaturesTab({ session }: { session: LiveSession }) {
       )}
 
       {/* Canvas para firma del asegurado */}
-      {!insuredSig && (
-        <Panel title="Firme aquí como Asegurado">
+      {canSign && (
+        <Panel title={insuredSig ? "Volver a firmar como Asegurado" : "Firme aquí como Asegurado"}>
+          {insuredSig && (
+            <p className="app-body text-slate-400 text-sm mb-3">
+              Puedes dibujar una nueva firma y guardarla. Se reemplazará la firma anterior.
+            </p>
+          )}
           <div ref={containerRef} className="rounded-lg border border-slate-700 bg-white w-full mb-3">
             <canvas
               ref={canvasRef}
@@ -1603,16 +1609,16 @@ function SignaturesTab({ session }: { session: LiveSession }) {
               className="rounded-lg bg-sky-600 px-3 py-1.5 app-body text-white hover:bg-sky-500 disabled:opacity-50 flex items-center gap-1.5"
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PenTool className="h-3.5 w-3.5" />}
-              Firmar
+              Guardar
             </button>
           </div>
         </Panel>
       )}
 
-      {insuredSig && !adjusterSig && (
+      {!canSign && (
         <Panel>
           <p className="app-body text-slate-400 text-center py-4">
-            Su firma ha sido registrada. Esperando la firma del ajustador...
+            La inspección está cerrada. Ya no es posible modificar las firmas.
           </p>
         </Panel>
       )}

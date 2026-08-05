@@ -207,8 +207,8 @@ export function CoordScheduler({
               <p className="app-body text-muted-foreground py-2">No hay slots disponibles.</p>
             ) : (
               <>
-                {/* Grid de slots — 12 columnas, compactos (24px) */}
-                <div className="grid grid-cols-12 gap-1">
+                {/* Grid de slots — responsive, más aire */}
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-7 gap-1.5">
                   {slots.map((slot) => {
                     const isSelected = currentValue === `${selectedDate}T${slot.time}`;
                     return (
@@ -217,7 +217,7 @@ export function CoordScheduler({
                         type="button"
                         disabled={readOnly || !slot.available}
                         onClick={() => assignSlot(slot.time)}
-                        className={`h-6 max-h-6 rounded app-body font-medium transition-colors flex items-center justify-center gap-0.5 ${
+                        className={`h-5 rounded app-body font-medium text-xs transition-colors flex items-center justify-center gap-0.5 whitespace-nowrap ${
                           !slot.available
                             ? "bg-muted/40 text-muted-foreground/40 cursor-not-allowed line-through border border-border/30"
                             : slot.extra

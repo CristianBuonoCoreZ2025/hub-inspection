@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldCheck, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
+import { ClaimsHubLogo } from "@/components/icons/claims-hub-logo";
 import { cn } from "@/lib/utils";
 import { useNavLinks } from "@/hooks/use-nav-links";
 import type { NavLink, VisibleNavGroup, VisibleNavSubgroup } from "@/components/layout/nav-data";
@@ -368,14 +369,14 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
             {/* Logo */}
             <Link
               href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-[14px] bg-primary/10 text-primary shrink-0 transition-all duration-200 hover:bg-primary/15"
+              className="flex items-center gap-3 px-3 py-2 rounded-[14px] bg-violet-500/10 text-violet-700 shrink-0 transition-all duration-200 hover:bg-violet-500/15"
             >
-              <div className="flex size-10 items-center justify-center rounded-[12px] bg-primary text-primary-foreground shrink-0 transition-all duration-200 hover:scale-105 shadow-[0_0_20px_rgba(139,92,246,0.35)]">
-                <ShieldCheck className="size-5" />
+              <div className="flex size-10 items-center justify-center rounded-[12px] text-violet-700 shrink-0 transition-all duration-200 hover:scale-105">
+                <ClaimsHubLogo className="size-10" />
               </div>
               <div className="flex flex-col min-w-0">
                 <span className="text-[13px] font-semibold leading-tight">Claims Hub</span>
-                <span className="text-[10px] text-primary/70 leading-tight">Dashboard</span>
+                <span className="text-[10px] text-violet-500/80 leading-tight">Dashboard</span>
               </div>
             </Link>
 

@@ -1397,7 +1397,7 @@
   }
 
   .kpi-value {
-    font-size: 28px !important;
+    font-size: 36px !important;
     font-weight: 700 !important;
     letter-spacing: -0.03em !important;
     line-height: 1 !important;
@@ -2249,6 +2249,7 @@
   .glass-glow-sky         { --glass-glow: rgba(0, 149, 218, 0.06) !important; }
   .glass-glow-pink        { --glass-glow: rgba(236, 72, 153, 0.06) !important; }
   .glass-glow-indigo      { --glass-glow: rgba(99, 102, 241, 0.06) !important; }
+  .glass-glow-rose        { --glass-glow: rgba(244, 63, 94, 0.06) !important; }
 
   /* ── kpi-glow: CSS var para kpi-card ── */
   .kpi-glow-blue          { --kpi-glow: rgba(59, 130, 246, 0.1) !important; }
