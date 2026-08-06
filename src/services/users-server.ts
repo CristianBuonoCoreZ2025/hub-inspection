@@ -48,22 +48,22 @@ export async function inviteUser(
   input: InviteUserInput
 ): Promise<{ user: { id: string; email: string } }> {
   // ── Debug de env vars (sin exponer valores) ──
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const supabaseUrlDebug = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const serviceKeyDebug = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
   logger.info("inviteUser: env vars check", {
     component: "users-server",
     action: "inviteUser.env",
     metadata: {
-      urlDefined: !!supabaseUrl,
-      urlLength: supabaseUrl.length,
-      urlStartsWithHttps: supabaseUrl.startsWith("https://"),
-      urlEndsWithSlash: supabaseUrl.endsWith("/"),
-      urlDomain: supabaseUrl.replace("https://", "").split(".")[0] || "(empty)",
-      keyDefined: !!serviceKey,
-      keyLength: serviceKey.length,
-      keyStartsOk: serviceKey.startsWith("eyJ"),
-      keyEndsOk: !serviceKey.endsWith(" ") && !serviceKey.endsWith("\n"),
-      keyHasQuotes: serviceKey.startsWith('"') || serviceKey.endsWith('"'),
+      urlDefined: !!supabaseUrlDebug,
+      urlLength: supabaseUrlDebug.length,
+      urlStartsWithHttps: supabaseUrlDebug.startsWith("https://"),
+      urlEndsWithSlash: supabaseUrlDebug.endsWith("/"),
+      urlDomain: supabaseUrlDebug.replace("https://", "").split(".")[0] || "(empty)",
+      keyDefined: !!serviceKeyDebug,
+      keyLength: serviceKeyDebug.length,
+      keyStartsOk: serviceKeyDebug.startsWith("eyJ"),
+      keyEndsOk: !serviceKeyDebug.endsWith(" ") && !serviceKeyDebug.endsWith("\n"),
+      keyHasQuotes: serviceKeyDebug.startsWith('"') || serviceKeyDebug.endsWith('"'),
     },
   });
 
@@ -153,6 +153,113 @@ export async function inviteUser(
   }
 
   // ── Crear el usuario con admin API ──
+  // Primero intentamos con fetch directo para ver la respuesta cruda de Supabase
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const adminAuthUrl = `${supabaseUrl}/auth/v1/admin/users`;
+  
+  try {
+    const directRes = await fetch(adminAuthUrl, {
+      method: "POST",
+      headers: {
+        "apikey": serviceKey,
+        "Authorization": `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: metadata,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    
+    const directBody = await directRes.text().catch(() => "(no body)");
+    logger.info("inviteUser: fetch directo a Supabase Auth", {
+      component: "users-server",
+      action: "inviteUser.directFetch",
+      metadata: {
+        status: directRes.status,
+        statusText: directRes.statusText,
+        bodyLength: directBody.length,
+        bodyPreview: directBody.slice(0, 500),
+        url: adminAuthUrl,
+      },
+    });
+    
+    if (directRes.ok) {
+      const directData = JSON.parse(directBody);
+      if (directData?.id) {
+        // Éxito con fetch directo, saltamos el client
+        const userId = directData.id;
+        // Continuamos con upsert del perfil...
+        const { error: upsertError } = await adminClient
+          .from("profiles")
+          .upsert(
+            {
+              user_id: userId,
+              email,
+              full_name: fullName,
+              first_name: firstName,
+              last_name: lastName,
+              role: input.role,
+              company_id: companyId,
+              country_id: input.countryId,
+              timezone,
+              rut: rut || null,
+              phone: input.phone?.trim() || null,
+              is_active: true,
+            },
+            { onConflict: "user_id" }
+          );
+        if (upsertError) {
+          logger.warn("Upsert profile en inviteUser falló", {
+            component: "users-server",
+            action: "inviteUser.upsert",
+            metadata: { error: upsertError.message, email },
+          });
+        }
+        
+        if (input.clientIds.length > 0) {
+          const rows = input.clientIds.map((cid) => ({ user_id: userId, company_id: cid }));
+          const { error: ucError } = await adminClient
+            .from("user_clients")
+            .upsert(rows, { onConflict: "user_id,company_id", ignoreDuplicates: true });
+          if (ucError) {
+            logger.warn("Error al insertar user_clients adicionales", {
+              component: "users-server",
+              action: "inviteUser.user_clients",
+              metadata: { error: ucError.message, userId },
+            });
+          }
+        }
+        
+        try {
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+          await adminClient.auth.admin.inviteUserByEmail(email, {
+            redirectTo: `${siteUrl}/forgot-password`,
+          });
+        } catch (inviteErr) {
+          logger.warn("Email de invitación falló", {
+            component: "users-server",
+            action: "inviteUser.email",
+            metadata: { error: String(inviteErr), email },
+          });
+        }
+        
+        return { user: { id: userId, email } };
+      }
+    }
+    // Si el fetch directo no es ok o no tiene id, caemos al flujo normal
+  } catch (directErr) {
+    logger.warn("inviteUser: fetch directo falló, intentando con supabase client", {
+      component: "users-server",
+      action: "inviteUser.directFetch",
+      metadata: { error: directErr instanceof Error ? directErr.message : String(directErr) },
+    });
+  }
+
   const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
     email,
     password: tempPassword,
