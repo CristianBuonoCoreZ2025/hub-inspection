@@ -1,6 +1,6 @@
 import { createServerClient as createSSRClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Cliente Supabase para Server Components y Server Actions.
@@ -37,15 +37,13 @@ export async function createServerClient(): Promise<SupabaseClient> {
  * No es async porque no lee cookies.
  */
 export function createAdminClient(): SupabaseClient {
-  return createSSRClient(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        getAll() {
-          return [];
-        },
-        setAll() {},
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     }
   );
