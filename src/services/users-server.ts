@@ -47,6 +47,26 @@ const TIMEZONE_BY_COUNTRY: Record<string, string> = {
 export async function inviteUser(
   input: InviteUserInput
 ): Promise<{ user: { id: string; email: string } }> {
+  // ── Debug de env vars (sin exponer valores) ──
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  logger.info("inviteUser: env vars check", {
+    component: "users-server",
+    action: "inviteUser.env",
+    metadata: {
+      urlDefined: !!supabaseUrl,
+      urlLength: supabaseUrl.length,
+      urlStartsWithHttps: supabaseUrl.startsWith("https://"),
+      urlEndsWithSlash: supabaseUrl.endsWith("/"),
+      urlDomain: supabaseUrl.replace("https://", "").split(".")[0] || "(empty)",
+      keyDefined: !!serviceKey,
+      keyLength: serviceKey.length,
+      keyStartsOk: serviceKey.startsWith("eyJ"),
+      keyEndsOk: !serviceKey.endsWith(" ") && !serviceKey.endsWith("\n"),
+      keyHasQuotes: serviceKey.startsWith('"') || serviceKey.endsWith('"'),
+    },
+  });
+
   const adminClient = createAdminClient();
 
   const email = input.email.trim().toLowerCase();
