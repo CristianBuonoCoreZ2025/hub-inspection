@@ -141,7 +141,19 @@ export async function inviteUser(
   });
 
   if (createError) {
-    throw new Error(`Supabase Auth: ${createError.message || JSON.stringify(createError)}`);
+    const errInfo = {
+      name: createError.name,
+      message: createError.message,
+      status: (createError as { status?: number }).status,
+      code: (createError as { code?: string }).code,
+      details: JSON.stringify(createError, Object.getOwnPropertyNames(createError)),
+    };
+    logger.error("Supabase createUser falló", new Error(`Supabase Auth: ${errInfo.message || "sin mensaje"}`), {
+      component: "users-server",
+      action: "inviteUser.createUser",
+      metadata: errInfo,
+    });
+    throw new Error(`Supabase Auth: ${errInfo.message || errInfo.details || "error desconocido"}`);
   }
 
   if (!userData.user) {
