@@ -19,8 +19,6 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.4.0",
-    "@nhost/nhost-js": "^4.7.2",
-    "@nhost/react": "^3.11.2",
     "@onlyoffice/document-editor-react": "^2.2.0",
     "@phosphor-icons/react": "^2.1.10",
     "@react-email/editor": "^1.6.12",
