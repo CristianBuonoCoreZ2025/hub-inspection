@@ -1601,20 +1601,18 @@ export default function ClaimDetailPage() {
 
  {/* ═══ MODAL: Nueva Gestión ═══ */}
  <Dialog open={openGestionModal} onOpenChange={setOpenGestionModal}>
- <DialogContent className="modal-md" showCloseButton>
- <div className="modal-header">
- <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
- <ClipboardList className="h-4 w-4" />
- </div>
+ <DialogContent className="modal-b-md" showCloseButton>
+ <div className="modal-b-header">
+ <DialogTitle className="modal-b-title">
+ <ClipboardList className="h-5 w-5" />
  Nueva Gestión
  </DialogTitle>
- <DialogDescription className="modal-subtitle">
+ <DialogDescription className="modal-b-subtitle">
  Selecciona la gestión a aplicar al siniestro {claim?.liquidation_number || "—"} / {claim?.client_reference || "—"}.
  </DialogDescription>
  </div>
 
- <div className="modal-body space-y-3">
+ <div className="modal-b-body space-y-3">
  {templatesLoading ? (
  <p className="text-muted-foreground app-body py-8 text-center">Cargando gestiones...</p>
  ) : !chainFilteredTemplates || chainFilteredTemplates.length === 0 ? (
@@ -1701,7 +1699,7 @@ export default function ClaimDetailPage() {
  )}
  </div>
 
- <div className="modal-footer">
+ <div className="modal-b-footer">
  <Button
  size="sm"
  className="pg-btn-platinum"

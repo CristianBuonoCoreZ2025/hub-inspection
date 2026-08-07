@@ -36,7 +36,7 @@ export default function LineasNegocioPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ country_id: "", name: "", code_prefix: "", claim_type: "", claim_type_id: "", ramo_fecu: "", description: "" });
+  const [formData, setFormData] = useState({ country_id: "", name: "", code_prefix: "", claim_type: "", claim_type_id: "", ramo_fecu: "", description: "", color: "#0095DA" });
 
   // Modal de documentos
   const [openDocs, setOpenDocs] = useState(false);
@@ -90,7 +90,7 @@ export default function LineasNegocioPage() {
   }, "name");
   const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
 
-  const resetForm = () => setFormData({ country_id: defaultCountryId, name: "", code_prefix: "", claim_type: "", claim_type_id: "", ramo_fecu: "", description: "" });
+  const resetForm = () => setFormData({ country_id: defaultCountryId, name: "", code_prefix: "", claim_type: "", claim_type_id: "", ramo_fecu: "", description: "", color: "#0095DA" });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,7 +149,7 @@ export default function LineasNegocioPage() {
                         <button type="button" className="btn-icon-sm" onClick={() => { setDocsLineId(l.id); setDocsLineName(l.name); setOpenDocs(true); }} title="Documentos a solicitar"><FileText className="h-4 w-4" /></button>
                       )}
                       {canEdit("catalogos") && (
-                        <button type="button" className="btn-icon-sm" onClick={() => { setEditingId(l.id); setFormData({ country_id: l.country_id || "", name: l.name, code_prefix: (l as { code_prefix?: string }).code_prefix || "", claim_type: l.claim_type || "", claim_type_id: l.claim_type_id || "", ramo_fecu: l.ramo_fecu || "", description: l.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
+                        <button type="button" className="btn-icon-sm" onClick={() => { setEditingId(l.id); setFormData({ country_id: l.country_id || "", name: l.name, code_prefix: (l as { code_prefix?: string }).code_prefix || "", claim_type: l.claim_type || "", claim_type_id: l.claim_type_id || "", ramo_fecu: l.ramo_fecu || "", description: l.description || "", color: l.color || "#0095DA" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
                       )}
                       {canDelete("catalogos") && (
                         <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta linea?")) deleteMutation.mutate(l.id); }}><Ban className="h-4 w-4" /></button>
@@ -224,6 +224,23 @@ export default function LineasNegocioPage() {
                   <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ej: Accidentes Personales" className="app-input" />
                 </div>
                 <div className="modal-field"><Label className="app-field-label">Ramo FECU</Label><Input value={formData.ramo_fecu} onChange={(e) => setFormData({ ...formData, ramo_fecu: e.target.value })} className="app-input" /></div>
+                <div className="modal-field">
+                  <Label className="app-field-label">Color del gráfico</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={formData.color}
+                      onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                      className="color-picker-input"
+                    />
+                    <Input
+                      value={formData.color}
+                      onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                      placeholder="#0095DA"
+                      className="app-input font-mono"
+                    />
+                  </div>
+                </div>
                 <div className="modal-field modal-field-full"><Label className="app-field-label">Descripcion</Label><Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="app-input" /></div>
               </div>
             </div>

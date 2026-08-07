@@ -156,7 +156,7 @@ export async function deleteBroker(id: string) {
 export async function getBusinessLines() {
   try {
     return await fetchAllSorted<BusinessLine>("business_lines", {
-      select: "id, country_id, name, code_prefix, claim_type, claim_type_id, ramo_fecu, description, is_active, created_at, updated_at",
+      select: "id, country_id, name, code_prefix, claim_type, claim_type_id, ramo_fecu, description, color, is_active, created_at, updated_at",
       eq: { is_active: true },
     });
   } catch (err) {
@@ -165,11 +165,11 @@ export async function getBusinessLines() {
   }
 }
 
-export async function createBusinessLine(input: { country_id?: string; name: string; code_prefix?: string; claim_type?: string; claim_type_id?: string; ramo_fecu?: string; description?: string }) {
+export async function createBusinessLine(input: { country_id?: string; name: string; code_prefix?: string; claim_type?: string; claim_type_id?: string; ramo_fecu?: string; description?: string; color?: string }) {
   return insertRow<BusinessLine>("business_lines", {
     ...input,
     is_active: true,
-  }, "id, country_id, name, code_prefix, claim_type, claim_type_id, ramo_fecu, description, is_active");
+  }, "id, country_id, name, code_prefix, claim_type, claim_type_id, ramo_fecu, description, color, is_active");
 }
 
 export async function updateBusinessLine(id: string, input: Partial<BusinessLine>) {
@@ -180,7 +180,7 @@ export async function updateBusinessLine(id: string, input: Partial<BusinessLine
       set[key] = value;
     }
   }
-  return updateRow<BusinessLine>("business_lines", id, set, "id, country_id, name, code_prefix, claim_type, claim_type_id, ramo_fecu, description, is_active");
+  return updateRow<BusinessLine>("business_lines", id, set, "id, country_id, name, code_prefix, claim_type, claim_type_id, ramo_fecu, description, color, is_active");
 }
 
 export async function deleteBusinessLine(id: string) {

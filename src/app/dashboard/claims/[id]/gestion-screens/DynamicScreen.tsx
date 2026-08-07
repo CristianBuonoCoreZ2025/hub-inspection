@@ -4436,6 +4436,7 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
  const statusLabels: Record<string, string> = {
  scheduled: "Agendada",
  active: "En Curso",
+ paused: "En Pausa",
  completed: "Completada",
  cancelled: "Cancelada",
  };

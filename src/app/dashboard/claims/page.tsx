@@ -1340,20 +1340,20 @@ const paginatedData = sortedClaims ?? [];
  }
  }}
  >
- <DialogContent className="modal-lg" showCloseButton={true}>
- <div className="modal-header">
- <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+ <DialogContent className="modal-b-lg" showCloseButton={true}>
+ <div className="modal-b-header">
+ <DialogTitle className="modal-b-title">
+ <span className="modal-title-icon">
  <ClipboardCheck className="h-4 w-4" />
- </div>
+ </span>
  Crear Siniestro
  </DialogTitle>
- <DialogDescription className="modal-subtitle">
+ <DialogDescription className="modal-b-subtitle">
  Completa los datos para crear el siniestro e iniciar una inspección remota.
  </DialogDescription>
  </div>
 
- <div className="modal-body">
+ <div className="modal-b-body">
  <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); if (step === 4) form.handleSubmit(onSubmit)(e); }} id="claim-wizard-form">
  {/* Wizard steps - compact */}
  <div className="flex items-center gap-1 mb-5 px-1">
@@ -2558,7 +2558,7 @@ const paginatedData = sortedClaims ?? [];
  </form>
  </div>
 
- <div className="modal-footer">
+ <div className="modal-b-footer">
  <button
  type="button"
  className="pg-btn-platinum"
