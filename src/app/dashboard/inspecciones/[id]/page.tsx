@@ -15,8 +15,8 @@ import {
  rescheduleInspectionViaCIN,
  cancelInspectionViaCIN,
  canAccessInspectionSession,
- getInspectionMaxDate,
 } from "@/services/inspections";
+import { getInspectionMaxDate } from "@/server/actions/inspections";
 import { updateClaimStatus } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getUsers, getUsersByRoleForCompany } from "@/services/users";

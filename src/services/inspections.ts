@@ -1216,46 +1216,6 @@ async function findCINTemplateForClaim(claimId: string): Promise<{
 }
 
 /**
- * Obtiene la fecha máxima permitida para reagendar/mover una inspección.
- *
- * Calcula: fecha_creacion_claim + days_to_issue del CIN template (días hábiles).
- * Si no encuentra el template o days_to_issue, usa fallback de 2 días hábiles.
- *
- * @param claimId — ID del siniestro
- * @returns objeto con maxDate (ISO yyyy-MM-dd), maxDays y claimCreatedAt
- */
-export async function getInspectionMaxDate(claimId: string): Promise<{
-  maxDate: string;
-  maxDays: number;
-  claimCreatedAt: string;
-}> {
-  // 1. Obtener fecha de creación del claim
-  const claim = await fetchById<{ created_at: string }>("claims", claimId, "created_at");
-  const claimCreatedAt = claim?.created_at ?? new Date().toISOString();
-
-  // 2. Obtener days_to_issue del CIN template
-  const cinTemplate = await findCINTemplateForClaim(claimId);
-  let maxDays = 2; // fallback
-  if (cinTemplate) {
-    const tpl = await fetchById<{ days_to_issue: number | null }>(
-      "action_template",
-      cinTemplate.action_template_id,
-      "days_to_issue",
-    );
-    maxDays = tpl?.days_to_issue ?? 2;
-  }
-
-  // 3. Calcular fecha máxima = claim.created_at + maxDays (días hábiles)
-  const { calculateMaxDate } = await import("@/lib/utils");
-  const max = calculateMaxDate(claimCreatedAt, maxDays);
-  return {
-    maxDate: max.toISOString().split("T")[0],
-    maxDays,
-    claimCreatedAt,
-  };
-}
-
-/**
  * Obtiene el nombre de un lookup_catalog por ID.
  */
 async function getLookupName(id: string): Promise<string> {
