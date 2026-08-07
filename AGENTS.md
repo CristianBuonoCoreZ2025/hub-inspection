@@ -140,6 +140,10 @@ estilos visuales, tamaños, colores, gradientes, espaciados o layout.
 - **Patrón frontend para obtener `company_id`:** Siempre desde `claim.company_id` (el siniestro siempre lo tiene, es relacional). NUNCA hacer casts raros como `(claim as unknown as { company_id?: string }).company_id` ni buscarlo en `claimActions` (que no lo trae en su SELECT). Ejemplo correcto: `claim?.company_id || ""`.
 - Implementar **Row Level Security (RLS)** en todas las tablas con datos sensibles/empresa.
 - Nunca usar bypass de seguridad (`security definer` solo en funciones controladas).
+- **REGLA SECURITY DEFINER:** Toda función `SECURITY DEFINER` DEBE tener `SET search_path`
+  explícito (ej: `SET search_path = public`). Sin esto, la función hereda el `search_path`
+  del caller (ej: `authenticator` en GoTrue), que puede no incluir el schema donde están
+  los tipos/funciones/tablas referenciados, causando errores silenciosos. Ver migración 340.
 - Usar `SUPABASE_ADMIN_SECRET` solo en server actions o Supabase Functions, nunca en cliente.
 - Auditoría completa: registrar quién crea/modifica/elimina registros.
 
@@ -4666,5 +4670,115 @@ pnpm exec tsx scripts/run-apply-propercase.ts
 1. Siempre correr en `staging/dev` antes de producción.
 2. Antes de correr en producción, hacer un `pg_dump` parcial de las tablas involucradas.
 3. El script es **idempotente**: solo actualiza las filas cuyo valor original difiere del formateado.
+
+---
+
+## N. Fix de Creación de Usuarios — handle_new_user (Migraciones 338, 339, 340)
+
+### Resumen
+
+La creación de usuarios (invite, signup, admin API) estaba rota en producción con
+error genérico `"Database error creating new user"` (HTTP 500). Se requirió **una
+cadena de 3 migraciones** para resolver el problema completamente.
+
+### Causa raíz
+
+La función `handle_new_user()` (trigger `AFTER INSERT ON auth.users`) tenía **tres
+bugs combinados** que impedían toda creación de usuarios:
+
+1. **Bug 1 — `NEW.metadata` inexistente (Migración 338)**:
+   La función usaba `NEW.metadata` para leer los metadatos del usuario, pero la
+   columna real en `auth.users` se llama `raw_user_meta_data`. Esto causaba que
+   `v_company_id`, `v_role`, `v_full_name`, etc. quedaran todos en NULL.
+
+2. **Bug 2 — Cast TEXT → enum sin explícito (Migración 339)**:
+   La función declaraba `v_role TEXT` pero lo insertaba en `profiles.role` que es
+   tipo `user_role` (enum). PostgreSQL no auto-castea TEXT a enum dentro de
+   funciones PL/pgSQL, causando error `42804: column "role" is of type user_role
+   but expression is of type text`.
+
+3. **Bug 3 — SECURITY DEFINER sin search_path (Migración 340) — CAUSA RAÍZ**:
+   La función era `SECURITY DEFINER` (se ejecuta como `postgres`) pero **NO tenía
+   `search_path` configurado**. Cuando GoTrue invocaba el trigger, el `search_path`
+   del rol `authenticator` no incluía `public`, por lo que el cast `v_role::user_role`
+   fallaba porque no encontraba el tipo `user_role` (definido en `public`).
+   GoTrue atrapaba el error y devolvía el mensaje genérico
+   `"Database error creating new user"`.
+
+### Por qué fue difícil de diagnosticar
+
+- GoTrue devuelve un mensaje genérico `"Database error creating new user"` (500)
+  sin detalles del error real de PostgreSQL.
+- El error ocurría **solo via Admin API** (GoTrue), no al insertar directamente
+  via SQL (psql/tsx), porque en ese caso el `search_path` sí incluía `public`.
+- Los tests directos en la base de datos funcionaban, pero la API fallaba.
+- Se necesitó deshabilitar el trigger y probar via API para aislar el problema.
+- El `search_path` del rol `authenticator` de Supabase es diferente al de `postgres`.
+
+### Solución definitiva
+
+**Migración 338**: Cambiar `NEW.metadata` → `NEW.raw_user_meta_data` en toda la función.
+
+**Migración 339**: Agregar cast explícito `v_role::user_role` en el INSERT a `profiles`.
+
+**Migración 340**: Agregar `SET search_path = public` a la función `SECURITY DEFINER`:
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public    -- ← ESTO era la causa raíz
+AS $$
+  ...
+$$;
+```
+
+### Regla derivada (OBLIGATORIA)
+
+**TODA función `SECURITY DEFINER` en este proyecto DEBE tener `SET search_path`
+explícito.** No hay excepciones. Sin `search_path`, la función hereda el del
+caller, que puede no incluir el schema donde están los tipos/funciones/tablas
+que la función referencia.
+
+```sql
+-- ✅ Correcto
+CREATE OR REPLACE FUNCTION public.mi_funcion()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$ ... $$;
+
+-- ❌ Prohibido (sin search_path)
+CREATE OR REPLACE FUNCTION public.mi_funcion()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$ ... $$;
+```
+
+### Verificación post-fix
+
+- Admin API sin `user_metadata`: Status 200 ✅
+- Admin API con `email_confirm`: Status 200 ✅
+- 47 usuarios existentes: intactos
+- 49 perfiles existentes: intactos
+
+### Nota sobre auth.identities.email (GENERATED ALWAYS)
+
+En Supabase cloud, `auth.identities.email` es `GENERATED ALWAYS` a partir de
+`identity_data->>'email'`. GoTrue intenta INSERT con email explícito, lo que
+fallaría con error `428C9: cannot insert a non-DEFAULT value into column "email"`.
+
+Sin embargo, en Supabase **cloud** esto funciona correctamente porque GoTrue
+está configurado para no enviar el email explícito (deja que la columna
+generada lo calcule). El fix de `DROP EXPRESSION` solo es necesario en
+**Supabase local (Docker)** donde GoTrue tiene un comportamiento diferente.
+
+No se puede aplicar `ALTER TABLE auth.identities ALTER COLUMN email DROP EXPRESSION`
+en Supabase cloud porque el usuario `postgres` no es owner de `auth.identities`
+(es `supabase_auth_admin`) y no puede hacer `SET ROLE` a ese rol (es un rol
+reservado). Solo `supabase_admin` (superuser) puede modificarlo, y ese rol
+no es accesible desde el pooler ni desde el SQL Editor del Dashboard.
 
 
