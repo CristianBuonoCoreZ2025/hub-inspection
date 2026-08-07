@@ -15,6 +15,7 @@ import {
  rescheduleInspectionViaCIN,
  cancelInspectionViaCIN,
  canAccessInspectionSession,
+ getInspectionMaxDate,
 } from "@/services/inspections";
 import { updateClaimStatus } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
@@ -176,13 +177,6 @@ export default function InspectionDetailPage() {
  // Ref para el ID del log de conexión del inspector
  const inspectorLogIdRef = useRef<string | null>(null);
 
- // Límites de fecha para reagendamiento: máximo days_to_issue del CIN (2 días)
- const { maxDate: rescheduleMaxDate } = useMemo(() => {
-   const max = new Date();
-   max.setDate(max.getDate() + 2); // days_to_issue de template CIN
-   max.setHours(23, 59, 59, 999);
-   return { maxDate: max.toISOString().split("T")[0] };
- }, []);
  const { codeToId } = useClaimStatuses();
 
  const { data: session, isLoading, isError, error } = useQuery({
@@ -194,6 +188,16 @@ export default function InspectionDetailPage() {
  return s?.inspection_type === "remote" && s?.status === "active" ? 10000 : false;
  },
  });
+
+ // Límites de fecha para reagendamiento/mover fecha:
+ // máximo = fecha_creacion_claim + days_to_issue del CIN (días hábiles)
+ const { data: inspectionMaxDate } = useQuery({
+   queryKey: ["inspection-max-date", session?.claim_id],
+   queryFn: () => getInspectionMaxDate(session!.claim_id!),
+   enabled: !!session?.claim_id,
+   staleTime: Infinity, // no cambia mientras la sesión está abierta
+ });
+ const rescheduleMaxDate = inspectionMaxDate?.maxDate;
 
  const sessionStatus = (session?.status ?? "") as string;
  const sessionSubstate = (session?.substate ?? "normal") as string;
@@ -1511,7 +1515,7 @@ export default function InspectionDetailPage() {
  value={rescheduleSelectedDatetime || undefined}
  onChange={(iso) => setRescheduleSelectedDatetime(iso)}
  readOnly={rescheduleMutation.isPending}
- daysToIssue={2}
+ daysToIssue={inspectionMaxDate?.maxDays ?? 2}
  maxDate={rescheduleMaxDate}
  excludeSessionId={session?.id}
  />
@@ -1594,6 +1598,7 @@ export default function InspectionDetailPage() {
  value={moveSelectedDatetime || undefined}
  onChange={(iso) => setMoveSelectedDatetime(iso)}
  readOnly={moveDateMutation.isPending}
+ daysToIssue={inspectionMaxDate?.maxDays ?? 2}
  maxDate={rescheduleMaxDate}
  excludeSessionId={session.id}
  />

@@ -59,3 +59,38 @@ export function toLabelCase(input: string): string {
     })
     .join(" ");
 }
+
+/**
+ * Suma N días hábiles a una fecha, excluyendo sábados (6) y domingos (0).
+ * No modifica la fecha original.
+ *
+ * Ej: addBusinessDays(lunes, 5) → siguiente lunes
+ *     addBusinessDays(viernes, 1) → siguiente lunes
+ */
+export function addBusinessDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  let remaining = days;
+  while (remaining > 0) {
+    result.setDate(result.getDate() + 1);
+    const day = result.getDay();
+    if (day !== 0 && day !== 6) {
+      remaining--;
+    }
+  }
+  return result;
+}
+
+/**
+ * Calcula la fecha máxima permitida para una acción, basada en la fecha de
+ * creación del siniestro + N días hábiles configurados en el template.
+ *
+ * @param claimCreatedAt — fecha de creación del claim (ISO string o Date)
+ * @param daysToIssue    — días hábiles configurados en el template (ej: days_to_issue del CIN)
+ * @returns Date con la fecha máxima (al final del día, 23:59:59.999)
+ */
+export function calculateMaxDate(claimCreatedAt: string | Date, daysToIssue: number): Date {
+  const base = typeof claimCreatedAt === "string" ? new Date(claimCreatedAt) : claimCreatedAt;
+  const max = addBusinessDays(base, daysToIssue);
+  max.setHours(23, 59, 59, 999);
+  return max;
+}

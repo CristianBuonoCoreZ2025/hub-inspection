@@ -47,6 +47,7 @@ export interface SessionClaim {
   region?: { name: string } | null;
   city?: { name: string } | null;
   destination_housing?: { name: string } | null;
+  created_at?: string;
 }
 
 export type SessionWithRelations = InspectionSession & { created_at: string; claim_action?: { code: string | null } | null; action_template?: { code: string | null } | null; inspector?: { id: string; full_name: string | null; email: string | null } | null; claim?: SessionClaim; inspection_reports?: { report_url: string | null; status: string; generated_at: string }[] | null };
@@ -359,7 +360,7 @@ export async function getInspectionSessionById(id: string) {
     ${SESSION_SELECT}, created_at,
     claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, action_data, issuer_id, issued_on, issued_by),
     action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
-    claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, report_date, assignment_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
+    claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, report_date, assignment_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, created_at, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
     inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, include_in_report, created_at),
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
     inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at),
@@ -619,12 +620,22 @@ export async function moveInspectionDate(
     throw new Error("No se puede mover a una fecha/hora pasada");
   }
 
-  // Máximo 2 días desde hoy (mismo plazo que reagendamiento)
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + 2);
-  maxDate.setHours(23, 59, 59, 999);
+  // Máximo = fecha_creacion_claim + days_to_issue del CIN (días hábiles)
+  const { calculateMaxDate } = await import("@/lib/utils");
+  const claimCreatedAt = session.claim?.created_at ?? new Date().toISOString();
+  const cinTemplate = await findCINTemplateForClaim(session.claim_id ?? "");
+  let maxDays = 2;
+  if (cinTemplate) {
+    const tpl = await fetchById<{ days_to_issue: number | null }>(
+      "action_template",
+      cinTemplate.action_template_id,
+      "days_to_issue",
+    );
+    maxDays = tpl?.days_to_issue ?? 2;
+  }
+  const maxDate = calculateMaxDate(claimCreatedAt, maxDays);
   if (newScheduled.getTime() > maxDate.getTime()) {
-    throw new Error("La nueva fecha no puede superar los 2 días desde hoy");
+    throw new Error(`La nueva fecha no puede superar el plazo máximo de ${maxDays} días hábiles desde la creación del siniestro.`);
   }
 
   // Verificar que el inspector tenga el slot libre en la nueva fecha.
@@ -926,11 +937,14 @@ export async function rescheduleInspectionViaCIN(params: {
   }
   const tpl = await fetchById<{ days_to_issue: number | null }>("action_template", cinTemplate.action_template_id, "days_to_issue");
   const maxDays = tpl?.days_to_issue ?? 2;
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + maxDays);
-  maxDate.setHours(23, 59, 59, 999);
+
+  // Fecha máxima = fecha_creacion_claim + days_to_issue (días hábiles)
+  const { calculateMaxDate } = await import("@/lib/utils");
+  const claim = await fetchById<{ created_at: string }>("claims", claimId, "created_at");
+  const claimCreatedAt = claim?.created_at ?? new Date().toISOString();
+  const maxDate = calculateMaxDate(claimCreatedAt, maxDays);
   if (scheduledDate.getTime() > maxDate.getTime()) {
-    throw new Error(`La fecha de reagendamiento no puede superar los ${maxDays} días desde hoy.`);
+    throw new Error(`La fecha de reagendamiento no puede superar el plazo máximo de ${maxDays} días hábiles desde la creación del siniestro.`);
   }
 
   // Calendario del inspector: verificar solapamiento real con sesiones existentes.
@@ -1199,6 +1213,46 @@ async function findCINTemplateForClaim(claimId: string): Promise<{
   action_features_id: string;
 } | null> {
   return findTemplateForClaim(claimId, "CIN");
+}
+
+/**
+ * Obtiene la fecha máxima permitida para reagendar/mover una inspección.
+ *
+ * Calcula: fecha_creacion_claim + days_to_issue del CIN template (días hábiles).
+ * Si no encuentra el template o days_to_issue, usa fallback de 2 días hábiles.
+ *
+ * @param claimId — ID del siniestro
+ * @returns objeto con maxDate (ISO yyyy-MM-dd), maxDays y claimCreatedAt
+ */
+export async function getInspectionMaxDate(claimId: string): Promise<{
+  maxDate: string;
+  maxDays: number;
+  claimCreatedAt: string;
+}> {
+  // 1. Obtener fecha de creación del claim
+  const claim = await fetchById<{ created_at: string }>("claims", claimId, "created_at");
+  const claimCreatedAt = claim?.created_at ?? new Date().toISOString();
+
+  // 2. Obtener days_to_issue del CIN template
+  const cinTemplate = await findCINTemplateForClaim(claimId);
+  let maxDays = 2; // fallback
+  if (cinTemplate) {
+    const tpl = await fetchById<{ days_to_issue: number | null }>(
+      "action_template",
+      cinTemplate.action_template_id,
+      "days_to_issue",
+    );
+    maxDays = tpl?.days_to_issue ?? 2;
+  }
+
+  // 3. Calcular fecha máxima = claim.created_at + maxDays (días hábiles)
+  const { calculateMaxDate } = await import("@/lib/utils");
+  const max = calculateMaxDate(claimCreatedAt, maxDays);
+  return {
+    maxDate: max.toISOString().split("T")[0],
+    maxDays,
+    claimCreatedAt,
+  };
 }
 
 /**
