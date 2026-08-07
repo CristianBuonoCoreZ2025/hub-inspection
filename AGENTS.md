@@ -62,7 +62,7 @@ Sin excepciones. Configuración, catálogos, transacciones, auditoría, todo.
   - `src/app/` — rutas de Next.js App Router
   - `src/features/` — módulos de negocio (auth, dashboard, claims, inspections, etc.)
   - `src/components/` — componentes compartidos (ui, layout)
-  - `src/lib/` — utilidades, configuraciones (nhost, etc.)
+  - `src/lib/` — utilidades, configuraciones (supabase, etc.)
   - `src/hooks/` — custom hooks reutilizables
   - `src/services/` — lógica de acceso a datos (Supabase PostgREST clients)
   - `src/server/` — server actions y lógica server-only
@@ -140,7 +140,7 @@ estilos visuales, tamaños, colores, gradientes, espaciados o layout.
 - **Patrón frontend para obtener `company_id`:** Siempre desde `claim.company_id` (el siniestro siempre lo tiene, es relacional). NUNCA hacer casts raros como `(claim as unknown as { company_id?: string }).company_id` ni buscarlo en `claimActions` (que no lo trae en su SELECT). Ejemplo correcto: `claim?.company_id || ""`.
 - Implementar **Row Level Security (RLS)** en todas las tablas con datos sensibles/empresa.
 - Nunca usar bypass de seguridad (`security definer` solo en funciones controladas).
-- Usar `NHOST_ADMIN_SECRET` solo en server actions o Nhost Functions, nunca en cliente.
+- Usar `SUPABASE_ADMIN_SECRET` solo en server actions o Supabase Functions, nunca en cliente.
 - Auditoría completa: registrar quién crea/modifica/elimina registros.
 
 ## Base de Datos (Supabase / PostgreSQL)
@@ -150,8 +150,15 @@ estilos visuales, tamaños, colores, gradientes, espaciados o layout.
 - Usar `SUPABASE_SERVICE_ROLE_KEY` solo en server actions o API routes, nunca en cliente.
 - Tablas clave: `companies`, `tenants`, `profiles`, `roles`, `user_roles`, `claims`, `claim_participants`, `claim_actions`, `action_template`, `action_features`, `gestion_screens`, `inspection_sessions`, `inspection_checklists`, `inspection_damages`, `inspection_evidences`, `inspection_notes`, `inspection_signatures`, `inspection_reports`, `inspection_chat_messages`, `audit_logs`.
 
+### Variables de Entorno para Conexión
+
+- **Local (Docker):** `DATABASE_URL` en `.env.local`.
+- **Producción:** `DATABASE_URL` en `.env.produccion`.
+- **Variables de la app:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+- **Nunca commitear** archivos `.env*` ni connection strings con credenciales.
+
 ## Branding & UI
-- Diseño premium inspirado en Vercel, Stripe, Linear, Notion, Clerk, Nhost.
+- Diseño premium inspirado en Vercel, Stripe, Linear, Notion, Clerk, Supabase.
 - Dark Mode y Light Mode obligatorios.
 - Mobile First, totalmente responsive.
 - Sistema de white-label preparado para logos y colores por empresa.
@@ -1021,17 +1028,17 @@ NO se puede emitir manualmente hasta que todos los documentos estén resueltos.
 
 ---
 
-## 1. Migraciones SQL en Nhost / Hasura
+## 1. Migraciones SQL en Supabase / Hasura
 
 ### Problema
-Nhost no tiene CLI nativo para Windows. No se puede usar `nhost db push` como en Supabase.
+Supabase no tiene CLI nativo para Windows. No se puede usar `supabase db push` como en Supabase.
 
 ### Solución Definitiva
 - Crear script propio `scripts/db-push.ts` usando `node-postgres` (`pg`).
 - Las migraciones se ejecutan contra PostgreSQL directamente con la `DATABASE_URL`.
-- Siempre usar `ssl: { rejectUnauthorized: false }` en conexiones externas a Nhost PostgreSQL.
+- Siempre usar `ssl: { rejectUnauthorized: false }` en conexiones externas a Supabase PostgreSQL.
 - Dividir migraciones en archivos secuenciales (`01_tables.sql`, `02_triggers.sql`, `03_policies.sql`).
-- Como fallback, si el DNS de Nhost no resuelve (acción pública recién activada), usar el **Hasura SQL Editor** (Data → SQL).
+- Como fallback, si el DNS de Supabase no resuelve (acción pública recién activada), usar el **Hasura SQL Editor** (Data → SQL).
 
 ### Regla
 ```
@@ -1043,7 +1050,7 @@ Toda migración nueva debe: (a) funcionar con pnpm db:push, y (b) poder ejecutar
 ## 2. No usar `CREATE POLICY IF NOT EXISTS`
 
 ### Problema
-PostgreSQL 14 (versión de Nhost) no soporta `CREATE POLICY IF NOT EXISTS`. Lanza: `syntax error at or near "NOT"`.
+PostgreSQL 14 (versión de Supabase) no soporta `CREATE POLICY IF NOT EXISTS`. Lanza: `syntax error at or near "NOT"`.
 
 ### Solución Definitiva
 Usar el patrón:
@@ -1062,13 +1069,13 @@ Nunca usar CREATE POLICY IF NOT EXISTS en migraciones. Siempre usar DROP IF EXIS
 ## 3. No usar `TO authenticated` en Policies PostgreSQL
 
 ### Problema
-`authenticated` no es un rol PostgreSQL nativo. Es específico de Supabase. Nhost/Hasura usan roles diferentes.
+`authenticated` no es un rol PostgreSQL nativo. Es específico de Supabase. Supabase/Hasura usan roles diferentes.
 
 ### Solución Definitiva
 - **RLS PostgreSQL:** usar `TO public` o no especificar `TO` (default `public`).
 - **Control de acceso real:** Configurar permisos en **Hasura Console → Data → [Tabla] → Permissions**.
 - Los roles de Hasura son: `admin`, `user`, `anonymous`, etc. (configurables).
-- El rol por defecto de Nhost Auth es `user`.
+- El rol por defecto de Supabase Auth es `user`.
 
 ### Regla
 ```
@@ -1077,13 +1084,13 @@ Nunca usar TO authenticated en CREATE POLICY. Las restricciones de acceso se imp
 
 ---
 
-## 4. Flujo de Registro (Signup) con Nhost Auth
+## 4. Flujo de Registro (Signup) con Supabase Auth
 
 ### Problema
-Nhost Auth requiere verificación de email por defecto. Al registrarse, `session` es `null` hasta que el usuario confirme el email. Intentar hacer GraphQL queries (como crear empresa) inmediatamente después del signup falla porque no hay sesión activa.
+Supabase Auth requiere verificación de email por defecto. Al registrarse, `session` es `null` hasta que el usuario confirme el email. Intentar hacer GraphQL queries (como crear empresa) inmediatamente después del signup falla porque no hay sesión activa.
 
 ### Solución Definitiva
-1. **Signup puro:** solo registrar en Nhost Auth, sin operaciones GraphQL.
+1. **Signup puro:** solo registrar en Supabase Auth, sin operaciones GraphQL.
 2. **Si requiere verificación:** mostrar pantalla de "Revisa tu correo".
 3. **Si no requiere verificación (dev):** redirigir al onboarding o dashboard.
 4. **Onboarding obligatorio:** Después del primer login exitoso, si el usuario no tiene `company_id` asignado en su `profile`, redirigir a `/onboarding` para crear la empresa.
@@ -1116,18 +1123,18 @@ Toda tabla nueva creada por migración DEBE ser "tracked" en Hasura antes de que
 
 ---
 
-## 6. Variables de Entorno para Nhost
+## 6. Variables de Entorno para Supabase
 
 ### Configuración mínima requerida en `.env.local`:
 ```env
-# Nhost Cloud (subdomain + region)
-NEXT_PUBLIC_NHOST_SUBDOMAIN=tu-subdomain
-NEXT_PUBLIC_NHOST_REGION=eu-central-1
+# Supabase Cloud (subdomain + region)
+NEXT_PUBLIC_SUPABASE_SUBDOMAIN=tu-subdomain
+NEXT_PUBLIC_SUPABASE_REGION=eu-central-1
 
 # O URLs individuales (para local o custom)
-NEXT_PUBLIC_NHOST_AUTH_URL=https://auth.tu-proyecto.nhost.run
-NEXT_PUBLIC_NHOST_GRAPHQL_URL=https://graphql.tu-proyecto.nhost.run/v1
-NEXT_PUBLIC_NHOST_STORAGE_URL=https://storage.tu-proyecto.nhost.run
+NEXT_PUBLIC_SUPABASE_AUTH_URL=https://auth.tu-proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_GRAPHQL_URL=https://graphql.tu-proyecto.supabase.co/v1
+NEXT_PUBLIC_SUPABASE_STORAGE_URL=https://storage.tu-proyecto.supabase.co
 
 # Para db:push (PostgreSQL connection string)
 DATABASE_URL="postgres://postgres:password@host:port/database"
@@ -1135,22 +1142,22 @@ DATABASE_URL="postgres://postgres:password@host:port/database"
 
 ### Regla
 ```
-El archivo .env.local debe tener SIEMPRE DATABASE_URL para migraciones, y las variables de Nhost para la app.
+El archivo .env.local debe tener SIEMPRE DATABASE_URL para migraciones, y las variables de Supabase para la app.
 ```
 
 ---
 
-## 7. SDK de Nhost v4: Patrones de Uso
+## 7. SDK de Supabase v4: Patrones de Uso
 
 ### Auth (siempre retorna `FetchResponse` con `.body`):
 ```ts
-const { body } = await nhost.auth.signInEmailPassword({ email, password });
+const { body } = await supabase.auth.signInEmailPassword({ email, password });
 if (body.session) { /* login OK */ }
 ```
 
 ### GraphQL (siempre envuelto en objeto `{ query, variables }`):
 ```ts
-const { body } = await nhost.graphql.request({
+const { body } = await supabase.graphql.request({
   query: `...`,
   variables: { ... }
 });
@@ -1160,7 +1167,7 @@ return body.data;
 
 ### Regla
 ```
-Todas las llamadas al SDK Nhost v4 deben usar .body para acceder a los datos de respuesta.
+Todas las llamadas al SDK Supabase v4 deben usar .body para acceder a los datos de respuesta.
 ```
 
 ---
@@ -1770,7 +1777,7 @@ A partir de la migración `pages` el sistema usa una tabla de recursos (`pages`)
 ### Pasos obligatorios ANTES del deploy
 
 1. **Backup de `user_type_permissions` en producción** (opcional pero recomendado).
-2. **Abrir Hasura / Nhost SQL Editor**.
+2. **Abrir Hasura / Supabase SQL Editor**.
 3. **Ejecutar `scripts/apply-pages-production.sql`**.
 4. **Verificar**:
    ```sql
@@ -2119,7 +2126,7 @@ mientras que la última reapertura se refleja en claims.reopened_at/by/reason.
 ## 13. Storage en Cloudflare R2 — Estructura de Archivos
 
 ### Problema
-Nhost Storage solo ofrece 1GB gratis y cobra egress. Los siniestros generan muchos archivos (documentos, imágenes, firmas) que necesitan almacenamiento escalable y barato.
+Supabase Storage solo ofrece 1GB gratis y cobra egress. Los siniestros generan muchos archivos (documentos, imágenes, firmas) que necesitan almacenamiento escalable y barato.
 
 ### Solución Definitiva
 Usar **Cloudflare R2** (S3-compatible, 10GB free, egress gratis) con estructura de carpetas basada en códigos.
@@ -2727,7 +2734,7 @@ con esta estructura:
 // src/server/actions/<modulo>.ts
 "use server";
 
-import { graphqlRequest } from "@/lib/nhost/graphql";
+import { graphqlRequest } from "@/lib/supabase/graphql";
 import { logger } from "@/lib/logger";
 import { requirePermission, getServerUser } from "@/server/lib/session";
 import {
@@ -3457,7 +3464,7 @@ Hasura Permissions bloquean según el rol del JWT.
 ## 18. Migración a Supabase — Decisión Definitiva
 
 ### Problema
-Hasura (Nhost) presentaba inestabilidad persistente (502/503 intermitentes) que afectaba el desarrollo y la experiencia de usuario.
+Hasura (Supabase) presentaba inestabilidad persistente (502/503 intermitentes) que afectaba el desarrollo y la experiencia de usuario.
 
 ### Solución Definitiva
 - **Backend:** Supabase (PostgreSQL + PostgREST + Auth + Storage + Edge Functions)

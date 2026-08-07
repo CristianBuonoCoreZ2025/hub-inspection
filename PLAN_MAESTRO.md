@@ -8,7 +8,7 @@
 ## Estado del Proyecto
 
 **Migración a Supabase:** ✅ COMPLETADA
-- Backend migrado de Nhost/Hasura a Supabase
+- Backend migrado de legacy/Hasura a Supabase
 - Auth, Storage, RLS, PostgREST todos funcionando
 - 24/24 queries PostgREST verificadas
 
@@ -64,13 +64,13 @@ NUNCA intentar hacer configurables los tabs/wizard de inspección.
 
 ## Fase 1: Estabilización Post-Migración ✅ COMPLETADA
 
-### 1.1 Migración Nhost → Supabase ✅
-- [x] Exportar BD de Nhost (pg_dump)
+### 1.1 Migración legacy → Supabase ✅
+- [x] Exportar BD de legacy (pg_dump)
 - [x] Importar a Supabase
 - [x] Migrar Auth (createBrowserClient, createServerClient, middleware)
 - [x] Crear capa de datos unificada (`src/lib/supabase/db.ts`)
 - [x] Migrar 32 services (GraphQL → PostgREST)
-- [x] Migrar Storage (Nhost → Cloudflare R2 + Supabase Storage)
+- [x] Migrar Storage (legacy → Cloudflare R2 + Supabase Storage)
 - [x] RLS policies en todas las tablas
 - [x] PostgREST embedding con FK hints en todas las queries
 
@@ -87,7 +87,7 @@ NUNCA intentar hacer configurables los tabs/wizard de inspección.
 - [x] Listado de gestiones del siniestro muestra inspecciones como claim_actions normales
 - [x] `inspection_number` usa `claim_action.code` (estándar de gestiones)
 - [x] Eliminado `buildInspectionNumber` y `attachInspectionNumber` (cálculo client-side legacy)
-- [x] Eliminado `INSPECTION_LIVE_QUERY` (vestigio de Nhost/GraphQL)
+- [x] Eliminado `INSPECTION_LIVE_QUERY` (vestigio de legacy/GraphQL)
 
 ---
 

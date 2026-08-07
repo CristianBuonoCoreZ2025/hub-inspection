@@ -47,7 +47,7 @@ Dado el estado actual del sistema (magic link lento, bundle pesado, trabajo en c
 - Email (`input type="email"`).
 - Contraseña (`input type="password"`).
 - Toggle "Recordarme".
-- Botón "Iniciar sesión".
+- Botón "Iniciar".
 - Badge de conectividad.
 
 #### Pantalla 2 — Lista de inspecciones

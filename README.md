@@ -101,9 +101,9 @@ del departamento de siniestros.
 | Estado Global | Zustand | Bueno. Ligero, TypeScript-friendly |
 | Cache | TanStack Query | Excelente. Stale-while-revalidate, optimistic |
 | Formularios | React Hook Form + Zod | Excelente. Performance + validación type-safe |
-| Backend | Nhost (Hasura + PostgreSQL + Auth) | Bueno. GraphQL auto-generado, RLS |
-| Auth | Nhost Auth v4 | Bueno. OAuth, MFA, webhooks |
-| Storage | Nhost Storage | Adecuado. S3-compatible |
+| Backend | Supabase (Hasura + PostgreSQL + Auth) | Bueno. GraphQL auto-generado, RLS |
+| Auth | Supabase Auth v4 | Bueno. OAuth, MFA, webhooks |
+| Storage | Supabase Storage | Adecuado. S3-compatible |
 | Deploy | Vercel | Excelente. Edge, CI/CD nativo |
 | Gestor de paquetes | pnpm | — |
 
@@ -119,7 +119,7 @@ src/
 ├── components/       # UI compartido (shadcn + custom)
 ├── hooks/            # Custom hooks
 ├── lib/              # Utilidades, configuraciones (nhost, etc.)
-├── services/         # GraphQL clients (Nhost)
+├── services/         # GraphQL clients (Supabase)
 ├── server/           # Server Actions
 ├── types/            # TypeScript globals
 └── features/         # (preparado para expansión por dominio)
@@ -157,7 +157,7 @@ src/
 
 1. **Feature-Based Modules** — organizar `src/features/` por dominio (claims, inspections, evidence, agenda, liquidation, vendor-network, customer-portal, mobile-sync, ai-services)
 2. **Capa BFF** — agregar `src/api/` para aggregations complejos que Hasura no resuelve bien
-3. **Event-Driven** — Nhost Functions serverless para workflows (on-claim-created, on-inspection-completed, on-sla-breach, on-fraud-flag)
+3. **Event-Driven** — Supabase Functions serverless para workflows (on-claim-created, on-inspection-completed, on-sla-breach, on-fraud-flag)
 4. **Caché de Catálogos** — TanQuery con staleTime largo + SSR para catálogos en dashboard
 5. **Real-time** — Hasura Subscriptions para chat en vivo + SSE para notificaciones
 
@@ -166,14 +166,14 @@ src/
 **Estado actual (bueno):**
 - RLS en PostgreSQL
 - Hasura permissions por rol
-- Auth con JWT de Nhost
+- Auth con JWT de Supabase
 - XSS/CSRF protegido por Next.js
 
 **Recomendaciones futuras:**
 1. Rate limiting en API routes
 2. Content Security Policy en headers
 3. Audit logging completo (ya implementado en PostgreSQL)
-4. Data encryption at rest (Nhost tiers superiores)
+4. Data encryption at rest (Supabase tiers superiores)
 5. API key management para integraciones con aseguradoras
 
 ### Integraciones Futuras
@@ -301,7 +301,7 @@ Estado alternativo: CANCELLED (desde PENDING o SCHEDULED)
 ### Fase 1: Core SaaS — COMPLETADO
 
 - ✅ Landing Page
-- ✅ Autenticación (Nhost Auth)
+- ✅ Autenticación (Supabase Auth)
 - ✅ Onboarding de empresa
 - ✅ Multi-tenant (RLS + Hasura Permissions)
 - ✅ Gestión de usuarios y roles
@@ -395,14 +395,14 @@ Estado alternativo: CANCELLED (desde PENDING o SCHEDULED)
 - Usar **React Hook Form** para todos los formularios
 - Mantener separación clara entre Server Actions y Client Components
 - Usar `@nhost/nhost-js` para autenticación en Next.js (cookies via SessionStorage)
-- No usar mocks ni funcionalidades simuladas — todo conectado a Nhost desde la primera versión
+- No usar mocks ni funcionalidades simuladas — todo conectado a Supabase desde la primera versión
 
 ### Multi Tenant & Seguridad
 
 - Todas las tablas deben tener `company_id` o `tenant_id`
 - Implementar **Row Level Security (RLS)** en TODAS las tablas desde el inicio
 - Nunca usar bypass de seguridad (`security definer` solo en funciones controladas)
-- Usar `NHOST_ADMIN_SECRET` solo en server actions o Nhost Functions, nunca en cliente
+- Usar `SUPABASE_ADMIN_SECRET` solo en server actions o Supabase Functions, nunca en cliente
 - Auditoría completa: registrar quién crea/modifica/elimina registros
 
 ### Logging
@@ -525,7 +525,7 @@ Todas las tarjetas DEBEN usar glass-panel o app-panel.
 
 ### Stack
 
-- **PostgreSQL** (via Nhost)
+- **PostgreSQL** (via Supabase)
 - **Hasura** — GraphQL auto-generado sobre PostgreSQL
 - **Migraciones** — SQL manuales versionadas en `migrations/`
 - **Triggers** — auditoría automática (`audit_logs`), sincronización `status ↔ status_id`
@@ -579,9 +579,9 @@ Estados disponibles: `created`, `scheduled`, `in_progress`, `pending_info`, `in_
 
 ## 11. Decisiones Técnicas Definitivas
 
-### 11.1 Migraciones SQL en Nhost / Hasura
+### 11.1 Migraciones SQL en Supabase / Hasura
 
-Nhost no tiene CLI nativo para Windows. Se usa un script propio `scripts/db-push.ts`
+Supabase no tiene CLI nativo para Windows. Se usa un script propio `scripts/db-push.ts`
 con `node-postgres` (`pg`).
 
 ```
@@ -591,7 +591,7 @@ manualmente en Hasura SQL Editor.
 
 ### 11.2 No usar `CREATE POLICY IF NOT EXISTS`
 
-PostgreSQL 14 (Nhost) no lo soporta. Usar:
+PostgreSQL 14 (Supabase) no lo soporta. Usar:
 ```sql
 DROP POLICY IF EXISTS "nombre_policy" ON tabla;
 CREATE POLICY "nombre_policy" ON tabla ...;
@@ -604,7 +604,7 @@ y controlar acceso vía Hasura Permissions.
 
 ### 11.4 Flujo de Registro (Signup)
 
-1. Signup puro: solo registrar en Nhost Auth, sin operaciones GraphQL
+1. Signup puro: solo registrar en Supabase Auth, sin operaciones GraphQL
 2. Si requiere verificación: mostrar pantalla de "Revisa tu correo"
 3. Onboarding obligatorio: si el usuario no tiene `company_id`, redirigir a `/onboarding`
 4. La empresa se crea DESPUÉS del login, no durante el registro
@@ -615,7 +615,7 @@ y controlar acceso vía Hasura Permissions.
 Después de cada migración que crea tablas nuevas, ir a Hasura Console → Data →
 "Track All" para exponer las tablas en GraphQL.
 
-### 11.6 SDK de Nhost v4
+### 11.6 SDK de Supabase v4
 
 ```ts
 // Auth
@@ -628,7 +628,7 @@ if (body.errors) { throw new Error(...) }
 return body.data;
 ```
 
-Todas las llamadas al SDK Nhost v4 deben usar `.body` para acceder a los datos.
+Todas las llamadas al SDK Supabase v4 deben usar `.body` para acceder a los datos.
 
 ### 11.7 Onboarding de Empresa
 
@@ -649,11 +649,11 @@ pnpm db:push      # Ejecutar migraciones SQL en PostgreSQL
 ### Variables de Entorno (`.env.local`)
 
 ```env
-NEXT_PUBLIC_NHOST_SUBDOMAIN=tu-subdomain
-NEXT_PUBLIC_NHOST_REGION=eu-central-1
-NEXT_PUBLIC_NHOST_AUTH_URL=https://auth.tu-proyecto.nhost.run
-NEXT_PUBLIC_NHOST_GRAPHQL_URL=https://graphql.tu-proyecto.nhost.run/v1
-NEXT_PUBLIC_NHOST_STORAGE_URL=https://storage.tu-proyecto.nhost.run
+NEXT_PUBLIC_SUPABASE_SUBDOMAIN=tu-subdomain
+NEXT_PUBLIC_SUPABASE_REGION=eu-central-1
+NEXT_PUBLIC_SUPABASE_AUTH_URL=https://auth.tu-proyecto.nhost.run
+NEXT_PUBLIC_SUPABASE_GRAPHQL_URL=https://graphql.tu-proyecto.nhost.run/v1
+NEXT_PUBLIC_SUPABASE_STORAGE_URL=https://storage.tu-proyecto.nhost.run
 DATABASE_URL="postgres://postgres:password@host:port/database"
 ```
 

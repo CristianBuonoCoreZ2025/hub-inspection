@@ -12,7 +12,7 @@ La raíz: se modificó la estructura de la BD sin auditar TODAS las dependencias
 
 ## Configuración
 
-- Base de datos: Conectarse con `DATABASE_URL` o `NHOST_DATABASE_URL` de `.env.local` (PostgreSQL en Supabase hosted).
+- Base de datos: Conectarse con `DATABASE_URL` de `.env.local` o `.env.produccion` (PostgreSQL en Supabase local o hosted).
 - Código: Proyecto Next.js 16 en el directorio actual.
 - Solo queries de lectura (SELECT). NO ejecutar migraciones, NO modificar datos, NO crear archivos de migración.
 - Regla #1 del proyecto: NUNCA borrar datos. NUNCA hacer DELETE/DROP/TRUNCATE. Solo auditar.
