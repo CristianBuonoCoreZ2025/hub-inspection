@@ -3,7 +3,7 @@ const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-const DATABASE_URL = process.env.DATABASE_URL || process.env.NHOST_DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL;
 
 // Códigos PG que indican que el objeto ya existe (la migración ya fue aplicada)
 const ALREADY_EXISTS_CODES = new Set(['42P07', '42701', '42710', '42723']);

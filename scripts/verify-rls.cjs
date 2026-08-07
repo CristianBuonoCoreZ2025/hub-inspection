@@ -1,7 +1,7 @@
 require("dotenv").config({ path: ".env.local" });
 const { Client } = require("pg");
 
-const DATABASE_URL = process.env.DATABASE_URL || process.env.NHOST_DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
   console.error("❌ DATABASE_URL no está configurada");

@@ -1,7 +1,7 @@
 -- ═══════════════════════════════════════════════════════════════
 -- Script de producción: catálogo de páginas y permisos
 --
--- Ejecutar en Nhost / Supabase SQL Editor ANTES de deploy.
+-- Ejecutar en Supabase SQL Editor ANTES de deploy.
 -- Es idempotente: puede correrse más de una vez sin duplicar datos.
 --
 -- Orden:

@@ -8,7 +8,7 @@ const envPath = existsSync(".env.local") ? ".env.local" : ".env";
 config({ path: envPath });
 
 const DATABASE_URL =
-  process.env.DATABASE_URL || process.env.NHOST_DATABASE_URL;
+  process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
   console.error(
@@ -40,7 +40,7 @@ async function main() {
 
   try {
     await client.connect();
-    console.log("🔗 Conectado a PostgreSQL (Nhost)\n");
+    console.log("🔗 Conectado a PostgreSQL (Supabase)\n");
 
     const sqlPath = join(process.cwd(), "scripts", "apply-propercase.sql");
     const sql = readFileSync(sqlPath, "utf-8");

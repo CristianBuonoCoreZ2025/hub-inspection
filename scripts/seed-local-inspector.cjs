@@ -22,7 +22,7 @@ const { randomUUID } = require("crypto");
 const TEST_EMAIL = "gabriel.labra@mclarens.cl";
 const TEST_PASSWORD = "Test1234!";
 
-const DB = process.env.DATABASE_URL || process.env.NHOST_DATABASE_URL;
+const DB = process.env.DATABASE_URL;
 if (!DB) {
   console.error("Falta DATABASE_URL");
   process.exit(1);

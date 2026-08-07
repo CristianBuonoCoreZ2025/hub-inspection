@@ -9,15 +9,14 @@ import { createHash } from "crypto";
 const envPath = existsSync(".env.local") ? ".env.local" : ".env";
 config({ path: envPath });
 
-const DATABASE_URL =
-  process.env.DATABASE_URL || process.env.NHOST_DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
   console.error(
     "❌ Error: DATABASE_URL no está configurada.\n" +
       "   Agrega la connection string de PostgreSQL en .env.local:\n" +
       '   DATABASE_URL="postgres://user:password@host:port/database"\n' +
-      "   (La encuentras en Nhost Console → Settings → Database)"
+      "   (La encuentras en Supabase Dashboard → Project Settings → Database)"
   );
   process.exit(1);
 }
@@ -47,7 +46,7 @@ async function runMigrations() {
 
   try {
     await client.connect();
-    console.log("🔗 Conectado a PostgreSQL (Nhost)\n");
+    console.log("🔗 Conectado a PostgreSQL (Supabase)\n");
 
     // Crear tabla de tracking si no existe (con checksum para detectar drift)
     await client.query(`
@@ -168,8 +167,8 @@ async function runMigrations() {
           "   1. El hostname en .env.local está mal escrito.\n" +
           "   2. El acceso público aún no se propagó por DNS (espera 2-5 min).\n" +
           "   3. Firewall o restricción de red en tu computador.\n" +
-          "   4. El acceso público no está habilitado en Nhost Console.\n\n" +
-          "   Solución: Copia exactamente la Connection String de Nhost Console → Settings → Database."
+          "   4. El acceso público no está habilitado en Supabase Dashboard.\n\n" +
+          "   Solución: Copia exactamente la Connection String de Supabase Dashboard → Project Settings → Database."
       );
     } else if (error.code === "ECONNREFUSED") {
       console.error(

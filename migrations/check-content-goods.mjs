@@ -13,7 +13,7 @@ import { existsSync } from "fs";
 const envPath = existsSync(".env.local") ? ".env.local" : ".env";
 config({ path: envPath });
 
-const DATABASE_URL = process.env.DATABASE_URL || process.env.NHOST_DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL;
 
 async function main() {
   const client = new Client({
