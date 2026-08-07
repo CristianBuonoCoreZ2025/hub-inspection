@@ -8,6 +8,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
  getInspectionSessionById,
  updateInspectionSession,
+ moveInspectionDate,
+ resumeInspection,
+ startInspection,
+ getWorkPeriods,
  rescheduleInspectionViaCIN,
  cancelInspectionViaCIN,
  canAccessInspectionSession,
@@ -16,11 +20,12 @@ import { updateClaimStatus } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getUsers, getUsersByRoleForCompany } from "@/services/users";
 import { usePermissions } from "@/hooks/use-permissions";
-import { formatUserDateTime as formatDateTime } from "@/lib/timezone";
+import { formatUserDateTime as formatDateTime, formatDuration } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
 import { useAuth } from "@/hooks/use-auth";
+import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import {
  ArrowLeft,
@@ -38,6 +43,7 @@ import {
  RotateCcw,
  CalendarClock,
  Play,
+ FastForward,
  AlertTriangle,
  CheckCircle2,
  Loader2,
@@ -59,6 +65,11 @@ import {
  DialogTitle,
  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+ Popover,
+ PopoverTrigger,
+ PopoverContent,
+} from "@/components/ui/popover";
 import {
  Select,
  SelectContent,
@@ -110,6 +121,7 @@ const sessionStatusColors: Record<string, string> = {
  pending: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
  scheduled: "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300",
  active: "bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200",
+ paused: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
  completed: "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300",
  cancelled: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
 };
@@ -150,6 +162,8 @@ export default function InspectionDetailPage() {
  const tabSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
  const [cancelModalOpen, setCancelModalOpen] = useState(false);
  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+ const [moveDateModalOpen, setMoveDateModalOpen] = useState(false);
+ const [moveSelectedDatetime, setMoveSelectedDatetime] = useState<string>("");
  const [cancelReasonId, setCancelReasonId] = useState<string>("");
  const [cancelNotes, setCancelNotes] = useState<string>("");
  const [rescheduleSelectedDatetime, setRescheduleSelectedDatetime] = useState<string>("");
@@ -180,6 +194,16 @@ export default function InspectionDetailPage() {
  return s?.inspection_type === "remote" && s?.status === "active" ? 10000 : false;
  },
  });
+
+ const sessionStatus = (session?.status ?? "") as string;
+ const sessionSubstate = (session?.substate ?? "normal") as string;
+ const isPlanned = sessionStatus === "scheduled";
+ const isMovable = isPlanned || sessionStatus === "active";
+ const isPaused = isPlanned && sessionSubstate === "paused";
+ const isRemote = session?.inspection_type === "remote";
+
+ // Realtime: reflejar firmas del asegurado inmediatamente en el dashboard
+ useRealtime("inspection_signatures", [["inspection-session", sessionId], ["signatures", sessionId]], !!sessionId);
 
  const { data: fullSession, isLoading: isFullLoading } = useQuery({
  queryKey: ["inspection-session-full", sessionId],
@@ -231,6 +255,12 @@ export default function InspectionDetailPage() {
 
  // Cargar motivos: fallida para reagendar, desistida para cancelar
  // Se cargan siempre para poder mostrar el motivo de sesiones canceladas
+ const { data: workPeriods } = useQuery({
+ queryKey: ["inspection-work-periods", sessionId],
+ queryFn: () => getWorkPeriods(sessionId),
+ enabled: !!sessionId,
+ });
+
  const { data: fallidaReasons } = useQuery({
  queryKey: ["lookup-catalog", "cancellation_reason_fallida"],
  queryFn: () => getLookupCatalog("cancellation_reason_fallida"),
@@ -365,6 +395,46 @@ export default function InspectionDetailPage() {
  setRescheduleInspectorId("");
  // Volver al siniestro — el usuario debe completar la nueva CIN
  if (session?.claim_id && canOpenClaim) router.push(`/dashboard/claims/${session.claim_id}`);
+ },
+ onError: (err: Error) => toast.error(err.message),
+ });
+
+ const moveDateMutation = useMutation({
+ mutationFn: ({ sessionId: id, scheduledAt }: { sessionId: string; scheduledAt: string }) =>
+ moveInspectionDate(id, scheduledAt),
+ onSuccess: () => {
+ toast.success("Fecha de inspección actualizada");
+ queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+ queryClient.invalidateQueries({ queryKey: ["inspector-schedule"] });
+ queryClient.invalidateQueries({ queryKey: ["magic-link-live", session?.magic_link_token] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-work-periods", sessionId] });
+ setMoveDateModalOpen(false);
+ setMoveSelectedDatetime("");
+ },
+ onError: (err: Error) => toast.error(err.message),
+ });
+
+ const resumeMutation = useMutation({
+ mutationFn: (id: string) => resumeInspection(id),
+ onSuccess: () => {
+ toast.success("Inspección reanudada");
+ queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+ queryClient.invalidateQueries({ queryKey: ["inspector-schedule"] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-work-periods", sessionId] });
+ },
+ onError: (err: Error) => toast.error(err.message),
+ });
+
+ const startMutation = useMutation({
+ mutationFn: (id: string) => startInspection(id),
+ onSuccess: () => {
+ toast.success("Inspección iniciada");
+ queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+ queryClient.invalidateQueries({ queryKey: ["inspector-schedule"] });
+ queryClient.invalidateQueries({ queryKey: ["inspection-work-periods", sessionId] });
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -513,6 +583,11 @@ export default function InspectionDetailPage() {
  <Badge className={sessionStatusColors[session.status]}>
  {sessionStatusLabels[session.status]}
  </Badge>
+ {session.substate === "paused" && (
+ <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+ Pausada
+ </Badge>
+ )}
  {session.inspection_type === "remote" && (
  <Badge className="bg-violet-500/10 text-violet-600 border-violet-500/20">
  Remota
@@ -787,12 +862,61 @@ export default function InspectionDetailPage() {
  <span className="app-data-label">Finalizada</span>
  <p className="font-medium">{session.ended_at ? formatDateTime(session.ended_at) : "—"}</p>
  </div>
+ <div className="col-span-2 md:col-span-4 xl:col-span-6">
+ <span className="app-data-label">Log de inicios y términos</span>
+ <div className="mt-1">
+ <Popover>
+ <PopoverTrigger
+ render={<Button variant="outline" size="sm" className="h-7 text-xs" />}
+ >
+ Ver {workPeriods?.length ?? 0} registro{(workPeriods?.length ?? 0) > 1 ? "s" : ""}
+ </PopoverTrigger>
+ <PopoverContent className="w-80 p-3" side="bottom" align="start">
+ <div className="space-y-1 pb-2 border-b border-border/40 mb-2">
+ <div className="flex justify-between gap-2 text-xs app-body text-slate-700 dark:text-slate-300">
+ <span className="text-slate-500">Programada</span>
+ <span>{session.scheduled_at ? formatDateTime(session.scheduled_at) : "—"}</span>
+ </div>
+ <div className="flex justify-between gap-2 text-xs app-body text-slate-700 dark:text-slate-300">
+ <span className="text-slate-500">Magic link expira</span>
+ <span className={session.magic_link_expires_at && new Date(session.magic_link_expires_at) < new Date() ? "text-red-500" : ""}>
+ {session.magic_link_expires_at ? formatDateTime(session.magic_link_expires_at) : "—"}
+ </span>
+ </div>
+ </div>
+ <div className="space-y-1 max-h-60 overflow-y-auto">
+ {workPeriods && workPeriods.length > 0 ? (
+ workPeriods.map((p, i) => (
+ <div key={p.id} className="flex items-center justify-between gap-2 text-xs app-body">
+ <div className="flex items-center gap-2">
+ <span className="font-mono text-slate-500">#{i + 1}</span>
+ <span className="text-slate-700 dark:text-slate-300">{p.started_at ? formatDateTime(p.started_at) : "—"}</span>
+ <span className="text-slate-400">→</span>
+ <span className={p.ended_at ? "text-slate-700 dark:text-slate-300" : "text-emerald-600 font-medium"}>
+ {p.ended_at ? formatDateTime(p.ended_at) : "En curso"}
+ </span>
+ </div>
+ {p.ended_at && (
+ <span className="text-slate-500 font-mono shrink-0">
+ {formatDuration(new Date(p.ended_at).getTime() - new Date(p.started_at).getTime())}
+ </span>
+ )}
+ </div>
+ ))
+ ) : (
+ <p className="text-xs text-muted-foreground py-2">Sin registros de trabajo</p>
+ )}
+ </div>
+ </PopoverContent>
+ </Popover>
+ </div>
+ </div>
  </div>
 
- {/* Botones de acción horizontales (scheduled o active) */}
- {(session.status === "scheduled" || session.status === "active") && (
+ {/* Botones de acción horizontales (scheduled, active o paused) */}
+ {isMovable && (
  <div className="flex flex-row items-start gap-1.5 shrink-0">
- {session.status === "scheduled" && (
+ {isPlanned && !isPaused && (
  <Button
  size="sm"
  variant="outline"
@@ -807,21 +931,36 @@ export default function InspectionDetailPage() {
  (!session.geo_status || session.geo_status === "pending" || session.geo_status === "failed")
  }
  onClick={() => {
- const now = new Date();
- const dateStr = now.toISOString().split("T")[0];
- const timeStr = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
- updateMutation.mutate({
- id: session.id,
- input: {
- status: "active",
- started_at: now.toISOString(),
- inspection_date: dateStr,
- inspection_time: timeStr,
- },
- });
+ startMutation.mutate(session.id);
  }}
  >
  <Play className="h-3.5 w-3.5" />
+ </Button>
+ )}
+ {isPaused && (
+ <Button
+ size="sm"
+ variant="outline"
+ className="h-7 w-7 p-0 text-amber-600 dark:text-amber-400 border-amber-400/40"
+ title="Reanudar inspección (viene de pausa)"
+ disabled={resumeMutation.isPending}
+ onClick={() => resumeMutation.mutate(session.id)}
+ >
+ <FastForward className="h-3.5 w-3.5" />
+ </Button>
+ )}
+ {isMovable && isRemote && (
+ <Button
+ size="sm"
+ variant="outline"
+ className="h-7 w-7 p-0"
+ title="Mover fecha (solo remotas)"
+ onClick={() => {
+ setMoveSelectedDatetime(sessionStatus === "active" ? "" : (session.scheduled_at || ""));
+ setMoveDateModalOpen(true);
+ }}
+ >
+ <Clock className="h-3.5 w-3.5" />
  </Button>
  )}
  <Button
@@ -1421,6 +1560,66 @@ export default function InspectionDetailPage() {
  className="pg-btn-platinum"
  >
  {rescheduleMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Reagendando...</> : "Reagendar"}
+ </Button>
+ </div>
+ </DialogContent>
+ </Dialog>
+
+ {/* Modal de Mover Fecha */}
+ <Dialog open={moveDateModalOpen} onOpenChange={(open) => { if (!open && moveDateMutation.isPending) return; setMoveDateModalOpen(open); }}>
+ <DialogContent className="modal-b-lg" showCloseButton>
+ <div className="modal-b-header">
+ <DialogTitle className="modal-b-title">
+ <Clock className="h-5 w-5" />
+ Mover Fecha
+ </DialogTitle>
+ <DialogDescription className="modal-b-subtitle">
+ Cambiar la fecha/hora de la inspección sin crear una nueva coordinación. El inspector no cambia.
+ </DialogDescription>
+ </div>
+ <div className="modal-b-body space-y-4">
+ <div>
+ <label className="app-field-label app-body">Inspector</label>
+ <p className="app-body font-medium py-1">
+ {allInspectors.find((i) => i.id === session.inspector_id)?.full_name
+ || allInspectors.find((i) => i.id === session.inspector_id)?.email
+ || "Sin inspector asignado"}
+ </p>
+ </div>
+ <div>
+ <label className="app-field-label app-body">Nueva fecha y hora *</label>
+ <CoordScheduler
+ inspectorId={session.inspector_id || ""}
+ inspectionType={(session.inspection_type as "onsite" | "remote") || "onsite"}
+ value={moveSelectedDatetime || undefined}
+ onChange={(iso) => setMoveSelectedDatetime(iso)}
+ readOnly={moveDateMutation.isPending}
+ maxDate={rescheduleMaxDate}
+ excludeSessionId={session.id}
+ />
+ </div>
+ </div>
+ <div className="modal-b-footer">
+ <Button
+ size="sm"
+ className="pg-btn-platinum"
+ disabled={moveDateMutation.isPending}
+ onClick={() => setMoveDateModalOpen(false)}
+ >
+ Cancelar
+ </Button>
+ <Button
+ size="sm"
+ className="pg-btn-platinum"
+ disabled={!moveSelectedDatetime || moveDateMutation.isPending}
+ onClick={() => {
+ moveDateMutation.mutate({
+ sessionId: session.id,
+ scheduledAt: moveSelectedDatetime,
+ });
+ }}
+ >
+ {moveDateMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Moviendo...</> : "Guardar"}
  </Button>
  </div>
  </DialogContent>

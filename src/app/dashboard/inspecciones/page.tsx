@@ -10,13 +10,16 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import {
   getInspectionSessionsLight,
+  startInspection,
+  resumeInspection,
+  getWorkPeriods,
   updateInspectionSession,
   canAccessInspectionSession,
   type SessionClaim,
   type SessionWithRelations,
 } from "@/services/inspections";
 import { getUsers } from "@/services/users";
-import { formatUserDateTime as formatDateTime } from "@/lib/timezone";
+import { formatUserDateTime as formatDateTime, formatDuration } from "@/lib/timezone";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
@@ -30,13 +33,20 @@ import {
   Eye,
   EyeOff,
   Play,
+  FastForward,
   Ban,
+  Clock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -71,6 +81,7 @@ function InspectionsPageContent() {
   const [statusFilter, setStatusFilter] = useState<string[]>(["active", "scheduled"]);
   const [inspectorFilter, setInspectorFilter] = useState<string[]>([]);
   const [internalNumberFilter, setInternalNumberFilter] = useState("");
+  const [logSessionId, setLogSessionId] = useState<string | null>(null);
 
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
     queryKey: ["inspection-sessions"],
@@ -82,11 +93,35 @@ function InspectionsPageContent() {
     queryFn: () => getUsers(),
   });
 
+  const { data: workPeriods } = useQuery({
+    queryKey: ["inspection-work-periods", logSessionId],
+    queryFn: () => getWorkPeriods(logSessionId!),
+    enabled: !!logSessionId,
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, input }: { id: string; input: Partial<InspectionSession> }) =>
       updateInspectionSession(id, input),
     onSuccess: () => {
       toast.success("Estado actualizado");
+      queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const startMutation = useMutation({
+    mutationFn: (id: string) => startInspection(id),
+    onSuccess: () => {
+      toast.success("Inspección iniciada");
+      queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: (id: string) => resumeInspection(id),
+    onSuccess: () => {
+      toast.success("Inspección reanudada");
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -392,6 +427,15 @@ function InspectionsPageContent() {
                           variant="ghost"
                           size="icon"
                           className="btn-icon-sm"
+                          title="Ver log de inicios y términos"
+                          onClick={() => setLogSessionId(session.id)}
+                        >
+                          <Clock className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="btn-icon-sm"
                           title={
                             canOpenSession(session)
                               ? "Ver"
@@ -408,20 +452,27 @@ function InspectionsPageContent() {
                         </Button>
                         {canEdit("inspecciones") && session.status === "scheduled" && (
                           <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="btn-icon-sm"
-                              title="Iniciar"
-                              onClick={() =>
-                                updateMutation.mutate({
-                                  id: session.id,
-                                  input: { status: "active" },
-                                })
-                              }
-                            >
-                              <Play className="h-4 w-4" />
-                            </Button>
+                            {session.substate === "paused" ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="btn-icon-sm text-amber-600 hover:text-amber-700"
+                                title="Reanudar (viene de pausa)"
+                                onClick={() => resumeMutation.mutate(session.id)}
+                              >
+                                <FastForward className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="btn-icon-sm"
+                                title="Iniciar"
+                                onClick={() => startMutation.mutate(session.id)}
+                              >
+                                <Play className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -447,6 +498,60 @@ function InspectionsPageContent() {
           </table>
         </div>
         <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        <Dialog open={!!logSessionId} onOpenChange={(open) => !open && setLogSessionId(null)}>
+          <DialogContent className="sm:max-w-md" showCloseButton>
+            <div className="modal-header">
+              <DialogTitle className="modal-title">
+                <span className="modal-title-icon">
+                  <Clock className="h-4 w-4" />
+                </span>
+                Log de inicios y términos
+              </DialogTitle>
+            </div>
+            <div className="space-y-2">
+              {sessions?.find((s) => s.id === logSessionId) && (
+                <div className="space-y-1 pb-2 border-b border-border/40">
+                  <div className="flex justify-between gap-2 text-xs app-body text-slate-700 dark:text-slate-300">
+                    <span className="text-slate-500">Programada</span>
+                    <span>{(sessions?.find((s) => s.id === logSessionId)?.scheduled_at) ? formatDateTime(sessions.find((s) => s.id === logSessionId)!.scheduled_at as string) : "—"}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 text-xs app-body text-slate-700 dark:text-slate-300">
+                    <span className="text-slate-500">Magic link expira</span>
+                    <span>
+                      {(() => {
+                        const exp = sessions?.find((s) => s.id === logSessionId)?.magic_link_expires_at;
+                        return exp ? formatDateTime(exp as string) : "—";
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-1 max-h-72 overflow-y-auto py-2">
+                {workPeriods && workPeriods.length > 0 ? (
+                  workPeriods.map((p, i) => (
+                    <div key={p.id} className="flex items-center justify-between gap-2 text-xs app-body border-b border-border last:border-0 pb-1 last:pb-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-slate-500">#{i + 1}</span>
+                        <span className="text-slate-700 dark:text-slate-300">{p.started_at ? formatDateTime(p.started_at) : "—"}</span>
+                        <span className="text-slate-400">→</span>
+                        <span className={p.ended_at ? "text-slate-700 dark:text-slate-300" : "text-emerald-600 font-medium"}>
+                          {p.ended_at ? formatDateTime(p.ended_at) : "En curso"}
+                        </span>
+                      </div>
+                      {p.ended_at && (
+                        <span className="text-slate-500 font-mono shrink-0">
+                          {formatDuration(new Date(p.ended_at).getTime() - new Date(p.started_at).getTime())}
+                        </span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">Sin registros de trabajo</p>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

@@ -3,8 +3,7 @@
 import { useRef, useCallback, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { getReport, createReport, updateReport } from "@/services/inspections";
-import { updateInspectionSession } from "@/services/inspections";
+import { getReport, createReport, updateReport, completeInspection } from "@/services/inspections";
 import { issueClaimAction } from "@/services/claim-actions";
 import { toast } from "sonner";
 import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download, Archive } from "lucide-react";
@@ -280,8 +279,8 @@ export default function ReportTab({
           report_type: isCancellation ? "cancellation" : "completion",
         } as Omit<import("@/types").InspectionReport, "id">);
       }
-      // 5. Marcar la sesión como completed
-      await updateInspectionSession(session.id, { status: "completed", ended_at: new Date().toISOString() });
+      // 5. Marcar la sesión como completed (cierra work_period)
+      await completeInspection(session.id);
       // 6. Emitir el claim_action INS
       if (session.claim_action_id) {
         await issueClaimAction(session.claim_action_id, profile?.id);

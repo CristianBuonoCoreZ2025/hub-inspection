@@ -129,7 +129,7 @@ export function CoordScheduler({
         label: `${timeStr} - ${endStr}`,
         available: !booked,
         extra: isExtra,
-        bookedInfo: booked ? `Ocupado: ${booked.claim?.claim_number}` : undefined,
+        bookedInfo: booked ? `Ocupado: ${booked.claim?.claim_number || booked.id.slice(0, 8)}` : undefined,
       });
     }
     return result;

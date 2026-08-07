@@ -24,7 +24,7 @@ export async function GET(
     const { data: sessions, error } = await supabase
       .from("inspection_sessions")
       .select(`
-        id, claim_id, status, inspection_type, scheduled_at, started_at, ended_at,
+        id, claim_id, status, substate, inspection_type, scheduled_at, started_at, ended_at,
         magic_link_token, magic_link_expires_at, created_at,
         inspection_date, inspection_time,
         interviewed_name, interviewed_email, interviewed_relationship,

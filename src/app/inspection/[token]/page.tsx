@@ -9,7 +9,7 @@ import {
   ClipboardCheck, Video, User, Calendar, WifiOff, Loader2, RefreshCw,
   Camera, FileText, AlertTriangle, MessageSquare, Send,
   ShieldCheck, MapPin, PenTool, XCircle, CheckCircle,
-  MonitorSmartphone,
+  MonitorSmartphone, PauseCircle,
 } from "lucide-react";
 import { useClaimsAppPresence } from "@/hooks/use-claims-app-presence";
 import { convertHeicToJpeg } from "@/lib/heic-convert";
@@ -64,7 +64,7 @@ interface LiveClaim {
   insurance_company: { name: string } | null;
 }
 interface LiveSession {
-  id: string; claim_id: string; status: string; inspection_type: string;
+  id: string; claim_id: string; status: string; substate?: string; inspection_type: string;
   scheduled_at: string | null; started_at: string | null; ended_at: string | null;
   magic_link_token: string | null; magic_link_expires_at: string | null;
   created_at: string;
@@ -129,7 +129,7 @@ const damageCategoryLabels: Record<string, string> = {
 };
 const statusLabels: Record<string, string> = {
   pending: "Pendiente", scheduled: "Agendada", active: "En progreso",
-  completed: "Completada", cancelled: "Cancelada",
+  paused: "En pausa", completed: "Completada", cancelled: "Cancelada",
 };
 
 function fmtDate(d: string | null) {
@@ -349,6 +349,7 @@ export default function MagicLinkPage() {
   const isScheduled = session.status === "scheduled";
   const isCompleted = session.status === "completed";
   const isCancelled = session.status === "cancelled";
+  const isPaused = isScheduled && session.substate === "paused";
   const hasInsuredSignature = session.inspection_signatures?.some((s) => s.role === "insured");
   const hasAdjusterSignature = session.inspection_signatures?.some((s) => s.role === "adjuster");
   const hasWaiver = !!session.signature_waiver_reason;
@@ -430,6 +431,31 @@ export default function MagicLinkPage() {
           <div className="mt-4 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 app-body text-amber-300">
             <strong>Importante:</strong> Mantenga esta pestaña abierta. Cuando el inspector inicie la sesión,
             verá la inspección en tiempo real aquí mismo.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPaused) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+        <div className="max-w-md w-full mx-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
+              <PauseCircle className="h-5 w-5 text-amber-400" />
+            </div>
+            <div>
+              <h2 className="app-body font-semibold">Inspección en pausa</h2>
+              <p className="app-body text-slate-400">El inspector ha pausado la inspección temporalmente</p>
+              <p className="app-body text-slate-500 mt-1">
+                Se reanudará: <strong className="text-white">{fmtDate(session.scheduled_at)}</strong>
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 rounded-lg bg-slate-900/50 border border-slate-700 p-3 app-body text-slate-300">
+            Puede revisar la información de la inspección, pero no podrá firmar ni modificar
+            nada hasta que el inspector reanude la sesión.
           </div>
         </div>
       </div>
@@ -1431,7 +1457,20 @@ function SignaturesTab({ session }: { session: LiveSession }) {
 
   const insuredSig = session.inspection_signatures?.find((s) => s.role === "insured");
   const adjusterSig = session.inspection_signatures?.find((s) => s.role === "adjuster");
-  const canSign = session.status !== "completed" && session.status !== "cancelled";
+  const canSign = session.status !== "completed" && session.status !== "cancelled" && !(session.status === "scheduled" && session.substate === "paused");
+  const confirmKey = `signature-confirmed-${session.id}`;
+  const [confirmed, setConfirmed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(confirmKey) === "1";
+  });
+
+  const confirmSignature = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(confirmKey, "1");
+    }
+    setConfirmed(true);
+    toast.success("Firma confirmada");
+  };
 
   const signMutation = useMutation({
     mutationFn: async (data: { sessionId: string; role: string; signatureDataUrl: string }) => {
@@ -1579,11 +1618,11 @@ function SignaturesTab({ session }: { session: LiveSession }) {
       )}
 
       {/* Canvas para firma del asegurado */}
-      {canSign && (
+      {canSign && !confirmed && (
         <Panel title={insuredSig ? "Volver a firmar como Asegurado" : "Firme aquí como Asegurado"}>
           {insuredSig && (
             <p className="app-body text-slate-400 text-sm mb-3">
-              Puedes dibujar una nueva firma y guardarla. Se reemplazará la firma anterior.
+              Puedes dibujar una nueva firma y guardarla, o confirmar la actual si estás conforme.
             </p>
           )}
           <div ref={containerRef} className="rounded-lg border border-slate-700 bg-white w-full mb-3">
@@ -1599,7 +1638,7 @@ function SignaturesTab({ session }: { session: LiveSession }) {
               onTouchEnd={stop}
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={clear} className="rounded-lg border border-slate-700 px-3 py-1.5 app-body text-slate-300 hover:bg-slate-800">
               Limpiar
             </button>
@@ -1611,14 +1650,25 @@ function SignaturesTab({ session }: { session: LiveSession }) {
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PenTool className="h-3.5 w-3.5" />}
               Guardar
             </button>
+            {insuredSig && (
+              <button
+                onClick={confirmSignature}
+                className="rounded-lg bg-emerald-600 px-3 py-1.5 app-body text-white hover:bg-emerald-500 flex items-center gap-1.5"
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+                Confirmar
+              </button>
+            )}
           </div>
         </Panel>
       )}
 
-      {!canSign && (
+      {(confirmed || !canSign) && (
         <Panel>
           <p className="app-body text-slate-400 text-center py-4">
-            La inspección está cerrada. Ya no es posible modificar las firmas.
+            {confirmed
+              ? "Firma confirmada. Esperando la firma del ajustador..."
+              : "La inspección está cerrada. Ya no es posible modificar las firmas."}
           </p>
         </Panel>
       )}

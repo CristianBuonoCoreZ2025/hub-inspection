@@ -1,12 +1,12 @@
 import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
-import { formatUserDateTime } from "@/lib/timezone";
+import { formatUserDateTime, formatUserDate, formatUserTime } from "@/lib/timezone";
 import type {
   InspectionSession, PropertyRisk, PropertyMateriality,
   SecurityMeasures, InsuredStatement, ThirdParty, DamageSketch,
   InspectionDamage, InspectionEvidence, InspectionSignature,
 } from "@/types";
 
-const SESSION_SELECT = "id, company_id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, signature_waiver_reason, lock_overridden_by, lock_overridden_at, created_at, updated_at";
+const SESSION_SELECT = "id, company_id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, substate, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, signature_waiver_reason, lock_overridden_by, lock_overridden_at, created_at, updated_at";
 
 // ═══════════════════════════════════════════════════════════════
 // SESSIONS
@@ -387,7 +387,7 @@ export async function getInspectionSessionById(id: string) {
 /**
  * Obtener las sesiones agendadas de un inspector en un rango de fechas.
  * Busca por inspector_id de la sesión Y por claim.inspector_id (compatibilidad).
- * Solo retorna sesiones con status scheduled o active.
+ * Solo retorna sesiones con status scheduled o active (paused no bloquea agenda).
  */
 export async function getInspectorSchedule(
   inspectorId: string,
@@ -591,6 +591,226 @@ export async function rescheduleInspectionSession(
   // 2. Crear nueva inspección agendada con la nueva fecha
   const newSession = await createInspectionSession(claimId, newOptions);
   return newSession;
+}
+
+/**
+ * Mueve la fecha de una inspección agendada sin crear nueva coordinación.
+ * Conserva inspector, tipo y token. Actualiza magic_link_expires_at a 6h
+ * desde la nueva fecha, sin reducir la expiración previa.
+ */
+export async function moveInspectionDate(
+  sessionId: string,
+  newScheduledAt: string,
+) {
+  const session = await getInspectionSessionById(sessionId);
+  if (!session) throw new Error("Inspección no encontrada");
+  const status = session.status as string;
+  if (!["scheduled", "active"].includes(status)) {
+    throw new Error("Solo se puede mover la fecha de una inspección agendada o en progreso");
+  }
+  if (session.inspection_type !== "remote") {
+    throw new Error("Mover fecha solo aplica a inspecciones remotas");
+  }
+
+  const newScheduled = new Date(newScheduledAt);
+  const now = new Date();
+  now.setSeconds(0, 0);
+  if (newScheduled.getTime() < now.getTime()) {
+    throw new Error("No se puede mover a una fecha/hora pasada");
+  }
+
+  // Máximo 2 días desde hoy (mismo plazo que reagendamiento)
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 2);
+  maxDate.setHours(23, 59, 59, 999);
+  if (newScheduled.getTime() > maxDate.getTime()) {
+    throw new Error("La nueva fecha no puede superar los 2 días desde hoy");
+  }
+
+  // Verificar que el inspector tenga el slot libre en la nueva fecha.
+  const dateStart = newScheduled.toISOString().slice(0, 10);
+  const nextDay = new Date(newScheduled);
+  nextDay.setDate(nextDay.getDate() + 1);
+  const dateEnd = nextDay.toISOString().slice(0, 10);
+  const busy = await getInspectorSchedule(session.inspector_id ?? "", dateStart, dateEnd);
+  const newDuration = 60; // solo aplica a remotas
+  const newStart = newScheduled.getTime();
+  const newEnd = newStart + newDuration * 60 * 1000;
+  const overlap = busy
+    .filter((s) => s.id !== sessionId)
+    .find((s) => {
+      const sStart = new Date(s.scheduled_at).getTime();
+      const sDuration = s.inspection_type === "onsite" ? 180 : 60;
+      const sEnd = sStart + sDuration * 60 * 1000;
+      return sStart < newEnd && sEnd > newStart;
+    });
+  if (overlap) {
+    throw new Error(
+      `El inspector ya tiene una inspección agendada en ese horario ` +
+      `(existente: ${formatUserDateTime(overlap.scheduled_at)}). ` +
+      `Elija otro horario.`
+    );
+  }
+
+  // Calcular expiración del magic link: 6h desde la nueva fecha,
+  // sin reducir la expiración previa.
+  const newExpires = new Date(newScheduledAt);
+  newExpires.setHours(newExpires.getHours() + 6);
+  const previousExpires = session.magic_link_expires_at
+    ? new Date(session.magic_link_expires_at)
+    : new Date(0);
+  const finalExpires = new Date(Math.max(newExpires.getTime(), previousExpires.getTime()));
+
+  const set: Record<string, unknown> = {
+    scheduled_at: newScheduledAt,
+    magic_link_expires_at: finalExpires.toISOString(),
+  };
+  if (status !== "active") {
+    set.inspection_date = formatUserDate(newScheduledAt);
+    set.inspection_time = formatUserTime(newScheduledAt);
+  }
+
+  if (status === "active") {
+    // Modelo reloj de ajedrez: cerrar periodo activo actual con una pausa.
+    // paused_at = ahora (cuando se detiene), resumed_at = NULL (se setea al reanudar).
+    await closeOpenWorkPeriod(sessionId);
+    set.status = "scheduled";
+    set.substate = "paused";
+  }
+
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, set, SESSION_SELECT);
+}
+
+// Modelo de reloj de ajedrez: inspection_work_periods
+interface WorkPeriod {
+  id: string;
+  inspection_session_id: string;
+  company_id: string;
+  started_at: string;
+  ended_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Cierra el periodo de trabajo abierto (ended_at IS NULL) seteando ended_at = ahora.
+ */
+export async function closeOpenWorkPeriod(sessionId: string) {
+  const supabase = getSupabaseClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('inspection_work_periods')
+    .update({ ended_at: now })
+    .eq('inspection_session_id', sessionId)
+    .is('ended_at', null);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Abre un nuevo periodo de trabajo (started_at = ahora, ended_at = NULL).
+ */
+export async function openWorkPeriod(sessionId: string, companyId: string) {
+  if (!companyId) throw new Error('No se puede abrir work period sin company_id');
+  return insertRow<WorkPeriod>('inspection_work_periods', {
+    inspection_session_id: sessionId,
+    company_id: companyId,
+    started_at: new Date().toISOString(),
+    ended_at: null,
+  });
+}
+
+/**
+ * Reanuda una inspeccion pausada (scheduled + substate paused).
+ * Abre un nuevo work_period y cambia status->active, substate->normal.
+ */
+export async function resumeInspection(sessionId: string) {
+  const session = await getInspectionSessionById(sessionId);
+  if (!session) throw new Error('Inspeccion no encontrada');
+  if (session.status !== 'scheduled' || session.substate !== 'paused') {
+    throw new Error('Solo se puede reanudar una inspeccion pausada');
+  }
+  await openWorkPeriod(sessionId, String(session.company_id ?? session.claim?.company_id ?? ""));
+  return updateRow<InspectionSession>('inspection_sessions', sessionId, {
+    status: 'active',
+    substate: 'normal',
+  }, SESSION_SELECT);
+}
+
+export async function getWorkPeriods(sessionId: string) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('inspection_work_periods')
+    .select('id, inspection_session_id, company_id, started_at, ended_at, created_at, updated_at')
+    .eq('inspection_session_id', sessionId)
+    .order('started_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as WorkPeriod[]) ?? [];
+}
+
+/**
+ * Calcula el tiempo activo total sumando los work_periods.
+ * Cada work_period con ended_at NULL se trata como activo hasta 'ahora'.
+ *   tiempo_activo = sum(ended_at - started_at) de todos los work_periods
+ */
+export function calculateInspectionActiveDuration(
+  periods: { started_at: string; ended_at: string | null }[],
+) {
+  const now = Date.now();
+  let active = 0;
+  for (const p of periods) {
+    const start = new Date(p.started_at).getTime();
+    const end = p.ended_at ? new Date(p.ended_at).getTime() : now;
+    if (!Number.isNaN(start) && !Number.isNaN(end) && end > start) {
+      active += end - start;
+    }
+  }
+  return active;
+}
+
+export async function getInspectionActiveDuration(sessionId: string) {
+  const periods = await getWorkPeriods(sessionId);
+  return calculateInspectionActiveDuration(periods);
+}
+
+/**
+ * Inicia una inspección: status→active, started_at=ahora, abre work_period.
+ * Reemplaza el updateInspectionSession directo para el botón "Iniciar".
+ */
+export async function startInspection(sessionId: string) {
+  const session = await getInspectionSessionById(sessionId);
+  if (!session) throw new Error("Inspección no encontrada");
+  if (session.status !== "scheduled") {
+    throw new Error("Solo se puede iniciar una inspección agendada");
+  }
+  const now = new Date();
+  const dateStr = now.toISOString().split("T")[0];
+  const timeStr = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+  const companyId = String(session.company_id ?? session.claim?.company_id ?? "");
+  await openWorkPeriod(sessionId, companyId);
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    status: "active",
+    substate: "normal",
+    started_at: now.toISOString(),
+    inspection_date: dateStr,
+    inspection_time: timeStr,
+  }, SESSION_SELECT);
+}
+
+/**
+ * Completa una inspección: status→completed, ended_at=ahora, cierra work_period.
+ * Reemplaza el updateInspectionSession directo para finalizar.
+ */
+export async function completeInspection(sessionId: string) {
+  const session = await getInspectionSessionById(sessionId);
+  if (!session) throw new Error("Inspección no encontrada");
+  if (session.status !== "active") {
+    throw new Error("Solo se puede completar una inspección en progreso");
+  }
+  await closeOpenWorkPeriod(sessionId);
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    status: "completed",
+    ended_at: new Date().toISOString(),
+  }, SESSION_SELECT);
 }
 
 export async function updateInspectionSession(id: string, input: Partial<InspectionSession>) {
