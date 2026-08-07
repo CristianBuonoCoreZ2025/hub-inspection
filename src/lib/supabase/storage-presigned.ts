@@ -5,13 +5,13 @@ import "server-only";
  *
  * Con Cloudflare R2, los archivos tienen URLs públicas (r2PublicUrl/path).
  * Si el archivo ya es una URL pública de R2, se devuelve tal cual.
- * Si es una URL legacy de Supabase/Nhost, se devuelve tal cual (ya no se presigna).
+ * Si es una URL legacy de Supabase, se devuelve tal cual (ya no se presigna).
  *
  * @param fileUrlOrPath — URL completa o path del archivo
  * @returns URL accesible
  */
 export async function getPresignedUrl(fileUrlOrPath: string): Promise<string> {
-  // Si ya es una URL completa (R2, Supabase, Nhost), devolver tal cual
+  // Si ya es una URL completa (R2, Supabase), devolver tal cual
   return fileUrlOrPath;
 }
 

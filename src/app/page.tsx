@@ -112,7 +112,7 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <LoginButton>Iniciar Sesión</LoginButton>
+            <LoginButton>Iniciar</LoginButton>
           </div>
         </div>
       </header>
@@ -139,7 +139,7 @@ export default function LandingPage() {
                   inspección remota con evidencias, y trazabilidad completa del expediente — todo en una plataforma.
                 </p>
                 <div className="flex flex-wrap gap-3">
-                  <LoginButton showArrow>Iniciar Sesión</LoginButton>
+                  <LoginButton showArrow>Iniciar</LoginButton>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 text-[11px] text-muted-foreground">
                   <span className="flex items-center gap-1.5">
@@ -496,7 +496,7 @@ export default function LandingPage() {
                   Inicia sesión para acceder a tu panel de gestión de siniestros.
                 </p>
                 <div className="mt-6">
-                  <LoginButton showArrow>Iniciar Sesión</LoginButton>
+                  <LoginButton showArrow>Iniciar</LoginButton>
                 </div>
               </div>
             </div>

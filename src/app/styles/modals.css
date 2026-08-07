@@ -13,16 +13,15 @@
 
 @layer components {
   /* ═══════════════ TAMAÑOS (inmunes a --radius) ═══════════════ */
+  /* Glass consistente con .app-panel — no fondo plano */
   .modal-sm {
     @apply flex max-h-[90vh] w-[min(96vw,520px)] flex-col gap-0
            border-0 p-0;
     overflow: hidden !important;
     border-radius: 18px !important;
-    background: color-mix(in srgb, var(--card) 85%, transparent) !important;
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    box-shadow: 0 26px 55px rgba(2, 12, 27, 0.25) !important;
-    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
   }
 
   .modal-md {
@@ -30,11 +29,9 @@
            border-0 p-0;
     overflow: hidden !important;
     border-radius: 18px !important;
-    background: color-mix(in srgb, var(--card) 85%, transparent) !important;
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    box-shadow: 0 26px 55px rgba(2, 12, 27, 0.25) !important;
-    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
   }
 
   /* modal-md-wide → 660px → modales de análisis IA */
@@ -48,11 +45,9 @@
     border: 0 !important;
     padding: 0 !important;
     border-radius: 18px !important;
-    background: color-mix(in srgb, var(--card) 85%, transparent) !important;
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    box-shadow: 0 26px 55px rgba(2, 12, 27, 0.25) !important;
-    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
   }
 
   .modal-lg {
@@ -60,11 +55,9 @@
            border-0 p-0;
     overflow: hidden !important;
     border-radius: 18px !important;
-    background: color-mix(in srgb, var(--card) 85%, transparent) !important;
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    box-shadow: 0 26px 55px rgba(2, 12, 27, 0.25) !important;
-    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
     display: flex !important;
     flex-direction: column !important;
     max-height: 90vh !important;
@@ -77,15 +70,24 @@
            border-0 p-0;
     overflow: hidden !important;
     border-radius: 18px !important;
-    background: color-mix(in srgb, var(--card) 85%, transparent) !important;
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    box-shadow: 0 26px 55px rgba(2, 12, 27, 0.25) !important;
-    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
     display: flex !important;
     flex-direction: column !important;
     max-height: 92vh !important;
     min-height: 0 !important;
+  }
+
+  /* Modo oscuro — bordes y sombras ajustados */
+  .dark .modal-sm,
+  .dark .modal-md,
+  .dark .modal-md-wide,
+  .dark .modal-lg,
+  .dark .modal-xl {
+    background: var(--card) !important;
+    border-color: var(--border) !important;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.2) !important;
   }
 
   /* ════════════════════════════════════════════════════════════════
@@ -350,25 +352,47 @@
   }
 
   /* ═══════════════ ESTRUCTURA INTERNA (inmune) ═══════════════ */
+  /* Header — con sutil tinte del color primario del tema */
   .modal-header {
     flex-shrink: 0 !important;
-    padding: 22px 22px 14px 22px !important;
+    padding: 18px 20px 13px 20px !important;
     border-bottom: 1px solid var(--border) !important;
+    background:
+      radial-gradient(ellipse 80% 70% at 10% 15%, rgba(255, 230, 170, 0.35), transparent 55%),
+      radial-gradient(ellipse 70% 60% at 90% 15%, rgba(255, 180, 220, 0.30), transparent 50%),
+      radial-gradient(ellipse 80% 70% at 50% 95%, rgba(180, 220, 255, 0.35), transparent 55%),
+      radial-gradient(ellipse 60% 50% at 95% 85%, rgba(180, 190, 255, 0.25), transparent 45%),
+      linear-gradient(135deg, #fffbf0 0%, #fff4f7 35%, #f0f7ff 70%, #eef2ff 100%) !important;
+    position: relative !important;
+    overflow: hidden !important;
   }
 
+  /* Título — app-section-title */
   .modal-title {
-    margin: 0 0 10px 0 !important;
-    font-size: 22px !important;
-    letter-spacing: -0.03em !important;
+    margin: 0 !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.3 !important;
     color: var(--foreground) !important;
-    font-weight: 700 !important;
-    line-height: 1.2 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  /* Icono — solo contorno, sin caja de fondo (estilo "Mover Fecha") */
+  .modal-title-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    color: var(--foreground) !important;
   }
 
   .modal-subtitle {
     margin: 0 !important;
     color: var(--muted-foreground) !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     line-height: 1.5 !important;
   }
 
@@ -376,7 +400,27 @@
     flex: 1 1 auto !important;
     overflow-y: auto !important;
     min-height: 0 !important;
-    padding: 14px 22px !important;
+    padding: 24px !important;
+    background: var(--card) !important;
+  }
+
+  /* Modal body sin padding — para modales que contienen tablas/grillas
+     que necesitan ocupar todo el ancho (ej: dashboard KPI detail).
+     El modal-footer provee la separación inferior. */
+  .modal-body-flush {
+    padding: 0 !important;
+  }
+
+  /* Contenedor de grilla dentro de un modal — scroll vertical limitado */
+  .modal-grid-wrap {
+    max-height: 60vh;
+    overflow: auto;
+  }
+
+  /* Mensaje de muestra parcial en footer de modal con grilla */
+  .modal-grid-partial {
+    font-size: 11px !important;
+    color: var(--muted-foreground) !important;
   }
 
   .modal-footer {
@@ -385,16 +429,178 @@
     align-items: center !important;
     justify-content: flex-end !important;
     gap: 10px !important;
-    padding: 14px 22px !important;
+    padding: 12px 24px !important;
     border-top: 1px solid var(--border) !important;
+    background: var(--card) !important;
   }
 }
 
-/* ═══════════════ OVERLAY (inmune) ═══════════════ */
+/* ════════════════════════════════════════════════════════════════
+ * MODAL_B — Variante de referencia con header de color primario
+ * Estilo de la imagen de referencia: header con gradiente, footer limpio,
+ * sombra pronunciada, overlay oscuro.
+ * ════════════════════════════════════════════════════════════════ */
+@layer components {
+  .modal-b-sm {
+    @apply flex max-h-[90vh] w-[min(96vw,520px)] flex-col gap-0
+           border-0 p-0;
+    overflow: hidden !important;
+    border-radius: 18px !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.24),
+      0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .modal-b-md {
+    @apply flex max-h-[90vh] w-[min(96vw,560px)] flex-col gap-0
+           border-0 p-0;
+    overflow: hidden !important;
+    border-radius: 18px !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.24),
+      0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .modal-b-lg {
+    @apply flex max-h-[90vh] w-[min(98vw,720px)] flex-col gap-0
+           border-0 p-0;
+    overflow: hidden !important;
+    border-radius: 18px !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.24),
+      0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 90vh !important;
+    min-height: 0 !important;
+  }
+
+  .modal-b-xl {
+    @apply flex max-h-[92vh] w-[min(98vw,920px)] flex-col gap-0
+           border-0 p-0;
+    overflow: hidden !important;
+    border-radius: 18px !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.24),
+      0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 92vh !important;
+    min-height: 0 !important;
+  }
+
+  /* Header con gradiente pastel visible */
+  .modal-b-header {
+    flex-shrink: 0 !important;
+    padding: 18px 20px 13px 20px !important;
+    border-bottom: 1px solid var(--border) !important;
+    background:
+      radial-gradient(ellipse 80% 70% at 10% 15%, rgba(255, 230, 170, 0.35), transparent 55%),
+      radial-gradient(ellipse 70% 60% at 90% 15%, rgba(255, 180, 220, 0.30), transparent 50%),
+      radial-gradient(ellipse 80% 70% at 50% 95%, rgba(180, 220, 255, 0.35), transparent 55%),
+      radial-gradient(ellipse 60% 50% at 95% 85%, rgba(180, 190, 255, 0.25), transparent 45%),
+      linear-gradient(135deg, #fffbf0 0%, #fff4f7 35%, #f0f7ff 70%, #eef2ff 100%) !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  .modal-b-title {
+    margin: 0 !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.3 !important;
+    color: var(--foreground) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .modal-b-subtitle {
+    margin: 0 !important;
+    color: var(--muted-foreground) !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+  }
+
+  .modal-b-body {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    min-height: 0 !important;
+    padding: 24px !important;
+    background: var(--card) !important;
+  }
+
+  .modal-b-footer {
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+    padding: 12px 24px !important;
+    border-top: 1px solid var(--border) !important;
+    background: var(--card) !important;
+  }
+
+  /* Modo oscuro para Modal_B */
+  .dark .modal-b-sm,
+  .dark .modal-b-md,
+  .dark .modal-b-lg,
+  .dark .modal-b-xl {
+    background: var(--card) !important;
+    border-color: var(--border) !important;
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .dark .modal-header,
+  .dark .modal-b-header {
+    background:
+      radial-gradient(ellipse 80% 70% at 10% 15%, rgb(139 92 246 / 0.25), transparent 55%),
+      radial-gradient(ellipse 70% 60% at 90% 10%, rgb(14 165 233 / 0.20), transparent 50%),
+      radial-gradient(ellipse 80% 70% at 50% 95%, rgb(236 72 153 / 0.18), transparent 55%),
+      radial-gradient(ellipse 60% 50% at 95% 85%, rgb(59 130 246 / 0.12), transparent 45%),
+      linear-gradient(135deg, #111827 0%, #1e1b4b 50%, #0f172a 100%) !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+ * ICONOS DE HEADER SIN FONDO — solo contorno (estilo "Mover Fecha")
+ *
+ * Los iconos en headers de modales NO llevan caja/gradiente de fondo.
+ * Solo el icono de lucide (contorno) hereda el color del título.
+ * Esto aplica a TODOS los wrappers con h-8 w-8 rounded-lg que tengan
+ * bg-linear-to-br, bg-violet-500/10, bg-red-500, bg-primary, etc.
+ * ════════════════════════════════════════════════════════════════ */
+.modal-header [class~="h-8"][class~="w-8"][class~="rounded-lg"],
+.modal-b-header [class~="h-8"][class~="w-8"][class~="rounded-lg"] {
+  background: transparent !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-color: transparent !important;
+  color: var(--foreground) !important;
+}
+
+/* Overlay exclusivo para Modal_B */
+[data-slot="dialog-overlay"].modal-b-overlay,
+.modal-b-overlay [data-slot="dialog-overlay"] {
+  background: rgba(0, 0, 0, 0.5) !important;
+  -webkit-backdrop-filter: blur(3px) !important;
+  backdrop-filter: blur(3px) !important;
+}
 [data-slot="dialog-overlay"] {
-  background: rgba(2, 12, 27, 0.45) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  backdrop-filter: blur(8px) !important;
+  background: color-mix(in srgb, var(--primary) 10%, rgba(0, 0, 0, 0.22)) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+  backdrop-filter: blur(2px) !important;
 }
 
 /* ═══════════════ GRID / FIELD (portal-seguros, inmune) ═══════════════ */

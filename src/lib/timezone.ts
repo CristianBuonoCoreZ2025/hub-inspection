@@ -139,6 +139,29 @@ export function fromDateTimeLocalInput(value: string): string {
 }
 
 /**
+ * Formatea una duración en milisegundos de forma inteligente:
+ *   < 1 minuto  → "Xs"
+ *   < 1 hora    → "Xm"
+ *   < 1 día     → "Xh Ym"
+ *   < 1 año     → "Xd Yh"
+ *   >= 1 año    → "Xa Yd"
+ */
+export function formatDuration(ms: number): string {
+  if (ms < 0 || Number.isNaN(ms)) return "0s";
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const years = Math.floor(days / 365);
+
+  if (seconds < 60) return `${seconds}s`;
+  if (minutes < 60) return `${minutes}m`;
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  if (days < 365) return `${days}d ${hours % 24}h`;
+  return `${years}a ${days % 365}d`;
+}
+
+/**
  * Convierte un ISO (con offset o UTC) al formato que espera <input type="datetime-local">
  * (yyyy-MM-ddTHH:mm en la zona horaria del usuario, sin offset).
  *

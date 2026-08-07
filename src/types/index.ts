@@ -419,6 +419,7 @@ export interface InspectionSession {
   magic_link_expires_at: string | null;
   magic_link_extended: boolean;
   status: "scheduled" | "active" | "completed" | "cancelled";
+  substate: "normal" | "paused";
   inspection_type: "onsite" | "remote";
   inspection_date: string | null;
   inspection_time: string | null;
@@ -677,6 +678,7 @@ export interface BusinessLine {
   claim_type_id: string | null;
   ramo_fecu: string | null;
   description: string | null;
+  color: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
