@@ -56,7 +56,7 @@ export function BarChartDual({
               <YAxis
                 type="category"
                 dataKey="name"
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 9 }}
                 axisLine={false}
                 tickLine={false}
                 width={200}
@@ -88,7 +88,7 @@ export function BarChartDual({
             }}
             cursor={{ fill: "rgba(0, 149, 218, 0.06)" }}
           />
-          <Legend iconType="circle" wrapperStyle={{ fontSize: 10, paddingTop: 0 }} />
+          <Legend iconType="circle" wrapperStyle={{ fontSize: 9, paddingTop: 0 }} />
           <Bar
             dataKey="asignadas"
             fill="url(#bar-grad-1)"

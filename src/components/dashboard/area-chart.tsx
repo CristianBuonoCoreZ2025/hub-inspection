@@ -47,7 +47,7 @@ export function AreaChartGlass({
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 10 }}
+          tick={{ fontSize: 9 }}
           axisLine={false}
           tickLine={false}
         />

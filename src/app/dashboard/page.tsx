@@ -1,11 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
-import { getClaims } from "@/services/claims";
-import { getInspectionSessions } from "@/services/inspections";
-import { getCompanies } from "@/services/companies";
-import { getUsers } from "@/services/users";
+import { useState, useMemo, useCallback } from "react";
+import { getDashboardClaims, getDashboardSessions, getDashboardProfiles, getDashboardCompaniesCount } from "@/services/dashboard";
+import { getCountries } from "@/services/catalogs";
 import { userTypeLabels } from "@/services/permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
@@ -22,23 +20,27 @@ import {
   Briefcase,
   Layers,
   FilePen,
-  Navigation,
-  ScrollText,
   MapPin,
 } from "lucide-react";
 import { KpiTodayIcon, KpiActiveIcon, KpiScheduledIcon, KpiCompletedIcon, KpiOverdueIcon, KpiTimeIcon } from "@/components/dashboard/kpi-icons";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
-import type { Claim, InspectionSession, UserRole, Profile } from "@/types";
+import type { UserRole } from "@/types";
+import type { LightClaim, LightSession } from "@/services/dashboard";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DonutChart } from "@/components/dashboard/donut-chart";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { BarChartGlass } from "@/components/dashboard/bar-chart";
-import { BarChartDual } from "@/components/dashboard/bar-chart-dual";
 import { BarChartQuad } from "@/components/dashboard/bar-chart-quad";
+import { NestedDonutChart } from "@/components/dashboard/nested-donut-chart";
 
 const STATUS_COLORS: Record<string, string> = {
   created: "#3b82f6",
@@ -80,15 +82,22 @@ function isToday(d: string) {
   return date >= start && date <= end;
 }
 
+function formatDuration(minutes: number): string {
+  const roundedMinutes = Math.max(0, Math.round(minutes));
+  const hours = Math.floor(roundedMinutes / 60);
+  const remainder = roundedMinutes % 60;
+  return hours > 0 ? `${hours}H${remainder}M` : `${remainder}M`;
+}
+
 /**
  * Filtra los claims según el rol del usuario:
  * - internal: ve todo
  * - otros roles: solo claims donde participa en alguno de los roles asignados
  */
 function filterClaimsForUser(
-  allClaims: Claim[],
+  allClaims: LightClaim[],
   profile: { id: string; role: UserRole; company_id: string | null } | null | undefined
-): Claim[] {
+): LightClaim[] {
   if (!profile) return [];
   if (profile.role === "internal") return allClaims;
   return allClaims.filter((c) =>
@@ -101,72 +110,94 @@ function filterClaimsForUser(
   );
 }
 
+// Paleta de colores para los donuts de ubicación (constante del módulo)
+const LOCATION_COLORS = ["#0095DA", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#06b6d4", "#ec4899", "#6366f1"];
+
 export default function DashboardPage() {
   const { profile } = useAuth();
   const { statusCode } = useClaimStatuses();
-  useRealtime("claims", [["claims"], ["claims-all"]]);
-  useRealtime("inspection_sessions", [["inspection-sessions"], ["inspection-sessions-all"]]);
-  useRealtime("audit_logs", [["recent-activity"]]);
 
   const isGlobalUser = profile?.role === "internal";
   const roleLabel = profile ? userTypeLabels[profile.role] : "";
 
-  const { data: claims } = useQuery<Claim[]>({
-    queryKey: ["claims"],
-    queryFn: () => getClaims(),
+  // Realtime: solo claims y sessions (audit_logs se quitó por performance)
+  useRealtime("claims", [["dashboard-claims"]]);
+  useRealtime("inspection_sessions", [["dashboard-sessions"]]);
+
+  const { data: claims } = useQuery({
+    queryKey: ["dashboard-claims"],
+    queryFn: () => getDashboardClaims(),
     enabled: !!profile,
   });
 
-  const { data: sessions } = useQuery<InspectionSession[]>({
-    queryKey: ["inspection-sessions"],
-    queryFn: () => getInspectionSessions(),
+  const { data: sessions } = useQuery({
+    queryKey: ["dashboard-sessions"],
+    queryFn: () => getDashboardSessions(),
     enabled: !!profile,
   });
 
-  const { data: companies } = useQuery({
-    queryKey: ["companies"],
-    queryFn: () => getCompanies(),
+  const { data: companiesCount } = useQuery({
+    queryKey: ["dashboard-companies-count"],
+    queryFn: () => getDashboardCompaniesCount(),
     enabled: !!profile,
   });
+
+  const { data: countries } = useQuery({
+    queryKey: ["countries"],
+    queryFn: getCountries,
+    enabled: !!profile,
+  });
+
+  // Filtros para el dashboard de inspecciones por ubicación (3 nested donuts)
+  const [selectedCountryId, setSelectedCountryId] = useState<string>("__all");
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [selectedCommune, setSelectedCommune] = useState<string | null>(null);
+
+  // Filtro para el dashboard de siniestros (3 nested donuts: región > ciudad > comuna)
+  const [selectedSiniestroCountryId, setSelectedSiniestroCountryId] = useState<string | null>(null);
+  const [selectedSiniestroRegion, setSelectedSiniestroRegion] = useState<string | null>(null);
+  const [selectedSiniestroCity, setSelectedSiniestroCity] = useState<string | null>(null);
+  const [selectedSiniestroCommune, setSelectedSiniestroCommune] = useState<string | null>(null);
 
   const { data: users } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => getUsers(),
+    queryKey: ["dashboard-profiles"],
+    queryFn: () => getDashboardProfiles(),
     enabled: !!profile,
   });
 
   // Filtrar claims según el rol del usuario
   const myClaims = useMemo(
-    () => filterClaimsForUser(claims ?? [], profile),
+    () => filterClaimsForUser((claims as LightClaim[]) ?? [], profile),
     [claims, profile]
   );
 
   // Las sesiones ya vienen filtradas por RLS (is_session_accessible).
   // No se recortan por claims para que un inspector asignado a una inspección
   // la vea aunque no tenga acceso al siniestro asociado.
-  const sessionList = useMemo(() => sessions ?? [], [sessions]);
+  const sessionList = useMemo(() => (sessions as LightSession[]) ?? [], [sessions]);
 
   const stats = useMemo(() => {
     const allClaims = myClaims;
     const allSessions = sessionList;
 
     const closedClaims = allClaims.filter(
-      (c: Claim) => statusCode(c.status_id) === "closed"
+      (c: LightClaim) => statusCode(c.status_id) === "closed"
     );
     const openClaims = allClaims.filter(
-      (c: Claim) => statusCode(c.status_id) !== "closed"
+      (c: LightClaim) => statusCode(c.status_id) !== "closed"
     );
     const createdClaims = allClaims.filter(
-      (c: Claim) => statusCode(c.status_id) === "created"
+      (c: LightClaim) => statusCode(c.status_id) === "created"
     );
     const adjustmentClaims = allClaims.filter(
-      (c: Claim) => statusCode(c.status_id) === "adjustment"
+      (c: LightClaim) => statusCode(c.status_id) === "adjustment"
     );
 
     // Tiempo promedio de resolución
     let avgResolutionDays = 0;
     if (closedClaims.length > 0) {
-      const totalDays = closedClaims.reduce((sum: number, c: Claim) => {
+      const totalDays = closedClaims.reduce((sum: number, c: LightClaim) => {
         const created = new Date(c.created_at).getTime();
         const updated = new Date(c.updated_at).getTime();
         return sum + (updated - created) / 86400000;
@@ -182,19 +213,19 @@ export default function DashboardPage() {
 
     // Inspecciones
     const scheduledSessions = allSessions.filter(
-      (s: InspectionSession) =>
+      (s: LightSession) =>
         s.status === "scheduled" &&
         s.scheduled_at &&
         new Date(s.scheduled_at) >= new Date()
     );
     const activeSessions = allSessions.filter(
-      (s: InspectionSession) => s.status === "active"
+      (s: LightSession) => s.status === "active"
     );
     const completedSessions = allSessions.filter(
-      (s: InspectionSession) => s.status === "completed"
+      (s: LightSession) => s.status === "completed"
     );
     const cancelledSessions = allSessions.filter(
-      (s: InspectionSession) => s.status === "cancelled"
+      (s: LightSession) => s.status === "cancelled"
     );
 
     // Tasa de completitud de inspecciones
@@ -206,7 +237,7 @@ export default function DashboardPage() {
     // Claims por estado (para donut)
     const claimsByStatus: Array<{ name: string; value: number; color: string }> = [];
     const statusCounts: Record<string, number> = {};
-    allClaims.forEach((c: Claim) => {
+    allClaims.forEach((c: LightClaim) => {
       const code = statusCode(c.status_id) ?? "unknown";
       statusCounts[code] = (statusCounts[code] || 0) + 1;
     });
@@ -220,14 +251,14 @@ export default function DashboardPage() {
 
     // Claims por compañía (top 5, para barras horizontales con casos + inspecciones)
     const claimsByCompany: Record<string, { claims: number; inspections: number }> = {};
-    allClaims.forEach((c: Claim) => {
+    allClaims.forEach((c: LightClaim) => {
       const name = c.insurance_company?.name || "Sin compañía";
       if (!claimsByCompany[name]) claimsByCompany[name] = { claims: 0, inspections: 0 };
       claimsByCompany[name].claims++;
     });
     const claimMapForCompany = new Map(allClaims.map((c) => [c.id, c]));
     allSessions.forEach((s) => {
-      const claim = claimMapForCompany.get(s.claim_id);
+      const claim = s.claim_id ? claimMapForCompany.get(s.claim_id) : undefined;
       const name = claim?.insurance_company?.name || "Sin compañía";
       if (!claimsByCompany[name]) claimsByCompany[name] = { claims: 0, inspections: 0 };
       claimsByCompany[name].inspections++;
@@ -238,20 +269,24 @@ export default function DashboardPage() {
       .map(([name, v]) => ({ name, value: v.claims, inspections: v.inspections }));
 
     // Claims por ramo / línea de negocio
-    const claimsByRamo: Record<string, number> = {};
-    allClaims.forEach((c: Claim) => {
-      const name = c.business_line?.name || c.claim_type?.name || "Sin ramo";
-      claimsByRamo[name] = (claimsByRamo[name] || 0) + 1;
+    const claimsByRamo: Record<string, { count: number; color: string | null }> = {};
+    allClaims.forEach((c: LightClaim) => {
+      const name = c.business_line?.name || c.claim_type?.name || "Sin línea de negocio";
+      const color = c.business_line?.color || null;
+      if (!claimsByRamo[name]) claimsByRamo[name] = { count: 0, color };
+      claimsByRamo[name].count++;
+      if (!claimsByRamo[name].color && color) claimsByRamo[name].color = color;
     });
+    const ramoFallbackColors = ["#0095DA", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
     const topRamos = Object.entries(claimsByRamo)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 6)
-      .map(([name, value]) => ({ name, value }));
+      .map(([name, v], i) => ({ name, value: v.count, color: v.color || ramoFallbackColors[i % ramoFallbackColors.length] }));
 
     // Top responsables (liquidador, despachador, revisor)
     const buildTopUsers = (field: "assigned_adjuster_id" | "adjuster_id" | "dispatcher_id" | "auditor_id") => {
       const map: Record<string, { id: string; name: string; count: number }> = {};
-      allClaims.forEach((c: Claim) => {
+      allClaims.forEach((c: LightClaim) => {
         const id = c[field];
         if (!id) return;
         const name =
@@ -347,7 +382,7 @@ export default function DashboardPage() {
     const claimMap = new Map(allClaims.map((c) => [c.id, c]));
     const companyMap: Record<string, { id: string; name: string; total: number }> = {};
     allSessions.forEach((s) => {
-      const claim = claimMap.get(s.claim_id);
+      const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
       const id = claim?.insurance_company_id || "unknown";
       const name = claim?.insurance_company?.name || "Sin compañía";
       if (!companyMap[id]) companyMap[id] = { id, name, total: 0 };
@@ -370,12 +405,12 @@ export default function DashboardPage() {
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
       const monthLabel = monthDate.toLocaleDateString("es-CL", { month: "short" });
 
-      const monthClaims = allClaims.filter((c: Claim) => {
+      const monthClaims = allClaims.filter((c: LightClaim) => {
         const d = new Date(c.claim_date || c.created_at);
         return d >= monthDate && d <= monthEnd;
       });
 
-      const monthInspections = allSessions.filter((s: InspectionSession) => {
+      const monthInspections = allSessions.filter((s: LightSession) => {
         if (!s.scheduled_at) return false;
         const d = new Date(s.scheduled_at);
         return d >= monthDate && d <= monthEnd;
@@ -391,7 +426,7 @@ export default function DashboardPage() {
     // Claims por día de la semana (para barras)
     const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
     const claimsByDay: Array<{ name: string; value: number }> = dayNames.map(d => ({ name: d, value: 0 }));
-    allClaims.forEach((c: Claim) => {
+    allClaims.forEach((c: LightClaim) => {
       const d = new Date(c.claim_date || c.created_at);
       claimsByDay[d.getDay()].value++;
     });
@@ -403,12 +438,13 @@ export default function DashboardPage() {
       if (d) inspectionsByDay[new Date(d).getDay()].value++;
     });
 
-    // Inspecciones por región (con 4 estados)
-    const inspByRegionMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
+    // Inspecciones por región (con 4 estados + country_id para filtro)
+    const inspByRegionMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number; country_id: string | null }> = {};
     allSessions.forEach((s) => {
-      const claim = claimMapForCompany.get(s.claim_id);
+      const claim = s.claim_id ? claimMapForCompany.get(s.claim_id) : undefined;
       const region = claim?.region?.name || "Sin región";
-      if (!inspByRegionMap[region]) inspByRegionMap[region] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      const countryId = claim?.region?.country_id || null;
+      if (!inspByRegionMap[region]) inspByRegionMap[region] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0, country_id: countryId };
       if (s.status === "scheduled") inspByRegionMap[region].agendadas++;
       else if (s.status === "active") inspByRegionMap[region].enProceso++;
       else if (s.status === "completed") inspByRegionMap[region].completadas++;
@@ -422,7 +458,7 @@ export default function DashboardPage() {
     // Inspecciones por comuna (top 10, con 4 estados)
     const inspByCommuneMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
     allSessions.forEach((s) => {
-      const claim = claimMapForCompany.get(s.claim_id);
+      const claim = s.claim_id ? claimMapForCompany.get(s.claim_id) : undefined;
       const commune = claim?.commune?.name || "Sin comuna";
       if (!inspByCommuneMap[commune]) inspByCommuneMap[commune] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
       if (s.status === "scheduled") inspByCommuneMap[commune].agendadas++;
@@ -451,7 +487,7 @@ export default function DashboardPage() {
 
     // Siniestros por región
     const claimsByRegionMap: Record<string, number> = {};
-    allClaims.forEach((c: Claim) => {
+    allClaims.forEach((c: LightClaim) => {
       const region = c.region?.name || "Sin región";
       claimsByRegionMap[region] = (claimsByRegionMap[region] || 0) + 1;
     });
@@ -462,8 +498,10 @@ export default function DashboardPage() {
 
     // Inspecciones sin asignar (sin inspector)
     const unassignedInspections = allSessions.filter((s) => !s.inspector_id).length;
-    const cancellationRate = allSessions.length > 0
-      ? (cancelledSessions.length / allSessions.length) * 100
+    const scheduledForRate = scheduledSessions.length;
+    const completedForRate = completedSessions.length;
+    const completionVsScheduledRate = scheduledForRate + completedForRate > 0
+      ? (completedForRate / (scheduledForRate + completedForRate)) * 100
       : 0;
 
     return {
@@ -495,10 +533,10 @@ export default function DashboardPage() {
       avgTimeByInspector,
       claimsByRegion,
       unassignedInspections,
-      cancellationRate,
-      totalCompanies: companies?.length ?? 0,
+      completionVsScheduledRate,
+      totalCompanies: companiesCount ?? 0,
       totalUsers: users?.length ?? 0,
-      activeUsers: users?.filter((u: Profile) => u.is_active)?.length ?? 0,
+      activeUsers: users?.filter((u) => u.is_active)?.length ?? 0,
       // Nuevas métricas de inspecciones
       inspectionsToday,
       scheduledToday,
@@ -512,7 +550,254 @@ export default function DashboardPage() {
       myScheduledSessions,
       myCompletedSessions,
     };
-  }, [myClaims, sessionList, companies, users, statusCode, isGlobalUser, profile]);
+  }, [myClaims, sessionList, companiesCount, users, statusCode, isGlobalUser, profile]);
+
+  // Setear el país inicial al primero que tenga inspecciones
+  // Patrón render-time (evita setState-in-effect): ajustamos el estado cuando
+  // cambian los datos, comparando con el valor previo para no looping.
+  const [prevCountryInit, setPrevCountryInit] = useState<string>("__all");
+  if (
+    selectedCountryId === "__all" &&
+    stats.inspectionsByRegion.length > 0 &&
+    prevCountryInit === "__all"
+  ) {
+    const firstCountryId = stats.inspectionsByRegion.find((r) => r.country_id)?.country_id;
+    if (firstCountryId) {
+      setSelectedCountryId(firstCountryId);
+      setPrevCountryInit(firstCountryId);
+    }
+  }
+
+  // ── Datos para los 3 nested donuts de inspecciones por ubicación ──
+
+  const buildDonut = useCallback((map: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }>, selectedName: string | null) => {
+    const outer = Object.entries(map)
+      .sort((a, b) => (b[1].agendadas + b[1].enProceso + b[1].completadas + b[1].canceladas) - (a[1].agendadas + a[1].enProceso + a[1].completadas + a[1].canceladas))
+      .slice(0, 6)
+      .map(([name, v], i) => ({
+        name,
+        value: v.agendadas + v.enProceso + v.completadas + v.canceladas,
+        color: LOCATION_COLORS[i % LOCATION_COLORS.length],
+      }));
+
+    const selected = outer.find((o) => o.name === selectedName)?.name || outer[0]?.name || null;
+    const selectedEntry = selected ? outer.find((o) => o.name === selected) : null;
+    const selectedData = selected ? map[selected] : null;
+    const totalValue = outer.reduce((sum, o) => sum + o.value, 0);
+    const selectedPercent = selectedEntry && totalValue > 0 ? (selectedEntry.value / totalValue) * 100 : 0;
+    const inner = selectedData
+      ? [
+          { name: "Agendadas", value: selectedData.agendadas, color: "#3b82f6" },
+          { name: "En curso", value: selectedData.enProceso, color: "#f59e0b" },
+          { name: "Completadas", value: selectedData.completadas, color: "#10b981" },
+          { name: "Canceladas", value: selectedData.canceladas, color: "#ef4444" },
+        ].filter((d) => d.value > 0)
+      : [];
+
+    return { outer, inner, selectedName: selected, selectedPercent };
+  }, []);
+
+  const locationDonuts = useMemo(() => {
+    const claimMap = new Map(myClaims.map((c) => [c.id, c]));
+    const regionMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
+    const cityMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
+    const communeMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
+
+    sessionList.forEach((s) => {
+      const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
+      const countryId = claim?.region?.country_id;
+      if (selectedCountryId !== "__all" && countryId !== selectedCountryId) return;
+
+      const region = claim?.region?.name || "Sin región";
+      const city = claim?.commune?.city?.name || "Sin ciudad";
+      const commune = claim?.commune?.name || "Sin comuna";
+
+      if (!regionMap[region]) regionMap[region] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      if (!cityMap[city]) cityMap[city] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      if (!communeMap[commune]) communeMap[commune] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+
+      if (s.status === "scheduled") { regionMap[region].agendadas++; cityMap[city].agendadas++; communeMap[commune].agendadas++; }
+      else if (s.status === "active") { regionMap[region].enProceso++; cityMap[city].enProceso++; communeMap[commune].enProceso++; }
+      else if (s.status === "completed") { regionMap[region].completadas++; cityMap[city].completadas++; communeMap[commune].completadas++; }
+      else if (s.status === "cancelled") { regionMap[region].canceladas++; cityMap[city].canceladas++; communeMap[commune].canceladas++; }
+    });
+
+    // Filtrar ciudad y comuna por región seleccionada
+    const regionKey = selectedRegion || Object.keys(regionMap)[0];
+    const filteredCityMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
+    const filteredCommuneMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
+
+    sessionList.forEach((s) => {
+      const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
+      const countryId = claim?.region?.country_id;
+      if (selectedCountryId !== "__all" && countryId !== selectedCountryId) return;
+      if ((claim?.region?.name || "Sin región") !== regionKey) return;
+      const city = claim?.commune?.city?.name || "Sin ciudad";
+      const commune = claim?.commune?.name || "Sin comuna";
+      if (!filteredCityMap[city]) filteredCityMap[city] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      if (!filteredCommuneMap[commune]) filteredCommuneMap[commune] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      if (s.status === "scheduled") { filteredCityMap[city].agendadas++; filteredCommuneMap[commune].agendadas++; }
+      else if (s.status === "active") { filteredCityMap[city].enProceso++; filteredCommuneMap[commune].enProceso++; }
+      else if (s.status === "completed") { filteredCityMap[city].completadas++; filteredCommuneMap[commune].completadas++; }
+      else if (s.status === "cancelled") { filteredCityMap[city].canceladas++; filteredCommuneMap[commune].canceladas++; }
+    });
+
+    const cityKey = selectedCity || Object.keys(filteredCityMap)[0];
+    const finalCommuneMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
+    sessionList.forEach((s) => {
+      const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
+      const countryId = claim?.region?.country_id;
+      if (selectedCountryId !== "__all" && countryId !== selectedCountryId) return;
+      if ((claim?.region?.name || "Sin región") !== regionKey) return;
+      if ((claim?.commune?.city?.name || "Sin ciudad") !== cityKey) return;
+      const commune = claim?.commune?.name || "Sin comuna";
+      if (!finalCommuneMap[commune]) finalCommuneMap[commune] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      if (s.status === "scheduled") finalCommuneMap[commune].agendadas++;
+      else if (s.status === "active") finalCommuneMap[commune].enProceso++;
+      else if (s.status === "completed") finalCommuneMap[commune].completadas++;
+      else if (s.status === "cancelled") finalCommuneMap[commune].canceladas++;
+    });
+
+    return {
+      region: buildDonut(regionMap, selectedRegion),
+      city: buildDonut(filteredCityMap, selectedCity),
+      commune: buildDonut(finalCommuneMap, selectedCommune),
+    };
+  }, [myClaims, sessionList, selectedCountryId, selectedRegion, selectedCity, selectedCommune, buildDonut]);
+
+  // Países con siniestros y seteo inicial del primer país
+  const siniestrosCountries = useMemo(() => {
+    const ids = new Set<string>();
+    myClaims.forEach((c) => {
+      const id = c.region?.country_id;
+      if (id) ids.add(id);
+    });
+    return Array.from(ids)
+      .map((id) => ({
+        id,
+        name: countries?.find((c) => c.id === id)?.name || id,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [myClaims, countries]);
+
+  const [prevSiniestroCountryInit, setPrevSiniestroCountryInit] = useState<string | null>(null);
+  if (
+    selectedSiniestroCountryId === null &&
+    siniestrosCountries.length > 0 &&
+    prevSiniestroCountryInit === null
+  ) {
+    const firstCountryId = siniestrosCountries[0].id;
+    setSelectedSiniestroCountryId(firstCountryId);
+    setPrevSiniestroCountryInit(firstCountryId);
+  }
+  const siniestrosDonuts = useMemo(() => {
+    const businessFallbackColors = ["#0095DA", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
+
+    const addClaim = (
+      targetMap: Record<string, { value: number; color: string }>,
+      businessMap: Record<string, Record<string, { value: number; color: string | null }>>,
+      key: string,
+      businessLine: string,
+      color: string | null,
+      index: number
+    ) => {
+      if (!targetMap[key]) targetMap[key] = { value: 0, color: LOCATION_COLORS[index % LOCATION_COLORS.length] };
+      targetMap[key].value++;
+
+      if (!businessMap[key]) businessMap[key] = {};
+      if (!businessMap[key][businessLine]) businessMap[key][businessLine] = { value: 0, color };
+      businessMap[key][businessLine].value++;
+      if (!businessMap[key][businessLine].color && color) businessMap[key][businessLine].color = color;
+    };
+
+    const buildBusinessDonut = (
+      targetMap: Record<string, { value: number; color: string }>,
+      businessMap: Record<string, Record<string, { value: number; color: string | null }>>,
+      selectedName: string | null
+    ) => {
+      const outer = Object.entries(targetMap)
+        .sort((a, b) => b[1].value - a[1].value)
+        .slice(0, 6)
+        .map(([name, v]) => ({ name, value: v.value, color: v.color }));
+
+      const selected = outer.find((o) => o.name === selectedName)?.name || outer[0]?.name || null;
+      const selectedEntry = selected ? outer.find((o) => o.name === selected) : null;
+      const totalValue = outer.reduce((sum, o) => sum + o.value, 0);
+      const selectedPercent = selectedEntry && totalValue > 0 ? (selectedEntry.value / totalValue) * 100 : 0;
+
+      const businessLines = selected ? businessMap[selected] : {};
+      const inner = Object.entries(businessLines || {})
+        .sort((a, b) => b[1].value - a[1].value)
+        .slice(0, 6)
+        .map(([name, v], i) => ({
+          name,
+          value: v.value,
+          color: v.color || businessFallbackColors[i % businessFallbackColors.length],
+        }));
+
+      return { outer, inner, selectedName: selected, selectedPercent };
+    };
+
+    const claimsForCountry = selectedSiniestroCountryId
+      ? myClaims.filter((c) => c.region?.country_id === selectedSiniestroCountryId)
+      : [];
+
+    const regionMap: Record<string, { value: number; color: string }> = {};
+    const businessByRegion: Record<string, Record<string, { value: number; color: string | null }>> = {};
+    const cityMap: Record<string, { value: number; color: string }> = {};
+    const businessByCity: Record<string, Record<string, { value: number; color: string | null }>> = {};
+    const communeMap: Record<string, { value: number; color: string }> = {};
+    const businessByCommune: Record<string, Record<string, { value: number; color: string | null }>> = {};
+
+    claimsForCountry.forEach((c) => {
+      const region = c.region?.name || "Sin región";
+      const city = c.commune?.city?.name || "Sin ciudad";
+      const commune = c.commune?.name || "Sin comuna";
+      const businessLine = c.business_line?.name || c.claim_type?.name || "Sin línea de negocio";
+      const color = c.business_line?.color || null;
+
+      addClaim(regionMap, businessByRegion, region, businessLine, color, Object.keys(regionMap).length);
+      addClaim(cityMap, businessByCity, city, businessLine, color, Object.keys(cityMap).length);
+      addClaim(communeMap, businessByCommune, commune, businessLine, color, Object.keys(communeMap).length);
+    });
+
+    // Filtrar ciudad y comuna por región seleccionada
+    const regionKey = selectedSiniestroRegion || Object.keys(regionMap)[0];
+    const filteredCityMap: Record<string, { value: number; color: string }> = {};
+    const filteredBusinessByCity: Record<string, Record<string, { value: number; color: string | null }>> = {};
+    const filteredCommuneMap: Record<string, { value: number; color: string }> = {};
+    const filteredBusinessByCommune: Record<string, Record<string, { value: number; color: string | null }>> = {};
+
+    claimsForCountry.forEach((c) => {
+      if ((c.region?.name || "Sin región") !== regionKey) return;
+      const city = c.commune?.city?.name || "Sin ciudad";
+      const commune = c.commune?.name || "Sin comuna";
+      const businessLine = c.business_line?.name || c.claim_type?.name || "Sin línea de negocio";
+      const color = c.business_line?.color || null;
+      addClaim(filteredCityMap, filteredBusinessByCity, city, businessLine, color, Object.keys(filteredCityMap).length);
+      addClaim(filteredCommuneMap, filteredBusinessByCommune, commune, businessLine, color, Object.keys(filteredCommuneMap).length);
+    });
+
+    const cityKey = selectedSiniestroCity || Object.keys(filteredCityMap)[0];
+    const finalCommuneMap: Record<string, { value: number; color: string }> = {};
+    const finalBusinessByCommune: Record<string, Record<string, { value: number; color: string | null }>> = {};
+
+    claimsForCountry.forEach((c) => {
+      if ((c.region?.name || "Sin región") !== regionKey) return;
+      if ((c.commune?.city?.name || "Sin ciudad") !== cityKey) return;
+      const commune = c.commune?.name || "Sin comuna";
+      const businessLine = c.business_line?.name || c.claim_type?.name || "Sin línea de negocio";
+      const color = c.business_line?.color || null;
+      addClaim(finalCommuneMap, finalBusinessByCommune, commune, businessLine, color, Object.keys(finalCommuneMap).length);
+    });
+
+    return {
+      region: buildBusinessDonut(regionMap, businessByRegion, selectedSiniestroRegion),
+      city: buildBusinessDonut(filteredCityMap, filteredBusinessByCity, selectedSiniestroCity),
+      commune: buildBusinessDonut(finalCommuneMap, finalBusinessByCommune, selectedSiniestroCommune),
+      hasData: claimsForCountry.length > 0,
+    };
+  }, [myClaims, selectedSiniestroCountryId, selectedSiniestroRegion, selectedSiniestroCity, selectedSiniestroCommune]);
 
   // KPIs globales: foco en inspecciones
   const kpis = isGlobalUser
@@ -569,7 +854,7 @@ export default function DashboardPage() {
         },
         {
           label: "Tiempo Promedio",
-          value: `${stats.avgInspectionMinutes.toFixed(0)}m`,
+          value: formatDuration(stats.avgInspectionMinutes),
           icon: KpiTimeIcon,
           color: "sky",
           trend: "neutral" as const,
@@ -626,9 +911,6 @@ export default function DashboardPage() {
     ? "Panel de gestión visual — métricas globales en tiempo real"
     : `Tus casos asignados — ${roleLabel.toLowerCase()}`;
 
-  // ¿Mostrar sección de sistema (top compañías + actividad)?
-  const showSystemSection = isGlobalUser || profile?.role === "adjuster";
-
   // Modal de detalle de KPI
   const [kpiModal, setKpiModal] = useState<{ title: string; key: string } | null>(null);
 
@@ -644,14 +926,18 @@ export default function DashboardPage() {
     const fmtTime = (d: string) =>
       new Date(d).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
     const getBase = (s: (typeof sessions)[number]) => {
-      const claim = claimMap.get(s.claim_id);
+      const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
       const date = s.scheduled_at || s.started_at || s.ended_at;
       const liq = claim?.liquidation_number || "—";
       const shortLiq = liq.startsWith("L-") ? liq.slice(2) : liq;
       const insured = claim?.claims_participants?.find((p) => p.type === "insured")?.full_name || "—";
+      // Regla AGENTS.md: si la liquidación se muestra en el mismo contexto,
+      // el código de gestión debe ser el CORTO (solo gestión, sin prefijo de liquidación)
+      const rawCode = s.inspection_number || `I-${s.id.slice(0, 4)}`;
+      const shortCode = rawCode.match(/^L-\d+-/) ? rawCode.replace(/^L-\d+-/, "") : rawCode;
       return {
         id: s.id,
-        inspectionCode: s.inspection_number || `I-${s.id.slice(0, 4)}`,
+        inspectionCode: shortCode,
         liquidation: shortLiq,
         insured,
         address: claim?.claim_address || "—",
@@ -803,9 +1089,174 @@ export default function DashboardPage() {
             <span className="dash-section-count">{stats.totalSessions} sesiones</span>
           </div>
 
-          {/* Row 1: Top Inspectores + Por Estado + Tasa Cancelación */}
+          {/* Row 1: Por Día de la Semana + Por Estado + Tasa Cancelación */}
           <div className="dash-grid">
-            <div className="glass-panel dash-col-4 glass-glow-violet">
+            <div className="glass-panel dash-col-4 glass-glow-pink">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Calendar className="h-4 w-4" />
+                  Por Día de la Semana
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                <BarChartGlass
+                  data={stats.inspectionsByDay}
+                  color="#ec4899"
+                />
+              </div>
+            </div>
+
+            <div className="glass-panel dash-col-4 glass-glow-amber">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <Activity className="h-4 w-4" />
+                  Por Estado
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                <BarChartGlass
+                  data={stats.inspectionsByStatus}
+                  color="#8b5cf6"
+                />
+              </div>
+            </div>
+
+            <div className="glass-panel dash-col-4 glass-glow-rose">
+              <div className="glass-panel-header">
+                <div className="glass-panel-title">
+                  <AlertCircle className="h-4 w-4" />
+                  Tasa de Completadas vs Programadas
+                </div>
+              </div>
+              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
+                <span className="text-4xl font-bold tracking-tight text-rose-500">
+                  {stats.completionVsScheduledRate.toFixed(0)}%
+                </span>
+                <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                  {stats.completedSessions} completadas de {stats.completedSessions + stats.scheduledSessions} programadas
+                </p>
+                <div className="mt-4 w-full grid grid-cols-2 gap-2">
+                  <div className="flex flex-col items-center rounded-lg bg-emerald-500/5 border border-emerald-500/10 py-2">
+                    <span className="text-lg font-bold text-emerald-500">{stats.completedSessions}</span>
+                    <span className="text-[10px] text-muted-foreground">Completadas</span>
+                  </div>
+                  <div className="flex flex-col items-center rounded-lg bg-blue-500/5 border border-blue-500/10 py-2">
+                    <span className="text-lg font-bold text-blue-500">{stats.scheduledSessions}</span>
+                    <span className="text-[10px] text-muted-foreground">Programadas</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Inspecciones por Ubicación — 3 nested donuts interconectados en una sola card */}
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-12 glass-glow-sky">
+              <div className="glass-panel-header dash-location-header">
+                <div className="glass-panel-title">
+                  <MapPin className="h-4 w-4" />
+                  Inspecciones por Ubicación
+                </div>
+                {countries && countries.length > 0 && (() => {
+                  const activeCountries = countries.filter((c) => myClaims.some((claim) => claim.region?.country_id === c.id));
+                  if (activeCountries.length === 0) return null;
+                  return (
+                    <Select
+                      value={selectedCountryId}
+                      onValueChange={(v) => { setSelectedCountryId(v ?? "__all"); setSelectedRegion(null); setSelectedCity(null); setSelectedCommune(null); }}
+                    >
+                      <SelectTrigger className="dash-filter-select">
+                        <SelectValue placeholder="Todos los países" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all">Todos los países</SelectItem>
+                        {activeCountries.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  );
+                })()}
+                {/* Leyenda única de estados de inspección (flotante, común a los 3 donuts) */}
+                <div className="dash-location-legend">
+                  <span className="dash-location-legend-item">
+                    <span className="dash-location-legend-dot dash-legend-dot-scheduled" />
+                    Agendadas
+                  </span>
+                  <span className="dash-location-legend-item">
+                    <span className="dash-location-legend-dot dash-legend-dot-active" />
+                    En curso
+                  </span>
+                  <span className="dash-location-legend-item">
+                    <span className="dash-location-legend-dot dash-legend-dot-completed" />
+                    Completadas
+                  </span>
+                  <span className="dash-location-legend-item">
+                    <span className="dash-location-legend-dot dash-legend-dot-cancelled" />
+                    Canceladas
+                  </span>
+                </div>
+              </div>
+              <div className="glass-panel-body">
+                <div className="dash-location-grid">
+                  <div className="dash-location-col">
+                    <div className="dash-location-col-title">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Región
+                    </div>
+                    {locationDonuts.region.outer.length > 0 ? (
+                      <NestedDonutChart
+                        data={locationDonuts.region}
+                        onSliceClick={(name) => { setSelectedRegion(name); setSelectedCity(null); setSelectedCommune(null); }}
+                        showLegend={false}
+                        label="Seleccionada"
+                      />
+                    ) : (
+                      <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">Sin datos</div>
+                    )}
+                  </div>
+
+                  <div className="dash-location-col">
+                    <div className="dash-location-col-title">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Ciudad
+                    </div>
+                    {locationDonuts.city.outer.length > 0 ? (
+                      <NestedDonutChart
+                        data={locationDonuts.city}
+                        onSliceClick={(name) => { setSelectedCity(name); setSelectedCommune(null); }}
+                        showLegend={false}
+                        label="Seleccionada"
+                      />
+                    ) : (
+                      <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">Sin datos</div>
+                    )}
+                  </div>
+
+                  <div className="dash-location-col">
+                    <div className="dash-location-col-title">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Comuna
+                    </div>
+                    {locationDonuts.commune.outer.length > 0 ? (
+                      <NestedDonutChart
+                        data={locationDonuts.commune}
+                        onSliceClick={(name) => setSelectedCommune(name)}
+                        showLegend={false}
+                        label="Seleccionada"
+                      />
+                    ) : (
+                      <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">Sin datos</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3: Top Inspectores + Tiempo por Inspector */}
+          <div className="dash-grid">
+            <div className="glass-panel dash-col-6 glass-glow-violet">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <UserCheck className="h-4 w-4" />
@@ -832,111 +1283,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-4 glass-glow-amber">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Activity className="h-4 w-4" />
-                  Por Estado
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                <BarChartGlass
-                  data={stats.inspectionsByStatus}
-                  color="#8b5cf6"
-                />
-              </div>
-            </div>
-
-            <div className="glass-panel dash-col-4 glass-glow-rose">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <AlertCircle className="h-4 w-4" />
-                  Tasa de Cancelación
-                </div>
-              </div>
-              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
-                <span className="text-4xl font-bold tracking-tight text-rose-500">
-                  {stats.cancellationRate.toFixed(0)}%
-                </span>
-                <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {stats.cancelledSessions} canceladas de {stats.totalSessions}
-                </p>
-                <div className="mt-4 w-full grid grid-cols-2 gap-2">
-                  <div className="flex flex-col items-center rounded-lg bg-emerald-500/5 border border-emerald-500/10 py-2">
-                    <span className="text-lg font-bold text-emerald-500">{stats.completedSessions}</span>
-                    <span className="text-[10px] text-muted-foreground">Completadas</span>
-                  </div>
-                  <div className="flex flex-col items-center rounded-lg bg-amber-500/5 border border-amber-500/10 py-2">
-                    <span className="text-lg font-bold text-amber-500">{stats.activeSessions}</span>
-                    <span className="text-[10px] text-muted-foreground">En curso</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2: Por Región + Por Comuna */}
-          <div className="dash-grid">
-            <div className="glass-panel dash-col-6 glass-glow-sky">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <MapPin className="h-4 w-4" />
-                  Inspecciones por Región
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                {stats.inspectionsByRegion.length > 0 ? (
-                  <BarChartQuad
-                    data={stats.inspectionsByRegion}
-                    horizontal
-                  />
-                ) : (
-                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
-                    Sin datos
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="glass-panel dash-col-6 glass-glow-emerald">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <MapPin className="h-4 w-4" />
-                  Inspecciones por Comuna
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                {stats.inspectionsByCommune.length > 0 ? (
-                  <BarChartQuad
-                    data={stats.inspectionsByCommune}
-                    horizontal
-                  />
-                ) : (
-                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
-                    Sin datos
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Row 3: Por Día + Tiempo por Región */}
-          <div className="dash-grid">
-            <div className="glass-panel dash-col-6 glass-glow-pink">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Calendar className="h-4 w-4" />
-                  Por Día de la Semana
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                <BarChartGlass
-                  data={stats.inspectionsByDay}
-                  color="#ec4899"
-                />
-              </div>
-            </div>
-
             <div className="glass-panel dash-col-6 glass-glow-amber">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
@@ -950,10 +1296,13 @@ export default function DashboardPage() {
                     data={stats.avgTimeByInspector.map((r) => ({
                       name: r.name,
                       value: r.value,
-                      label: `${Math.floor(r.value / 60)}h ${r.value % 60}m`,
+                      label: formatDuration(r.value),
                     }))}
                     color="#f59e0b"
                     horizontal
+                    valueInside
+                    tickFormatter={formatDuration}
+                    seriesName="Duración"
                   />
                 ) : (
                   <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
@@ -970,84 +1319,115 @@ export default function DashboardPage() {
           SECCIÓN: SINIESTROS
           Por Estado + Por Ramo + Por Región + Top Liquidadores + Top Despachadores + Top Revisores
           ═══════════════════════════════════════════════════════════════ */}
-      {stats.totalClaims > 0 && (
+      {siniestrosDonuts.hasData && (
         <>
           <div className="dash-section-header">
             <FileText className="h-4.5 w-4.5" />
             <span className="dash-section-title">Siniestros</span>
             <div className="dash-section-line" />
-            <span className="dash-section-count">{stats.totalClaims} casos</span>
+            <span className="dash-section-count">{myClaims.length} casos</span>
           </div>
 
-          {/* Row 1: Donut (estado) + Por Ramo */}
+          {/* Row 1: Siniestros por Ubicación — 3 nested donuts (Región > Ciudad > Comuna) con Línea de Negocio interior */}
           <div className="dash-grid">
-            <div className="glass-panel dash-col-4 glass-glow-blue">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <FileText className="h-4 w-4" />
-                  {isGlobalUser ? "Por Estado" : "Mis Casos por Estado"}
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                {stats.claimsByStatus.length > 0 ? (
-                  <DonutChart data={stats.claimsByStatus} />
-                ) : (
-                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
-                    Sin datos
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="glass-panel dash-col-8 glass-glow-sky">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Layers className="h-4 w-4" />
-                  Por Ramo
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                {stats.topRamos.length > 0 ? (
-                  <BarChartGlass
-                    data={stats.topRamos}
-                    color="#0095DA"
-                    horizontal
-                  />
-                ) : (
-                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
-                    Sin datos
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2: Por Región */}
-          <div className="dash-grid">
-            <div className="glass-panel dash-col-12 glass-glow-violet">
-              <div className="glass-panel-header">
+            <div className="glass-panel dash-col-12 glass-glow-sky">
+              <div className="glass-panel-header dash-location-header">
                 <div className="glass-panel-title">
                   <MapPin className="h-4 w-4" />
-                  Siniestros por Región
+                  Siniestros por Ubicación y Línea de Negocio
+                </div>
+                {siniestrosCountries.length > 0 && (
+                  <Select
+                    value={selectedSiniestroCountryId || ""}
+                    onValueChange={(v) => {
+                      setSelectedSiniestroCountryId(v);
+                      setSelectedSiniestroRegion(null);
+                      setSelectedSiniestroCity(null);
+                      setSelectedSiniestroCommune(null);
+                      setPrevSiniestroCountryInit(v);
+                    }}
+                  >
+                    <SelectTrigger className="dash-filter-select">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {siniestrosCountries.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {/* Leyenda flotante de líneas de negocio */}
+                <div className="dash-location-legend dash-siniestros-legend">
+                  {siniestrosDonuts.region.inner.map((entry) => (
+                    <span key={entry.name} className="dash-location-legend-item">
+                      <span
+                        className="dash-location-legend-dot"
+                        style={{ background: entry.color }}
+                      />
+                      {entry.name}
+                    </span>
+                  ))}
                 </div>
               </div>
               <div className="glass-panel-body">
-                {stats.claimsByRegion.length > 0 ? (
-                  <BarChartGlass
-                    data={stats.claimsByRegion}
-                    color="#8b5cf6"
-                    horizontal
-                  />
-                ) : (
-                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
-                    Sin datos
+                <div className="dash-location-grid">
+                  <div className="dash-location-col">
+                    <div className="dash-location-col-title">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Región
+                    </div>
+                    {siniestrosDonuts.region.outer.length > 0 ? (
+                      <NestedDonutChart
+                        data={siniestrosDonuts.region}
+                        onSliceClick={(name) => { setSelectedSiniestroRegion(name); setSelectedSiniestroCity(null); setSelectedSiniestroCommune(null); }}
+                        showLegend={false}
+                        label="Seleccionada"
+                      />
+                    ) : (
+                      <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">Sin datos</div>
+                    )}
                   </div>
-                )}
+
+                  <div className="dash-location-col">
+                    <div className="dash-location-col-title">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Ciudad
+                    </div>
+                    {siniestrosDonuts.city.outer.length > 0 ? (
+                      <NestedDonutChart
+                        data={siniestrosDonuts.city}
+                        onSliceClick={(name) => { setSelectedSiniestroCity(name); setSelectedSiniestroCommune(null); }}
+                        showLegend={false}
+                        label="Seleccionada"
+                      />
+                    ) : (
+                      <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">Sin datos</div>
+                    )}
+                  </div>
+
+                  <div className="dash-location-col">
+                    <div className="dash-location-col-title">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Comuna
+                    </div>
+                    {siniestrosDonuts.commune.outer.length > 0 ? (
+                      <NestedDonutChart
+                        data={siniestrosDonuts.commune}
+                        onSliceClick={(name) => setSelectedSiniestroCommune(name)}
+                        showLegend={false}
+                        label="Seleccionada"
+                      />
+                    ) : (
+                      <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">Sin datos</div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Row 3: Top Liquidadores + Top Despachadores + Top Revisores */}
+          {/* Row 2: Top Liquidadores + Sistema (Top Compañías casos vs inspecciones) */}
           <div className="dash-grid">
             <div className="glass-panel dash-col-4 glass-glow-violet">
               <div className="glass-panel-header">
@@ -1062,6 +1442,7 @@ export default function DashboardPage() {
                     data={stats.topAdjusters.map((a) => ({ name: a.name, value: a.count }))}
                     color="#8b5cf6"
                     horizontal
+                    seriesName="Siniestros"
                   />
                 ) : (
                   <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
@@ -1071,125 +1452,26 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="glass-panel dash-col-4 glass-glow-amber">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <Navigation className="h-4 w-4" />
-                  Top Despachadores
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                {stats.topDispatchers.length > 0 ? (
-                  <BarChartGlass
-                    data={stats.topDispatchers.map((d) => ({ name: d.name, value: d.count }))}
-                    color="#f59e0b"
-                    horizontal
-                  />
-                ) : (
-                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
-                    Sin datos
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="glass-panel dash-col-4 glass-glow-emerald">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <ScrollText className="h-4 w-4" />
-                  Top Revisores
-                </div>
-              </div>
-              <div className="glass-panel-body">
-                {stats.topAuditors.length > 0 ? (
-                  <BarChartGlass
-                    data={stats.topAuditors.map((a) => ({ name: a.name, value: a.count }))}
-                    color="#10b981"
-                    horizontal
-                  />
-                ) : (
-                  <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
-                    Sin datos
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════
-          SECCIÓN: SISTEMA
-          Top Compañías (casos vs inspecciones) + Inspecciones sin asignar
-          ═══════════════════════════════════════════════════════════════ */}
-      {stats.totalClaims > 0 && showSystemSection && (
-        <>
-          <div className="dash-section-header">
-            <Building2 className="h-4.5 w-4.5" />
-            <span className="dash-section-title">{isGlobalUser ? "Sistema" : "Mis Compañías"}</span>
-            <div className="dash-section-line" />
-          </div>
-
-          <div className="dash-grid">
             <div className="glass-panel dash-col-8 glass-glow-sky">
               <div className="glass-panel-header">
                 <div className="glass-panel-title">
                   <Building2 className="h-4 w-4" />
-                  {isGlobalUser ? "Top Compañías" : "Mis Casos por Compañía"}
-                </div>
-                <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#0095DA]" />
-                    Siniestros
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#8b5cf6]" />
-                    Inspecciones
-                  </span>
+                  Liquidaciones por Compañía
                 </div>
               </div>
               <div className="glass-panel-body">
                 {stats.topCompanies.length > 0 ? (
-                  <BarChartDual
-                    data={stats.topCompanies.map((c) => ({
-                      name: c.name,
-                      asignadas: c.value,
-                      completadas: c.inspections,
-                    }))}
+                  <BarChartGlass
+                    data={stats.topCompanies.map((c) => ({ name: c.name, value: c.value }))}
+                    color="#0095DA"
                     horizontal
-                    color1="#0095DA"
-                    color2="#8b5cf6"
+                    seriesName="Siniestros"
                   />
                 ) : (
                   <div className="h-60 flex items-center justify-center text-sm text-muted-foreground">
                     Sin datos
                   </div>
                 )}
-              </div>
-            </div>
-
-            <div className="glass-panel dash-col-4 glass-glow-rose">
-              <div className="glass-panel-header">
-                <div className="glass-panel-title">
-                  <AlertCircle className="h-4 w-4" />
-                  Sin Asignar
-                </div>
-              </div>
-              <div className="glass-panel-body flex flex-col items-center justify-center pt-4 pb-4">
-                <span className="text-4xl font-bold tracking-tight text-rose-500">
-                  {stats.unassignedInspections}
-                </span>
-                <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  Inspecciones sin inspector asignado
-                </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20">
-                    <span className="text-[10px] font-semibold text-rose-500">
-                      {stats.totalSessions > 0 ? ((stats.unassignedInspections / stats.totalSessions) * 100).toFixed(0) : 0}%
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">del total</span>
-                </div>
               </div>
             </div>
           </div>
@@ -1197,60 +1479,81 @@ export default function DashboardPage() {
       )}
 
       <Dialog open={!!kpiModal} onOpenChange={() => setKpiModal(null)}>
-        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-5 py-3 border-b bg-muted/50 shrink-0">
-            <DialogTitle className="text-base font-semibold">{kpiModal?.title}</DialogTitle>
-          </DialogHeader>
-          {kpiDetailRows.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">Sin datos para mostrar</div>
-          ) : (
-            <div className="flex-1 overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/80 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sticky top-0 z-10">
-                  <tr>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Inspección</th>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Liquidación</th>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Asegurado</th>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Dirección</th>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Inspector</th>
-                    {kpiModal?.key === "overdue" && <th className="px-3 py-2 text-left whitespace-nowrap">Estado</th>}
-                    {kpiModal?.key === "avg-time" && <th className="px-3 py-2 text-right whitespace-nowrap">Duración</th>}
-                    <th className="px-3 py-2 text-right whitespace-nowrap">Fecha</th>
-                    <th className="px-3 py-2 text-right whitespace-nowrap">Hora</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {kpiDetailRows.map((row) => (
-                    <tr key={row.id} className="hover:bg-muted/40 transition-colors">
-                      <td className="px-3 py-2 font-mono whitespace-nowrap">{row.inspectionCode}</td>
-                      <td className="px-3 py-2 font-mono whitespace-nowrap">{row.liquidation}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{row.insured}</td>
-                      <td className="px-3 py-2 max-w-xs truncate" title={row.address}>{row.address}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{row.inspector}</td>
-                      {kpiModal?.key === "overdue" && (
-                        <td className="px-3 py-2 whitespace-nowrap capitalize">
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                            row.status === "active" ? "bg-amber-100 text-amber-700" :
-                            row.status === "scheduled" ? "bg-blue-100 text-blue-700" :
-                            "bg-gray-100 text-gray-700"
-                          }`}>
-                            {row.status === "active" ? "En curso" : row.status === "scheduled" ? "Agendada" : row.status}
-                          </span>
-                        </td>
-                      )}
-                      {kpiModal?.key === "avg-time" && (
-                        <td className="px-3 py-2 text-right font-mono whitespace-nowrap">
-                          {row.duration != null ? `${Math.floor(row.duration / 60)}h ${row.duration % 60}m` : "—"}
-                        </td>
-                      )}
-                      <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">{row.date}</td>
-                      <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">{row.time}</td>
+        <DialogContent className="modal-xl" showCloseButton>
+          <div className="modal-header">
+            <DialogTitle className="modal-title">
+              <span className="modal-title-icon">
+                <Layers className="h-4 w-4" />
+              </span>
+              {kpiModal?.title}
+            </DialogTitle>
+          </div>
+          <div className="modal-body modal-body-flush">
+            {kpiDetailRows.length === 0 ? (
+              <div className="py-12 text-center text-[11px] text-muted-foreground">Sin datos para mostrar</div>
+            ) : (
+              <div className="app-data-table-wrap modal-grid-wrap">
+                <table className="app-data-table">
+                  <thead>
+                    <tr>
+                      <th className="whitespace-nowrap">Inspección</th>
+                      <th className="whitespace-nowrap">Liquidación</th>
+                      <th className="whitespace-nowrap">Asegurado</th>
+                      <th className="whitespace-nowrap">Dirección</th>
+                      <th className="whitespace-nowrap">Inspector</th>
+                      {kpiModal?.key === "overdue" && <th className="whitespace-nowrap">Estado</th>}
+                      {kpiModal?.key === "avg-time" && <th className="text-right whitespace-nowrap">Duración</th>}
+                      <th className="text-right whitespace-nowrap">Fecha</th>
+                      <th className="text-right whitespace-nowrap">Hora</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {kpiDetailRows.slice(0, 10).map((row) => (
+                      <tr key={row.id}>
+                        <td className="font-mono whitespace-nowrap">{row.inspectionCode}</td>
+                        <td className="font-mono whitespace-nowrap">{row.liquidation}</td>
+                        <td className="whitespace-nowrap">{row.insured}</td>
+                        <td className="max-w-xs truncate" title={row.address}>{row.address}</td>
+                        <td className="whitespace-nowrap">{row.inspector}</td>
+                        {kpiModal?.key === "overdue" && (
+                          <td className="whitespace-nowrap capitalize">
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                              row.status === "active" ? "bg-amber-100 text-amber-700" :
+                              row.status === "scheduled" ? "bg-blue-100 text-blue-700" :
+                              "bg-gray-100 text-gray-700"
+                            }`}>
+                              {row.status === "active" ? "En curso" : row.status === "scheduled" ? "Agendada" : row.status}
+                            </span>
+                          </td>
+                        )}
+                        {kpiModal?.key === "avg-time" && (
+                          <td className="text-right font-mono whitespace-nowrap">
+                            {row.duration != null ? formatDuration(row.duration) : "—"}
+                          </td>
+                        )}
+                        <td className="text-right text-muted-foreground whitespace-nowrap">{row.date}</td>
+                        <td className="text-right text-muted-foreground whitespace-nowrap">{row.time}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            {kpiDetailRows.length > 10 ? (
+              <span className="text-[11px] text-muted-foreground mr-auto">
+                Muestra parcial — primeros 10 registros de {kpiDetailRows.length}
+              </span>
+            ) : kpiDetailRows.length > 0 ? (
+              <span className="text-[11px] text-muted-foreground mr-auto">
+                {kpiDetailRows.length} registro{kpiDetailRows.length !== 1 ? "s" : ""}
+              </span>
+            ) : null}
+            <button type="button" className="pg-btn-platinum" onClick={() => setKpiModal(null)}>
+              Cerrar
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

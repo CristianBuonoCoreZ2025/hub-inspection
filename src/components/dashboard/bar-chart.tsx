@@ -13,10 +13,52 @@ import {
 } from "recharts"
 
 interface BarChartGlassProps {
-  data: Array<{ name: string; value: number; color?: string }>
+  data: Array<{ name: string; value: number; color?: string; label?: string }>
   height?: number
   color?: string
   horizontal?: boolean
+  valueInside?: boolean
+  tickFormatter?: (value: number) => string
+  seriesName?: string
+}
+
+export function getHorizontalBarLabelWidth(names: string[]): string {
+  const longestName = names.reduce((longest, name) => name.length > longest.length ? name : longest, "")
+  const fallbackWidth = longestName.length * 5.2 + 12
+
+  if (typeof document === "undefined") {
+    return `${Math.min(280, Math.max(96, Math.ceil(fallbackWidth)))}px`
+  }
+
+  const canvas = document.createElement("canvas")
+  const context = canvas.getContext("2d")
+  if (!context) return `${Math.min(280, Math.max(96, Math.ceil(fallbackWidth)))}px`
+
+  context.font = "500 9px system-ui, sans-serif"
+  const measuredWidth = names.reduce(
+    (longest, name) => Math.max(longest, context.measureText(name).width),
+    0,
+  )
+
+  return `${Math.min(280, Math.max(96, Math.ceil(measuredWidth + 12)))}px`
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.replace(/^#/, "")
+  if (normalized.length !== 6) return null
+  const r = parseInt(normalized.slice(0, 2), 16)
+  const g = parseInt(normalized.slice(2, 4), 16)
+  const b = parseInt(normalized.slice(4, 6), 16)
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null
+  return { r, g, b }
+}
+
+function getReadableTextColor(backgroundColor: string): string {
+  const rgb = hexToRgb(backgroundColor)
+  if (!rgb) return "#ffffff"
+  // Luminancia relativa (WCAG simplificado)
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255
+  return luminance > 0.55 ? "#1f2937" : "#ffffff"
 }
 
 export function BarChartGlass({
@@ -24,53 +66,108 @@ export function BarChartGlass({
   height,
   color = "#0095DA",
   horizontal = false,
+  valueInside = false,
+  tickFormatter,
+  seriesName = "Cantidad",
 }: BarChartGlassProps) {
+  const uid = React.useId()
+  const baseGradId = `bar-grad-${uid}`
+  const itemGradId = (i: number) => `bar-grad-item-${uid}-${i}`
+
+  const maxValue = React.useMemo(() => Math.max(1, ...data.map((d) => d.value)), [data])
+  const labelColumnWidth = React.useMemo(
+    () => getHorizontalBarLabelWidth(data.map((entry) => entry.name)),
+    [data],
+  )
+
+  if (horizontal) {
+    return (
+      <div
+        className={`dash-chart-wrap horizontal-bar-list${valueInside ? " horizontal-bar-list-inside-values" : ""}`}
+        style={{
+          ...(height ? { height } : {}),
+          "--horizontal-bar-label-width": labelColumnWidth,
+        } as React.CSSProperties}
+        role="img"
+        aria-label={`Gráfica de ${seriesName.toLowerCase()}`}
+      >
+        <div className="horizontal-bar-rows">
+          {data.map((entry, index) => {
+            const pct = (entry.value / maxValue) * 100;
+            const display = entry.label ?? (tickFormatter ? tickFormatter(entry.value) : entry.value);
+            const fill = entry.color || color;
+            return (
+              <div className="horizontal-bar-row" key={`${entry.name}-${index}`}>
+                <div className="horizontal-bar-name" title={entry.name}>
+                  {entry.name}
+                </div>
+                <div
+                  className="horizontal-bar-track"
+                  title={`${entry.name} — ${seriesName}: ${display}`}
+                >
+                  <div
+                    className="horizontal-bar-fill"
+                    style={{
+                      width: `${pct}%`,
+                      background: `linear-gradient(90deg, ${fill}e6, ${fill}80)`,
+                    }}
+                  >
+                    {valueInside && (
+                      <span
+                        className="horizontal-bar-value horizontal-bar-value-inside"
+                        style={{ color: getReadableTextColor(fill) }}
+                      >
+                        {display}
+                      </span>
+                    )}
+                  </div>
+                  {!valueInside && <span className="horizontal-bar-value">{display}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dash-chart-wrap" style={height ? { height } : undefined}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          layout={horizontal ? "vertical" : "horizontal"}
           margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
         >
         <defs>
-          <linearGradient id="bar-grad" x1="0" y1="0" x2={horizontal ? "1" : "0"} y2={horizontal ? "0" : "1"}>
+          <linearGradient id={baseGradId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.9} />
             <stop offset="100%" stopColor={color} stopOpacity={0.5} />
           </linearGradient>
+          {data.map((entry, index) => (
+            entry.color ? (
+              <linearGradient key={itemGradId(index)} id={itemGradId(index)} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={entry.color} stopOpacity={0.9} />
+                <stop offset="100%" stopColor={entry.color} stopOpacity={0.5} />
+              </linearGradient>
+            ) : null
+          ))}
         </defs>
         <CartesianGrid
           strokeDasharray="3 3"
-          horizontal={!horizontal}
-          vertical={horizontal}
+          horizontal
+          vertical={false}
         />
-        {horizontal ? (
-          <>
-            <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-            <YAxis
-              type="category"
-              dataKey="name"
-              tick={{ fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-              width={90}
-            />
-          </>
-        ) : (
-          <>
-            <XAxis
-              dataKey="name"
-              tick={{ fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-              interval={0}
-              angle={-15}
-              textAnchor="end"
-              height={50}
-            />
-            <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-          </>
-        )}
+        <XAxis
+          dataKey="name"
+          tick={{ fontSize: 10 }}
+          axisLine={false}
+          tickLine={false}
+          interval={0}
+          angle={-15}
+          textAnchor="end"
+          height={50}
+        />
+        <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
         <Tooltip
           contentStyle={{
             borderRadius: "12px",
@@ -84,14 +181,15 @@ export function BarChartGlass({
         />
         <Bar
           dataKey="value"
-          fill="url(#bar-grad)"
-          radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}
+          name={seriesName}
+          fill={`url(#${baseGradId})`}
+          radius={[6, 6, 0, 0]}
           maxBarSize={50}
         >
           {data.map((entry, index) => (
             <Cell
               key={`bar-cell-${index}`}
-              fill={entry.color ? entry.color : "url(#bar-grad)"}
+              fill={entry.color ? `url(#${itemGradId(index)})` : `url(#${baseGradId})`}
             />
           ))}
         </Bar>
