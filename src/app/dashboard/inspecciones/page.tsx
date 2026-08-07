@@ -450,7 +450,11 @@ function InspectionsPageContent() {
                             <EyeOff className="h-4 w-4 text-amber-500" />
                           )}
                         </Button>
-                        {canEdit("inspecciones") && session.status === "scheduled" && (
+                        {canEdit("inspecciones") && session.status === "scheduled" && (() => {
+                          const effInspector = session.inspector_id || session.claim?.inspector_id || null;
+                          const isAssigned = !!profile?.id && effInspector === profile.id;
+                          if (!isAssigned) return null;
+                          return (
                           <>
                             {session.substate === "paused" ? (
                               <Button
@@ -488,7 +492,8 @@ function InspectionsPageContent() {
                               <Ban className="h-4 w-4" />
                             </Button>
                           </>
-                        )}
+                          );
+                        })()}
                       </div>
                     </td>
                   </tr>

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 
 export default function ReasignarInspeccionesPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const { canEdit } = usePermissions();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,7 +46,7 @@ export default function ReasignarInspeccionesPage() {
 
   const reassignMutation = useMutation({
     mutationFn: ({ id, inspectorId, reason }: { id: string; inspectorId: string; reason: string }) =>
-      reassignInspectionSession(id, inspectorId, reason, user?.id),
+      reassignInspectionSession(id, inspectorId, reason, profile?.id),
     onSuccess: () => {
       toast.success("Inspección reasignada");
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions", "pending-reassign"] });

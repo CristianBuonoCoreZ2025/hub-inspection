@@ -205,6 +205,9 @@ export default function InspectionDetailPage() {
  const isMovable = isPlanned || sessionStatus === "active";
  const isPaused = isPlanned && sessionSubstate === "paused";
  const isRemote = session?.inspection_type === "remote";
+ // Solo el inspector asignado puede iniciar o reanudar la inspección
+ const effectiveInspectorId = session?.inspector_id ?? session?.claim?.inspector_id ?? null;
+ const isAssignedInspector = !!profile?.id && effectiveInspectorId === profile.id;
 
  // Realtime: reflejar firmas del asegurado inmediatamente en el dashboard
  useRealtime("inspection_signatures", [["inspection-session", sessionId], ["signatures", sessionId]], !!sessionId);
@@ -920,7 +923,7 @@ export default function InspectionDetailPage() {
  {/* Botones de acción horizontales (scheduled, active o paused) */}
  {isMovable && (
  <div className="flex flex-row items-start gap-1.5 shrink-0">
- {isPlanned && !isPaused && (
+ {isPlanned && !isPaused && isAssignedInspector && (
  <Button
  size="sm"
  variant="outline"
@@ -941,7 +944,7 @@ export default function InspectionDetailPage() {
  <Play className="h-3.5 w-3.5" />
  </Button>
  )}
- {isPaused && (
+ {isPaused && isAssignedInspector && (
  <Button
  size="sm"
  variant="outline"
