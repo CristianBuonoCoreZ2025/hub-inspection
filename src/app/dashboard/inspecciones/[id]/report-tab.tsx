@@ -501,7 +501,25 @@ export default function ReportTab({
         // Usar el fileCode del sistema (muestra que pasó por el sistema)
         // ej: L-000000141-HINS-003-EVI-0001.png
         const fileCode = ev.metadata?.fileCode;
-        const ext = (ev.metadata?.mimeType || ev.type || "bin").split("/").pop()?.split(";")[0] || "bin";
+        // Resolución de extensión (orden de prioridad):
+        //  1. Extensión de la URL de R2 (siempre tiene la extensión real del archivo)
+        //  2. Subtipo del mimeType guardado en metadata (ej: image/jpeg -> jpeg)
+        //  3. Mapeo del tipo de BD (photo/video/pdf/document) — NUNCA usar el tipo
+        //     crudo como extensión, porque "photo" no es una extensión válida.
+        //  4. "bin" como último recurso
+        const urlExt = ev.url?.split("?")[0].split(".").pop();
+        const mimeExt = ev.metadata?.mimeType?.split("/").pop()?.split(";")[0];
+        const typeExt: Record<string, string> = {
+          photo: "jpg",
+          video: "mp4",
+          pdf: "pdf",
+          document: "pdf",
+        };
+        const ext =
+          (urlExt && urlExt.length >= 2 && urlExt.length <= 5 && urlExt !== "bin" ? urlExt : undefined) ||
+          (mimeExt && mimeExt !== "octet-stream" ? mimeExt : undefined) ||
+          typeExt[ev.type] ||
+          "bin";
         const fileName = fileCode
           ? `${fileCode}.${ext}`
           : `${String(index).padStart(2, "0")}.${ext}`;
