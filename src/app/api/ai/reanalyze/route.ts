@@ -74,6 +74,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Para inspection_evidences: verificar que la sesión esté completada.
+    // Durante la inspección (active/scheduled), NUNCA se analiza con IA.
+    if (tableName === "inspection_evidences" && resolvedSessionId) {
+      const { data: sessionRow } = await supabase
+        .from("inspection_sessions")
+        .select("status")
+        .eq("id", resolvedSessionId)
+        .maybeSingle();
+      const sessionStatus = sessionRow?.status;
+      if (sessionStatus && sessionStatus !== "completed" && sessionStatus !== "cancelled") {
+        return NextResponse.json(
+          { error: "No se puede analizar con IA mientras la inspección esté en curso. El análisis se ejecuta automáticamente al cerrar la inspección." },
+          { status: 403 }
+        );
+      }
+    }
+
     // Resetear el registro a "pending" — limpiar análisis anterior
     const resetUpdate: Record<string, unknown> = {
       ai_status: "pending",

@@ -70,7 +70,7 @@ interface ImageCardProps {
   aiModel?: string | null;
   aiPromptSnapshot?: AiPromptSnapshot | null;
   aiAnalyzedAt?: string | null;
-  onReanalyze: () => void;
+  onReanalyze?: () => void;
 
   // Fila extra (fecha, uploader, GPS, etc.)
   extraInfo?: React.ReactNode;
@@ -240,6 +240,7 @@ export function ImageCard({
             {aiSummary && aiStatus === "done" && (
               <div className="ai-card-controls-group">
                 <div className="ai-card-controls-row">
+                  {onReanalyze && (
                   <button
                     onClick={onReanalyze}
                     className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
@@ -248,6 +249,7 @@ export function ImageCard({
                     <RefreshCw className="h-3 w-3" />
                     <span>Re-IA</span>
                   </button>
+                  )}
                 <Popover>
                   <PopoverTrigger
                     type="button"
@@ -336,7 +338,7 @@ export function ImageCard({
             )}
 
             {/* error → re-analizar */}
-            {aiStatus === "error" && (
+            {aiStatus === "error" && onReanalyze && (
               <div className="ai-card-controls-group">
                 <button
                   onClick={onReanalyze}
@@ -350,7 +352,7 @@ export function ImageCard({
             )}
 
             {/* skipped → re-analizar (omitido temporalmente) */}
-            {aiStatus === "skipped" && (
+            {aiStatus === "skipped" && onReanalyze && (
               <div className="ai-card-controls-group">
                 <button
                   onClick={onReanalyze}

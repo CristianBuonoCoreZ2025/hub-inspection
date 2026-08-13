@@ -771,8 +771,8 @@ function DocumentTable({
                   <td className="text-muted-foreground text-[11px]">{fileSize}</td>
                   <td>
                     <div className="app-row-actions">
-                      {/* Re-IA — re-analizar con IA */}
-                      {(aiStatus === "done" || aiStatus === "error" || aiStatus === "skipped" || (!aiSummary && aiStatus !== "pending" && aiStatus !== "processing")) && (
+                      {/* Re-IA — re-analizar con IA (solo cuando la inspección está cerrada) */}
+                      {readOnly && (aiStatus === "done" || aiStatus === "error" || aiStatus === "skipped" || (!aiSummary && aiStatus !== "pending" && aiStatus !== "processing")) && (
                         <button
                           type="button"
                           className="btn-icon-sm"
@@ -1074,7 +1074,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
       aiModel={evidence.ai_model}
       aiPromptSnapshot={evidence.ai_prompt_snapshot as { system_prompt: string; user_prompt: string; refinement_prompt: string | null; source: string } | null}
       aiAnalyzedAt={evidence.ai_analyzed_at}
-      onReanalyze={handleReanalyze}
+      onReanalyze={readOnly ? handleReanalyze : undefined}
       extraInfo={extraInfo}
       thumbnailContent={thumbnailContent}
       includeInReport={isPhoto ? evidence.include_in_report : undefined}

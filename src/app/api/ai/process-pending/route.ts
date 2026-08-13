@@ -116,17 +116,34 @@ export async function POST(request: NextRequest) {
     // Determinar qué tablas procesar según el contexto
     const configs: TableConfig[] = [];
     if (sessionId) {
-      configs.push({
-        table: "inspection_evidences",
-        filterColumn: "session_id",
-        filterValue: sessionId,
-        urlColumn: "url",
-        nameColumn: "description",
-        mimeColumn: null,
-        hasAiStatus: true,
-        excludeLiveVideo: true,
-        hasIsActive: false,
-      });
+      // Verificar que la sesión esté completada antes de analizar evidencias.
+      // Durante la inspección (active/scheduled), las evidencias quedan en
+      // "deferred" y NUNCA se analizan por IA hasta que se cierre la sesión.
+      const { data: sessionRow } = await supabase
+        .from("inspection_sessions")
+        .select("status")
+        .eq("id", sessionId)
+        .maybeSingle();
+      const sessionStatus = sessionRow?.status;
+      if (sessionStatus && sessionStatus !== "completed" && sessionStatus !== "cancelled") {
+        logger.info("process-pending: sesión aún activa, saltando evidencias", {
+          component: "ai-process-pending",
+          action: "skip-active-session",
+          metadata: { sessionId, status: sessionStatus },
+        });
+      } else {
+        configs.push({
+          table: "inspection_evidences",
+          filterColumn: "session_id",
+          filterValue: sessionId,
+          urlColumn: "url",
+          nameColumn: "description",
+          mimeColumn: null,
+          hasAiStatus: true,
+          excludeLiveVideo: true,
+          hasIsActive: false,
+        });
+      }
     }
     if (claimId) {
       configs.push({
