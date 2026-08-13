@@ -165,6 +165,12 @@ export async function getInspectionSessionsLight(
     scheduled: "scheduled_at",
     status: "status",
     created_at: "created_at",
+    internal_number: "created_at",
+    inspection: "created_at",
+    client_reference: "created_at",
+    inspector: "created_at",
+    insured: "created_at",
+    address: "created_at",
   };
   const orderColumn = (options?.sortKey && columnMap[options.sortKey]) ? columnMap[options.sortKey] : "created_at";
   const ascending = (options?.sortDir === "asc");

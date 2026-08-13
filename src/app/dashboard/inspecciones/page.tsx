@@ -4,7 +4,6 @@ import { useState, useMemo, useCallback, Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import {
@@ -84,14 +83,25 @@ function InspectionsPageContent() {
   const [logSessionId, setLogSessionId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const toggleSort = useCallback((key: string) => {
+    setSortKey((prev) => {
+      if (prev !== key) { setSortDir("asc"); return key; }
+      setSortDir((d) => d === "asc" ? "desc" : "asc");
+      return key;
+    });
+  }, []);
 
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
-    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter],
+    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir],
     queryFn: () => getInspectionSessionsLight(undefined, {
       page,
       pageSize,
       statusFilter: statusFilter.length ? statusFilter : undefined,
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
+      sortKey,
+      sortDir,
     }),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
@@ -226,17 +236,17 @@ function InspectionsPageContent() {
     [sessions, search, internalNumberFilter]
   );
 
-  const { sorted: sortedSessions, sortKey, sortDir, toggleSort } = useTableSort(filtered, accessors, null);
+  const sortedSessions = filtered;
 
   const total = totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const paginatedData = sortedSessions;
   const handlePageSizeChange = (size: number) => { setPageSize(size); setPage(1); };
 
-  // Resetear a página 1 cuando cambian filtros server-side
+  // Resetear a página 1 cuando cambian filtros o sort server-side
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, inspectorFilter]);
+  }, [statusFilter, inspectorFilter, sortKey, sortDir]);
 
   return (
     <div className="app-page">
