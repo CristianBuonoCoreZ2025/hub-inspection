@@ -937,12 +937,6 @@ export function LiveVideoCall({
               Esperando a que el {role === "inspector" ? "cliente" : "inspector"} se conecte...
             </span>
           )}
-          {recording && (
-            <span className="flex items-center gap-1.5 app-body font-medium text-rose-400">
-              <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-              REC {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, "0")}
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-2">
           {screenshotCount > 0 && (
@@ -1168,19 +1162,7 @@ export function LiveVideoCall({
           </button>
         )}
 
-        {role === "inspector" && (
-          <button
-            type="button"
-            onClick={recording ? stopRecording : startRecording}
-            disabled={!peerJoined}
-            className={`${ctrlBtn} rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              recording ? "bg-rose-600 hover:bg-rose-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
-            }`}
-            title={recording ? "Detener grabación" : "Grabar sesión"}
-          >
-            {recording ? <Square className={ctrlIcon} /> : <Circle className={cn(ctrlIcon, "fill-white")} />}
-          </button>
-        )}
+        {/* Botón de grabar deshabilitado temporalmente */}
         </>
         )}
 
