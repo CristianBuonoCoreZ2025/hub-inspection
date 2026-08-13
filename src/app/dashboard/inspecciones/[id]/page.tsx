@@ -302,10 +302,13 @@ export default function InspectionDetailPage() {
 
  // Realtime: reflejar firmas del asegurado inmediatamente en el dashboard
  useRealtime("inspection_signatures", [["inspection-session", sessionId], ["signatures", sessionId]], !!sessionId);
-
  // Detectar cuando el asegurado captura la ubicacion (inspeccion remota)
 // Doble mecanismo: polling (la sesion se refresca cada 10s) + realtime Supabase
-const prevGeoCapturedAtRef = useRef<string | null>(null);
+// Importante: solo disparamos el popup cuando geo_captured_at CAMBIA a un valor
+// NUEVO. Si la pagina carga con una captura ya existente (ya guardada como
+// evidencia), NO se levanta el popup. Solo se levanta si el valor cambia
+// despues del montaje (captura nueva o recaptura).
+const prevGeoCapturedAtRef = useRef<string | null | undefined>(undefined);
 const showGeoPopup = useCallback((lat: number, lng: number, distance: number | null, status: string) => {
   setGeoCapturedData({ lat, lng, distance, status });
   setGeoCapturedModalOpen(true);
@@ -316,12 +319,22 @@ const showGeoPopup = useCallback((lat: number, lng: number, distance: number | n
   });
 }, [sessionId, queryClient]);
 
-// Deteccion por polling: cuando session.geo_captured_at cambia, levantar popup
+// Inicializar el ref con el valor actual al montar/cargar la sesion por primera vez
+// Asi evitamos que el polling dispare el popup para una captura que ya existia
+useEffect(() => {
+  if (prevGeoCapturedAtRef.current === undefined && session) {
+    prevGeoCapturedAtRef.current = session.geo_captured_at || null;
+  }
+}, [session]);
+
+// Deteccion por polling: cuando session.geo_captured_at cambia a un valor NUEVO
 useEffect(() => {
   if (!session?.geo_captured_at) return;
   if (session.geo_status !== "verified" && session.geo_status !== "out_of_range") return;
   const current = session.geo_captured_at;
-  if (current !== prevGeoCapturedAtRef.current) {
+  const prev = prevGeoCapturedAtRef.current;
+  // Solo disparar si el valor cambio Y no es la inicializacion
+  if (prev !== undefined && current !== prev) {
     prevGeoCapturedAtRef.current = current;
     if (session.geo_latitude != null && session.geo_longitude != null) {
       showGeoPopup(session.geo_latitude, session.geo_longitude, session.geo_distance_meters, session.geo_status);
@@ -342,7 +355,7 @@ useEffect(() => {
         const newGeoStatus = payload.new?.geo_status as string | null;
         const newGeoCapturedAt = payload.new?.geo_captured_at as string | null;
         const oldGeoCapturedAt = prevGeoCapturedAtRef.current;
-        const isCapture = newGeoCapturedAt && newGeoCapturedAt !== oldGeoCapturedAt &&
+        const isCapture = oldGeoCapturedAt !== undefined && newGeoCapturedAt && newGeoCapturedAt !== oldGeoCapturedAt &&
           (newGeoStatus === "verified" || newGeoStatus === "out_of_range");
         if (isCapture) {
           prevGeoCapturedAtRef.current = newGeoCapturedAt;
