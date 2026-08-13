@@ -124,6 +124,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   // El popover de IA ahora vive dentro de cada card (no estado global)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoCameraInputRef = useRef<HTMLInputElement>(null);
   const modalCameraInputRef = useRef<HTMLInputElement>(null);
 
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
@@ -293,39 +294,75 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     if (modalCameraInputRef.current) modalCameraInputRef.current.value = "";
   };
 
-  // Cámara directa: sube la foto sin abrir el modal de subida.
+  // Cámara directa: sube foto o video sin abrir el modal de subida.
+  // Usa XHR (no fetch) para soportar archivos grandes como videos.
   // Solo muestra un toast corto al terminar. Si se quiere borrar,
   // se borra desde la lista de evidencias.
-  const handleDirectCamera = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDirectCapture = (e: React.ChangeEvent<HTMLInputElement>, kind: "photo" | "video") => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-    for (const rawFile of files) {
-      try {
-        const file = await convertHeicToJpeg(rawFile);
+    const toastId = "direct-cam";
+    let fileIdx = 0;
+
+    const uploadNext = () => {
+      if (fileIdx >= files.length) {
+        queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
+        queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+        if (e.target) e.target.value = "";
+        return;
+      }
+      const rawFile = files[fileIdx++];
+
+      convertHeicToJpeg(rawFile).then((file) => {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("sessionId", sessionId);
         formData.append("originalName", file.name);
-        toast.loading("Subiendo foto...", { id: "direct-cam" });
-        const res = await fetch("/api/inspection/evidences/upload", {
-          method: "POST",
-          body: formData,
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/inspection/evidences/upload");
+
+        toast.loading(kind === "video" ? "Subiendo video..." : "Subiendo foto...", { id: toastId });
+
+        xhr.upload.addEventListener("progress", (ev) => {
+          if (!ev.lengthComputable) return;
+          const pct = Math.round((ev.loaded / ev.total) * 100);
+          toast.loading(
+            kind === "video" ? `Subiendo video... ${pct}%` : `Subiendo foto... ${pct}%`,
+            { id: toastId },
+          );
         });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || `Error ${res.status}`);
-        }
-        toast.success("Foto subida", { id: "direct-cam", duration: 2000 });
-      } catch (err) {
-        toast.error("No se pudo subir la foto", {
-          id: "direct-cam",
-          description: err instanceof Error ? err.message : undefined,
+
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            toast.success(kind === "video" ? "Video subido" : "Foto subida", { id: toastId, duration: 2000 });
+          } else {
+            let msg = `Error ${xhr.status}`;
+            try { const b = JSON.parse(xhr.responseText); msg = b.error || msg; } catch { /* ignore */ }
+            toast.error(kind === "video" ? "No se pudo subir el video" : "No se pudo subir la foto", {
+              id: toastId,
+              description: msg,
+            });
+          }
+          uploadNext();
         });
-      }
-    }
-    queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
-    queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
-    if (cameraInputRef.current) cameraInputRef.current.value = "";
+
+        xhr.addEventListener("error", () => {
+          toast.error(kind === "video" ? "No se pudo subir el video" : "No se pudo subir la foto", {
+            id: toastId,
+            description: "Error de red",
+          });
+          uploadNext();
+        });
+
+        xhr.send(formData);
+      }).catch(() => {
+        toast.error("No se pudo procesar el archivo", { id: toastId });
+        uploadNext();
+      });
+    };
+
+    uploadNext();
   };
 
   const closeUploadModal = () => {
@@ -391,7 +428,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
                 type="file"
                 accept="image/*"
                 capture="environment"
-                onChange={handleDirectCamera}
+                onChange={(e) => handleDirectCapture(e, "photo")}
                 className="hidden"
                 id="evidence-camera-direct"
               />
@@ -401,6 +438,23 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
                 title="Tomar foto"
               >
                 <Camera className="h-3.5 w-3.5" />
+              </label>
+              {/* Cámara directa: graba video y sube sin abrir modal */}
+              <input
+                ref={videoCameraInputRef}
+                type="file"
+                accept="video/*"
+                capture="environment"
+                onChange={(e) => handleDirectCapture(e, "video")}
+                className="hidden"
+                id="evidence-video-direct"
+              />
+              <label
+                htmlFor="evidence-video-direct"
+                className="btn-icon-sm flex items-center justify-center cursor-pointer"
+                title="Grabar video"
+              >
+                <Video className="h-3.5 w-3.5" />
               </label>
             </div>
           </div>
