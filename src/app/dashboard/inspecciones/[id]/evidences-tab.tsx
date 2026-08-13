@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteEvidence, updateEvidenceInclude } from "@/services/inspections";
 import { logInspectionEvent } from "@/services/inspection-events";
-import { toast } from "sonner";
 import {
   Upload, Trash2, ImageIcon, Video, FileText, ExternalLink,
   MapPin, Clock, Camera, Lock, X, ZoomIn,
@@ -28,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useAlert } from "@/components/ui/alert-context";
 
 type UploadStatus = "queued" | "uploading" | "processing" | "done" | "error";
 
@@ -119,6 +119,7 @@ function formatDate(iso: string | null): string {
 
 export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: string; sessionStatus?: string }) {
   const queryClient = useQueryClient();
+  const showAlert = useAlert();
   const [uploadModal, setUploadModal] = useState<{ visible: boolean; isDragging: boolean }>({ visible: false, isDragging: false });
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
@@ -160,10 +161,10 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     onSuccess: (_data, evidenceId) => {
       queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
-      toast.success("Evidencia eliminada");
+      showAlert({ title: "Evidencia eliminada", description: "La evidencia se eliminó correctamente.", type: "info" });
       logInspectionEvent({ sessionId, role: "adjuster", eventType: "evidence_deleted", evidenceId });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => showAlert({ title: "Error", description: err.message, type: "error" }),
   });
 
   const uploadFile = useCallback((file: File) => {
@@ -240,7 +241,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           setUploadQueue((q) => q.map((it) => (it.id === id ? { ...it, status: "done" } : it)));
           queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
           queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
-          toast.success(`${file.name} subido`);
+          showAlert({ title: "Archivo subido", description: `${file.name} se subió correctamente.`, type: "info" });
           logInspectionEvent({
             sessionId,
             role: "adjuster",
@@ -310,7 +311,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
         const f = await convertHeicToJpeg(file);
         uploadFile(f);
       } catch (err) {
-        toast.error(`No se pudo convertir ${file.name}: formato HEIC no soportado`);
+        showAlert({ title: "Formato no soportado", description: `No se pudo convertir ${file.name}: formato HEIC no soportado`, type: "error" });
         console.error(err);
       }
     },
@@ -340,7 +341,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   const handleDirectCapture = (e: React.ChangeEvent<HTMLInputElement>, kind: "photo" | "video") => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-    const toastId = "direct-cam";
     let fileIdx = 0;
 
     // Log: evento de captura iniciado
@@ -387,7 +387,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
             xhr.upload.addEventListener("progress", (ev) => {
               if (!ev.lengthComputable) return;
               const pct = Math.round((ev.loaded / ev.total) * 100);
-              toast.loading(`Subiendo video... ${pct}%`, { id: toastId });
+              // Progreso de subida mostrado en la cola de uploads
             });
 
             xhr.addEventListener("load", () => {
@@ -411,7 +411,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           });
           if (!regRes.ok) throw new Error(`HTTP ${regRes.status} (register)`);
 
-          toast.success("Video capturado", { id: toastId, duration: 1500 });
+          showAlert({ title: "Video capturado", description: "El video se subió correctamente.", type: "info" });
           logInspectionEvent({
             sessionId, role: "adjuster", eventType: "upload_completed",
             eventDetail: `Subido: ${file.name}`,
@@ -430,13 +430,12 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 
           xhr.upload.addEventListener("progress", (ev) => {
             if (!ev.lengthComputable) return;
-            const pct = Math.round((ev.loaded / ev.total) * 100);
-            toast.loading(`Subiendo foto... ${pct}%`, { id: toastId });
+            // Progreso mostrado en la cola de uploads
           });
 
           xhr.addEventListener("load", () => {
             if (xhr.status >= 200 && xhr.status < 300) {
-              toast.success("Foto capturada", { id: toastId, duration: 1500 });
+              showAlert({ title: "Foto capturada", description: "La foto se subió correctamente.", type: "info" });
               logInspectionEvent({
                 sessionId, role: "adjuster", eventType: "upload_completed",
                 eventDetail: `Subido: ${file.name}`,
@@ -445,7 +444,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
             } else {
               let msg = `Error ${xhr.status}`;
               try { const b = JSON.parse(xhr.responseText); msg = b.error || msg; } catch { /* ignore */ }
-              toast.error("No se pudo subir la foto", { id: toastId, description: msg });
+              showAlert({ title: "No se pudo subir la foto", description: msg, type: "error" });
               logInspectionEvent({
                 sessionId, role: "adjuster", eventType: "upload_failed",
                 eventDetail: `Error: ${file.name}`,
@@ -456,7 +455,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           });
 
           xhr.addEventListener("error", () => {
-            toast.error("No se pudo subir la foto", { id: toastId, description: "Error de red" });
+            showAlert({ title: "No se pudo subir la foto", description: "Error de red", type: "error" });
             logInspectionEvent({
               sessionId, role: "adjuster", eventType: "upload_failed",
               eventDetail: `Error de red: ${file.name}`,
@@ -468,10 +467,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           xhr.send(formData);
         }
       }).catch((err) => {
-        toast.error(kind === "video" ? "No se pudo subir el video" : "No se pudo subir la foto", {
-          id: toastId,
-          description: err instanceof Error ? err.message : "Error",
-        });
+        showAlert({ title: "No se pudo subir", description: err instanceof Error ? err.message : "Error", type: "error" });
         logInspectionEvent({
           sessionId, role: "adjuster", eventType: "upload_failed",
           eventDetail: `Error: ${rawFile.name}`,
@@ -919,6 +915,7 @@ function DocumentTable({
   sessionId: string;
 }) {
   const queryClient = useQueryClient();
+  const showAlert = useAlert();
   const confirmDelete = useConfirm();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
@@ -935,9 +932,9 @@ function DocumentTable({
         body: JSON.stringify({ table: "inspection_evidences", id: evidence.id, sessionId }),
       });
       queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
-      toast.success("Re-análisis iniciado");
+      showAlert({ title: "Re-análisis iniciado", description: "El re-análisis comenzó correctamente.", type: "info" });
     } catch {
-      toast.error("No se pudo iniciar el re-análisis");
+      showAlert({ title: "Error", description: "No se pudo iniciar el re-análisis.", type: "error" });
     }
   };
 
@@ -1155,6 +1152,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
   maxReport?: number;
 }) {
   const queryClient = useQueryClient();
+  const showAlert = useAlert();
   const confirmDelete = useConfirm();
   const isDoc = evidence.type === "pdf" || evidence.type === "document";
   const isVideo = evidence.type === "video";
@@ -1163,7 +1161,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
   const includeMutation = useMutation({
     mutationFn: ({ id, include }: { id: string; include: boolean }) => updateEvidenceInclude(id, include),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] }),
-    onError: () => toast.error("No se pudo actualizar selección"),
+    onError: () => showAlert({ title: "Error", description: "No se pudo actualizar la selección.", type: "error" }),
   });
 
   const meta = evidence.metadata;
@@ -1179,9 +1177,9 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
         body: JSON.stringify({ table: "inspection_evidences", id: evidence.id, sessionId }),
       });
       queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
-      toast.success("Re-análisis iniciado");
+      showAlert({ title: "Re-análisis iniciado", description: "El re-análisis comenzó correctamente.", type: "info" });
     } catch {
-      toast.error("No se pudo iniciar el re-análisis");
+      showAlert({ title: "Error", description: "No se pudo iniciar el re-análisis.", type: "error" });
     }
   };
 
@@ -1306,7 +1304,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
       includeInReport={isPhoto ? evidence.include_in_report : undefined}
       onIncludeToggle={isPhoto ? (include) => {
         if (include && selectedCount !== undefined && maxReport !== undefined && selectedCount >= maxReport && !evidence.include_in_report) {
-          toast.error(`Máximo ${maxReport} fotos en el informe`);
+          showAlert({ title: "Límite alcanzado", description: `Máximo ${maxReport} fotos en el informre.`, type: "error" });
           return;
         }
         includeMutation.mutate({ id: evidence.id, include });
