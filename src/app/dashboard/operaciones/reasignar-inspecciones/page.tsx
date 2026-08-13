@@ -51,6 +51,8 @@ export default function ReasignarInspeccionesPage() {
       toast.success("Inspección reasignada");
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions", "pending-reassign"] });
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["inspection-session"] });
+      queryClient.invalidateQueries({ queryKey: ["inspection-max-date"] });
       setSelectedSessionId(null);
       setNewInspectorId("");
       setReason("");

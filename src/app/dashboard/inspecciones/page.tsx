@@ -115,6 +115,7 @@ function InspectionsPageContent() {
 
   const fkSortColumns = ["internal_number", "inspection", "client_reference", "address"];
   const isFkSort = !!(sortKey && fkSortColumns.includes(sortKey));
+  const useRpcForList = isFkSort || !!internalNumberFilter;
 
   const { data: totalCount } = useQuery({
     queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter, internalNumberFilter],
@@ -123,7 +124,7 @@ function InspectionsPageContent() {
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
       internalNumber: internalNumberFilter || undefined,
     }),
-    enabled: !isFkSort,
+    enabled: !useRpcForList,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
   });
@@ -258,8 +259,8 @@ function InspectionsPageContent() {
     return filtered;
   }, [filtered, sortKey, sortDir]);
 
-  // Si hay sort por FK, la RPC ya trae el count en _totalCount del primer elemento
-  const rpcTotal = (isFkSort && sessions && sessions.length > 0)
+  // Si hay sort por FK o filtro por N interno, la RPC ya trae el count en _totalCount
+  const rpcTotal = (useRpcForList && sessions && sessions.length > 0)
     ? (sessions[0] as { _totalCount?: number })._totalCount
     : undefined;
   const total = rpcTotal ?? totalCount ?? 0;

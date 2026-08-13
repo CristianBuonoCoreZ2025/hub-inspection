@@ -183,6 +183,8 @@ export default function InspectionDetailPage() {
  queryKey: ["inspection-session", sessionId],
  queryFn: () => getInspectionSessionById(sessionId),
  retry: false,
+ staleTime: 0,
+ refetchOnMount: true,
  refetchInterval: (query) => {
  const s = query.state.data as InspectionSession | undefined;
  return s?.inspection_type === "remote" && s?.status === "active" ? 10000 : false;

@@ -1,5 +1,5 @@
 import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
-import { formatUserDateTime, formatUserDate, formatUserTime } from "@/lib/timezone";
+import { formatUserDateTime, getUserTimeZone } from "@/lib/timezone";
 import type {
   InspectionSession, PropertyRisk, PropertyMateriality,
   SecurityMeasures, InsuredStatement, ThirdParty, DamageSketch,
@@ -162,12 +162,25 @@ export async function getInspectionSessionsLight(
 
   // Columnas que requieren RPC (PostgREST no puede ordenar parent por FK)
   const fkSortColumns = new Set(["internal_number", "inspection", "client_reference", "address"]);
-  const useRpc = options?.sortKey && fkSortColumns.has(options.sortKey);
+  // Tambien requiere RPC cuando hay filtro por internalNumber (ilike con notacion de punto no funciona)
+  const useRpc = (options?.sortKey && fkSortColumns.has(options.sortKey)) || !!options?.internalNumber;
 
   let orderedIds: string[] = [];
   let totalCount: number | null = null;
 
   if (useRpc) {
+    // Mapear sortKey a columna que la RPC entiende
+    const rpcSortMap: Record<string, string> = {
+      scheduled: "scheduled",
+      status: "status",
+      created_at: "created_at",
+      internal_number: "internal_number",
+      inspection: "inspection",
+      client_reference: "client_reference",
+      inspector: "inspector",
+      address: "address",
+    };
+    const rpcSortColumn = options?.sortKey ? (rpcSortMap[options.sortKey] || "created_at") : "created_at";
     // 1. RPC: obtener IDs ordenados + total
     const { data: rpcData, error: rpcError } = await supabase.rpc(
       "get_inspection_sessions_ordered",
@@ -177,13 +190,14 @@ export async function getInspectionSessionsLight(
         p_status_filter: options?.statusFilter?.length ? options.statusFilter : null,
         p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
         p_internal_number: options?.internalNumber || null,
-        p_sort_column: options?.sortKey,
+        p_sort_column: rpcSortColumn,
         p_sort_ascending: options?.sortDir === "asc",
       }
     );
     if (rpcError) throw new Error(rpcError.message);
-    orderedIds = (rpcData as { id: string; total_count: number }[]).map((r) => r.id);
-    totalCount = (rpcData as { total_count: number }[])[0]?.total_count ?? 0;
+    const rpcRows = (rpcData as { id: string; total_count: number }[]) ?? [];
+    orderedIds = rpcRows.map((r) => r.id);
+    totalCount = rpcRows[0]?.total_count ?? 0;
     if (orderedIds.length === 0) return [];
   }
 
@@ -832,8 +846,18 @@ export async function moveInspectionDate(
     magic_link_expires_at: finalExpires.toISOString(),
   };
   if (status !== "active") {
-    set.inspection_date = formatUserDate(newScheduledAt);
-    set.inspection_time = formatUserTime(newScheduledAt);
+    // inspection_date es tipo `date` en BD: debe ser YYYY-MM-DD (no DD-MM-YYYY)
+    // inspection_time es tipo `time` en BD: debe ser HH:mm
+    // Extraer fecha/hora en la zona horaria del usuario (no UTC)
+    const newDate = new Date(newScheduledAt);
+    const tz = getUserTimeZone();
+    const dateParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(newDate);
+    const p = (type: string) => dateParts.find((x) => x.type === type)?.value ?? "0";
+    set.inspection_date = `${p("year")}-${p("month")}-${p("day")}`;
+    set.inspection_time = `${p("hour")}:${p("minute")}`;
   }
 
   if (status === "active") {
