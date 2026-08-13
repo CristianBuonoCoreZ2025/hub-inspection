@@ -36,7 +36,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
-import { Search, Trash2, FileText, ClipboardCheck, Download, Check, Upload, ChevronDown, Shield, MapPin, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Search, Trash2, FileText, ClipboardCheck, Download, Check, Upload, ChevronDown, Shield, MapPin, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { getClaimTypeIcon } from "@/lib/claim-type-icons";
@@ -1330,8 +1330,27 @@ XLSX.writeFile(workbook, `siniestros_${new Date().toISOString().slice(0, 10)}.xl
   setExportProgress(null);
 }
 }}
+disabled={!!exportProgress}
 >
- <Download className="h-3.5 w-3.5" /> {exportProgress ? `Exportando ${exportProgress.current}/${exportProgress.total}...` : "Exportar"}
+ {exportProgress ? (
+   <>
+     <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+       <circle
+         cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"
+         strokeDasharray={2 * Math.PI * 10}
+         strokeDashoffset={2 * Math.PI * 10 * (1 - (exportProgress.total > 0 ? exportProgress.current / exportProgress.total : 0))}
+         strokeLinecap="round"
+         transform="rotate(-90 12 12)"
+       />
+     </svg>
+     Exportar
+   </>
+ ) : (
+   <>
+     <Download className="h-3.5 w-3.5" /> Exportar
+   </>
+ )}
  </Button>
  {canCreate("claims") && (
  <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="pg-btn-platinum">

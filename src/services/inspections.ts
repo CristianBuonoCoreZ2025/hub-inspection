@@ -162,27 +162,30 @@ export async function getInspectionSessionsLight(
   const from = (effectivePage - 1) * effectivePageSize;
   const to = from + effectivePageSize - 1;
 
-  // Mapeo de sortKey → { column, foreignTable }
-  // PostgREST/supabase-js usa foreignTable para ordenar por columnas de FK
+  // Mapeo de sortKey → columna para ordenar
+  // PostgREST soporta ordenar por columnas de FK con notacion de punto:
+  //   order=claim.liquidation_number.asc
+  // Esto ordena el PARENT (inspection_sessions) por la columna del FK,
+  // no los recursos embebidos.
   // liquidation_number se ordena alfabeticamente pero funciona porque tiene
   // ceros a la izquierda (L-000000014 < L-000000100 alfanumericamente)
-  const sortMap: Record<string, { column: string; foreignTable?: string }> = {
-    scheduled: { column: "scheduled_at" },
-    status: { column: "status" },
-    created_at: { column: "created_at" },
-    internal_number: { column: "liquidation_number", foreignTable: "claim" },
-    inspection: { column: "code", foreignTable: "claim_action" },
-    client_reference: { column: "client_reference", foreignTable: "claim" },
-    inspector: { column: "inspector_id" },
-    address: { column: "claim_address", foreignTable: "claim" },
+  const sortMap: Record<string, string> = {
+    scheduled: "scheduled_at",
+    status: "status",
+    created_at: "created_at",
+    internal_number: "claim.liquidation_number",
+    inspection: "claim_action.code",
+    client_reference: "claim.client_reference",
+    inspector: "inspector_id",
+    address: "claim.claim_address",
   };
-  const sortConfig = (options?.sortKey && sortMap[options.sortKey]) ? sortMap[options.sortKey] : { column: "created_at" };
+  const orderColumn = (options?.sortKey && sortMap[options.sortKey]) ? sortMap[options.sortKey] : "created_at";
   const ascending = (options?.sortDir === "asc");
 
   let query = supabase
     .from("inspection_sessions")
     .select(`${SESSION_SELECT}, created_at, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`)
-    .order(sortConfig.column, { ascending, ...(sortConfig.foreignTable ? { foreignTable: sortConfig.foreignTable } : {}) });
+    .order(orderColumn, { ascending });
 
   if (claimId) query = query.eq("claim_id", claimId);
   if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
