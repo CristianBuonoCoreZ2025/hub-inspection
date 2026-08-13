@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         metadata: { error: error.message, code: error.code },
       });
       return NextResponse.json(
-        { error: `Error al registrar evidencia: ${error.message}` },
+        { error: `Error al registrar evidencia: ${error.message}`, code: error.code, hint: error.hint },
         { status: 500 },
       );
     }
