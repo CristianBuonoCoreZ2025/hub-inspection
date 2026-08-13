@@ -733,10 +733,17 @@ export function LiveVideoCall({
     );
     const recorder = new MediaRecorder(combined, { mimeType: mimeType || undefined });
     mediaRecorderRef.current = recorder;
+    console.log("[record] start", recorder.mimeType, recorder.state);
     recorder.ondataavailable = (e) => {
+      console.log("[record] data chunk", e.data.size);
       if (e.data.size > 0) recordedChunksRef.current.push(e.data);
     };
+    recorder.onerror = (e) => {
+      console.error("[record] recorder error", e);
+      setError("Error del grabador: " + (e as ErrorEvent)?.message || "desconocido");
+    };
     recorder.onstop = () => {
+      console.log("[record] onstop, chunks:", recordedChunksRef.current.length);
       void uploadRecording();
     };
     recorder.start(1000);
@@ -746,8 +753,15 @@ export function LiveVideoCall({
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+    console.log("[record] stop clicked, state:", mediaRecorderRef.current?.state);
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+        console.log("[record] stop() called");
+      }
+    } catch (err) {
+      console.error("[record] stop() error", err);
+      setError(err instanceof Error ? err.message : "Error al detener grabación");
     }
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     setRecording(false);
@@ -755,13 +769,16 @@ export function LiveVideoCall({
 
   const uploadRecording = async () => {
     const chunks = recordedChunksRef.current;
-    if (chunks.length === 0) return;
+    if (chunks.length === 0) {
+      console.log("[record] no chunks");
+      return;
+    }
     const blob = new Blob(chunks, { type: chunks[0]?.type || "video/webm" });
     const ext = blob.type.includes("mp4") ? ".mp4" : ".webm";
     const fileName = `grabacion-sesion-${Date.now()}${ext}`;
+    console.log("[record] upload start", blob.size, blob.type);
 
     try {
-      // Subir via presigned URL a R2 (evita el límite de body size de Vercel).
       const presignRes = await fetch("/api/inspection/evidences/presign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -773,14 +790,20 @@ export function LiveVideoCall({
           source: "live_video",
         }),
       });
+      console.log("[record] presign status", presignRes.status);
       if (!presignRes.ok) throw new Error(`HTTP ${presignRes.status} (presign)`);
       const { presignedUrl, url, fileCode, userId, claimId } = await presignRes.json();
+      console.log("[record] presign ok", { presignedUrl: presignedUrl?.slice(0, 40), fileCode });
 
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", presignedUrl);
         xhr.setRequestHeader("Content-Type", blob.type);
+        xhr.upload.addEventListener("progress", (ev) => {
+          if (ev.lengthComputable) console.log("[record] r2 progress", Math.round((ev.loaded / ev.total) * 100));
+        });
         xhr.addEventListener("load", () => {
+          console.log("[record] r2 load status", xhr.status);
           if (xhr.status >= 200 && xhr.status < 300) resolve();
           else reject(new Error(`HTTP ${xhr.status} (R2)`));
         });
@@ -801,13 +824,18 @@ export function LiveVideoCall({
           userId, claimId,
         }),
       });
+      console.log("[record] register status", regRes.status);
       if (!regRes.ok) throw new Error(`HTTP ${regRes.status} (register)`);
       const data = await regRes.json();
+      console.log("[record] register ok", data);
       if (data.evidence) {
         onRecordingSaved?.({ id: data.evidence.id, url: data.evidence.url, description: data.evidence.description });
       }
     } catch (err) {
+      console.error("[record] upload error", err);
       setError(err instanceof Error ? err.message : "Error al subir grabación");
+    } finally {
+      mediaRecorderRef.current = null;
     }
   };
 
