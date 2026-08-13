@@ -723,6 +723,11 @@ html[data-ui-style='fluid-aurora'] .glass-panel {
   html[data-ui-style='fluid-aurora'] .nested-donut-center-value {
     text-shadow: 0 0 20px rgba(0, 242, 255, 0.5) !important;
   }
+
+  /* ── Export progress text: amarillo neon para contraste sobre fondo oscuro ── */
+  html[data-ui-style='fluid-aurora'] .export-progress-text {
+    fill: #facc15 !important;
+  }
 }
 
 /* ── Grid icons: el base ya usa var(--primary) que se ajusta por tema ── */

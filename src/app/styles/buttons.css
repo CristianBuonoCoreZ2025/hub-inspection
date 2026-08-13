@@ -849,3 +849,8 @@
   }
 }
 
+/* ── Export progress: texto del porcentaje dentro del SVG circular ── */
+.export-progress-text {
+  fill: var(--accent-foreground);
+}
+
