@@ -1245,8 +1245,17 @@ const paginatedData = sortedClaims ?? [];
  <div className="app-grid-header-right">
  <Button
  className="pg-btn-platinum"
- onClick={async () => {
- const allRaw: Claim[] = [];
+onClick={async (e) => {
+if (total > 500) {
+  const ok = confirm("Se exportaran " + total + " siniestros. Esto puede tardar varios minutos. ¿Deseas continuar?");
+  if (!ok) return;
+}
+const btn = e.currentTarget;
+const originalText = btn.textContent;
+btn.disabled = true;
+btn.textContent = "Exportando...";
+try {
+const allRaw: Claim[] = [];
  const pageSize = 100;
  let page = 1;
  while (true) {
@@ -1293,8 +1302,8 @@ const paginatedData = sortedClaims ?? [];
  c.client_reference || "",
  c.claim_number || "",
  insured?.full_name || "",
- insured?.address || "",
- insured?.city || "",
+ c.claim_address || insured?.address || "",
+ c.city?.name || insured?.city || "",
  statusLabel(c.status_id) || "",
  c.claim_date ? new Date(c.claim_date).toLocaleDateString("es-CL") : "",
  c.report_date ? new Date(c.report_date).toLocaleDateString("es-CL") : "",
@@ -1309,9 +1318,13 @@ const paginatedData = sortedClaims ?? [];
  worksheet["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 18) }));
  const workbook = XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(workbook, worksheet, "Siniestros");
- XLSX.writeFile(workbook, `siniestros_${new Date().toISOString().slice(0, 10)}.xlsx`);
- }}
- >
+XLSX.writeFile(workbook, `siniestros_${new Date().toISOString().slice(0, 10)}.xlsx`);
+} finally {
+  btn.disabled = false;
+  btn.textContent = originalText;
+}
+}}
+>
  <Download className="h-3.5 w-3.5" /> Exportar
  </Button>
  {canCreate("claims") && (

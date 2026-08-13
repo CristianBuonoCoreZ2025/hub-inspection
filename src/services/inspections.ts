@@ -149,6 +149,7 @@ export async function getInspectionSessionsLight(
     sortKey?: string | null;
     sortDir?: "asc" | "desc";
     q?: string;
+    internalNumber?: string;
   }
 ) {
   const supabase = getSupabaseClient();
@@ -161,28 +162,33 @@ export async function getInspectionSessionsLight(
   const from = (effectivePage - 1) * effectivePageSize;
   const to = from + effectivePageSize - 1;
 
-  const columnMap: Record<string, string> = {
-    scheduled: "scheduled_at",
-    status: "status",
-    created_at: "created_at",
-    internal_number: "created_at",
-    inspection: "created_at",
-    client_reference: "created_at",
-    inspector: "created_at",
-    insured: "created_at",
-    address: "created_at",
+  // Mapeo de sortKey → { column, foreignTable }
+  // PostgREST/supabase-js usa foreignTable para ordenar por columnas de FK
+  const sortMap: Record<string, { column: string; foreignTable?: string }> = {
+    scheduled: { column: "scheduled_at" },
+    status: { column: "status" },
+    created_at: { column: "created_at" },
+    internal_number: { column: "liquidation_number", foreignTable: "claim" },
+    inspection: { column: "code", foreignTable: "claim_action" },
+    client_reference: { column: "client_reference", foreignTable: "claim" },
+    inspector: { column: "inspector_id" },
+    address: { column: "claim_address", foreignTable: "claim" },
   };
-  const orderColumn = (options?.sortKey && columnMap[options.sortKey]) ? columnMap[options.sortKey] : "created_at";
+  const sortConfig = (options?.sortKey && sortMap[options.sortKey]) ? sortMap[options.sortKey] : { column: "created_at" };
   const ascending = (options?.sortDir === "asc");
 
   let query = supabase
     .from("inspection_sessions")
     .select(`${SESSION_SELECT}, created_at, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`)
-    .order(orderColumn, { ascending });
+    .order(sortConfig.column, { ascending, ...(sortConfig.foreignTable ? { foreignTable: sortConfig.foreignTable } : {}) });
 
   if (claimId) query = query.eq("claim_id", claimId);
   if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
   if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
+  if (options?.internalNumber) {
+    const digits = options.internalNumber.replace(/\D/g, "");
+    if (digits) query = query.ilike("claim.liquidation_number", `%${digits}%`);
+  }
   query = query.range(from, to);
 
   const { data, error } = await query;
@@ -212,17 +218,23 @@ export async function getInspectionSessionsCount(
     statusFilter?: string[];
     inspectorFilter?: string[];
     q?: string;
+    internalNumber?: string;
   }
 ) {
   const supabase = getSupabaseClient();
 
   let query = supabase
     .from("inspection_sessions")
-    .select("id", { count: "exact", head: true });
+    .select("id", { count: "exact" })
+    .limit(1);
 
   if (claimId) query = query.eq("claim_id", claimId);
   if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
   if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
+  if (options?.internalNumber) {
+    const digits = options.internalNumber.replace(/\D/g, "");
+    if (digits) query = query.ilike("claim.liquidation_number", `%${digits}%`);
+  }
 
   const { count, error } = await query;
   if (error) throw new Error(error.message);

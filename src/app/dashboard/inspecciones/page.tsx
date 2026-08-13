@@ -94,7 +94,7 @@ function InspectionsPageContent() {
   }, []);
 
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
-    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir],
+    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir, internalNumberFilter],
     queryFn: () => getInspectionSessionsLight(undefined, {
       page,
       pageSize,
@@ -102,16 +102,18 @@ function InspectionsPageContent() {
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
       sortKey,
       sortDir,
+      internalNumber: internalNumberFilter || undefined,
     }),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
   });
 
   const { data: totalCount } = useQuery({
-    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter],
+    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter, internalNumberFilter],
     queryFn: () => getInspectionSessionsCount(undefined, {
       statusFilter: statusFilter.length ? statusFilter : undefined,
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
+      internalNumber: internalNumberFilter || undefined,
     }),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
@@ -227,16 +229,24 @@ function InspectionsPageContent() {
           sessionStatusLabels[s.status]?.toLowerCase().includes(search.toLowerCase()) ||
           s.claim?.liquidation_number?.toLowerCase().includes(search.toLowerCase()) ||
           s.inspection_number?.toLowerCase().includes(search.toLowerCase())
-        const filterDigits = internalNumberFilter.replace(/\D/g, "");
-        const matchesInternal =
-          filterDigits === "" ||
-          (s.claim?.liquidation_number || "").replace(/\D/g, "").includes(filterDigits)
-        return matchesSearch && matchesInternal;
+        return matchesSearch;
       }) ?? [],
-    [sessions, search, internalNumberFilter]
+    [sessions, search]
   );
 
-  const sortedSessions = filtered;
+  // Sort client-side solo para columnas que PostgREST no puede ordenar (relaciones array)
+  const sortedSessions = useMemo(() => {
+    if (sortKey === "insured") {
+      return [...filtered].sort((a, b) => {
+        const aName = a.claim?.claims_participants?.[0]?.full_name || "";
+        const bName = b.claim?.claims_participants?.[0]?.full_name || "";
+        return sortDir === "asc"
+          ? aName.localeCompare(bName)
+          : bName.localeCompare(aName);
+      });
+    }
+    return filtered;
+  }, [filtered, sortKey, sortDir]);
 
   const total = totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -246,7 +256,7 @@ function InspectionsPageContent() {
   // Resetear a página 1 cuando cambian filtros o sort server-side
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, inspectorFilter, sortKey, sortDir]);
+  }, [statusFilter, inspectorFilter, sortKey, sortDir, internalNumberFilter]);
 
   return (
     <div className="app-page">
@@ -327,7 +337,7 @@ function InspectionsPageContent() {
             </Select>
             )}
           </div>
-          <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+          <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSizeChange} />
         </div>
         <div className="app-data-table-wrap">
           <table className="app-data-table">
@@ -537,7 +547,7 @@ function InspectionsPageContent() {
             </tbody>
           </table>
         </div>
-        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={handlePageSizeChange} />
         <Dialog open={!!logSessionId} onOpenChange={(open) => !open && setLogSessionId(null)}>
           <DialogContent className="sm:max-w-md" showCloseButton>
             <div className="modal-header">

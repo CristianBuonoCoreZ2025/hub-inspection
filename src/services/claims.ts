@@ -164,10 +164,27 @@ export async function getClaimsParticipants(claimIds: string[]) {
     city: string | null;
     commune: string | null;
   };
-  return fetchAll<Participant>("claims_participants", {
-    select: "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune",
-    in: { claim_id: claimIds },
-  });
+  // PostgREST limita a 200 filas por defecto y tiene un limite en el
+  // numero de valores del filtro `in`. Traer en batches de 100 claim_ids
+  // y paginar cada batch hasta traer todos los participantes.
+  const BATCH_SIZE = 100;
+  const all: Participant[] = [];
+  for (let i = 0; i < claimIds.length; i += BATCH_SIZE) {
+    const batch = claimIds.slice(i, i + BATCH_SIZE);
+    let from = 0;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const rows = await fetchAll<Participant>("claims_participants", {
+        select: "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune",
+        in: { claim_id: batch },
+        range: { from, to: from + 199 },
+      });
+      all.push(...rows);
+      if (rows.length < 200) break;
+      from += 200;
+    }
+  }
+  return all;
 }
 
 export async function getClaimById(id: string) {
