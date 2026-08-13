@@ -31,7 +31,7 @@ export function DashboardMobileRedirect() {
       if (pathname.startsWith("/mobile")) return;
       // No redirigir si el usuario eligio explicitamente el sistema tradicional.
       // Se guarda en localStorage para que la eleccion persista mientras navegue.
-      if (localStorage.getItem("no-mobile-redirect") === "1") return;
+      if (typeof window !== "undefined" && localStorage.getItem("no-mobile-redirect") === "1") return;
       // No redirigir si está viendo el detalle de una inspección
       // (/dashboard/inspecciones/[id]) — el mobile no tiene equivalente
       // y el inspector necesita poder revisar la inspección desde el móvil

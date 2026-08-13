@@ -67,15 +67,19 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
   const handleBackToDashboard = () => {
     // Cambiar a sistema tradicional: persistir la eleccion en localStorage
     // para que no redirija de vuelta al mobile mientras el usuario navegue.
-    localStorage.setItem("no-mobile-redirect", "1");
-    localStorage.removeItem("mobile-mode");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("no-mobile-redirect", "1");
+      localStorage.removeItem("mobile-mode");
+    }
     router.push("/dashboard");
   };
 
   // Al estar en /mobile, el usuario eligio el sistema mobile — limpiar
   // la preferencia de "no redirigir" para que el sistema mobile funcione.
   useEffect(() => {
-    localStorage.removeItem("no-mobile-redirect");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("no-mobile-redirect");
+    }
   }, []);
 
   const isInspectionList = pathname === "/mobile/inspecciones";
