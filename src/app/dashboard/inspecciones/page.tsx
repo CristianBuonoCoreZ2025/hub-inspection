@@ -35,6 +35,7 @@ import {
   FastForward,
   Ban,
   Clock,
+  Download,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { InspectionSession } from "@/types";
+import * as XLSX from "xlsx";
+import { useConfirm } from "@/hooks/use-confirm";
 
 const sessionStatusLabels: Record<string, string> = {
   scheduled: "Agendada",
@@ -75,6 +78,7 @@ function InspectionsPageContent() {
   const router = useRouter();
   const { canEdit, canView } = usePermissions();
   const { profile, dataAccess } = useAuth();
+  const confirm = useConfirm();
   useRealtime("inspection_sessions", [["inspection-sessions"], ["inspection-sessions-all"]]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>(["active", "scheduled"]);
@@ -85,6 +89,7 @@ function InspectionsPageContent() {
   const [pageSize, setPageSize] = useState(50);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null);
   const toggleSort = useCallback((key: string) => {
     setSortKey((prev) => {
       if (prev !== key) { setSortDir("asc"); return key; }
@@ -279,6 +284,108 @@ function InspectionsPageContent() {
           </div>
         </div>
         <div className="app-grid-header-right">
+          <Button
+            className="pg-btn-platinum"
+            disabled={!!exportProgress}
+            onClick={async () => {
+              const totalExport = total;
+              if (totalExport > 500) {
+                const ok = await confirm({
+                  title: "Exportar inspecciones",
+                  description: `Se exportaran ${totalExport} inspecciones. Esto puede tardar varios minutos. ¿Deseas continuar?`,
+                  confirmLabel: "Exportar",
+                });
+                if (!ok) return;
+              }
+              setExportProgress({ current: 0, total: totalExport });
+              try {
+                const allSessions: SessionWithRelations[] = [];
+                const exportPageSize = 100;
+                let exportPage = 1;
+                while (true) {
+                  const batch = await getInspectionSessionsLight(undefined, {
+                    page: exportPage,
+                    pageSize: exportPageSize,
+                    statusFilter: statusFilter.length ? statusFilter : undefined,
+                    inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
+                    sortKey,
+                    sortDir,
+                    internalNumber: internalNumberFilter || undefined,
+                  });
+                  if (batch.length === 0) break;
+                  allSessions.push(...batch);
+                  setExportProgress({ current: allSessions.length, total: totalExport });
+                  if (batch.length < exportPageSize) break;
+                  exportPage++;
+                }
+                const headers = [
+                  "N° Interno",
+                  "Inspección",
+                  "Ref. Cliente",
+                  "Inspector",
+                  "Asegurado",
+                  "Dirección",
+                  "Estado",
+                  "Programada",
+                  "Iniciada",
+                  "Finalizada",
+                ];
+                const resolveInspectorName = (id: string | null | undefined) => {
+                  if (!id) return "";
+                  const u = users?.find((x) => x.id === id);
+                  return u ? `${u.first_name || ""} ${u.last_name || ""}`.trim() : id.slice(0, 8);
+                };
+                const data = [
+                  headers,
+                  ...allSessions.map((s) => {
+                    const ca = s as InspectionSession & { claim_action?: { code?: string | null } | null };
+                    return [
+                      s.claim?.liquidation_number || "",
+                      ca.claim_action?.code || s.inspection_number || s.id.slice(0, 8),
+                      s.claim?.client_reference || "",
+                      resolveInspectorName(s.inspector_id || s.claim?.inspector_id),
+                      s.claim?.claims_participants?.[0]?.full_name || "",
+                      s.claim?.claim_address || "",
+                      sessionStatusLabels[s.status] || s.status,
+                      s.scheduled_at ? new Date(s.scheduled_at).toLocaleDateString("es-CL") : "",
+                      s.started_at ? new Date(s.started_at).toLocaleDateString("es-CL") : "",
+                      s.ended_at ? new Date(s.ended_at).toLocaleDateString("es-CL") : "",
+                    ];
+                  }),
+                ];
+                const worksheet = XLSX.utils.aoa_to_sheet(data);
+                worksheet["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 18) }));
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Inspecciones");
+                XLSX.writeFile(workbook, `inspecciones_${new Date().toISOString().slice(0, 10)}.xlsx`);
+              } finally {
+                setExportProgress(null);
+              }
+            }}
+          >
+            {exportProgress ? (
+              <>
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" className="opacity-25" />
+                  <circle
+                    cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5"
+                    strokeDasharray={2 * Math.PI * 10}
+                    strokeDashoffset={2 * Math.PI * 10 * (1 - (exportProgress.total > 0 ? exportProgress.current / exportProgress.total : 0))}
+                    strokeLinecap="round"
+                    transform="rotate(-90 12 12)"
+                  />
+                  <text x="12" y="16" textAnchor="middle" fontSize="9" fill="var(--accent-foreground)" fontWeight="700">
+                    {exportProgress.total > 0 ? Math.round((exportProgress.current / exportProgress.total) * 100) : 0}
+                  </text>
+                </svg>
+                Exportar
+              </>
+            ) : (
+              <>
+                <Download className="h-3.5 w-3.5" /> Exportar
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
