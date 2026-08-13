@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
-import { uploadToR2 } from "./r2-upload";
+import { uploadToR2, getPresignedUploadUrl } from "./r2-upload";
+import { r2PublicUrl } from "./r2-client";
 import { inspectionImagePath, inspectionDocumentPath } from "./paths";
 import { optimizeFile } from "./optimize";
 import { logger } from "@/lib/logger";
@@ -191,6 +192,38 @@ export async function uploadInspectionFileRaw(
   });
 
   return { url, key, seq, fileCode, ctx };
+}
+
+/**
+ * Genera una URL presigned para subir un archivo directamente a R2 desde el cliente.
+ * Usa el mismo formato de key/fileCode que uploadInspectionFileRaw, pero no sube el archivo.
+ * El cliente sube via PUT a la URL presigned, luego llama a registerEvidence para registrar en BD.
+ */
+export async function presignInspectionFile(
+  sessionId: string,
+  contentType: string,
+  fileType: InspectionFileType,
+  ext: string
+): Promise<{ presignedUrl: string; url: string; key: string; seq: number; fileCode: string; ctx: InspectionStorageContext }> {
+  const ctx = await resolveInspectionStorageContext(sessionId);
+  const seq = await nextFileSeq(ctx.claimActionId, fileType);
+
+  const key =
+    fileType === "DOC" || fileType === "CRO"
+      ? inspectionDocumentPath(ctx.actionCode, ctx.liquidationNumber, seq, ext, fileType)
+      : inspectionImagePath(ctx.actionCode, ctx.liquidationNumber, fileType, seq, ext);
+
+  const fileCode = key.split("/").pop()?.replace(/\.[^.]+$/, "") || "";
+  const presignedUrl = await getPresignedUploadUrl(key, contentType, 600);
+  const url = `${r2PublicUrl}/${key}`;
+
+  logger.info("URL presigned para inspección", {
+    component: "inspection-upload",
+    action: "inspection.file.presign",
+    metadata: { sessionId, actionCode: ctx.actionCode, fileType, seq, key, fileCode },
+  });
+
+  return { presignedUrl, url, key, seq, fileCode, ctx };
 }
 
 /**

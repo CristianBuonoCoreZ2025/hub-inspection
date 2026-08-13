@@ -995,14 +995,29 @@ export async function startInspection(sessionId: string, fromMobile?: boolean) {
   const timeStr = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
   const companyId = String(session.company_id ?? session.claim?.company_id ?? "");
   await openWorkPeriod(sessionId, companyId);
-  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+
+  // Si el inspector inicia la inspección antes de la hora programada,
+  // extender magic_link_expires_at para que el link del asegurado no expire
+  // durante la inspección. Mínimo 6h desde el inicio real. No reduce la
+  // expiración previa si era más lejana.
+  const set: Record<string, unknown> = {
     status: "active",
     substate: "normal",
     started_at: now.toISOString(),
     inspection_date: dateStr,
     inspection_time: timeStr,
     ...(fromMobile ? { started_from_mobile: true } : {}),
-  }, SESSION_SELECT);
+  };
+  if (session.inspection_type === "remote") {
+    const minExpires = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+    const prevExpires = session.magic_link_expires_at
+      ? new Date(session.magic_link_expires_at)
+      : new Date(0);
+    const finalExpires = new Date(Math.max(minExpires.getTime(), prevExpires.getTime()));
+    set.magic_link_expires_at = finalExpires.toISOString();
+  }
+
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, set, SESSION_SELECT);
 }
 
 /**

@@ -32,7 +32,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Host no permitido" }, { status: 403 });
     }
 
-    const res = await fetch(url);
+    const isOsmTile = parsed.hostname.endsWith("tile.openstreetmap.org");
+    const headers: Record<string, string> = {};
+    if (isOsmTile) {
+      // OSM tile policy requiere User-Agent válido y Referer.
+      // Sin esto, OSM bloquea las peticiones (403 Access Blocked).
+      headers["User-Agent"] = "ClaimsHub/1.0 (fdpchile.com; contacto@fdpchile.com)";
+      headers["Referer"] = "https://claims.fdpchile.com/";
+    }
+
+    const res = await fetch(url, { headers });
     if (!res.ok) {
       return NextResponse.json({ error: `R2 respondió ${res.status}` }, { status: res.status });
     }

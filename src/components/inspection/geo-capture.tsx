@@ -125,24 +125,20 @@ export function GeoCapture({
       if (provider === "mapbox" && mapboxToken) {
         return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`;
       }
-      // OpenStreetMap tiles proxyados via /api/storage/proxy para que
-      // html2canvas-pro pueda capturarlos (OSM no envía CORS headers).
-      // Leaflet reemplaza {s}, {z}, {x}, {y} en la URL antes de hacer el request.
-      // El proxy recibe la URL final ya construida y la devuelve con CORS headers.
-      return "/api/storage/proxy?url=https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+      // CartoDB usa datos de OSM pero con CORS headers y sin rate limits estrictos.
+      // OSM directo bloquea las peticiones (403 Access Blocked) por política de uso.
+      return "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
     },
     [mapboxToken],
   );
 
-  // Función custom para construir la URL del tile proxyado.
-  // Leaflet reemplaza {s}, {z}, {x}, {y} en la URL, pero el proxy necesita
-  // la URL final codificada. Esta función hace el reemplazo manualmente.
+  // Función custom para construir la URL del tile.
+  // CartoDB tiene CORS headers, no necesita proxy.
   const buildTileUrl = React.useCallback(
     (data: { x: number; y: number; z: number }) => {
       const subdomains = ["a", "b", "c"];
       const s = subdomains[Math.abs(data.x + data.y) % subdomains.length];
-      const osmUrl = `https://${s}.tile.openstreetmap.org/${data.z}/${data.x}/${data.y}.png`;
-      return `/api/storage/proxy?url=${encodeURIComponent(osmUrl)}`;
+      return `https://${s}.basemaps.cartocdn.com/light_all/${data.z}/${data.x}/${data.y}.png`;
     },
     [],
   );
@@ -152,7 +148,7 @@ export function GeoCapture({
       if (provider === "mapbox" && mapboxToken) {
         return '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
       }
-      return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+      return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
     },
     [mapboxToken],
   );

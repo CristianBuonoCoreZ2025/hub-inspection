@@ -745,19 +745,50 @@ export function LiveVideoCall({
     if (chunks.length === 0) return;
     const blob = new Blob(chunks, { type: chunks[0]?.type || "video/webm" });
     const ext = blob.type.includes("mp4") ? ".mp4" : ".webm";
-    const file = new File([blob], `grabacion-sesion-${Date.now()}${ext}`, { type: blob.type });
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("sessionId", sessionId);
-    formData.append("source", "live_video");
-    formData.append("originalName", file.name);
+    const fileName = `grabacion-sesion-${Date.now()}${ext}`;
     try {
-      const res = await fetch("/api/inspection/evidences/upload", {
+      // 1. Pedir URL presigned para subir directamente a R2
+      //    (evita HTTP 413 por límite de body size de Vercel)
+      const presignRes = await fetch("/api/inspection/evidences/presign", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          mimeType: blob.type,
+          ext,
+          originalName: fileName,
+          source: "live_video",
+        }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      if (!presignRes.ok) throw new Error(`HTTP ${presignRes.status} (presign)`);
+      const { presignedUrl, url, fileCode, userId, claimId } = await presignRes.json();
+
+      // 2. Subir directamente a R2 via PUT
+      const uploadRes = await fetch(presignedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": blob.type },
+        body: blob,
+      });
+      if (!uploadRes.ok) throw new Error(`HTTP ${uploadRes.status} (upload to R2)`);
+
+      // 3. Registrar la evidencia en la BD
+      const regRes = await fetch("/api/inspection/evidences/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          url,
+          fileCode,
+          mimeType: blob.type,
+          originalName: fileName,
+          source: "live_video",
+          fileSize: blob.size,
+          userId,
+          claimId,
+        }),
+      });
+      if (!regRes.ok) throw new Error(`HTTP ${regRes.status} (register)`);
+      const data = await regRes.json();
       if (data.evidence) {
         onRecordingSaved?.({ id: data.evidence.id, url: data.evidence.url, description: data.evidence.description });
       }
@@ -1011,13 +1042,13 @@ export function LiveVideoCall({
         </div>
         )}
 
-        {/* Botón fullscreen */}
-        {!minimized && peerJoined && (
+        {/* Botón ampliar (solo visible cuando NO está expandido) */}
+        {!minimized && peerJoined && !expanded && (
           <button
             type="button"
             onClick={goFullscreen}
             className="absolute top-4 right-4 p-2 rounded-lg bg-black/50 hover:bg-black/70 text-white/80 transition-colors"
-            title="Pantalla completa"
+            title="Ampliar"
           >
             <Maximize2 className="h-4 w-4" />
           </button>

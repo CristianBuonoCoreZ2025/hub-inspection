@@ -1,5 +1,6 @@
 import "server-only";
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { r2Client, r2Bucket, r2PublicUrl } from "./r2-client";
 import { logger } from "@/lib/logger";
 
@@ -91,4 +92,39 @@ export async function deleteFromR2(key: string): Promise<void> {
     action: "r2.delete",
     metadata: { key },
   });
+}
+
+/**
+ * Genera una URL presigned para subir un archivo directamente a R2 desde el cliente.
+ * Evita el límite de body size de Vercel/Next.js para archivos grandes (ej: grabaciones de video).
+ *
+ * @param key — path completo en R2
+ * @param contentType — tipo MIME del archivo
+ * @param expiresIn — tiempo de validez de la URL (default: 10 min)
+ * @returns URL presigned para PUT
+ */
+export async function getPresignedUploadUrl(
+  key: string,
+  contentType: string,
+  expiresIn: number = 600,
+): Promise<string> {
+  if (!r2Bucket) {
+    throw new Error("R2 no configurado. Faltan variables de entorno: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL");
+  }
+
+  const command = new PutObjectCommand({
+    Bucket: r2Bucket,
+    Key: key,
+    ContentType: contentType,
+  });
+
+  const url = await getSignedUrl(r2Client, command, { expiresIn });
+
+  logger.info("URL presigned generada", {
+    component: "r2-upload",
+    action: "r2.presign",
+    metadata: { key, contentType, expiresIn },
+  });
+
+  return url;
 }

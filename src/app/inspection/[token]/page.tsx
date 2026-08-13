@@ -354,7 +354,10 @@ export default function MagicLinkPage() {
   }
 
   const scheduledAt = session.scheduled_at ? new Date(session.scheduled_at) : null;
-  const windowStart = scheduledAt ? new Date(scheduledAt.getTime() - 60 * 60 * 1000) : null;
+  const startedAt = session.started_at ? new Date(session.started_at) : null;
+  // Si el inspector ya inició, la ventana arranca en started_at (el instante real).
+  // Si no, arranca 1h antes de la hora programada.
+  const windowStart = startedAt ?? (scheduledAt ? new Date(scheduledAt.getTime() - 60 * 60 * 1000) : null);
   const windowEnd = session.magic_link_expires_at ? new Date(session.magic_link_expires_at) : null;
   const isNotYetActive = windowStart ? now < windowStart : false;
   const isExpired = windowEnd ? now > windowEnd : false;
