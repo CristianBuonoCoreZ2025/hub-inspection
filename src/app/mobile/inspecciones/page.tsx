@@ -65,13 +65,16 @@ export default function MobileInspectionsPage() {
     staleTime: 30 * 1000,
   });
 
-  // Filtrar solo las inspecciones del inspector logueado
+  // Filtrar: solo inspecciones presenciales (onsite) del inspector logueado
+  // El mobile NO sirve para inspecciones remotas — nunca se muestran
   const mySessions = useMemo(() => {
     if (!sessions || !profile?.id) return [];
     return sessions.filter((s) => {
+      // Solo presenciales
+      if (s.inspection_type !== "onsite") return false;
       const effInspector = s.inspector_id || s.claim?.inspector_id;
-      if (dataAccess?.is_admin) return true; // admin ve todas
-      return effInspector === profile.id;
+      if (dataAccess?.is_admin) return true; // admin/interno ve todas las presenciales
+      return effInspector === profile.id; // inspector ve solo las suyas
     });
   }, [sessions, profile, dataAccess]);
 
