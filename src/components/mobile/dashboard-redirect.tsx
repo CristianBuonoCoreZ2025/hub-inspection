@@ -27,8 +27,8 @@ export function DashboardMobileRedirect() {
 
     if (isInspector || isInternal) {
       const pathname = window.location.pathname;
-      // Evitar loop: no redirigir si ya estamos en /mobile
-      if (pathname.startsWith("/mobile")) return;
+      // Evitar loop: no redirigir si ya estamos en /mobile/inspecciones
+      if (pathname.startsWith("/mobile/inspecciones")) return;
       // No redirigir si el usuario eligio explicitamente el sistema tradicional.
       // Se guarda en localStorage para que la eleccion persista mientras navegue.
       if (typeof window !== "undefined" && localStorage.getItem("no-mobile-redirect") === "1") return;
@@ -36,7 +36,7 @@ export function DashboardMobileRedirect() {
       // (/dashboard/inspecciones/[id]) — el mobile no tiene equivalente
       // y el inspector necesita poder revisar la inspección desde el móvil
       if (/^\/dashboard\/inspecciones\/[^/]+/.test(pathname)) return;
-      router.replace("/mobile");
+      router.replace("/mobile/inspecciones");
     }
   }, [isLoading, profile, dataAccess, isMobile, router]);
 
