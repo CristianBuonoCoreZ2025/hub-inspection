@@ -19,8 +19,6 @@ import {
   Circle,
   Square,
   UserCheck,
-  Trash2,
-  X,
 } from "lucide-react";
 import { joinSignalingChannel, ICE_SERVERS, type SignalingRole, type SignalingMessage } from "@/lib/webrtc/signaling";
 import { cn } from "@/lib/utils";
@@ -134,7 +132,6 @@ export function LiveVideoCall({
   const [screenshotting, setScreenshotting] = React.useState(false);
   const [lastScreenshot, setLastScreenshot] = React.useState<SavedEvidence | null>(null);
   const [screenshotCount, setScreenshotCount] = React.useState(0);
-  const [deletingScreenshot, setDeletingScreenshot] = React.useState(false);
   const [recording, setRecording] = React.useState(false);
   const [recordingTime, setRecordingTime] = React.useState(0);
   const [peers, setPeers] = React.useState<ConnectedPeer[]>([]);
@@ -722,28 +719,6 @@ export function LiveVideoCall({
     }
   };
 
-  // ── Borrar screenshot capturado (lo elimina de evidencias) ──
-  const deleteScreenshot = async () => {
-    if (!lastScreenshot) return;
-    setDeletingScreenshot(true);
-    try {
-      const res = await fetch(`/api/inspection/evidences/${lastScreenshot.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
-      setScreenshotCount((c) => Math.max(0, c - 1));
-      setLastScreenshot(null);
-      onScreenshotSaved?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al borrar foto");
-    } finally {
-      setDeletingScreenshot(false);
-    }
-  };
-
   // ── Grabación de sesión (solo inspector) ──
   const startRecording = () => {
     if (!remoteStreamRef.current) return;
@@ -1104,7 +1079,7 @@ export function LiveVideoCall({
         )}
       </div>
 
-      {/* Notificación de screenshot con preview y botón de borrar */}
+      {/* Notificación de screenshot — auto-dismiss a los 3s, sin botones */}
       {!minimized && lastScreenshot && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-zinc-900/95 rounded-xl shadow-2xl flex items-center gap-3 p-2 max-w-md">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1120,28 +1095,6 @@ export function LiveVideoCall({
             </div>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{lastScreenshot.description}</p>
           </div>
-          <button
-            type="button"
-            onClick={deleteScreenshot}
-            disabled={deletingScreenshot}
-            className="shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors disabled:opacity-50"
-            title="Borrar esta foto de evidencias"
-          >
-            {deletingScreenshot ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Trash2 className="h-3.5 w-3.5" />
-            )}
-            <span className="text-[11px] font-medium">Borrar</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setLastScreenshot(null)}
-            className="shrink-0 p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
-            title="Cerrar notificación"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
         </div>
       )}
 
