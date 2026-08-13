@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
 import { ClipboardCheck, Calendar, MapPin, Loader2, RefreshCw, Video, Home } from "lucide-react";
 
-type TabKey = "hoy" | "pendientes" | "completadas" | "pausadas";
+type TabKey = "todas" | "hoy" | "pendientes" | "en_curso" | "pausadas" | "completadas";
 
 const STATUS_COLORS: Record<string, string> = {
   scheduled: "scheduled",
@@ -55,7 +55,7 @@ export default function MobileInspectionsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { profile, dataAccess } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabKey>("hoy");
+  const [activeTab, setActiveTab] = useState<TabKey>("todas");
 
   useRealtime("inspection_sessions", [["inspection-sessions-mobile"]]);
 
@@ -69,11 +69,12 @@ export default function MobileInspectionsPage() {
   // El mobile NO sirve para inspecciones remotas — nunca se muestran
   const mySessions = useMemo(() => {
     if (!sessions || !profile?.id) return [];
+    const canSeeAll = dataAccess?.is_admin || profile.role === "internal";
     return sessions.filter((s) => {
       // Solo presenciales
       if (s.inspection_type !== "onsite") return false;
+      if (canSeeAll) return true; // admin/interno ve todas las presenciales
       const effInspector = s.inspector_id || s.claim?.inspector_id;
-      if (dataAccess?.is_admin) return true; // admin/interno ve todas las presenciales
       return effInspector === profile.id; // inspector ve solo las suyas
     });
   }, [sessions, profile, dataAccess]);
@@ -82,6 +83,8 @@ export default function MobileInspectionsPage() {
   const filteredSessions = useMemo(() => {
     const today = new Date().toDateString();
     switch (activeTab) {
+      case "todas":
+        return mySessions;
       case "hoy":
         return mySessions.filter((s) => {
           if (s.status === "cancelled" || s.status === "completed") return false;
@@ -90,8 +93,10 @@ export default function MobileInspectionsPage() {
         });
       case "pendientes":
         return mySessions.filter((s) => s.status === "scheduled" && s.substate !== "paused");
+      case "en_curso":
+        return mySessions.filter((s) => s.status === "active" && s.substate !== "paused");
       case "pausadas":
-        return mySessions.filter((s) => s.status === "scheduled" && s.substate === "paused");
+        return mySessions.filter((s) => s.substate === "paused");
       case "completadas":
         return mySessions.filter((s) => s.status === "completed" || s.status === "cancelled");
       default:
@@ -104,9 +109,11 @@ export default function MobileInspectionsPage() {
   };
 
   const tabs: { key: TabKey; label: string; count: number }[] = [
+    { key: "todas", label: "Todas", count: mySessions.length },
     { key: "hoy", label: "Hoy", count: mySessions.filter((s) => s.status !== "cancelled" && s.status !== "completed" && s.scheduled_at && new Date(s.scheduled_at).toDateString() === new Date().toDateString()).length },
-    { key: "pendientes", label: "Pendientes", count: mySessions.filter((s) => s.status === "scheduled" && s.substate !== "paused").length },
-    { key: "pausadas", label: "Pausadas", count: mySessions.filter((s) => s.status === "scheduled" && s.substate === "paused").length },
+    { key: "pendientes", label: "Programadas", count: mySessions.filter((s) => s.status === "scheduled" && s.substate !== "paused").length },
+    { key: "en_curso", label: "En curso", count: mySessions.filter((s) => s.status === "active" && s.substate !== "paused").length },
+    { key: "pausadas", label: "Pausadas", count: mySessions.filter((s) => s.substate === "paused").length },
     { key: "completadas", label: "Completadas", count: mySessions.filter((s) => s.status === "completed" || s.status === "cancelled").length },
   ];
 
