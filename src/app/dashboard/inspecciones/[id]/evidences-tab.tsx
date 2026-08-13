@@ -334,9 +334,9 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   };
 
   // Cámara directa: sube foto o video sin abrir el modal de subida.
-  // Usa XHR (no fetch) para soportar archivos grandes como videos.
-  // Solo muestra un toast corto al terminar. Si se quiere borrar,
-  // se borra desde la lista de evidencias.
+  // Fotos: sube via route handler normal (FormData + XHR).
+  // Videos: usa presigned URL para subir directamente a R2 (evita límite de body size).
+  // Si se quiere borrar, se borra desde la lista de evidencias.
   const handleDirectCapture = (e: React.ChangeEvent<HTMLInputElement>, kind: "photo" | "video") => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -361,49 +361,122 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
       }
       const rawFile = files[fileIdx++];
 
-      convertHeicToJpeg(rawFile).then((file) => {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("sessionId", sessionId);
-        formData.append("originalName", file.name);
+      convertHeicToJpeg(rawFile).then(async (file) => {
+        if (kind === "video") {
+          // ── Video: presigned URL + PUT directo a R2 via XHR ──
+          const ext = file.name.includes(".") ? "." + file.name.split(".").pop()?.toLowerCase() : ".webm";
+          const presignRes = await fetch("/api/inspection/evidences/presign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              mimeType: file.type || "video/webm",
+              ext,
+              originalName: file.name,
+              source: "live_video",
+            }),
+          });
+          if (!presignRes.ok) throw new Error(`HTTP ${presignRes.status} (presign)`);
+          const { presignedUrl, url, fileCode, userId, claimId } = await presignRes.json();
 
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/api/inspection/evidences/upload");
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open("PUT", presignedUrl);
+            xhr.setRequestHeader("Content-Type", file.type || "video/webm");
 
-        xhr.upload.addEventListener("progress", (ev) => {
-          if (!ev.lengthComputable) return;
-          const pct = Math.round((ev.loaded / ev.total) * 100);
-          toast.loading(
-            kind === "video" ? `Subiendo video... ${pct}%` : `Subiendo foto... ${pct}%`,
-            { id: toastId },
-          );
-        });
-
-        xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            toast.success(kind === "video" ? "Video capturado" : "Foto capturada", { id: toastId, duration: 1500 });
-          } else {
-            let msg = `Error ${xhr.status}`;
-            try { const b = JSON.parse(xhr.responseText); msg = b.error || msg; } catch { /* ignore */ }
-            toast.error(kind === "video" ? "No se pudo subir el video" : "No se pudo subir la foto", {
-              id: toastId,
-              description: msg,
+            xhr.upload.addEventListener("progress", (ev) => {
+              if (!ev.lengthComputable) return;
+              const pct = Math.round((ev.loaded / ev.total) * 100);
+              toast.loading(`Subiendo video... ${pct}%`, { id: toastId });
             });
-          }
-          uploadNext();
-        });
 
-        xhr.addEventListener("error", () => {
-          toast.error(kind === "video" ? "No se pudo subir el video" : "No se pudo subir la foto", {
-            id: toastId,
-            description: "Error de red",
+            xhr.addEventListener("load", () => {
+              if (xhr.status >= 200 && xhr.status < 300) resolve();
+              else reject(new Error(`HTTP ${xhr.status} (R2)`));
+            });
+            xhr.addEventListener("error", () => reject(new Error("Error de red")));
+            xhr.addEventListener("abort", () => reject(new Error("Cancelado")));
+            xhr.send(file);
+          });
+
+          // Registrar en BD
+          const regRes = await fetch("/api/inspection/evidences/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId, url, fileCode, mimeType: file.type || "video/webm",
+              originalName: file.name, source: "live_video", fileSize: file.size,
+              userId, claimId,
+            }),
+          });
+          if (!regRes.ok) throw new Error(`HTTP ${regRes.status} (register)`);
+
+          toast.success("Video capturado", { id: toastId, duration: 1500 });
+          logInspectionEvent({
+            sessionId, role: "adjuster", eventType: "upload_completed",
+            eventDetail: `Subido: ${file.name}`,
+            metadata: { fileName: file.name, fileSize: file.size, source: "direct-camera" },
           });
           uploadNext();
-        });
+        } else {
+          // ── Foto: route handler normal via FormData + XHR ──
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("sessionId", sessionId);
+          formData.append("originalName", file.name);
 
-        xhr.send(formData);
-      }).catch(() => {
-        toast.error("No se pudo procesar el archivo", { id: toastId });
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", "/api/inspection/evidences/upload");
+
+          xhr.upload.addEventListener("progress", (ev) => {
+            if (!ev.lengthComputable) return;
+            const pct = Math.round((ev.loaded / ev.total) * 100);
+            toast.loading(`Subiendo foto... ${pct}%`, { id: toastId });
+          });
+
+          xhr.addEventListener("load", () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              toast.success("Foto capturada", { id: toastId, duration: 1500 });
+              logInspectionEvent({
+                sessionId, role: "adjuster", eventType: "upload_completed",
+                eventDetail: `Subido: ${file.name}`,
+                metadata: { fileName: file.name, fileSize: file.size, source: "direct-camera" },
+              });
+            } else {
+              let msg = `Error ${xhr.status}`;
+              try { const b = JSON.parse(xhr.responseText); msg = b.error || msg; } catch { /* ignore */ }
+              toast.error("No se pudo subir la foto", { id: toastId, description: msg });
+              logInspectionEvent({
+                sessionId, role: "adjuster", eventType: "upload_failed",
+                eventDetail: `Error: ${file.name}`,
+                metadata: { fileName: file.name, error: msg },
+              });
+            }
+            uploadNext();
+          });
+
+          xhr.addEventListener("error", () => {
+            toast.error("No se pudo subir la foto", { id: toastId, description: "Error de red" });
+            logInspectionEvent({
+              sessionId, role: "adjuster", eventType: "upload_failed",
+              eventDetail: `Error de red: ${file.name}`,
+              metadata: { fileName: file.name, error: "network" },
+            });
+            uploadNext();
+          });
+
+          xhr.send(formData);
+        }
+      }).catch((err) => {
+        toast.error(kind === "video" ? "No se pudo subir el video" : "No se pudo subir la foto", {
+          id: toastId,
+          description: err instanceof Error ? err.message : "Error",
+        });
+        logInspectionEvent({
+          sessionId, role: "adjuster", eventType: "upload_failed",
+          eventDetail: `Error: ${rawFile.name}`,
+          metadata: { fileName: rawFile.name, error: err instanceof Error ? err.message : String(err) },
+        });
         uploadNext();
       });
     };

@@ -704,6 +704,8 @@ export function LiveVideoCall({
         setLastScreenshot(ev);
         setScreenshotCount((c) => c + 1);
         onScreenshotSaved?.(ev);
+        // Auto-dismiss despues de 3 segundos
+        setTimeout(() => setLastScreenshot(null), 3000);
         // Avisar al otro par
         channelRef.current?.send({
           type: "screenshot",
@@ -799,13 +801,24 @@ export function LiveVideoCall({
       if (!presignRes.ok) throw new Error(`HTTP ${presignRes.status} (presign)`);
       const { presignedUrl, url, fileCode, userId, claimId } = await presignRes.json();
 
-      // 2. Subir directamente a R2 via PUT
-      const uploadRes = await fetch(presignedUrl, {
-        method: "PUT",
-        headers: { "Content-Type": blob.type },
-        body: blob,
+      // 2. Subir directamente a R2 via XHR (fetch falla con archivos grandes)
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", presignedUrl);
+        xhr.setRequestHeader("Content-Type", blob.type);
+        xhr.upload.addEventListener("progress", (ev) => {
+          if (ev.lengthComputable) {
+            // Progreso disponible si se necesita mostrar en UI
+          }
+        });
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`HTTP ${xhr.status} (upload to R2)`));
+        });
+        xhr.addEventListener("error", () => reject(new Error("Error de red al subir a R2")));
+        xhr.addEventListener("abort", () => reject(new Error("Subida cancelada")));
+        xhr.send(blob);
       });
-      if (!uploadRes.ok) throw new Error(`HTTP ${uploadRes.status} (upload to R2)`);
 
       // 3. Registrar la evidencia en la BD
       const regRes = await fetch("/api/inspection/evidences/register", {
@@ -1106,7 +1119,6 @@ export function LiveVideoCall({
               <span className="app-body font-medium truncate">Foto capturada</span>
             </div>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{lastScreenshot.description}</p>
-            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">Subida como evidencia — revisa y borra si no sirve</p>
           </div>
           <button
             type="button"
