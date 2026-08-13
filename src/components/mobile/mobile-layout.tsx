@@ -50,6 +50,14 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, profile, isMobile, isInspector, isInternal, router]);
 
+  // Al estar en /mobile, el usuario eligio el sistema mobile — limpiar
+  // la preferencia de "no redirigir" para que el sistema mobile funcione.
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("no-mobile-redirect");
+    }
+  }, []);
+
   if (isLoading || (user && !profile)) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -73,14 +81,6 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
     }
     router.push("/dashboard");
   };
-
-  // Al estar en /mobile, el usuario eligio el sistema mobile — limpiar
-  // la preferencia de "no redirigir" para que el sistema mobile funcione.
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("no-mobile-redirect");
-    }
-  }, []);
 
   const isInspectionList = pathname === "/mobile/inspecciones";
 
