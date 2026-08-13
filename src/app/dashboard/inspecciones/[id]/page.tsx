@@ -1164,57 +1164,10 @@ export default function InspectionDetailPage() {
  }}
  />
  )}
-
-{/* Geolocalización del asegurado (remota: el asegurado captura desde el Magic Link) */}
-{session.inspection_type === "remote" && session.geo_latitude && session.geo_longitude && (
- <div className="app-panel">
-   <div className="flex items-center justify-between gap-2 mb-2">
-     <div className="flex items-center gap-2">
-       <MapPin className="h-4 w-4 text-primary" />
-       <h3 className="app-section-title">Ubicación del Asegurado</h3>
-     </div>
-     {session.geo_status && (
-       <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium ${
-         session.geo_status === "verified" ? "bg-emerald-500/10 text-emerald-600" :
-         session.geo_status === "out_of_range" ? "bg-amber-500/10 text-amber-600" :
-         session.geo_status === "failed" ? "bg-rose-500/10 text-rose-600" :
-         "bg-muted/40 text-muted-foreground"
-       }`}>
-         {session.geo_status === "verified" ? "Verificada" :
-          session.geo_status === "out_of_range" ? "Fuera de rango" :
-          session.geo_status === "failed" ? "Fallida" : "Pendiente"}
-       </span>
-     )}
-   </div>
-   {session.geo_distance_meters != null && (
-     <p className="text-[11px] text-muted-foreground mb-2">
-       Distancia a la dirección declarada: <span className="font-mono font-medium">{session.geo_distance_meters} m</span>
-     </p>
-   )}
-   <div className="rounded-xl overflow-hidden border border-border/40 shadow-sm">
-     <MapContainer
-       center={[session.geo_latitude, session.geo_longitude]}
-       zoom={16}
-       className="geo-map-container w-full"
-       scrollWheelZoom={false}
-     >
-       <TileLayer
-         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-       />
-       <Marker position={[session.geo_latitude, session.geo_longitude]} />
-     </MapContainer>
-   </div>
-   <div className="mt-2 flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
-     <MapPin className="h-3 w-3" />
-     {session.geo_latitude.toFixed(6)}, {session.geo_longitude.toFixed(6)}
-   </div>
- </div>
-)}
  </div>
  )}
 
- {/* ── TAB: ACTA DE INSPECCION ── */}
+{/* ── TAB: ACTA DE INSPECCION ── */}
  {activeTab === "acta" && (
  <div className="mt-4">
  {session.status === "scheduled" ? (
@@ -1548,28 +1501,33 @@ export default function InspectionDetailPage() {
  </Dialog>
  )}
 
- {/* Modal: Ubicación capturada por el asegurado (con botón para guardar evidencia) */}
+ {/* Popup flotante: Ubicación capturada por el asegurado (esquina inferior derecha) */}
 {geoCapturedModalOpen && geoCapturedData && (
-<Dialog open={geoCapturedModalOpen} onOpenChange={setGeoCapturedModalOpen}>
- <DialogContent className="modal-xl ring-1 ring-emerald-500/20 shadow-2xl shadow-emerald-500/10" showCloseButton>
-   <div className="modal-header px-5 pt-4 pb-3 border-b border-border/40">
-     <div className="flex items-center gap-2">
-       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/20">
-         <MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+ <div className="fixed bottom-4 right-4 z-50 w-96 max-w-[calc(100vw-2rem)] rounded-xl border border-emerald-500/30 bg-white dark:bg-zinc-900 shadow-2xl shadow-emerald-500/10 overflow-hidden">
+   {/* Header */}
+   <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border/40 bg-emerald-500/5">
+     <div className="flex items-center gap-2 min-w-0">
+       <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/20 shrink-0">
+         <MapPin className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
        </div>
-       <div className="flex-1 min-w-0">
-         <DialogTitle className="app-section-title mb-0">Ubicación del Asegurado Capturada</DialogTitle>
-         <DialogDescription className="modal-subtitle truncate">
-           {geoCapturedData.distance != null ? `Distancia: ${geoCapturedData.distance} m` : "Sin distancia calculada"}
-         </DialogDescription>
-       </div>
-       <div className="flex flex-col items-end gap-0.5 shrink-0">
-         <span className="text-[10px] font-mono text-muted-foreground">Lat {geoCapturedData.lat.toFixed(6)}</span>
-         <span className="text-[10px] font-mono text-muted-foreground">Lng {geoCapturedData.lng.toFixed(6)}</span>
+       <div className="min-w-0">
+         <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 truncate">Ubicación capturada</p>
+         <p className="text-[10px] text-muted-foreground truncate">
+           {geoCapturedData.distance != null ? `${geoCapturedData.distance} m del siniestro` : "Sin distancia"}
+         </p>
        </div>
      </div>
+     <button
+       type="button"
+       onClick={() => setGeoCapturedModalOpen(false)}
+       className="p-1 rounded-md hover:bg-muted/40 text-muted-foreground shrink-0"
+       title="Cerrar"
+     >
+       <XCircle className="h-4 w-4" />
+     </button>
    </div>
-   <div className="h-125 relative" ref={geoMapRef}>
+   {/* Mapa */}
+   <div ref={geoMapRef} className="h-48 relative">
      <MapContainer
        center={[geoCapturedData.lat, geoCapturedData.lng]}
        zoom={16}
@@ -1583,35 +1541,33 @@ export default function InspectionDetailPage() {
        <Marker position={[geoCapturedData.lat, geoCapturedData.lng]} />
      </MapContainer>
    </div>
-   <div className="modal-footer px-5 py-3 border-t border-border/40 flex items-center justify-between gap-3">
-     <p className="text-[11px] text-muted-foreground">
-       Toma un pantallazo del mapa y guárdalo como evidencia de geolocalización.
-     </p>
-     <div className="flex items-center gap-2 shrink-0">
-       <Button
-         variant="outline"
-         size="sm"
-         className="h-8"
-         onClick={() => setGeoCapturedModalOpen(false)}
-       >
-         Cerrar
-       </Button>
-       <Button
-         size="sm"
-         className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
-         disabled={geoSavingEvidence}
-         onClick={saveGeoMapEvidence}
-       >
-         {geoSavingEvidence ? (
-           <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Guardando...</>
-         ) : (
-           <><Camera className="h-3.5 w-3.5 mr-1.5" /> Guardar como evidencia</>
-         )}
-       </Button>
-     </div>
+   {/* Footer con botones */}
+   <div className="flex items-center gap-2 px-3 py-2 border-t border-border/40">
+     <Button
+       variant="outline"
+       size="sm"
+       className="h-7 text-[11px] flex-1"
+       onClick={() => {
+         setGeoCapturedModalOpen(false);
+         toast.info("Pide al asegurado que recaptura la ubicación");
+       }}
+     >
+       Solicitar recaptura
+     </Button>
+     <Button
+       size="sm"
+       className="h-7 text-[11px] flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+       disabled={geoSavingEvidence}
+       onClick={saveGeoMapEvidence}
+     >
+       {geoSavingEvidence ? (
+         <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Guardando...</>
+       ) : (
+         <><Camera className="h-3 w-3 mr-1" /> Guardar evidencia</>
+       )}
+     </Button>
    </div>
- </DialogContent>
-</Dialog>
+ </div>
 )}
 
 {/* Modal de Cancelación */}

@@ -171,7 +171,6 @@ export default function MagicLinkPage() {
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
   const [videoCallOpen, setVideoCallOpen] = useState(false);
   const [videoCallKey, setVideoCallKey] = useState(0);
-  const [clientTab, setClientTab] = useState<string | null>(null);
   const autoVideoOpenedRef = useRef(false);
   // Ref para el ID del log de conexión del asegurado
   const connectionLogIdRef = useRef<string | null>(null);
@@ -218,16 +217,7 @@ export default function MagicLinkPage() {
     }
   }, [session]);
 
-  // Resetear clientTab cuando el inspector cambia de tab activa
-  // (el asegurado vuelve a seguir al inspector)
-  const lastInspectorTabRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!session?.active_tab) return;
-    if (lastInspectorTabRef.current !== session.active_tab) {
-      lastInspectorTabRef.current = session.active_tab;
-      setClientTab(null);
-    }
-  }, [session?.active_tab]);
+  // El asegurado sigue al inspector automáticamente (sin navegación libre)
 
   // ── Log de conexión del asegurado ──
   // Registra un evento "connecting" al cargar la sesión, y "disconnected" al desmontar.
@@ -490,10 +480,10 @@ export default function MagicLinkPage() {
   ];
 
   // Si está completado pero falta firmar (y no hay waiver), forzar tab de firmas
-  // Si el asegurado navegó a una tab libremente (evidencias, firmas, resumen), respetar su elección
+  // El asegurado NUNCA puede navegar por su cuenta — siempre sigue al inspector
   const effectiveTab = isCompleted && !hasInsuredSignature && !hasWaiver
     ? "firmas"
-    : clientTab || activeTab;
+    : activeTab;
 
   // Label del step interno del acta (para el footer)
   const actaStepLabels: Record<string, string> = {
@@ -533,28 +523,20 @@ export default function MagicLinkPage() {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = tab.id === effectiveTab;
-            // Tabs que el asegurado puede navegar libremente (sin depender del inspector)
-            const clientNavigable = ["evidencias", "firmas", "resumen"].includes(tab.id);
-            const isClickable = clientNavigable && session.status === "active";
+            // El asegurado NUNCA puede navegar por su cuenta.
+            // Siempre sigue al inspector (active_tab).
             return (
-              <button
+              <div
                 key={tab.id}
-                type="button"
-                disabled={!isClickable}
-                onClick={() => {
-                  if (isClickable) setClientTab(tab.id);
-                }}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 app-body font-medium transition-colors ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 app-body font-medium ${
                   active
                     ? "bg-sky-500/15 text-sky-400"
-                    : isClickable
-                      ? "text-slate-400 hover:text-sky-400 hover:bg-sky-500/10 cursor-pointer"
-                      : "text-slate-600 cursor-default"
+                    : "text-slate-600 cursor-default"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{tab.label}</span>
-              </button>
+              </div>
             );
           })}
         </div>

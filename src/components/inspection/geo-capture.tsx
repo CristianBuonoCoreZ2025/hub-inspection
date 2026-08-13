@@ -3,7 +3,7 @@
 import * as React from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { MapPin, Navigation, CheckCircle2, AlertTriangle, XCircle, Loader2 } from "lucide-react";
+import { MapPin, MapPinned, CheckCircle2, AlertTriangle, XCircle, Loader2 } from "lucide-react";
 import {
   GEO_THRESHOLD_METERS,
   validateGeoProximity,
@@ -433,7 +433,7 @@ export function GeoCapture({
               </>
             ) : (
               <>
-                <Navigation className="h-4 w-4" />
+                <MapPinned className="h-4 w-4" />
                 <span className="text-[11px] font-medium">
                   {captured && disabled
                     ? "Ubicación ya registrada"
