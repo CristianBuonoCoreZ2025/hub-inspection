@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -218,20 +218,23 @@ export default function InspectionDetailPage() {
      });
      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-     toast.success("Evidencia guardada", {
-       description: "El mapa de geolocalización se guardó como evidencia.",
-       duration: 5000,
-     });
-     queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
-     setGeoCapturedModalOpen(false);
-   } catch (err) {
-     toast.error("No se pudo guardar la evidencia", {
-       description: err instanceof Error ? err.message : "Error desconocido",
-     });
-   } finally {
-     setGeoSavingEvidence(false);
-  }
- };
+     showAlert({
+      title: "Evidencia guardada",
+      description: "El mapa de geolocalización se guardó como evidencia.",
+      type: "info",
+    });
+    queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
+    setGeoCapturedModalOpen(false);
+  } catch (err) {
+    showAlert({
+      title: "No se pudo guardar la evidencia",
+      description: err instanceof Error ? err.message : "Error desconocido",
+      type: "error",
+    });
+  } finally {
+    setGeoSavingEvidence(false);
+ }
+};
 
  // Solicitar recaptura: llama al mismo endpoint que el boton del MagicLinkSender
  // Limpia los campos geo_* y habilita geo_recapture_enabled para que el asegurado
@@ -319,10 +322,6 @@ const showGeoPopup = useCallback((lat: number, lng: number, distance: number | n
   setGeoCapturedData({ lat, lng, distance, status });
   setGeoCapturedModalOpen(true);
   queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
-  toast.success("Ubicacion capturada", {
-    description: "El asegurado ha capturado su ubicacion. Revisa el mapa para guardar la evidencia.",
-    duration: 8000,
-  });
 }, [sessionId, queryClient]);
 
 // Inicializar el ref con el valor actual al montar/cargar la sesion por primera vez
