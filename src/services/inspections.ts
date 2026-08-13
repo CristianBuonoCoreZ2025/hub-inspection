@@ -164,6 +164,8 @@ export async function getInspectionSessionsLight(
 
   // Mapeo de sortKey → { column, foreignTable }
   // PostgREST/supabase-js usa foreignTable para ordenar por columnas de FK
+  // liquidation_number se ordena alfabeticamente pero funciona porque tiene
+  // ceros a la izquierda (L-000000014 < L-000000100 alfanumericamente)
   const sortMap: Record<string, { column: string; foreignTable?: string }> = {
     scheduled: { column: "scheduled_at" },
     status: { column: "status" },

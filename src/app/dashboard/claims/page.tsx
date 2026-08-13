@@ -70,6 +70,7 @@ import { FormDatePicker } from "@/components/ui/form-date-picker";
 import { FormSelect } from "@/components/ui/form-select";
 import { cn } from "@/lib/utils";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
+import { useConfirm } from "@/hooks/use-confirm";
 
 type Participant = { type: string; person_type?: "natural" | "legal" | null; full_name?: string | null; first_name?: string | null; last_name?: string | null; rut?: string | null; email?: string | null; phone?: string | null; cell_phone?: string | null; address?: string | null; country?: string | null; region?: string | null; city?: string | null; commune?: string | null };
 
@@ -210,6 +211,7 @@ function ClaimsPageContent() {
  const router = useRouter();
  const searchParams = useSearchParams();
  const searchParamsStr = searchParams?.toString() ?? "";
+ const confirm = useConfirm();
  const { canCreate, canView } = usePermissions();
  const { profile, dataAccess } = useAuth();
  const { statusCode, statusLabel, codeToId } = useClaimStatuses();
@@ -315,6 +317,7 @@ function ClaimsPageContent() {
    return loadSavedFilter<string>("dateTo", "");
  });
  const [open, setOpen] = useState(false);
+ const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null);
  const [step, setStep] = useState(1);
  const [documents, setDocuments] = useState<{ id: string; name: string; type: string; file: File }[]>([]);
  const [dragOver, setDragOver] = useState(false);
@@ -1246,14 +1249,16 @@ const paginatedData = sortedClaims ?? [];
  <Button
  className="pg-btn-platinum"
 onClick={async (e) => {
+const total = claimsCount ?? 0;
 if (total > 500) {
-  const ok = confirm("Se exportaran " + total + " siniestros. Esto puede tardar varios minutos. ¿Deseas continuar?");
+  const ok = await confirm({
+    title: "Exportar siniestros",
+    description: `Se exportaran ${total} siniestros. Esto puede tardar varios minutos. ¿Deseas continuar?`,
+    confirmLabel: "Exportar",
+  });
   if (!ok) return;
 }
-const btn = e.currentTarget;
-const originalText = btn.textContent;
-btn.disabled = true;
-btn.textContent = "Exportando...";
+setExportProgress({ current: 0, total });
 try {
 const allRaw: Claim[] = [];
  const pageSize = 100;
@@ -1272,9 +1277,11 @@ const allRaw: Claim[] = [];
    });
    if (batch.length === 0) break;
    allRaw.push(...batch);
+   setExportProgress({ current: allRaw.length, total });
    if (batch.length < pageSize) break;
    page++;
  }
+ setExportProgress({ current: allRaw.length, total: allRaw.length });
  const allParticipants = allRaw.length ? await getClaimsParticipants(allRaw.map((c) => c.id)) : [];
  const rows = allRaw.map((claim) => ({ ...claim, claims_participants: allParticipants.filter((p) => p.claim_id === claim.id) }));
  const headers = [
@@ -1320,12 +1327,11 @@ const allRaw: Claim[] = [];
  XLSX.utils.book_append_sheet(workbook, worksheet, "Siniestros");
 XLSX.writeFile(workbook, `siniestros_${new Date().toISOString().slice(0, 10)}.xlsx`);
 } finally {
-  btn.disabled = false;
-  btn.textContent = originalText;
+  setExportProgress(null);
 }
 }}
 >
- <Download className="h-3.5 w-3.5" /> Exportar
+ <Download className="h-3.5 w-3.5" /> {exportProgress ? `Exportando ${exportProgress.current}/${exportProgress.total}...` : "Exportar"}
  </Button>
  {canCreate("claims") && (
  <Button onClick={() => { form.reset(); setDocuments([]); setStep(1); setExpandedPanel(null); setContractorLinked(false); setBeneficiaryLinked(false); setClaimAddressLinked(false); setClaimNumberWarning(null); setParticipantSuggestion(null); setOpen(true); }} className="pg-btn-platinum">

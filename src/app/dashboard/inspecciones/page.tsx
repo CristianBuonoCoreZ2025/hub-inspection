@@ -234,7 +234,8 @@ function InspectionsPageContent() {
     [sessions, search]
   );
 
-  // Sort client-side solo para columnas que PostgREST no puede ordenar (relaciones array)
+  // Sort client-side solo para insured (relacion array, PostgREST no puede ordenar)
+  // Las demas columnas se ordenan server-side via foreignTable
   const sortedSessions = useMemo(() => {
     if (sortKey === "insured") {
       return [...filtered].sort((a, b) => {
