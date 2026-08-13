@@ -26,8 +26,13 @@ export function DashboardMobileRedirect() {
     const isInternal = profile.role === "internal" || !!dataAccess?.is_admin;
 
     if (isInspector || isInternal) {
+      const pathname = window.location.pathname;
       // Evitar loop: no redirigir si ya estamos en /mobile
-      if (window.location.pathname.startsWith("/mobile")) return;
+      if (pathname.startsWith("/mobile")) return;
+      // No redirigir si está viendo el detalle de una inspección
+      // (/dashboard/inspecciones/[id]) — el mobile no tiene equivalente
+      // y el inspector necesita poder revisar la inspección desde el móvil
+      if (/^\/dashboard\/inspecciones\/[^/]+/.test(pathname)) return;
       router.replace("/mobile");
     }
   }, [isLoading, profile, dataAccess, isMobile, router]);
