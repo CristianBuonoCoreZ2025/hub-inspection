@@ -240,18 +240,54 @@ export function LiveVideoCall({
 
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState;
-      if (s === "connected") setState("connected");
-      else if (s === "connecting") setState("connecting");
-      else if (s === "disconnected") setState("disconnected");
-      else if (s === "failed") {
-        setState("failed");
-        setError("Conexión fallida. Verifica tu conexión a internet.");
-      } else if (s === "closed") setState("disconnected");
+      if (s === "connected") {
+        setState("connected");
+        setError(null);
+      } else if (s === "connecting") {
+        setState("connecting");
+      } else if (s === "disconnected") {
+        // No cambiar a "disconnected" inmediatamente si el video remoto sigue reproduciéndose.
+        // WebRTC puede reportar "disconnected" temporalmente durante renegotiación o
+        // cambios de red, aunque el media siga fluyendo.
+        const remoteVideo = remoteVideoRef.current;
+        const hasRemoteFrame = remoteVideo && remoteVideo.readyState >= 2 && remoteVideo.videoWidth > 0;
+        if (!hasRemoteFrame) {
+          setState("disconnected");
+        }
+      } else if (s === "failed") {
+        // No mostrar "failed" inmediatamente. ICE restart ya se dispara en
+        // oniceconnectionstatechange. Dar un grace period de 5s para que
+        // ICE restart recupere la conexión. Si después de 5s sigue failed
+        // y no hay video remoto, recién ahí mostrar el error.
+        const remoteVideo = remoteVideoRef.current;
+        const hasRemoteFrame = remoteVideo && remoteVideo.readyState >= 2 && remoteVideo.videoWidth > 0;
+        if (hasRemoteFrame) {
+          // El video remoto sigue reproduciéndose — no es un fallo real
+          console.warn("[LiveVideoCall] connectionState=failed pero video remoto activo — ignorando");
+          return;
+        }
+        setState("connecting");
+        setTimeout(() => {
+          const pc2 = pcRef.current;
+          const rv = remoteVideoRef.current;
+          const hasFrame = rv && rv.readyState >= 2 && rv.videoWidth > 0;
+          if (pc2 && pc2.connectionState === "failed" && !hasFrame) {
+            setState("failed");
+            setError("Conexión fallida. Verifica tu conexión a internet.");
+          }
+        }, 5000);
+      } else if (s === "closed") {
+        setState("disconnected");
+      }
     };
 
     pc.oniceconnectionstatechange = () => {
       if (pc.iceConnectionState === "failed") {
         pc.restartIce();
+      } else if (pc.iceConnectionState === "connected") {
+        // ICE se recuperó — limpiar estado de error
+        setState("connected");
+        setError(null);
       }
     };
 

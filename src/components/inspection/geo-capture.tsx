@@ -79,6 +79,8 @@ interface GeoCaptureProps {
   capturedBy?: string;
   /** Si true, oculta mensajes de "fuera de rango" al usuario (solo muestra "Ubicación capturada") */
   hideOutOfRange?: boolean;
+  /** Si true, no sube evidencia geo_map automáticamente (el inspector la crea desde el dashboard) */
+  skipEvidenceUpload?: boolean;
 }
 
 export function GeoCapture({
@@ -96,6 +98,7 @@ export function GeoCapture({
   replaceEvidence,
   capturedBy,
   hideOutOfRange = false,
+  skipEvidenceUpload = false,
 }: GeoCaptureProps) {
   const { data: threshold = GEO_THRESHOLD_METERS } = useQuery({
     queryKey: ["geo-threshold"],
@@ -239,8 +242,9 @@ export function GeoCapture({
             setValidation(result);
 
             // Subir el mapa como evidencia (source: geo_map)
+            // Solo si skipEvidenceUpload es false (inspecciones onsite o cuando el inspector lo decide)
             let mapUrl = "";
-            if (sessionId) {
+            if (sessionId && !skipEvidenceUpload) {
               try {
                 // Si replaceEvidence, borrar evidencias geo_map anteriores
                 if (replaceEvidence && sessionToken) {
@@ -252,17 +256,11 @@ export function GeoCapture({
                 }
 
                 // Esperar a que el mapa de Leaflet se renderice
-                // (setCaptured lo monta, pero los tiles tardan en cargar)
                 await new Promise((resolve) => setTimeout(resolve, 3000));
 
-                // Estrategia de captura del mapa:
-                // 1. Si hay token de Mapbox válido → usar Mapbox Static API (imagen real)
-                // 2. Si no hay token → intentar capturar el mapa visible con html2canvas-pro
-                // 3. Si html2canvas falla → usar save-map con SVG fallback
                 const mapboxToken = mapProviders?.tokens?.mapbox || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
                 if (mapboxToken) {
-                  // Mapbox Static API: imagen real del mapa con marcador
                   mapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+f74e4e(${coords.lng},${coords.lat})/${coords.lng},${coords.lat},16,0/600x400?access_token=${mapboxToken}`;
 
                   await fetch("/api/inspection/geo/save-map", {
@@ -278,7 +276,6 @@ export function GeoCapture({
                     }),
                   });
                 } else {
-                  // Sin token de Mapbox: intentar capturar el mapa visible
                   const mapBlob = await captureMapAsBlob();
 
                   if (mapBlob) {
@@ -296,7 +293,6 @@ export function GeoCapture({
                       body: formData,
                     });
                   } else {
-                    // Fallback final: SVG con coordenadas
                     mapUrl = generateStaticMapUrl(coords.lat, coords.lng, {
                       zoom: 16,
                       width: 600,
@@ -350,7 +346,7 @@ export function GeoCapture({
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
-  }, [claimCoords, onCapture, threshold, sessionId, sessionToken, replaceEvidence, capturedBy, inspectionType, captureMapAsBlob]);
+  }, [claimCoords, onCapture, threshold, sessionId, sessionToken, replaceEvidence, capturedBy, inspectionType, captureMapAsBlob, skipEvidenceUpload, mapProviders]);
 
   // ── Auto-captura para inspecciones presenciales ──
   // El inspector no necesita presionar ningún botón: al montar el componente

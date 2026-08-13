@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -50,6 +50,7 @@ import {
  AlertTriangle,
  CheckCircle2,
  Loader2,
+ Camera,
  Wifi,
  ChevronRight,
  ChevronLeft,
@@ -175,6 +176,57 @@ export default function InspectionDetailPage() {
  const [chatPanelOpen, setChatPanelOpen] = useState(false);
  const [videoCallOpen, setVideoCallOpen] = useState(false);
  const [mapViewOpen, setMapViewOpen] = useState(false);
+ const [geoCapturedModalOpen, setGeoCapturedModalOpen] = useState(false);
+ const [geoCapturedData, setGeoCapturedData] = useState<{ lat: number; lng: number; distance: number | null; status: string } | null>(null);
+ const [geoSavingEvidence, setGeoSavingEvidence] = useState(false);
+ const geoMapRef = useRef<HTMLDivElement | null>(null);
+
+ const saveGeoMapEvidence = async () => {
+   if (!geoCapturedData || !geoMapRef.current || !sessionId) return;
+   setGeoSavingEvidence(true);
+   try {
+     // Esperar a que los tiles del mapa terminen de cargar
+     await new Promise((resolve) => setTimeout(resolve, 2000));
+     const html2canvas = (await import("html2canvas-pro")).default;
+     const canvas = await html2canvas(geoMapRef.current, {
+       useCORS: true,
+       allowTaint: true,
+       backgroundColor: "#ffffff",
+       scale: 2,
+       imageTimeout: 15000,
+     });
+     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png", 0.9));
+     if (!blob) throw new Error("No se pudo capturar el mapa");
+
+     const formData = new FormData();
+     formData.append("file", new File([blob], `geo_map_${Date.now()}.png`, { type: "image/png" }));
+     formData.append("sessionId", sessionId);
+     formData.append("lat", String(geoCapturedData.lat));
+     formData.append("lng", String(geoCapturedData.lng));
+     formData.append("source", "geo_map");
+     formData.append("label", "asegurado");
+     if (profile?.id) formData.append("capturedBy", profile.id);
+
+     const res = await fetch("/api/inspection/evidences/upload", {
+       method: "POST",
+       body: formData,
+     });
+     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+     toast.success("Evidencia guardada", {
+       description: "El mapa de geolocalización se guardó como evidencia.",
+       duration: 5000,
+     });
+     queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
+     setGeoCapturedModalOpen(false);
+   } catch (err) {
+     toast.error("No se pudo guardar la evidencia", {
+       description: err instanceof Error ? err.message : "Error desconocido",
+     });
+   } finally {
+     setGeoSavingEvidence(false);
+   }
+ };
  const autoVideoOpenedRef = useRef(false);
  // Ref para el ID del log de conexión del inspector
  const inspectorLogIdRef = useRef<string | null>(null);
@@ -232,11 +284,18 @@ export default function InspectionDetailPage() {
          const oldGeoStatus = prevGeoStatusRef.current;
          if (newGeoStatus && newGeoStatus !== oldGeoStatus && (newGeoStatus === "verified" || newGeoStatus === "out_of_range")) {
            prevGeoStatusRef.current = newGeoStatus;
+          const newLat = payload.new?.geo_latitude as number | null;
+          const newLng = payload.new?.geo_longitude as number | null;
+          const newDistance = payload.new?.geo_distance_meters as number | null;
+          if (newLat != null && newLng != null) {
+            setGeoCapturedData({ lat: newLat, lng: newLng, distance: newDistance, status: newGeoStatus });
+            setGeoCapturedModalOpen(true);
+          }
            queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
            queryClient.invalidateQueries({ queryKey: ["inspection-session-full", sessionId] });
            queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
            toast.success("Ubicación capturada", {
-             description: "El asegurado ha capturado su ubicación. Se creó la evidencia de geolocalización.",
+             description: "El asegurado ha capturado su ubicacion. Revisa el mapa para guardar la evidencia.ón.",
              duration: 8000,
            });
          }
@@ -1489,7 +1548,73 @@ export default function InspectionDetailPage() {
  </Dialog>
  )}
 
- {/* Modal de Cancelación */}
+ {/* Modal: Ubicación capturada por el asegurado (con botón para guardar evidencia) */}
+{geoCapturedModalOpen && geoCapturedData && (
+<Dialog open={geoCapturedModalOpen} onOpenChange={setGeoCapturedModalOpen}>
+ <DialogContent className="modal-xl ring-1 ring-emerald-500/20 shadow-2xl shadow-emerald-500/10" showCloseButton>
+   <div className="modal-header px-5 pt-4 pb-3 border-b border-border/40">
+     <div className="flex items-center gap-2">
+       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/20">
+         <MapPin className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+       </div>
+       <div className="flex-1 min-w-0">
+         <DialogTitle className="app-section-title mb-0">Ubicación del Asegurado Capturada</DialogTitle>
+         <DialogDescription className="modal-subtitle truncate">
+           {geoCapturedData.distance != null ? `Distancia: ${geoCapturedData.distance} m` : "Sin distancia calculada"}
+         </DialogDescription>
+       </div>
+       <div className="flex flex-col items-end gap-0.5 shrink-0">
+         <span className="text-[10px] font-mono text-muted-foreground">Lat {geoCapturedData.lat.toFixed(6)}</span>
+         <span className="text-[10px] font-mono text-muted-foreground">Lng {geoCapturedData.lng.toFixed(6)}</span>
+       </div>
+     </div>
+   </div>
+   <div className="h-125 relative" ref={geoMapRef}>
+     <MapContainer
+       center={[geoCapturedData.lat, geoCapturedData.lng]}
+       zoom={16}
+       className="h-full w-full"
+       scrollWheelZoom={false}
+     >
+       <TileLayer
+         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+       />
+       <Marker position={[geoCapturedData.lat, geoCapturedData.lng]} />
+     </MapContainer>
+   </div>
+   <div className="modal-footer px-5 py-3 border-t border-border/40 flex items-center justify-between gap-3">
+     <p className="text-[11px] text-muted-foreground">
+       Toma un pantallazo del mapa y guárdalo como evidencia de geolocalización.
+     </p>
+     <div className="flex items-center gap-2 shrink-0">
+       <Button
+         variant="outline"
+         size="sm"
+         className="h-8"
+         onClick={() => setGeoCapturedModalOpen(false)}
+       >
+         Cerrar
+       </Button>
+       <Button
+         size="sm"
+         className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+         disabled={geoSavingEvidence}
+         onClick={saveGeoMapEvidence}
+       >
+         {geoSavingEvidence ? (
+           <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Guardando...</>
+         ) : (
+           <><Camera className="h-3.5 w-3.5 mr-1.5" /> Guardar como evidencia</>
+         )}
+       </Button>
+     </div>
+   </div>
+ </DialogContent>
+</Dialog>
+)}
+
+{/* Modal de Cancelación */}
  <Dialog open={cancelModalOpen} onOpenChange={(open) => { if (!open && cancelMutation.isPending) return; setCancelModalOpen(open); }}>
  <DialogContent className="modal-sm" showCloseButton={!cancelMutation.isPending}>
  <div className="modal-header">
