@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -450,7 +450,7 @@ enabled: activeTab === "informe",
  mutationFn: ({ id, input }: { id: string; input: Partial<InspectionSession> }) =>
  updateInspectionSession(id, input),
  onSuccess: async (_data, variables) => {
- toast.success("Estado actualizado");
+ showAlert({ title: "Estado actualizado", description: "El estado de la inspección se actualizó correctamente.", type: "info" });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
  queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
 
@@ -469,7 +469,7 @@ enabled: activeTab === "informe",
  }
  }
  },
- onError: (err: Error) => toast.error(err.message),
+ onError: (err: Error) => showAlert({ title: "Error", description: err.message, type: "error" }),
  });
 
  function handleTabClick(tabId: string) {
@@ -514,7 +514,7 @@ enabled: activeTab === "informe",
  userId: profile?.id,
  }),
  onSuccess: async () => {
- toast.success("Inspección cancelada (desistida). Se generó gestión CIN de desistimiento.");
+ showAlert({ title: "Inspección cancelada", description: "Se generó gestión CIN de desistimiento.", type: "info" });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
  queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
  queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
@@ -537,7 +537,7 @@ enabled: activeTab === "informe",
  // Volver al siniestro (la INS fue rechazada, no hay nueva inspección)
  if (session?.claim_id && canOpenClaim) router.push(`/dashboard/claims/${session.claim_id}`);
  },
- onError: (err: Error) => toast.error(err.message),
+ onError: (err: Error) => showAlert({ title: "Error", description: err.message, type: "error" }),
  });
 
  const rescheduleMutation = useMutation({
@@ -556,7 +556,7 @@ enabled: activeTab === "informe",
  userId: profile?.id,
  }),
  onSuccess: () => {
- toast.success("Inspección reagendada. Se generó gestión CIN para re-coordinar.");
+ showAlert({ title: "Inspección reagendada", description: "Se generó gestión CIN para re-coordinar.", type: "info" });
  queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
  queryClient.invalidateQueries({ queryKey: ["claim-actions"] });
  // Invalidar la agenda del inspector para que la próxima vez muestre
@@ -570,14 +570,14 @@ enabled: activeTab === "informe",
  // Volver al siniestro — el usuario debe completar la nueva CIN
  if (session?.claim_id && canOpenClaim) router.push(`/dashboard/claims/${session.claim_id}`);
  },
- onError: (err: Error) => toast.error(err.message),
+ onError: (err: Error) => showAlert({ title: "Error", description: err.message, type: "error" }),
  });
 
  const moveDateMutation = useMutation({
  mutationFn: ({ sessionId: id, scheduledAt }: { sessionId: string; scheduledAt: string }) =>
  moveInspectionDate(id, scheduledAt),
  onSuccess: () => {
- toast.success("Fecha de inspección actualizada");
+ showAlert({ title: "Fecha actualizada", description: "La fecha de inspección se actualizó correctamente.", type: "info" });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
  queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
  queryClient.invalidateQueries({ queryKey: ["inspector-schedule"] });
@@ -586,31 +586,31 @@ enabled: activeTab === "informe",
  setMoveDateModalOpen(false);
  setMoveSelectedDatetime("");
  },
- onError: (err: Error) => toast.error(err.message),
+ onError: (err: Error) => showAlert({ title: "Error", description: err.message, type: "error" }),
  });
 
  const resumeMutation = useMutation({
  mutationFn: (id: string) => resumeInspection(id),
  onSuccess: () => {
- toast.success("Inspección reanudada");
+ showAlert({ title: "Inspección reanudada", description: "La inspección se reanudó correctamente.", type: "info" });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
  queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
  queryClient.invalidateQueries({ queryKey: ["inspector-schedule"] });
  queryClient.invalidateQueries({ queryKey: ["inspection-work-periods", sessionId] });
  },
- onError: (err: Error) => toast.error(err.message),
+ onError: (err: Error) => showAlert({ title: "Error", description: err.message, type: "error" }),
  });
 
  const startMutation = useMutation({
  mutationFn: (id: string) => startInspection(id),
  onSuccess: () => {
- toast.success("Inspección iniciada");
+ showAlert({ title: "Inspección iniciada", description: "La inspección se inició correctamente.", type: "info" });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
  queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
  queryClient.invalidateQueries({ queryKey: ["inspector-schedule"] });
  queryClient.invalidateQueries({ queryKey: ["inspection-work-periods", sessionId] });
  },
- onError: (err: Error) => toast.error(err.message),
+ onError: (err: Error) => showAlert({ title: "Error", description: err.message, type: "error" }),
  });
 
  if (isLoading) {
@@ -1484,13 +1484,13 @@ enabled: activeTab === "informe",
  queryClient.invalidateQueries({ queryKey: ["evidences", session.id] });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
  }}
- onPeerJoined={() => toast.success("El asegurado se ha conectado a la videollamada")}
- onPeerRejected={() => toast.warning("Otra persona intentó conectarse a la videollamada y fue rechazada. Ya hay un asegurado en sesión.")}
+ onPeerJoined={() => showAlert({ title: "Asegurado conectado", description: "El asegurado se ha conectado a la videollamada.", type: "info" })}
+ onPeerRejected={() => showAlert({ title: "Conexión rechazada", description: "Otra persona intentó conectarse a la videollamada y fue rechazada. Ya hay un asegurado en sesión.", type: "info" })}
  onRecordingSaved={() => {
  queryClient.invalidateQueries({ queryKey: ["evidences", session.id] });
  queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
  if (session.magic_link_token) queryClient.invalidateQueries({ queryKey: ["magic-link-live", session.magic_link_token] });
- toast.success("Grabación de sesión guardada como evidencia");
+ showAlert({ title: "Grabación guardada", description: "La grabación de sesión se guardó como evidencia.", type: "info" });
  }}
  />
  </div>
