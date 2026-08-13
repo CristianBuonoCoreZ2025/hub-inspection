@@ -180,6 +180,7 @@ export default function InspectionDetailPage() {
  const [geoCapturedModalOpen, setGeoCapturedModalOpen] = useState(false);
  const [geoCapturedData, setGeoCapturedData] = useState<{ lat: number; lng: number; distance: number | null; status: string } | null>(null);
  const [geoSavingEvidence, setGeoSavingEvidence] = useState(false);
+ const [geoRecapturing, setGeoRecapturing] = useState(false);
  const geoMapRef = useRef<HTMLDivElement | null>(null);
 
  const saveGeoMapEvidence = async () => {
@@ -226,6 +227,39 @@ export default function InspectionDetailPage() {
      });
    } finally {
      setGeoSavingEvidence(false);
+  }
+ };
+
+ // Solicitar recaptura: llama al mismo endpoint que el boton del MagicLinkSender
+ // Limpia los campos geo_* y habilita geo_recapture_enabled para que el asegurado
+ // pueda capturar de nuevo desde el Magic Link
+ const handleRequestRecapture = async () => {
+   if (!sessionId) return;
+   setGeoRecapturing(true);
+   try {
+     const res = await fetch("/api/inspection/geo/enable-recapture", {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ sessionId }),
+     });
+     if (!res.ok) {
+       const data = await res.json().catch(() => ({}));
+       throw new Error(data.error || `HTTP ${res.status}`);
+     }
+     // Resetear el ref para que el polling detecte la proxima captura
+     prevGeoCapturedAtRef.current = null;
+     queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+     setGeoCapturedModalOpen(false);
+     toast.success("Recaptura habilitada", {
+       description: "El asegurado ya puede capturar su ubicacion nuevamente.",
+       duration: 5000,
+     });
+   } catch (err) {
+     toast.error("No se pudo habilitar la recaptura", {
+       description: err instanceof Error ? err.message : "Error desconocido",
+     });
+   } finally {
+     setGeoRecapturing(false);
    }
  };
  const autoVideoOpenedRef = useRef(false);
@@ -1568,12 +1602,14 @@ enabled: activeTab === "informe",
        variant="outline"
        size="sm"
        className="h-7 text-[11px] flex-1"
-       onClick={() => {
-         setGeoCapturedModalOpen(false);
-         toast.info("Pide al asegurado que recaptura la ubicación");
-       }}
+       disabled={geoRecapturing}
+       onClick={handleRequestRecapture}
      >
-       Solicitar recaptura
+       {geoRecapturing ? (
+         <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Habilitando...</>
+       ) : (
+         "Solicitar recaptura"
+       )}
      </Button>
      <Button
        size="sm"
