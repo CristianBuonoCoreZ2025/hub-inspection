@@ -54,7 +54,7 @@ type ConnectionState = "idle" | "connecting" | "connected" | "disconnected" | "f
 
 /**
  * Captura un thumbnail JPEG base64 de un elemento <video>.
- * Retorna string vacío si el video no tiene frames disponibles.
+ * Retorna string vac├¡o si el video no tiene frames disponibles.
  */
 function captureVideoThumb(video: HTMLVideoElement | null, w: number, h: number): string {
   if (!video || !video.videoWidth) return "";
@@ -71,7 +71,7 @@ function captureVideoThumb(video: HTMLVideoElement | null, w: number, h: number)
   }
 }
 
-/** Devuelve un mensaje útil según el error de getUserMedia y el dispositivo. */
+/** Devuelve un mensaje ├║til seg├║n el error de getUserMedia y el dispositivo. */
 function getMediaErrorMessage(err: unknown): string {
   const domErr = err instanceof DOMException ? err : null;
   const raw = err instanceof Error ? err.message : "";
@@ -80,15 +80,15 @@ function getMediaErrorMessage(err: unknown): string {
   const isAndroid = /Android/i.test(ua);
 
   if (domErr?.name === "NotAllowedError" || domErr?.name === "SecurityError" || raw.toLowerCase().includes("permission")) {
-    if (isIOS) return "Permiso denegado. En iPhone: Ajustes > Safari > Cámara/Micrófono > Permitir.";
-    if (isAndroid) return "Permiso denegado. En Android: Configuración del navegador > Permisos > Cámara y micrófono > Permitir.";
-    return "Permiso denegado. Habilite cámara y micrófono en la barra de direcciones o configuración del navegador.";
+    if (isIOS) return "Permiso denegado. En iPhone: Ajustes > Safari > C├ímara/Micr├│fono > Permitir.";
+    if (isAndroid) return "Permiso denegado. En Android: Configuraci├│n del navegador > Permisos > C├ímara y micr├│fono > Permitir.";
+    return "Permiso denegado. Habilite c├ímara y micr├│fono en la barra de direcciones o configuraci├│n del navegador.";
   }
-  if (domErr?.name === "NotFoundError") return "No se encontró cámara o micrófono. Conecte uno o use subir fotos.";
+  if (domErr?.name === "NotFoundError") return "No se encontr├│ c├ímara o micr├│fono. Conecte uno o use subir fotos.";
   if (domErr?.name === "NotReadableError" || raw.toLowerCase().includes("could not start")) {
-    return "La cámara o el micrófono están en uso por otra app. Cierre otras pestañas/programas y vuelva a intentar.";
+    return "La c├ímara o el micr├│fono est├ín en uso por otra app. Cierre otras pesta├▒as/programas y vuelva a intentar.";
   }
-  return raw || "No se pudo acceder a la cámara/micrófono.";
+  return raw || "No se pudo acceder a la c├ímara/micr├│fono.";
 }
 
 export function LiveVideoCall({
@@ -118,9 +118,9 @@ export function LiveVideoCall({
   const hangupSentRef = React.useRef<boolean>(false);
   // Buffer de ICE candidates que llegan antes de la remote description
   const iceCandidateBufferRef = React.useRef<RTCIceCandidateInit[]>([]);
-  // El inspector trackea al cliente que ya está conectado para rechazar a un segundo
+  // El inspector trackea al cliente que ya est├í conectado para rechazar a un segundo
   const connectedClientRef = React.useRef<string | null>(null);
-  // Peers ya rechazados (para no notificar al inspector más de una vez por el mismo peer)
+  // Peers ya rechazados (para no notificar al inspector m├ís de una vez por el mismo peer)
   const rejectedPeersRef = React.useRef<Set<string>>(new Set());
 
   const [state, setState] = React.useState<ConnectionState>("idle");
@@ -140,23 +140,23 @@ export function LiveVideoCall({
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const recordedChunksRef = React.useRef<Blob[]>([]);
   const recordingTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
-  // Refs estables para callbacks que se usan en suscripciones de larga duración
+  // Refs estables para callbacks que se usan en suscripciones de larga duraci├│n
   const onPeersUpdateRef = React.useRef(onPeersUpdate);
   React.useEffect(() => {
     onPeersUpdateRef.current = onPeersUpdate;
   }, [onPeersUpdate]);
 
-  // Ordenamos siempre audio primero, video después, para mantener m-lines consistentes
+  // Ordenamos siempre audio primero, video despu├®s, para mantener m-lines consistentes
   const getOrderedLocalTracks = () => {
     const s = localStreamRef.current;
     return s ? [...s.getAudioTracks(), ...s.getVideoTracks()] : [];
   };
 
-  // ── Inicializar media local ──
+  // ÔöÇÔöÇ Inicializar media local ÔöÇÔöÇ
   const initLocalMedia = React.useCallback(async () => {
-    // Estrategia: intentar video+audio primero. Si la cámara falla (ej: en uso
-    // por otro navegador), hacer fallback a solo audio para no bloquear la cámara
-    // del asegurado si están en el mismo equipo.
+    // Estrategia: intentar video+audio primero. Si la c├ímara falla (ej: en uso
+    // por otro navegador), hacer fallback a solo audio para no bloquear la c├ímara
+    // del asegurado si est├ín en el mismo equipo.
     let stream: MediaStream;
     let cameraPerm: "granted" | "denied" | "error" = "error";
     let microphonePerm: "granted" | "denied" | "error" = "error";
@@ -180,8 +180,8 @@ export function LiveVideoCall({
         microphonePerm = "denied";
       }
 
-      // Fallback a audio solo — no pedir video para no bloquear la cámara
-      // del asegurado si están en el mismo equipo
+      // Fallback a audio solo ÔÇö no pedir video para no bloquear la c├ímara
+      // del asegurado si est├ín en el mismo equipo
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true },
@@ -211,7 +211,7 @@ export function LiveVideoCall({
     return stream;
   }, [onMediaPermission]);
 
-  // ── Crear peer connection ──
+  // ÔöÇÔöÇ Crear peer connection ÔöÇÔöÇ
   const createPeerConnection = React.useCallback(() => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     pcRef.current = pc;
@@ -243,8 +243,8 @@ export function LiveVideoCall({
       } else if (s === "connecting") {
         setState("connecting");
       } else if (s === "disconnected") {
-        // No cambiar a "disconnected" inmediatamente si el video remoto sigue reproduciéndose.
-        // WebRTC puede reportar "disconnected" temporalmente durante renegotiación o
+        // No cambiar a "disconnected" inmediatamente si el video remoto sigue reproduci├®ndose.
+        // WebRTC puede reportar "disconnected" temporalmente durante renegotiaci├│n o
         // cambios de red, aunque el media siga fluyendo.
         const remoteVideo = remoteVideoRef.current;
         const hasRemoteFrame = remoteVideo && remoteVideo.readyState >= 2 && remoteVideo.videoWidth > 0;
@@ -254,13 +254,13 @@ export function LiveVideoCall({
       } else if (s === "failed") {
         // No mostrar "failed" inmediatamente. ICE restart ya se dispara en
         // oniceconnectionstatechange. Dar un grace period de 5s para que
-        // ICE restart recupere la conexión. Si después de 5s sigue failed
-        // y no hay video remoto, recién ahí mostrar el error.
+        // ICE restart recupere la conexi├│n. Si despu├®s de 5s sigue failed
+        // y no hay video remoto, reci├®n ah├¡ mostrar el error.
         const remoteVideo = remoteVideoRef.current;
         const hasRemoteFrame = remoteVideo && remoteVideo.readyState >= 2 && remoteVideo.videoWidth > 0;
         if (hasRemoteFrame) {
-          // El video remoto sigue reproduciéndose — no es un fallo real
-          console.warn("[LiveVideoCall] connectionState=failed pero video remoto activo — ignorando");
+          // El video remoto sigue reproduci├®ndose ÔÇö no es un fallo real
+          console.warn("[LiveVideoCall] connectionState=failed pero video remoto activo ÔÇö ignorando");
           return;
         }
         setState("connecting");
@@ -270,7 +270,7 @@ export function LiveVideoCall({
           const hasFrame = rv && rv.readyState >= 2 && rv.videoWidth > 0;
           if (pc2 && pc2.connectionState === "failed" && !hasFrame) {
             setState("failed");
-            setError("Conexión fallida. Verifica tu conexión a internet.");
+            setError("Conexi├│n fallida. Verifica tu conexi├│n a internet.");
           }
         }, 5000);
       } else if (s === "closed") {
@@ -282,13 +282,13 @@ export function LiveVideoCall({
       if (pc.iceConnectionState === "failed") {
         pc.restartIce();
       } else if (pc.iceConnectionState === "connected") {
-        // ICE se recuperó — limpiar estado de error
+        // ICE se recuper├│ ÔÇö limpiar estado de error
         setState("connected");
         setError(null);
       }
     };
 
-    // Negotiation needed — perfect negotiation pattern
+    // Negotiation needed ÔÇö perfect negotiation pattern
     pc.onnegotiationneeded = async () => {
       try {
         makingOfferRef.current = true;
@@ -304,19 +304,19 @@ export function LiveVideoCall({
     return pc;
   }, [userId, role]);
 
-  // ── Manejar mensaje de signaling ──
+  // ÔöÇÔöÇ Manejar mensaje de signaling ÔöÇÔöÇ
   const handleSignalingMessage = React.useCallback(
     async (msg: SignalingMessage) => {
       const pc = pcRef.current;
       if (!pc) return;
 
       try {
-        // Kick: el inspector fuerza la desconexión de este peer
+        // Kick: el inspector fuerza la desconexi├│n de este peer
         if (msg.type === "kick") {
           if (msg.target === userId) {
             setRejectedReason(msg.reason);
             setState("rejected");
-            // Liberar cámara/micrófono local
+            // Liberar c├ímara/micr├│fono local
             if (localStreamRef.current) {
               localStreamRef.current.getTracks().forEach((t) => t.stop());
               localStreamRef.current = null;
@@ -327,12 +327,12 @@ export function LiveVideoCall({
           return;
         }
 
-        // Rechazo: el inspector nos avisa que ya hay una sesión en curso
+        // Rechazo: el inspector nos avisa que ya hay una sesi├│n en curso
         if (msg.type === "busy") {
           if (role === "client") {
             setRejectedReason(msg.reason);
             setState("rejected");
-            // Liberar cámara/micrófono local
+            // Liberar c├ímara/micr├│fono local
             if (localStreamRef.current) {
               localStreamRef.current.getTracks().forEach((t) => t.stop());
               localStreamRef.current = null;
@@ -351,7 +351,7 @@ export function LiveVideoCall({
                 type: "busy",
                 from: userId,
                 role,
-                reason: "Ya existe una sesión de videollamada en curso. Espere a que finalice la inspección en curso.",
+                reason: "Ya existe una sesi├│n de videollamada en curso. Espere a que finalice la inspecci├│n en curso.",
               });
               if (!rejectedPeersRef.current.has(msg.from)) {
                 rejectedPeersRef.current.add(msg.from);
@@ -369,7 +369,7 @@ export function LiveVideoCall({
           }
           // El inspector (impolite) inicia la oferta cuando el cliente se une
           if (role === "inspector" && localStreamRef.current) {
-            // Forzar renegotiación agregando tracks si no están (audio → video)
+            // Forzar renegotiaci├│n agregando tracks si no est├ín (audio ÔåÆ video)
             const senders = pc.getSenders();
             if (senders.length === 0) {
               getOrderedLocalTracks().forEach((track) => {
@@ -387,7 +387,7 @@ export function LiveVideoCall({
                 type: "busy",
                 from: userId,
                 role,
-                reason: "Ya existe una sesión de videollamada en curso. Espere a que finalice la inspección en curso.",
+                reason: "Ya existe una sesi├│n de videollamada en curso. Espere a que finalice la inspecci├│n en curso.",
               });
               if (!rejectedPeersRef.current.has(msg.from)) {
                 rejectedPeersRef.current.add(msg.from);
@@ -424,10 +424,10 @@ export function LiveVideoCall({
             try {
               await pc.addIceCandidate(c);
             } catch {
-              // Algunos ICE del buffer ya no aplican tras la negociación; se ignoran
+              // Algunos ICE del buffer ya no aplican tras la negociaci├│n; se ignoran
             }
           }
-          // Asegurar que nuestros tracks estén agregados en orden audio → video
+          // Asegurar que nuestros tracks est├®n agregados en orden audio ÔåÆ video
           if (localStreamRef.current) {
             const senders = pc.getSenders();
             if (senders.length === 0) {
@@ -455,7 +455,7 @@ export function LiveVideoCall({
             try {
               await pc.addIceCandidate(c);
             } catch {
-              // Algunos ICE del buffer ya no aplican tras la negociación; se ignoran
+              // Algunos ICE del buffer ya no aplican tras la negociaci├│n; se ignoran
             }
           }
         } else if (msg.type === "ice") {
@@ -465,7 +465,7 @@ export function LiveVideoCall({
           }
 
           if (!pc.remoteDescription) {
-            // Llegó ICE antes de la oferta/answer remota; lo almacenamos
+            // Lleg├│ ICE antes de la oferta/answer remota; lo almacenamos
             iceCandidateBufferRef.current.push(msg.candidate);
             return;
           }
@@ -487,7 +487,7 @@ export function LiveVideoCall({
               connectedClientRef.current = null;
               setConnectedClientId(null);
             } else {
-              // Hangup de un cliente que no es el conectado — ignorar
+              // Hangup de un cliente que no es el conectado ÔÇö ignorar
               return;
             }
           }
@@ -502,7 +502,7 @@ export function LiveVideoCall({
             remoteVideoRef.current.srcObject = null;
           }
         } else if (msg.type === "screenshot") {
-          // El otro par capturó una foto — refrescar para mostrarla en tiempo real
+          // El otro par captur├│ una foto ÔÇö refrescar para mostrarla en tiempo real
           if (msg.from !== userId) onScreenshotSaved?.();
         }
       } catch (err) {
@@ -512,7 +512,7 @@ export function LiveVideoCall({
     [role, userId, onPeerJoined, onPeerRejected, onKicked, onScreenshotSaved],
   );
 
-  // ── Inicializar todo al montar ──
+  // ÔöÇÔöÇ Inicializar todo al montar ÔöÇÔöÇ
   React.useEffect(() => {
     let cancelled = false;
 
@@ -524,12 +524,12 @@ export function LiveVideoCall({
         return;
       }
 
-      // Si no hay cámara/micrófono, igual nos unimos al canal de signaling
+      // Si no hay c├ímara/micr├│fono, igual nos unimos al canal de signaling
       // para que ambos lados se vean conectados en el chat/peers, pero no
-      // creamos una conexión WebRTC que falle por SDP sin media.
+      // creamos una conexi├│n WebRTC que falle por SDP sin media.
       if (stream.getTracks().length > 0) {
         const pc = createPeerConnection();
-        // Agregar tracks locales al peer connection en orden audio → video
+        // Agregar tracks locales al peer connection en orden audio ÔåÆ video
         [...stream.getAudioTracks(), ...stream.getVideoTracks()].forEach((track) => {
           pc.addTrack(track, stream);
         });
@@ -580,7 +580,7 @@ export function LiveVideoCall({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, userId, role]);
 
-  // ── Toggle video ──
+  // ÔöÇÔöÇ Toggle video ÔöÇÔöÇ
   const toggleVideo = () => {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -589,12 +589,12 @@ export function LiveVideoCall({
       videoTrack.enabled = !videoTrack.enabled;
       setVideoOn(videoTrack.enabled);
     } else {
-      // No hay video track (cámara no disponible) — liberar el stream actual
+      // No hay video track (c├ímara no disponible) ÔÇö liberar el stream actual
       // y volver a pedir video+audio
       stream.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
       setVideoOn(false);
-      // Re-intentar obtener cámara
+      // Re-intentar obtener c├ímara
       navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
         audio: { echoCancellation: true, noiseSuppression: true },
@@ -611,12 +611,12 @@ export function LiveVideoCall({
           });
         }
       }).catch(() => {
-        setError("No se pudo acceder a la cámara. Puede estar en uso por otra aplicación.");
+        setError("No se pudo acceder a la c├ímara. Puede estar en uso por otra aplicaci├│n.");
       });
     }
   };
 
-  // ── Toggle audio ──
+  // ÔöÇÔöÇ Toggle audio ÔöÇÔöÇ
   const toggleAudio = () => {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -627,7 +627,7 @@ export function LiveVideoCall({
     }
   };
 
-  // ── Colgar ──
+  // ÔöÇÔöÇ Colgar ÔöÇÔöÇ
   const handleHangup = () => {
     if (channelRef.current && !hangupSentRef.current) {
       channelRef.current.send({ type: "hangup", from: userId, role });
@@ -636,7 +636,7 @@ export function LiveVideoCall({
     onHangup();
   };
 
-  // ── Forzar desconexión de un peer (solo inspector) ──
+  // ÔöÇÔöÇ Forzar desconexi├│n de un peer (solo inspector) ÔöÇÔöÇ
   const kickPeer = (targetUserId: string, reason?: string) => {
     if (role !== "inspector" || !channelRef.current) return;
     channelRef.current.send({
@@ -644,14 +644,14 @@ export function LiveVideoCall({
       from: userId,
       role,
       target: targetUserId,
-      reason: reason || "El inspector ha finalizado tu conexión a la videollamada.",
+      reason: reason || "El inspector ha finalizado tu conexi├│n a la videollamada.",
     });
   };
 
-  // ── Capturar screenshot del video remoto ──
+  // ÔöÇÔöÇ Capturar screenshot del video remoto ÔöÇÔöÇ
   const captureScreenshot = async () => {
-    // Priorizar video remoto (lo que muestra el asegurado), pero si no está
-    // disponible (ej: WebRTC aún conectando), usar video local como fallback
+    // Priorizar video remoto (lo que muestra el asegurado), pero si no est├í
+    // disponible (ej: WebRTC a├║n conectando), usar video local como fallback
     const remoteVideo = remoteVideoRef.current;
     const localVideo = localVideoRef.current;
     const hasRemoteFrame = remoteVideo && remoteVideo.readyState >= 2 && remoteVideo.videoWidth > 0;
@@ -719,7 +719,7 @@ export function LiveVideoCall({
     }
   };
 
-  // ── Grabación de sesión (solo inspector) ──
+  // ÔöÇÔöÇ Grabaci├│n de sesi├│n (solo inspector) ÔöÇÔöÇ
   const startRecording = () => {
     if (!remoteStreamRef.current) return;
     recordedChunksRef.current = [];
@@ -761,7 +761,7 @@ export function LiveVideoCall({
       }
     } catch (err) {
       console.error("[record] stop() error", err);
-      setError(err instanceof Error ? err.message : "Error al detener grabación");
+      setError(err instanceof Error ? err.message : "Error al detener grabaci├│n");
     }
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     setRecording(false);
@@ -833,13 +833,13 @@ export function LiveVideoCall({
       }
     } catch (err) {
       console.error("[record] upload error", err);
-      setError(err instanceof Error ? err.message : "Error al subir grabación");
+      setError(err instanceof Error ? err.message : "Error al subir grabaci├│n");
     } finally {
       mediaRecorderRef.current = null;
     }
   };
 
-  // ── Pantalla completa / ampliar video remoto ──
+  // ÔöÇÔöÇ Pantalla completa / ampliar video remoto ÔöÇÔöÇ
   const goFullscreen = async () => {
     setExpanded(true);
   };
@@ -850,7 +850,7 @@ export function LiveVideoCall({
     connected: "Conectado",
     disconnected: "Desconectado",
     failed: "Fallido",
-    rejected: "Sesión en uso",
+    rejected: "Sesi├│n en uso",
   };
 
   const stateColor: Record<ConnectionState, string> = {
@@ -873,9 +873,9 @@ export function LiveVideoCall({
   const hasSupervisor = peers.some((p) => p.role === "supervisor");
   const previewIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Broadcast de thumbnails al supervisor ──
+  // ÔöÇÔöÇ Broadcast de thumbnails al supervisor ÔöÇÔöÇ
   // Cuando el inspector detecta un supervisor, captura thumbnails del video
-  // remoto (asegurado) y local (inspector) cada 3 segundos y los envía via signaling.
+  // remoto (asegurado) y local (inspector) cada 3 segundos y los env├¡a via signaling.
   React.useEffect(() => {
     if (role !== "inspector") return;
 
@@ -937,6 +937,12 @@ export function LiveVideoCall({
               Esperando a que el {role === "inspector" ? "cliente" : "inspector"} se conecte...
             </span>
           )}
+          {recording && (
+            <span className="flex items-center gap-1.5 app-body font-medium text-rose-400">
+              <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+              REC {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, "0")}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {screenshotCount > 0 && (
@@ -971,13 +977,13 @@ export function LiveVideoCall({
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                           <span className="app-body text-white/70 truncate">
-                            {p.userId === connectedClientId ? "Asegurado en sesión" : "Conexión adicional"}
+                            {p.userId === connectedClientId ? "Asegurado en sesi├│n" : "Conexi├│n adicional"}
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
-                            kickPeer(p.userId, "El inspector ha finalizado tu conexión a la videollamada.");
+                            kickPeer(p.userId, "El inspector ha finalizado tu conexi├│n a la videollamada.");
                           }}
                           className="shrink-0 px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600 text-white app-body text-xs transition-colors"
                           title="Desconectar a este usuario"
@@ -996,7 +1002,7 @@ export function LiveVideoCall({
               type="button"
               onClick={() => setExpanded(false)}
               className="p-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white/80 transition-colors"
-              title="Volver a ventana pequeña"
+              title="Volver a ventana peque├▒a"
             >
               <Minimize2 className="h-4 w-4" />
             </button>
@@ -1029,7 +1035,7 @@ export function LiveVideoCall({
         {!minimized && state === "failed" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70">
             <AlertTriangle className="h-12 w-12 mb-3 text-rose-500" />
-            <p className="app-body font-medium">No se pudo establecer la conexión</p>
+            <p className="app-body font-medium">No se pudo establecer la conexi├│n</p>
             <p className="app-body text-white/50 mt-1">{error}</p>
           </div>
         )}
@@ -1038,24 +1044,24 @@ export function LiveVideoCall({
             <AlertTriangle className="h-12 w-12 mb-3 text-amber-500" />
             <p className="app-body font-medium text-amber-400">Videollamada no disponible</p>
             <p className="app-body text-white/60 mt-2 max-w-sm">
-              {rejectedReason || "Ya existe una sesión de videollamada en curso."}
+              {rejectedReason || "Ya existe una sesi├│n de videollamada en curso."}
             </p>
             <p className="app-body text-white/40 mt-3">
-              Puede continuar revisando las evidencias y firmas de la inspección en las demás pestañas.
+              Puede continuar revisando las evidencias y firmas de la inspecci├│n en las dem├ís pesta├▒as.
             </p>
           </div>
         )}
         {!minimized && state === "disconnected" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 px-6 text-center">
             <WifiOff className="h-12 w-12 mb-3 text-amber-500" />
-            <p className="app-body font-medium">El inspector desconectó la videollamada</p>
+            <p className="app-body font-medium">El inspector desconect├│ la videollamada</p>
             <p className="app-body text-white/50 mt-1">
               Esperando a que el inspector vuelva a conectar.
             </p>
           </div>
         )}
 
-        {/* Video local (PiP) — oculto cuando la sesión fue rechazada o minimizado */}
+        {/* Video local (PiP) ÔÇö oculto cuando la sesi├│n fue rechazada o minimizado */}
         {!minimized && state !== "rejected" && (
         <div className={cn("absolute overflow-hidden bg-black", minimized ? "bottom-1 right-1 w-8 h-6 rounded border border-white/20" : compact ? "bottom-2 right-2 w-20 h-14 rounded border border-white/20" : "bottom-4 right-4 w-32 sm:w-48 h-24 sm:h-36 rounded-lg border-2 border-white/20 shadow-2xl")}>
           <video
@@ -1072,13 +1078,13 @@ export function LiveVideoCall({
           )}
           {!minimized && (
             <div className="absolute bottom-1 left-1 app-body text-white/80 bg-black/60 rounded px-1 py-0.5">
-              Tú
+              T├║
             </div>
           )}
         </div>
         )}
 
-        {/* Botón ampliar (solo visible cuando NO está expandido) */}
+        {/* Bot├│n ampliar (solo visible cuando NO est├í expandido) */}
         {!minimized && peerJoined && !expanded && (
           <button
             type="button"
@@ -1091,7 +1097,7 @@ export function LiveVideoCall({
         )}
       </div>
 
-      {/* Notificación de screenshot — auto-dismiss a los 3s, sin botones */}
+      {/* Notificaci├│n de screenshot ÔÇö auto-dismiss a los 3s, sin botones */}
       {!minimized && lastScreenshot && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-zinc-900/95 rounded-xl shadow-2xl flex items-center gap-3 p-2 max-w-md">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1130,7 +1136,7 @@ export function LiveVideoCall({
           className={`${ctrlBtn} rounded-full transition-colors ${
             audioOn ? "bg-white/10 hover:bg-white/20 text-white" : "bg-rose-600 hover:bg-rose-700 text-white"
           }`}
-          title={audioOn ? "Silenciar micrófono" : "Activar micrófono"}
+          title={audioOn ? "Silenciar micr├│fono" : "Activar micr├│fono"}
         >
           {audioOn ? <Mic className={ctrlIcon} /> : <MicOff className={ctrlIcon} />}
         </button>
@@ -1141,7 +1147,7 @@ export function LiveVideoCall({
           className={`${ctrlBtn} rounded-full transition-colors ${
             videoOn ? "bg-white/10 hover:bg-white/20 text-white" : "bg-rose-600 hover:bg-rose-700 text-white"
           }`}
-          title={videoOn ? "Apagar cámara" : "Encender cámara"}
+          title={videoOn ? "Apagar c├ímara" : "Encender c├ímara"}
         >
           {videoOn ? <Video className={ctrlIcon} /> : <VideoOff className={ctrlIcon} />}
         </button>
@@ -1162,7 +1168,19 @@ export function LiveVideoCall({
           </button>
         )}
 
-        {/* Botón de grabar deshabilitado temporalmente */}
+        {role === "inspector" && (
+          <button
+            type="button"
+            onClick={recording ? stopRecording : startRecording}
+            disabled={!peerJoined}
+            className={`${ctrlBtn} rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              recording ? "bg-rose-600 hover:bg-rose-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
+            }`}
+            title={recording ? "Detener grabaci├│n" : "Grabar sesi├│n"}
+          >
+            {recording ? <Square className={ctrlIcon} /> : <Circle className={cn(ctrlIcon, "fill-white")} />}
+          </button>
+        )}
         </>
         )}
 
@@ -1182,7 +1200,7 @@ export function LiveVideoCall({
       {!compact && peerJoined && role === "inspector" && (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-white/40 app-body flex items-center gap-1 pointer-events-none">
           <ImageIcon className="h-3 w-3" />
-          Toca la cámara para capturar fotos del video en vivo
+          Toca la c├ímara para capturar fotos del video en vivo
         </div>
       )}
     </div>

@@ -53,6 +53,24 @@ export async function POST(request: NextRequest) {
     const validSources = ["upload", "screenshot_inspector", "screenshot_client", "live_video", "geo_map"];
     const sourceValue = source && validSources.includes(source) ? source : "upload";
 
+    // Validar que captured_by exista en profiles; si no, lo dejamos null
+    let capturedBy = userId || null;
+    if (capturedBy) {
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", capturedBy)
+        .maybeSingle();
+      if (!profileRow) {
+        logger.warn("Evidence register: userId no existe en profiles", {
+          component: "inspection-evidences-register",
+          action: "insert.evidence",
+          metadata: { userId: capturedBy },
+        });
+        capturedBy = null;
+      }
+    }
+
     const metadata: Record<string, unknown> = {
       originalName: typeof originalName === "string" ? originalName : fileCode,
       fileSize: typeof fileSize === "number" ? fileSize : null,
@@ -69,7 +87,7 @@ export async function POST(request: NextRequest) {
         type: dbType,
         url,
         description: fileCode,
-        captured_by: userId || null,
+        captured_by: capturedBy,
         captured_at: new Date().toISOString(),
         source: sourceValue,
         metadata,
