@@ -124,6 +124,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
   // El popover de IA ahora vive dentro de cada card (no estado global)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const modalCameraInputRef = useRef<HTMLInputElement>(null);
 
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
@@ -289,6 +290,41 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
       await handleFile(file);
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (modalCameraInputRef.current) modalCameraInputRef.current.value = "";
+  };
+
+  // Cámara directa: sube la foto sin abrir el modal de subida.
+  // Solo muestra un toast corto al terminar. Si se quiere borrar,
+  // se borra desde la lista de evidencias.
+  const handleDirectCamera = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    for (const rawFile of files) {
+      try {
+        const file = await convertHeicToJpeg(rawFile);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("sessionId", sessionId);
+        formData.append("originalName", file.name);
+        toast.loading("Subiendo foto...", { id: "direct-cam" });
+        const res = await fetch("/api/inspection/evidences/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || `Error ${res.status}`);
+        }
+        toast.success("Foto subida", { id: "direct-cam", duration: 2000 });
+      } catch (err) {
+        toast.error("No se pudo subir la foto", {
+          id: "direct-cam",
+          description: err instanceof Error ? err.message : undefined,
+        });
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
+    queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
     if (cameraInputRef.current) cameraInputRef.current.value = "";
   };
 
@@ -349,6 +385,23 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
               >
                 <Upload className="h-3.5 w-3.5" />
               </Button>
+              {/* Cámara directa: toma foto y sube sin abrir modal */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleDirectCamera}
+                className="hidden"
+                id="evidence-camera-direct"
+              />
+              <label
+                htmlFor="evidence-camera-direct"
+                className="btn-icon-sm flex items-center justify-center cursor-pointer"
+                title="Tomar foto"
+              >
+                <Camera className="h-3.5 w-3.5" />
+              </label>
             </div>
           </div>
         </div>
@@ -408,7 +461,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
                   />
                   {/* Botón tomar foto — solo mobile */}
                   <input
-                    ref={cameraInputRef}
+                    ref={modalCameraInputRef}
                     type="file"
                     accept="image/*"
                     capture="environment"
