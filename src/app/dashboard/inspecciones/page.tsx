@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useMemo, useCallback, Suspense } from "react";
+import { useState, useMemo, useCallback, Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import {
   getInspectionSessionsLight,
+  getInspectionSessionsCount,
   startInspection,
   resumeInspection,
   getWorkPeriods,
@@ -82,10 +82,29 @@ function InspectionsPageContent() {
   const [inspectorFilter, setInspectorFilter] = useState<string[]>([]);
   const [internalNumberFilter, setInternalNumberFilter] = useState("");
   const [logSessionId, setLogSessionId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
-    queryKey: ["inspection-sessions"],
-    queryFn: () => getInspectionSessionsLight(),
+    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter],
+    queryFn: () => getInspectionSessionsLight(undefined, {
+      page,
+      pageSize,
+      statusFilter: statusFilter.length ? statusFilter : undefined,
+      inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
+    }),
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+  });
+
+  const { data: totalCount } = useQuery({
+    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter],
+    queryFn: () => getInspectionSessionsCount(undefined, {
+      statusFilter: statusFilter.length ? statusFilter : undefined,
+      inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
+    }),
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
   });
 
   const { data: users } = useQuery({
@@ -198,22 +217,26 @@ function InspectionsPageContent() {
           sessionStatusLabels[s.status]?.toLowerCase().includes(search.toLowerCase()) ||
           s.claim?.liquidation_number?.toLowerCase().includes(search.toLowerCase()) ||
           s.inspection_number?.toLowerCase().includes(search.toLowerCase())
-        const matchesStatus = statusFilter.length === 0 || statusFilter.includes(s.status);
-        const matchesInspector =
-          inspectorFilter.length === 0 ||
-          inspectorFilter.includes(s.inspector_id || s.claim?.inspector_id || "");
         const filterDigits = internalNumberFilter.replace(/\D/g, "");
         const matchesInternal =
           filterDigits === "" ||
           (s.claim?.liquidation_number || "").replace(/\D/g, "").includes(filterDigits)
-        return matchesSearch && matchesStatus && matchesInspector && matchesInternal;
+        return matchesSearch && matchesInternal;
       }) ?? [],
-    [sessions, search, statusFilter, inspectorFilter, internalNumberFilter]
+    [sessions, search, internalNumberFilter]
   );
 
   const { sorted: sortedSessions, sortKey, sortDir, toggleSort } = useTableSort(filtered, accessors, null);
 
-  const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sortedSessions);
+  const total = totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const paginatedData = sortedSessions;
+  const handlePageSizeChange = (size: number) => { setPageSize(size); setPage(1); };
+
+  // Resetear a página 1 cuando cambian filtros server-side
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, inspectorFilter]);
 
   return (
     <div className="app-page">
@@ -276,6 +299,7 @@ function InspectionsPageContent() {
                 <SelectItem value="cancelled">Cancelada</SelectItem>
               </SelectContent>
             </Select>
+            {(dataAccess?.is_admin || dataAccess?.see_all_client_claims) && (
             <Select
               multiple
               value={inspectorFilter}
@@ -291,6 +315,7 @@ function InspectionsPageContent() {
                 ))}
               </SelectContent>
             </Select>
+            )}
           </div>
           <Pagination variant="controls" page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         </div>

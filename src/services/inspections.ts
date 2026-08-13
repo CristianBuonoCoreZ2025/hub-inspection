@@ -139,13 +139,50 @@ export async function getInspectionSessions(claimId?: string) {
   return sessions;
 }
 
-export async function getInspectionSessionsLight(claimId?: string) {
-  const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
-    select: `${SESSION_SELECT}, created_at, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`,
-    ...(claimId ? { eq: { claim_id: claimId } } : {}),
-    order: { column: "created_at", ascending: false },
-    limit: 200,
-  });
+export async function getInspectionSessionsLight(
+  claimId?: string,
+  options?: {
+    page?: number;
+    pageSize?: number;
+    statusFilter?: string[];
+    inspectorFilter?: string[];
+    sortKey?: string | null;
+    sortDir?: "asc" | "desc";
+    q?: string;
+  }
+) {
+  const supabase = getSupabaseClient();
+
+  const hasPagination = options?.page !== undefined || options?.pageSize !== undefined;
+  const effectivePageSize = hasPagination
+    ? Math.max(1, Math.min(options?.pageSize ?? 50, 200))
+    : 200;
+  const effectivePage = hasPagination ? Math.max(1, options?.page ?? 1) : 1;
+  const from = (effectivePage - 1) * effectivePageSize;
+  const to = from + effectivePageSize - 1;
+
+  const columnMap: Record<string, string> = {
+    scheduled: "scheduled_at",
+    status: "status",
+    created_at: "created_at",
+  };
+  const orderColumn = (options?.sortKey && columnMap[options.sortKey]) ? columnMap[options.sortKey] : "created_at";
+  const ascending = (options?.sortDir === "asc");
+
+  let query = supabase
+    .from("inspection_sessions")
+    .select(`${SESSION_SELECT}, created_at, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`)
+    .order(orderColumn, { ascending });
+
+  if (claimId) query = query.eq("claim_id", claimId);
+  if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
+  if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
+  query = query.range(from, to);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const sessions = (data as SessionWithRelations[]) ?? [];
 
   for (const s of sessions) {
     if (s.claim?.claims_participants) {
@@ -161,6 +198,29 @@ export async function getInspectionSessionsLight(claimId?: string) {
   }
 
   return sessions;
+}
+
+export async function getInspectionSessionsCount(
+  claimId?: string,
+  options?: {
+    statusFilter?: string[];
+    inspectorFilter?: string[];
+    q?: string;
+  }
+) {
+  const supabase = getSupabaseClient();
+
+  let query = supabase
+    .from("inspection_sessions")
+    .select("id", { count: "exact", head: true });
+
+  if (claimId) query = query.eq("claim_id", claimId);
+  if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
+  if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
+
+  const { count, error } = await query;
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 export interface SessionForReassign {
