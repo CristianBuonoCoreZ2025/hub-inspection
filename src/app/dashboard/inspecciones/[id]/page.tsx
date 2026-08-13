@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -36,6 +36,7 @@ import {
  FileText,
  MapPin,
  MapPinned,
+ Map,
  User,
  Mail,
  Phone,
@@ -268,23 +269,45 @@ export default function InspectionDetailPage() {
  // Realtime: reflejar firmas del asegurado inmediatamente en el dashboard
  useRealtime("inspection_signatures", [["inspection-session", sessionId], ["signatures", sessionId]], !!sessionId);
 
- // Realtime: detectar cuando el asegurado captura la ubicación (inspección remota)
- // y mostrar un toast al inspector
- const prevGeoCapturedAtRef = useRef<string | null>(session?.geo_captured_at || null);
- useEffect(() => {
-   if (!sessionId) return;
-   const supabase = getSupabaseClient();
-   const channel = supabase
-     .channel(`geo-status-${sessionId}`)
-     .on(
-       "postgres_changes",
-       { event: "UPDATE", schema: "public", table: "inspection_sessions", filter: `id=eq.${sessionId}` },
-       (payload: { new: Record<string, unknown> }) => {
+ // Detectar cuando el asegurado captura la ubicacion (inspeccion remota)
+// Doble mecanismo: polling (la sesion se refresca cada 10s) + realtime Supabase
+const prevGeoCapturedAtRef = useRef<string | null>(null);
+const showGeoPopup = useCallback((lat: number, lng: number, distance: number | null, status: string) => {
+  setGeoCapturedData({ lat, lng, distance, status });
+  setGeoCapturedModalOpen(true);
+  queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
+  toast.success("Ubicacion capturada", {
+    description: "El asegurado ha capturado su ubicacion. Revisa el mapa para guardar la evidencia.",
+    duration: 8000,
+  });
+}, [sessionId, queryClient]);
+
+// Deteccion por polling: cuando session.geo_captured_at cambia, levantar popup
+useEffect(() => {
+  if (!session?.geo_captured_at) return;
+  if (session.geo_status !== "verified" && session.geo_status !== "out_of_range") return;
+  const current = session.geo_captured_at;
+  if (current !== prevGeoCapturedAtRef.current) {
+    prevGeoCapturedAtRef.current = current;
+    if (session.geo_latitude != null && session.geo_longitude != null) {
+      showGeoPopup(session.geo_latitude, session.geo_longitude, session.geo_distance_meters, session.geo_status);
+    }
+  }
+}, [session?.geo_captured_at, session?.geo_status, session?.geo_latitude, session?.geo_longitude, session?.geo_distance_meters, showGeoPopup]);
+
+// Deteccion por realtime (backup: deteccion inmediata sin esperar polling)
+useEffect(() => {
+  if (!sessionId) return;
+  const supabase = getSupabaseClient();
+  const channel = supabase
+    .channel(`geo-status-${sessionId}`)
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "inspection_sessions", filter: `id=eq.${sessionId}` },
+      (payload: { new: Record<string, unknown> }) => {
         const newGeoStatus = payload.new?.geo_status as string | null;
         const newGeoCapturedAt = payload.new?.geo_captured_at as string | null;
         const oldGeoCapturedAt = prevGeoCapturedAtRef.current;
-        // Detectar nueva captura: geo_captured_at cambio y hay status valido
-        // (funciona tambien al recapturar: mismo status pero nueva fecha)
         const isCapture = newGeoCapturedAt && newGeoCapturedAt !== oldGeoCapturedAt &&
           (newGeoStatus === "verified" || newGeoStatus === "out_of_range");
         if (isCapture) {
@@ -293,16 +316,9 @@ export default function InspectionDetailPage() {
           const newLng = payload.new?.geo_longitude as number | null;
           const newDistance = payload.new?.geo_distance_meters as number | null;
           if (newLat != null && newLng != null) {
-            setGeoCapturedData({ lat: newLat, lng: newLng, distance: newDistance, status: newGeoStatus });
-            setGeoCapturedModalOpen(true);
+            showGeoPopup(newLat, newLng, newDistance, newGeoStatus);
           }
           queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
-          queryClient.invalidateQueries({ queryKey: ["inspection-session-full", sessionId] });
-          queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
-          toast.success("Ubicacion capturada", {
-            description: "El asegurado ha capturado su ubicacion. Revisa el mapa para guardar la evidencia.",
-            duration: 8000,
-          });
         }
       },
     )
@@ -898,7 +914,7 @@ enabled: activeTab === "informe",
  title="Ver ubicación del siniestro en el mapa"
  onClick={() => setMapViewOpen(true)}
  >
- <MapPinned className="h-3.5 w-3.5 text-primary" />
+ <Map className="h-3.5 w-3.5 text-primary" />
  </Button>
  )}
  </div>
