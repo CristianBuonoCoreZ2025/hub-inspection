@@ -183,7 +183,7 @@ export async function getInspectionSessionsLight(
     const rpcSortColumn = options?.sortKey ? (rpcSortMap[options.sortKey] || "created_at") : "created_at";
     // 1. RPC: obtener IDs ordenados + total
     const { data: rpcData, error: rpcError } = await supabase.rpc(
-      "get_inspection_sessions_ordered",
+      "get_inspection_sessions_ordered_v3",
       {
         p_page: effectivePage,
         p_page_size: effectivePageSize,
@@ -191,7 +191,7 @@ export async function getInspectionSessionsLight(
         p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
         p_internal_number: options?.internalNumber || null,
         p_sort_column: rpcSortColumn,
-        p_sort_ascending: options?.sortDir === "asc",
+        p_sort_dir: options?.sortDir || "desc",
       }
     );
     if (rpcError) throw new Error(rpcError.message);
@@ -279,14 +279,14 @@ export async function getInspectionSessionsCount(
   // Si hay filtro por internalNumber, usar RPC porque ilike con notacion
   // de punto no funciona en PostgREST
   if (options?.internalNumber) {
-    const { data, error } = await supabase.rpc("get_inspection_sessions_ordered", {
+    const { data, error } = await supabase.rpc("get_inspection_sessions_ordered_v3", {
       p_page: 1,
       p_page_size: 1,
       p_status_filter: options?.statusFilter?.length ? options.statusFilter : null,
       p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
       p_internal_number: options.internalNumber,
       p_sort_column: "created_at",
-      p_sort_ascending: false,
+      p_sort_dir: "desc",
     });
     if (error) throw new Error(error.message);
     return (data as { total_count: number }[])[0]?.total_count ?? 0;
