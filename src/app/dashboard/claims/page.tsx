@@ -1334,16 +1334,16 @@ disabled={!!exportProgress}
 >
  {exportProgress ? (
    <>
-     <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" className="opacity-25" />
        <circle
-         cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"
+         cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5"
          strokeDasharray={2 * Math.PI * 10}
          strokeDashoffset={2 * Math.PI * 10 * (1 - (exportProgress.total > 0 ? exportProgress.current / exportProgress.total : 0))}
          strokeLinecap="round"
          transform="rotate(-90 12 12)"
        />
-       <text x="12" y="15" textAnchor="middle" fontSize="7" fill="currentColor" fontWeight="600">
+       <text x="12" y="16" textAnchor="middle" fontSize="9" fill="currentColor" fontWeight="700">
          {exportProgress.total > 0 ? Math.round((exportProgress.current / exportProgress.total) * 100) : 0}
        </text>
      </svg>

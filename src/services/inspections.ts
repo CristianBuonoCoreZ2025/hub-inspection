@@ -159,47 +159,76 @@ export async function getInspectionSessionsLight(
     ? Math.max(1, Math.min(options?.pageSize ?? 50, 200))
     : 200;
   const effectivePage = hasPagination ? Math.max(1, options?.page ?? 1) : 1;
-  const from = (effectivePage - 1) * effectivePageSize;
-  const to = from + effectivePageSize - 1;
 
-  // Mapeo de sortKey → columna para ordenar
-  // PostgREST soporta ordenar por columnas de FK con notacion de punto:
-  //   order=claim.liquidation_number.asc
-  // Esto ordena el PARENT (inspection_sessions) por la columna del FK,
-  // no los recursos embebidos.
-  // liquidation_number se ordena alfabeticamente pero funciona porque tiene
-  // ceros a la izquierda (L-000000014 < L-000000100 alfanumericamente)
-  const sortMap: Record<string, string> = {
-    scheduled: "scheduled_at",
-    status: "status",
-    created_at: "created_at",
-    internal_number: "claim.liquidation_number",
-    inspection: "claim_action.code",
-    client_reference: "claim.client_reference",
-    inspector: "inspector_id",
-    address: "claim.claim_address",
-  };
-  const orderColumn = (options?.sortKey && sortMap[options.sortKey]) ? sortMap[options.sortKey] : "created_at";
-  const ascending = (options?.sortDir === "asc");
+  // Columnas que requieren RPC (PostgREST no puede ordenar parent por FK)
+  const fkSortColumns = new Set(["internal_number", "inspection", "client_reference", "address"]);
+  const useRpc = options?.sortKey && fkSortColumns.has(options.sortKey);
 
+  let orderedIds: string[] = [];
+  let totalCount: number | null = null;
+
+  if (useRpc) {
+    // 1. RPC: obtener IDs ordenados + total
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      "get_inspection_sessions_ordered",
+      {
+        p_page: effectivePage,
+        p_page_size: effectivePageSize,
+        p_status_filter: options?.statusFilter?.length ? options.statusFilter : null,
+        p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
+        p_internal_number: options?.internalNumber || null,
+        p_sort_column: options?.sortKey,
+        p_sort_ascending: options?.sortDir === "asc",
+      }
+    );
+    if (rpcError) throw new Error(rpcError.message);
+    orderedIds = (rpcData as { id: string; total_count: number }[]).map((r) => r.id);
+    totalCount = (rpcData as { total_count: number }[])[0]?.total_count ?? 0;
+    if (orderedIds.length === 0) return [];
+  }
+
+  // 2. Query principal: traer datos completos
   let query = supabase
     .from("inspection_sessions")
-    .select(`${SESSION_SELECT}, created_at, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`)
-    .order(orderColumn, { ascending });
+    .select(`${SESSION_SELECT}, created_at, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`);
 
-  if (claimId) query = query.eq("claim_id", claimId);
-  if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
-  if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
-  if (options?.internalNumber) {
-    const digits = options.internalNumber.replace(/\D/g, "");
-    if (digits) query = query.ilike("claim.liquidation_number", `%${digits}%`);
+  if (useRpc) {
+    // Traer solo los IDs que la RPC retorno, en el mismo orden
+    query = query.in("id", orderedIds);
+  } else {
+    // Sort directo (columnas nativas)
+    const directSortMap: Record<string, string> = {
+      scheduled: "scheduled_at",
+      status: "status",
+      created_at: "created_at",
+      inspector: "inspector_id",
+    };
+    const orderColumn = (options?.sortKey && directSortMap[options.sortKey]) ? directSortMap[options.sortKey] : "created_at";
+    const ascending = (options?.sortDir === "asc");
+    query = query.order(orderColumn, { ascending });
+
+    if (claimId) query = query.eq("claim_id", claimId);
+    if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
+    if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
+    if (options?.internalNumber) {
+      const digits = options.internalNumber.replace(/\D/g, "");
+      if (digits) query = query.ilike("claim.liquidation_number", `%${digits}%`);
+    }
+    const from = (effectivePage - 1) * effectivePageSize;
+    const to = from + effectivePageSize - 1;
+    query = query.range(from, to);
   }
-  query = query.range(from, to);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  const sessions = (data as SessionWithRelations[]) ?? [];
+  let sessions = (data as SessionWithRelations[]) ?? [];
+
+  // Si useRpc, reordenar sessions segun el orden de orderedIds
+  if (useRpc && orderedIds.length > 0) {
+    const orderMap = new Map(orderedIds.map((id, idx) => [id, idx]));
+    sessions = sessions.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+  }
 
   for (const s of sessions) {
     if (s.claim?.claims_participants) {
@@ -212,6 +241,11 @@ export async function getInspectionSessionsLight(
     if (ca.claim_action?.code) {
       ca.inspection_number = ca.claim_action.code;
     }
+  }
+
+  // Guardar totalCount en el primer elemento para que la pagina lo lea
+  if (useRpc && totalCount !== null && sessions.length > 0) {
+    (sessions[0] as SessionWithRelations & { _totalCount?: number })._totalCount = totalCount;
   }
 
   return sessions;
@@ -228,6 +262,22 @@ export async function getInspectionSessionsCount(
 ) {
   const supabase = getSupabaseClient();
 
+  // Si hay filtro por internalNumber, usar RPC porque ilike con notacion
+  // de punto no funciona en PostgREST
+  if (options?.internalNumber) {
+    const { data, error } = await supabase.rpc("get_inspection_sessions_ordered", {
+      p_page: 1,
+      p_page_size: 1,
+      p_status_filter: options?.statusFilter?.length ? options.statusFilter : null,
+      p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
+      p_internal_number: options.internalNumber,
+      p_sort_column: "created_at",
+      p_sort_ascending: false,
+    });
+    if (error) throw new Error(error.message);
+    return (data as { total_count: number }[])[0]?.total_count ?? 0;
+  }
+
   let query = supabase
     .from("inspection_sessions")
     .select("id", { count: "exact" })
@@ -236,10 +286,6 @@ export async function getInspectionSessionsCount(
   if (claimId) query = query.eq("claim_id", claimId);
   if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
   if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
-  if (options?.internalNumber) {
-    const digits = options.internalNumber.replace(/\D/g, "");
-    if (digits) query = query.ilike("claim.liquidation_number", `%${digits}%`);
-  }
 
   const { count, error } = await query;
   if (error) throw new Error(error.message);

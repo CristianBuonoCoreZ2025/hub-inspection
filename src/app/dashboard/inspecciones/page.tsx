@@ -108,6 +108,9 @@ function InspectionsPageContent() {
     gcTime: 5 * 60_000,
   });
 
+  const fkSortColumns = ["internal_number", "inspection", "client_reference", "address"];
+  const isFkSort = !!(sortKey && fkSortColumns.includes(sortKey));
+
   const { data: totalCount } = useQuery({
     queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter, internalNumberFilter],
     queryFn: () => getInspectionSessionsCount(undefined, {
@@ -115,6 +118,7 @@ function InspectionsPageContent() {
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
       internalNumber: internalNumberFilter || undefined,
     }),
+    enabled: !isFkSort,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
   });
@@ -249,7 +253,11 @@ function InspectionsPageContent() {
     return filtered;
   }, [filtered, sortKey, sortDir]);
 
-  const total = totalCount ?? 0;
+  // Si hay sort por FK, la RPC ya trae el count en _totalCount del primer elemento
+  const rpcTotal = (isFkSort && sessions && sessions.length > 0)
+    ? (sessions[0] as { _totalCount?: number })._totalCount
+    : undefined;
+  const total = rpcTotal ?? totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const paginatedData = sortedSessions;
   const handlePageSizeChange = (size: number) => { setPageSize(size); setPage(1); };
