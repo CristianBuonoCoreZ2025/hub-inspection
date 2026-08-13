@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, Mail, Send, RefreshCw, Clock, CheckCircle2, AlertTriangle, Loader2, UserRound } from "lucide-react";
+import { Copy, Mail, Send, RefreshCw, Clock, CheckCircle2, AlertTriangle, Loader2, MapPinned } from "lucide-react";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -237,7 +237,7 @@ export function MagicLinkSender({
             <RefreshCw className={`h-3.5 w-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
           </Button>
         )}
-        {/* Rehabilitar captura — solo durante validez, icono user+pin (UserRound) */}
+        {/* Rehabilitar captura — solo durante validez, icono mapa con pin */}
         {isWithinValidity && (
           <Button
             size="sm"
@@ -250,7 +250,7 @@ export function MagicLinkSender({
             {enableRecaptureMutation.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <UserRound className="h-3.5 w-3.5 text-primary" />
+              <MapPinned className="h-3.5 w-3.5 text-primary" />
             )}
           </Button>
         )}
