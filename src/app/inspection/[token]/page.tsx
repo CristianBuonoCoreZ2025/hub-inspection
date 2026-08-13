@@ -14,6 +14,7 @@ import {
 import { useClaimsAppPresence } from "@/hooks/use-claims-app-presence";
 import { convertHeicToJpeg } from "@/lib/heic-convert";
 import { logConnectionEvent, type ConnectionLogEntry } from "@/services/connection-logs";
+import { logInspectionEvent } from "@/services/inspection-events";
 
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
@@ -1215,6 +1216,16 @@ function EvidencesTab({
     const failed: File[] = [];
     for (let i = 0; i < files.length; i++) {
       const rawFile = files[i];
+      const isVideo = rawFile.type.startsWith("video/");
+      // Log: evento de captura iniciado
+      logInspectionEvent({
+        sessionId,
+        role: "insured",
+        eventType: isVideo ? "video_recorded" : "photo_taken",
+        eventDetail: isVideo ? `Video subido: ${rawFile.name}` : `Foto subida: ${rawFile.name}`,
+        metadata: { fileName: rawFile.name, fileSize: rawFile.size, source: "magic-link" },
+        magicLinkToken: token,
+      });
       try {
         const file = await convertHeicToJpeg(rawFile);
         let lastErr: Error | null = null;
@@ -1238,9 +1249,25 @@ function EvidencesTab({
         }
         if (lastErr) throw lastErr;
         setProgress((p) => ({ ...p, completed: p.completed + 1 }));
+        logInspectionEvent({
+          sessionId,
+          role: "insured",
+          eventType: "upload_completed",
+          eventDetail: `Subido: ${rawFile.name}`,
+          metadata: { fileName: rawFile.name, fileSize: rawFile.size, source: "magic-link" },
+          magicLinkToken: token,
+        });
       } catch {
         failed.push(rawFile);
         setProgress((p) => ({ ...p, failed: p.failed + 1 }));
+        logInspectionEvent({
+          sessionId,
+          role: "insured",
+          eventType: "upload_failed",
+          eventDetail: `Error: ${rawFile.name}`,
+          metadata: { fileName: rawFile.name, source: "magic-link" },
+          magicLinkToken: token,
+        });
       }
     }
     setFailedFiles(failed);

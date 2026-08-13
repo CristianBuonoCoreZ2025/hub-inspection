@@ -59,6 +59,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useAlert } from "@/components/ui/alert-context";
 import { Badge } from "@/components/ui/badge";
 import { MagicLinkSender } from "@/components/ui/magic-link-sender";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
@@ -94,6 +95,7 @@ import ReportTab from "./report-tab";
 import SketchesTab from "./sketches-tab";
 import ChatTab from "./chat-tab";
 import ConnectionLogsTab from "./connection-logs-tab";
+import EventLogsTab from "./event-logs-tab";
 import { LiveVideoCall } from "@/components/inspection/live-video-call";
 import { logConnectionEvent } from "@/services/connection-logs";
 
@@ -160,6 +162,7 @@ export default function InspectionDetailPage() {
  const router = useRouter();
  const queryClient = useQueryClient();
  const confirmAction = useConfirm();
+ const showAlert = useAlert();
  const sessionId = params.id as string;
  const { canView } = usePermissions();
  const { profile, dataAccess } = useAuth();
@@ -250,13 +253,16 @@ export default function InspectionDetailPage() {
      prevGeoCapturedAtRef.current = null;
      queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
      setGeoCapturedModalOpen(false);
-     toast.success("Recaptura habilitada", {
-       description: "El asegurado ya puede capturar su ubicacion nuevamente.",
-       duration: 5000,
+     showAlert({
+       title: "Recaptura habilitada",
+       description: "El asegurado ya puede capturar su ubicación nuevamente.",
+       type: "info",
      });
    } catch (err) {
-     toast.error("No se pudo habilitar la recaptura", {
+     showAlert({
+       title: "No se pudo habilitar la recaptura",
        description: err instanceof Error ? err.message : "Error desconocido",
+       type: "error",
      });
    } finally {
      setGeoRecapturing(false);
@@ -728,6 +734,7 @@ enabled: activeTab === "informe",
  { id: "firmas", label: "Firmas", icon: User, section: "inspecciones_firmas" },
  { id: "informe", label: "Informe", icon: FileText, section: "inspecciones_informe" },
  { id: "conexiones", label: "Conexiones", icon: Wifi, section: "inspecciones_detalle" },
+ { id: "eventos", label: "Eventos", icon: FileText, section: "inspecciones_detalle" },
  ];
 
  const tabs = allTabs.filter(t => canView(t.section));
@@ -1332,6 +1339,13 @@ enabled: activeTab === "informe",
  {activeTab === "conexiones" && (
  <div className="mt-4">
  <ConnectionLogsTab sessionId={session.id} />
+ </div>
+ )}
+
+ {/* ── TAB: EVENTOS ── */}
+ {activeTab === "eventos" && (
+ <div className="mt-4">
+ <EventLogsTab sessionId={session.id} />
  </div>
  )}
 

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteEvidence, updateEvidenceInclude } from "@/services/inspections";
+import { logInspectionEvent } from "@/services/inspection-events";
 import { toast } from "sonner";
 import {
   Upload, Trash2, ImageIcon, Video, FileText, ExternalLink,
@@ -156,10 +157,11 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 
   const deleteMutation = useMutation({
     mutationFn: deleteEvidence,
-    onSuccess: () => {
+    onSuccess: (_data, evidenceId) => {
       queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
       toast.success("Evidencia eliminada");
+      logInspectionEvent({ sessionId, role: "adjuster", eventType: "evidence_deleted", evidenceId });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -180,6 +182,15 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
       xhr,
     };
     setUploadQueue((q) => [...q, item]);
+
+    // Log: upload iniciado
+    logInspectionEvent({
+      sessionId,
+      role: "adjuster",
+      eventType: "upload_started",
+      eventDetail: `Subiendo: ${file.name}`,
+      metadata: { fileName: file.name, fileSize: file.size, source: "modal" },
+    });
 
     const formData = new FormData();
     formData.append("file", file);
@@ -230,6 +241,13 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
           queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
           toast.success(`${file.name} subido`);
+          logInspectionEvent({
+            sessionId,
+            role: "adjuster",
+            eventType: "upload_completed",
+            eventDetail: `Subido: ${file.name}`,
+            metadata: { fileName: file.name, fileSize: file.size, source: "modal" },
+          });
         } catch {
           setUploadQueue((q) =>
             q.map((it) =>
@@ -238,6 +256,13 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
                 : it,
             ),
           );
+          logInspectionEvent({
+            sessionId,
+            role: "adjuster",
+            eventType: "upload_failed",
+            eventDetail: `Error: ${file.name}`,
+            metadata: { fileName: file.name, error: "Respuesta inválida del servidor" },
+          });
         }
       } else {
         let msg = "Error al subir archivo";
@@ -248,6 +273,13 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           msg = `Error ${xhr.status}: ${xhr.statusText}`;
         }
         setUploadQueue((q) => q.map((it) => (it.id === id ? { ...it, status: "error", errorMsg: msg } : it)));
+        logInspectionEvent({
+          sessionId,
+          role: "adjuster",
+          eventType: "upload_failed",
+          eventDetail: `Error: ${file.name}`,
+          metadata: { fileName: file.name, error: msg },
+        });
       }
       // El cierre automático del modal se maneja en useEffect cuando
       // todas las subidas llegan a done/error.
@@ -255,6 +287,13 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 
     xhr.addEventListener("error", () => {
       setUploadQueue((q) => q.map((it) => (it.id === id ? { ...it, status: "error", errorMsg: "Error de red" } : it)));
+      logInspectionEvent({
+        sessionId,
+        role: "adjuster",
+        eventType: "upload_failed",
+        eventDetail: `Error de red: ${file.name}`,
+        metadata: { fileName: file.name, error: "network" },
+      });
     });
 
     xhr.addEventListener("abort", () => {
@@ -303,6 +342,15 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
     if (files.length === 0) return;
     const toastId = "direct-cam";
     let fileIdx = 0;
+
+    // Log: evento de captura iniciado
+    logInspectionEvent({
+      sessionId,
+      role: "adjuster",
+      eventType: kind === "video" ? "video_recorded" : "photo_taken",
+      eventDetail: kind === "video" ? "Video grabado desde cámara directa" : "Foto tomada desde cámara directa",
+      metadata: { count: files.length, fileNames: files.map(f => f.name) },
+    });
 
     const uploadNext = () => {
       if (fileIdx >= files.length) {
