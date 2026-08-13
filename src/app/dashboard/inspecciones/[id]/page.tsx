@@ -270,7 +270,7 @@ export default function InspectionDetailPage() {
 
  // Realtime: detectar cuando el asegurado captura la ubicación (inspección remota)
  // y mostrar un toast al inspector
- const prevGeoStatusRef = useRef(session?.geo_status || null);
+ const prevGeoCapturedAtRef = useRef<string | null>(session?.geo_captured_at || null);
  useEffect(() => {
    if (!sessionId) return;
    const supabase = getSupabaseClient();
@@ -280,10 +280,15 @@ export default function InspectionDetailPage() {
        "postgres_changes",
        { event: "UPDATE", schema: "public", table: "inspection_sessions", filter: `id=eq.${sessionId}` },
        (payload: { new: Record<string, unknown> }) => {
-         const newGeoStatus = payload.new?.geo_status as string | null;
-         const oldGeoStatus = prevGeoStatusRef.current;
-         if (newGeoStatus && newGeoStatus !== oldGeoStatus && (newGeoStatus === "verified" || newGeoStatus === "out_of_range")) {
-           prevGeoStatusRef.current = newGeoStatus;
+        const newGeoStatus = payload.new?.geo_status as string | null;
+        const newGeoCapturedAt = payload.new?.geo_captured_at as string | null;
+        const oldGeoCapturedAt = prevGeoCapturedAtRef.current;
+        // Detectar nueva captura: geo_captured_at cambio y hay status valido
+        // (funciona tambien al recapturar: mismo status pero nueva fecha)
+        const isCapture = newGeoCapturedAt && newGeoCapturedAt !== oldGeoCapturedAt &&
+          (newGeoStatus === "verified" || newGeoStatus === "out_of_range");
+        if (isCapture) {
+          prevGeoCapturedAtRef.current = newGeoCapturedAt;
           const newLat = payload.new?.geo_latitude as number | null;
           const newLng = payload.new?.geo_longitude as number | null;
           const newDistance = payload.new?.geo_distance_meters as number | null;
@@ -291,25 +296,25 @@ export default function InspectionDetailPage() {
             setGeoCapturedData({ lat: newLat, lng: newLng, distance: newDistance, status: newGeoStatus });
             setGeoCapturedModalOpen(true);
           }
-           queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
-           queryClient.invalidateQueries({ queryKey: ["inspection-session-full", sessionId] });
-           queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
-           toast.success("Ubicación capturada", {
-             description: "El asegurado ha capturado su ubicacion. Revisa el mapa para guardar la evidencia.ón.",
-             duration: 8000,
-           });
-         }
-       },
-     )
-     .subscribe();
-   return () => { supabase.removeChannel(channel); };
-   // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [sessionId]);
+          queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+          queryClient.invalidateQueries({ queryKey: ["inspection-session-full", sessionId] });
+          queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
+          toast.success("Ubicacion capturada", {
+            description: "El asegurado ha capturado su ubicacion. Revisa el mapa para guardar la evidencia.",
+            duration: 8000,
+          });
+        }
+      },
+    )
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [sessionId]);
 
- const { data: fullSession, isLoading: isFullLoading } = useQuery({
- queryKey: ["inspection-session-full", sessionId],
- queryFn: () => getInspectionSessionById(sessionId),
- enabled: activeTab === "informe",
+const { data: fullSession, isLoading: isFullLoading } = useQuery({
+queryKey: ["inspection-session-full", sessionId],
+queryFn: () => getInspectionSessionById(sessionId),
+enabled: activeTab === "informe",
  retry: false,
  staleTime: 5 * 60 * 1000,
  });

@@ -37,9 +37,20 @@ export async function POST(req: NextRequest) {
       metadata: { userId: user.id, sessionId },
     });
 
+    // Al habilitar recaptura, limpiar los campos geo_* para que el asegurado
+    // empiece de cero. La ubicacion anterior ya no sirve.
     const { data: updated, error } = await admin
       .from("inspection_sessions")
-      .update({ geo_recapture_enabled: true })
+      .update({
+        geo_recapture_enabled: true,
+        geo_latitude: null,
+        geo_longitude: null,
+        geo_captured_at: null,
+        geo_captured_by: null,
+        geo_distance_meters: null,
+        geo_status: "pending",
+        geo_map_url: null,
+      })
       .eq("id", sessionId)
       .select("id, geo_recapture_enabled")
       .single();

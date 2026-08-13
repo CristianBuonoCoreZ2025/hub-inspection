@@ -1795,5 +1795,16 @@ export async function updateReport(id: string, input: Partial<import("@/types").
 }
 
 export async function enableGeoRecapture(sessionId: string) {
-  return updateRow<InspectionSession>("inspection_sessions", sessionId, { geo_recapture_enabled: true }, SESSION_SELECT);
+  // Al habilitar recaptura, limpiar los campos geo_* para que el asegurado
+  // empiece de cero. La ubicacion anterior ya no sirve.
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    geo_recapture_enabled: true,
+    geo_latitude: null,
+    geo_longitude: null,
+    geo_captured_at: null,
+    geo_captured_by: null,
+    geo_distance_meters: null,
+    geo_status: "pending",
+    geo_map_url: null,
+  }, SESSION_SELECT);
 }

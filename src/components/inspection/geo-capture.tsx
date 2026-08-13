@@ -166,12 +166,23 @@ export function GeoCapture({
   );
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Para inspecciones remotas: bloquear el boton inmediatamente despues de capturar
+  // hasta que el inspector habilite una nueva recaptura
+  const [locallyCaptured, setLocallyCaptured] = React.useState(false);
   const autoCaptureRef = React.useRef(false);
   const mapContainerRef = React.useRef<HTMLDivElement | null>(null);
 
   // Sincronizar con coordenadas iniciales cuando cambian (recaptura habilitada desde dashboard)
   React.useEffect(() => {
-    if (!initialCoords) return;
+    if (!initialCoords) {
+      // Inspector habilito recaptura y limpio los campos geo_*
+      // Resetear estado local para que el asegurado pueda capturar de nuevo
+      setCaptured(null);
+      setValidation(null);
+      setLocallyCaptured(false);
+      setError(null);
+      return;
+    }
     const id = setTimeout(() => {
       setCaptured(initialCoords);
       if (initialDistance != null) {
@@ -240,6 +251,11 @@ export function GeoCapture({
             // Mostrar inmediatamente la ubicación capturada en el mapa
             setCaptured(coords);
             setValidation(result);
+            // Bloquear el boton inmediatamente (inspeccion remota)
+            // hasta que el inspector habilite una nueva recaptura
+            if (inspectionType === "remote") {
+              setLocallyCaptured(true);
+            }
 
             // Subir el mapa como evidencia (source: geo_map)
             // Solo si skipEvidenceUpload es false (inspecciones onsite o cuando el inspector lo decide)
@@ -422,7 +438,7 @@ export function GeoCapture({
         <>
           <button
             type="button"
-            disabled={disabled || loading}
+            disabled={disabled || loading || locallyCaptured}
             onClick={handleCapture}
             className="liquid-date-picker flex w-full items-center justify-center gap-2 mb-3 h-9"
           >
@@ -435,7 +451,7 @@ export function GeoCapture({
               <>
                 <MapPinned className="h-4 w-4" />
                 <span className="text-[11px] font-medium">
-                  {captured && disabled
+                  {captured && (disabled || locallyCaptured)
                     ? "Ubicación ya registrada"
                     : captured
                       ? "Recapturar ubicación"
@@ -444,7 +460,7 @@ export function GeoCapture({
               </>
             )}
           </button>
-          {captured && disabled && (
+          {captured && (disabled || locallyCaptured) && (
             <p className="mb-3 text-[10px] text-amber-600 dark:text-amber-400">
               Ya se registró tu ubicación. El liquidador debe habilitar una nueva captura.
             </p>
